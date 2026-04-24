@@ -1,5 +1,12 @@
 # Peisear
 
+[![crates.io](https://img.shields.io/crates/v/peisear?label=rust)](https://crates.io/crates/peisear)
+[![Rust Documentation](https://docs.rs/peisear/badge.svg?version=latest)](https://docs.rs/peisear)
+[![Dependency Status](https://deps.rs/crate/peisear/latest/status.svg)](https://deps.rs/crate/peisear)
+[![License](https://img.shields.io/github/license/nabbisen/peisear)](https://github.com/nabbisen/peisear/blob/main/LICENSE)
+
+![logo](docs/src/assets/logo.png)
+
 A minimal, self-hostable issue management system written in Rust (Edition 2024).
 
 - **Sophisticated** — Typed domain model, server-side rendering, robust error handling with `IntoResponse`, argon2id password hashing, JWT sessions.
