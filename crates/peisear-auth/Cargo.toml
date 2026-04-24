@@ -1,0 +1,15 @@
+[package]
+name = "peisear-auth"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Password hashing and JWT helpers, framework-agnostic."
+
+[dependencies]
+argon2 = { workspace = true }
+chrono = { workspace = true }
+jsonwebtoken = { workspace = true }
+rand_core = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }

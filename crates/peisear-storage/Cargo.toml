@@ -1,0 +1,16 @@
+[package]
+name = "peisear-storage"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Persistence layer (SQLite today; designed to grow to PostgreSQL per roadmap)."
+
+[dependencies]
+peisear-core = { workspace = true }
+
+chrono = { workspace = true }
+sqlx = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }

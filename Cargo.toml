@@ -1,6 +1,24 @@
-[package]
-name = "peisear"
-version = "0.1.0"
+# Workspace manifest.
+#
+# Versions for every external dependency are pinned here so that member
+# crates can inherit them with `{ workspace = true }` and we never have
+# accidentally diverging versions across the tree.
+#
+# See the README for the rationale behind the per-layer split and a
+# roadmap-aware view of where future crates (PostgreSQL backend, OIDC
+# provider, AI assistant, etc.) are meant to land.
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/peisear-core",
+    "crates/peisear-auth",
+    "crates/peisear-storage",
+    "crates/peisear-web",
+]
+
+[workspace.package]
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.85"
 
@@ -14,17 +32,22 @@ documentation = "https://docs.rs/peisear"
 categories = []
 keywords = []
 
-[dependencies]
-# Web framework
+[workspace.dependencies]
+# ─── Domain / pure data ──────────────────────────────────────────────
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+tracing = "0.1"
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# ─── Web / runtime ───────────────────────────────────────────────────
 axum = { version = "0.8", features = ["macros"] }
 axum-extra = { version = "0.12", features = ["cookie"] }
+tokio = { version = "1", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["fs", "trace", "compression-gzip"] }
 
-# Async runtime
-tokio = { version = "1", features = ["full"] }
-
-# Database
+# ─── Storage ─────────────────────────────────────────────────────────
 sqlx = { version = "0.8", default-features = false, features = [
     "runtime-tokio-rustls",
     "sqlite",
@@ -34,38 +57,32 @@ sqlx = { version = "0.8", default-features = false, features = [
     "uuid",
 ] }
 
-# Serialization
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-serde_urlencoded = "0.7"
-
-# Auth
+# ─── Auth ────────────────────────────────────────────────────────────
 jsonwebtoken = "9"
 argon2 = "0.5"
 rand_core = { version = "0.6", features = ["std"] }
 
-# Templates (server-side HTML rendering; see README for rationale vs Leptos)
-askama = "0.14"
-# Dropped `askama_axum` (deprecated since askama 0.13). `askama_web`
-# provides `#[derive(WebTemplate)]` wiring to axum 0.8's `IntoResponse`.
-askama_web = { version = "0.14", features = ["axum-0.8"] }
-
-# Utilities
-chrono = { version = "0.4", features = ["serde"] }
-time = "0.3"
-uuid = { version = "1", features = ["v4", "serde"] }
-thiserror = "2"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# ─── Web‑layer specifics ─────────────────────────────────────────────
 dotenvy = "0.15"
+leptos = { version = "0.8", features = ["ssr"] }
+serde_json = "1"
+serde_urlencoded = "0.7"
+time = "0.3"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 validator = { version = "0.18", features = ["derive"] }
 
-[profile.dev]
-opt-level = 0
-debug = 1
+# ─── Workspace‑local crates (consumed via `workspace = true`) ────────
+peisear-core = { version = "0.2.0", path = "crates/peisear-core" }
+peisear-auth = { version = "0.2.0", path = "crates/peisear-auth" }
+peisear-storage = { version = "0.2.0", path = "crates/peisear-storage" }
 
+# Release profile applies to all workspace binaries.
 [profile.release]
 opt-level = 3
 lto = "thin"
 strip = "symbols"
 codegen-units = 1
+
+[profile.dev]
+opt-level = 0
+debug = 1

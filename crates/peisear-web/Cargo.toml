@@ -1,0 +1,41 @@
+[package]
+name = "peisear-web"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Axum + Leptos SSR server binary for the peisear (issue tracker)."
+
+# The binary is exposed as `peisear` (no suffix) so end users just
+# run `cargo run -p peisear-web` or install the binary by that
+# name. The `lib` target exists for integration tests to reuse the
+# router and handlers.
+[[bin]]
+name = "peisear"
+path = "src/main.rs"
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+peisear-core = { workspace = true }
+peisear-auth = { workspace = true }
+peisear-storage = { workspace = true }
+
+axum = { workspace = true }
+axum-extra = { workspace = true }
+chrono = { workspace = true }
+dotenvy = { workspace = true }
+leptos = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_urlencoded = { workspace = true }
+thiserror = { workspace = true }
+time = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+uuid = { workspace = true }
+validator = { workspace = true }
