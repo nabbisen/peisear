@@ -1,0 +1,39 @@
+peisear
+Copyright 2026 nabbisen <nabbisen@scqr.net>
+
+This product is licensed under the Apache License, Version 2.0
+(the "License"); you may not use this product except in compliance with the
+License. You may obtain a copy of the License in the LICENSE file at the root
+of this repository, or at:
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+------------------------------------------------------------------------
+Third-party dependencies
+------------------------------------------------------------------------
+
+This product is built on top of open-source libraries obtained via
+Cargo. Each of those crates retains its own copyright and licence; no
+source code from them is vendored into this repository. Their licences
+are available via `cargo about` or by inspecting the `Cargo.lock` file
+and visiting each crate's entry on <https://crates.io>.
+
+Notable runtime dependencies include:
+
+- axum, tokio, tower (MIT)          https://github.com/tokio-rs/axum
+- leptos (MIT)                      https://github.com/leptos-rs/leptos
+- sqlx (MIT OR Apache-2.0)          https://github.com/launchbadge/sqlx
+- argon2 (MIT OR Apache-2.0)        https://github.com/RustCrypto/password-hashes
+- jsonwebtoken (MIT)                https://github.com/Keats/jsonwebtoken
+- Tailwind CSS (MIT)                https://github.com/tailwindlabs/tailwindcss
+- daisyUI (MIT)                     https://github.com/saadeghi/daisyui
+
+Operators who package peisear for redistribution should produce a full
+third-party licence bundle using `cargo about generate` or equivalent
+tooling and include it alongside this NOTICE.

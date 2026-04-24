@@ -1784,7 +1784,7 @@ checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
 
 [[package]]
 name = "peisear-auth"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "argon2",
  "chrono",
@@ -1796,7 +1796,7 @@ dependencies = [
 
 [[package]]
 name = "peisear-core"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "serde",
@@ -1805,7 +1805,7 @@ dependencies = [
 
 [[package]]
 name = "peisear-storage"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "chrono",
  "peisear-core",
@@ -1817,7 +1817,7 @@ dependencies = [
 
 [[package]]
 name = "peisear-web"
-version = "0.2.0"
+version = "0.2.1"
 dependencies = [
  "axum",
  "axum-extra",
