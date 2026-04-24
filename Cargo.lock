@@ -1783,8 +1783,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df94ce210e5bc13cb6651479fa48d14f601d9858cfe0467f43ae157023b938d3"
 
 [[package]]
+name = "peisear"
+version = "0.2.2"
+dependencies = [
+ "peisear-auth",
+ "peisear-core",
+ "peisear-storage",
+ "peisear-web",
+]
+
+[[package]]
 name = "peisear-auth"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "argon2",
  "chrono",
@@ -1796,7 +1806,7 @@ dependencies = [
 
 [[package]]
 name = "peisear-core"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "chrono",
  "serde",
@@ -1805,7 +1815,7 @@ dependencies = [
 
 [[package]]
 name = "peisear-storage"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "chrono",
  "peisear-core",
@@ -1817,7 +1827,7 @@ dependencies = [
 
 [[package]]
 name = "peisear-web"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "axum",
  "axum-extra",

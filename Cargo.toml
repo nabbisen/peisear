@@ -15,10 +15,11 @@ members = [
     "crates/peisear-auth",
     "crates/peisear-storage",
     "crates/peisear-web",
+    "crates/peisear",
 ]
 
 [workspace.package]
-version = "0.2.1"
+version = "0.2.2"
 edition = "2024"
 rust-version = "1.85"
 

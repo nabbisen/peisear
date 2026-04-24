@@ -3,7 +3,9 @@ name = "peisear-web"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
+authors.workspace = true
 license.workspace = true
+repository.workspace = true
 description = "Axum + Leptos SSR server binary for the peisear (issue tracker)."
 
 # The binary is exposed as `peisear` (no suffix) so end users just
