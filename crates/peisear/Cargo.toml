@@ -13,7 +13,7 @@ keywords.workspace = true
 readme = "../../README.md"
 
 [dependencies]
-peisear-core = { path = "../peisear-core", version = "0.2.2" }
-peisear-auth = { path = "../peisear-auth", version = "0.2.2" }
-peisear-storage = { path = "../peisear-storage", version = "0.2.2" }
-peisear-web = { path = "../peisear-web", version = "0.2.2" }
+peisear-core = { workspace = true }
+peisear-auth = { workspace = true }
+peisear-storage = { workspace = true }
+peisear-web = { workspace = true }
