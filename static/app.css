@@ -1,0 +1,16 @@
+/* Supplemental styles. Tailwind's play CDN covers the bulk of styling;
+   a few small niceties live here so we don't have to ship a Node build. */
+
+/* Line clamp with vendor prefixes for older renderers. */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Indicate drop targets while a drag is in progress. */
+.column-drop.drag-over {
+    outline: 2px dashed hsl(var(--p));
+    outline-offset: -4px;
+}

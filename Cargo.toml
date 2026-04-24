@@ -1,0 +1,71 @@
+[package]
+name = "peisear"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+
+description = "A minimal, sophisticated, solid, and easy issue tracker."
+authors = ["nabbisen <nabbisen@scqr.net>"]
+license = "Apache-2.0"
+repository = "https://github.com/nabbisen/peisear"
+readme = "README.md"
+documentation = "https://docs.rs/peisear"
+
+categories = []
+keywords = []
+
+[dependencies]
+# Web framework
+axum = { version = "0.8", features = ["macros"] }
+axum-extra = { version = "0.12", features = ["cookie"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["fs", "trace", "compression-gzip"] }
+
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Database
+sqlx = { version = "0.8", default-features = false, features = [
+    "runtime-tokio-rustls",
+    "sqlite",
+    "macros",
+    "migrate",
+    "chrono",
+    "uuid",
+] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_urlencoded = "0.7"
+
+# Auth
+jsonwebtoken = "9"
+argon2 = "0.5"
+rand_core = { version = "0.6", features = ["std"] }
+
+# Templates (server-side HTML rendering; see README for rationale vs Leptos)
+askama = "0.14"
+# Dropped `askama_axum` (deprecated since askama 0.13). `askama_web`
+# provides `#[derive(WebTemplate)]` wiring to axum 0.8's `IntoResponse`.
+askama_web = { version = "0.14", features = ["axum-0.8"] }
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+time = "0.3"
+uuid = { version = "1", features = ["v4", "serde"] }
+thiserror = "2"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+dotenvy = "0.15"
+validator = { version = "0.18", features = ["derive"] }
+
+[profile.dev]
+opt-level = 0
+debug = 1
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+strip = "symbols"
+codegen-units = 1

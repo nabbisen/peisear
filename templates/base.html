@@ -1,0 +1,29 @@
+{#
+    Base layout. Children fill in the `title` and `content` blocks.
+    Tailwind + daisyUI are loaded from CDN so the app can be built and
+    deployed without a Node toolchain. For production, ship them as
+    local assets (see README).
+#}
+<!doctype html>
+<html lang="en" data-theme="corporate">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Issue Tracker{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com/3.4.15"></script>
+    <link rel="stylesheet" href="/static/app.css">
+    <script>
+        // daisyUI themes on tailwindcss CDN
+        tailwind.config = { darkMode: ['class', '[data-theme="dark"]'] };
+    </script>
+</head>
+<body class="min-h-screen bg-base-200 text-base-content">
+    {% block navbar %}{% endblock %}
+    <main class="container mx-auto px-4 py-6 max-w-6xl">
+        {% block flash %}{% endblock %}
+        {% block content %}{% endblock %}
+    </main>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

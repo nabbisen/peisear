@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Sign in — Issue Tracker{% endblock %}
+{% block content %}
+<div class="max-w-sm mx-auto mt-12">
+    <div class="text-center mb-6">
+        <div class="text-2xl font-semibold tracking-tight"><span class="text-primary">●</span> Issue Tracker</div>
+        <div class="text-sm text-base-content/60 mt-1">Sign in to your workspace</div>
+    </div>
+    <div class="card bg-base-100 shadow border border-base-300">
+        <form method="post" action="/login" class="card-body gap-3">
+            {% match flash %}
+              {% when Some with (msg) %}
+                <div class="alert alert-warning text-xs py-2">{{ msg }}</div>
+              {% when None %}
+            {% endmatch %}
+
+            <label class="form-control w-full">
+                <div class="label py-1"><span class="label-text text-sm">Email</span></div>
+                <input type="email" name="email" autocomplete="email" required
+                       value="{{ email }}"
+                       class="input input-bordered input-sm w-full" />
+            </label>
+
+            <label class="form-control w-full">
+                <div class="label py-1"><span class="label-text text-sm">Password</span></div>
+                <input type="password" name="password" autocomplete="current-password" required minlength="8"
+                       class="input input-bordered input-sm w-full" />
+            </label>
+
+            <button type="submit" class="btn btn-primary btn-sm mt-2">Sign in</button>
+            <div class="text-center text-xs mt-1 text-base-content/60">
+                No account? <a href="/register" class="link link-primary">Create one</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

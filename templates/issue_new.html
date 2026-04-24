@@ -1,0 +1,60 @@
+{% extends "_app_base.html" %}
+{% block title %}New issue — {{ project.name }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="breadcrumbs text-sm mb-2"><ul>
+        <li><a href="/projects">Projects</a></li>
+        <li><a href="/projects/{{ project.id }}">{{ project.name }}</a></li>
+        <li>New issue</li>
+    </ul></div>
+
+    <h1 class="text-xl font-semibold mb-4">New issue</h1>
+
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+        <form method="post" action="/projects/{{ project.id }}/issues/new" class="card-body gap-3">
+            <label class="form-control w-full">
+                <div class="label py-1"><span class="label-text text-sm">Title</span></div>
+                <input type="text" name="title" required maxlength="200" autofocus
+                       class="input input-bordered input-sm w-full"
+                       placeholder="What needs to happen?" />
+            </label>
+
+            <label class="form-control w-full">
+                <div class="label py-1"><span class="label-text text-sm">Description</span></div>
+                <textarea name="description" rows="6" maxlength="10000"
+                          class="textarea textarea-bordered textarea-sm w-full font-mono text-xs"
+                          placeholder="Describe the problem, the steps to reproduce, or the acceptance criteria."></textarea>
+            </label>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label class="form-control w-full">
+                    <div class="label py-1"><span class="label-text text-sm">Status</span></div>
+                    <select name="status" class="select select-bordered select-sm w-full">
+                        {% for s in statuses %}
+                            <option value="{{ s.as_str() }}" {% if s.as_str() == "open" %}selected{% endif %}>
+                                {{ s.label() }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+
+                <label class="form-control w-full">
+                    <div class="label py-1"><span class="label-text text-sm">Priority</span></div>
+                    <select name="priority" class="select select-bordered select-sm w-full">
+                        {% for p in priorities %}
+                            <option value="{{ p.as_str() }}" {% if p.as_str() == "medium" %}selected{% endif %}>
+                                {{ p.label() }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </label>
+            </div>
+
+            <div class="card-actions justify-end mt-2">
+                <a href="/projects/{{ project.id }}" class="btn btn-ghost btn-sm">Cancel</a>
+                <button type="submit" class="btn btn-primary btn-sm">Create issue</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

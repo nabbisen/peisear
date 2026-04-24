@@ -1,0 +1,47 @@
+{% extends "_app_base.html" %}
+{% block title %}Edit {{ project.name }} — Issue Tracker{% endblock %}
+{% block content %}
+<div class="max-w-xl mx-auto">
+    <div class="breadcrumbs text-sm mb-2"><ul>
+        <li><a href="/projects">Projects</a></li>
+        <li><a href="/projects/{{ project.id }}">{{ project.name }}</a></li>
+        <li>Edit</li>
+    </ul></div>
+
+    <h1 class="text-xl font-semibold mb-4">Edit project</h1>
+
+    <div class="card bg-base-100 border border-base-300 shadow-sm">
+        <form method="post" action="/projects/{{ project.id }}/edit" class="card-body gap-3">
+            <label class="form-control w-full">
+                <div class="label py-1"><span class="label-text text-sm">Name</span></div>
+                <input type="text" name="name" required maxlength="120" value="{{ project.name }}"
+                       class="input input-bordered input-sm w-full" />
+            </label>
+            <label class="form-control w-full">
+                <div class="label py-1"><span class="label-text text-sm">Description</span></div>
+                <textarea name="description" rows="4" maxlength="4000"
+                          class="textarea textarea-bordered textarea-sm w-full">{{ project.description }}</textarea>
+            </label>
+            <div class="card-actions justify-end mt-2">
+                <a href="/projects/{{ project.id }}" class="btn btn-ghost btn-sm">Cancel</a>
+                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="card bg-base-100 border border-error/30 shadow-sm mt-6">
+        <div class="card-body">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="font-medium text-error">Delete project</div>
+                    <div class="text-xs text-base-content/60">Permanently remove this project and all its issues.</div>
+                </div>
+                <form method="post" action="/projects/{{ project.id }}/delete"
+                      onsubmit="return confirm('Delete this project and all its issues? This cannot be undone.');">
+                    <button type="submit" class="btn btn-error btn-outline btn-sm">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
