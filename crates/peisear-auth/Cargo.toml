@@ -7,6 +7,7 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Password hashing and JWT helpers, framework-agnostic."
+readme = "README.md"
 
 [dependencies]
 argon2 = { workspace = true }

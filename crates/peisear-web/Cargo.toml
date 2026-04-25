@@ -6,16 +6,13 @@ rust-version.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Axum + Leptos SSR server binary for the peisear (issue tracker)."
+description = "Axum + Leptos SSR HTTP layer for peisear (issue tracker). Library only — the runnable binary lives in the `peisear` facade crate."
+readme = "README.md"
 
-# The binary is exposed as `peisear` (no suffix) so end users just
-# run `cargo run -p peisear-web` or install the binary by that
-# name. The `lib` target exists for integration tests to reuse the
-# router and handlers.
-[[bin]]
-name = "peisear"
-path = "src/main.rs"
-
+# Library only. The runnable binary is owned by the `peisear` facade
+# crate so that `cargo install peisear` is the public entry point.
+# Integration tests still get to import the router and handlers via
+# this lib target.
 [lib]
 path = "src/lib.rs"
 
@@ -38,6 +35,5 @@ tokio = { workspace = true }
 tower = { workspace = true }
 tower-http = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
 uuid = { workspace = true }
 validator = { workspace = true }

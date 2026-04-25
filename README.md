@@ -1,4 +1,4 @@
-# peisear
+# Peisear
 
 **Issue tracking that fits in a single binary.**
 Sophisticated. Solid. Really easy. Good UI.
@@ -38,7 +38,7 @@ tar xzf peisear.tar.gz && cd peisear
 cp .env.example .env
 echo "JWT_SECRET=$(openssl rand -base64 48)" >> .env
 
-cargo run --release -p peisear-web
+cargo run --release -p peisear
 #   → http://localhost:3000
 ```
 

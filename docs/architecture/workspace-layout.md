@@ -41,32 +41,38 @@ peisear/
 │   │                                #   (SqlitePool today), per-table
 │   │                                #   query modules. sqlx + core only.
 │   │
-│   └── peisear-web/                 # HTTP surface.
+│   ├── peisear-web/                 # HTTP surface (library only).
+│   │   └── src/
+│   │       ├── lib.rs               # Public API: build_router, AppState, Config.
+│   │       ├── app.rs               # build_router(AppState) -> Router
+│   │       ├── state.rs             # AppState { db, jwt_secret, cookie_secure }
+│   │       ├── config.rs            # Environment loader.
+│   │       ├── error.rs             # AppError + IntoResponse; From<StorageError>,
+│   │       │                        # From<AuthError> bridges.
+│   │       ├── extractors.rs        # AuthUser, MaybeAuthUser, AUTH_COOKIE.
+│   │       ├── handlers.rs          # Shared validation-error formatter.
+│   │       ├── handlers/
+│   │       │   ├── auth.rs          # Register / login / logout.
+│   │       │   ├── issues.rs        # Issue CRUD + JSON status change.
+│   │       │   ├── projects.rs      # Project CRUD.
+│   │       │   └── root.rs          # Index redirect, /health.
+│   │       ├── components.rs        # Shared render helper + Column DTO.
+│   │       └── components/
+│   │           ├── layout.rs        # <Base>, <AppShell>, <PublicShell>
+│   │           ├── auth.rs          # <LoginPage>, <RegisterPage>
+│   │           ├── projects.rs      # <ProjectsListPage>, <ProjectNewPage>,
+│   │           │                    # <ProjectEditPage>
+│   │           ├── issues.rs        # <ProjectDetailPage> (board+list),
+│   │           │                    # <IssueNewPage>, <IssueDetailPage>
+│   │           └── error_page.rs    # <ErrorPage> for non-auth errors
+│   │
+│   └── peisear/                     # Facade crate.
 │       ├── Cargo.toml               #   [[bin]] name = "peisear"
 │       └── src/
-│           ├── main.rs              # Binary entry — bootstrap + serve.
-│           ├── lib.rs               # Re-exports for integration tests.
-│           ├── app.rs               # build_router(AppState) -> Router
-│           ├── state.rs             # AppState { db, jwt_secret, cookie_secure }
-│           ├── config.rs            # Environment loader.
-│           ├── error.rs             # AppError + IntoResponse; From<StorageError>,
-│           │                        # From<AuthError> bridges.
-│           ├── extractors.rs        # AuthUser, MaybeAuthUser, AUTH_COOKIE.
-│           ├── handlers.rs          # Shared validation-error formatter.
-│           ├── handlers/
-│           │   ├── auth.rs          # Register / login / logout.
-│           │   ├── issues.rs        # Issue CRUD + JSON status change.
-│           │   ├── projects.rs      # Project CRUD.
-│           │   └── root.rs          # Index redirect, /health.
-│           ├── components.rs        # Shared render helper + Column DTO.
-│           └── components/
-│               ├── layout.rs        # <Base>, <AppShell>, <PublicShell>
-│               ├── auth.rs          # <LoginPage>, <RegisterPage>
-│               ├── projects.rs      # <ProjectsListPage>, <ProjectNewPage>,
-│               │                    # <ProjectEditPage>
-│               ├── issues.rs        # <ProjectDetailPage> (board+list),
-│               │                    # <IssueNewPage>, <IssueDetailPage>
-│               └── error_page.rs    # <ErrorPage> for non-auth errors
+│           ├── lib.rs               # Re-exports peisear_core/auth/storage/web
+│           │                        # as peisear::{core, auth, storage, web}.
+│           └── main.rs              # Server bootstrap; the binary that
+│                                    # `cargo install peisear` ships.
 │
 ├── static/
 │   ├── app.css                      # Supplemental CSS.

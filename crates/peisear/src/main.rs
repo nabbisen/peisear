@@ -1,8 +1,13 @@
-//! Server entry point — keeps only the bootstrap sequence. Router
-//! wiring, state, and handlers all live in the library side.
+//! peisear server entry point.
+//!
+//! This is the binary installed by `cargo install peisear`. It is
+//! deliberately tiny: configuration loading, DB pool construction,
+//! migration, and `axum::serve` invocation. All actual routing,
+//! handlers, and rendering live in the `peisear-web` library, which
+//! this crate re-exports.
 
-use peisear_storage::pool;
-use peisear_web::{AppState, Config, build_router};
+use peisear::storage::pool;
+use peisear::web::{AppState, Config, build_router};
 use std::net::SocketAddr;
 
 #[tokio::main]
@@ -18,7 +23,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!(
         database = %config.database_url,
         addr = %config.bind_addr,
-        "starting issue tracker"
+        "starting peisear"
     );
 
     let db = pool::connect(&config.database_url).await?;

@@ -23,12 +23,12 @@ project communication.
 2. Clone the workspace and run the test suite:
    ```bash
    cargo check --workspace
-   cargo build -p peisear-web --bin peisear
+   cargo build -p peisear --bin peisear
    ```
 3. Run the application:
    ```bash
    cp .env.example .env
-   cargo run --release -p peisear-web
+   cargo run --release -p peisear
    ```
 
 For an in-depth walkthrough of the architecture before making

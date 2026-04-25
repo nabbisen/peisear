@@ -8,7 +8,7 @@ in place, a working peisear instance is one command away.
 Run Cargo from the workspace root:
 
 ```bash
-cargo run --release -p peisear-web
+cargo run --release -p peisear
 ```
 
 Or, because there's only one runnable binary in the workspace, the

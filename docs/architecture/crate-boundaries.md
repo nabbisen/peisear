@@ -1,9 +1,10 @@
 # Crate Boundaries
 
-peisear is four crates because the Roadmap has four kinds of work,
-and each kind has a natural home.
+peisear is split into four implementation crates plus a thin facade
+crate, because the Roadmap has four kinds of work — each with a
+natural home — and crates.io needs a single name to install.
 
-## The four crates
+## The four implementation crates
 
 ### `peisear-core` — the vocabulary
 
@@ -55,6 +56,35 @@ It owns the app-wide `AppError` and its `IntoResponse` impl, plus
 `From<StorageError>` and `From<AuthError>` conversions — so lower
 layers get to use purpose-built error types, and handlers still
 `?`-propagate uniformly up to a correct HTTP response.
+
+This crate is **library-only**; the runnable binary is owned by the
+facade.
+
+## The facade crate
+
+### `peisear` — crates.io entry point
+
+Pulls in all four implementation crates and exposes them as
+`peisear::core`, `peisear::auth`, `peisear::storage`, and
+`peisear::web`. Owns `[[bin]] name = "peisear"` so that
+`cargo install peisear` ships the runnable server.
+
+The rule: **the facade is the public face on crates.io; it does not
+own logic.** `main.rs` is a fifteen-line bootstrap that calls into
+`peisear::web::build_router`. Implementation details remain in the
+named crates and may evolve independently; the facade can pin
+compatible versions of each at publish time.
+
+This split exists for two independent reasons:
+
+1. **One install command.** `cargo install peisear` is the natural
+   thing for end users to type; `cargo install peisear-web` would be
+   surprising.
+2. **Independent publishability.** `peisear-core` is useful to anyone
+   building tooling on the same domain vocabulary, even if they never
+   touch the HTTP layer; `peisear-auth` is useful to anyone needing
+   the same JWT/argon2 primitives. Keeping them as their own
+   published crates lets them be picked up à la carte.
 
 ## Why the error split matters
 

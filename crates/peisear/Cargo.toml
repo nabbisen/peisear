@@ -12,8 +12,28 @@ categories.workspace = true
 keywords.workspace = true
 readme = "../../README.md"
 
+# Public entry point on crates.io.
+#
+# `cargo install peisear` builds and installs the `peisear` binary, which
+# is just a thin bootstrap that calls into the layered `peisear-web`
+# library. The four lower-level crates remain individually publishable
+# for users who want to build something else on top of peisear's domain
+# model (`peisear-core`), credential primitives (`peisear-auth`), or
+# storage layer (`peisear-storage`).
+[[bin]]
+name = "peisear"
+path = "src/main.rs"
+
 [dependencies]
 peisear-core = { workspace = true }
 peisear-auth = { workspace = true }
 peisear-storage = { workspace = true }
 peisear-web = { workspace = true }
+
+# Runtime dependencies needed by `main.rs`. The library API surfaces in
+# `peisear-web` (Config, AppState, build_router) re-export everything
+# else.
+axum = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

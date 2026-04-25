@@ -18,6 +18,17 @@ Leptos components, migrations are baked in via `sqlx::migrate!()` —
 but dynamically links against system `libc`, `libssl`, `libsqlite3`,
 and so on. For fully static binaries, see "Building static" below.
 
+Alternatively, install the published binary directly from crates.io:
+
+```bash
+cargo install peisear
+```
+
+This compiles and installs the `peisear` binary into `~/.cargo/bin/`
+and is suitable for development hosts and one-off deployments. For
+production you generally still want a release tarball checked into
+your config-management system.
+
 ## What to ship
 
 ```

@@ -7,6 +7,7 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Persistence layer (SQLite today; designed to grow to PostgreSQL per roadmap)."
+readme = "README.md"
 
 [dependencies]
 peisear-core = { workspace = true }
