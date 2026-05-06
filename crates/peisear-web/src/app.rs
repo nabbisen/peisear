@@ -184,6 +184,14 @@ pub fn build_router(state: AppState) -> Router {
             "/projects/{id}/issues/{issue_id}/edit",
             get(issues::edit_page),
         )
+        // Phase C PR1: sub-issue creation form lives at
+        // `/sub-issues/new` under the parent. GET renders the
+        // form; POST creates the row and redirects back to
+        // the parent's detail page.
+        .route(
+            "/projects/{id}/issues/{issue_id}/sub-issues/new",
+            get(issues::new_sub_issue_form).post(issues::create_sub_issue),
+        )
         .route(
             "/projects/{id}/issues/{issue_id}/delete",
             post(issues::delete),

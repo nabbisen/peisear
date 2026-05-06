@@ -402,6 +402,19 @@ pub async fn assign_issue(
     )
     .await?;
 
+    // Phase C PR1 (peisear-feature-spec-v2.1 §8.5): sub-issues
+    // follow the parent's sprint. Reject explicit sprint
+    // assignment on a sub-issue — the only correct flow is to
+    // change the parent's sprint, which propagates via
+    // `sprint_for_issue`.
+    let issue = peisear_storage::issues::find(&state.db, &issue_id, &project_id).await?;
+    if issue.is_sub_issue() {
+        return Err(AppError::Validation(
+            "Sub-issues follow the parent's sprint. Change the parent's sprint instead."
+                .to_string(),
+        ));
+    }
+
     // Personal projects (team_id None) can't have sprints
     // assigned, since sprints are team-scoped.
     let team_id = project

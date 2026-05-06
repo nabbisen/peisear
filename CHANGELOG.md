@@ -5,6 +5,159 @@ All notable changes to peisear are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] — 2026-05-04
+
+### Added (Phase C PR1 — sub-issue hierarchy)
+
+A 1-level parent/child relationship on issues. Big work that
+splits naturally into smaller pieces can now live as a parent
+issue with sub-issues attached, instead of being either a
+single bloated issue or a fan-out of unrelated peers. Per
+peisear-feature-spec-v2.1 §8.3 / §8.4, the design is
+deliberately minimal — one new column on `issues`, one new
+form, no new tables.
+
+- **Schema** (`crates/peisear-storage/migrations/0015_sub_issues.sql`):
+  - New nullable `parent_issue_id` column on the `issues`
+    table, foreign-key referencing `issues(id)` with
+    `ON DELETE CASCADE` (deleting a parent removes its
+    children — clearer for the user than dangling references,
+    and matches "delete the whole subtree" mental model).
+  - Two partial indices for the two query shapes that
+    matter:
+    - `idx_issues_parent` on the non-NULL rows, for
+      "give me the children of issue X".
+    - `idx_issues_top_level` on the NULL rows, for
+      "list/kanban this project's top-level issues" — the
+      partial form lets the planner skip sub-issue rows
+      without filtering them out post-fetch.
+  - Two triggers enforcing the spec invariants:
+    - `prevent_sub_issue_nesting_insert` / `..._update`:
+      sub-issues cannot have sub-issues (1-level only); a
+      sub-issue must share its parent's `project_id`; an
+      issue cannot be its own parent (self-reference);
+      an issue with existing children cannot be demoted
+      (would create a 2-level chain — promote children
+      first).
+- **Domain model** (`crates/peisear-core/src/lib.rs`):
+  - `Issue` gains a `parent_issue_id: Option<String>` field
+    with extensive documentation of the constraints.
+  - New helpers `Issue::is_sub_issue()` and
+    `Issue::is_top_level()` so call sites read like prose.
+- **Storage layer** (`crates/peisear-storage/src/issues.rs`):
+  - `IssueRow` and `into_issue` round-trip the new column.
+  - All SELECTs that build `Issue` values widened to include
+    `parent_issue_id`.
+  - `list_in_project` semantically narrows to **top-level
+    only** — this is the function the project board, list
+    view, and kanban use, and per §8.5 only top-level issues
+    appear there. The previous all-issues behaviour is
+    preserved as a new `list_all_in_project`, which the
+    project_health and personal_metrics analytics paths can
+    use if they ever need to (currently they go through a
+    different aggregation path that already includes
+    sub-issues).
+  - New `list_sub_issues_of(parent_id)` returns children in
+    creation order.
+  - New `insert_sub_issue` mutation. Same shape as `insert`
+    but takes a `parent_issue_id` and routes trigger
+    violations through `translate_trigger_error` so the
+    handler sees a `StorageError::Validation` (400) instead
+    of a raw 500.
+  - New `promote_to_top_level` and `demote_to_sub_issue`
+    helpers for the future "convert this issue to/from a
+    sub-issue" workflow (the form path lands in a later
+    PR — the storage primitives are here so tests can
+    exercise the paths).
+- **Sprint follow-parent rule**
+  (`crates/peisear-storage/src/sprints.rs`):
+  - `sprint_for_issue` now does a coalescing query: if the
+    issue itself has a `sprint_issues` row return it,
+    otherwise look up the parent's row. Sub-issues thus
+    "see" their parent's sprint without ever needing their
+    own join row. Single round-trip whether top-level or
+    sub.
+  - `issues_in_sprint` filters to `parent_issue_id IS NULL`
+    so the sprint detail surface lists each piece of work
+    exactly once — listing both parent and child would
+    double-count effort against the sprint's commitment.
+  - The sprint-assignment handler
+    (`handlers/sprints.rs::assign_issue`) now refuses
+    sub-issue targets with a 400 ("Sub-issues follow the
+    parent's sprint. Change the parent's sprint instead.").
+- **HTTP routes** (`crates/peisear-web/src/app.rs`):
+  - `GET /projects/{id}/issues/{issue_id}/sub-issues/new`
+    renders the sub-issue creation form.
+  - `POST /projects/{id}/issues/{issue_id}/sub-issues/new`
+    creates the row and redirects back to the parent's
+    detail page (so the user immediately sees the new
+    child rendered in the parent's "Sub-issues" list).
+- **Handlers** (`crates/peisear-web/src/handlers/issues.rs`):
+  - `render_detail_or_edit` now loads (a) the issue's sub-
+    issues if it's top-level, and (b) the parent issue if
+    it's a sub-issue. Both lookups are cheap (single index
+    hit each). Empty inputs are propagated cleanly.
+  - New `new_sub_issue_form` GET handler validates that the
+    parent isn't itself a sub-issue (1-level rule) and
+    short-circuits with a clear validation error if so.
+  - New `create_sub_issue` POST handler runs the same
+    validation, then calls `insert_sub_issue`.
+- **UI** (`crates/peisear-web/src/components/issues.rs`):
+  - New "Sub-issues" card on the issue detail page,
+    rendered only for top-level issues (one-level rule
+    means sub-issues can't have children themselves so the
+    section would always be empty).
+  - When a top-level issue has no sub-issues, the card
+    shows a brief explainer with the "+ Add sub-issue"
+    button: "Break this work into smaller pieces if it
+    helps you track them — they share this issue's project
+    and sprint, but can have their own assignee, status,
+    and effort."
+  - When sub-issues exist, they render as a compact
+    `<ul>` with status badge + title link. Each row has
+    an `aria-label` like "Title, status In Progress" so
+    screen readers get the same information.
+  - New `SubIssueNewPage` component for the create form.
+    Mirrors `IssueNewPage` minus the sprint picker (the
+    sprint follow-parent rule means a separate selector
+    here would falsely imply independence).
+  - Parent-aware breadcrumb: on a sub-issue's detail page
+    the breadcrumb threads through the parent ("Projects /
+    FooProject / Parent issue / This sub-issue"). The
+    parent in the chain is a link, so the user can
+    navigate up either to the project or to the parent.
+  - Sprint card on the issue detail page is hidden for
+    sub-issues — sub-issues follow the parent's sprint, so
+    exposing a selector would be confusing. The user can
+    still see what sprint a sub-issue is in (via the
+    parent's view) and change it via the parent.
+- **Tests** (`crates/peisear-web/tests/sub_issues.rs`,
+  7 new tests):
+  - `list_in_project_returns_top_level_only` — project
+    list returns 2 rows for a project with 2 top-level + 2
+    sub-issues; `list_sub_issues_of` returns the 2 children.
+  - `detail_page_renders_sub_issues_section_for_top_level`
+    — the section appears on a top-level issue's detail
+    page with the right `aria-label`, the child title,
+    and the "+ Add sub-issue" affordance.
+  - `detail_page_omits_sub_issues_section_for_sub_issue`
+    — the section is absent on a sub-issue's own detail
+    page, and the breadcrumb includes the parent's title.
+  - `create_sub_issue_via_form_links_to_parent` — POSTing
+    to `/sub-issues/new` succeeds (303 SEE_OTHER), and
+    the parent detail page renders the new child.
+  - `cannot_create_sub_issue_under_a_sub_issue` — POSTing
+    against a sub-issue's `/sub-issues/new` URL returns
+    400 ahead of the SQL trigger (handler-level
+    validation gives a better error path).
+  - `sub_issue_inherits_parent_sprint` —
+    `sprint_for_issue(child_id)` returns the parent's
+    sprint id when the child has no `sprint_issues` row.
+  - `cannot_assign_sprint_directly_to_sub_issue` — POST
+    to a sub-issue's `/sprint` URL returns 400 with the
+    "follow the parent's sprint" message.
+  - Total suite: 65 active / 1 ignored.
+
 ## [0.18.0] — 2026-05-03
 
 ### Added (Phase B PR3 — UI changes for /today + project detail + issue detail)

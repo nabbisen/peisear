@@ -48,15 +48,36 @@ out across five phases, one per minor release:
   sprint, team, membership, and capacity mutations. With
   Phase B done, every domain-entity mutation honours the
   §21.4 contract.
-- **Phase C — Missing surfaces** *(target: 0.19.0)*. Sub-issue
-  hierarchy (parent_id approach, see §8.3 / appendix C),
-  calendar (personal axis + project axis only — no team axis),
-  sprint-planning page, inbox refinements.
-- **Phase D — Direct manipulation** *(target: 0.20.0)*. The
+- **Phase C — Missing surfaces** *(in progress, 0.19.0+)*.
+  - **PR1 — Sub-issue hierarchy** *(0.19.0, shipped 2026-
+    05-04)*. parent_id approach per §8.3 / §8.4: nullable
+    `parent_issue_id` column on `issues`, partial indices for
+    top-level / parent-children query shapes, two triggers
+    enforcing 1-level-only + same-project + no-self-reference
+    + no-demotion-with-children. New routes
+    `/projects/{id}/issues/{issue_id}/sub-issues/new` (GET
+    form + POST create); detail page renders Sub-issues card
+    on top-level issues with "+ Add sub-issue" affordance.
+    Sprint follow-parent rule: sub-issues inherit the
+    parent's sprint without a separate `sprint_issues` row;
+    direct sprint assignment to sub-issues is rejected (400).
+    Sprint detail listing filters to top-level only so effort
+    isn't double-counted. 7 new integration tests cover the
+    hierarchy, sprint-follow, and validation paths.
+  - **PR2 — Sprint planning page** *(target: 0.20.0)*.
+    `/teams/{slug}/sprints/{id}/plan` with backlog → sprint
+    list-based assignment UI. (DnD lands in Phase D.)
+  - **PR3 — Calendar surfaces** *(target: 0.21.0)*.
+    `/today/calendar` (personal axis) and
+    `/projects/{id}/calendar` (project axis). No team axis
+    per §10.2. Read-only display in this PR; DnD is Phase D.
+  - **PR4 — Inbox refinements** *(target: 0.22.0)*.
+    Notification preferences UI, mark-all-read, snooze.
+- **Phase D — Direct manipulation** *(target: 0.23.0)*. The
   five direct-manipulation surfaces (status click toggle,
   kanban DnD, calendar DnD, sprint-plan DnD, list reorder)
   rolled out in five sub-steps D-1 through D-5.
-- **Phase E — Quality consolidation** *(target: 0.21.0)*.
+- **Phase E — Quality consolidation** *(target: 0.24.0)*.
   ABDD QA + Security QA. The §11.5 authorization assertions
   and §21.4 optimistic-lock assertions reach full coverage on
   all relevant endpoints. WCAG AA contrast, mobile completion

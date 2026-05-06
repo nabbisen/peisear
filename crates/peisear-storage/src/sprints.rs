@@ -313,12 +313,32 @@ pub async fn remove_issue(pool: &Pool, issue_id: &str) -> StorageResult<()> {
 
 /// Find the sprint an issue is in, or `None` if the issue is
 /// not in any sprint.
+///
+/// Phase C PR1 (peisear-feature-spec-v2.1 §8.5): for sub-
+/// issues, this returns the **parent's** sprint. Sub-issues
+/// follow the parent's sprint membership and don't get their
+/// own row in `sprint_issues` — the planning surface only
+/// schedules top-level issues, and a sub-issue's effort is
+/// considered scheduled when its parent is.
+///
+/// Implementation: the SQL coalesces. If the issue itself has
+/// a `sprint_issues` row, return it; otherwise look up the
+/// parent's row. The single query keeps the round-trip count
+/// at one whether the issue is top-level or sub.
 pub async fn sprint_for_issue(
     pool: &Pool,
     issue_id: &str,
 ) -> StorageResult<Option<String>> {
     let row: Option<(String,)> = sqlx::query_as(
-        r#"SELECT sprint_id FROM sprint_issues WHERE issue_id = ?1"#,
+        r#"
+        SELECT sprint_id FROM sprint_issues
+        WHERE issue_id = ?1
+           OR issue_id = (
+               SELECT parent_issue_id FROM issues
+               WHERE id = ?1 AND parent_issue_id IS NOT NULL
+           )
+        LIMIT 1
+        "#,
     )
     .bind(issue_id)
     .fetch_optional(pool)
@@ -328,6 +348,12 @@ pub async fn sprint_for_issue(
 
 /// Issues currently linked to a sprint, with their effort and
 /// status. Used by the sprint detail page.
+///
+/// Phase C PR1: only **top-level** issues are listed here.
+/// Sub-issues follow the parent's sprint membership; rendering
+/// them as separate rows would double-count them in
+/// "committed work" displays. The sub-issues belonging to a
+/// listed parent are visible on the parent's detail page.
 pub async fn issues_in_sprint(
     pool: &Pool,
     sprint_id: &str,
@@ -339,6 +365,7 @@ pub async fn issues_in_sprint(
         FROM sprint_issues si
         JOIN issues i ON i.id = si.issue_id
         WHERE si.sprint_id = ?1
+          AND i.parent_issue_id IS NULL
         ORDER BY i.status ASC, si.assigned_at ASC
         "#,
     )

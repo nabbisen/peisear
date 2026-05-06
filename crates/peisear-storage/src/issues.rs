@@ -24,6 +24,11 @@ struct IssueRow {
     position: i64,
     effort: Option<i64>,
     assignee_id: Option<String>,
+    /// Sub-issue parent reference (Phase C PR1, migration
+    /// 0015). NULL for top-level issues; FK to `issues(id)`
+    /// for sub-issues. The 1-level constraint is enforced by
+    /// trigger.
+    parent_issue_id: Option<String>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
@@ -45,18 +50,52 @@ impl IssueRow {
             position: self.position,
             effort: self.effort,
             assignee_id: self.assignee_id,
+            parent_issue_id: self.parent_issue_id,
             created_at: self.created_at,
             updated_at: self.updated_at,
         })
     }
 }
 
-/// List all issues in a project (for list view).
+/// List top-level issues in a project. Per
+/// peisear-feature-spec-v2.1 §8.5, the project board / list /
+/// kanban surface only the top-level rows; sub-issues are
+/// rendered inline in their parent's detail page. This
+/// function applies that filter — callers that want every row
+/// (e.g. analytics, project_workload, health computation)
+/// should use [`list_all_in_project`].
 pub async fn list_in_project(pool: &Pool, project_id: &str) -> StorageResult<Vec<Issue>> {
     let rows = sqlx::query_as::<_, IssueRow>(
         r#"
         SELECT id, project_id, author_id, title, description,
-               status, priority, position, effort, assignee_id, created_at, updated_at
+               status, priority, position, effort, assignee_id, parent_issue_id,
+               created_at, updated_at
+        FROM issues
+        WHERE project_id = ?1
+          AND parent_issue_id IS NULL
+        ORDER BY status ASC, position ASC, created_at DESC
+        "#,
+    )
+    .bind(project_id)
+    .fetch_all(pool)
+    .await?;
+    rows.into_iter().map(IssueRow::into_issue).collect()
+}
+
+/// List **every** issue in a project, top-level and sub-issue
+/// alike. Use for analytics surfaces (workload, health,
+/// project_health) where excluding sub-issues would skew the
+/// numbers — sub-issues represent real assigned work even if
+/// they're not shown on the kanban.
+pub async fn list_all_in_project(
+    pool: &Pool,
+    project_id: &str,
+) -> StorageResult<Vec<Issue>> {
+    let rows = sqlx::query_as::<_, IssueRow>(
+        r#"
+        SELECT id, project_id, author_id, title, description,
+               status, priority, position, effort, assignee_id, parent_issue_id,
+               created_at, updated_at
         FROM issues
         WHERE project_id = ?1
         ORDER BY status ASC, position ASC, created_at DESC
@@ -68,11 +107,39 @@ pub async fn list_in_project(pool: &Pool, project_id: &str) -> StorageResult<Vec
     rows.into_iter().map(IssueRow::into_issue).collect()
 }
 
+/// List the sub-issues of a given parent. Returns them in
+/// creation order (oldest first) — this is the order they
+/// were defined in, which usually reads as "natural reading
+/// order" in the parent's detail panel.
+///
+/// Empty vec if the parent has no children. The parent itself
+/// is not included.
+pub async fn list_sub_issues_of(
+    pool: &Pool,
+    parent_issue_id: &str,
+) -> StorageResult<Vec<Issue>> {
+    let rows = sqlx::query_as::<_, IssueRow>(
+        r#"
+        SELECT id, project_id, author_id, title, description,
+               status, priority, position, effort, assignee_id, parent_issue_id,
+               created_at, updated_at
+        FROM issues
+        WHERE parent_issue_id = ?1
+        ORDER BY created_at ASC
+        "#,
+    )
+    .bind(parent_issue_id)
+    .fetch_all(pool)
+    .await?;
+    rows.into_iter().map(IssueRow::into_issue).collect()
+}
+
 pub async fn find(pool: &Pool, issue_id: &str, project_id: &str) -> StorageResult<Issue> {
     let row = sqlx::query_as::<_, IssueRow>(
         r#"
         SELECT id, project_id, author_id, title, description,
-               status, priority, position, effort, assignee_id, created_at, updated_at
+               status, priority, position, effort, assignee_id, parent_issue_id,
+               created_at, updated_at
         FROM issues
         WHERE id = ?1 AND project_id = ?2
         "#,
@@ -151,6 +218,162 @@ pub async fn insert(
 
     tx.commit().await?;
     Ok(())
+}
+
+/// Insert a sub-issue under an existing parent. Same shape as
+/// `insert` but with an additional `parent_issue_id` argument.
+///
+/// The 1-level constraint (a sub-issue can't have its own
+/// sub-issue) and the same-project constraint are both
+/// enforced by triggers in migration 0015 — this function
+/// surfaces those as `StorageError::Validation` rather than
+/// raw SQL errors so the caller can render them to the user.
+///
+/// Sub-issues use a separate position counter from their
+/// parent's status group: they're listed under the parent in
+/// creation order (see `list_sub_issues_of`), not interspersed
+/// in the project's main kanban. We therefore default position
+/// to 0 — it's not meaningful for sub-issues, but the column
+/// is NOT NULL.
+#[allow(clippy::too_many_arguments)]
+pub async fn insert_sub_issue(
+    pool: &Pool,
+    id: &str,
+    project_id: &str,
+    parent_issue_id: &str,
+    author_id: &str,
+    title: &str,
+    description: &str,
+    status: IssueStatus,
+    priority: Priority,
+    effort: Option<i64>,
+    assignee_id: Option<&str>,
+) -> StorageResult<()> {
+    let mut tx = pool.begin().await?;
+
+    let res = sqlx::query(
+        r#"
+        INSERT INTO issues
+            (id, project_id, author_id, title, description, status, priority,
+             position, effort, assignee_id, parent_issue_id)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8, ?9, ?10)
+        "#,
+    )
+    .bind(id)
+    .bind(project_id)
+    .bind(author_id)
+    .bind(title)
+    .bind(description)
+    .bind(status.as_str())
+    .bind(priority.as_str())
+    .bind(effort)
+    .bind(assignee_id)
+    .bind(parent_issue_id)
+    .execute(&mut *tx)
+    .await;
+
+    // Trigger violations show up as raw sqlx errors with
+    // SQLite's RAISE message inside. Translate them to
+    // Validation so the handler can render them as 400 instead
+    // of 500.
+    if let Err(e) = res {
+        return Err(translate_trigger_error(e));
+    }
+
+    issue_events::insert_event(
+        &mut tx,
+        id,
+        project_id,
+        Some(author_id),
+        issue_events::kind::CREATED,
+        None,
+        Some(status.as_str()),
+    )
+    .await?;
+
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Promote a sub-issue back to top-level (sets
+/// `parent_issue_id = NULL`). Per spec §8.3 this is a single
+/// column update — the assignee, status, sprint membership
+/// etc. all stay as they were.
+///
+/// No-op if the issue is already top-level.
+pub async fn promote_to_top_level(
+    pool: &Pool,
+    id: &str,
+    project_id: &str,
+) -> StorageResult<()> {
+    sqlx::query(
+        r#"
+        UPDATE issues
+        SET parent_issue_id = NULL
+        WHERE id = ?1 AND project_id = ?2
+        "#,
+    )
+    .bind(id)
+    .bind(project_id)
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// Demote a top-level issue to be a sub-issue of `new_parent_id`.
+/// Validates that the move doesn't create a 2-level chain
+/// (existing children must be promoted first) — that check is
+/// done in the trigger.
+pub async fn demote_to_sub_issue(
+    pool: &Pool,
+    id: &str,
+    project_id: &str,
+    new_parent_id: &str,
+) -> StorageResult<()> {
+    let res = sqlx::query(
+        r#"
+        UPDATE issues
+        SET parent_issue_id = ?3
+        WHERE id = ?1 AND project_id = ?2
+        "#,
+    )
+    .bind(id)
+    .bind(project_id)
+    .bind(new_parent_id)
+    .execute(pool)
+    .await;
+
+    if let Err(e) = res {
+        return Err(translate_trigger_error(e));
+    }
+    Ok(())
+}
+
+/// Translate a raw `sqlx::Error` into the closest `StorageError`
+/// for sub-issue trigger violations. We match on the error's
+/// message text (SQLite's RAISE produces a specific string)
+/// because SQLite doesn't expose machine-readable codes for
+/// trigger-RAISE'd errors.
+///
+/// This is brittle to RAISE message wording — keep the test
+/// for it close (storage unit tests assert on the exact
+/// translated `Validation` payload), and update both together
+/// if the migration ever changes the strings.
+fn translate_trigger_error(e: sqlx::Error) -> StorageError {
+    let msg = e.to_string();
+    // Known trigger messages from migration 0015.
+    let known = [
+        "sub-issue cannot have a sub-issue",
+        "sub-issue must share project with its parent",
+        "an issue cannot be its own parent",
+        "cannot demote an issue that has its own sub-issues",
+    ];
+    for needle in known.iter() {
+        if msg.contains(needle) {
+            return StorageError::Validation(needle.to_string());
+        }
+    }
+    e.into()
 }
 
 pub async fn update(

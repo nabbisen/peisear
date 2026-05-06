@@ -816,6 +816,155 @@ pub fn IssueNewPage(
     }
 }
 
+/// Form for creating a new sub-issue under a parent issue
+/// (Phase C PR1, peisear-feature-spec-v2.1 §8.3).
+///
+/// Mirrors `IssueNewPage` but:
+///
+/// - Posts to the parent's `/sub-issues/new` endpoint, so the
+///   handler can wire the new row to its parent at insert
+///   time.
+/// - Has no Sprint picker — sub-issues follow the parent's
+///   sprint (decision: parent sprint follow-up rule), so
+///   exposing a separate selector here would imply
+///   independence the system doesn't actually grant.
+/// - The breadcrumb threads through the parent: Projects →
+///   Project → Parent issue → "New sub-issue", so the user
+///   can navigate up either way.
+/// - The "Cancel" link returns to the parent detail page,
+///   not the project board, since that's where the user came
+///   from.
+#[component]
+pub fn SubIssueNewPage(
+    user: CurrentUser,
+    project: Project,
+    parent: Issue,
+    priorities: Vec<Priority>,
+    statuses: Vec<IssueStatus>,
+    assignees: Vec<AssigneeOption>,
+    flash: Option<String>,
+) -> impl IntoView {
+    let title = format!("New sub-issue — {}", parent.title);
+    let project_href = format!("/projects/{}", project.id);
+    let parent_href = format!("/projects/{}/issues/{}", project.id, parent.id);
+    let submit_action = format!(
+        "/projects/{}/issues/{}/sub-issues/new",
+        project.id, parent.id
+    );
+    let project_name = project.name.clone();
+    let parent_title = parent.title.clone();
+    let parent_href_for_cancel = parent_href.clone();
+
+    view! {
+        <AppShell title=title user=user flash=flash>
+            <div class="max-w-2xl mx-auto">
+                <div class="breadcrumbs text-sm mb-2"><ul>
+                    <li><a href="/projects">"Projects"</a></li>
+                    <li><a href=project_href>{project_name}</a></li>
+                    <li><a href=parent_href>{parent_title}</a></li>
+                    <li>"New sub-issue"</li>
+                </ul></div>
+
+                <h1 class="text-xl font-semibold mb-1">"New sub-issue"</h1>
+                <p class="text-sm text-base-content/60 mb-4">
+                    "This sub-issue follows its parent's sprint. \
+                     You can give it its own assignee, status, priority, and effort."
+                </p>
+
+                <div class="card bg-base-100 border border-base-300 shadow-sm">
+                    <form method="post" action=submit_action class="card-body gap-3">
+                        <label class="form-control w-full">
+                            <div class="label py-1">
+                                <span class="label-text text-sm">"Title"</span>
+                            </div>
+                            <input type="text" name="title" required=true maxlength="200" autofocus=true
+                                   class="input input-bordered input-sm w-full"
+                                   placeholder="What needs to happen for this part?"/>
+                        </label>
+
+                        <label class="form-control w-full">
+                            <div class="label py-1">
+                                <span class="label-text text-sm">"Description"</span>
+                            </div>
+                            <textarea name="description" rows="6" maxlength="10000"
+                                      class="textarea textarea-bordered textarea-sm w-full font-mono text-xs"
+                                      placeholder="Describe this sub-task in more detail if useful."></textarea>
+                        </label>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <label class="form-control w-full">
+                                <div class="label py-1">
+                                    <span class="label-text text-sm">"Status"</span>
+                                </div>
+                                <select name="status"
+                                        class="select select-bordered select-sm w-full">
+                                    {statuses.into_iter().map(|s| {
+                                        let selected = s.as_str() == "open";
+                                        view! {
+                                            <option value=s.as_str() selected=selected>{s.label()}</option>
+                                        }
+                                    }).collect_view()}
+                                </select>
+                            </label>
+
+                            <label class="form-control w-full">
+                                <div class="label py-1">
+                                    <span class="label-text text-sm">"Priority"</span>
+                                </div>
+                                <select name="priority"
+                                        class="select select-bordered select-sm w-full">
+                                    {priorities.into_iter().map(|p| {
+                                        let selected = p.as_str() == "medium";
+                                        view! {
+                                            <option value=p.as_str() selected=selected>{p.label()}</option>
+                                        }
+                                    }).collect_view()}
+                                </select>
+                            </label>
+
+                            <label class="form-control w-full">
+                                <div class="label py-1">
+                                    <span class="label-text text-sm">"Effort"</span>
+                                    <span class="label-text-alt text-xs opacity-60">"story points"</span>
+                                </div>
+                                <select name="effort"
+                                        class="select select-bordered select-sm w-full">
+                                    <option value="" selected=true>"—"</option>
+                                    {peisear_core::EFFORT_PRESETS.iter().map(|n| {
+                                        view! {
+                                            <option value=n.to_string()>{n.to_string()}</option>
+                                        }
+                                    }).collect_view()}
+                                </select>
+                            </label>
+
+                            <label class="form-control w-full">
+                                <div class="label py-1">
+                                    <span class="label-text text-sm">"Assignee"</span>
+                                </div>
+                                <select name="assignee_id"
+                                        class="select select-bordered select-sm w-full">
+                                    <option value="" selected=true>"—"</option>
+                                    {assignees.into_iter().map(|a| {
+                                        view! {
+                                            <option value=a.id>{a.display_name}</option>
+                                        }
+                                    }).collect_view()}
+                                </select>
+                            </label>
+                        </div>
+
+                        <div class="card-actions justify-end mt-2">
+                            <a href=parent_href_for_cancel class="btn btn-ghost btn-sm">"Cancel"</a>
+                            <button type="submit" class="btn btn-primary btn-sm">"Create sub-issue"</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </AppShell>
+    }
+}
+
 /// Issue detail page. Read-only by default; the parent `editing`
 /// parameter switches to the edit form. Phase B PR3 (B-3) split
 /// view and edit modes into separate URLs:
@@ -833,6 +982,11 @@ pub fn IssueDetailPage(
     workload: Vec<UserLoad>,
     sprint_options: Vec<(String, String)>,
     current_sprint_id: Option<String>,
+    /// Sub-issues of this issue (Phase C PR1).
+    sub_issues: Vec<Issue>,
+    /// The parent issue if this row is a sub-issue. None for
+    /// top-level issues.
+    parent_issue: Option<Issue>,
     flash: Option<String>,
     editing: bool,
 ) -> impl IntoView {
@@ -887,8 +1041,89 @@ pub fn IssueDetailPage(
         })
         .collect_view();
     let no_sprint_selected = current_sprint_id.is_none();
+    // Phase C PR1: sub-issues don't get their own sprint
+    // selector — they follow the parent's sprint per
+    // peisear-feature-spec-v2.1 §8.5. The sprint membership is
+    // still visible on the detail page (rendered in the meta
+    // row up top), so the user can see what sprint they're in;
+    // they just can't change it from this page. To re-sprint
+    // a sub-issue, the user changes the parent's sprint
+    // (which propagates).
+    let show_sprint_picker = has_sprint_options && issue.is_top_level();
 
-    let sprint_card = has_sprint_options.then(|| view! {
+    // Phase C PR1: sub-issue card. Top-level issues with no
+    // children get a "+ Add sub-issue" affordance; ones with
+    // children get the list. Sub-issues themselves don't show
+    // this section at all (1-level rule means they can't have
+    // children).
+    let new_sub_issue_href = format!(
+        "/projects/{}/issues/{}/sub-issues/new",
+        project.id, issue.id
+    );
+    let sub_issues_card = if issue.is_top_level() {
+        Some(view! {
+            <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
+                     aria-label="Sub-issues">
+                <div class="card-body py-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-sm font-medium">"Sub-issues"</h2>
+                        <a href=new_sub_issue_href class="btn btn-ghost btn-xs">
+                            "+ Add sub-issue"
+                        </a>
+                    </div>
+                    {if sub_issues.is_empty() {
+                        view! {
+                            <p class="text-xs italic text-base-content/50">
+                                "No sub-issues yet. Break this work into smaller pieces \
+                                 if it helps you track them — they share this issue's project \
+                                 and sprint, but can have their own assignee, status, and effort."
+                            </p>
+                        }.into_any()
+                    } else {
+                        let project_id_for_links = project.id.clone();
+                        view! {
+                            <ul class="divide-y divide-base-200">
+                                {sub_issues.into_iter().map(|si| {
+                                    let detail_href = format!(
+                                        "/projects/{}/issues/{}",
+                                        project_id_for_links, si.id
+                                    );
+                                    let status_badge_class = format!(
+                                        "badge badge-xs {}",
+                                        match si.status {
+                                            IssueStatus::Open => "badge-ghost",
+                                            IssueStatus::InProgress => "badge-primary",
+                                            IssueStatus::Done => "badge-success",
+                                        }
+                                    );
+                                    let aria = format!(
+                                        "{}, status {}",
+                                        si.title,
+                                        si.status.label(),
+                                    );
+                                    view! {
+                                        <li class="py-2 flex items-center gap-2"
+                                            aria-label=aria>
+                                            <span class=status_badge_class>
+                                                {si.status.label()}
+                                            </span>
+                                            <a href=detail_href class="text-sm hover:underline flex-1">
+                                                {si.title}
+                                            </a>
+                                        </li>
+                                    }
+                                }).collect_view()}
+                            </ul>
+                        }.into_any()
+                    }}
+                </div>
+            </section>
+        })
+    } else {
+        None
+    };
+
+    let sprint_card = show_sprint_picker.then(|| view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
                  aria-label="Sprint assignment">
             <div class="card-body py-3">
@@ -911,22 +1146,43 @@ pub fn IssueDetailPage(
         </section>
     });
 
+    // Phase C PR1: parent-aware breadcrumb.
+    // For sub-issues, insert the parent issue as a link
+    // between the project and the current issue. The user
+    // sees "Projects / FooProject / Parent Title / This sub-
+    // issue" and can navigate up either to the project or to
+    // the parent.
+    let breadcrumb_items = {
+        let mut items = vec![
+            super::breadcrumb::BreadcrumbItem::link("Projects", "/projects"),
+            super::breadcrumb::BreadcrumbItem::link(
+                project_name_for_breadcrumb,
+                project_href_for_breadcrumb.clone(),
+            ),
+        ];
+        if let Some(parent) = &parent_issue {
+            let parent_href = format!("/projects/{}/issues/{}", project.id, parent.id);
+            items.push(super::breadcrumb::BreadcrumbItem::link(
+                parent.title.clone(),
+                parent_href,
+            ));
+        }
+        items.push(super::breadcrumb::BreadcrumbItem::current(
+            issue_title_for_breadcrumb,
+        ));
+        items
+    };
+
     view! {
         <AppShell title=title user=user flash=flash>
             <div class="max-w-3xl mx-auto">
-                {super::breadcrumb::render_breadcrumb(vec![
-                    super::breadcrumb::BreadcrumbItem::link("Projects", "/projects"),
-                    super::breadcrumb::BreadcrumbItem::link(
-                        project_name_for_breadcrumb,
-                        project_href_for_breadcrumb.clone(),
-                    ),
-                    super::breadcrumb::BreadcrumbItem::current(issue_title_for_breadcrumb),
-                ])}
+                {super::breadcrumb::render_breadcrumb(breadcrumb_items)}
                 {super::breadcrumb::render_back_link(
                     "issues",
                     project_href_for_breadcrumb,
                 )}
                 {body}
+                {sub_issues_card}
                 {sprint_card}
             </div>
         </AppShell>
@@ -1242,6 +1498,31 @@ pub fn render_issue_new(
     })
 }
 
+/// Render the sub-issue creation form (Phase C PR1). Wrapper
+/// around [`SubIssueNewPage`] that supplies the priority and
+/// status enum lists from `peisear_core` defaults — handlers
+/// don't need to know about those.
+pub fn render_new_sub_issue_form(
+    user: CurrentUser,
+    project: Project,
+    parent: Issue,
+    assignees: Vec<AssigneeOption>,
+) -> Html<String> {
+    super::render_to_html(move || {
+        view! {
+            <SubIssueNewPage
+                user=user
+                project=project
+                parent=parent
+                priorities=Priority::all().to_vec()
+                statuses=IssueStatus::all().to_vec()
+                assignees=assignees
+                flash=None
+            />
+        }
+    })
+}
+
 pub fn render_issue_detail(
     user: CurrentUser,
     project: Project,
@@ -1256,6 +1537,13 @@ pub fn render_issue_detail(
     sprint_options: Vec<(String, String)>,
     // The sprint id this issue is currently in, if any.
     current_sprint_id: Option<String>,
+    // Sub-issues of this issue (Phase C PR1). Always empty for
+    // sub-issues themselves (one-level rule); may be empty for
+    // top-level issues that haven't been broken down yet.
+    sub_issues: Vec<Issue>,
+    // The parent issue if this row is a sub-issue. Used for
+    // breadcrumb context.
+    parent_issue: Option<Issue>,
     flash: Option<String>,
     editing: bool,
 ) -> Html<String> {
@@ -1271,6 +1559,8 @@ pub fn render_issue_detail(
                 workload=workload
                 sprint_options=sprint_options
                 current_sprint_id=current_sprint_id
+                sub_issues=sub_issues
+                parent_issue=parent_issue
                 flash=flash
                 editing=editing
             />

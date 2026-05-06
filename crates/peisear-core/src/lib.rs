@@ -185,8 +185,49 @@ pub struct Issue {
     /// `ON DELETE SET NULL` so removing a user does not cascade-delete
     /// their issues; ownership simply returns to the pool.
     pub assignee_id: Option<String>,
+    /// Parent issue id when this row is a sub-issue (Phase C
+    /// PR1, peisear-feature-spec-v2.1 §8.3). `None` means
+    /// "this is a top-level issue" — the common case.
+    ///
+    /// Constraints (enforced by triggers in migration 0015):
+    ///
+    /// - The parent must be top-level itself; sub-issues
+    ///   cannot have sub-issues (one level only).
+    /// - The parent must be in the same project.
+    /// - An issue cannot be its own parent, transitively or
+    ///   directly.
+    /// - An issue with existing children cannot be demoted
+    ///   into being a sub-issue itself (would create a 2-
+    ///   level chain).
+    ///
+    /// Sub-issues inherit nothing automatically: assignee,
+    /// status, priority, effort, and sprint membership are
+    /// all independently settable. The one effective tie is
+    /// "parent's sprint determines the sub-issue's sprint" —
+    /// a UI-level rule (sub-issues don't get their own sprint
+    /// row in the planning surface) rather than a schema
+    /// constraint.
+    pub parent_issue_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+}
+
+impl Issue {
+    /// True if this issue is a sub-issue of another. Convenience
+    /// over checking the field directly so calling sites read
+    /// like prose ("if issue.is_sub_issue() { ... }").
+    pub fn is_sub_issue(&self) -> bool {
+        self.parent_issue_id.is_some()
+    }
+
+    /// True if this issue is at the top level of the
+    /// hierarchy. The complement of `is_sub_issue`. Top-level
+    /// issues are the only ones rendered on the kanban board,
+    /// the project list, and the sprint plan view; sub-issues
+    /// appear inline in their parent's detail page (§8.5).
+    pub fn is_top_level(&self) -> bool {
+        self.parent_issue_id.is_none()
+    }
 }
 
 /// Effort estimate presets shown in the UI.

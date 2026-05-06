@@ -424,6 +424,86 @@ pub async fn create(
     Ok(Redirect::to(&format!("/projects/{project_id}/issues/{id}")))
 }
 
+/// GET form for creating a sub-issue under a parent (Phase C
+/// PR1, peisear-feature-spec-v2.1 §8.3). The form posts to the
+/// sibling POST handler `create_sub_issue`. Like top-level
+/// issue creation, the sub-issue can pick its own assignee,
+/// priority, status, and effort. Sprint membership follows
+/// the parent (no sprint picker in this form).
+pub async fn new_sub_issue_form(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((project_id, parent_issue_id)): Path<(String, String)>,
+) -> AppResult<axum::response::Html<String>> {
+    let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    let parent = issues::find(&state.db, &parent_issue_id, &project_id).await?;
+
+    // Reject if parent is itself a sub-issue (nested sub-issues
+    // not allowed). The trigger would catch this at the SQL
+    // level, but bouncing here gives a better error.
+    if parent.is_sub_issue() {
+        return Err(AppError::Validation(
+            "Sub-issues cannot have their own sub-issues. Promote the parent to a top-level \
+             issue first, or add this work as a sibling sub-issue under the same parent."
+                .to_string(),
+        ));
+    }
+
+    let assignees = issues::list_assignee_candidates(&state.db, &project_id).await?;
+    Ok(components::issues::render_new_sub_issue_form(
+        user, project, parent, assignees,
+    ))
+}
+
+/// POST handler for creating a sub-issue under a parent.
+pub async fn create_sub_issue(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((project_id, parent_issue_id)): Path<(String, String)>,
+    Form(form): Form<IssueForm>,
+) -> AppResult<Redirect> {
+    form.validate()
+        .map_err(|e| AppError::Validation(super::format_validation(&e)))?;
+
+    // Access check on the project.
+    let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    // Existence + project-membership check on the parent.
+    let parent = issues::find(&state.db, &parent_issue_id, &project_id).await?;
+    if parent.is_sub_issue() {
+        return Err(AppError::Validation(
+            "Sub-issues cannot have their own sub-issues.".into(),
+        ));
+    }
+
+    let status = IssueStatus::parse(&form.status)
+        .ok_or_else(|| AppError::Validation("Invalid status".into()))?;
+    let priority = Priority::parse(&form.priority)
+        .ok_or_else(|| AppError::Validation("Invalid priority".into()))?;
+    let effort = parse_effort(&form.effort)?;
+    let assignee_id = validate_assignee(&state.db, &project_id, &form.assignee_id).await?;
+
+    let id = uuid::Uuid::new_v4().to_string();
+    issues::insert_sub_issue(
+        &state.db,
+        &id,
+        &project_id,
+        &parent_issue_id,
+        &user.id,
+        form.title.trim(),
+        form.description.trim(),
+        status,
+        priority,
+        effort,
+        assignee_id.as_deref(),
+    )
+    .await?;
+    // Redirect back to the parent so the user sees the new
+    // sub-issue rendered in the parent's Sub-issues list.
+    Ok(Redirect::to(&format!(
+        "/projects/{project_id}/issues/{parent_issue_id}"
+    )))
+}
+
 #[derive(Debug, Deserialize)]
 pub struct DetailQuery {
     /// Legacy `?edit=1` parameter from before Phase B PR3.
@@ -504,6 +584,28 @@ async fn render_detail_or_edit(
     let assignees = issues::list_assignee_candidates(&state.db, &project_id).await?;
     let workload = issues::project_workload(&state.db, &project_id).await?;
 
+    // Sub-issue context (Phase C PR1). Two pieces:
+    //
+    // 1. The sub-issues *of* this issue. Empty for sub-issues
+    //    (they can't have children themselves), and for top-
+    //    level issues that haven't been broken down yet.
+    // 2. The parent issue, if this row *is* a sub-issue.
+    //    Used for the breadcrumb "Project / Parent / This".
+    //
+    // Both lookups are cheap (single index hit each) so we run
+    // them unconditionally rather than gating on the issue's
+    // hierarchy state.
+    let sub_issues = if issue.is_top_level() {
+        peisear_storage::issues::list_sub_issues_of(&state.db, &issue_id).await?
+    } else {
+        Vec::new()
+    };
+    let parent_issue = if let Some(parent_id) = &issue.parent_issue_id {
+        Some(peisear_storage::issues::find(&state.db, parent_id, &project_id).await?)
+    } else {
+        None
+    };
+
     // Sprint options: only when the project belongs to a team
     // and that team has planned/active sprints. Personal
     // projects skip this entirely (sprints are a team feature).
@@ -533,6 +635,8 @@ async fn render_detail_or_edit(
         workload,
         sprint_options,
         current_sprint_id,
+        sub_issues,
+        parent_issue,
         flash,
         is_edit_mode,
     ))
