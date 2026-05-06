@@ -38,3 +38,14 @@ tower-http = { workspace = true }
 tracing = { workspace = true }
 uuid = { workspace = true }
 validator = { workspace = true }
+
+[dev-dependencies]
+# Integration tests live in `tests/` and use these crates. The
+# helper module shared between integration tests is at
+# `tests/common/` (each test crate imports it via `mod common;`),
+# matching the standard Rust convention for integration test
+# submodules. See peisear-feature-spec-v2.1.md §40 (Phase E
+# Security QA) for the test categories these dev-deps support.
+axum-test = { workspace = true }
+sqlx = { workspace = true }
+serde_urlencoded = { workspace = true }

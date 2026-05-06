@@ -7,6 +7,411 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.0] — 2026-05-03
+
+This release closes Phase A of the v2.1 spec ([information
+architecture](docs/spec/peisear-feature-spec-v2.1.md)). Five
+user-facing changes ship together: navigation rename
+(`/me`→`/today`, `/notifications`→`/inbox`), consolidated
+breadcrumbs, list filter+sort persistence, global search, and
+optimistic-lock for issue and project mutations. Two
+infrastructure decisions ship in support: an `axum-test`-based
+integration test scaffold, and `updated_at` columns on the
+remaining domain tables for the Phase B optimistic-lock
+rollout.
+
+### Added (Phase A Step 5 — optimistic-lock for issue and project mutations)
+
+This is the architectural commitment from
+[v2.1 spec §21.4](docs/spec/peisear-feature-spec-v2.1.md):
+every mutation endpoint compares a client-supplied
+`client_updated_at` against the row's canonical `updated_at`
+and rejects with 409 Conflict on mismatch. 0.17.0 ships the
+contract for issue and project mutations (the entities whose
+`updated_at` column already existed in 0.16.0). Sprint, team,
+team-membership, and capacity mutations get the schema
+infrastructure now (migration 0014 below) and the
+handler-level checks in Phase B (0.18.0).
+
+- **`AppError::OptimisticLockConflict`** new variant carrying
+  `entity_type`, `entity_id`, and `current_updated_at`. The
+  HTML response renders an explanatory error page urging the
+  user to refresh and re-apply. The structured JSON shape
+  from spec appendix E.3.3 is wired up here so when Phase B's
+  `/api/*` mutation endpoints land, the conflict response
+  payload is one `IntoResponse` impl away.
+- **`crate::error::check_optimistic_lock(...)`** centralises
+  the comparison so every handler site is one call:
+  parse client RFC3339 (400 on malformed) → compare to current
+  `updated_at` → 409 on mismatch. RFC3339 was chosen over
+  Unix milliseconds for unambiguity (the `T`-and-`Z` shape
+  self-identifies as a timestamp; ms vs. seconds vs. micros
+  unit confusion that bites Unix epoch values goes away);
+  language-portable parse paths in Rust, Python, JS,
+  PostgreSQL all agree on RFC3339; and SQLite's
+  `CURRENT_TIMESTAMP` already feeds chrono's `DateTime<Utc>`,
+  which renders to RFC3339 with `to_rfc3339()` for free.
+- **Issue mutations** carry `client_updated_at` end-to-end:
+  - The edit form (`IssueEditForm`) renders a hidden input
+    populated with `issue.updated_at.to_rfc3339()` at render
+    time.
+  - The `update` handler extends `IssueForm` with a
+    `client_updated_at: String` field, re-reads the issue
+    after the access check (so we compare against the
+    canonical value, not a stale read from the page render),
+    and calls `check_optimistic_lock` before any state-
+    mutating SQL.
+  - The kanban DnD JSON endpoint (`change_status`) extends
+    `StatusChange` with the same field. During the Phase A
+    rollout window the kanban JS hasn't been updated to
+    embed `data-updated-at` per card yet, so we accept an
+    empty string with a `tracing::debug!` line to track real
+    traffic; Phase D's direct-manipulation work upgrades
+    this to required.
+- **Project mutations** carry the same plumbing: hidden input
+  in `ProjectEditPage`, `client_updated_at` field on
+  `ProjectForm`, lock check in the `update` handler.
+- **Tests**:
+  - `crates/peisear-web/tests/optimistic_lock.rs` activates
+    4 tests (was 4 ignored in 0.16.0): issue update, issue
+    status change, issue update with missing
+    `client_updated_at`, and project update — each verifies
+    that a stale value returns 409 (or 400 for missing). The
+    sprint/capacity tests stay `#[ignore]` with notes
+    pointing at Phase B.
+
+### Added (migration 0014 — `updated_at` columns + auto-bump triggers)
+
+Schema preparation for the Phase B optimistic-lock rollout to
+sprints, teams, team_memberships, and user_capacities. Adds:
+
+- `updated_at` `DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP`
+  on each of the four tables.
+- `*_updated_at` AFTER UPDATE trigger that bumps
+  `updated_at` to `CURRENT_TIMESTAMP`. The
+  `WHEN OLD.updated_at = NEW.updated_at` guard prevents
+  recursion and documents that the application layer never
+  sets `updated_at` directly — the trigger is the single
+  point of truth.
+- Backfill: existing rows get `updated_at` set to the latest
+  meaningful event timestamp the row already carries
+  (`COALESCE(completed_at, started_at, created_at)` for
+  sprints; `created_at` for teams and capacities;
+  `joined_at` for memberships). Using `CURRENT_TIMESTAMP`
+  for backfill would invent a fictional "this row was
+  updated when the migration ran" event that any future
+  audit surface would have to apologise for.
+
+The Rust struct fields (`Sprint::updated_at`, `Team::updated_at`,
+`TeamMembership::updated_at`, `CapacityRow::updated_at`) and
+the storage-layer SELECT widening to fetch them are
+deliberately deferred to Phase B (0.18.0). Reasoning: they
+form one cluster of changes (~30 mechanical edits across
+struct definitions, query tuples, and handler call sites),
+and shipping them together with the Phase B endpoint
+authorization work is more reviewable than spreading them
+across two releases. Live data accumulates correct
+`updated_at` values from the moment 0.17.0 deploys, so when
+Phase B turns on the handler-level checks, even rows
+untouched in Phase A have a meaningful timestamp to compare
+against.
+
+### Added (Phase A Step 4 — global search)
+
+A search box in the navbar takes the user to project and open
+issue matches anywhere they have access. The implementation
+follows the v2.1 spec §4.5 ("Search by simple LIKE %; project +
+open issue scope; typeahead 8 / results 50").
+
+- **New module `peisear-storage::search`** with two queries:
+  - `projects_by_name(user_id, q, limit)` — projects the user
+    can access, name LIKE `%q%`. Access is "personal projects
+    they own + team projects of teams they belong to" (the
+    same predicate as `projects::list_for_user`).
+  - `open_issues_by_title(user_id, q, limit)` — issues in the
+    same accessible project set, title LIKE `%q%`, **with
+    `status != 'done'`** per the spec. The completed-work
+    surface is sprint summaries and project-detail filters,
+    not search.
+  - LIKE meta-character escaping: `%`, `_`, and `\` in the
+    user's input are escaped before the LIKE pattern is
+    bound, so a search for "100%" matches the literal `%`
+    rather than acting as a wildcard. Backslash is escaped
+    first so we don't double-escape the introducers in
+    subsequent replacements. Two unit tests cover the
+    escaping logic; integration test
+    `typeahead_handles_like_meta_characters` covers the
+    end-to-end behaviour.
+- **New handler module `peisear-web::handlers::search`** with
+  two endpoints:
+  - `GET /search?q=...&page=N` — HTML results page. Renders
+    Projects and Open issues sections side-by-side, paginated
+    at 50 hits per category per page. Each section
+    independently shows "Next →" / "← Previous" depending on
+    whether more rows exist beyond the current page; the
+    "Next" detection is done by fetching one extra row beyond
+    the page window, avoiding a `COUNT(*)` round-trip.
+  - `GET /api/search?q=...` — JSON typeahead for the navbar
+    input. Returns up to 8 hits total, balanced 4 projects +
+    4 issues with overflow back-fill. Echoes `q` in the
+    response so the client can drop stale responses if the
+    user has typed more characters since the request was
+    sent.
+- **New navbar input box** in `components/layout.rs`. A plain
+  HTML form so the search works without JavaScript (Enter
+  submits to /search). With JS, vanilla
+  `static/search.js` attaches a typeahead dropdown:
+  - 250ms debounce
+  - Aborts in-flight requests on new keystrokes
+  - Skips queries shorter than 2 characters
+  - Keyboard navigation (Down/Up to cycle items, Enter to
+    activate the focused one or fall through to form submit,
+    Escape to close)
+  - Click-outside closes the dropdown
+  - Server-side `q` echo + client-side comparison guards
+    against stale-response races
+  - HTML-escaping on both ends (server JSON encoding +
+    client innerHTML render) for defence-in-depth
+- **Tests**: 2 unit tests for the LIKE escaper; 9 integration
+  tests in `tests/search.rs` covering empty-query handling,
+  project name match, issue title match, exclusion of
+  completed issues, cross-user isolation (a user does not see
+  another user's personal project), LIKE-meta escaping, the
+  HTML results page, the empty-query results page, and the
+  authentication requirement.
+- **CI**: `test-peisear-web-search` job added.
+
+### Added (Phase A Step 3 — list filter/sort persistence)
+
+The project-detail issue list now remembers each user's filter
+and sort preferences per-project. The scheme is "URL primary,
+server default secondary" (decision A-3 = C in the v2.1 session
+record); the user-facing rules are described in
+[v2.1 spec §4.4](docs/spec/peisear-feature-spec-v2.1.md).
+
+- **New table `user_view_states`** (migration 0013). Stores a
+  per-user, per-view JSON blob. The schema-less blob shape
+  decouples future view-state fields from migrations — adding
+  a new filter dimension does not require an `ALTER TABLE`.
+  Documented in detail in the migration file's leading comment.
+- **New module `peisear-storage::view_states`**: `get`,
+  `upsert`, `delete`, plus `project_issues_key()` that mints
+  the canonical view key `project_issues:{project_id}` so
+  handlers don't have to remember the namespace by hand.
+- **`ProjectViewQuery` extended** with `status`, `assignee`,
+  and `sort` query params, and methods to (a) detect whether
+  any of them were URL-supplied, (b) merge with a saved
+  default such that URL-supplied fields win, (c) serialise
+  the persistence-worthy subset to JSON, and (d) parse back
+  defensively (a corrupt JSON row falls through to factory
+  defaults rather than crashing the page).
+- **`apply_filter_and_sort` in the issue handler**. Status
+  filter, assignee filter (including `unassigned` literal),
+  and sort by priority / created / updated. Stable sort
+  preserves the storage-layer default order as a tiebreaker.
+  Board view is **not** filtered — the kanban columns are
+  themselves the status structure, and hiding columns based
+  on a status filter would be surprising. Filtering applies
+  only to the list view.
+- **List view toolbar**: a plain `<form method="get">` with
+  status / assignee / sort selects and Apply / Reset buttons.
+  No JavaScript — Apply re-submits the form to the project
+  URL with the new query params. Reset links to the bare URL,
+  which inherits the saved default; explicitly choosing
+  "All / Anyone / Default" + Apply is the way to overwrite
+  the saved state. This trade-off is documented in the
+  component file: the alternative ("Reset wipes saved
+  default") would clash with users navigating via generic
+  links and losing their context every time.
+- **Persistence semantics**: the merged state is upserted
+  iff the URL contributed at least one filter/sort field. A
+  bare URL (no filter/sort params) does NOT overwrite the
+  saved default — that would erase the user's preference
+  every time they followed a generic link.
+- **Per-user isolation**: the storage key is namespaced by
+  `user_id`. Two users on the same project don't share view
+  state. (Phase A only ships personal projects; team-project
+  isolation arrives in Phase C, but the key shape is already
+  ready for it.)
+- **Tests** (`crates/peisear-web/tests/view_state.rs`): 5
+  cases covering toolbar render, URL filter applied, explicit
+  filter persists across bare-URL revisit, URL overrides
+  saved default, per-user defaults isolated.
+- **CI**: `test-peisear-web-view-state` job added.
+
+### Added (Phase A Step 2 — breadcrumb consolidation and back-link)
+
+This adds a shared breadcrumb component with consistent ARIA
+semantics on the three detail pages where users spend most of
+their time. See [v2.1 spec §4.4](docs/spec/peisear-feature-spec-v2.1.md)
+for the navigation-context-preservation rationale.
+
+- **`crates/peisear-web/src/components/breadcrumb.rs`** is the
+  new home for the breadcrumb / back-link markup. The previous
+  inline copies in `ProjectDetailPage`, `IssueDetailPage`, and
+  `SprintDetailPage` had drifted: some led with `Projects`,
+  others with `Teams`, none had a `Today` entry-point link, and
+  none tagged the terminal node with `aria-current="page"`. The
+  consolidation fixes all three.
+- **`Today` is the leading entry on every detail-page
+  breadcrumb**. It links to the v0.17.0 personal-dashboard URL
+  (`/today`), reinforcing the v2.1 navigation entry-point story.
+  `BreadcrumbItem` callers pass *intermediate* and *terminal*
+  nodes only — the leading `Today` link is prepended by
+  `render_breadcrumb` so it can't be forgotten.
+- **The terminal node carries `aria-current="page"`**. Screen
+  readers announce the user's current location; sighted users
+  get a non-link node visually distinct from the link siblings.
+- **A `← Back to {parent}` link sits beneath the breadcrumb**
+  on each detail page. Implemented as an `<a>` to a canonical
+  parent URL rather than `history.back()`, so the behaviour is
+  predictable for users arriving via deep links (e.g. an email
+  link). On mobile, where the breadcrumb often has to be
+  truncated to fit, this gives a finger-friendly tap target.
+- **Pages migrated**: `ProjectDetailPage`, `IssueDetailPage`,
+  `SprintDetailPage`. The inline `<div class="breadcrumbs">`
+  markup is replaced with a single call to
+  `render_breadcrumb(vec![…])` followed by
+  `render_back_link(label, href)`.
+- **Tests**: `crates/peisear-web/tests/breadcrumb.rs` covers
+  the structural invariants — `/today` link present, terminal
+  node tagged `aria-current="page"`, back-link rendered — by
+  substring-checking the SSR output. The substring approach is
+  intentionally loose: it asserts the *contract* (what a screen
+  reader will read) rather than the visual styling (which Phase
+  B will rework).
+
+### Added (Phase A Step 1 — URL rename: /me → /today, /notifications → /inbox)
+
+This is the first user-visible v2.1 change in the Phase A roadmap
+(see [v2.1 spec §4.2](docs/spec/peisear-feature-spec-v2.1.md) for
+the rationale).
+
+- **`/today`** is now the canonical personal-dashboard URL. The
+  same handler (`handlers::me::page`) serves it, and internal
+  links in the navbar dropdown and notification deep-links have
+  been updated.
+- **`/inbox`** is now the canonical notifications-inbox URL.
+  The same handlers (`handlers::notifications::*`) serve all
+  three routes (`GET /inbox`, `POST /inbox/{id}/read`,
+  `POST /inbox/mark-all-read`). The bell icon in the navbar,
+  the notification component's mark-read forms, and the
+  redirect target after marking read have all been updated.
+- **Legacy URLs return HTTP 308 Permanent Redirect**:
+  - `GET /me` → `/today`
+  - `GET /notifications` → `/inbox`
+  - `POST /notifications/mark-all-read` → `/inbox/mark-all-read`
+  - `POST /notifications/{id}/read` → `/inbox/{id}/read`
+
+  308 (rather than 301) is used uniformly so the four redirects
+  follow a single rule. 308 preserves the request method and
+  body across the redirect — required for the two POST routes,
+  unambiguous on the GET ones. RFC 7538.
+- **`crates/peisear-web/src/handlers/redirects.rs`** is the new
+  home for these redirect handlers. They're parameterless except
+  for `/notifications/{id}/read`, which preserves `{id}` to
+  the new path.
+- **Tests**: smoke.rs covers the happy-path GETs at the new
+  URLs and the redirect status of the legacy URLs.
+  auth_boundary.rs distinguishes "the redirect itself runs
+  before any auth check" (so unauthenticated `/me` returns 308
+  to `/today`, not 401/303 to `/login`) from "the destination
+  enforces auth" (so unauthenticated `/today` returns 303 to
+  `/login`). This split is documented in the test cases so a
+  reviewer can see the design intent: redirects don't depend
+  on session state.
+
+### Added (Phase A preparation — e2e basecost integration test infrastructure)
+
+- **`axum-test 20`** as a workspace-level dev-dependency.
+  Selected over `reqwest` + a real-port server because it
+  shares the test runtime, doesn't allocate ports (so test
+  parallelism isn't bottlenecked on port table), and integrates
+  with `axum::Router` directly. Cookie support is built in,
+  which peisear's session-based authentication requires.
+- **`crates/peisear-web/tests/common/`** integration test
+  helper module, structured as `mod.rs + submodules` per the
+  Rust convention for shared test helpers (a bare `common.rs`
+  would be compiled as its own empty test crate). Submodules:
+  - `server::TestApp::spawn()` — fresh DB pool, migrations
+    applied, JWT secret fixed for tests, `TestServer` configured
+    with cookie persistence.
+  - `auth::register / login / register_and_login / new_authed_app`
+    — production-flow user setup with cookie jar saved.
+  - `fixture::create_personal_project / create_issue` — domain
+    data factories that bypass form validation.
+  - `assertion::personal_data_endpoint_is_walled_off` and
+    `stale_update_returns_409` — shared invariants for §11.5
+    and §21.4.
+- **`crates/peisear-web/tests/smoke.rs`** — 11 baseline tests
+  exercising the canonical happy paths and the legacy URL
+  redirects. Covers health, login/register pages, the
+  register-then-redirect-to-/projects flow, the unauthenticated
+  redirect-to-/login behaviour, the `/today` dashboard for an
+  authed user, the `/inbox` dashboard for an authed user, logout,
+  and the four 308 redirects from the legacy `/me` /
+  `/notifications` URLs (including path-parameter preservation
+  on `/notifications/{id}/read`).
+- **`crates/peisear-web/tests/auth_boundary.rs`** — 7 test
+  entries for v2.1 §11.5 enforcement. 2 active after Phase A
+  Step 1 (`today_unauthenticated_redirects_to_login` and
+  `me_unauthenticated_redirects_to_today_not_login`); 5 marked
+  `#[ignore]` until their Phase B endpoints exist
+  (`/api/users/{id}/burnout`, `/api/users/{id}/capacity`,
+  `/api/users/{id}/notifications`, the team-admin-cannot-read
+  case, and explicit user-scoped POSTs). The `#[ignore]`
+  attribute is removed in the same PR that introduces the
+  corresponding production endpoint, so the test inventory
+  stays in lock-step with the API surface.
+- **`crates/peisear-web/tests/optimistic_lock.rs`** — 4 test
+  inventory entries for v2.1 §21.4 (issue update, issue
+  status, sprint start, capacity period). All `#[ignore]`d
+  pending Phase A's `client_updated_at` plumbing rollout.
+- **`.github/workflows/test.yml`** — CI runs `cargo fmt`,
+  `cargo clippy --all-targets -D warnings`, the integration
+  test crates one-at-a-time (the combined link step has been
+  observed to peak above 7 GB RAM on the default runner), and
+  `cargo build --workspace`. Each test crate gets its own
+  job for clear failure attribution.
+
+### Decisions
+
+These v2.1 implementation-strategy decisions, recorded for
+future reference:
+
+- **Versioning**: minor-bumps per Phase (Phase A → 0.17.0,
+  Phase B → 0.18.0, ..., Phase E → 0.21.0). Major-version 1.0
+  is reserved for a later definition-of-done milestone, not
+  for v2.1 spec completion.
+- **URL renames**: `/me` → `/today` and `/notifications` → `/inbox`
+  use **HTTP 308 Permanent Redirects** rather than dual handlers.
+  Old handlers are deleted; only the redirect remains. 308 (over
+  301) is chosen because two of the four legacy routes are POSTs
+  (`/notifications/mark-all-read`, `/notifications/{id}/read`),
+  and 308 preserves the request method across the redirect where
+  301 historically allowed clients to silently downgrade POST to
+  GET. Using 308 uniformly across all four redirects keeps the
+  rule simple. External bookmarks and links keep working
+  indefinitely.
+- **Optimistic locking rollout**: applied to all mutation
+  endpoints whose entities have an `updated_at` column —
+  issues and projects in 0.17.0; sprints, teams, team
+  memberships, and capacity periods in 0.18.0 once the
+  Phase B endpoint authorization work brings the rest of the
+  schema in line. Migration 0014 ships the `updated_at`
+  columns and triggers in 0.17.0 so live data accumulates
+  meaningful timestamps from day one. Mixed-state APIs are
+  bounded to one release window; the `updated_at` schema
+  itself is uniform.
+- **Frontend stack**: Leptos hydration / island. The crate is
+  already in the dependency tree; islands cover the interactive
+  needs (drag-and-drop, optimistic updates, conflict toasts)
+  without introducing a second framework.
+- **e2e infrastructure**: integrated into `peisear-web/tests/`
+  before Phase A implementation begins, rather than added later
+  Phase E. Phase A's optimistic-lock plumbing needs the test
+  scaffolding from day one.
+
 ## [0.16.0] — 2026-04-29
 
 ### Added

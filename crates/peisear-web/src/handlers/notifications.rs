@@ -1,8 +1,11 @@
 //! Notifications inbox handlers.
 //!
-//! `/notifications`         — inbox list
-//! `/notifications/{id}/read`   — mark one read
-//! `/notifications/mark-all-read` — clear inbox
+//! `/inbox`                  — inbox list
+//! `/inbox/{id}/read`        — mark one read
+//! `/inbox/mark-all-read`    — clear inbox
+//!
+//! Renamed from `/notifications` in v0.17.0; legacy URLs are
+//! kept as 308 Permanent Redirects (see [`crate::handlers::redirects`]).
 
 use axum::{
     extract::{Path, Query, State},
@@ -44,7 +47,7 @@ pub async fn mark_read(
     Path(id): Path<String>,
 ) -> AppResult<Redirect> {
     notif_store::mark_read(&state.db, &user.id, &id).await?;
-    Ok(Redirect::to("/notifications"))
+    Ok(Redirect::to("/inbox"))
 }
 
 /// Clear the inbox: mark every unread row as read at once.
@@ -53,6 +56,6 @@ pub async fn mark_all_read(
     State(state): State<AppState>,
 ) -> AppResult<Redirect> {
     let n = notif_store::mark_all_read(&state.db, &user.id).await?;
-    let target = format!("/notifications?flash=Marked+{n}+as+read");
+    let target = format!("/inbox?flash=Marked+{n}+as+read");
     Ok(Redirect::to(&target))
 }

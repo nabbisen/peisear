@@ -22,6 +22,15 @@ pub fn ProjectDetailPage(
     workload: Vec<UserLoad>,
     health: ProjectHealthReport,
     flash: Option<String>,
+    /// Currently-applied status filter, e.g. "open" /
+    /// "in_progress" / "done". Empty string = no filter.
+    active_status: String,
+    /// Currently-applied assignee filter: a user id, the literal
+    /// string "unassigned", or empty for no filter.
+    active_assignee: String,
+    /// Currently-applied sort key: "priority" / "created" /
+    /// "updated". Empty string = storage-default order.
+    active_sort: String,
 ) -> impl IntoView {
     let title = format!("{} — Issue Tracker", project.name);
     let is_board = view_mode == "board";
@@ -57,14 +66,18 @@ pub fn ProjectDetailPage(
     let name_for_breadcrumb = project.name.clone();
     let name_for_header = project.name.clone();
 
+    let breadcrumb = super::breadcrumb::render_breadcrumb(vec![
+        super::breadcrumb::BreadcrumbItem::link("Projects", "/projects"),
+        super::breadcrumb::BreadcrumbItem::current(name_for_breadcrumb),
+    ]);
+    let back_link = super::breadcrumb::render_back_link("Projects", "/projects");
+
     view! {
         <AppShell title=title user=user flash=flash>
+            {breadcrumb}
+            {back_link}
             <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
                 <div class="min-w-0">
-                    <div class="breadcrumbs text-sm"><ul>
-                        <li><a href="/projects">"Projects"</a></li>
-                        <li class="max-w-[24ch] truncate">{name_for_breadcrumb}</li>
-                    </ul></div>
                     <h1 class="text-2xl font-semibold tracking-tight truncate">{name_for_header}</h1>
                     {desc_node}
                 </div>
@@ -86,7 +99,16 @@ pub fn ProjectDetailPage(
             {if is_board {
                 view! { <BoardView project_id=project_id_for_board columns=columns assignees=assignees.clone()/> }.into_any()
             } else {
-                view! { <ListView project_id=project_id_for_list issues=all_issues assignees=assignees.clone()/> }.into_any()
+                view! {
+                    <ListView
+                        project_id=project_id_for_list
+                        issues=all_issues
+                        assignees=assignees.clone()
+                        active_status=active_status
+                        active_assignee=active_assignee
+                        active_sort=active_sort
+                    />
+                }.into_any()
             }}
 
             // DnD script is loaded only in board mode. `data-project-id`
@@ -494,9 +516,108 @@ fn ListView(
     project_id: String,
     issues: Vec<Issue>,
     assignees: Vec<AssigneeOption>,
+    /// Active status filter (empty = "all").
+    active_status: String,
+    /// Active assignee filter (user id, "unassigned", or empty).
+    active_assignee: String,
+    /// Active sort key.
+    active_sort: String,
 ) -> impl IntoView {
     let is_empty = issues.is_empty();
+    let toolbar_action = format!("/projects/{project_id}");
+    let reset_href = toolbar_action.clone();
+    let assignees_for_toolbar = assignees.clone();
     view! {
+        <>
+        // Filter & sort toolbar. Submits as a normal HTML GET
+        // form: the browser appends the chosen values as query
+        // parameters on the project URL, and the handler parses
+        // them out of `ProjectViewQuery`. This is the URL-primary
+        // half of v2.1 §4.4. The handler also persists the
+        // selection as the user's saved default for this project.
+        //
+        // No JavaScript: a plain `<select onchange="form.submit()">`
+        // would be slightly nicer UX but adds JS for marginal
+        // gain. The "Apply" button keeps the page accessible to
+        // any user agent.
+        <form method="get" action=toolbar_action
+              class="flex flex-wrap items-end gap-2 mb-3"
+              aria-label="Filter and sort issues">
+            // Hidden field so toolbar submission keeps us in list
+            // view. Without this, picking a filter would bounce
+            // the user back to the board view default.
+            <input type="hidden" name="view" value="list"/>
+
+            <label class="form-control">
+                <div class="label py-0">
+                    <span class="label-text text-xs">"Status"</span>
+                </div>
+                <select name="status" class="select select-sm select-bordered">
+                    <option value="" selected=active_status.is_empty()>"All statuses"</option>
+                    {IssueStatus::all().into_iter().map(|s| {
+                        let s_str = s.as_str().to_string();
+                        let selected = active_status == s_str;
+                        view! {
+                            <option value=s_str.clone() selected=selected>{s.label()}</option>
+                        }
+                    }).collect_view()}
+                </select>
+            </label>
+
+            <label class="form-control">
+                <div class="label py-0">
+                    <span class="label-text text-xs">"Assignee"</span>
+                </div>
+                <select name="assignee" class="select select-sm select-bordered">
+                    <option value="" selected=active_assignee.is_empty()>"Anyone"</option>
+                    <option value="unassigned"
+                            selected={active_assignee == "unassigned"}>
+                        "Unassigned"
+                    </option>
+                    {assignees_for_toolbar.into_iter().map(|a| {
+                        let a_id = a.id.clone();
+                        let selected = active_assignee == a_id;
+                        view! {
+                            <option value=a_id selected=selected>
+                                {a.display_name}
+                            </option>
+                        }
+                    }).collect_view()}
+                </select>
+            </label>
+
+            <label class="form-control">
+                <div class="label py-0">
+                    <span class="label-text text-xs">"Sort by"</span>
+                </div>
+                <select name="sort" class="select select-sm select-bordered">
+                    <option value="" selected=active_sort.is_empty()>"Default"</option>
+                    <option value="priority"
+                            selected={active_sort == "priority"}>"Priority"</option>
+                    <option value="created"
+                            selected={active_sort == "created"}>"Recently created"</option>
+                    <option value="updated"
+                            selected={active_sort == "updated"}>"Recently updated"</option>
+                </select>
+            </label>
+
+            <button type="submit" class="btn btn-sm btn-primary">"Apply"</button>
+            // "Reset" links back to the bare list URL with no
+            // filter/sort params. Per the handler logic, a bare
+            // URL does NOT clear the saved server default — the
+            // user would need to explicitly choose "All / Anyone
+            // / Default" and click Apply to overwrite the saved
+            // state. This is a deliberate trade-off: the
+            // alternative ("clicking Reset wipes saved state")
+            // would conflict with users navigating via generic
+            // links, who would otherwise lose their filter
+            // every time.
+            <a href=reset_href class="btn btn-sm btn-ghost"
+               aria-label="Show this list with no filter or sort applied">
+                "Reset"
+            </a>
+        </form>
+
         <div class="card bg-base-100 border border-base-300">
             <div class="overflow-x-auto">
                 <table class="table table-sm">
@@ -549,6 +670,7 @@ fn ListView(
                 </table>
             </div>
         </div>
+        </>
     }
 }
 
@@ -754,11 +876,18 @@ pub fn IssueDetailPage(
     view! {
         <AppShell title=title user=user flash=flash>
             <div class="max-w-3xl mx-auto">
-                <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects">"Projects"</a></li>
-                    <li><a href=project_href_for_breadcrumb>{project_name_for_breadcrumb}</a></li>
-                    <li class="max-w-[32ch] truncate">{issue_title_for_breadcrumb}</li>
-                </ul></div>
+                {super::breadcrumb::render_breadcrumb(vec![
+                    super::breadcrumb::BreadcrumbItem::link("Projects", "/projects"),
+                    super::breadcrumb::BreadcrumbItem::link(
+                        project_name_for_breadcrumb,
+                        project_href_for_breadcrumb.clone(),
+                    ),
+                    super::breadcrumb::BreadcrumbItem::current(issue_title_for_breadcrumb),
+                ])}
+                {super::breadcrumb::render_back_link(
+                    "issues",
+                    project_href_for_breadcrumb,
+                )}
                 {body}
                 {sprint_card}
             </div>
@@ -783,10 +912,21 @@ fn IssueEditForm(
     let assignee_for_hint = current_assignee_id.clone();
     let title_value = issue.title.clone();
     let description = issue.description.clone();
+    // RFC3339 captured at render time. The handler verifies
+    // this against the issue's current `updated_at` per
+    // peisear-feature-spec-v2.1 §21.4 and rejects with 409 if
+    // someone else has saved an edit between this render and
+    // the form submission.
+    let client_updated_at = issue.updated_at.to_rfc3339();
 
     view! {
         <div class="card bg-base-100 border border-base-300 shadow-sm">
             <form method="post" action=submit_action class="card-body gap-3">
+                // Optimistic-lock guard. If a concurrent edit
+                // lands first, this stale value triggers the
+                // 409 conflict path. See §21.4.
+                <input type="hidden" name="client_updated_at" value=client_updated_at/>
+
                 <label class="form-control w-full">
                     <div class="label py-1"><span class="label-text text-sm">"Title"</span></div>
                     <input type="text" name="title" required=true maxlength="200"
@@ -952,6 +1092,7 @@ fn IssueView(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_project_detail(
     user: CurrentUser,
     project: Project,
@@ -962,6 +1103,14 @@ pub fn render_project_detail(
     workload: Vec<UserLoad>,
     health: ProjectHealthReport,
     flash: Option<String>,
+    // Phase A Step 3 (v2.1 §4.4): the currently-active filter
+    // and sort, computed by the handler from URL params merged
+    // with server-saved defaults. Empty string means "no
+    // constraint" — the UI dropdown shows that as the default
+    // option.
+    active_status: String,
+    active_assignee: String,
+    active_sort: String,
 ) -> Html<String> {
     super::render_to_html(move || {
         view! {
@@ -975,6 +1124,9 @@ pub fn render_project_detail(
                 workload=workload
                 health=health
                 flash=flash
+                active_status=active_status
+                active_assignee=active_assignee
+                active_sort=active_sort
             />
         }
     })

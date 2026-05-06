@@ -20,7 +20,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.16.0"
+version = "0.17.0"
 edition = "2024"
 rust-version = "1.85"
 
@@ -48,6 +48,17 @@ axum-extra = { version = "0.12", features = ["cookie"] }
 tokio = { version = "1", features = ["full"] }
 tower = "0.5"
 tower-http = { version = "0.6", features = ["fs", "trace", "compression-gzip"] }
+
+# ─── Testing (dev-only across workspace) ─────────────────────────────
+# axum-test wraps a Router and presents an HTTP-like fluent API for
+# integration tests. We pick it over reqwest+real-server for two
+# reasons: (1) it doesn't bind to a real port, so test parallelism
+# isn't bottlenecked on port allocation; (2) it shares the runtime
+# with the test, avoiding the spawn-server-and-poll dance.
+# Cookie support is built-in (no feature flag) and required because
+# peisear authenticates via HTTP-only cookies — tests need to
+# exercise the full session lifecycle.
+axum-test = "20"
 
 # ─── Storage ─────────────────────────────────────────────────────────
 sqlx = { version = "0.8", default-features = false, features = [
@@ -93,11 +104,11 @@ wasm-smtp-cloudflare = "0.9"
 mail-builder = "0.4"
 
 # ─── Workspace‑local crates (consumed via `workspace = true`) ────────
-peisear-core = { version = "0.16.0", path = "crates/peisear-core" }
-peisear-auth = { version = "0.16.0", path = "crates/peisear-auth" }
-peisear-storage = { version = "0.16.0", path = "crates/peisear-storage" }
-peisear-notify = { version = "0.16.0", path = "crates/peisear-notify" }
-peisear-web = { version = "0.16.0", path = "crates/peisear-web" }
+peisear-core = { version = "0.17.0", path = "crates/peisear-core" }
+peisear-auth = { version = "0.17.0", path = "crates/peisear-auth" }
+peisear-storage = { version = "0.17.0", path = "crates/peisear-storage" }
+peisear-notify = { version = "0.17.0", path = "crates/peisear-notify" }
+peisear-web = { version = "0.17.0", path = "crates/peisear-web" }
 
 # Release profile applies to all workspace binaries.
 [profile.release]

@@ -58,6 +58,14 @@ pub struct ProjectForm {
     /// for "personal project"; we treat that as `None`.
     #[serde(default)]
     pub team_id: String,
+    /// RFC3339 timestamp captured when the edit form was rendered.
+    /// Validated against the project's current `updated_at` per
+    /// peisear-feature-spec-v2.1 §21.4 (Phase A Step 5). Empty
+    /// (i.e. omitted) is rejected as a 400 by `check_optimistic_lock`
+    /// — we never silently bypass the lock. Default for create
+    /// (which doesn't supply it).
+    #[serde(default)]
+    pub client_updated_at: String,
 }
 
 pub async fn create(
@@ -119,6 +127,18 @@ pub async fn update(
 ) -> AppResult<Redirect> {
     form.validate()
         .map_err(|e| AppError::Validation(super::format_validation(&e)))?;
+
+    // Optimistic-lock check (peisear-feature-spec-v2.1 §21.4).
+    // Read the current project row; both for the access check
+    // and for its `updated_at` to compare against the form.
+    let current = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    crate::error::check_optimistic_lock(
+        &form.client_updated_at,
+        current.updated_at,
+        "project",
+        &project_id,
+    )?;
+
     projects::update(
         &state.db,
         &project_id,

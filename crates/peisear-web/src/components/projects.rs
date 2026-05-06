@@ -174,6 +174,11 @@ pub fn ProjectEditPage(
     let name_for_breadcrumb = name.clone();
     let name_for_input = name.clone();
     let title = format!("Edit {name} — Issue Tracker");
+    // Optimistic-lock guard. The handler verifies this against
+    // the project's current `updated_at` per
+    // peisear-feature-spec-v2.1 §21.4 and returns 409 if a
+    // concurrent edit landed first.
+    let client_updated_at = project.updated_at.to_rfc3339();
 
     view! {
         <AppShell title=title user=user flash=flash>
@@ -188,6 +193,7 @@ pub fn ProjectEditPage(
 
                 <div class="card bg-base-100 border border-base-300 shadow-sm">
                     <form method="post" action=edit_action class="card-body gap-3">
+                        <input type="hidden" name="client_updated_at" value=client_updated_at/>
                         <label class="form-control w-full">
                             <div class="label py-1"><span class="label-text text-sm">"Name"</span></div>
                             <input type="text" name="name" required=true maxlength="120"

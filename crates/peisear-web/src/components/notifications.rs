@@ -1,9 +1,9 @@
-//! Inbox page for `/notifications`.
+//! Inbox page for `/inbox`.
 //!
 //! Renders the user's notification history with read/unread
 //! distinction, mark-as-read action per row, and a "mark all
 //! read" affordance. Each row links to a relevant page
-//! (e.g. `/me` for burnout kinds) when applicable.
+//! (e.g. `/today` for burnout kinds) when applicable.
 //!
 //! Design notes:
 //! - Unread rows render with a subtle left-border accent;
@@ -58,7 +58,7 @@ pub fn InboxPage(
                         <p class="text-sm text-base-content/60">{header_status_text}</p>
                     </div>
                     {has_unread.then(|| view! {
-                        <form method="post" action="/notifications/mark-all-read">
+                        <form method="post" action="/inbox/mark-all-read">
                             <button type="submit" class="btn btn-sm btn-ghost"
                                     aria-label="Mark all notifications as read">
                                 "Mark all read"
@@ -124,7 +124,7 @@ fn render_row(n: Notification) -> impl IntoView {
     );
 
     let link_target = link_target_for_kind(&n.kind);
-    let mark_read_action = format!("/notifications/{}/read", n.id);
+    let mark_read_action = format!("/inbox/{}/read", n.id);
     let dispatched_text = if n.dispatched_via.is_empty() {
         None
     } else {
@@ -185,12 +185,12 @@ fn render_row(n: Notification) -> impl IntoView {
 }
 
 /// Where this kind of notification's "View context" link sends
-/// the user. Burnout kinds go to `/me`; project trend kinds
+/// the user. Burnout kinds go to `/today`; project trend kinds
 /// will eventually take a `project_id` payload and link to that
 /// project's page (placeholder for now).
 fn link_target_for_kind(kind_str: &str) -> Option<String> {
     match kind_str {
-        kind::BURNOUT_OVERLOAD | kind::BURNOUT_STALLED => Some("/me".to_string()),
+        kind::BURNOUT_OVERLOAD | kind::BURNOUT_STALLED => Some("/today".to_string()),
         kind::PROJECT_TREND_DECLINE => Some("/projects".to_string()),
         _ => None,
     }

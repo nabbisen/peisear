@@ -508,12 +508,16 @@ pub fn SprintDetailPage(
                   flash=flash
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
-                <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams">"Teams"</a></li>
-                    <li><a href=team_href>{team_name}</a></li>
-                    <li><a href=sprints_href>"Sprints"</a></li>
-                    <li>{sprint_name.clone()}</li>
-                </ul></div>
+                {super::breadcrumb::render_breadcrumb(vec![
+                    super::breadcrumb::BreadcrumbItem::link("Teams", "/teams"),
+                    super::breadcrumb::BreadcrumbItem::link(
+                        team_name,
+                        team_href.clone(),
+                    ),
+                    super::breadcrumb::BreadcrumbItem::link("Sprints", sprints_href.clone()),
+                    super::breadcrumb::BreadcrumbItem::current(sprint_name.clone()),
+                ])}
+                {super::breadcrumb::render_back_link("sprints", sprints_href)}
 
                 <div class="flex items-center justify-between gap-3 mb-2">
                     <div>

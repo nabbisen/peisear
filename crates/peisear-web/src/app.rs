@@ -11,8 +11,8 @@ use tower_http::{compression::CompressionLayer, services::ServeDir, trace::Trace
 use crate::{
     AppState,
     handlers::{
-        auth, issues, me, notification_preferences, notifications, projects, root, settings,
-        sprints, teams,
+        auth, issues, me, notification_preferences, notifications, projects, redirects, root,
+        search, settings, sprints, teams,
     },
 };
 
@@ -57,15 +57,31 @@ pub fn build_router(state: AppState) -> Router {
             "/settings/notifications/silence-all",
             post(notification_preferences::silence_all),
         )
-        // Notifications inbox
-        .route("/notifications", get(notifications::page))
+        // Inbox (formerly /notifications, renamed in 0.17.0 per
+        // peisear-feature-spec-v2.1 §4.2). Old paths return 308
+        // Permanent Redirect; see handlers::redirects for rationale.
+        .route("/inbox", get(notifications::page))
         .route(
-            "/notifications/mark-all-read",
+            "/inbox/mark-all-read",
             post(notifications::mark_all_read),
         )
         .route(
-            "/notifications/{id}/read",
+            "/inbox/{id}/read",
             post(notifications::mark_read),
+        )
+        // Legacy /notifications redirects → /inbox (308, preserves
+        // POST method for the two POST endpoints).
+        .route(
+            "/notifications",
+            get(redirects::notifications_to_inbox),
+        )
+        .route(
+            "/notifications/mark-all-read",
+            post(redirects::notifications_mark_all_read_to_inbox),
+        )
+        .route(
+            "/notifications/{id}/read",
+            post(redirects::notifications_read_to_inbox),
         )
         // Teams (0.14.0)
         .route("/teams", get(teams::list_page).post(teams::create))
@@ -118,8 +134,16 @@ pub fn build_router(state: AppState) -> Router {
             "/projects/{project_id}/issues/{issue_id}/sprint",
             post(sprints::assign_issue),
         )
-        // Personal dashboard
-        .route("/me", get(me::page))
+        // Personal dashboard. Renamed from /me to /today in 0.17.0
+        // per peisear-feature-spec-v2.1 §4.2; legacy /me returns
+        // 308 Permanent Redirect.
+        .route("/today", get(me::page))
+        .route("/me", get(redirects::me_to_today))
+        // Global search (Phase A Step 4, peisear-feature-spec-v2.1 §4.5).
+        // /search is the HTML results page (form submission, direct URL).
+        // /api/search is the JSON typeahead used by the navbar input.
+        .route("/search", get(search::results_page))
+        .route("/api/search", get(search::typeahead))
         // Projects
         .route(
             "/projects",

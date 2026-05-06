@@ -1,0 +1,130 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  # Cap codegen units to keep linker memory in check on the
+  # default GitHub runner (7 GB RAM). The peisear-web test build
+  # in particular has been observed to OOM with the rustc
+  # default of 256.
+  CARGO_PROFILE_DEV_CODEGEN_UNITS: 16
+  RUSTFLAGS: -D warnings
+
+jobs:
+  fmt:
+    name: cargo fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+
+  clippy:
+    name: cargo clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --workspace --all-targets -- -D warnings
+
+  # Build and test each test target individually rather than running
+  # `cargo test --workspace` in one go. The combined build links many
+  # large crates (sqlx + leptos + axum + wasm-smtp family) and has
+  # been observed to peak above the GitHub runner's RAM limit during
+  # the linker step. Splitting per test crate keeps each link step
+  # under the cap and also produces clearer failure attribution.
+  test-peisear-web-smoke:
+    name: peisear-web / smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test smoke -- --test-threads=1
+
+  test-peisear-web-auth-boundary:
+    name: peisear-web / auth_boundary
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test auth_boundary -- --test-threads=1
+
+  test-peisear-web-breadcrumb:
+    name: peisear-web / breadcrumb
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test breadcrumb -- --test-threads=1
+
+  test-peisear-web-view-state:
+    name: peisear-web / view_state
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test view_state -- --test-threads=1
+
+  test-peisear-web-search:
+    name: peisear-web / search
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test search -- --test-threads=1
+
+  test-peisear-web-optimistic-lock:
+    name: peisear-web / optimistic_lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test optimistic_lock -- --test-threads=1
+
+  test-peisear-notify:
+    name: peisear-notify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-notify -- --test-threads=1
+
+  # Library-only test runs for crates without integration tests
+  # currently. Cheap; catches doctests and unit tests as those land.
+  test-libs:
+    name: peisear-core / peisear-auth / peisear-storage (lib tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-core --lib
+      - run: cargo test -p peisear-auth --lib
+      - run: cargo test -p peisear-storage --lib
+
+  build:
+    name: cargo build (release-lite)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --workspace

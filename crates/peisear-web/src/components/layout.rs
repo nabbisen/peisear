@@ -60,6 +60,13 @@ pub fn AppShell(
                 <FlashBar flash=flash/>
                 {children()}
             </main>
+            // Global search typeahead. Loaded once per authed
+            // page because the navbar input lives in every
+            // AppShell render. Deferred so the script doesn't
+            // block first paint — the input remains usable as a
+            // plain HTML form (Enter submits to /search) until
+            // the JS finishes parsing.
+            <script src="/static/search.js" defer=true></script>
         </Base>
     }
 }
@@ -102,8 +109,45 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                     <span class="text-primary">"●"</span>" Issue Tracker"
                 </a>
             </div>
+
+            // Global search (Phase A Step 4, v2.1 §4.5).
+            // The form submits to /search for the HTML results
+            // page. The vanilla JS at /static/search.js attaches
+            // a typeahead dropdown to this input via the data
+            // attribute below — JS-disabled clients still get a
+            // working search box, just without the dropdown
+            // preview.
+            //
+            // The whole block is wrapped in `relative` so the
+            // dropdown's `absolute` positioning can be relative
+            // to the input, not the whole navbar. `min-w` keeps
+            // the box from collapsing on small viewports; mobile
+            // refinement (drawer placement) is Phase E mobile QA.
+            <div class="flex-none mx-2 hidden sm:block">
+                <form method="get" action="/search"
+                      class="relative"
+                      role="search"
+                      aria-label="Search projects and open issues">
+                    <input type="search"
+                           name="q"
+                           placeholder="Search..."
+                           autocomplete="off"
+                           class="input input-bordered input-sm w-64"
+                           data-typeahead="global"
+                           aria-label="Search query"/>
+                    // Container the JS populates with the
+                    // typeahead dropdown. Empty until the
+                    // server returns hits.
+                    <div data-typeahead-dropdown=""
+                         class="absolute left-0 right-0 mt-1 z-50 hidden bg-base-100 border border-base-300 rounded-md shadow-lg max-h-96 overflow-y-auto"
+                         role="listbox"
+                         aria-label="Search suggestions">
+                    </div>
+                </form>
+            </div>
+
             <div class="flex-none gap-2">
-                <a href="/notifications"
+                <a href="/inbox"
                    class="btn btn-ghost btn-sm relative"
                    aria-label=bell_aria>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
@@ -126,9 +170,9 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                     </label>
                     <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-48 border border-base-300">
                         <li class="menu-title"><span class="text-xs opacity-70">{user.email}</span></li>
-                        <li><a href="/me">"My dashboard"</a></li>
+                        <li><a href="/today">"Today"</a></li>
                         <li><a href="/teams">"Teams"</a></li>
-                        <li><a href="/notifications">"Notifications"</a></li>
+                        <li><a href="/inbox">"Inbox"</a></li>
                         <li><a href="/settings">"Settings"</a></li>
                         <li>
                             <form method="post" action="/logout">

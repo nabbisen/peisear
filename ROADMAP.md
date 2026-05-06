@@ -10,6 +10,200 @@ for the mapping.
 
 The next few minor releases.
 
+### v2.1 spec implementation (active, multi-release)
+
+The [v2.1 feature specification](docs/spec/peisear-feature-spec-v2.1.md)
+defines a UI/UX overhaul (5-entry navigation, sub-issue
+hierarchy, calendar, direct-manipulation surfaces, plus the
+review-driven additions in §11.5 / §21.4 / §28.6). It rolls
+out across five phases, one per minor release:
+
+- **Phase A — Information architecture** *(0.17.0, shipped
+  2026-05-03)*. 5-entry navigation (`/me` → `/today`,
+  `/notifications` → `/inbox` with HTTP 308 permanent
+  redirects — 308 over 301 preserves POST method on the two
+  legacy POST endpoints), consolidated breadcrumb/back-link
+  components, list filter+sort persistence (URL-primary,
+  server view_state secondary), global search (LIKE % over
+  project + open-issue scope, typeahead 8 / results 50),
+  optimistic-lock contract for issue and project mutations
+  (entities whose `updated_at` column predates 0.17.0) plus
+  schema preparation (migration 0014) for the four
+  remaining tables.
+- **Phase B — Key screens** *(target: 0.18.0)*. `/today`
+  panel collapsing, "what to read first" callout, project-
+  health explainability, issue-detail edit-mode URL, status
+  segment UI on the detail page. Personal-data API
+  endpoints (`/api/users/{id}/burnout` etc) land here,
+  gated by §11.5 authorization checks. **Also closes the
+  optimistic-lock rollout**: surfaces `Sprint::updated_at`,
+  `Team::updated_at`, `TeamMembership::updated_at`,
+  `CapacityRow::updated_at` to the application layer (the
+  columns and triggers landed in 0.17.0 via migration 0014;
+  Phase B widens the storage SELECTs and adds the handler-
+  level lock checks for sprint, team, membership, and
+  capacity mutations). With Phase B done, every domain-
+  entity mutation honours the §21.4 contract.
+- **Phase C — Missing surfaces** *(target: 0.19.0)*. Sub-issue
+  hierarchy (parent_id approach, see §8.3 / appendix C),
+  calendar (personal axis + project axis only — no team axis),
+  sprint-planning page, inbox refinements.
+- **Phase D — Direct manipulation** *(target: 0.20.0)*. The
+  five direct-manipulation surfaces (status click toggle,
+  kanban DnD, calendar DnD, sprint-plan DnD, list reorder)
+  rolled out in five sub-steps D-1 through D-5.
+- **Phase E — Quality consolidation** *(target: 0.21.0)*.
+  ABDD QA + Security QA. The §11.5 authorization assertions
+  and §21.4 optimistic-lock assertions reach full coverage on
+  all relevant endpoints. WCAG AA contrast, mobile completion
+  for the four key flows, language consistency.
+
+#### Test infrastructure (preparation, in 0.16.0 → 0.17.0)
+
+- e2e basecost: `axum-test 20` workspace dev-dep, shared
+  helpers in `peisear-web/tests/common/` (Rust convention),
+  `tests/smoke.rs` covering the existing happy paths,
+  `tests/auth_boundary.rs` and `tests/optimistic_lock.rs`
+  with `#[ignore]`d test inventory that gets unblocked Phase
+  by Phase as endpoints land.
+- CI: `.github/workflows/test.yml` runs `cargo fmt`, clippy
+  with `-D warnings`, each test crate in a separate runner
+  job (the combined link step OOMs the default 7 GB runner),
+  and `cargo build --workspace`.
+
+#### List filter/sort future enhancements (post-Phase A)
+
+Phase A Step 3 (0.17.0) ships a deliberately small filter/sort
+vocabulary on the project-detail issue list: status, assignee,
+and sort by priority / created / updated. The schema-less
+`user_view_states.state_json` shape is designed to grow without
+migrations — these are the candidates a future release should
+consider:
+
+- **Priority filter** — pair with the existing priority sort,
+  e.g. "show only high+ priority items". Requires only a new
+  query parameter and a `retain` predicate.
+- **Due-date filter** — depends on Phase C adding the
+  `due_date` field to issues (per spec §8.1). Once that lands,
+  filters like "due this week" / "overdue" / "no due date"
+  become natural.
+- **Sub-issue visibility toggle** — Phase C introduces the
+  parent/child issue hierarchy. The list view will need a
+  toggle: "show top-level only" vs "flatten with indentation".
+- **Multi-select filters** — e.g. "in_progress AND open" as
+  one filter view. Requires the URL param to accept comma-
+  separated values; the `apply_filter_and_sort` predicate
+  becomes `contains` instead of `==`.
+- **Saved query presets** — let a user name and re-select
+  multiple filter combinations ("My this-week view"). This is
+  a UI affordance over the same `user_view_states` storage,
+  with the key extended from `project_issues:{id}` to
+  `project_issues:{id}:preset:{name}`.
+- **Sort direction toggle** — currently sort is one-way per
+  key. Adding `?dir=asc|desc` is a small enhancement that
+  doubles the available orderings.
+- **Reset semantics revisit** — the current Reset link
+  inherits the saved default rather than wiping it (rationale
+  in 0.17.0 changelog). If user testing surfaces confusion,
+  consider an explicit "Clear my saved default" affordance
+  next to Reset.
+- **Apply other lists**: extend the same scheme to
+  `/teams/{slug}/sprints/{id}` issue table (Phase B/C scope).
+
+#### Global search future enhancements (post-Phase A)
+
+Phase A Step 4 (0.17.0) ships a deliberately simple global
+search: LIKE `%q%` over project names and open issue titles,
+fixed scope, no ranking. The endpoint surface is stable enough
+that future enhancements can land underneath without breaking
+the typeahead's JSON shape:
+
+- **Result ranking** — currently results are ordered by
+  `updated_at DESC`. A future revision could score by name
+  match position (prefix > substring > fuzzy) and recency,
+  but only after user testing surfaces a real ordering
+  problem at scale.
+- **Search descriptions / comments** — currently only project
+  names and issue titles are searched. Description-body
+  matches surface a long tail of false positives in early
+  testing; revisit when issue templates settle and
+  descriptions are more uniformly structured.
+- **Search closed (done) issues** — Phase A excludes
+  `status = done` from typeahead. A separate "Search archive"
+  surface or a "Show completed too" checkbox on /search could
+  open this up without polluting the live-work typeahead.
+- **Search teams and sprints** — Phase A scope is
+  project + open issue. Once Phase C lands sub-issues and
+  the calendar, broaden search to those too.
+- **FTS5 migration** — at higher data volumes (10k+ issues),
+  LIKE goes from "milliseconds" to "noticeable". Migration
+  to SQLite FTS5 with the trigram tokenizer (handles
+  Japanese without a morphological analyser) is the natural
+  upgrade. Plan the migration so the storage-layer API
+  (`projects_by_name`, `open_issues_by_title`) stays the
+  same — handlers and components shouldn't have to change.
+- **`/` keyboard shortcut** to focus the navbar search input
+  globally. A small UX win; deferred to Phase E (ABDD QA)
+  where keyboard shortcuts are reviewed holistically.
+- **Recent searches** — server-side per-user history with a
+  small dropdown on focus. Useful for quickly re-running a
+  filter; the storage shape (key/value JSON) is already
+  there in `user_view_states`.
+- **Search on mobile** — the navbar input is hidden below
+  the `sm` breakpoint in 0.17.0 because it competes with
+  the user menu for space. Phase E mobile QA will rework
+  this (likely a drawer-mounted search).
+
+#### Optimistic-lock future enhancements (post-Phase A/B)
+
+0.17.0 ships optimistic-lock for issue and project
+mutations using `updated_at` as the version field. 0.18.0
+extends it to sprint / team / team-membership / capacity.
+Beyond that:
+
+- **Conflict-resolution UI** — today, a 409 surfaces an
+  error page asking the user to refresh and re-apply.
+  A future revision could render a side-by-side diff
+  ("their version" / "your edit") and let the user merge.
+  Useful for long-form fields like issue descriptions; less
+  useful for status/priority where the right move is
+  usually "their change wins, mine moves on".
+- **Toast notification for conflict on direct-manipulation
+  surfaces** — Phase D's drag-and-drop and inline edits
+  produce 409s the user can't reasonably anticipate. A
+  toast with "Refresh — someone changed this" is a better
+  UX than an error page when the user didn't even click
+  Save.
+- **`/api/*` JSON conflict response** — the `IntoResponse`
+  for `AppError::OptimisticLockConflict` currently always
+  emits HTML. The structured shape from spec appendix
+  E.3.3 (`{error, message, current_updated_at,
+  entity_type, entity_id}`) is wired into the type already;
+  Phase B/D will plumb an `ApiAppError` sibling type for
+  `/api/*` mutation handlers so conflicts there return JSON
+  for client-side handling.
+- **Same-second race window** — SQLite's `CURRENT_TIMESTAMP`
+  is whole-second precision, so two writes inside the same
+  second land with equal `updated_at` values and the lock
+  can't tell them apart. This is rare in practice but not
+  zero. Mitigation options: (1) switch to `strftime('%s%f')`
+  for sub-second precision in the trigger, (2) add an
+  explicit `version BIGINT` column that increments on each
+  UPDATE. The integration tests use a 1.1s sleep
+  (`ensure_distinct_timestamp`) to side-step the issue;
+  production traffic almost never sees it. Revisit if user
+  reports surface concrete instances.
+- **Lock for delete operations** — 0.17.0 doesn't gate
+  DELETE endpoints (issue delete, project delete) on
+  `client_updated_at`. Their contention model differs:
+  the user clicked Delete deliberately, and a stale read
+  on a row about to be deleted just raises NotFound on the
+  next mutation rather than overwriting work. Adding the
+  lock here would convert a NotFound into a Conflict, which
+  is arguably more accurate but doesn't add user-visible
+  value. Revisit if there's evidence that delete races
+  cause real surprise.
+
 ### Workload fairness
 
 A cluster of features that together let a team distribute work
@@ -179,6 +373,58 @@ returns to the queue once health/burnout is in users' hands.
 ## Medium-term
 
 Bigger moves that require more scaffolding but are well-scoped.
+
+### Search refinement (future revisit)
+
+The Phase A search shipping in 0.17.0 is deliberately the simplest
+working version: SQL `LIKE %query%` against `projects.name`,
+`projects.description`, and open issues' `title` / `description`
+columns; typeahead returning 8 hits, results page returning 50
+with pagination. This is enough to make peisear navigable while
+the project's scale remains in the "individual contributor +
+small team" regime the product is designed for.
+
+Three threads to revisit when the product or its scale changes:
+
+- **Search engine**: SQLite **FTS5** is the obvious next step
+  if `LIKE %…%` becomes too slow or misses too much. Adopting
+  it adds three things: a virtual-table schema mirror per
+  searchable entity, INSERT / UPDATE / DELETE triggers to keep
+  the mirror in sync, and a tokenizer choice. The tokenizer is
+  the real decision: the default whitespace tokenizer doesn't
+  index Japanese (no spaces, so an entire issue body becomes
+  one token), so Japanese support requires either the built-in
+  `trigram` tokenizer or an external morphological analyzer
+  (mecab / lindera). `trigram` is the lower-cost path and is
+  what to plan for first, with the constraint that queries
+  shorter than 3 characters won't hit the index. We also need
+  to confirm Cloudflare D1's FTS5 support if peisear ever runs
+  on D1 — sqlite extension support there has been a moving
+  target. Not a near-term need; revisit when issue counts cross
+  the order of 10⁵ per project, or when users start asking for
+  ranked relevance instead of substring matching.
+
+- **Search scope**: Phase A intentionally limits search to
+  projects and *open* issues, not closed issues, sub-issues,
+  sprints, or teams. The scope was chosen to keep the
+  typeahead responsive and to match the most common query —
+  "what was that issue about X". Revisit as user feedback
+  accumulates: closed-issue search is the most-likely-asked
+  extension; sprint and team search would matter once a single
+  account has dozens of either. Sub-issue search becomes
+  meaningful after Phase C lands the sub-issue hierarchy.
+
+- **Result-count defaults & UI/UX**: typeahead 8 / results
+  page 50 is a starting point chosen by gut, not measurement.
+  Things to revisit once we have real usage signal: whether
+  typeahead 8 is a useful preview or just truncation noise,
+  whether the results page benefits from facets (project,
+  status, assignee), whether keyboard navigation + recent
+  history needs surface real estate beyond the current
+  dropdown, and whether mobile typeahead deserves its own
+  treatment rather than the desktop layout shrunk down. None
+  of this is urgent; flagged so it isn't forgotten under
+  "we shipped search, done".
 
 ### PostgreSQL backend
 

@@ -18,12 +18,14 @@ pub mod personal_metrics;
 pub mod pool;
 pub mod project_health;
 pub mod projects;
+pub mod search;
 pub mod sprints;
 pub mod teams;
 pub mod user_burnout;
 pub mod user_capacities;
 pub mod user_metrics_snapshots;
 pub mod users;
+pub mod view_states;
 
 /// Active backend‑specific pool type. Swap this alias (or trait‑abstract
 /// it) when adding another backend.
