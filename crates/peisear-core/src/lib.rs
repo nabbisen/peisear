@@ -49,6 +49,11 @@ pub struct Project {
     /// [`personal_metrics::DEFAULT_WIP_LIMIT`] for users who have
     /// not set their own [`User::wip_limit`].
     pub wip_limit_default: Option<i64>,
+    /// Optional team this project belongs to. `None` is a
+    /// personal project (the default; see migration 0011 for
+    /// the team feature). Members of the linked team get access
+    /// to the project's issues per their team role.
+    pub team_id: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -1191,4 +1196,783 @@ pub mod personal_metrics {
             _ => HealthIndicator::Concern,
         }
     }
+}
+
+/// Per-user fatigue / burnout signals.
+///
+/// Sibling to [`personal_metrics`]. The two modules together back
+/// the personal dashboard at `/me`: `personal_metrics` answers
+/// "where are you right now?" while `user_burnout` answers "how
+/// have you been recently, and is it sustainable?".
+///
+/// The framing is deliberate. V2.1 §0.2 forbids using these signals
+/// for performance evaluation; §1.2 calls for self-reflection
+/// support. Concretely this means:
+///
+/// - Indicators classify only as `Insufficient` / `Good` / `Watch`.
+///   We never reach `Concern` here. A "concerning" framing in this
+///   territory crosses into "you are burnt out" telling, which is a
+///   call for the person to make about themselves, not for software
+///   to assert.
+/// - The summary text is a question or suggestion, not a diagnosis.
+/// - Numbers come with units the user can sanity-check ("over
+///   capacity for 4 of the last 4 snapshots").
+///
+/// Future indicators (estimation drift trend, cognitive switching)
+/// will land additively as new fields on
+/// [`UserBurnoutSignals`] and new chips in the dashboard. The
+/// shape is uniform across all signals so adding one is a
+/// localised change.
+pub mod user_burnout {
+    use super::HealthIndicator;
+
+    /// Window (in days) over which the estimation drift comparison
+    /// is computed. Four weeks gives two two-week halves: "now"
+    /// vs. "earlier", median over each half. Shorter and either
+    /// half might be empty for a user who completes a few issues
+    /// per fortnight; longer and "earlier" stops being earlier in
+    /// any meaningful sense.
+    pub const DRIFT_WINDOW_DAYS: i64 = 28;
+
+    /// Threshold (in ratio) below which the estimation drift is
+    /// reported as `DriftDirection::Steady` rather than Up / Down.
+    /// 25% movement is the "obviously different" line —  smaller
+    /// is week-to-week noise from small samples. The number is
+    /// dimensionless; computed as `(recent - older) / older`.
+    pub const DRIFT_STEADY_THRESHOLD_RATIO: f64 = 0.25;
+
+    /// Window (in days) over which cognitive switching is
+    /// observed. Two weeks captures the user's working pattern
+    /// without mixing in stale rhythm; same window as other
+    /// per-user reflective signals on the dashboard for symmetry.
+    pub const SWITCHING_WINDOW_DAYS: i64 = 14;
+
+    /// Minimum number of `status_changed -> in_progress` events
+    /// before the cognitive-switching pattern is meaningfully
+    /// reportable. Two weeks of work with one or two transitions
+    /// total is not enough data to characterise a "rhythm" — the
+    /// number would just be noise. The UI hides the chip when
+    /// `total_events_observed < SWITCHING_MIN_EVENTS`.
+    pub const SWITCHING_MIN_EVENTS: i64 = 5;
+
+    /// Number of consecutive over-capacity snapshots before
+    /// `overload_streak_days` graduates to `Watch`. At the
+    /// default 6-hour snapshot interval, 8 ≈ 2 days. Exposed
+    /// as a public constant so the notification edge-trigger
+    /// logic (in `crate::notifications`) doesn't keep its own
+    /// copy of the threshold.
+    pub const OVERLOAD_STREAK_WATCH: i64 = 8;
+
+    /// Days a single in-flight assigned issue must be stalled
+    /// before `stalled_assigned_max_days` reaches `Watch`.
+    /// Same exposure rationale as `OVERLOAD_STREAK_WATCH`.
+    pub const STALLED_WATCH_DAYS: i64 = 14;
+
+    /// Direction of an estimation drift. `Steady` is reported when
+    /// the relative change is below `DRIFT_STEADY_THRESHOLD_RATIO`,
+    /// or when there is insufficient data to compute one half.
+    ///
+    /// Note the deliberate absence of any "good" or "bad"
+    /// connotation. Drift up means recent issues took longer per
+    /// point than older ones — that *might* signal the user is
+    /// hitting harder problems, taking on more thought-heavy work,
+    /// or having a rough fortnight. None of these are necessarily
+    /// bad and none of them are addressable by software. The
+    /// dashboard surfaces the fact and trusts the user to
+    /// contextualise it.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    pub enum DriftDirection {
+        Up,
+        Down,
+        Steady,
+    }
+
+    /// Computed estimation drift over the configured window. Built
+    /// by `peisear-storage::user_burnout::estimation_drift_for_user`.
+    ///
+    /// Returns `None` from that function when there isn't enough
+    /// completed work in either half of the window to compare; the
+    /// UI hides the chip in that case rather than showing
+    /// "insufficient data" prominently. We respect the user's
+    /// time and don't surface non-information.
+    #[derive(Debug, Clone)]
+    pub struct EstimationDriftTrend {
+        /// Median days-per-point across the recent half of the
+        /// window. None of the entries inside that half are
+        /// individually surfaced; the median is the only number
+        /// that matters at this layer.
+        pub recent_median_days_per_point: f64,
+        /// Same, for the older half of the window.
+        pub older_median_days_per_point: f64,
+        /// Direction classification. See [`DriftDirection`].
+        pub direction: DriftDirection,
+        /// The window total — surfaced so the UI can phrase
+        /// the message correctly ("over the last X days").
+        pub window_days: i64,
+    }
+
+    /// Cognitive-switching pattern over the configured window.
+    /// Built by `peisear-storage::user_burnout::cognitive_switching_for_user`.
+    ///
+    /// "Switching" here is operationalised as the count of
+    /// `status_changed -> in_progress` events for issues assigned
+    /// to the user. Each such event is a "I'm picking this up
+    /// now" moment; multiple per day is one signature of context
+    /// switching. We don't try to detect *good* vs. *bad*
+    /// switching — debugging sessions involve picking things up
+    /// and putting them down too. The chip surfaces the rhythm
+    /// without judgement.
+    #[derive(Debug, Clone)]
+    pub struct CognitiveSwitchingPattern {
+        /// Median `-> in_progress` events per active day. "Active
+        /// day" means a day on which any switching happened;
+        /// quiet days don't count toward the median, which would
+        /// otherwise dilute toward zero.
+        pub switches_per_day_median: f64,
+        /// Total events observed in the window. Surfaced so the
+        /// UI can decline to render the chip if the data is too
+        /// thin to characterise a rhythm.
+        pub total_events_observed: i64,
+        /// The window total — surfaced so the UI can phrase
+        /// the message ("over the last X days").
+        pub window_days: i64,
+    }
+
+    /// Snapshot of one user's burnout signals at request time.
+    ///
+    /// Only used as a return value from
+    /// `peisear-storage::user_burnout::for_user`; the storage layer
+    /// fills it in from the snapshot and event tables.
+    #[derive(Debug, Clone)]
+    pub struct UserBurnoutSignals {
+        /// Number of consecutive most-recent snapshots where the
+        /// user was over their capacity. `0` means either no
+        /// snapshots, or the most recent one was within capacity.
+        ///
+        /// "Snapshots" not "days" because the snapshot interval is
+        /// finer than daily (every 6 hours by default). The UI
+        /// labels this as "snapshots" or "ticks" rather than
+        /// inflating it to a days estimate.
+        pub overload_streak_days: i64,
+
+        /// For the user's oldest in-flight assigned issue, the
+        /// days since its last status_changed event (or
+        /// `updated_at` for legacy data). `0` if the user has no
+        /// in-flight assigned work.
+        pub stalled_assigned_max_days: i64,
+
+        /// The window over which streaks are measured, surfaced
+        /// here so the UI can phrase the message correctly
+        /// ("over capacity for X of the last Y").
+        pub window_days: i64,
+
+        /// Estimation drift trend. `None` when the user does not
+        /// have enough completed work in both halves of the
+        /// drift window to compute a comparison. See
+        /// [`EstimationDriftTrend`].
+        ///
+        /// New in 0.11.0.
+        pub estimation_drift: Option<EstimationDriftTrend>,
+
+        /// Cognitive-switching pattern. `None` when the user's
+        /// total switch events in the window are below
+        /// `SWITCHING_MIN_EVENTS`. See [`CognitiveSwitchingPattern`].
+        ///
+        /// New in 0.11.0.
+        pub cognitive_switching: Option<CognitiveSwitchingPattern>,
+    }
+
+    /// Classify the overload-streak signal. Note the deliberate
+    /// ceiling at `Watch` — see the module docstring.
+    pub fn classify_overload_streak(s: &UserBurnoutSignals) -> HealthIndicator {
+        // Consecutive snapshots ≥ OVERLOAD_STREAK_WATCH (≈ 2 days
+        // at 6h interval) graduates from "busy week" to "worth
+        // a glance". Below that, no signal.
+        match s.overload_streak_days {
+            n if n >= OVERLOAD_STREAK_WATCH => HealthIndicator::Watch,
+            _ => HealthIndicator::Good,
+        }
+    }
+
+    /// Classify the stalled-assigned signal. Same `Watch` ceiling.
+    pub fn classify_stalled(s: &UserBurnoutSignals) -> HealthIndicator {
+        match s.stalled_assigned_max_days {
+            d if d >= STALLED_WATCH_DAYS => HealthIndicator::Watch,
+            _ => HealthIndicator::Good,
+        }
+    }
+
+    /// Classify a drift trend. Returns `Some(direction)` when the
+    /// signal exists, `None` when there's no drift trend at all
+    /// (insufficient data). Note this returns the direction, not
+    /// a `HealthIndicator` — the panel renders drift as a neutral
+    /// directional fact, not as a "good / watch" chip. There is
+    /// no version of "drift up" that gets a warning palette.
+    pub fn classify_drift(drift: &EstimationDriftTrend) -> DriftDirection {
+        // Already pre-classified at storage time; this function
+        // exists so future logic (e.g., considering both halves'
+        // sample sizes) can centralise here.
+        drift.direction
+    }
+
+    /// Build the natural-language self-reflection prompt for the
+    /// user's dashboard. Foregrounds whichever signals are at
+    /// `Watch`; if all are `Good`, returns a brief encouraging
+    /// note rather than alarmism by default.
+    ///
+    /// The text is pure data — no behaviour change in the app
+    /// flows from it. The whole point of the API is that this
+    /// function is a pure function over the signals.
+    ///
+    /// 0.11.0: drift and switching are deliberately *not* added
+    /// to this summary. They are not warnings; they are facts.
+    /// The summary line is for warnings ("here's what to glance
+    /// at"); the pattern facts get their own distinct chips so
+    /// they're visually separated from "this is something to
+    /// notice".
+    pub fn summarize(signals: &UserBurnoutSignals) -> String {
+        let overload = classify_overload_streak(signals);
+        let stalled = classify_stalled(signals);
+        let any_watch = matches!(overload, HealthIndicator::Watch)
+            || matches!(stalled, HealthIndicator::Watch);
+
+        if !any_watch {
+            return "Steady so far.".to_string();
+        }
+
+        let mut parts: Vec<String> = Vec::new();
+        if matches!(overload, HealthIndicator::Watch) {
+            parts.push(format!(
+                "you've been over capacity for {} recent snapshots — \
+                 consider whether some work can wait or move",
+                signals.overload_streak_days
+            ));
+        }
+        if matches!(stalled, HealthIndicator::Watch) {
+            parts.push(format!(
+                "an assigned issue has been stuck for {} days — \
+                 worth a quick check whether it's blocked",
+                signals.stalled_assigned_max_days
+            ));
+        }
+        parts.join("; ")
+    }
+}
+
+/// Notification subsystem types.
+///
+/// Two concerns sit here:
+///
+/// 1. **Vocabulary** — the strings that identify notification
+///    kinds, channels, and severity. Kept as a small set of
+///    constants so all code references the same spellings and
+///    typos surface as compile errors.
+///
+/// 2. **Domain types** — `Notification`, `Preference`,
+///    `Severity`, `Channel`. The storage layer maps rows into
+///    these; the dispatch layer consumes them; the web layer
+///    renders them.
+///
+/// ## Design posture
+///
+/// V2.1 §1.4 says warnings should reach the user. The
+/// notifications subsystem realises that by piping
+/// `user_burnout` and `project_health` state transitions through
+/// a structured pipeline. The posture inherits the rest of the
+/// project: signals are *informational*, not evaluative; user
+/// has full control over delivery; "all silent" is a respected
+/// preference, not a sign of evasion.
+///
+/// ## Edge-triggered + cooldown
+///
+/// Notifications are produced when a tracked signal **transitions**
+/// (e.g. burnout overload streak crosses from below the watch
+/// threshold to at-or-above). The same transition does not
+/// re-fire while it persists. A 24-hour cooldown on
+/// `(user_id, kind)` further suppresses noisy ping-ponging
+/// (state flapping around the threshold during a single day).
+/// The cooldown is implemented at dispatch time via a query
+/// against the `notifications` audit table; see
+/// `peisear-web::notifications::dispatch`.
+pub mod notifications {
+    use serde::{Deserialize, Serialize};
+
+    /// Severity drives UI palette and the per-kind `min_severity`
+    /// preference filter. The set is intentionally small —
+    /// "info" and "watch" — because more granularity invites
+    /// gaming-the-classifier behaviour we'd rather avoid.
+    /// The same `HealthIndicator::Watch` ceiling that other
+    /// surfaces honour applies here: `Concern` does not exist.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+    #[serde(rename_all = "lowercase")]
+    pub enum Severity {
+        Info,
+        Watch,
+    }
+
+    impl Severity {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::Info => "info",
+                Self::Watch => "watch",
+            }
+        }
+
+        /// Parse from the storage-layer string. Unknown values
+        /// default to `Info` rather than failing — a future
+        /// downgrade that doesn't recognise a higher severity
+        /// renders it as informational, which is safer than
+        /// silently dropping the row.
+        pub fn from_storage_str(s: &str) -> Self {
+            match s {
+                "watch" => Self::Watch,
+                _ => Self::Info,
+            }
+        }
+
+        /// Used in the preference filter: `min_severity = watch`
+        /// suppresses `info` notifications.
+        pub fn meets_minimum(self, minimum: Severity) -> bool {
+            match (self, minimum) {
+                (Self::Watch, _) => true,
+                (Self::Info, Self::Info) => true,
+                (Self::Info, Self::Watch) => false,
+            }
+        }
+    }
+
+    /// Channel identifiers. String-typed so the storage layer
+    /// can store a comma-separated list without an enum<->string
+    /// dance, but a small const set so callers can reference
+    /// known values.
+    pub mod channel {
+        pub const IN_APP: &str = "in_app";
+        pub const EMAIL: &str = "email";
+        pub const WEBHOOK: &str = "webhook";
+
+        /// All channels known to this build, as a `&[&str]`
+        /// slice for iteration in handlers / forms. The order
+        /// determines how channels are rendered in the
+        /// preferences UI (left to right: most recommended
+        /// first).
+        pub const ALL_CHANNELS: &[&str] = &[IN_APP, EMAIL, WEBHOOK];
+
+        /// Pretty name for UI labels.
+        pub fn human_name(id: &str) -> &str {
+            match id {
+                IN_APP => "In-app",
+                EMAIL => "Email",
+                WEBHOOK => "Webhook",
+                _ => id,
+            }
+        }
+
+        /// All channels known to this build. Used by the
+        /// preferences page to render the full toggle list.
+        pub fn all() -> &'static [&'static str] {
+            ALL_CHANNELS
+        }
+    }
+
+    /// Notification kinds. Free-form strings in the database
+    /// (so new kinds don't require a migration) but the constants
+    /// here are the canonical spellings code uses.
+    pub mod kind {
+        /// Sentinel row in `notification_preferences` that
+        /// records whether the user has been prompted for the
+        /// first-login email opt-in. Not a real notification
+        /// kind — never appears in the `notifications` table.
+        pub const GLOBAL: &str = "_global";
+
+        pub const BURNOUT_OVERLOAD: &str = "burnout_overload";
+        pub const BURNOUT_STALLED: &str = "burnout_stalled";
+        pub const PROJECT_TREND_DECLINE: &str = "project_trend_decline";
+
+        /// Pretty label for the preferences UI. Unknown kinds
+        /// render with their raw id.
+        pub fn human_name(k: &str) -> &str {
+            match k {
+                BURNOUT_OVERLOAD => "Sustained over-capacity streak",
+                BURNOUT_STALLED => "Long-stalled assigned work",
+                PROJECT_TREND_DECLINE => "Project health decline",
+                _ => k,
+            }
+        }
+
+        /// Canonical kinds shown on the preferences page (in
+        /// this order). `GLOBAL` is intentionally absent.
+        pub fn all_user_facing() -> &'static [&'static str] {
+            &[BURNOUT_OVERLOAD, BURNOUT_STALLED, PROJECT_TREND_DECLINE]
+        }
+    }
+
+    /// One persisted notification, hydrated from storage.
+    /// Visible to the user via the in-app inbox at
+    /// `/notifications`; also serves as the audit log for what
+    /// was dispatched (rows always exist; the
+    /// `dispatched_via` field records which channels actually
+    /// delivered).
+    #[derive(Debug, Clone)]
+    pub struct Notification {
+        pub id: String,
+        pub user_id: String,
+        pub kind: String,
+        pub severity: Severity,
+        pub title: String,
+        pub body: String,
+        /// Free-form JSON payload. Application decodes per-kind.
+        pub payload_json: Option<String>,
+        pub created_at: chrono::DateTime<chrono::Utc>,
+        pub read_at: Option<chrono::DateTime<chrono::Utc>>,
+        /// Channel ids that successfully delivered.
+        pub dispatched_via: Vec<String>,
+    }
+
+    /// One per-user, per-kind preference row. Absent rows fall
+    /// back to [`DEFAULT_PREFERENCES`].
+    #[derive(Debug, Clone)]
+    pub struct Preference {
+        pub user_id: String,
+        pub kind: String,
+        /// Channel ids the user wants. Empty = silent.
+        pub channels: Vec<String>,
+        pub min_severity: Severity,
+    }
+
+    /// Effective preferences (storage row OR fallback default).
+    /// What dispatch consults to decide what to do with a fresh
+    /// notification.
+    pub struct EffectivePreference<'a> {
+        pub channels: &'a [&'a str],
+        pub min_severity: Severity,
+    }
+
+    /// System default: in-app delivery for all kinds, all
+    /// severities. Smart-defaults posture from design
+    /// discussion (Q3=A): the first-time user has working
+    /// notifications without configuring anything. They opt in
+    /// to email/webhook explicitly.
+    pub const DEFAULT_CHANNELS: &[&str] = &[channel::IN_APP];
+    pub const DEFAULT_MIN_SEVERITY: Severity = Severity::Info;
+
+    /// Edge-triggered: a notification fires only when the
+    /// underlying signal transitions across the threshold.
+    /// Concrete transitions today:
+    ///
+    /// - `burnout_overload`: overload_streak_days transitions
+    ///   from < OVERLOAD_STREAK_WATCH to ≥ OVERLOAD_STREAK_WATCH
+    /// - `burnout_stalled`: stalled_assigned_max_days
+    ///   transitions from < STALLED_WATCH_DAYS to
+    ///   ≥ STALLED_WATCH_DAYS
+    /// - `project_trend_decline`: composite_score median over
+    ///   the past 7 days drops by ≥ 5 points compared to the
+    ///   prior 7 days
+    ///
+    /// Returns true if the transition warrants a notification.
+    /// Callers compare prior and current state through this.
+    pub fn is_edge_into_watch_burnout_overload(
+        prior_streak_days: i64,
+        current_streak_days: i64,
+    ) -> bool {
+        let threshold = crate::user_burnout::OVERLOAD_STREAK_WATCH;
+        prior_streak_days < threshold && current_streak_days >= threshold
+    }
+
+    pub fn is_edge_into_watch_burnout_stalled(
+        prior_max_days: i64,
+        current_max_days: i64,
+    ) -> bool {
+        let threshold = crate::user_burnout::STALLED_WATCH_DAYS;
+        prior_max_days < threshold && current_max_days >= threshold
+    }
+
+    /// Cooldown window: the same `(user_id, kind)` will not
+    /// fire twice within this many hours, regardless of
+    /// edge-triggering. A safety net against threshold
+    /// flapping; the bulk of suppression is done by the
+    /// edge-trigger logic above.
+    pub const COOLDOWN_HOURS: i64 = 24;
+}
+
+/// Team / membership / role types (0.14.0).
+///
+/// Phase 1 ships flat teams; sub-teams (parent_team_id) are
+/// reserved for Phase 2. See ROADMAP "Privacy & access control
+/// evolution" for the privacy decisions deliberately left for
+/// later.
+///
+/// ## Role semantics
+///
+/// - `Admin`: political role — manage members, edit team
+///   settings, move projects in/out of the team.
+/// - `Member`: full project participation in team-owned projects
+///   (create / edit issues, be assigned).
+/// - `Viewer`: read-only on team projects.
+///
+/// Per V2.1 §2.5, none of these roles read other users'
+/// individual signals (burnout panel, personal dashboard).
+/// Admin is a managerial role, not a surveilling one.
+pub mod teams {
+    use serde::{Deserialize, Serialize};
+
+    /// Per-team role. String-typed in storage; this enum is the
+    /// canonical Rust representation.
+    ///
+    /// Future fixed roles (e.g. `Billing`, `SecurityManager`)
+    /// can be added to this enum without breaking storage —
+    /// the underlying TEXT column accepts any value the CHECK
+    /// constraint allows. Custom (per-team named) roles would
+    /// require a `team_roles` table; deferred to Phase 2.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+    #[serde(rename_all = "lowercase")]
+    pub enum TeamRole {
+        Admin,
+        Member,
+        Viewer,
+    }
+
+    impl TeamRole {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::Admin => "admin",
+                Self::Member => "member",
+                Self::Viewer => "viewer",
+            }
+        }
+
+        pub fn human_name(self) -> &'static str {
+            match self {
+                Self::Admin => "Admin",
+                Self::Member => "Member",
+                Self::Viewer => "Viewer",
+            }
+        }
+
+        /// Parse from storage. Returns `None` for unknown
+        /// values — the migration's CHECK should prevent these,
+        /// but a future role addition might leave older code
+        /// reading new values, and we want a clear "unknown"
+        /// path rather than panicking.
+        pub fn from_storage_str(s: &str) -> Option<Self> {
+            match s {
+                "admin" => Some(Self::Admin),
+                "member" => Some(Self::Member),
+                "viewer" => Some(Self::Viewer),
+                _ => None,
+            }
+        }
+
+        /// Whether this role can write (create / edit issues,
+        /// be assigned). Viewer is read-only; member and admin
+        /// can write.
+        pub fn can_write(self) -> bool {
+            matches!(self, Self::Admin | Self::Member)
+        }
+
+        /// Whether this role can manage the team itself
+        /// (membership, settings). Admin only.
+        pub fn can_manage_team(self) -> bool {
+            matches!(self, Self::Admin)
+        }
+    }
+
+    /// One team. Renamable; the `slug` (URL identifier) is
+    /// fixed at create time.
+    #[derive(Debug, Clone)]
+    pub struct Team {
+        pub id: String,
+        pub name: String,
+        pub slug: String,
+        pub description: Option<String>,
+        pub created_at: chrono::DateTime<chrono::Utc>,
+    }
+
+    /// One row of `team_memberships`. Joined-on-demand with
+    /// `users` for member listings.
+    #[derive(Debug, Clone)]
+    pub struct TeamMembership {
+        pub team_id: String,
+        pub user_id: String,
+        pub role: TeamRole,
+        pub joined_at: chrono::DateTime<chrono::Utc>,
+    }
+
+    /// Maximum slug length, enforced by the migration's CHECK.
+    /// Exposed here so handler-level validation can refuse a
+    /// too-long slug before hitting the database.
+    pub const SLUG_MAX_LEN: usize = 64;
+
+    /// Generate a URL slug from a free-form display name.
+    /// Lowercases, replaces non-alphanumeric runs with single
+    /// hyphens, trims leading/trailing hyphens, and truncates
+    /// to `SLUG_MAX_LEN`.
+    ///
+    /// Returns the empty string if the name has no
+    /// alphanumeric characters at all (caller should
+    /// reject — slugs cannot be empty per the schema CHECK).
+    pub fn slugify(name: &str) -> String {
+        let mut out = String::with_capacity(name.len());
+        let mut last_was_hyphen = true; // suppress leading hyphens
+        for ch in name.chars().flat_map(|c| c.to_lowercase()) {
+            if ch.is_ascii_alphanumeric() {
+                out.push(ch);
+                last_was_hyphen = false;
+            } else if !last_was_hyphen {
+                out.push('-');
+                last_was_hyphen = true;
+            }
+        }
+        // Trim trailing hyphen.
+        while out.ends_with('-') {
+            out.pop();
+        }
+        if out.len() > SLUG_MAX_LEN {
+            out.truncate(SLUG_MAX_LEN);
+            // Avoid trailing hyphen after truncation.
+            while out.ends_with('-') {
+                out.pop();
+            }
+        }
+        out
+    }
+}
+
+/// Sprint: a team-scoped, time-boxed unit of planning (0.15.0).
+///
+/// ## Posture
+///
+/// peisear's sprint model is informational, not evaluative.
+/// V2.1 §0.2 (the non-evaluative stance) shapes the surface:
+///
+/// - We compute "completed work this period" but don't call it
+///   `velocity`. The Jira-popularised term carries
+///   "performance" connotations we don't want.
+/// - We display burndown as a 2-line chart (cumulative
+///   completed vs cumulative committed) without an "ideal"
+///   line, without a predicted-finish line, and without a
+///   completion-percentage readout. The chart is descriptive,
+///   not prescriptive.
+/// - "Carried over" issues (in flight at sprint end) are
+///   reported as a fact, not a failure. They're shown next to
+///   the completed bar so the user sees the full picture.
+///
+/// ## Lifecycle
+///
+/// `planned` → `active` (admin starts) → `completed` (admin
+/// marks done). All transitions are explicit admin actions —
+/// no time-based auto-promotion. The "click to start the
+/// sprint" event is the signal we want a person to make
+/// deliberately, not the calendar.
+pub mod sprints {
+    use serde::{Deserialize, Serialize};
+
+    /// Sprint lifecycle. Transitions are admin actions; see
+    /// the storage layer for guards (e.g. you can only start a
+    /// `planned` sprint, only complete an `active` sprint).
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+    #[serde(rename_all = "lowercase")]
+    pub enum SprintStatus {
+        Planned,
+        Active,
+        Completed,
+    }
+
+    impl SprintStatus {
+        pub fn as_str(self) -> &'static str {
+            match self {
+                Self::Planned => "planned",
+                Self::Active => "active",
+                Self::Completed => "completed",
+            }
+        }
+
+        pub fn human_name(self) -> &'static str {
+            match self {
+                Self::Planned => "Planned",
+                Self::Active => "Active",
+                Self::Completed => "Completed",
+            }
+        }
+
+        /// Parse from storage. Unknown values default to
+        /// `Planned` rather than failing — defensive against
+        /// future status additions read by older code.
+        pub fn from_storage_str(s: &str) -> Self {
+            match s {
+                "active" => Self::Active,
+                "completed" => Self::Completed,
+                _ => Self::Planned,
+            }
+        }
+    }
+
+    /// One sprint row.
+    #[derive(Debug, Clone)]
+    pub struct Sprint {
+        pub id: String,
+        pub team_id: String,
+        pub name: String,
+        pub goal: Option<String>,
+        pub starts_on: chrono::NaiveDate,
+        pub ends_on: chrono::NaiveDate,
+        pub status: SprintStatus,
+        pub started_at: Option<chrono::DateTime<chrono::Utc>>,
+        pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
+        pub created_at: chrono::DateTime<chrono::Utc>,
+    }
+
+    /// Aggregate "what does the sprint look like *right now*?"
+    /// computed on demand (no caching).
+    ///
+    /// Field semantics:
+    /// - `committed_points` is the sum of `effort` across all
+    ///   issues currently linked to the sprint, regardless of
+    ///   their current status.
+    /// - `completed_points` is the sum of `effort` across the
+    ///   subset whose `status = 'done'`. The natural reading
+    ///   is: "of what was committed, this much has finished."
+    /// - `committed_count` and `completed_count` are the issue
+    ///   counts behind the same numbers.
+    /// - `carried_over_points` and `carried_over_count` are
+    ///   non-zero only for *completed* sprints (`status =
+    ///   Completed`); they record what was still in flight at
+    ///   sprint completion. For `Planned` and `Active` sprints
+    ///   these are 0 (the sprint isn't done yet, so nothing has
+    ///   been "carried" anywhere).
+    #[derive(Debug, Clone)]
+    pub struct SprintSummary {
+        pub sprint_id: String,
+        pub committed_points: i64,
+        pub completed_points: i64,
+        pub committed_count: i64,
+        pub completed_count: i64,
+        pub carried_over_points: i64,
+        pub carried_over_count: i64,
+    }
+
+    /// One point on the burndown timeline. Cumulative numbers
+    /// (so the chart can plot raw values).
+    ///
+    /// Two lines are drawn together:
+    /// - "Committed" rises whenever issues are added to the
+    ///   sprint mid-flight (or stays flat).
+    /// - "Completed" rises whenever issues transition to
+    ///   `done`. Stays flat on quiet days.
+    ///
+    /// The visual gap between the two lines is the work still
+    /// in progress at that moment. We don't draw a third
+    /// "ideal" line — that would be prescriptive.
+    #[derive(Debug, Clone, Serialize)]
+    pub struct BurndownPoint {
+        pub day: chrono::NaiveDate,
+        pub cumulative_committed: i64,
+        pub cumulative_completed: i64,
+    }
+
+    /// Number of recent completed sprints whose `completed_points`
+    /// median is shown on the per-team velocity chart's
+    /// reference line. Five is enough to make a single
+    /// outlier sprint not dominate; small enough that "recent"
+    /// still means recent.
+    pub const VELOCITY_MEDIAN_WINDOW: usize = 5;
 }

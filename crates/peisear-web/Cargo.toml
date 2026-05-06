@@ -20,6 +20,7 @@ path = "src/lib.rs"
 peisear-core = { workspace = true }
 peisear-auth = { workspace = true }
 peisear-storage = { workspace = true }
+peisear-notify = { workspace = true }
 
 axum = { workspace = true }
 axum-extra = { workspace = true }

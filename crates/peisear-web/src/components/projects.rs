@@ -80,8 +80,31 @@ fn ProjectCard(project: Project) -> impl IntoView {
 }
 
 /// Blank form for creating a new project.
+///
+/// `writable_teams` is the user's teams where their role lets
+/// them create projects (admin or member; viewer excluded).
+/// When the list is empty, the team selector is hidden — the
+/// project is unambiguously personal. When non-empty, an
+/// optional `<select>` lets the user pick a team or "Personal
+/// (no team)".
 #[component]
-pub fn ProjectNewPage(user: CurrentUser, flash: Option<String>) -> impl IntoView {
+pub fn ProjectNewPage(
+    user: CurrentUser,
+    writable_teams: Vec<(peisear_core::teams::Team, peisear_core::teams::TeamRole)>,
+    flash: Option<String>,
+) -> impl IntoView {
+    let has_teams = !writable_teams.is_empty();
+    let team_options = writable_teams
+        .into_iter()
+        .map(|(t, _role)| {
+            let id = t.id.clone();
+            let name = t.name.clone();
+            view! {
+                <option value=id>{name}</option>
+            }
+        })
+        .collect_view();
+
     view! {
         <AppShell title="New project — Issue Tracker" user=user flash=flash>
             <div class="max-w-xl mx-auto">
@@ -106,6 +129,26 @@ pub fn ProjectNewPage(user: CurrentUser, flash: Option<String>) -> impl IntoView
                                       class="textarea textarea-bordered textarea-sm w-full"
                                       placeholder="What is this project about?"></textarea>
                         </label>
+                        {has_teams.then(|| view! {
+                            <label class="form-control w-full">
+                                <div class="label py-1">
+                                    <span class="label-text text-sm">"Team"</span>
+                                    <span class="label-text-alt text-xs opacity-60">
+                                        "optional"
+                                    </span>
+                                </div>
+                                <select name="team_id" class="select select-bordered select-sm w-full">
+                                    <option value="">"Personal (no team)"</option>
+                                    {team_options}
+                                </select>
+                                <div class="label py-1">
+                                    <span class="label-text-alt text-xs text-base-content/60">
+                                        "If you choose a team, members of that team can see and \
+                                         contribute to this project per their team role."
+                                    </span>
+                                </div>
+                            </label>
+                        })}
                         <div class="card-actions justify-end mt-2">
                             <a href="/projects" class="btn btn-ghost btn-sm">"Cancel"</a>
                             <button type="submit" class="btn btn-primary btn-sm">"Create project"</button>
@@ -198,8 +241,14 @@ pub fn render_projects_list(
     })
 }
 
-pub fn render_project_new(user: CurrentUser, flash: Option<String>) -> Html<String> {
-    super::render_to_html(move || view! { <ProjectNewPage user=user flash=flash/> })
+pub fn render_project_new(
+    user: CurrentUser,
+    writable_teams: Vec<(peisear_core::teams::Team, peisear_core::teams::TeamRole)>,
+    flash: Option<String>,
+) -> Html<String> {
+    super::render_to_html(move || {
+        view! { <ProjectNewPage user=user writable_teams=writable_teams flash=flash/> }
+    })
 }
 
 pub fn render_project_edit(

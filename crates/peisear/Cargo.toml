@@ -28,6 +28,7 @@ path = "src/main.rs"
 peisear-core = { workspace = true }
 peisear-auth = { workspace = true }
 peisear-storage = { workspace = true }
+peisear-notify = { workspace = true }
 peisear-web = { workspace = true }
 
 # Runtime dependencies needed by `main.rs`. The library API surfaces in

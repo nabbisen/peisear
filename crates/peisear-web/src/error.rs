@@ -72,6 +72,8 @@ impl From<StorageError> for AppError {
                 Self::Internal("invalid storage state".into())
             }
             StorageError::Bootstrap(msg) => Self::Internal(msg),
+            StorageError::Conflict(msg) => Self::Conflict(msg),
+            StorageError::Validation(msg) => Self::Validation(msg),
         }
     }
 }

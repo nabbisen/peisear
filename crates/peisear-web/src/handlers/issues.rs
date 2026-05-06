@@ -221,6 +221,26 @@ pub async fn detail_page(
     let issue = issues::find(&state.db, &issue_id, &project_id).await?;
     let assignees = issues::list_assignee_candidates(&state.db, &project_id).await?;
     let workload = issues::project_workload(&state.db, &project_id).await?;
+
+    // Sprint options: only when the project belongs to a team
+    // and that team has planned/active sprints. Personal
+    // projects skip this entirely (sprints are a team feature).
+    let (sprint_options, current_sprint_id) = if let Some(team_id) = &project.team_id {
+        let all = peisear_storage::sprints::list_for_team(&state.db, team_id).await?;
+        let opts: Vec<(String, String)> = all
+            .into_iter()
+            .filter(|s| !matches!(
+                s.status,
+                peisear_core::sprints::SprintStatus::Completed
+            ))
+            .map(|s| (s.id, s.name))
+            .collect();
+        let cur = peisear_storage::sprints::sprint_for_issue(&state.db, &issue_id).await?;
+        (opts, cur)
+    } else {
+        (Vec::new(), None)
+    };
+
     Ok(components::issues::render_issue_detail(
         user,
         project,
@@ -229,6 +249,8 @@ pub async fn detail_page(
         IssueStatus::all().to_vec(),
         assignees,
         workload,
+        sprint_options,
+        current_sprint_id,
         q.flash,
         q.edit == Some(1),
     ))

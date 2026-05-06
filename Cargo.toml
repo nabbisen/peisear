@@ -14,12 +14,13 @@ members = [
     "crates/peisear-core",
     "crates/peisear-auth",
     "crates/peisear-storage",
+    "crates/peisear-notify",
     "crates/peisear-web",
     "crates/peisear",
 ]
 
 [workspace.package]
-version = "0.9.0"
+version = "0.16.0"
 edition = "2024"
 rust-version = "1.85"
 
@@ -72,11 +73,31 @@ time = "0.3"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 validator = { version = "0.18", features = ["derive"] }
 
+# ─── Notifications / mail transport ─────────────────────────────────
+# wasm-smtp 0.9 ships the SMTP protocol core. The `tokio`
+# adapter provides a production-quality `Transport` over
+# tokio + rustls — peisear's actual deployment shape — so we
+# don't write our own transport plumbing. The Cloudflare
+# adapter sits in the dependency tree even though we don't
+# currently target Workers, so a future Workers deployment is
+# a transport swap, not a dependency change.
+#
+# `mail-builder` is upstream's recommended composition crate
+# (see wasm-smtp's `composing-messages.md`). Enabling its
+# pass-through feature on wasm-smtp-tokio gives us
+# `SmtpClient::send_message`, which takes a
+# `mail_builder::MessageBuilder` directly.
+wasm-smtp = "0.9"
+wasm-smtp-tokio = { version = "0.9", features = ["mail-builder"] }
+wasm-smtp-cloudflare = "0.9"
+mail-builder = "0.4"
+
 # ─── Workspace‑local crates (consumed via `workspace = true`) ────────
-peisear-core = { version = "0.9.0", path = "crates/peisear-core" }
-peisear-auth = { version = "0.9.0", path = "crates/peisear-auth" }
-peisear-storage = { version = "0.9.0", path = "crates/peisear-storage" }
-peisear-web = { version = "0.9.0", path = "crates/peisear-web" }
+peisear-core = { version = "0.16.0", path = "crates/peisear-core" }
+peisear-auth = { version = "0.16.0", path = "crates/peisear-auth" }
+peisear-storage = { version = "0.16.0", path = "crates/peisear-storage" }
+peisear-notify = { version = "0.16.0", path = "crates/peisear-notify" }
+peisear-web = { version = "0.16.0", path = "crates/peisear-web" }
 
 # Release profile applies to all workspace binaries.
 [profile.release]

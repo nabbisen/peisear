@@ -19,8 +19,12 @@ pub mod error_page;
 pub mod issues;
 pub mod layout;
 pub mod me;
+pub mod notifications;
+pub mod notification_preferences;
 pub mod projects;
 pub mod settings;
+pub mod sprints;
+pub mod teams;
 
 use axum::response::Html;
 use leptos::prelude::*;

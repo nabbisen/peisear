@@ -31,8 +31,21 @@ pub async fn list_page(
     ))
 }
 
-pub async fn new_page(AuthUser(user): AuthUser) -> impl IntoResponse {
-    components::projects::render_project_new(user, None)
+pub async fn new_page(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+) -> AppResult<impl IntoResponse> {
+    // Load the user's teams (any role) so the form can offer
+    // them as project assignment targets. Members and admins
+    // can put projects in their teams; viewers cannot
+    // (filtered at the post-submit access-control check).
+    let user_teams = peisear_storage::teams::teams_for_user(&state.db, &user.id).await?;
+    let writable_teams: Vec<(peisear_core::teams::Team, peisear_core::teams::TeamRole)> =
+        user_teams
+            .into_iter()
+            .filter(|(_, role)| role.can_write())
+            .collect();
+    Ok(components::projects::render_project_new(user, writable_teams, None))
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -41,6 +54,10 @@ pub struct ProjectForm {
     pub name: String,
     #[validate(length(max = 4000, message = "Description must be under 4000 chars."))]
     pub description: String,
+    /// Optional team assignment. The form sends an empty string
+    /// for "personal project"; we treat that as `None`.
+    #[serde(default)]
+    pub team_id: String,
 }
 
 pub async fn create(
@@ -51,6 +68,26 @@ pub async fn create(
     form.validate()
         .map_err(|e| AppError::Validation(super::format_validation(&e)))?;
 
+    let team_id_input = form.team_id.trim();
+    let team_id_opt: Option<&str> = if team_id_input.is_empty() {
+        None
+    } else {
+        Some(team_id_input)
+    };
+
+    // If a team was selected, verify the user is a member with
+    // write capability. Without this guard, any user could
+    // assign a project to any team they know the id of.
+    if let Some(tid) = team_id_opt {
+        let role = peisear_storage::teams::role_for(&state.db, tid, &user.id).await?;
+        let Some(role) = role else {
+            return Err(AppError::Forbidden);
+        };
+        if !role.can_write() {
+            return Err(AppError::Forbidden);
+        }
+    }
+
     let id = uuid::Uuid::new_v4().to_string();
     projects::insert(
         &state.db,
@@ -58,6 +95,7 @@ pub async fn create(
         &user.id,
         form.name.trim(),
         form.description.trim(),
+        team_id_opt,
     )
     .await?;
 

@@ -3,9 +3,13 @@
 pub mod auth;
 pub mod issues;
 pub mod me;
+pub mod notifications;
+pub mod notification_preferences;
 pub mod projects;
 pub mod root;
 pub mod settings;
+pub mod sprints;
+pub mod teams;
 
 pub(crate) fn format_validation(errors: &validator::ValidationErrors) -> String {
     let mut out = Vec::new();

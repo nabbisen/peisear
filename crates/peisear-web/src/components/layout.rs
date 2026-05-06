@@ -41,16 +41,21 @@ pub fn Base(
 }
 
 /// Shell used for every authenticated page: navbar + flash + main.
+///
+/// `unread_count` drives the bell badge in the navbar. Threaded
+/// through every handler that returns the shell so the badge
+/// stays in sync with reality across page loads.
 #[component]
 pub fn AppShell(
     #[prop(into)] title: String,
     user: CurrentUser,
     flash: Option<String>,
+    #[prop(default = 0)] unread_count: i64,
     children: Children,
 ) -> impl IntoView {
     view! {
         <Base title=title>
-            <Navbar user=user/>
+            <Navbar user=user unread_count=unread_count/>
             <main class="container mx-auto px-4 py-6 max-w-6xl">
                 <FlashBar flash=flash/>
                 {children()}
@@ -76,7 +81,20 @@ pub fn PublicShell(
 }
 
 #[component]
-fn Navbar(user: CurrentUser) -> impl IntoView {
+fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
+    let bell_aria = if unread_count > 0 {
+        format!("Notifications ({} unread)", unread_count)
+    } else {
+        "Notifications".to_string()
+    };
+    let unread_badge = (unread_count > 0).then(|| {
+        view! {
+            <span class="badge badge-sm badge-primary absolute -top-1 -right-1 px-1 min-h-0 h-4">
+                {if unread_count > 99 { "99+".to_string() } else { unread_count.to_string() }}
+            </span>
+        }
+    });
+
     view! {
         <header class="navbar bg-base-100 shadow-sm border-b border-base-300 px-4">
             <div class="flex-1">
@@ -85,6 +103,18 @@ fn Navbar(user: CurrentUser) -> impl IntoView {
                 </a>
             </div>
             <div class="flex-none gap-2">
+                <a href="/notifications"
+                   class="btn btn-ghost btn-sm relative"
+                   aria-label=bell_aria>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true">
+                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                    </svg>
+                    {unread_badge}
+                </a>
                 <div class="dropdown dropdown-end">
                     <label tabindex="0" class="btn btn-ghost btn-sm normal-case">
                         {user.display_name.clone()}
@@ -97,6 +127,8 @@ fn Navbar(user: CurrentUser) -> impl IntoView {
                     <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-48 border border-base-300">
                         <li class="menu-title"><span class="text-xs opacity-70">{user.email}</span></li>
                         <li><a href="/me">"My dashboard"</a></li>
+                        <li><a href="/teams">"Teams"</a></li>
+                        <li><a href="/notifications">"Notifications"</a></li>
                         <li><a href="/settings">"Settings"</a></li>
                         <li>
                             <form method="post" action="/logout">

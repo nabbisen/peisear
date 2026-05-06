@@ -7,6 +7,1100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.0] — 2026-04-29
+
+### Added
+
+- **`peisear-notify` crate.** A new workspace member — the
+  sixth crate, joining `peisear-core`, `peisear-auth`,
+  `peisear-storage`, `peisear-web`, and the `peisear` binary.
+  This crate owns the notification dispatch pipeline (edge
+  detection, channel routing, audit log) that previously
+  lived inside `peisear-web::notifications`.
+- **Real email delivery via the wasm-smtp 0.9 family.** The
+  email channel — log-stub since 0.13.0 — now performs real
+  SMTP delivery when `SMTP_*` environment variables are
+  configured. Built on:
+  - `wasm-smtp 0.9` (SMTP protocol core)
+  - `wasm-smtp-tokio 0.9` with the `mail-builder` feature
+    (production tokio + rustls Transport, plus
+    `SmtpClient::send_message` convenience)
+  - `wasm-smtp-cloudflare 0.9` (kept in the dependency tree
+    unused, so a future Cloudflare Workers deployment is a
+    transport swap, not a dependency change)
+  - `mail-builder 0.4` (RFC 5322 / MIME composition)
+- **STARTTLS support.** Both implicit TLS (port 465) and
+  STARTTLS (port 587) work out of the box — `wasm-smtp 0.9`
+  ships `SmtpClient::connect_starttls`; we pick the right
+  transport flavour based on configuration.
+- **`SmtpConfig::from_env`** reads operator config from
+  environment:
+
+  | Variable | Required | Notes |
+  |---|---|---|
+  | `SMTP_HOST` | for email | e.g. `smtp.example.com` |
+  | `SMTP_PORT` | optional | default 465 (implicit TLS) |
+  | `SMTP_TLS_MODE` | optional | `implicit` or `starttls`; auto from port if unset |
+  | `SMTP_USER` | for email | SMTP AUTH username |
+  | `SMTP_PASSWORD` | for email | SMTP AUTH password |
+  | `SMTP_FROM_ADDRESS` | for email | `From:` header |
+  | `SMTP_FROM_NAME` | optional | display name; falls back to address |
+
+  When any required variable is missing, the email channel
+  is unavailable but the in-app channel continues to work
+  (see "Design" below).
+- **Three integration tests** in
+  `peisear-notify/tests/dispatch_integration.rs` verifying:
+  - `smtp_unconfigured_records_in_app_only_in_dispatched_via`
+    — the Q4 graceful-degradation contract.
+  - `smtp_configured_but_unreachable_records_in_app_only`
+    — failure at send time doesn't break in-app delivery.
+  - `cooldown_suppresses_second_dispatch_within_window`
+    — sanity that the cooldown filter still works after the
+    dispatch pipeline moved crates.
+
+### Design
+
+- **Why a verb-form crate name (`peisear-notify`).** Existing
+  crate names follow a noun-form pattern (`core`, `auth`,
+  `storage`, `web`); plural nouns like `peisear-notifications`
+  would commit the crate to a "list of notification objects"
+  framing. A verb form keeps the responsibility shape open —
+  this crate *notifies*, and may grow to *broadcast*,
+  *summarise*, etc. without the noun-plural baggage.
+- **What stays out of `peisear-notify`.** HTTP routes for
+  `/notifications` and `/settings/notifications` (those live
+  in `peisear-web::handlers`); UI rendering (in
+  `peisear-web::components`); domain types like
+  `Notification`, `Preference`, `Severity` (these stay in
+  `peisear-core` so future crates like `peisear-ai` can
+  produce notification events without depending on the
+  dispatch pipeline); storage CRUD (in `peisear-storage`).
+- **Why the wasm-smtp family is the right partner.** Per the
+  pre-implementation Q&A: peisear is project management
+  software, not an email product. The wasm-smtp family
+  isolates the SMTP-related code surface — protocol,
+  transport, authentication mechanisms (PLAIN, LOGIN,
+  SCRAM-SHA-256, XOAUTH2), error classification, MIME
+  composition (via `mail-builder`) — into an external
+  ecosystem maintained by people who think about SMTP for a
+  living. peisear-notify carries about 150 lines of email
+  code; the rest delegates upward to the wasm-smtp family.
+- **Q4 graceful degradation.** When SMTP env vars aren't set,
+  startup logs a single `warn` line ("SMTP not configured;
+  the email channel will fail at send time") and continues.
+  Send attempts fail at the channel layer (logged at `warn`),
+  the audit row records `dispatched_via` without `email`, and
+  the in-app channel is unaffected. Rationale: peisear should
+  remain useful in deployments that deliberately don't
+  configure email (single-user instances, evaluation
+  environments). A startup failure would punish them for a
+  non-essential capability.
+- **Default port 465, not 587.** Implicit TLS is the modern
+  recommendation. `SMTP_TLS_MODE` lets operators override
+  explicitly, and the auto-derivation from port number
+  (587 → STARTTLS) means typical SMTP submission deployments
+  Just Work without extra configuration.
+- **Q5 test strategy: integration test, not docker mailpit.**
+  The test verifies env-var diff (configured/unconfigured/
+  unreachable produce correct `dispatched_via` outcomes)
+  rather than full SMTP-on-the-wire delivery. Docker mailpit
+  was considered and rejected — added CI complexity for
+  marginal extra coverage. Real SMTP correctness is the
+  operator's verification when they configure their own
+  server.
+- **Q6 from-address policy: global only.** Phase 1 has a
+  single `SMTP_FROM_ADDRESS`; per-team overrides are Phase 2
+  if real demand appears. Multiple From addresses complicate
+  SPF/DKIM setup; not justified by current usage.
+
+### Changed
+
+- All six workspace crates bumped to `0.16.0`.
+- `peisear-web::notifications::*` (the dispatch pipeline,
+  channel impls, edge detection helpers) moved to the new
+  `peisear-notify` crate. Public API surface preserved at
+  the `peisear_notify::*` module path; internal callers
+  (`peisear-web::jobs`, the binary's `main`) updated.
+- The email channel's send call site went from
+  `tracing::info!("[email-stub] would dispatch via email", ...)`
+  to a real
+  `SmtpClient::connect[_starttls]` →
+  `SmtpClient::login` → `SmtpClient::send_message` → `quit`
+  pipeline using `wasm-smtp-tokio` adapters. The function's
+  signature in [`peisear_notify::channel::send_via_channel`]
+  is unchanged.
+- `.env.example` updated: STARTTLS noted as supported,
+  `SMTP_TLS_MODE` documented, default port flipped 587 → 465.
+
+### Deferred (Phase 2 candidates)
+
+- **HTML email** (`multipart/alternative`). Phase 1 is plain
+  text only; the 80% case for notification email.
+  `mail-builder` makes adding HTML straightforward when a
+  use case appears.
+- **Connection pooling.** Today each email send opens, logs
+  in, sends one message, and quits. Notification volume is
+  small; pooling complexity isn't earned yet. If volume
+  grows, `wasm-smtp` already supports multi-message sessions
+  on a single connection (documented in upstream's
+  `connection-reuse.md`); it's a refactor of our send path,
+  not a new dependency.
+- **Digest mode.** Bundle multiple notifications into a
+  single per-day or per-week email. Requires per-user
+  preference UI changes and storage shape changes; not
+  blocking anything today.
+- **Per-team `From:` address.** See Q6 in design notes
+  above.
+- **Webhook channel real implementation.** Still a log stub
+  since 0.13.0. Requires per-user webhook URL UI + outbound
+  HTTP client setup; tracked as a separate Phase 2 item in
+  ROADMAP.
+
+## [0.15.0] — 2026-04-28
+
+### Added
+
+- **Sprints (Phase 1: flat, Jira-style).** Time-boxed planning
+  units scoped to a team. Optional — teams that don't want
+  sprints continue working without them, and personal projects
+  remain unaffected (sprints require a team).
+- **`sprints` and `sprint_issues` tables.** A sprint has a
+  team-scoped name, optional goal, inclusive `starts_on` /
+  `ends_on` dates, and a lifecycle status: `planned` →
+  `active` → `completed`. Issues join via a single-issue-
+  per-sprint constraint (`sprint_issues.issue_id` is the
+  primary key, so re-assigning an issue moves it).
+- **`/teams/{slug}/sprints`** — sprint listing for a team.
+  Members see; admins see + create. Includes the velocity
+  chart (when there are 2+ completed sprints).
+- **`/teams/{slug}/sprints/new`** — admin-only creation form
+  with name, dates, optional goal.
+- **`/teams/{slug}/sprints/{id}`** — sprint detail page with
+  summary card, burndown chart (when active or completed),
+  issues table, and admin lifecycle buttons (Start /
+  Complete / Edit / Delete).
+- **`/teams/{slug}/sprints/{id}/edit`** — admin-only sprint
+  settings.
+- **Sprint lifecycle transitions** are explicit admin POSTs:
+  - `start`: `planned` → `active`. Refuses if another sprint
+    in the same team is already active (one-at-a-time
+    invariant enforced at the application layer).
+  - `complete`: `active` → `completed`. Sets `completed_at`;
+    carry-over numbers freeze at the moment of completion.
+  - `delete`: removes a sprint at any state (admin
+    judgment).
+- **Issue assignment to sprints** via a dropdown card on the
+  issue detail page. The dropdown appears only for issues in
+  team-shared projects. Personal projects don't show it
+  (sprints are a team feature). Completed sprints don't
+  appear in the dropdown — historical numbers are immutable.
+- **Velocity bar chart** on the sprint listing. Each
+  completed sprint contributes a pair of bars: completed
+  points (filled, distinct colour) plus carried-over points
+  (lighter, alongside). A median reference line spans the
+  recent window. Heading: "**Completed work this period**" —
+  the bars are described as fact, never as performance.
+- **Burndown line chart** on the sprint detail (active and
+  completed states). Two cumulative lines: `committed`
+  (added scope) and `completed` (finished work). The visible
+  gap between them is in-flight work. **No ideal line**, no
+  predicted-finish curve, no completion-percentage readout.
+- **Sprint summary card** showing `Committed`, `Completed`,
+  `In flight`, and (for completed sprints only) `Carried
+  over`. Plain numbers; no "achievement %" or "velocity
+  index".
+- **Sprints link** added to the team detail page so members
+  reach the listing in one tap.
+- New core types in `peisear-core::sprints`:
+  `SprintStatus` enum (`Planned` / `Active` / `Completed`),
+  `Sprint` struct, `SprintSummary` struct, `BurndownPoint`
+  struct (serialisable for the chart), and
+  `VELOCITY_MEDIAN_WINDOW = 5`.
+- New storage module `peisear-storage::sprints`: full
+  lifecycle CRUD (`find_by_id`, `list_for_team`,
+  `active_for_team`, `insert`, `update`, `delete`,
+  `start`, `complete`, `add_issue`, `remove_issue`,
+  `sprint_for_issue`, `issues_in_sprint`, `summary`,
+  `burndown`, `recent_completed_for_team`).
+
+### Design
+
+- **Jira-style variable-length sprints, not Linear-style
+  rolling cadence.** Each sprint is created with explicit
+  start/end dates by an admin. Auto-rolling cadence
+  (Linear's "every 2 weeks, automatically") is deferred to
+  Phase 2. The reasoning, from design notes: rolling cadence
+  encodes a fixed expectation that the team must keep up with
+  the calendar; variable-length sprints let the team set
+  their own pace per cycle.
+- **Velocity chart deliberately doesn't say "velocity".**
+  The Jira-popularised word carries "performance" baggage we
+  want no part of. The chart heading reads "Completed work
+  this period". Bars are neutral colours, not green/red. The
+  median reference line is for orientation, not target. We
+  don't say "increasing" or "decreasing" anywhere — the user
+  reads the picture and forms their own view.
+- **Burndown shows facts only.** Two cumulative lines
+  (committed and completed); their gap is in-flight. No
+  ideal-line diagonal — that would be prescriptive. No
+  predicted finish — that would be presumptuous. No
+  completion percentage — "70% done" is closer to a verdict
+  than to information. The chart shows the *what*; the team
+  decides the *so what*.
+- **Carry-over is fact, not failure.** Issues remaining when
+  a sprint completes are reported as "{N} carried over"
+  alongside the completion numbers. The same neutral framing
+  used elsewhere in peisear (`Watch` ceiling, no `Concern`).
+- **Lifecycle transitions are explicit admin events.** No
+  time-based auto-promotion: a sprint stays in `planned`
+  until an admin clicks "Start sprint", and stays in
+  `active` until an admin clicks "Complete sprint". This is
+  V2.1 §4.4 (the *moment of decision* should be a click,
+  not a tick of the clock).
+- **One active sprint per team at a time.** The application
+  refuses to start a second active sprint with a friendly
+  conflict message ("Another sprint (X) is currently active
+  in this team."). A team that wants two parallel work
+  streams should use two teams; the alternative — multi-
+  active — turns "is this in flight?" into a multi-answer
+  question.
+- **Single-sprint-per-issue.** `sprint_issues.issue_id`
+  is the primary key, so an issue can be in at most one
+  sprint. Moving between sprints is allowed (UPSERT
+  ON CONFLICT updates the row). Multi-sprint commitment
+  ("this issue is part of sprint A and sprint B") is a
+  Phase 2 feature behind a use case we haven't seen.
+- **Sprints are a team feature, end of.** Personal projects
+  (`team_id IS NULL`) don't get sprint UI: the dropdown
+  doesn't appear on their issue pages, and POST attempts
+  return a Validation error. The sprint feature is one of
+  the things you opt into when you create or join a team.
+- **Burndown computed from `issue_events`.** The `done`-event
+  history (added in 0.8.0) is the source of truth for "when
+  did this issue finish?". Issues that predate the event log
+  fall back to `updated_at`. Computed live; no caching.
+
+### Changed
+
+- All five workspace crates bumped to `0.15.0`.
+- `IssueDetailPage` now accepts `sprint_options` (a `Vec<(id,
+  name)>` of the project's team's planned-or-active sprints)
+  and `current_sprint_id`. Personal-project pages pass an
+  empty vec. The sprint dropdown card renders only when there
+  are options.
+- `handlers::issues::detail_page` resolves the project's team
+  and lists its sprints when applicable. Cost: one extra
+  query per detail-page load for team projects.
+- ROADMAP updated: the Sprint feature is shipped (was a
+  Medium-term entry). Added a "next phase, ready to start"
+  block with a 6-step plan for the **wasm-smtp v0.6** /
+  **wasm-smtp-cloudflare v0.6** integration now that those
+  releases are out.
+
+### Deferred (future)
+
+- **Auto-rolling cadence (Linear-style).** "Every 2 weeks,
+  generate the next sprint" as a per-team setting.
+- **Sprint planning page.** A drag-and-drop UI for moving
+  multiple issues between the backlog and a planned sprint.
+  Today's per-issue dropdown handles the same job at smaller
+  scale.
+- **Carry-over policies.** Today, completing a sprint leaves
+  unfinished issues attached to the now-completed sprint
+  (which is why "Carried over" stays meaningful). A future
+  setting could move them automatically to the next planned
+  sprint, or to the backlog.
+- **Cross-team sprints.** A single sprint spanning multiple
+  teams is rejected today. If a real use case appears, a
+  `sprint_team_assignments` join would be the addition.
+- **Multi-sprint commitment.** One issue in two sprints
+  simultaneously. The PK on `sprint_issues.issue_id` blocks
+  this; relaxing it would be the change.
+- **Velocity trend chart on `/me`.** Currently velocity is
+  team-level only. A per-user "completed this period across
+  all my teams" view would be parallel work.
+
+## [0.14.0] — 2026-04-28
+
+### Added
+
+- **Teams (Phase 1: flat).** Multi-user collaboration via
+  optional teams. The design is Linear-inspired: teams are an
+  affordance for users who need them, not a requirement.
+  Personal projects (no team) continue to work exactly as
+  before — the team feature is purely additive for individual
+  workflows.
+- **`teams` and `team_memberships` tables.** Teams have a
+  human name, a URL slug (immutable post-create), and an
+  optional description. Memberships carry a role: `admin`,
+  `member`, or `viewer`.
+- **`projects.team_id` (nullable).** A project either belongs
+  to a team (members of the team have access per their role)
+  or stays personal (the owner is the only person with
+  access — current 0.13.0 behaviour). Null means personal.
+- **Three roles**:
+  - **Admin**: manage members and team settings (rename,
+    update description), move projects in/out, invite
+    members, change roles, remove members. Admin is a
+    *political* role. **Admin does not gain access to other
+    members' personal sustainability data** (burnout panel,
+    `/me`); see ROADMAP "Privacy & access control evolution"
+    for the rationale.
+  - **Member**: full project participation — create / edit
+    issues, be assigned, modify capacity within issues.
+  - **Viewer**: read-only on team projects. Cannot create
+    issues or be assigned.
+- **`/teams` inbox**: list of the user's teams with role
+  badges. Empty-state copy explicitly tells solo users they
+  don't need to create a team.
+- **`/teams/new`**: team creation form. Slug is auto-derived
+  from the name via `slugify()` (lowercase, hyphenated,
+  truncated at 64 chars) but explicitly settable. Creating a
+  team auto-adds the creator as `admin` in the same
+  transaction.
+- **`/teams/{slug}`**: team detail page with members table
+  (with inline role-change dropdowns for admins) and projects
+  list. Privacy footnote at the bottom of the page reminds
+  users about V2.1 §2.5: "admin role is a management role,
+  not an oversight role".
+- **`/teams/{slug}/edit`**: admin-only settings page (rename,
+  update description; slug is immutable).
+- **`/teams/{slug}/members`** (POST): admin-only invite by
+  email + role assignment.
+- **`/teams/{slug}/members/{user_id}/role`** (POST):
+  admin-only role change. Refuses to demote the last admin.
+- **`/teams/{slug}/members/{user_id}/remove`** (POST): admin
+  removes any member, OR self-removal regardless of role.
+  Refuses to remove the last admin.
+- **`/teams/{slug}/projects/{project_id}/unassign`** (POST):
+  admin detaches a project from the team back to personal.
+- **Project create form** now offers an optional team
+  dropdown when the user belongs to teams where they have
+  write capability (admin or member; viewer excluded). The
+  form post-validates that the actor really is allowed to
+  put a project in the chosen team (defence against
+  forged form values).
+- **`Teams` link** in the user dropdown nav.
+- New core types in `peisear-core::teams`:
+  - `TeamRole` enum (`Admin` / `Member` / `Viewer`) with
+    `as_str` / `human_name` / `from_storage_str` and
+    `can_write` / `can_manage_team` capability helpers.
+  - `Team` and `TeamMembership` structs.
+  - `slugify(name)` helper with `SLUG_MAX_LEN = 64`.
+- New storage module `peisear-storage::teams`:
+  `find_by_id` / `find_by_slug` / `teams_for_user` /
+  `members_of_team` / `role_for` / `membership` /
+  `insert` (transactional with first-admin) /
+  `update_team` / `add_member` / `update_role` /
+  `remove_member` / `admin_count` (last-admin guard) /
+  `assign_project_to_team` / `unassign_project`.
+
+### Design
+
+- **Linear-inspired flat teams, not GitLab-style nested
+  groups.** The design discussion considered three patterns:
+  fixed N-tier, arbitrary nested, and flat-with-future-parent.
+  Linear's "start flat, add structure when it hurts" matches
+  peisear's preference for the smallest correct design and
+  is what we're shipping. Sub-teams (`parent_team_id`) are
+  Phase 2 territory — the schema reserves `team_id` such that
+  this is non-breaking.
+- **Personal projects remain unchanged.** Existing 0.13.0
+  workflows continue to work. The user with one personal
+  project doesn't need to know teams exist; the user managing
+  five projects across two collaborative groups gets the
+  feature when they need it.
+- **`team_id` nullable.** "No team" is a valid state, not a
+  defaulted-to placeholder. Personal projects are
+  distinguishable from team projects in the schema and in
+  query results. The list-projects query explicitly handles
+  both paths (`p.team_id IS NULL AND p.owner_id = ?` OR
+  `p.team_id IS NOT NULL AND member_join.user_id = ?`).
+- **Three roles, not five.** GitHub Repo has Triage and
+  Maintain in addition to Read/Write/Admin; GitLab has five.
+  We picked three because the difference between "can edit
+  issues" and "can also do project admin" maps cleanly onto
+  the per-team admin role; finer gradations multiply
+  complexity faster than they earn it.
+- **Role storage as TEXT, not enum.** Adding a fixed role
+  later (e.g. `Billing`) is a CHECK-constraint addition, not
+  a migration; adding custom (per-team named) roles would be
+  a `team_roles` table. Both paths kept open.
+- **Last-admin guard at the application layer.** A team
+  without admins cannot be managed; the guard is enforced in
+  `update_member_role` and `remove_member` before issuing
+  SQL. SQLite triggers could express this but are harder to
+  test and easier to bypass (e.g. via direct DB access).
+- **Privacy floor (V2.1 §2.5).** The team feature ships with
+  one absolute boundary: per-user signals (burnout panel,
+  personal dashboard) remain visible only to the user
+  themselves, regardless of team role. Project-level
+  metrics are visible to all team members. Admin role is
+  political (manage), not surveilling (read other people's
+  data). Future privacy controls (per-team policy, per-user
+  hide) are documented in ROADMAP "Privacy & access control
+  evolution".
+- **Non-members see 404, not 403, on team URLs.** A user
+  who's typed `/teams/some-slug` shouldn't be able to confirm
+  the team exists. The same posture as GitHub private repos.
+- **Self-removal is allowed for any member.** A non-admin
+  who joined a team can leave at any time — no need to ask
+  permission. The same last-admin guard still applies if the
+  leaving user happens to be the last admin.
+- **Slug collision is a redirect, not a 4xx.** Form input
+  errors round-trip through query string so the user can
+  see what was wrong without losing their other inputs. Same
+  pattern as the 0.12.0 capacity-conflict UI.
+
+### Changed
+
+- All five workspace crates bumped to `0.14.0`.
+- `Project` struct (peisear-core) gained
+  `team_id: Option<String>`. Existing callers that don't
+  consult this field continue to work (it's just an
+  additional field).
+- `peisear_storage::projects::insert` now takes
+  `team_id: Option<&str>`. The web layer's project-create
+  handler validates team membership before passing it
+  through; tests confirm forged team_id values are rejected.
+- `peisear_storage::projects::find_accessible` now resolves
+  team membership via LEFT JOIN: a user accesses a project
+  if it's their personal project OR they're a member of its
+  team. Existing callers (issue handlers, project page,
+  workload chips) get the team-shared access automatically.
+- `peisear_storage::projects::list_for_user` returns
+  personal projects + team-shared projects. Behaviour-
+  preserving for users with no team memberships.
+
+### Deferred (future)
+
+See ROADMAP "Privacy & access control evolution" for the
+full list. Highlights:
+
+- **Sub-teams**: one-level parent. Linear added this in
+  2025; we'd add it after observing operator usage.
+- **Custom roles**: per-team named roles with selectable
+  capability sets. Currently nothing in the V2.1 brief
+  drives this; opening it up adds complexity we're not yet
+  paying for.
+- **Per-team privacy policy**: stricter postures
+  (admin-can-see-burnout would actually be *less* strict
+  than the floor, and we've decided not to allow it; *more*
+  strict postures like "all sustainability silent across
+  the team" are reasonable Phase 2 work).
+- **Per-user privacy controls**: a user opts to hide their
+  workload chip from team members.
+- **Anonymous aggregation**: project workload as
+  median/p90 instead of named per-user chips, for larger
+  teams where individual chips create pressure.
+- **Cross-team project moves**: today, an admin can detach
+  a project to personal and the original creator can
+  reassign it. A future "transfer to another team" flow
+  would skip the personal-project intermediate state.
+- **Email-based invitation flow**: today the invitee must
+  already have a peisear account. Email invite tokens are
+  a Phase 2 improvement.
+
+## [0.13.0] — 2026-04-28
+
+### Added
+
+- **Notifications subsystem.** Warnings now reach the user
+  through an inbox + multi-channel dispatch pipeline, instead of
+  living only on whichever page surfaces the warning. V2.1 §1.4
+  ("warnings should reach you") is the design driver.
+- **Edge-triggered events with cooldown.** Notifications fire
+  when a tracked signal *transitions* across a threshold (a user
+  goes from `< 8` consecutive over-capacity snapshots to `≥ 8`,
+  or from `< 14` stalled-days to `≥ 14`), not on every tick that
+  the signal stays elevated. A 24-hour cooldown on
+  `(user_id, kind)` further dampens flapping. The combination
+  produces "one notice per real change", not noise.
+- **Three channels: in-app, email (stub), webhook (stub).**
+  - **in-app**: persists a row in the new `notifications`
+    table; the inbox at `/notifications` reads and renders
+    these.
+  - **email**: stub today (logs the dispatch intent at info
+    level). Will be wired to `wasm-smtp` once that crate
+    releases. No code change to users when that happens — just
+    a swap of the `send_via_channel(channel_id::EMAIL)` body.
+  - **webhook**: stub today (logs the intent). Real impl will
+    POST a small JSON envelope to a per-user URL configured in
+    a future settings extension.
+- **Inbox at `/notifications`** with read/unread distinction,
+  per-row "Mark read", header "Mark all read", filter-free
+  newest-first ordering, severity-coloured left border (warning
+  for `Watch`, info for `Info`), and contextual "View context →"
+  links (burnout kinds → `/me`, project trend → `/projects`).
+- **Preferences at `/settings/notifications`** with smart
+  defaults and minimal first-time UX:
+  - First-login email banner: a single Yes/No prompt
+    ("Yes, send me email" / "Just in-app, thanks"). Either
+    answer dismisses the banner permanently. The choice is
+    recorded as a `_global` row in `notification_preferences`.
+  - Per-kind preferences live in a folded `<details>` —
+    closed by default; users who want defaults never see it.
+    Each row has channel checkboxes and a min-severity
+    selector ("All" or "Watch only").
+  - "Silence all" link in the header sets every user-facing
+    kind's channels to empty. Reachable but not bait —
+    notification fatigue is a legitimate concern.
+- **Top-nav bell icon with unread badge.** The bell links to
+  `/notifications`; the badge shows the unread count (capped
+  display at "99+" for sanity). Initially threaded through
+  the layout shell so all authenticated pages see it; the
+  count is fetched per page render, so it's accurate as the
+  user navigates.
+- New core types in `peisear-core::notifications`:
+  - `Severity` enum (`Info`, `Watch`) with `from_storage_str`,
+    `as_str`, `meets_minimum`.
+  - `Notification` and `Preference` domain structs.
+  - `kind`, `channel` submodules with constants
+    (`BURNOUT_OVERLOAD`, `BURNOUT_STALLED`,
+    `PROJECT_TREND_DECLINE`, `IN_APP`, `EMAIL`, `WEBHOOK`,
+    `GLOBAL`) and `human_name` helpers.
+  - Edge detection helpers: `is_edge_into_watch_burnout_overload`,
+    `is_edge_into_watch_burnout_stalled`.
+  - `DEFAULT_CHANNELS` (`[IN_APP]`), `DEFAULT_MIN_SEVERITY`
+    (`Info`), `COOLDOWN_HOURS` (24).
+  - `OVERLOAD_STREAK_WATCH` (8) and `STALLED_WATCH_DAYS` (14)
+    promoted from inline magic numbers in
+    `classify_overload_streak` / `classify_stalled` to public
+    constants so the notification edge logic doesn't keep its
+    own copy of the threshold.
+- New storage module `peisear-storage::notifications`:
+  `insert`, `recent_for_user`, `unread_count_for_user`,
+  `mark_read`, `mark_all_read`, `last_dispatched_at_for_user_kind`
+  (cooldown query), `preferences_for_user`,
+  `preference_for_user_kind`, `upsert_preference`,
+  `global_acknowledged`, `set_global_acknowledged`,
+  `global_preference`.
+- New web module `peisear-web::notifications` with
+  `dispatch_loop`, `DispatchEvent`, edge detection wrapping,
+  channel-specific `send_via_channel` (no-op for in-app, log
+  stub for email/webhook).
+
+### Design
+
+- **Two-task architecture (Rust idiomatic).** The
+  `snapshot_loop` and `dispatch_loop` are independent tokio
+  tasks connected by an `mpsc::channel` of `DispatchEvent`.
+  The snapshot loop detects edges and `try_send`s events; the
+  dispatch loop drains events, applies preferences and
+  cooldown, fans out to channels, and persists audit rows.
+  Discussed in design notes:
+  - Responsibility separation (snapshot ≠ dispatch).
+  - Slow-channel isolation: a 30-second webhook timeout
+    blocks dispatch, not the next snapshot tick.
+  - Foundation for the planned digest mode (Phase 2):
+    receiving events into a different routine is a smaller
+    change than refactoring an inline dispatch path.
+  - Cooperative shutdown: dropping the snapshot loop's
+    `mpsc::Sender` closes the channel, which lets the
+    dispatch loop drain and exit naturally. No oneshot
+    needed for the dispatcher.
+- **Smart defaults and one-question first-login.** Q3=A in
+  the design discussion. The default channel list
+  (`[IN_APP]`) means a fresh user has working notifications
+  immediately. The first-login banner asks one question
+  (email yes/no), no more. Per-kind details are folded in a
+  `<details>` element. Together: a user who never opens the
+  preferences page still gets sensible behaviour, and the
+  user who wants more control never finds the UI hostile.
+- **Edge-trigger primary, cooldown safety net.** A naive
+  every-tick send would generate a notification per snapshot
+  for as long as the user is over capacity. Edge-trigger
+  reduces this to one notification per actual transition.
+  Cooldown then guards against threshold flapping (rapid
+  cross-and-back).
+- **Audit row always.** A successful dispatch produces a
+  `notifications` row with `dispatched_via` listing the
+  channels that worked. A failed dispatch (no channels
+  succeeded — webhook 500, email TODO) produces a row with
+  `dispatched_via = ""`. The user's inbox view is the same
+  whether or not external channels worked: the in-app
+  artefact is the row itself.
+- **Severity ceiling at "Watch", same as the rest of the
+  project.** The notifications subsystem inherits the
+  `HealthIndicator::Watch` ceiling — no `Concern` palette,
+  no escalation. The whole posture is "here is a thing to
+  glance at; you decide what to do".
+- **In-app row IS the artefact, not a marker for one.** The
+  in-app channel doesn't *also* have a side-effect; the
+  notifications row is itself the in-app delivery. Saves a
+  table and keeps audit and inbox in lockstep.
+- **String-typed kind / channel vocabulary, but enums for
+  severity.** Kinds and channels are TEXT in storage so new
+  ones don't need a migration. Constants in
+  `peisear-core::notifications::kind` / `::channel` keep the
+  spellings consistent. Severity is an enum because the set
+  is small and exhaustive matching is useful.
+- **Per-kind row absence = system defaults**, not "delete
+  the row". `preferences_for_user` returns only configured
+  rows; the web layer merges with `DEFAULT_CHANNELS` /
+  `DEFAULT_MIN_SEVERITY`. New kinds shipping in future
+  releases work for existing users without backfill.
+
+### Changed
+
+- All five workspace crates bumped to `0.13.0`.
+- `AppShell` now takes an `unread_count` prop (defaulting to
+  `0`); the navbar renders a 🔔 icon and an unread badge based
+  on it. Existing handlers continue to compile (default keeps
+  the old behaviour); the notifications/preferences pages and
+  any future page can pass the live count.
+- `peisear_web::jobs::spawn_all` returns the same shape it did
+  before (the `Vec<oneshot::Sender<()>>` for graceful shutdown)
+  but internally now spawns two tasks instead of one. The
+  dispatch loop's lifetime is tied to the snapshot loop's via
+  the mpsc sender drop.
+- `capture_one_user` was extended to compute the prior burnout
+  state, write the snapshot, recompute the new burnout state,
+  and emit edge events. The snapshot persistence path is
+  unchanged for callers who don't care about notifications.
+- `classify_overload_streak` / `classify_stalled` now reference
+  the new public constants (`OVERLOAD_STREAK_WATCH = 8`,
+  `STALLED_WATCH_DAYS = 14`) instead of inline literals.
+  Behaviour identical.
+
+### Deferred (future)
+
+- **Digest mode**, where a user can opt to receive an end-of-day
+  summary instead of per-event notifications. The dispatch
+  pipeline is shaped to support this — a digest mode is "drain
+  events into a per-user accumulator, flush at a scheduled
+  cadence" — but Phase 1 ships per-event only. (Q2=A in the
+  design discussion.)
+- **wasm-smtp integration for email.** Today the email channel
+  is a log-emitting stub. Once `wasm-smtp` releases, we replace
+  the body of `send_via_channel(EMAIL)` with the real send.
+  No interface change needed.
+- **Webhook configuration UI.** Webhook channel exists but
+  there's no per-user webhook URL field yet — the stub logs the
+  intent without a destination. The UI lands alongside the
+  real send implementation.
+- **Project-trend decline detection.** The `project_trend_decline`
+  kind exists in the vocabulary and the inbox renders it
+  correctly when a row is inserted, but the snapshot loop does
+  not yet detect the edge. The detection would compare a
+  median of the past 7 days' composite scores to the prior 7
+  days; ships in a follow-up.
+- **Per-page nav unread badge on every page**, not just on
+  pages that already pass `unread_count`. The default of `0`
+  means existing pages don't show the badge, only the bell.
+  This keeps the 0.13.0 diff bounded; full coverage is a later
+  pass over each handler.
+
+## [0.12.0] — 2026-04-28
+
+### Added
+
+- **Period-scoped capacity table.** New `user_capacities` table
+  with `period_start` / `period_end` (both nullable) lets a user
+  describe how much they can carry at a given time:
+  - Open-ended row (both NULL) is the default.
+  - Bounded row (both set) covers a sprint, a leave window, a
+    quarter, etc.
+  - Half-open rows (one bound NULL) cover "from a date forwards"
+    or "up to a date".
+- **CRUD UI on `/settings`.** The Capacity section renders:
+  - "Effective today" status banner — shows the points value
+    that's currently in effect, or "no capacity set for today"
+    if no row covers today.
+  - Capacity rows table with inline edit (dropdown form),
+    "Close on date" helper for open-ended rows, and remove
+    action with `confirm()`.
+  - "Add a capacity row" form below the table, with explicit
+    points / period_start / period_end / note fields.
+- **"(this period)" hint on the Load chip** at `/me`. When the
+  row that's currently effective has any period bound, the chip
+  surfaces a small italic "(this period)" annotation so the user
+  knows their displayed capacity isn't a permanent default.
+- New core / storage / web symbols:
+  - `peisear-storage::user_capacities` module with
+    `effective_for_user`, `effective_for_user_on_date`,
+    `effective_row_for_user`, `list_for_user`, `find`,
+    `overlaps_existing`, `insert`, `update`, `delete`,
+    `close_at`, plus `CapacityRow` and `ConflictInfo` types.
+  - `StorageError::Conflict(String)` and
+    `StorageError::Validation(String)` for application-level
+    rejections that need a useful message.
+  - Settings handlers: `insert_capacity`, `update_capacity`,
+    `delete_capacity`, `close_capacity`.
+
+### Design
+
+- **Single source of truth.** An earlier draft kept
+  `users.capacity_points` as the default and added
+  `user_capacities` as overrides. Per design discussion, this
+  was rejected: two sources meant "why is my capacity 15?"
+  required consulting both, and migration semantics ("the user
+  with `users.capacity_points = 10` — is that a default or a
+  no-bounds capacity?") were ambiguous. We chose the breaking
+  change: drop `users.capacity_points` entirely, make
+  `user_capacities` the only source. After this migration, the
+  answer is always "look at the row whose period covers the
+  date in question".
+- **Non-overlapping periods (application-layer enforcement).**
+  Periods may not overlap for a single user. SQLite cannot
+  express a multi-row constraint at the schema level (CHECK is
+  row-local), and triggers are easy to bypass and harder to
+  test, so the check lives in
+  `user_capacities::overlaps_existing`. Every `insert` and
+  `update` calls it first and returns
+  `StorageError::Conflict` on overlap, which the web layer
+  surfaces via redirect with `?error=...` and a `role="alert"`
+  message on the next page render. The narrow race between the
+  check and the write is zero in practice for SQLite/WAL; a
+  future PostgreSQL backend will use either a transaction or
+  an exclusion constraint.
+- **NULL bounds mean "infinity".** A row with
+  `period_start = NULL` is effective from the dawn of time;
+  `period_end = NULL` means "until further notice". This makes
+  the migration row (both NULL) trivially compatible with the
+  pre-0.12.0 data model, where a single capacity value was
+  effective forever. Operators reading a fresh database see
+  "10 pt: — to —" and understand it without docs.
+- **`close_at` as a UI-shaped helper.** The common workflow is
+  "I have an open-ended row; I want to add a new row starting
+  next month, but they would overlap." Rather than make the
+  user issue a manual `update` to set `period_end` first, we
+  ship `close_at(row, date)` as a dedicated endpoint at
+  `/settings/capacity/{id}/close`. The UI exposes it as a
+  "Close on date" dropdown only on rows that need it
+  (open-ended ones).
+- **No schema-level CHECK for overlaps; explicit comment in the
+  migration explains why.** The migration file documents the
+  schema-vs-application boundary so a future operator (or
+  future maintainer) reads the rationale before reaching for
+  triggers.
+- **Snapshot honesty preserved.** `user_metrics_snapshots`
+  (0.10.0) records `capacity_points` at write-time, so any
+  past snapshot continues to reflect what the user's capacity
+  *was* on that date. The 0.12.0 schema migration doesn't
+  touch existing snapshot rows; future writes continue to
+  resolve through `effective_for_user_on_date`.
+
+### Changed
+
+- **Breaking: `users.capacity_points` removed.** Migration
+  `0009_user_capacities.sql` migrates each user's existing
+  value into a single open-ended `user_capacities` row, then
+  drops the column. SQLite ≥ 3.35 supports this; we depend on
+  3.40+.
+- **`User` core type still has `capacity_points: Option<i64>`,**
+  but it's now populated by callers (handlers, components)
+  through `user_capacities::effective_for_user` rather than
+  read off the row. Pre-existing code that reads
+  `User.capacity_points` continues to compile but always gets
+  `None` from `users.rs`; the right call is to consult
+  `personal_metrics::for_user_*` (which handles resolution
+  internally).
+- **`personal_metrics::for_user_in_project` and `for_user_global`**
+  now resolve capacity through `user_capacities`. The
+  `PersonalMetrics::capacity_points` field semantics are
+  unchanged for callers.
+- **`issues::project_workload`** SQL now joins against
+  `user_capacities` via correlated subselect (`WHERE
+  period_start IS NULL OR period_start <= date('now')` AND
+  symmetric for end). Result shape (`Vec<UserLoad>`) unchanged.
+- **Settings page restructured.** The single capacity input is
+  replaced by the rows table + add form. WIP-limit form is
+  unchanged.
+- **All five workspace crates bumped to 0.12.0.**
+
+### Deferred (future)
+
+- **Schema-level overlap constraint via trigger.** If
+  application-layer enforcement turns out to leak in practice
+  (multiple writers, complex flows), a `BEFORE INSERT/UPDATE`
+  trigger raising on conflict is the natural fallback. Today's
+  bet is that the application layer is reliable enough; we'll
+  revisit if operator reports say otherwise.
+- **Sprint table integration.** Adding a sprint should
+  optionally auto-create matching capacity rows (period bounded
+  by sprint dates). Lands with the planned sprint feature.
+- **Per-day breakdown rendering.** A small visual showing
+  "today is 4/28 — your row covers 4/15 → 4/30, with 12 days
+  remaining" is a small addition that we don't ship today
+  because the table already conveys the information.
+- **Bulk import.** A future "paste a CSV of period rows" form
+  would help operators set up sprints in bulk. Today's manual
+  add-one-at-a-time is fine for low-frequency use.
+
+## [0.11.0] — 2026-04-28
+
+### Added
+
+- **Estimation drift trend.** The `<Sustainability>` panel on
+  `/me` now shows a "Pace drift" chip comparing the median
+  dwell-time-per-point of the recent two weeks vs. the prior two
+  weeks across a 28-day window. Reports `↑ longer per point`,
+  `↓ shorter per point`, or `→ steady` (within ±25%). Both
+  medians render visibly on the chip
+  (`recent 0.45 vs. 0.20 d / pt`) so the user has the "by how
+  much" answer at a glance.
+- **Cognitive switching pattern.** A "Switching" chip in the
+  same panel surfaces the median count of `-> in_progress`
+  events per active day over the past 14 days, alongside the
+  sample size (`5 / active day`, `42 events over 14 d`). The
+  median plus sample period together let the user contextualise
+  the number — "5 / day over 14 days" reads quite differently
+  from "5 / day over 4 active days".
+- **Insufficient-data chips.** When either signal cannot be
+  computed (drift needs both halves of the window populated;
+  switching needs ≥5 events), the chip renders explicitly as
+  `— need more data` with a clear aria-label, rather than
+  vanishing. The user can tell the difference between "this
+  signal is steady" and "this signal isn't computable yet".
+- New core types in `peisear-core::user_burnout`:
+  `EstimationDriftTrend`, `DriftDirection` (Up / Down / Steady),
+  `CognitiveSwitchingPattern`. New constants
+  `DRIFT_WINDOW_DAYS = 28`,
+  `DRIFT_STEADY_THRESHOLD_RATIO = 0.25`,
+  `SWITCHING_WINDOW_DAYS = 14`, `SWITCHING_MIN_EVENTS = 5`.
+- New storage functions in `peisear-storage::user_burnout`:
+  `estimation_drift_for_user` (event-time-bucketed median per
+  half), `cognitive_switching_for_user` (per-day grouped count
+  with active-day median).
+- New "Patterns" subsection in the `<Sustainability>` panel,
+  visually separated from the warning chips, with its own
+  framing footnote: "These are descriptions of recent rhythm,
+  not evaluations. Many patterns have legitimate reasons behind
+  them."
+
+### Design
+
+- **Patterns are not warnings.** The two new chips deliberately
+  use the neutral `badge-ghost` palette. Drift up does not
+  warrant a `Watch` palette and the type system reflects this:
+  `classify_drift` returns `DriftDirection`, not
+  `HealthIndicator`. Switching has no classifier at all because
+  there is no threshold that meaningfully separates "good"
+  switching (debugging, coordination) from "bad" switching.
+- **Drift uses the same median-vs-median comparison shape as
+  the project trend chip** (`peisear-core::project_health::
+  classify_trend`), but applied within a single user's
+  completed work. Symmetry across the codebase: when we compare
+  past to present, we use medians and explicit windows, not
+  means or single points.
+- **Why median over active days for switching, not calendar
+  days.** A user who works in bursts (intensive 3-day pushes
+  then quiet days) should see their rhythm represented by the
+  rhythm of those 3 days, not diluted by the quiet ones. The
+  question we're trying to answer is "what does a typical
+  active day look like for you?", and active days are the
+  right unit.
+- **Insufficient data is shown, not hidden.** Both new chips
+  render an explicit `— need more data` state when their
+  evidence is below threshold. Earlier prototypes hid the chip
+  on `None`; we changed to explicit rendering because per V2.1
+  §4.4 (説明可能性), telling the user "we don't have enough
+  yet" is information; silent absence is not. The distinction
+  between "this signal is steady" and "we can't tell yet" is a
+  user-meaningful one and the UI should preserve it.
+- **Visible context, not tooltip-only.** Both chips show the
+  raw numbers behind the headline (drift's two medians,
+  switching's sample period) on the chip face, not in a
+  tooltip. A tooltip would hide the "by how much" answer
+  behind a hover; visible numbers let the user agree or
+  disagree with the headline at a glance.
+- **`summarize()` is unchanged.** Drift / switching are not
+  added to the panel's natural-language summary. The summary is
+  for warnings ("here's what to glance at"); pattern facts are
+  separate and clearly labelled as descriptive. Mixing them
+  into the warning summary would conflate "act on this" with
+  "notice this".
+
+### Changed
+
+- Workspace and all five crates bumped to `0.11.0`.
+- `peisear-core::user_burnout::UserBurnoutSignals` gained two
+  optional fields: `estimation_drift: Option<EstimationDriftTrend>`
+  and `cognitive_switching: Option<CognitiveSwitchingPattern>`.
+- `peisear-storage::user_burnout::for_user` now also computes the
+  two new signals as part of its single call. Same return type
+  (`Option<UserBurnoutSignals>`) so callers don't change.
+- `<PersonalDashboard>`'s sustainability panel now renders a
+  Patterns subsection alongside any streak chips. The panel's
+  hide-condition is unchanged (panel hidden only when no streak
+  signals AND no computable patterns); the addition is that an
+  insufficient-data chip is treated as "showable" — the
+  Patterns block always renders when the panel is open at all.
+
+### Deferred (future)
+
+- **Per-project drift / switching scope.** Today these are
+  computed across all of a user's assigned work. A future
+  variation might offer per-project breakdowns when the user is
+  in many projects of distinct character. Probably waits until
+  the planned Team / organisation feature lands; the per-project
+  story makes more sense in that context.
+- **Drift direction's UI semantics.** Right now both `↑` and
+  `↓` use the same neutral palette. If user testing reveals
+  that a small visual differentiation (still no warning palette,
+  just clearer affordance) helps comprehension, we'll add it.
+  Today's choice is "let the arrow do the talking".
+
+## [0.10.1] — 2026-04-28
+
+### Added
+
+- **Five new operations docs** under `docs/operations/`:
+  - [`background-jobs.md`](docs/operations/background-jobs.md) —
+    what the snapshot loop does, what it costs, how to observe
+    it, what to expect after restarts.
+  - [`data-retention.md`](docs/operations/data-retention.md) —
+    growth rates of `issue_events`, `metrics_snapshots`, and
+    `user_metrics_snapshots`, the privacy posture around each,
+    retention-policy options the operator can choose between,
+    and the SQL to actually delete old rows.
+  - [`upgrade-runbook.md`](docs/operations/upgrade-runbook.md) —
+    pre-upgrade checklist, how to dry-run a migration, the
+    forward-only stance and rollback boundary, per-version
+    notes for 0.7.0+.
+  - [`observability.md`](docs/operations/observability.md) —
+    `tracing` log levels, structured fields, alerting threshold
+    suggestions including the SQL-based "no successful tick in
+    24 hours" check, debugging checklist for common symptoms.
+  - [`scaling.md`](docs/operations/scaling.md) — when SQLite is
+    enough, the signs it isn't, the easy levers before
+    PostgreSQL, what the background task does under load, the
+    "just one binary" promise's boundary.
+- The operations README now organises docs into "Day-one" and
+  "Day-two" sections so first-time deployers and longtime
+  operators can find what's relevant.
+
+### Design
+
+- **The new docs do not change the binary.** This is a
+  documentation-only release. The runbook and observability
+  posture they describe match what 0.10.0 already does; the
+  effect is that operators of existing 0.10.0 installations now
+  have written guidance instead of reading source.
+- **Honest about limits.** The docs spell out what peisear does
+  *not* yet do (no `/healthz` endpoint, no Prometheus metrics, no
+  built-in retention cleanup, no PostgreSQL backend) and what
+  the workarounds are. The intent is to set realistic operator
+  expectations, not to oversell the small-binary story.
+- **Cross-linked.** Each new doc links to its siblings so an
+  operator chasing a question can navigate without going back to
+  the README. Same convention as the existing `architecture/`
+  and `getting-started/` directories.
+
+### Changed
+
+- Workspace and all five crates bumped to `0.10.1` for
+  consistency with the doc release. No code changes.
+
+## [0.10.0] — 2026-04-27
+
+### Added
+
+- **Per-user sustainability signals.** A new `Sustainability`
+  panel on `/me` shows two streak-style indicators: the
+  consecutive-snapshot over-capacity streak, and the days since
+  the user's oldest in-flight issue last had a status change.
+  The panel is muted by default and opens itself only when at
+  least one indicator reaches `Watch`. The framing is question-
+  form ("consider whether some work can wait"), not diagnosis.
+- **`user_metrics_snapshots` table** — per-user point-in-time
+  history written by the background task on the same tick as
+  `metrics_snapshots`. Stores current WIP, in-flight points,
+  capacity, the over-capacity boolean (denormalised), the
+  effective WIP limit, and the over-WIP boolean (denormalised).
+- **`peisear-storage::user_burnout`** module with `for_user`
+  computing the streak signals from snapshots + events.
+- **`peisear-storage::user_metrics_snapshots`** module with
+  `insert`, `recent_for_user`, `users_with_active_assignments`.
+- **`peisear-core::user_burnout`** module with the
+  `UserBurnoutSignals` type, classification functions
+  (`classify_overload_streak`, `classify_stalled` — both
+  deliberately ceiling at `Watch`, never `Concern`), and the
+  pure-function `summarize` that produces the natural-language
+  prompt.
+- The background snapshot task now also runs `capture_all_users`
+  on each tick, writing one `user_metrics_snapshots` row per
+  user with at least one in-flight assigned issue.
+
+### Design
+
+- **A separate per-user table, not new columns on
+  `metrics_snapshots`.** Privacy boundaries differ: project-
+  level metrics are visible to anyone who can see the project;
+  per-user metrics are visible only to that user (and,
+  eventually, manager / neutral-third-party roles). Putting
+  them in the same table would either bleed access boundaries
+  (rows from one user visible alongside aggregate data) or
+  push the privacy logic to the row level. Schema-level
+  separation keeps the access control tractable; this
+  matches V2.1 brief §2.5 ("集計と個別を混同しない").
+- **`Watch` is the ceiling for burnout indicators.** No
+  `Concern` palette appears in the sustainability panel under
+  any condition. "Concern" framing on burnout territory
+  crosses into "you are burnt out" telling, which is the
+  user's call to make about themselves. The classification
+  functions in `peisear-core::user_burnout` have no `Concern`
+  branch at all, so the type system enforces this design.
+- **Question-form summary text.** `summarize()` returns
+  prompts like "you've been over capacity for X recent
+  snapshots — consider whether some work can wait or move",
+  not "you are over capacity". Same posture in the panel
+  footnote ("they exist so you can pace yourself"). Per V2.1
+  §5.3, alarming language is avoided even when the signal is
+  real.
+- **Honest unit labelling.** The over-capacity streak is
+  expressed as "snapshots" rather than "days". The snapshot
+  tick rate is configurable (`SNAPSHOT_INTERVAL`) and the
+  count is mechanical; calling it "days" would imply daily
+  resolution that the data doesn't have. The window for the
+  streak ("of last 14") is the calendar number where
+  resolution doesn't matter.
+- **Phase 1 of user burnout ships only two indicators.** Two
+  more were considered (estimation drift trend; cognitive
+  switching frequency) and explicitly deferred. They both
+  require more SQL and, more importantly, their interpretation
+  is more context-dependent — drift can mean estimation is
+  off, but it can also mean recent work was unusually hard;
+  switching frequency is high during legitimate debugging
+  sessions. Shipping interpretive signals without surrounding
+  context would hand the user a number they can't act on.
+  Deferring keeps the panel's claims tight.
+
+### Changed
+
+- Workspace and all five crates bumped to `0.10.0`.
+- The background snapshot task (`peisear-web::jobs`) now does
+  two passes per tick: project snapshots and user snapshots.
+  Both fail-tolerantly per row; the loop does not exit on
+  errors.
+- `peisear-web::handlers::me::page` now also fetches
+  `user_burnout::for_user` and threads `Option<UserBurnoutSignals>`
+  into the dashboard render.
+- `<PersonalDashboard>` gained a `burnout` parameter and a new
+  `<Sustainability>` section. The "What do these mean?"
+  collapsible was extended with the new section's explanation.
+- `<PersonalDashboard>`'s "Pace" description was corrected to
+  reflect the 0.8.0 reality (event-based dwell time, not
+  calendar approximation). The description-update is a
+  documentation-only change.
+
+### Deferred (future)
+
+- **Estimation drift trend** — week-over-week median of
+  `Pace`, with `Trend::Up { delta }` semantics on the personal
+  side. Builds on what's here; drops in additively.
+- **Cognitive switching frequency** — same-day status_changed
+  event count per user, surfaced as a streak / rolling
+  average. Defers until we have a UX answer for "high
+  switching is sometimes correct".
+- **Manager / neutral-third-party scopes.** The V2.1 brief
+  calls for view scopes beyond `self`; arrives with the
+  planned Team feature, since it requires a permission model
+  and a UI for granting / revoking the access. Until then,
+  `/me` is the only path to per-user data.
+
 ## [0.9.0] — 2026-04-27
 
 ### Added
@@ -620,7 +1714,15 @@ scope originally planned for 0.2.2 has been shipped under 0.2.3.
 - User registration, login, and logout backed by argon2id and JWT.
 - axum 0.7 + askama templating + sqlx on SQLite.
 
-[Unreleased]: https://github.com/nabbisen/peisear/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/nabbisen/peisear/compare/v0.16.0...HEAD
+[0.16.0]: https://github.com/nabbisen/peisear/releases/tag/v0.16.0
+[0.15.0]: https://github.com/nabbisen/peisear/releases/tag/v0.15.0
+[0.14.0]: https://github.com/nabbisen/peisear/releases/tag/v0.14.0
+[0.13.0]: https://github.com/nabbisen/peisear/releases/tag/v0.13.0
+[0.12.0]: https://github.com/nabbisen/peisear/releases/tag/v0.12.0
+[0.11.0]: https://github.com/nabbisen/peisear/releases/tag/v0.11.0
+[0.10.1]: https://github.com/nabbisen/peisear/releases/tag/v0.10.1
+[0.10.0]: https://github.com/nabbisen/peisear/releases/tag/v0.10.0
 [0.9.0]: https://github.com/nabbisen/peisear/releases/tag/v0.9.0
 [0.8.0]: https://github.com/nabbisen/peisear/releases/tag/v0.8.0
 [0.7.0]: https://github.com/nabbisen/peisear/releases/tag/v0.7.0

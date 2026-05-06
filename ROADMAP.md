@@ -30,15 +30,10 @@ without one person silently drowning.
   selector on new/edit forms, a ghost badge on cards, and an
   "Assignee" column in list view.
 - **Per-period capacity limits per assignee** — *capacity primitive
-  shipped in 0.5.0; period support deferred.* Users now have a global
-  `capacity_points` value (per-user, not per-period); the project
-  detail page shows a per-user workload strip with `Healthy` /
-  `Strained` / `Overloaded` colour coding and inline `WorkloadHint`
-  on issue forms. Saves are soft-warnings, not hard blocks. Period
-  support (sprint / week / month-scoped capacities) is the next
-  iteration on this primitive: see migration comment in
-  `0004_user_capacity.sql` for the planned `user_capacities` table.
-  Planned for 0.6.0 or 0.7.0 depending on demand.
+  shipped in 0.5.0; period support shipped in 0.12.0.* The
+  `user_capacities` table with optional `period_start` /
+  `period_end` is now the source of truth; see the 0.12.0
+  CHANGELOG entry for the migration story.
 - **Project-health score** — *shipped in 0.6.0.* Three indicators
   (Throughput, Oldest in-flight, Activity-14d) rendered as a strip
   on the project detail page, sharing a `HealthIndicator` palette
@@ -69,28 +64,88 @@ accessibility uplift). Phase 2 and beyond:
   Unavailable` rendered next to the composite score.
 - **`user_burnout` storage + core module** sibling to
   `personal_metrics`, sharing the `HealthIndicator` palette.
-  Likely signals: sustained-overload streak, stalled-assigned
-  streak, unbalanced load distribution across the team.
-- **Period-scoped capacity** (the deferred half of the 0.5.0
-  work): a `user_capacities` table with optional
-  `period_start`/`period_end` so capacity follows sprint cadence.
+  *Phase 1 shipped in 0.10.0; Phase 2 shipped in 0.11.0.* Four
+  indicators live: sustained-overload streak, stalled-assigned
+  streak, estimation drift trend (median dwell-per-point recent
+  vs. older half of a 28-day window), and cognitive switching
+  pattern (median pickups per active day). The first two have a
+  `Watch` palette ceiling; the latter two render in neutral
+  palette because they are descriptive rhythm, not warnings.
+  No `Concern` branch exists in any classifier.
+- **Period-scoped capacity.** *Shipped in 0.12.0.* New
+  `user_capacities` table replaces `users.capacity_points`; rows
+  have optional `period_start` / `period_end`. Periods may not
+  overlap (application-layer enforced). `/settings` UI provides
+  CRUD with a "Close on date" helper for closing open-ended
+  rows when adding new periods. Today's effective capacity
+  resolves through `user_capacities::effective_for_user`. The
+  Load chip on `/me` shows a "(this period)" hint when the
+  active row has period bounds. Migration is destructive: the
+  old column is dropped after data is moved into the new table.
 - **Sprints**: a `sprints` table with `(project_id, name,
   starts_at, ends_at)`, prerequisite for velocity-stddev,
-  burndown lines, and per-sprint completion ratios.
+  burndown lines, and per-sprint completion ratios. Now that
+  period-scoped capacity (0.12.0) is in place, sprint rows can
+  link to capacity rows by date range and the per-sprint
+  capacity is naturally computed.
 - **Roles**: manager / neutral-third-party scopes with their own
   `/me/{user_id}` (or aggregated dashboard) views. These arrive
   alongside the planned Team / organisation feature so the
   permission model lands once.
-- **Notification surfaces**: where the warnings actually reach
-  the person — beyond the page they happen to be looking at.
-  Settings page toggle, dashboard widget, optional email digest.
-- **AI-assisted warnings**: the new `peisear-ai` crate consumes
-  the `ProjectHealthReport` and `PersonalMetrics` shapes and
-  produces narrative summaries / suggestions.
+- **Notification surfaces**. *Shipped in 0.13.0 (Phase 1).
+  Real email delivery shipped in 0.16.0.*
+  `notifications` and `notification_preferences` tables back
+  an inbox at `/notifications` (with the navbar bell + unread
+  badge) and a preferences page at `/settings/notifications`
+  (with smart defaults and a one-question first-login email
+  prompt). Three channels through a `Channel`-shaped
+  abstraction: in-app via audit row; **email via the
+  wasm-smtp 0.9 family (real delivery as of 0.16.0)**;
+  webhook still a log stub awaiting per-user URL UI.
+  Edge-triggered detection with a 24-hour cooldown.
+  Architecture: snapshot loop and dispatch loop are
+  independent tokio tasks connected by
+  `mpsc::channel<DispatchEvent>`. The dispatch pipeline now
+  lives in its own crate, `peisear-notify`, so transport
+  dependencies (SMTP today, webhook HTTP client tomorrow,
+  AI digests later) don't bleed into the web crate's
+  compile graph.
 
-The foundation laid in 0.3.0–0.7.0 is oriented toward this
-trajectory. The next concrete step on the path is the Phase 2
-events table; everything else is then a thin layer on top.
+  **Email integration**: *Shipped in 0.16.0.* Real SMTP
+  delivery via the wasm-smtp 0.9 family (`wasm-smtp` core,
+  `wasm-smtp-tokio` Transport adapter, `wasm-smtp-cloudflare`
+  kept in tree as future option, plus `mail-builder` for
+  RFC 5322 / MIME composition). Both implicit TLS (port 465)
+  and STARTTLS (port 587) are supported. SMTP credentials
+  read from environment (operator territory). Graceful
+  degradation when unconfigured: in-app channel continues
+  working; email send attempts fail with a logged warning
+  and the audit row records `dispatched_via` without
+  `email`.
+
+  **Phase 2 notification candidates (deferred):**
+  - HTML email (`multipart/alternative`). `mail-builder`
+    makes adding HTML straightforward when a use case
+    appears.
+  - Connection pooling (multi-message sessions on a single
+    SMTP connection — `wasm-smtp` already supports this in
+    its API; we'd refactor our send path).
+  - Digest mode (bundle multiple notifications per day or
+    per week into one email).
+  - Per-team `From:` address override.
+  - Webhook channel real implementation (per-user URL UI
+    + outbound HTTP client).
+  - `project_trend_decline` notification kind detection.
+  - Per-page nav unread badge coverage (today the badge is
+    in the navbar bell only).
+
+The foundation laid in 0.3.0–0.7.0 oriented toward this
+trajectory; Phase 2 (events 0.8.0 → snapshots 0.9.0 → user
+burnout 0.10.0 → drift & switching 0.11.0 → period-scoped
+capacity 0.12.0 → notification surfaces 0.13.0) realises the
+core of it. The remaining items above (sprints, roles,
+AI assistance) are now a sequence of thin layers on top of
+the foundation rather than further structural work.
 
 ### AI assistant per user
 
@@ -146,22 +201,162 @@ behind a feature flag. The web crate grows an OIDC callback
 handler; the rest of the architecture is unchanged. Supports
 discovery, PKCE, and refresh flows.
 
-### Team / organisation model
+### Team model (Phase 1: flat teams)
 
-Currently a user owns their projects. A multi-user team concept
-requires:
+The 0.14.0 design adopts the **Linear-style flat team** approach
+discussed in design notes: optional teams that small users can
+ignore entirely. `team_id` on projects is nullable (a project
+without a team is a *personal project*, owned by its creator
+just as today). Users can join multiple teams; each membership
+carries a `role` (`admin` / `member` / `viewer`).
 
-- `teams` / `team_members` tables and queries in storage.
-- Scoping every existing `owner_id` to `team_id` with per-member
-  role (owner / member / viewer).
-- Access-control helpers in a new module, with query-level
-  enforcement preserved as the second line of defence.
+Role extensibility (future):
+
+- The 3-tier `admin / member / viewer` set is what 0.14.0
+  ships. The schema reserves `role TEXT` (not `enum`) so
+  future fixed roles (e.g. `billing` for paid hosted
+  scenarios, `security_manager` for compliance) can be added
+  without migration.
+- Custom roles (per-team named roles with selectable
+  capability sets) are an open design question — Linear has
+  no equivalent today; GitHub Enterprise does. We'd add
+  `team_roles` + `team_role_capabilities` tables only if
+  operator feedback justifies the complexity. Until then,
+  the three fixed values cover the design intent.
+
+Phase 2 candidates (deferred):
+
+- **Sub-teams** (one-level parent / nested teams). Linear
+  added this in 2025; we'd consider it after observing
+  operator usage of flat teams. The data model already
+  reserves `team_id` for this — adding `parent_team_id`
+  later is non-breaking.
+- **Per-team configuration**: cycle / sprint / label
+  defaults inherited by projects in the team.
+
+### Privacy & access control evolution
+
+V2.1 §2.5 ("集計と個別を混同しない") sets the boundary that
+0.14.0 ships: project-level metrics are visible to all team
+members; per-user signals (burnout panel, personal dashboard)
+are visible to that user only. The team admin role is
+**political** (manage members, configure team settings), not
+**surveilling** (read other people's burnout / dwell time /
+streak data).
+
+Future considerations on this surface:
+
+- **Per-team privacy policy**. A team could opt for a stricter
+  posture ("burnout panels are silent across the team")
+  without needing user-by-user opt-out. Default is the 0.14.0
+  posture (member workload visible, individual signals
+  private); admins of a team might restrict further but never
+  loosen below this floor.
+- **Per-user privacy controls**. A user could opt to hide
+  their per-user workload chip from team members (the
+  workload section on a project page would render as
+  "Hidden by user" rather than the load number). The
+  in-flight points are still computed and the user still
+  sees their own; what's suppressed is team-mates' visibility.
+- **Anonymous aggregation surface**. A project's overall
+  health composes individual workload signals; a future view
+  could show only the *aggregate* without naming specific
+  users (median/p90 instead of per-user chips). Useful where
+  the team is large enough that individual chips create
+  pressure.
+- **Deletion + retention semantics**. Deleting a user
+  currently `ON DELETE CASCADE`s their snapshots and
+  notifications. We should document and surface this as the
+  user's privacy guarantee: leaving a team is a clean
+  forget. Today's behaviour is correct; the surfacing is
+  what's missing.
+- **Audit trail visibility**. `issue_events` records actor_id
+  for every event; admins should not be able to retroactively
+  reconstruct who did what beyond what the issue's
+  history-pane already shows. A privacy-conscious
+  admin-tooling layer would expose less, not more.
+
+These are not 0.14.0 work — the Phase 1 floor (project
+metrics public to team, individual private) is the design
+this release ships against. They are **the privacy decisions
+we will need to make as the team feature matures**, recorded
+here so they don't get lost when the team feature does start
+demanding answers.
 
 ### Exports and imports
 
 CSV, JSON, and GitHub-compatible Markdown. Lands in `peisear-web` as
 a cluster of new handlers; the heavy lifting (SQL → struct → format)
 is storage + core.
+
+### Server-migration support
+
+A planned and supported way to move an entire peisear installation
+from one host to another. Distinct from *Exports and imports*
+above (which targets per-project data leaving the system in
+neutral formats); this is about the operator picking up the whole
+state and putting it down somewhere else.
+
+The current story is "stop the process, scp the SQLite file and
+the env vars to the new box, start the process there". That works
+but is undocumented as a supported path and has sharp edges
+around session continuity (JWT secret) and asset paths. Concrete
+work to make this a first-class feature:
+
+- **Bundled export.** A `peisear export <path>` subcommand that
+  produces a single archive (`.tar.zst` is the obvious choice)
+  containing: a hot-copy of the SQLite database via
+  `sqlite3 ".backup"`; a manifest with the version, schema
+  revision, and a checksum; and the contents of `static/` if it
+  has been customised. Specifically excludes secrets — those
+  must be redeployed out-of-band, see below.
+- **Bundled import.** Mirrored `peisear import <path>` that
+  validates the manifest version against the running binary,
+  refuses to overwrite a non-empty database without a force flag,
+  and applies the archive transactionally (move the existing
+  file aside, write the new one, run pending migrations, swap
+  back on success).
+- **Secrets-out-of-band by design.** `JWT_SECRET` is *not* in the
+  bundle. Migrating the secret moves all live sessions across
+  with it; rotating it forces every user to re-authenticate.
+  Both are defensible, neither is universally correct. The
+  documentation surfaces the choice and the operator decides.
+  Argon2 password hashes are in the database itself, so the
+  password file moves with the export — that's correct.
+- **Encrypted archive option.** For environments where the
+  archive lives on intermediate storage (S3, a desktop, a
+  thumb drive), an `--encrypt-with` flag taking a public key
+  produces an age-encrypted tar so the archive is not readable
+  in transit. Plain-text export remains the default for
+  trusted-network migrations where encryption is overhead.
+- **Cross-version compatibility window.** The manifest's schema
+  revision lets the new binary know whether it can run pending
+  migrations on the imported database (yes within the
+  forward-compatible window; refuse with a clear message if
+  someone tries to import a 0.12.0 archive into a 0.11.0 binary).
+- **Documentation.** A new `docs/operations/migrate-host.md`
+  walks through the full sequence including the secrets
+  decision, with rollback notes consistent with
+  [upgrade-runbook.md](docs/operations/upgrade-runbook.md).
+
+The deliberate alternative to a bundle command is to keep saying
+"the database file is the migration unit, here's how to copy it
+safely". That's documented in `backup.md` today and works. The
+case for shipping a dedicated tool is mostly that it removes the
+foot-guns (forgot to stop the process; copied a partial WAL;
+missed the static directory). Which path we pick depends on
+whether operator feedback says "the manual way is fine" or "we
+keep getting bitten". Currently leaning toward the bundle
+command, but holding off until at least one operator has made a
+real cross-host migration and reports back.
+
+### Deployment guide expansion in `docs/`
+
+*Shipped in 0.10.1.* `docs/operations/` now includes
+`background-jobs.md`, `data-retention.md`, `upgrade-runbook.md`,
+`observability.md`, and `scaling.md`. The operations README is
+organised into "Day-one" (deployment, backup, Tailwind
+self-hosting) and "Day-two" (the new five) sections.
 
 ## Long-term / vision
 

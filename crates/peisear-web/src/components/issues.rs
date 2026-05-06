@@ -674,6 +674,8 @@ pub fn IssueDetailPage(
     statuses: Vec<IssueStatus>,
     assignees: Vec<AssigneeOption>,
     workload: Vec<UserLoad>,
+    sprint_options: Vec<(String, String)>,
+    current_sprint_id: Option<String>,
     flash: Option<String>,
     editing: bool,
 ) -> impl IntoView {
@@ -712,6 +714,43 @@ pub fn IssueDetailPage(
         .into_any()
     };
 
+    let has_sprint_options = !sprint_options.is_empty();
+    let sprint_action = format!("/projects/{}/issues/{}/sprint", project.id, issue.id);
+    let current_sprint_for_select = current_sprint_id.clone();
+    let sprint_options_view = sprint_options
+        .into_iter()
+        .map(|(id, name)| {
+            let selected = current_sprint_for_select.as_deref() == Some(id.as_str());
+            view! {
+                <option value=id selected=selected>{name}</option>
+            }
+        })
+        .collect_view();
+    let no_sprint_selected = current_sprint_id.is_none();
+
+    let sprint_card = has_sprint_options.then(|| view! {
+        <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
+                 aria-label="Sprint assignment">
+            <div class="card-body py-3">
+                <form method="post" action=sprint_action
+                      class="flex items-center gap-2 flex-wrap">
+                    <label class="text-sm font-medium" for="sprint-select">"Sprint:"</label>
+                    <select id="sprint-select" name="sprint_id"
+                            class="select select-bordered select-sm flex-1 min-w-[14rem]"
+                            aria-label="Select sprint for this issue">
+                        <option value="" selected=no_sprint_selected>"(no sprint)"</option>
+                        {sprint_options_view}
+                    </select>
+                    <button type="submit" class="btn btn-ghost btn-sm">"Save"</button>
+                </form>
+                <p class="text-xs text-base-content/60 mt-1">
+                    "Sprint assignment is independent from this issue's status and priority — \
+                     adding to a sprint commits the work; the team decides what 'committed' means."
+                </p>
+            </div>
+        </section>
+    });
+
     view! {
         <AppShell title=title user=user flash=flash>
             <div class="max-w-3xl mx-auto">
@@ -721,6 +760,7 @@ pub fn IssueDetailPage(
                     <li class="max-w-[32ch] truncate">{issue_title_for_breadcrumb}</li>
                 </ul></div>
                 {body}
+                {sprint_card}
             </div>
         </AppShell>
     }
@@ -972,6 +1012,12 @@ pub fn render_issue_detail(
     statuses: Vec<IssueStatus>,
     assignees: Vec<AssigneeOption>,
     workload: Vec<UserLoad>,
+    // Sprints in the project's team that the user can pick
+    // from. Empty vec when the project is personal (no team)
+    // or the team has no `planned`/`active` sprints.
+    sprint_options: Vec<(String, String)>,
+    // The sprint id this issue is currently in, if any.
+    current_sprint_id: Option<String>,
     flash: Option<String>,
     editing: bool,
 ) -> Html<String> {
@@ -985,6 +1031,8 @@ pub fn render_issue_detail(
                 statuses=statuses
                 assignees=assignees
                 workload=workload
+                sprint_options=sprint_options
+                current_sprint_id=current_sprint_id
                 flash=flash
                 editing=editing
             />

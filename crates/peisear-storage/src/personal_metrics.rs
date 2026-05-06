@@ -126,14 +126,18 @@ fn calendar_time_days(created_at: &str, updated_at: &str) -> Option<f64> {
 /// Compute personal metrics for `user_id` scoped to `project_id`.
 ///
 /// Returns `None` if the user does not exist.
+///
+/// **0.12.0**: capacity is resolved through
+/// [`crate::user_capacities::effective_for_user`] (period-aware)
+/// rather than read from a static `users.capacity_points` field.
 pub async fn for_user_in_project(
     pool: &Pool,
     user_id: &str,
     project_id: &str,
 ) -> StorageResult<Option<PersonalMetrics>> {
-    let user_row: Option<(String, Option<i64>, Option<i64>)> = sqlx::query_as(
+    let user_row: Option<(String, Option<i64>)> = sqlx::query_as(
         r#"
-        SELECT u.display_name, u.wip_limit, u.capacity_points
+        SELECT u.display_name, u.wip_limit
         FROM users u
         WHERE u.id = ?1
         "#,
@@ -142,9 +146,13 @@ pub async fn for_user_in_project(
     .fetch_optional(pool)
     .await?;
 
-    let Some((display_name, user_wip_limit, capacity_points)) = user_row else {
+    let Some((display_name, user_wip_limit)) = user_row else {
         return Ok(None);
     };
+
+    // Today's effective capacity from user_capacities. None if the
+    // user has no row covering today (i.e., no capacity set).
+    let capacity_points = crate::user_capacities::effective_for_user(pool, user_id).await?;
 
     let project_default: Option<i64> = sqlx::query_scalar(
         r#"
@@ -237,9 +245,9 @@ pub async fn for_user_global(
     pool: &Pool,
     user_id: &str,
 ) -> StorageResult<Option<PersonalMetrics>> {
-    let user_row: Option<(String, Option<i64>, Option<i64>)> = sqlx::query_as(
+    let user_row: Option<(String, Option<i64>)> = sqlx::query_as(
         r#"
-        SELECT u.display_name, u.wip_limit, u.capacity_points
+        SELECT u.display_name, u.wip_limit
         FROM users u
         WHERE u.id = ?1
         "#,
@@ -248,9 +256,12 @@ pub async fn for_user_global(
     .fetch_optional(pool)
     .await?;
 
-    let Some((display_name, user_wip_limit, capacity_points)) = user_row else {
+    let Some((display_name, user_wip_limit)) = user_row else {
         return Ok(None);
     };
+
+    // Today's effective capacity. See `for_user_in_project` above.
+    let capacity_points = crate::user_capacities::effective_for_user(pool, user_id).await?;
 
     // Global WIP limit ignores per-project defaults; per-project
     // defaults don't compose into a global cap.

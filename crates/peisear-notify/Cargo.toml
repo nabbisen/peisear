@@ -1,0 +1,45 @@
+[package]
+name = "peisear-notify"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Notification dispatch pipeline: edge detection, channel routing, audit log."
+readme = "README.md"
+
+[dependencies]
+peisear-core = { workspace = true }
+peisear-storage = { workspace = true }
+
+chrono = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+# Email transport. Three crates from the wasm-smtp family:
+# - `wasm-smtp`: SMTP protocol core (state machine, parsing,
+#   command formatting, dot-stuffing, error classification).
+# - `wasm-smtp-tokio`: production tokio + rustls Transport for
+#   self-hosted servers (the deployment shape peisear targets).
+# - `wasm-smtp-cloudflare`: Workers-targeted adapter, pulled
+#   in unused so a future Cloudflare deployment is a transport
+#   swap, not a dependency change.
+# Plus `mail-builder` for RFC 5322 / MIME composition. Per
+# upstream's `composing-messages.md`, mail-builder is the
+# recommended partner; enabling its pass-through feature on
+# wasm-smtp-tokio activates `SmtpClient::send_message`.
+wasm-smtp = { workspace = true }
+wasm-smtp-tokio = { workspace = true }
+wasm-smtp-cloudflare = { workspace = true }
+mail-builder = { workspace = true }
+
+[dev-dependencies]
+# For integration tests at tests/*.rs. We deliberately keep
+# the dev-dep surface tiny: pulling sqlx/uuid here would
+# trigger feature-resolution recompiles. The production deps
+# (peisear-storage, tokio) are already enough to write
+# integration tests against the dispatch pipeline.
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }

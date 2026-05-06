@@ -13,10 +13,16 @@
 pub mod issue_events;
 pub mod issues;
 pub mod metrics_snapshots;
+pub mod notifications;
 pub mod personal_metrics;
 pub mod pool;
 pub mod project_health;
 pub mod projects;
+pub mod sprints;
+pub mod teams;
+pub mod user_burnout;
+pub mod user_capacities;
+pub mod user_metrics_snapshots;
 pub mod users;
 
 /// Active backend‑specific pool type. Swap this alias (or trait‑abstract
@@ -49,6 +55,21 @@ pub enum StorageError {
     /// (e.g. the DB file's parent directory could not be created).
     #[error("storage bootstrap error: {0}")]
     Bootstrap(String),
+
+    /// Application-level invariant violation: the proposed write
+    /// would conflict with existing data, but the conflict is
+    /// detectable cleanly enough to return a useful message.
+    /// Used by `user_capacities` for period overlaps. The string
+    /// is intended to be operator-readable.
+    #[error("conflict: {0}")]
+    Conflict(String),
+
+    /// The proposed write fails a domain rule before the SQL
+    /// constraint catches it. Distinct from `Database(...)` so the
+    /// web layer can map it to `400 Bad Request` instead of
+    /// `500 Internal Server Error`.
+    #[error("validation: {0}")]
+    Validation(String),
 }
 
 pub type StorageResult<T> = Result<T, StorageError>;

@@ -29,11 +29,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let db = pool::connect(&config.database_url).await?;
     pool::migrate(&db).await?;
 
+    // Read SMTP config from environment for the email channel.
+    // Returns None if any required variable is missing; the
+    // dispatcher gracefully degrades (in-app channel keeps
+    // working, email sends are skipped). Q4 of 0.16.0 design.
+    let smtp = peisear_notify::config::SmtpConfig::from_env();
+    peisear_notify::config::SmtpConfig::log_startup(smtp.as_ref());
+
     // Spawn background jobs (snapshot writer today; future:
     // user-burnout snapshot, optional cleanup). The returned
     // shutdown senders are dropped at process exit, which signals
     // the tasks to stop their loops.
-    let _shutdown_handles = jobs::spawn_all(db.clone());
+    let _shutdown_handles = jobs::spawn_all(db.clone(), smtp);
 
     let state = AppState {
         db,

@@ -428,12 +428,23 @@ pub async fn project_workload(
     pool: &Pool,
     project_id: &str,
 ) -> StorageResult<Vec<peisear_core::UserLoad>> {
+    // 0.12.0: capacity comes from `user_capacities`, resolved as
+    // "the row whose period covers today, most recently created".
+    // The correlated sub-select keeps the per-user join tractable
+    // even with the period filter.
     sqlx::query_as::<_, (String, String, Option<i64>, Option<i64>, i64)>(
         r#"
         SELECT
             u.id,
             u.display_name,
-            u.capacity_points,
+            (SELECT uc.points
+             FROM user_capacities uc
+             WHERE uc.user_id = u.id
+               AND (uc.period_start IS NULL OR uc.period_start <= date('now'))
+               AND (uc.period_end   IS NULL OR uc.period_end   >= date('now'))
+             ORDER BY uc.created_at DESC
+             LIMIT 1
+            ) AS capacity_points,
             COALESCE(SUM(CASE
                 WHEN i.status IN ('open', 'in_progress') THEN i.effort
                 ELSE NULL
@@ -446,7 +457,7 @@ pub async fn project_workload(
         JOIN projects p ON p.owner_id = u.id
         LEFT JOIN issues i ON i.assignee_id = u.id AND i.project_id = p.id
         WHERE p.id = ?1
-        GROUP BY u.id, u.display_name, u.capacity_points
+        GROUP BY u.id, u.display_name
         ORDER BY u.display_name ASC
         "#,
     )
