@@ -12,6 +12,7 @@ struct ProjectRow {
     owner_id: String,
     name: String,
     description: String,
+    wip_limit_default: Option<i64>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
@@ -23,6 +24,7 @@ impl From<ProjectRow> for Project {
             owner_id: r.owner_id,
             name: r.name,
             description: r.description,
+            wip_limit_default: r.wip_limit_default,
             created_at: r.created_at,
             updated_at: r.updated_at,
         }
@@ -32,7 +34,7 @@ impl From<ProjectRow> for Project {
 pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Project>> {
     let rows = sqlx::query_as::<_, ProjectRow>(
         r#"
-        SELECT id, owner_id, name, description, created_at, updated_at
+        SELECT id, owner_id, name, description, wip_limit_default, created_at, updated_at
         FROM projects
         WHERE owner_id = ?1
         ORDER BY updated_at DESC
@@ -51,7 +53,7 @@ pub async fn find_accessible(
 ) -> StorageResult<Project> {
     let row = sqlx::query_as::<_, ProjectRow>(
         r#"
-        SELECT id, owner_id, name, description, created_at, updated_at
+        SELECT id, owner_id, name, description, wip_limit_default, created_at, updated_at
         FROM projects
         WHERE id = ?1 AND owner_id = ?2
         "#,

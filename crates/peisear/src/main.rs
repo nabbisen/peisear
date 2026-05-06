@@ -7,7 +7,7 @@
 //! this crate re-exports.
 
 use peisear::storage::pool;
-use peisear::web::{AppState, Config, build_router};
+use peisear::web::{AppState, Config, build_router, jobs};
 use std::net::SocketAddr;
 
 #[tokio::main]
@@ -28,6 +28,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let db = pool::connect(&config.database_url).await?;
     pool::migrate(&db).await?;
+
+    // Spawn background jobs (snapshot writer today; future:
+    // user-burnout snapshot, optional cleanup). The returned
+    // shutdown senders are dropped at process exit, which signals
+    // the tasks to stop their loops.
+    let _shutdown_handles = jobs::spawn_all(db.clone());
 
     let state = AppState {
         db,

@@ -8,7 +8,7 @@ use axum::{
     response::{IntoResponse, Redirect},
 };
 use peisear_core::{IssueStatus, Priority};
-use peisear_storage::{issues, projects};
+use peisear_storage::{issues, metrics_snapshots, project_health, projects};
 use serde::Deserialize;
 use validator::Validate;
 
@@ -33,6 +33,28 @@ pub async fn project_detail(
 ) -> AppResult<impl IntoResponse> {
     let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
     let all_issues = issues::list_in_project(&state.db, &project_id).await?;
+    let assignees = issues::list_assignee_candidates(&state.db, &project_id).await?;
+    let workload = issues::project_workload(&state.db, &project_id).await?;
+    let raw_health = project_health::for_project(&state.db, &project_id).await?;
+    // Phase 2 trend window: 7-14 days before now. We fetch
+    // snapshots in this window, take their median score as the
+    // "past baseline", and report Up / Down / Flat against today.
+    // An empty list (no snapshots yet — first time the project is
+    // viewed, or a fresh install) yields Trend::Unavailable, which
+    // the UI hides.
+    let past_snapshots = metrics_snapshots::recent_for_project(
+        &state.db,
+        &project_id,
+        peisear_core::project_health::TREND_PAST_WINDOW_MIN_DAYS,
+        peisear_core::project_health::TREND_PAST_WINDOW_MAX_DAYS,
+    )
+    .await?;
+    // The function only needs the past score values, not the
+    // full ProjectHealthRaw. The denormalised score column is
+    // the right input here per the design rationale (today's
+    // weights aren't applied to yesterday's data).
+    let past_scores: Vec<u8> = past_snapshots.iter().map(|s| s.score_value).collect();
+    let health = peisear_core::project_health::compute_report_with_trend(raw_health, &past_scores);
 
     let mut columns: Vec<Column> = IssueStatus::all()
         .into_iter()
@@ -53,7 +75,7 @@ pub async fn project_detail(
     };
 
     Ok(components::issues::render_project_detail(
-        user, project, columns, view_mode, all_issues, q.flash,
+        user, project, columns, view_mode, all_issues, assignees, workload, health, q.flash,
     ))
 }
 
@@ -63,11 +85,15 @@ pub async fn new_page(
     Path(project_id): Path<String>,
 ) -> AppResult<impl IntoResponse> {
     let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    let assignees = issues::list_assignee_candidates(&state.db, &project_id).await?;
+    let workload = issues::project_workload(&state.db, &project_id).await?;
     Ok(components::issues::render_issue_new(
         user,
         project,
         Priority::all().to_vec(),
         IssueStatus::all().to_vec(),
+        assignees,
+        workload,
         None,
     ))
 }
@@ -80,6 +106,67 @@ pub struct IssueForm {
     pub description: String,
     pub status: String,
     pub priority: String,
+    /// Effort estimate as a string from the form `<select>`. The empty
+    /// string means "not estimated" (`None`); any positive integer is
+    /// passed through to storage. Validation lives in [`parse_effort`]
+    /// rather than `validator` derives so the empty-string case is
+    /// handled cleanly.
+    #[serde(default)]
+    pub effort: String,
+    /// User id from the assignee `<select>`. The empty string means
+    /// "unassigned" (`None`). Any non-empty value must match a user
+    /// who is a valid candidate for this project — see
+    /// [`validate_assignee`].
+    #[serde(default)]
+    pub assignee_id: String,
+}
+
+/// Parse an effort string as it arrives from a browser form.
+///
+/// `""` (the "—" preset) → `None` (not estimated).
+/// `"3"` → `Some(3)`. Negative numbers, zero, and non-numeric strings
+/// are validation errors.
+fn parse_effort(raw: &str) -> Result<Option<i64>, AppError> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    let n: i64 = trimmed
+        .parse()
+        .map_err(|_| AppError::Validation("Effort must be a positive integer.".into()))?;
+    if n <= 0 {
+        return Err(AppError::Validation(
+            "Effort must be a positive integer.".into(),
+        ));
+    }
+    Ok(Some(n))
+}
+
+/// Validate an assignee submission against the project's candidate set.
+///
+/// The empty string yields `None` (unassigned). Any non-empty value
+/// must appear in the candidate list returned by
+/// [`peisear_storage::issues::list_assignee_candidates`] — anything
+/// else is a 400, not a silent fallback. Falling back to "unassigned"
+/// on an unknown id would lose user-submitted data; rejecting forces
+/// the client to refresh and try again.
+async fn validate_assignee(
+    pool: &peisear_storage::Pool,
+    project_id: &str,
+    raw: &str,
+) -> Result<Option<String>, AppError> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    let candidates = issues::list_assignee_candidates(pool, project_id).await?;
+    if candidates.iter().any(|c| c.id == trimmed) {
+        Ok(Some(trimmed.to_string()))
+    } else {
+        Err(AppError::Validation(
+            "Selected user is not a valid assignee for this project.".into(),
+        ))
+    }
 }
 
 pub async fn create(
@@ -98,6 +185,8 @@ pub async fn create(
         .ok_or_else(|| AppError::Validation("Invalid status".into()))?;
     let priority = Priority::parse(&form.priority)
         .ok_or_else(|| AppError::Validation("Invalid priority".into()))?;
+    let effort = parse_effort(&form.effort)?;
+    let assignee_id = validate_assignee(&state.db, &project_id, &form.assignee_id).await?;
 
     let id = uuid::Uuid::new_v4().to_string();
     issues::insert(
@@ -109,6 +198,8 @@ pub async fn create(
         form.description.trim(),
         status,
         priority,
+        effort,
+        assignee_id.as_deref(),
     )
     .await?;
     Ok(Redirect::to(&format!("/projects/{project_id}/issues/{id}")))
@@ -128,12 +219,16 @@ pub async fn detail_page(
 ) -> AppResult<impl IntoResponse> {
     let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
     let issue = issues::find(&state.db, &issue_id, &project_id).await?;
+    let assignees = issues::list_assignee_candidates(&state.db, &project_id).await?;
+    let workload = issues::project_workload(&state.db, &project_id).await?;
     Ok(components::issues::render_issue_detail(
         user,
         project,
         issue,
         Priority::all().to_vec(),
         IssueStatus::all().to_vec(),
+        assignees,
+        workload,
         q.flash,
         q.edit == Some(1),
     ))
@@ -155,15 +250,20 @@ pub async fn update(
         .ok_or_else(|| AppError::Validation("Invalid status".into()))?;
     let priority = Priority::parse(&form.priority)
         .ok_or_else(|| AppError::Validation("Invalid priority".into()))?;
+    let effort = parse_effort(&form.effort)?;
+    let assignee_id = validate_assignee(&state.db, &project_id, &form.assignee_id).await?;
 
     issues::update(
         &state.db,
         &issue_id,
         &project_id,
+        &user.id,
         form.title.trim(),
         form.description.trim(),
         status,
         priority,
+        effort,
+        assignee_id.as_deref(),
     )
     .await?;
     Ok(Redirect::to(&format!(
@@ -178,7 +278,7 @@ pub async fn delete(
 ) -> AppResult<Redirect> {
     // Access check.
     let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
-    issues::delete(&state.db, &issue_id, &project_id).await?;
+    issues::delete(&state.db, &issue_id, &project_id, &user.id).await?;
     Ok(Redirect::to(&format!(
         "/projects/{project_id}?flash=Issue+deleted"
     )))
@@ -200,6 +300,6 @@ pub async fn change_status(
     let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
     let status = IssueStatus::parse(&body.status)
         .ok_or_else(|| AppError::Validation("Invalid status".into()))?;
-    issues::update_status(&state.db, &issue_id, &project_id, status).await?;
+    issues::update_status(&state.db, &issue_id, &project_id, &user.id, status).await?;
     Ok(StatusCode::NO_CONTENT)
 }

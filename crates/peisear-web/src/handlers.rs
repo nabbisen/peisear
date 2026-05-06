@@ -2,8 +2,10 @@
 
 pub mod auth;
 pub mod issues;
+pub mod me;
 pub mod projects;
 pub mod root;
+pub mod settings;
 
 pub(crate) fn format_validation(errors: &validator::ValidationErrors) -> String {
     let mut out = Vec::new();

@@ -10,7 +10,7 @@ use tower_http::{compression::CompressionLayer, services::ServeDir, trace::Trace
 
 use crate::{
     AppState,
-    handlers::{auth, issues, projects, root},
+    handlers::{auth, issues, me, projects, root, settings},
 };
 
 /// Build the full axum router given an already‑initialised state.
@@ -25,6 +25,12 @@ pub fn build_router(state: AppState) -> Router {
             get(auth::register_page).post(auth::register_submit),
         )
         .route("/logout", post(auth::logout))
+        // Settings
+        .route("/settings", get(settings::page))
+        .route("/settings/capacity", post(settings::update_capacity))
+        .route("/settings/wip-limit", post(settings::update_wip_limit))
+        // Personal dashboard
+        .route("/me", get(me::page))
         // Projects
         .route(
             "/projects",

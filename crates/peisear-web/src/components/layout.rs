@@ -96,6 +96,8 @@ fn Navbar(user: CurrentUser) -> impl IntoView {
                     </label>
                     <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-48 border border-base-300">
                         <li class="menu-title"><span class="text-xs opacity-70">{user.email}</span></li>
+                        <li><a href="/me">"My dashboard"</a></li>
+                        <li><a href="/settings">"Settings"</a></li>
                         <li>
                             <form method="post" action="/logout">
                                 <button type="submit" class="text-error">"Sign out"</button>

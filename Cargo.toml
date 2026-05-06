@@ -19,7 +19,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.2.3"
+version = "0.9.0"
 edition = "2024"
 rust-version = "1.85"
 
@@ -73,10 +73,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 validator = { version = "0.18", features = ["derive"] }
 
 # ─── Workspace‑local crates (consumed via `workspace = true`) ────────
-peisear-core = { version = "0.2.3", path = "crates/peisear-core" }
-peisear-auth = { version = "0.2.3", path = "crates/peisear-auth" }
-peisear-storage = { version = "0.2.3", path = "crates/peisear-storage" }
-peisear-web = { version = "0.2.3", path = "crates/peisear-web" }
+peisear-core = { version = "0.9.0", path = "crates/peisear-core" }
+peisear-auth = { version = "0.9.0", path = "crates/peisear-auth" }
+peisear-storage = { version = "0.9.0", path = "crates/peisear-storage" }
+peisear-web = { version = "0.9.0", path = "crates/peisear-web" }
 
 # Release profile applies to all workspace binaries.
 [profile.release]

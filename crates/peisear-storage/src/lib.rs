@@ -10,8 +10,12 @@
 //! future `storage-postgres` sibling crate, or a `backend` feature flag,
 //! can swap the type without callers changing their signatures.
 
+pub mod issue_events;
 pub mod issues;
+pub mod metrics_snapshots;
+pub mod personal_metrics;
 pub mod pool;
+pub mod project_health;
 pub mod projects;
 pub mod users;
 

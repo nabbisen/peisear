@@ -18,7 +18,9 @@ pub mod auth;
 pub mod error_page;
 pub mod issues;
 pub mod layout;
+pub mod me;
 pub mod projects;
+pub mod settings;
 
 use axum::response::Html;
 use leptos::prelude::*;
