@@ -3,6 +3,7 @@
 **Issue tracking that fits in a single binary.**
 Sophisticated. Solid. Really easy. Good UI.
 
+![Status](https://img.shields.io/badge/status-unstable-red)
 [![crates.io](https://img.shields.io/crates/v/peisear?label=rust)](https://crates.io/crates/peisear)
 [![Rust Documentation](https://docs.rs/peisear/badge.svg?version=latest)](https://docs.rs/peisear)
 [![Dependency Status](https://deps.rs/crate/peisear/latest/status.svg)](https://deps.rs/crate/peisear)
