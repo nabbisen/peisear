@@ -67,21 +67,26 @@ out across five phases, one per minor release:
   - **PR2 — Sprint planning page** *(target: 0.20.0)*.
     `/teams/{slug}/sprints/{id}/plan` with backlog → sprint
     list-based assignment UI. (DnD lands in Phase D.)
+    Detailed design: [`rfcs/0001-sprint-planning-page.md`](./rfcs/0001-sprint-planning-page.md).
   - **PR3 — Calendar surfaces** *(target: 0.21.0)*.
     `/today/calendar` (personal axis) and
     `/projects/{id}/calendar` (project axis). No team axis
     per §10.2. Read-only display in this PR; DnD is Phase D.
+    Detailed design: [`rfcs/0002-calendar-surfaces.md`](./rfcs/0002-calendar-surfaces.md).
   - **PR4 — Inbox refinements** *(target: 0.22.0)*.
     Notification preferences UI, mark-all-read, snooze.
+    Detailed design: [`rfcs/0003-inbox-refinements.md`](./rfcs/0003-inbox-refinements.md).
 - **Phase D — Direct manipulation** *(target: 0.23.0)*. The
   five direct-manipulation surfaces (status click toggle,
   kanban DnD, calendar DnD, sprint-plan DnD, list reorder)
   rolled out in five sub-steps D-1 through D-5.
+  Detailed design: [`rfcs/0004-direct-manipulation.md`](./rfcs/0004-direct-manipulation.md).
 - **Phase E — Quality consolidation** *(target: 0.24.0)*.
   ABDD QA + Security QA. The §11.5 authorization assertions
   and §21.4 optimistic-lock assertions reach full coverage on
   all relevant endpoints. WCAG AA contrast, mobile completion
   for the four key flows, language consistency.
+  Detailed design: [`rfcs/0005-quality-consolidation.md`](./rfcs/0005-quality-consolidation.md).
 
 #### Test infrastructure (preparation, in 0.16.0 → 0.17.0)
 

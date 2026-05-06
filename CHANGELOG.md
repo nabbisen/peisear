@@ -5,6 +5,74 @@ All notable changes to peisear are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.1] — 2026-05-05
+
+### Added (documentation)
+
+Patch release with no code changes — adds the `rfcs/`
+folder and five design documents covering the upcoming
+Phase C–E themes, so the next implementation work has a
+concrete contract to start from.
+
+- **`rfcs/README.md`** — folder index, lightweight + detailed
+  template, lifecycle, language note. The detailed template
+  adds Background / Requirements / Design / Test plan /
+  Security & privacy considerations on top of the
+  lightweight shape, triggered when the change crosses a
+  crate boundary, touches a schema migration, affects the
+  §11.5 privacy boundary or §21.4 optimistic-lock contract,
+  or introduces a new public surface.
+- **`rfcs/0001-sprint-planning-page.md`** (Phase C PR2,
+  target 0.20.0). Bulk-assign issues to a sprint via
+  `/teams/{slug}/sprints/{sprint_id}/plan`. Two-column
+  layout, button-based moves (DnD deferred to D-4),
+  capacity hint as a soft signal not a hard limit. Resolves
+  open questions left by the spec (backlog scope = team-
+  scoped projects only, capacity hint formula, sprint-side
+  ordering).
+- **`rfcs/0002-calendar-surfaces.md`** (Phase C PR3, target
+  0.21.0). Personal axis `/today/calendar` and project
+  axis `/projects/{id}/calendar`; no team axis (§10.2).
+  Pins migration `0016_issue_planned_dates.sql` to two
+  columns (`planned_start_at` / `planned_end_at`) instead
+  of the spec's four — reasoning recorded in the RFC. The
+  spec's "no efficiency metrics" rule (§16.6) is encoded
+  as a guard test (`calendar_does_not_render_efficiency_metrics`)
+  so future drift is caught.
+- **`rfcs/0003-inbox-refinements.md`** (Phase C PR4, target
+  0.22.0). Silence-resume banner, prominent mark-all-read,
+  email opt-in deferred to first-notification, sub-issue
+  parent breadcrumb in search. Migration
+  `0017_users_email_opt_in.sql` covers the deferred prompt
+  state. Decided to *not* grandfather existing users into
+  "never prompted"; they see the banner on next inbox
+  visit.
+- **`rfcs/0004-direct-manipulation.md`** (Phase D umbrella,
+  target 0.23.0). Cross-cutting contract for the five
+  substeps (D-1 status click, D-2 kanban DnD, D-3 calendar
+  DnD, D-4 sprint-plan DnD, D-5 list reorder). Locks in
+  the optimistic-update + 5-second undo + rollback-on-409
+  pattern, the no-celebratory-language rule, and the
+  ordering of substep delivery (D-1 → D-2 → D-4 → D-3 →
+  D-5). Each substep gets its own follow-up RFC when it
+  becomes the next thing on the table.
+- **`rfcs/0005-quality-consolidation.md`** (Phase E, target
+  0.24.0). Audit-format RFC: tables for authorization
+  endpoints, optimistic-lock mutations, language strings,
+  colour contrast, and aggregate-inferability suppression.
+  Resolves the lone `cross_user_settings_post_returns_403`
+  ignored test from 0.19.0 (activate or remove with cause).
+  Includes proposed defaults for audit-log retention
+  (30 days) and `issue_events` retention (90 days).
+
+### Updated
+
+- **`ROADMAP.md`** — Phase C PR2-4 and Phase D / E entries
+  now link to the RFCs that detail them.
+- **Workspace version** bumped 0.19.0 → 0.19.1 across the
+  six workspace crates' inter-crate dependency
+  declarations.
+
 ## [0.19.0] — 2026-05-04
 
 ### Added (Phase C PR1 — sub-issue hierarchy)

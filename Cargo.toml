@@ -20,7 +20,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.19.0"
+version = "0.19.1"
 edition = "2024"
 rust-version = "1.85"
 
@@ -104,11 +104,11 @@ wasm-smtp-cloudflare = "0.9"
 mail-builder = "0.4"
 
 # ─── Workspace‑local crates (consumed via `workspace = true`) ────────
-peisear-core = { version = "0.19.0", path = "crates/peisear-core" }
-peisear-auth = { version = "0.19.0", path = "crates/peisear-auth" }
-peisear-storage = { version = "0.19.0", path = "crates/peisear-storage" }
-peisear-notify = { version = "0.19.0", path = "crates/peisear-notify" }
-peisear-web = { version = "0.19.0", path = "crates/peisear-web" }
+peisear-core = { version = "0.19.1", path = "crates/peisear-core" }
+peisear-auth = { version = "0.19.1", path = "crates/peisear-auth" }
+peisear-storage = { version = "0.19.1", path = "crates/peisear-storage" }
+peisear-notify = { version = "0.19.1", path = "crates/peisear-notify" }
+peisear-web = { version = "0.19.1", path = "crates/peisear-web" }
 
 # Release profile applies to all workspace binaries.
 [profile.release]
