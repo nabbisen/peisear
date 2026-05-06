@@ -11,8 +11,8 @@ use tower_http::{compression::CompressionLayer, services::ServeDir, trace::Trace
 use crate::{
     AppState,
     handlers::{
-        auth, issues, me, notification_preferences, notifications, projects, redirects, root,
-        search, settings, sprints, teams,
+        api_users, auth, issues, me, notification_preferences, notifications, projects, redirects,
+        root, search, settings, sprints, teams,
     },
 };
 
@@ -144,6 +144,16 @@ pub fn build_router(state: AppState) -> Router {
         // /api/search is the JSON typeahead used by the navbar input.
         .route("/search", get(search::results_page))
         .route("/api/search", get(search::typeahead))
+        // Personal-data JSON API (Phase B PR2,
+        // peisear-feature-spec-v2.1 §11.5). All three return
+        // the requesting user's own data; cross-user reads are
+        // 403, unauth requests are 401 (JSON, not redirect).
+        .route("/api/users/{user_id}/burnout", get(api_users::burnout))
+        .route("/api/users/{user_id}/capacity", get(api_users::capacity))
+        .route(
+            "/api/users/{user_id}/notifications",
+            get(api_users::list_notifications),
+        )
         // Projects
         .route(
             "/projects",
@@ -164,6 +174,15 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/projects/{id}/issues/{issue_id}",
             get(issues::detail_page).post(issues::update),
+        )
+        // Phase B PR3 (B-3): edit mode is now an explicit URL,
+        // not `?edit=1`. The legacy parameter on the detail
+        // route 308-redirects here so bookmarks/links still
+        // work. The handler shares its data-loading code with
+        // `detail_page`; only the `is_edit_mode` flag changes.
+        .route(
+            "/projects/{id}/issues/{issue_id}/edit",
+            get(issues::edit_page),
         )
         .route(
             "/projects/{id}/issues/{issue_id}/delete",

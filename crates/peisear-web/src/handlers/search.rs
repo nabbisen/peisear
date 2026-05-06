@@ -31,7 +31,10 @@ use axum::{
 use peisear_storage::search;
 use serde::{Deserialize, Serialize};
 
-use crate::{AppResult, AppState, components, extractors::AuthUser};
+use crate::{
+    ApiAppResult, AppResult, AppState, components,
+    extractors::{ApiAuthUser, AuthUser},
+};
 
 /// Query parameters for both `/search` and `/api/search`.
 ///
@@ -95,10 +98,10 @@ pub struct TypeaheadIssue {
 /// keystroke goes to the same endpoint, the server returns
 /// nothing for "no real query", and the dropdown closes.
 pub async fn typeahead(
-    AuthUser(user): AuthUser,
+    ApiAuthUser(user): ApiAuthUser,
     State(state): State<AppState>,
     Query(q): Query<SearchQuery>,
-) -> AppResult<axum::Json<TypeaheadResponse>> {
+) -> ApiAppResult<axum::Json<TypeaheadResponse>> {
     let raw = q.q.unwrap_or_default();
     let trimmed = raw.trim();
 

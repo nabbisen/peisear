@@ -1,5 +1,6 @@
 //! HTTP handlers grouped by resource.
 
+pub mod api_users;
 pub mod auth;
 pub mod issues;
 pub mod me;

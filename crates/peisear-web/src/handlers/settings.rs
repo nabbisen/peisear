@@ -187,6 +187,14 @@ pub struct CapacityUpdateForm {
     pub period_end: String,
     #[serde(default)]
     pub note: String,
+    /// RFC3339 timestamp captured at form render. Validated
+    /// against the row's current `updated_at` per
+    /// peisear-feature-spec-v2.1 §21.4. Default empty means
+    /// "no lock value provided" — `check_optimistic_lock`
+    /// returns 400 (validation) on parse failure rather than
+    /// silently bypassing.
+    #[serde(default)]
+    pub client_updated_at: String,
 }
 
 /// Update an existing capacity row.
@@ -196,6 +204,20 @@ pub async fn update_capacity(
     Path(row_id): Path<String>,
     Form(form): Form<CapacityUpdateForm>,
 ) -> AppResult<Redirect> {
+    // Optimistic-lock check (peisear-feature-spec-v2.1 §21.4).
+    // Re-read the row to get the canonical `updated_at` —
+    // also doubles as a 404 guard if the row was deleted
+    // between page render and form submit.
+    let current = user_capacities::find(&state.db, &user.id, &row_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    crate::error::check_optimistic_lock(
+        &form.client_updated_at,
+        current.updated_at,
+        "capacity_period",
+        &row_id,
+    )?;
+
     let points = parse_positive_int(&form.points, "Capacity points")?
         .ok_or_else(|| AppError::Validation("Capacity points are required.".into()))?;
     let period_start = parse_date(&form.period_start, "Period start")?;
@@ -224,11 +246,29 @@ pub async fn update_capacity(
     }
 }
 
+/// Body for the delete form. Carries the lock value only.
+#[derive(Debug, Deserialize, Default)]
+pub struct CapacityDeleteForm {
+    #[serde(default)]
+    pub client_updated_at: String,
+}
+
 pub async fn delete_capacity(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
     Path(row_id): Path<String>,
+    Form(form): Form<CapacityDeleteForm>,
 ) -> AppResult<Redirect> {
+    let current = user_capacities::find(&state.db, &user.id, &row_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    crate::error::check_optimistic_lock(
+        &form.client_updated_at,
+        current.updated_at,
+        "capacity_period",
+        &row_id,
+    )?;
+
     user_capacities::delete(&state.db, &user.id, &row_id).await?;
     Ok(Redirect::to("/settings?flash=Capacity+row+removed"))
 }
@@ -236,6 +276,8 @@ pub async fn delete_capacity(
 #[derive(Debug, Deserialize)]
 pub struct CloseForm {
     pub period_end: String,
+    #[serde(default)]
+    pub client_updated_at: String,
 }
 
 /// Helper endpoint: set the `period_end` of an existing row to a
@@ -247,6 +289,16 @@ pub async fn close_capacity(
     Path(row_id): Path<String>,
     Form(form): Form<CloseForm>,
 ) -> AppResult<Redirect> {
+    let current = user_capacities::find(&state.db, &user.id, &row_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    crate::error::check_optimistic_lock(
+        &form.client_updated_at,
+        current.updated_at,
+        "capacity_period",
+        &row_id,
+    )?;
+
     let period_end = parse_date(&form.period_end, "Close date")?
         .ok_or_else(|| AppError::Validation("Close date is required.".into()))?;
     user_capacities::close_at(&state.db, &user.id, &row_id, period_end).await?;

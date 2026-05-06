@@ -10,7 +10,7 @@ use peisear_auth::jwt;
 use peisear_core::CurrentUser;
 use peisear_storage::users;
 
-use crate::{AppError, AppState};
+use crate::{ApiAppError, AppError, AppState};
 
 /// Name of the auth cookie holding the JWT.
 pub const AUTH_COOKIE: &str = "it_session";
@@ -71,6 +71,48 @@ where
             Ok(AuthUser(u)) => Ok(MaybeAuthUser(Some(u))),
             Err(AppError::Unauthorized) => Ok(MaybeAuthUser(None)),
             Err(e) => Err(e),
+        }
+    }
+}
+
+/// Extractor for `/api/*` routes. Identical authentication
+/// logic to [`AuthUser`] but rejects with [`ApiAppError`]
+/// instead of [`AppError`], so the error response is JSON
+/// (with status 401) rather than a 303 redirect to `/login`.
+///
+/// JS callers expect to handle 401 themselves (typically by
+/// prompting login or redirecting through their own router);
+/// the server's job here is just to fail with a parseable
+/// shape.
+pub struct ApiAuthUser(pub CurrentUser);
+
+impl<S> FromRequestParts<S> for ApiAuthUser
+where
+    S: Send + Sync,
+    AppState: FromRef<S>,
+{
+    type Rejection = ApiAppError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        // Reuse the existing AuthUser logic by attempting it
+        // and translating its rejection. This keeps a single
+        // source of truth for the auth path; if the cookie
+        // extraction or JWT verification logic changes, both
+        // extractors pick it up.
+        match AuthUser::from_request_parts(parts, state).await {
+            Ok(AuthUser(u)) => Ok(ApiAuthUser(u)),
+            Err(AppError::Unauthorized) => Err(ApiAppError::Unauthorized),
+            Err(AppError::Internal(msg)) => Err(ApiAppError::Internal(msg)),
+            // The remaining AppError variants (Forbidden,
+            // NotFound, Validation, etc.) shouldn't arise from
+            // an extractor that only does authentication; if
+            // one ever does, surface it as Internal so we
+            // notice in logs rather than papering over with a
+            // misleading error code.
+            Err(other) => {
+                tracing::error!(?other, "unexpected AppError from AuthUser in ApiAuthUser");
+                Err(ApiAppError::Internal("unexpected auth error".into()))
+            }
         }
     }
 }

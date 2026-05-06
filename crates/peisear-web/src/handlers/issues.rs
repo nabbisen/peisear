@@ -425,17 +425,80 @@ pub async fn create(
 }
 
 #[derive(Debug, Deserialize)]
-pub struct EditFlag {
+pub struct DetailQuery {
+    /// Legacy `?edit=1` parameter from before Phase B PR3.
+    /// Triggers a 308 redirect to the new
+    /// `/projects/{id}/issues/{issue_id}/edit` URL so that
+    /// bookmarked links and external embeds continue to land on
+    /// the edit form.
     pub edit: Option<u8>,
     pub flash: Option<String>,
 }
 
+/// Read-only issue detail page (Phase B PR3 / B-3 split).
+///
+/// Edit mode now lives at the explicit
+/// `/projects/{id}/issues/{issue_id}/edit` URL — this handler
+/// always renders read-only. The `?edit=1` legacy parameter is
+/// honoured via 308 redirect for backwards compatibility with
+/// links bookmarked before 0.18.0.
 pub async fn detail_page(
+    user: AuthUser,
+    state: State<AppState>,
+    path: Path<(String, String)>,
+    Query(q): Query<DetailQuery>,
+) -> AppResult<axum::response::Response> {
+    use axum::response::IntoResponse;
+
+    // Legacy ?edit=1 → 308 to new /edit URL. 308 (not 301) so a
+    // future POST against the legacy URL with ?edit=1 keeps its
+    // method intact — symmetric with the /me→/today migration
+    // in 0.17.0.
+    if q.edit == Some(1) {
+        let (project_id, issue_id) = &path.0;
+        let target = format!("/projects/{project_id}/issues/{issue_id}/edit");
+        return Ok((
+            axum::http::StatusCode::PERMANENT_REDIRECT,
+            [(axum::http::header::LOCATION, target)],
+        )
+            .into_response());
+    }
+
+    Ok(render_detail_or_edit(user, state, path, q.flash, false)
+        .await?
+        .into_response())
+}
+
+/// Edit-mode issue detail page (Phase B PR3 / B-3).
+///
+/// Same handler logic as `detail_page` but renders the edit
+/// form. URL-driven edit mode means refresh, browser-history
+/// back, and "Open in new tab" all behave consistently with the
+/// user's mental model — `/edit` is a place, not a state hidden
+/// inside a query parameter.
+pub async fn edit_page(
+    user: AuthUser,
+    state: State<AppState>,
+    path: Path<(String, String)>,
+    Query(q): Query<DetailQuery>,
+) -> AppResult<impl IntoResponse> {
+    // The legacy `?edit=1` on the new URL is harmless; we just
+    // ignore it here. (No reason for it to appear, but graceful
+    // is better than 400.)
+    let _ = q.edit;
+    render_detail_or_edit(user, state, path, q.flash, true).await
+}
+
+/// Shared rendering path for view and edit modes. Both endpoints
+/// load the same data; the only difference is the
+/// `is_edit_mode` flag passed to the renderer.
+async fn render_detail_or_edit(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
     Path((project_id, issue_id)): Path<(String, String)>,
-    Query(q): Query<EditFlag>,
-) -> AppResult<impl IntoResponse> {
+    flash: Option<String>,
+    is_edit_mode: bool,
+) -> AppResult<axum::response::Html<String>> {
     let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
     let issue = issues::find(&state.db, &issue_id, &project_id).await?;
     let assignees = issues::list_assignee_candidates(&state.db, &project_id).await?;
@@ -470,8 +533,8 @@ pub async fn detail_page(
         workload,
         sprint_options,
         current_sprint_id,
-        q.flash,
-        q.edit == Some(1),
+        flash,
+        is_edit_mode,
     ))
 }
 

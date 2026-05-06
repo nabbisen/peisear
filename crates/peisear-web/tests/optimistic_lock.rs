@@ -27,7 +27,9 @@ mod common;
 use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
 use common::auth::{TestUser, register_and_login};
-use common::fixture::{create_issue, create_personal_project};
+use common::fixture::{
+    create_issue, create_personal_project, create_planned_sprint, create_team_with_admin,
+};
 use common::server::{TestApp, ensure_distinct_timestamp};
 
 // -------------------------------------------------------------------
@@ -151,25 +153,86 @@ async fn project_update_with_stale_timestamp_returns_409() {
 }
 
 // -------------------------------------------------------------------
-// Sprint lifecycle (Step 5.2 pending)
+// Sprint lifecycle
 // -------------------------------------------------------------------
 
 #[tokio::test]
-#[ignore = "client_updated_at plumbing for sprint endpoints — Phase A Step 5.2 pending"]
 async fn sprint_start_with_stale_timestamp_returns_409() {
-    // Activated in Step 5.2 once sprint mutations carry
-    // client_updated_at and the team fixture helper lands.
-    todo!("Step 5.2: write once sprint endpoints accept client_updated_at");
+    // Workflow:
+    // 1. Create team + planned sprint, read its `updated_at` (t0).
+    // 2. Edit the sprint (e.g. rename) so its `updated_at`
+    //    advances to t1 — this simulates a concurrent edit
+    //    landing between page render and form submit.
+    // 3. POST `/start` with `client_updated_at = t0`. Must 409.
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let team_id = create_team_with_admin(&app.db, &user_id, "Engineering").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let team_slug = read_team_slug(&app, &team_id).await;
+
+    let t0 = read_sprint_updated_at(&app, &sprint_id).await;
+
+    // Concurrent edit: bump updated_at by editing the sprint.
+    // Going through the storage layer is enough — we don't need
+    // to exercise the form path here.
+    ensure_distinct_timestamp().await;
+    let today = chrono::Utc::now().date_naive();
+    let ends = today + chrono::Duration::days(14);
+    peisear_storage::sprints::update(
+        &app.db,
+        &sprint_id,
+        "Sprint 1 (renamed)",
+        None,
+        today,
+        ends,
+    )
+    .await
+    .expect("rename sprint");
+
+    // Now try to start with the stale t0.
+    let url = format!("/teams/{team_slug}/sprints/{sprint_id}/start");
+    let resp = app.server.post(&url).form(&[("client_updated_at", t0.as_str())]).await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "stale client_updated_at on /start must 409 (got {})",
+        resp.status_code()
+    );
 }
 
 // -------------------------------------------------------------------
-// Capacity period edits (Step 5.3 pending)
+// Capacity period edits
 // -------------------------------------------------------------------
 
 #[tokio::test]
-#[ignore = "client_updated_at plumbing for capacity endpoints — Phase A Step 5.3 pending"]
 async fn capacity_period_edit_with_stale_timestamp_returns_409() {
-    todo!("Step 5.3: write once capacity endpoints accept client_updated_at");
+    // Parallel to issue_update test: create row, edit once with
+    // valid t0, edit again with the now-stale t0 → 409.
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let row_id = create_capacity_row(&app, &user_id, 8).await;
+
+    let t0 = read_capacity_updated_at(&app, &row_id).await;
+
+    ensure_distinct_timestamp().await;
+    let resp = post_capacity_update(&app, &row_id, &t0, 10).await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::SEE_OTHER,
+        "first capacity update should redirect on success, got {}",
+        resp.status_code()
+    );
+
+    // Second update with the now-stale t0 must 409.
+    let resp = post_capacity_update(&app, &row_id, &t0, 12).await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "second capacity update with stale client_updated_at must return 409, got {}",
+        resp.status_code()
+    );
 }
 
 // -------------------------------------------------------------------
@@ -267,5 +330,81 @@ async fn post_status_change(
             "status": new_status,
             "client_updated_at": client_updated_at,
         }))
+        .await
+}
+
+// ── Sprint helpers ─────────────────────────────────────────
+
+/// Read a sprint's `updated_at` directly from the DB and
+/// format as RFC3339, matching what the production handler
+/// puts in form hidden inputs.
+async fn read_sprint_updated_at(app: &TestApp, sprint_id: &str) -> String {
+    let (updated_at,): (DateTime<Utc>,) =
+        sqlx::query_as(r#"SELECT updated_at FROM sprints WHERE id = ?1"#)
+            .bind(sprint_id)
+            .fetch_one(&app.db)
+            .await
+            .expect("read sprint updated_at");
+    updated_at.to_rfc3339()
+}
+
+/// Read a team's slug from the DB. Tests that create a team
+/// only know its id; the URL needs the slug, and computing it
+/// from the team name is fragile (special chars, dedup), so
+/// we just look it up.
+async fn read_team_slug(app: &TestApp, team_id: &str) -> String {
+    let (slug,): (String,) = sqlx::query_as(r#"SELECT slug FROM teams WHERE id = ?1"#)
+        .bind(team_id)
+        .fetch_one(&app.db)
+        .await
+        .expect("read team slug");
+    slug
+}
+
+// ── Capacity helpers ───────────────────────────────────────
+
+/// Insert a capacity period row directly via storage. Used
+/// over the form path because we don't need to exercise form
+/// validation here — just need a row to lock against.
+async fn create_capacity_row(app: &TestApp, user_id: &str, points: i64) -> String {
+    peisear_storage::user_capacities::insert(
+        &app.db, user_id, points, None, None, None,
+    )
+    .await
+    .expect("insert capacity row")
+}
+
+/// Read a capacity row's `updated_at`, RFC3339-formatted.
+async fn read_capacity_updated_at(app: &TestApp, row_id: &str) -> String {
+    let (updated_at,): (DateTime<Utc>,) =
+        sqlx::query_as(r#"SELECT updated_at FROM user_capacities WHERE id = ?1"#)
+            .bind(row_id)
+            .fetch_one(&app.db)
+            .await
+            .expect("read capacity updated_at");
+    updated_at.to_rfc3339()
+}
+
+/// POST `/settings/capacity/{row_id}` with a given
+/// client_updated_at and a new points value. Holds period and
+/// note constant — only points changes — so the test asserts
+/// on the lock check rather than other validation.
+async fn post_capacity_update(
+    app: &TestApp,
+    row_id: &str,
+    client_updated_at: &str,
+    new_points: i64,
+) -> axum_test::TestResponse {
+    let url = format!("/settings/capacity/{row_id}");
+    let points_str = new_points.to_string();
+    app.server
+        .post(&url)
+        .form(&[
+            ("points", points_str.as_str()),
+            ("period_start", ""),
+            ("period_end", ""),
+            ("note", ""),
+            ("client_updated_at", client_updated_at),
+        ])
         .await
 }

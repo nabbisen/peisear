@@ -33,43 +33,47 @@ use crate::{Pool, StorageError, StorageResult};
 
 /// Find a team by its id. None if missing.
 pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Team>> {
-    let row: Option<(String, String, String, Option<String>, DateTime<Utc>)> = sqlx::query_as(
-        r#"
-        SELECT id, name, slug, description, created_at
-        FROM teams
-        WHERE id = ?1
-        "#,
-    )
-    .bind(id)
-    .fetch_optional(pool)
-    .await?;
-    Ok(row.map(|(id, name, slug, description, created_at)| Team {
+    let row: Option<(String, String, String, Option<String>, DateTime<Utc>, DateTime<Utc>)> =
+        sqlx::query_as(
+            r#"
+            SELECT id, name, slug, description, created_at, updated_at
+            FROM teams
+            WHERE id = ?1
+            "#,
+        )
+        .bind(id)
+        .fetch_optional(pool)
+        .await?;
+    Ok(row.map(|(id, name, slug, description, created_at, updated_at)| Team {
         id,
         name,
         slug,
         description,
         created_at,
+        updated_at,
     }))
 }
 
 /// Find a team by URL slug. The hot lookup for `/teams/{slug}`.
 pub async fn find_by_slug(pool: &Pool, slug: &str) -> StorageResult<Option<Team>> {
-    let row: Option<(String, String, String, Option<String>, DateTime<Utc>)> = sqlx::query_as(
-        r#"
-        SELECT id, name, slug, description, created_at
-        FROM teams
-        WHERE slug = ?1
-        "#,
-    )
-    .bind(slug)
-    .fetch_optional(pool)
-    .await?;
-    Ok(row.map(|(id, name, slug, description, created_at)| Team {
+    let row: Option<(String, String, String, Option<String>, DateTime<Utc>, DateTime<Utc>)> =
+        sqlx::query_as(
+            r#"
+            SELECT id, name, slug, description, created_at, updated_at
+            FROM teams
+            WHERE slug = ?1
+            "#,
+        )
+        .bind(slug)
+        .fetch_optional(pool)
+        .await?;
+    Ok(row.map(|(id, name, slug, description, created_at, updated_at)| Team {
         id,
         name,
         slug,
         description,
         created_at,
+        updated_at,
     }))
 }
 
@@ -82,10 +86,11 @@ pub async fn teams_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<(Te
         String,
         Option<String>,
         DateTime<Utc>,
+        DateTime<Utc>,
         String,
     )> = sqlx::query_as(
         r#"
-        SELECT t.id, t.name, t.slug, t.description, t.created_at, m.role
+        SELECT t.id, t.name, t.slug, t.description, t.created_at, t.updated_at, m.role
         FROM teams t
         JOIN team_memberships m ON m.team_id = t.id
         WHERE m.user_id = ?1
@@ -98,7 +103,7 @@ pub async fn teams_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<(Te
 
     Ok(rows
         .into_iter()
-        .filter_map(|(id, name, slug, description, created_at, role_str)| {
+        .filter_map(|(id, name, slug, description, created_at, updated_at, role_str)| {
             // Unknown role values are skipped; in practice the
             // CHECK constraint prevents these, but we'd rather
             // hide a row than panic on an unrecognised future
@@ -111,6 +116,7 @@ pub async fn teams_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<(Te
                         slug,
                         description,
                         created_at,
+                        updated_at,
                     },
                     role,
                 )
@@ -181,9 +187,9 @@ pub async fn membership(
     team_id: &str,
     user_id: &str,
 ) -> StorageResult<Option<TeamMembership>> {
-    let row: Option<(String, DateTime<Utc>)> = sqlx::query_as(
+    let row: Option<(String, DateTime<Utc>, DateTime<Utc>)> = sqlx::query_as(
         r#"
-        SELECT role, joined_at FROM team_memberships
+        SELECT role, joined_at, updated_at FROM team_memberships
         WHERE team_id = ?1 AND user_id = ?2
         "#,
     )
@@ -191,12 +197,13 @@ pub async fn membership(
     .bind(user_id)
     .fetch_optional(pool)
     .await?;
-    Ok(row.and_then(|(role_str, joined_at)| {
+    Ok(row.and_then(|(role_str, joined_at, updated_at)| {
         TeamRole::from_storage_str(&role_str).map(|role| TeamMembership {
             team_id: team_id.to_string(),
             user_id: user_id.to_string(),
             role,
             joined_at,
+            updated_at,
         })
     }))
 }

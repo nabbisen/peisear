@@ -54,6 +54,11 @@ pub struct CapacityRow {
     pub period_end: Option<NaiveDate>,
     pub note: Option<String>,
     pub created_at: chrono::DateTime<chrono::Utc>,
+    /// Last mutation timestamp (from migration 0014's
+    /// trigger). Used by the optimistic-lock contract
+    /// (peisear-feature-spec-v2.1 §21.4) for capacity
+    /// edit/delete handlers.
+    pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
 /// Find the row whose period covers `today`, returning its
@@ -81,9 +86,10 @@ pub async fn effective_row_for_user(
         Option<NaiveDate>,
         Option<String>,
         chrono::DateTime<chrono::Utc>,
+        chrono::DateTime<chrono::Utc>,
     )> = sqlx::query_as(
         r#"
-        SELECT id, user_id, points, period_start, period_end, note, created_at
+        SELECT id, user_id, points, period_start, period_end, note, created_at, updated_at
         FROM user_capacities
         WHERE user_id = ?1
           AND (period_start IS NULL OR period_start <= ?2)
@@ -104,6 +110,7 @@ pub async fn effective_row_for_user(
         period_end: r.4,
         note: r.5,
         created_at: r.6,
+        updated_at: r.7,
     }))
 }
 
@@ -150,9 +157,10 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Capa
         Option<NaiveDate>,
         Option<String>,
         chrono::DateTime<chrono::Utc>,
+        chrono::DateTime<chrono::Utc>,
     )> = sqlx::query_as(
         r#"
-        SELECT id, user_id, points, period_start, period_end, note, created_at
+        SELECT id, user_id, points, period_start, period_end, note, created_at, updated_at
         FROM user_capacities
         WHERE user_id = ?1
         ORDER BY
@@ -175,6 +183,7 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Capa
             period_end: r.4,
             note: r.5,
             created_at: r.6,
+            updated_at: r.7,
         })
         .collect())
 }
@@ -194,9 +203,10 @@ pub async fn find(
         Option<NaiveDate>,
         Option<String>,
         chrono::DateTime<chrono::Utc>,
+        chrono::DateTime<chrono::Utc>,
     )> = sqlx::query_as(
         r#"
-        SELECT id, user_id, points, period_start, period_end, note, created_at
+        SELECT id, user_id, points, period_start, period_end, note, created_at, updated_at
         FROM user_capacities
         WHERE id = ?1 AND user_id = ?2
         "#,
@@ -213,6 +223,7 @@ pub async fn find(
         period_end: r.4,
         note: r.5,
         created_at: r.6,
+        updated_at: r.7,
     }))
 }
 

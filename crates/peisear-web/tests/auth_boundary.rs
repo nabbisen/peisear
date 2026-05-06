@@ -104,7 +104,6 @@ async fn me_unauthenticated_redirects_to_today_not_login() {
 // -------------------------------------------------------------------
 
 #[tokio::test]
-#[ignore = "endpoint not implemented yet — Phase B"]
 async fn burnout_endpoint_walls_off_other_users() {
     let (alice_app, _alice, _alice_id) = new_authed_app("alice").await;
 
@@ -137,7 +136,6 @@ async fn burnout_endpoint_walls_off_other_users() {
 // -------------------------------------------------------------------
 
 #[tokio::test]
-#[ignore = "endpoint not implemented yet — Phase B"]
 async fn capacity_endpoint_walls_off_other_users() {
     let (alice_app, _alice, _alice_id) = new_authed_app("alice").await;
     let bob_app = TestApp::spawn().await;
@@ -155,7 +153,6 @@ async fn capacity_endpoint_walls_off_other_users() {
 // -------------------------------------------------------------------
 
 #[tokio::test]
-#[ignore = "endpoint not implemented yet — Phase B"]
 async fn notifications_endpoint_walls_off_other_users() {
     let (alice_app, _alice, _alice_id) = new_authed_app("alice").await;
     let bob_app = TestApp::spawn().await;
@@ -173,18 +170,59 @@ async fn notifications_endpoint_walls_off_other_users() {
 // -------------------------------------------------------------------
 
 #[tokio::test]
-#[ignore = "team admin role + personal data endpoints not yet co-existing — Phase B"]
 async fn team_admin_cannot_read_member_personal_data() {
     // V2.1 §11.5.2 / §2.5: admin is a management role, NOT an
     // oversight role. An admin querying /api/users/{member_id}/
-    // burnout must still receive 403.
+    // burnout must still receive 403. The boundary is "self
+    // access only" — admin status doesn't bypass it.
     //
-    // Test outline (to fill in once the endpoint exists):
-    // 1. Create team T with admin = Alice
-    // 2. Add Bob as team member
-    // 3. Alice GETs /api/users/{bob_id}/burnout
-    // 4. Assert 403, not 200
-    todo!("write once Phase B adds team-membership + endpoint together");
+    // Both users live in the same DB so the team membership is
+    // real (cross-DB tests can't add a membership row that's
+    // visible to both apps' connection pools).
+    let app = TestApp::spawn().await;
+
+    // Register Alice (will become team admin) and stay logged in.
+    let alice = TestUser::new("alice");
+    let alice_id = register_and_login(&app, &alice).await;
+
+    // Register Bob in the same DB. axum-test's cookie jar gets
+    // overwritten by the registration (Bob's session replaces
+    // Alice's), so we re-login as Alice afterward.
+    let bob = TestUser::new("bob");
+    let bob_id = register_and_login(&app, &bob).await;
+    common::auth::logout(&app).await;
+    common::auth::login(&app, &alice).await;
+
+    // Make Alice the admin of a team and add Bob as a member.
+    let team_id = common::fixture::create_team_with_admin(&app.db, &alice_id, "Engineering").await;
+    peisear_storage::teams::add_member(
+        &app.db,
+        &team_id,
+        &bob_id,
+        peisear_core::teams::TeamRole::Member,
+    )
+    .await
+    .expect("add Bob to team");
+
+    // Alice (team admin) tries to read Bob's burnout. Must 403.
+    let url = format!("/api/users/{}/burnout", bob_id);
+    let resp = app.server.get(&url).await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::FORBIDDEN,
+        "team admin must NOT bypass the §11.5 self-access boundary; got {}",
+        resp.status_code()
+    );
+
+    // Same for capacity and notifications — admin is not
+    // oversight on any of these.
+    let url = format!("/api/users/{}/capacity", bob_id);
+    let resp = app.server.get(&url).await;
+    assert_eq!(resp.status_code(), StatusCode::FORBIDDEN);
+
+    let url = format!("/api/users/{}/notifications", bob_id);
+    let resp = app.server.get(&url).await;
+    assert_eq!(resp.status_code(), StatusCode::FORBIDDEN);
 }
 
 // -------------------------------------------------------------------
@@ -201,4 +239,87 @@ async fn cross_user_settings_post_returns_403() {
     // "self" — no need for this test until the explicit shape
     // lands.
     todo!("write once explicit user-scoped POSTs land");
+}
+
+// -------------------------------------------------------------------
+// Positive cases — self access on /api/users/{user_id}/* succeeds
+// -------------------------------------------------------------------
+
+#[tokio::test]
+async fn self_can_read_own_burnout() {
+    // The negative tests above prove the boundary; this confirms
+    // a legitimate self-read returns 200 with a JSON body
+    // shaped per the API spec.
+    let (app, _user, user_id) = new_authed_app("alice").await;
+
+    let url = format!("/api/users/{}/burnout", user_id);
+    let resp = app.server.get(&url).await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::OK,
+        "self-access should succeed; got {}",
+        resp.status_code()
+    );
+    // Spot-check one stable field rather than the whole shape —
+    // shape iteration is allowed during Phase B (decision B-E3).
+    let body = resp.text();
+    assert!(
+        body.contains("\"user_id\""),
+        "burnout response missing user_id field: {body}"
+    );
+    assert!(
+        body.contains("\"indicator\""),
+        "burnout response missing indicator field: {body}"
+    );
+}
+
+#[tokio::test]
+async fn self_can_read_own_capacity() {
+    let (app, _user, user_id) = new_authed_app("alice").await;
+    let url = format!("/api/users/{}/capacity", user_id);
+    let resp = app.server.get(&url).await;
+    assert_eq!(resp.status_code(), StatusCode::OK);
+    let body = resp.text();
+    assert!(body.contains("\"effective_today\""));
+    assert!(body.contains("\"rows\""));
+}
+
+#[tokio::test]
+async fn self_can_read_own_notifications() {
+    let (app, _user, user_id) = new_authed_app("alice").await;
+    let url = format!("/api/users/{}/notifications", user_id);
+    let resp = app.server.get(&url).await;
+    assert_eq!(resp.status_code(), StatusCode::OK);
+    let body = resp.text();
+    assert!(body.contains("\"unread_count\""));
+    assert!(body.contains("\"items\""));
+}
+
+#[tokio::test]
+async fn unauthed_api_users_returns_401_not_redirect() {
+    // Critical UX difference between AppError and ApiAppError:
+    // browser AppError unauth → 303 redirect to /login.
+    // /api/* ApiAppError unauth → 401 with JSON body, no
+    // redirect. The JSON client (typeahead JS, future
+    // dashboards) handles auth state itself; redirecting it to
+    // a login page would just leak HTML into the JSON parser.
+    let app = TestApp::spawn().await;
+    // No login on this app.
+    let resp = app.server.get("/api/users/some-id/burnout").await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::UNAUTHORIZED,
+        "/api/* unauth must be 401, not redirect; got {}",
+        resp.status_code()
+    );
+    // Body must be JSON, not the login HTML.
+    let body = resp.text();
+    assert!(
+        body.contains("\"error\""),
+        "/api/* unauth response should be JSON; got: {body}"
+    );
+    assert!(
+        body.contains("\"unauthorized\""),
+        "/api/* unauth body should carry the 'unauthorized' code; got: {body}"
+    );
 }

@@ -16,5 +16,5 @@ pub mod state;
 
 pub use app::build_router;
 pub use config::Config;
-pub use error::{AppError, AppResult};
+pub use error::{ApiAppError, ApiAppResult, AppError, AppResult};
 pub use state::AppState;

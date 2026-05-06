@@ -603,9 +603,9 @@ pub mod project_health {
     /// The `Indicator` shape is deliberately uniform across every
     /// kind. Adding a new metric in a future release means adding a
     /// variant to [`IndicatorKind`], a normalisation case to
-    /// [`normalize`], a default weight in [`HealthWeights`], and the
-    /// raw input in [`ProjectHealthRaw`] — *not* changing the UI or
-    /// the report-rendering code.
+    /// `compute_report`, and (optionally) an explanation arm in
+    /// [`Indicator::human_explanation`] — UI rendering itself is
+    /// shared.
     #[derive(Debug, Clone)]
     pub struct Indicator {
         pub kind: IndicatorKind,
@@ -623,6 +623,69 @@ pub mod project_health {
         pub weight: f64,
     }
 
+    impl Indicator {
+        /// Plain-language explanation of the current state of this
+        /// indicator, suitable for direct display to a user.
+        ///
+        /// Phase B (peisear-feature-spec-v2.1 §5.2 / decision B-E5):
+        /// project-health explainability prefers human language
+        /// over numbers. The brief explicitly favours "what's
+        /// happening" over "score breakdown":
+        ///
+        /// > Don't show: 'long_stale_ratio = 0.30 (-15)'
+        /// > Show: '3 issues haven't moved in over two weeks'
+        ///
+        /// The text adapts to `state` so that:
+        ///
+        /// - `Good` returns `None` — no story to tell, the UI
+        ///   omits the row entirely. (Listing every Good
+        ///   indicator turns into self-congratulatory clutter.)
+        /// - `Watch` and `Concern` return a concrete sentence
+        ///   naming the underlying value (taken from
+        ///   `value_display`) and the indicator's domain, so
+        ///   the user can act on it.
+        /// - `Insufficient` returns `None` — the indicator
+        ///   doesn't have enough data to say anything about
+        ///   the project yet.
+        ///
+        /// The phrasing sticks to neutral, descriptive language.
+        /// We deliberately avoid evaluative words like "bad",
+        /// "concerning", or "you need to" — the user reads
+        /// these every day, and §0.2 wants the tool to be a
+        /// dashboard, not a coach.
+        pub fn human_explanation(&self) -> Option<String> {
+            // Good and Insufficient produce no row.
+            match self.state {
+                HealthIndicator::Good | HealthIndicator::Insufficient => return None,
+                HealthIndicator::Watch | HealthIndicator::Concern => {}
+            }
+
+            // The verbal frame ("currently ...") matches across
+            // indicators so the explanations read as a coherent
+            // list rather than a grab-bag of sentence shapes.
+            let value = &self.value_display;
+            Some(match self.kind {
+                IndicatorKind::Throughput => format!(
+                    "Throughput is {value} — fewer issues are reaching Done than the rest of the project's history."
+                ),
+                IndicatorKind::Staleness => format!(
+                    "The oldest in-flight issue has been open for {value}."
+                ),
+                IndicatorKind::Activity => format!(
+                    "Issue activity in the last two weeks is {value}."
+                ),
+                IndicatorKind::BusFactor => format!(
+                    "{value} of in-flight work is concentrated on one person."
+                ),
+                IndicatorKind::LongStale => format!(
+                    "{value} of in-flight issues haven't been touched in over two weeks."
+                ),
+                IndicatorKind::WipCompliance => format!(
+                    "{value} of active assignees are over their WIP limit."
+                ),
+            })
+        }
+    }
     /// Per-indicator weights. Must sum (approximately) to 1.0.
     ///
     /// 0.7.0 ships a single fixed `DEFAULT` set. The roadmap notes
@@ -1785,6 +1848,13 @@ pub mod teams {
         pub slug: String,
         pub description: Option<String>,
         pub created_at: chrono::DateTime<chrono::Utc>,
+        /// Last mutation timestamp. Populated by the
+        /// `teams_updated_at` trigger from migration 0014. Used
+        /// by the optimistic-lock contract
+        /// (peisear-feature-spec-v2.1 §21.4): handlers re-read
+        /// this and compare against the form's
+        /// `client_updated_at` before applying a write.
+        pub updated_at: chrono::DateTime<chrono::Utc>,
     }
 
     /// One row of `team_memberships`. Joined-on-demand with
@@ -1795,6 +1865,10 @@ pub mod teams {
         pub user_id: String,
         pub role: TeamRole,
         pub joined_at: chrono::DateTime<chrono::Utc>,
+        /// Last mutation timestamp (from migration 0014's
+        /// trigger). The membership row mutates on role
+        /// changes; this is the lock value for those.
+        pub updated_at: chrono::DateTime<chrono::Utc>,
     }
 
     /// Maximum slug length, enforced by the migration's CHECK.
@@ -1919,6 +1993,11 @@ pub mod sprints {
         pub started_at: Option<chrono::DateTime<chrono::Utc>>,
         pub completed_at: Option<chrono::DateTime<chrono::Utc>>,
         pub created_at: chrono::DateTime<chrono::Utc>,
+        /// Last mutation timestamp (from migration 0014's
+        /// trigger). Used by the optimistic-lock contract
+        /// (peisear-feature-spec-v2.1 §21.4) for sprint edit /
+        /// start / complete / delete handlers.
+        pub updated_at: chrono::DateTime<chrono::Utc>,
     }
 
     /// Aggregate "what does the sprint look like *right now*?"

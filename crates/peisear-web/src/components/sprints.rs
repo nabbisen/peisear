@@ -431,6 +431,16 @@ pub fn SprintDetailPage(
     let start_action = format!("/teams/{}/sprints/{}/start", team_slug, sprint.id);
     let complete_action = format!("/teams/{}/sprints/{}/complete", team_slug, sprint.id);
     let delete_action = format!("/teams/{}/sprints/{}/delete", team_slug, sprint.id);
+    // Optimistic-lock value for the start/complete/delete
+    // forms. Cloned per form because each form moves its own
+    // copy into the hidden input. Per peisear-feature-spec-v2.1
+    // §21.4 the handler verifies this against the sprint's
+    // current `updated_at`.
+    let client_updated_at = sprint.updated_at.to_rfc3339();
+    let cua_start = client_updated_at.clone();
+    let cua_complete = client_updated_at.clone();
+    let cua_delete_planned = client_updated_at.clone();
+    let cua_delete_completed = client_updated_at;
 
     let is_admin = role.can_manage_team();
     let sprint_name = sprint.name.clone();
@@ -460,6 +470,7 @@ pub fn SprintDetailPage(
         SprintStatus::Planned => view! {
             <div class="flex gap-2 flex-wrap">
                 <form method="post" action=start_action>
+                    <input type="hidden" name="client_updated_at" value=cua_start/>
                     <button type="submit" class="btn btn-primary btn-sm"
                             aria-label="Start sprint">
                         "Start sprint"
@@ -469,6 +480,7 @@ pub fn SprintDetailPage(
                 <form method="post" action=delete_action.clone()
                       onsubmit="return confirm('Delete this planned sprint? \
                                                 Issues currently linked to it will be unlinked.')">
+                    <input type="hidden" name="client_updated_at" value=cua_delete_planned/>
                     <button type="submit" class="btn btn-ghost btn-sm text-error">"Delete"</button>
                 </form>
             </div>
@@ -476,6 +488,7 @@ pub fn SprintDetailPage(
         SprintStatus::Active => view! {
             <div class="flex gap-2 flex-wrap">
                 <form method="post" action=complete_action>
+                    <input type="hidden" name="client_updated_at" value=cua_complete/>
                     <button type="submit" class="btn btn-primary btn-sm"
                             aria-label="Complete sprint">
                         "Complete sprint"
@@ -489,6 +502,7 @@ pub fn SprintDetailPage(
                 <form method="post" action=delete_action
                       onsubmit="return confirm('Delete this completed sprint? \
                                                 Historical numbers will be lost.')">
+                    <input type="hidden" name="client_updated_at" value=cua_delete_completed/>
                     <button type="submit" class="btn btn-ghost btn-sm text-error">"Delete"</button>
                 </form>
             </div>
@@ -819,6 +833,11 @@ pub fn SprintEditPage(
     let sprint_goal = sprint.goal.clone().unwrap_or_default();
     let starts_on = sprint.starts_on.format("%Y-%m-%d").to_string();
     let ends_on = sprint.ends_on.format("%Y-%m-%d").to_string();
+    // Optimistic-lock guard. The handler verifies this against
+    // the sprint's current `updated_at` per
+    // peisear-feature-spec-v2.1 §21.4 and returns 409 if a
+    // concurrent edit landed first.
+    let client_updated_at = sprint.updated_at.to_rfc3339();
 
     let error_block = error.map(|msg| {
         view! {
@@ -846,6 +865,7 @@ pub fn SprintEditPage(
 
                 <div class="card bg-base-100 border border-base-300 shadow-sm">
                     <form method="post" action=action class="card-body gap-3">
+                        <input type="hidden" name="client_updated_at" value=client_updated_at/>
                         <label class="form-control w-full">
                             <div class="label py-1">
                                 <span class="label-text text-sm">"Name"</span>

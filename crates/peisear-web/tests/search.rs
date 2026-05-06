@@ -243,14 +243,14 @@ async fn results_page_with_blank_query_renders_help_text() {
 async fn search_endpoints_require_authentication() {
     let app = TestApp::spawn().await;
     // No login.
+    // /api/search uses ApiAuthUser → returns 401 + JSON
+    // (Phase B PR2). The /search HTML page still uses
+    // AuthUser → 303 redirect to /login.
     let resp = app.server.get("/api/search?q=foo").await;
-    // Existing behaviour: the AuthUser extractor maps unauthed
-    // requests to a 303 redirect to /login. JSON endpoints in
-    // Phase B will return 401 instead; that's a separate change.
-    assert!(
-        resp.status_code() == StatusCode::SEE_OTHER
-            || resp.status_code() == StatusCode::UNAUTHORIZED,
-        "expected redirect or 401 for unauthed /api/search, got {}",
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::UNAUTHORIZED,
+        "/api/search unauth should be 401, got {}",
         resp.status_code()
     );
 

@@ -42,6 +42,104 @@ fn format_skew(days_per_point: Option<f64>) -> Option<String> {
     Some(format!("≈ {:.1} d / pt", skew))
 }
 
+/// One callout's worth of "what to read first." Carries the
+/// title and a descriptive sentence; the renderer wraps it in
+/// the appropriate visual container.
+///
+/// The struct (rather than just a `String`) keeps the title and
+/// body distinct so the renderer can style them differently —
+/// the title gets the `font-medium` weight while the body stays
+/// regular weight, mirroring the pattern used elsewhere on
+/// `/today`.
+struct ReadFirst {
+    title: String,
+    body: String,
+}
+
+/// Compute the single most pressing signal for the "what to
+/// read first" callout (Phase B PR3 / B-1).
+///
+/// The priority chain is **strict** — at most one callout
+/// renders. The chain order, from highest to lowest:
+///
+/// 1. Burnout: overload streak ≥ watch threshold, or
+///    stalled-assigned days ≥ watch threshold. These are
+///    multi-day patterns; if they're firing, they should
+///    be the user's first read.
+/// 2. WIP > effective limit: actionable in the moment.
+///    "Push something to Done before starting more."
+/// 3. Long-stale issues count > 0: older but lower-urgency
+///    backlog cleanup signal.
+///
+/// Returns `None` if none apply — by design, we don't
+/// manufacture a callout when nothing's pressing
+/// (V2.1 §0.3 "Minimal by Default").
+///
+/// `current_wip` and `effective_wip_limit` come from the
+/// user's `PersonalMetrics`. `long_stale_count` is the
+/// number of long-stale assigned issues. `burnout` is the
+/// optional snapshot from `user_burnout::for_user`.
+fn compute_read_first(
+    current_wip: i64,
+    effective_wip_limit: i64,
+    long_stale_count: i64,
+    burnout: Option<&UserBurnoutSignals>,
+) -> Option<ReadFirst> {
+    if let Some(b) = burnout {
+        if b.overload_streak_days >= peisear_core::user_burnout::OVERLOAD_STREAK_WATCH {
+            return Some(ReadFirst {
+                title: "You've been over capacity for a while.".to_string(),
+                body: format!(
+                    "Over capacity for {} of the last {} snapshots. \
+                     A short break or a backlog re-prioritisation often helps here.",
+                    b.overload_streak_days, b.window_days
+                ),
+            });
+        }
+        if b.stalled_assigned_max_days >= peisear_core::user_burnout::STALLED_WATCH_DAYS {
+            return Some(ReadFirst {
+                title: "An assigned issue hasn't moved in a while.".to_string(),
+                body: format!(
+                    "Your oldest in-flight assigned issue has been open for {} days. \
+                     Worth a look — it may be blocked, or worth re-scoping.",
+                    b.stalled_assigned_max_days
+                ),
+            });
+        }
+    }
+
+    // WIP over limit. We use strict `>` (not `>=`) to match
+    // the meaning of "over" — being exactly at the limit is
+    // the limit, not over it.
+    if current_wip > effective_wip_limit {
+        return Some(ReadFirst {
+            title: "WIP is over your limit.".to_string(),
+            body: format!(
+                "You have {current_wip} issues in progress; your effective \
+                 limit is {effective_wip_limit}. Pushing one to Done before \
+                 starting more keeps focus crisp."
+            ),
+        });
+    }
+
+    // Long-stale. Threshold of 1 is deliberately permissive
+    // — even one stale issue is worth surfacing in the
+    // dashboard's most prominent slot when nothing more
+    // urgent applies.
+    if long_stale_count >= 1 {
+        let plural = if long_stale_count == 1 { "issue" } else { "issues" };
+        return Some(ReadFirst {
+            title: "Some long-stale issues are still assigned to you.".to_string(),
+            body: format!(
+                "{long_stale_count} {plural} haven't been touched in over two \
+                 weeks. Closing or re-assigning them clears your queue."
+            ),
+        });
+    }
+
+    None
+}
+
 /// Aria label and inline icon character for an indicator state.
 /// Accessibility: pair the colour-coded badge with text + glyph so
 /// users without colour vision still get the signal (V2.1 §3.4).
@@ -127,13 +225,66 @@ pub fn PersonalDashboard(
 
     let skew_text = format_skew(m.estimation_skew_days_per_point);
 
+    // Phase B PR3 (B-1) "what to read first" callout.
+    // Surfaces the single most pressing signal so a user
+    // arriving at /today knows where to look. The priority
+    // chain reflects which signals warrant most-immediate
+    // attention:
+    //
+    // 1. Sustained burnout signal (overload streak / stalled
+    //    assigned beyond watch thresholds) — these are
+    //    multi-day patterns that, if real, deserve the user's
+    //    next click.
+    // 2. WIP over the user's effective limit — actionable
+    //    today: pick something to push to Done before
+    //    starting more.
+    // 3. Long-stale issues count — older but lower-urgency
+    //    than the above two.
+    //
+    // If none of the above, we render no callout and the
+    // user sees the standard dashboard. This is deliberate:
+    // V2.1 §0.3 "Minimal by default" — when there's nothing
+    // urgent, don't manufacture an alarm.
+    //
+    // The chain stops at the first match. Callouts compete
+    // for attention; surfacing two at once dilutes both.
+    let read_first: Option<ReadFirst> = compute_read_first(
+        m.current_wip,
+        m.effective_wip_limit,
+        m.long_stale_count,
+        burnout.as_ref(),
+    );
+
     view! {
         <AppShell title="My dashboard".to_string() user=user flash=flash>
             <div class="max-w-3xl mx-auto">
                 <h1 class="text-xl font-semibold mb-1">"My dashboard"</h1>
-                <p class="text-sm text-base-content/60 mb-6">
+                <p class="text-sm text-base-content/60 mb-4">
                     "Personal metrics for " {display_name} ". Visible only to you."
                 </p>
+
+                // Phase B PR3 (B-1) "what to read first"
+                // callout. Renders only when something is
+                // worth surfacing — see compute_read_first
+                // for the priority chain. Visually
+                // distinguished from the rest of the page
+                // by the alert/info background and the
+                // dedicated heading inside.
+                {read_first.map(|rf| {
+                    let title = rf.title;
+                    let body = rf.body;
+                    view! {
+                        <aside role="note"
+                               aria-label="What to read first"
+                               class="alert alert-info bg-info/10 border border-info/40 \
+                                      text-base-content mb-6 items-start">
+                            <div class="grow">
+                                <p class="font-medium">{title}</p>
+                                <p class="text-sm mt-1">{body}</p>
+                            </div>
+                        </aside>
+                    }
+                })}
 
                 <section class="mb-6" aria-label="Current load">
                     <h2 class="text-xs uppercase tracking-wide text-base-content/60 mb-2">
@@ -166,11 +317,20 @@ pub fn PersonalDashboard(
                     </div>
                 </section>
 
-                <section class="mb-6" aria-label="Rhythm">
-                    <h2 class="text-xs uppercase tracking-wide text-base-content/60 mb-2">
+                // Phase B PR3 (B-1): Rhythm panel folded by
+                // default. The "Right now" panel above is the
+                // primary canvas; Rhythm is a "if you want to
+                // dig" surface, not first-glance content.
+                // Default-closed `<details>` keeps the page
+                // scannable.
+                <details class="mb-6">
+                    <summary class="cursor-pointer text-xs uppercase tracking-wide \
+                                    text-base-content/60 mb-2 inline-block"
+                             aria-label="Rhythm — open to see throughput, long-stale count, \
+                                         and pace">
                         "Rhythm"
-                    </h2>
-                    <div class="flex flex-wrap items-center gap-3">
+                    </summary>
+                    <div class="flex flex-wrap items-center gap-3 mt-2">
                         <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
                              title="Issues you have moved to Done">
                             <span class="text-xs text-base-content/70">"Throughput"</span>
@@ -196,7 +356,7 @@ pub fn PersonalDashboard(
                             </div>
                         })}
                     </div>
-                </section>
+                </details>
 
                 {render_burnout_panel(burnout, user_is_active)}
 

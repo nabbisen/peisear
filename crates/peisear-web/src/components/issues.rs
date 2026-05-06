@@ -161,6 +161,16 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
     let summary = health.score.summary.clone();
     let trend_chip = render_trend_chip(health.score.trend);
 
+    // Phase B PR3 (B-2): explainability — collect human-language
+    // sentences describing each indicator that's not at Good.
+    // The list is computed before consuming `health.indicators`
+    // for the chip row below.
+    let explanations: Vec<String> = health
+        .indicators
+        .iter()
+        .filter_map(|i| i.human_explanation())
+        .collect();
+
     let indicator_rows = health.indicators.into_iter().map(indicator_row).collect_view();
 
     view! {
@@ -190,6 +200,26 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
                 <summary class="cursor-pointer text-base-content/60 hover:text-base-content">
                     "Indicators"
                 </summary>
+                // Phase B PR3 (B-2): human-language
+                // explanation list. Each non-Good indicator
+                // contributes a sentence describing what's
+                // happening, in the user's own terms ("3 issues
+                // haven't moved in over two weeks") rather than
+                // the score's terms ("long_stale_ratio = 0.3").
+                // Per decision B-E5, readability beats
+                // calculation transparency.
+                //
+                // The list comes before the chip row so the
+                // user reads the story first, then can
+                // double-check against the numbers if they
+                // want.
+                {(!explanations.is_empty()).then(|| view! {
+                    <ul class="mt-2 ml-4 list-disc text-base-content/80 leading-relaxed space-y-1">
+                        {explanations.into_iter().map(|line| view! {
+                            <li>{line}</li>
+                        }).collect_view()}
+                    </ul>
+                })}
                 <div class="mt-2 flex flex-wrap items-center gap-3">
                     {indicator_rows}
                 </div>
@@ -786,7 +816,12 @@ pub fn IssueNewPage(
     }
 }
 
-/// Issue detail page with an edit-in-place mode toggled via `?edit=1`.
+/// Issue detail page. Read-only by default; the parent `editing`
+/// parameter switches to the edit form. Phase B PR3 (B-3) split
+/// view and edit modes into separate URLs:
+/// `/projects/{id}/issues/{issue_id}` for view, `/edit` suffix for
+/// edit. The legacy `?edit=1` query parameter 308-redirects to
+/// the new edit URL.
 #[component]
 pub fn IssueDetailPage(
     user: CurrentUser,
@@ -804,7 +839,10 @@ pub fn IssueDetailPage(
     let title = format!("{} — {}", issue.title, project.name);
     let project_href = format!("/projects/{}", project.id);
     let issue_href = format!("/projects/{}/issues/{}", project.id, issue.id);
-    let edit_href = format!("/projects/{}/issues/{}?edit=1", project.id, issue.id);
+    // Phase B PR3 (B-3): edit URL is explicit, not a query
+    // parameter. Refresh, browser-back, and "Open in new tab"
+    // now consistently land on the right mode.
+    let edit_href = format!("/projects/{}/issues/{}/edit", project.id, issue.id);
     let delete_action = format!("/projects/{}/issues/{}/delete", project.id, issue.id);
     let submit_action = issue_href.clone();
     let project_name_for_breadcrumb = project.name.clone();
@@ -1048,7 +1086,7 @@ fn IssueView(
         <div class="flex items-start justify-between gap-3 mb-3">
             <h1 class="text-xl font-semibold tracking-tight">{issue.title}</h1>
             <div class="flex gap-2 shrink-0">
-                <a href=edit_href class="btn btn-ghost btn-sm">"Edit"</a>
+                <a href=edit_href.clone() class="btn btn-ghost btn-sm">"Edit"</a>
                 <form method="post" action=delete_action
                       onsubmit="return confirm('Delete this issue? This cannot be undone.');">
                     <button type="submit" class="btn btn-ghost btn-sm text-error">"Delete"</button>
@@ -1056,8 +1094,56 @@ fn IssueView(
             </div>
         </div>
 
+        // Phase B PR3 (B-4): status segment control. Three
+        // mutually-exclusive segments (Open / In Progress /
+        // Done), with the current status highlighted. Display
+        // only — clicking does NOT mutate; the user clicks
+        // Edit to change. Direct-manipulation status changes
+        // come in Phase D.
+        //
+        // Visually: the active segment uses `btn-primary` so
+        // it stands out against the inactive `btn-ghost`
+        // siblings. The shared `btn-disabled` cursor keeps it
+        // clear that this is a read-only display, not an
+        // interactive switch.
+        //
+        // Accessibility: the wrapping div carries
+        // `role="group"` + `aria-label`, and each segment is
+        // a button with `aria-pressed` reflecting whether it
+        // matches the current status. Screen readers
+        // announce "Open, pressed; In Progress, not pressed;
+        // Done, not pressed" so the segmented semantics carry
+        // through.
+        <div class="join mb-3" role="group" aria-label="Issue status">
+            {IssueStatus::all().into_iter().map(|s| {
+                let is_current = s == issue.status;
+                let pressed = if is_current { "true" } else { "false" };
+                // `btn-primary` highlights the active segment;
+                // others are `btn-ghost` so they recede.
+                // `cursor-default` signals "click does nothing
+                // here." All segments stay enabled for screen
+                // reader navigation; their `aria-pressed`
+                // attribute carries the active/inactive
+                // semantics. The buttons have `type="button"`
+                // (not submit) and no click handler, so they
+                // are inert by design.
+                let cls = if is_current {
+                    "join-item btn btn-sm btn-primary cursor-default"
+                } else {
+                    "join-item btn btn-sm btn-ghost cursor-default"
+                };
+                view! {
+                    <button type="button"
+                            class=cls
+                            aria-pressed=pressed
+                            tabindex="-1">
+                        {s.label()}
+                    </button>
+                }
+            }).collect_view()}
+        </div>
+
         <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/70 mb-4">
-            <span class="badge badge-sm badge-ghost">{issue.status.label()}</span>
             <span class=pri_class>{issue.priority.label()}</span>
             {issue.effort.map(|e| {
                 let label = format!("{e} pt");

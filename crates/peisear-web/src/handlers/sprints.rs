@@ -111,6 +111,15 @@ pub struct SprintForm {
     pub goal: String,
     pub starts_on: String,
     pub ends_on: String,
+    /// RFC3339 timestamp captured at form render. Validated
+    /// against the sprint's current `updated_at` per
+    /// peisear-feature-spec-v2.1 §21.4. Default is empty string
+    /// for the create flow (which doesn't have an existing row
+    /// to lock against); the update handler rejects an empty
+    /// value as a 400 (malformed RFC3339) so the
+    /// no-hidden-input case fails closed.
+    #[serde(default)]
+    pub client_updated_at: String,
 }
 
 fn parse_date_required(raw: &str, field: &str) -> AppResult<NaiveDate> {
@@ -228,6 +237,18 @@ pub async fn update(
     if sprint.team_id != team.id {
         return Err(AppError::NotFound);
     }
+
+    // Optimistic-lock check (peisear-feature-spec-v2.1 §21.4).
+    // The sprint we just fetched carries the canonical
+    // `updated_at`; compare it against the form's hidden input
+    // before any state-mutating SQL.
+    crate::error::check_optimistic_lock(
+        &form.client_updated_at,
+        sprint.updated_at,
+        "sprint",
+        &sprint_id,
+    )?;
+
     let name = form.name.trim();
     if name.is_empty() {
         return Err(AppError::Validation("Sprint name is required.".into()));
@@ -249,10 +270,21 @@ pub async fn update(
     }
 }
 
+/// Body for non-edit lifecycle actions (start, complete,
+/// delete) that need to carry the lock value but don't have
+/// other fields. Keeping this as a separate struct from
+/// `SprintForm` keeps the validator-derive surface narrow.
+#[derive(Debug, Deserialize, Default)]
+pub struct LifecycleForm {
+    #[serde(default)]
+    pub client_updated_at: String,
+}
+
 pub async fn start(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
     Path((slug, sprint_id)): Path<(String, String)>,
+    Form(form): Form<LifecycleForm>,
 ) -> AppResult<Redirect> {
     let (team, role) = resolve_team_membership(&state, &user.id, &slug).await?;
     if !role.can_manage_team() {
@@ -264,6 +296,12 @@ pub async fn start(
     if sprint.team_id != team.id {
         return Err(AppError::NotFound);
     }
+    crate::error::check_optimistic_lock(
+        &form.client_updated_at,
+        sprint.updated_at,
+        "sprint",
+        &sprint_id,
+    )?;
     match sprints::start(&state.db, &sprint.id).await {
         Ok(()) => Ok(Redirect::to(&format!(
             "/teams/{slug}/sprints/{sprint_id}?flash=Sprint+started"
@@ -283,6 +321,7 @@ pub async fn complete(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
     Path((slug, sprint_id)): Path<(String, String)>,
+    Form(form): Form<LifecycleForm>,
 ) -> AppResult<Redirect> {
     let (team, role) = resolve_team_membership(&state, &user.id, &slug).await?;
     if !role.can_manage_team() {
@@ -294,6 +333,12 @@ pub async fn complete(
     if sprint.team_id != team.id {
         return Err(AppError::NotFound);
     }
+    crate::error::check_optimistic_lock(
+        &form.client_updated_at,
+        sprint.updated_at,
+        "sprint",
+        &sprint_id,
+    )?;
     match sprints::complete(&state.db, &sprint.id).await {
         Ok(()) => Ok(Redirect::to(&format!(
             "/teams/{slug}/sprints/{sprint_id}?flash=Sprint+completed"
@@ -307,6 +352,7 @@ pub async fn delete_sprint(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
     Path((slug, sprint_id)): Path<(String, String)>,
+    Form(form): Form<LifecycleForm>,
 ) -> AppResult<Redirect> {
     let (team, role) = resolve_team_membership(&state, &user.id, &slug).await?;
     if !role.can_manage_team() {
@@ -318,6 +364,12 @@ pub async fn delete_sprint(
     if sprint.team_id != team.id {
         return Err(AppError::NotFound);
     }
+    crate::error::check_optimistic_lock(
+        &form.client_updated_at,
+        sprint.updated_at,
+        "sprint",
+        &sprint_id,
+    )?;
     sprints::delete(&state.db, &sprint.id).await?;
     Ok(Redirect::to(&format!(
         "/teams/{slug}/sprints?flash=Sprint+deleted"
@@ -366,6 +418,19 @@ pub async fn assign_issue(
     if !role.can_write() {
         return Err(AppError::Forbidden);
     }
+
+    // Optimistic-lock note: this endpoint mutates the
+    // `sprint_issues` join table, not the issue or the
+    // sprint. Since neither the issue's `updated_at` nor the
+    // sprint's `updated_at` reflects this change (the join is
+    // separate), there's no natural lock value for the
+    // join-row contention pattern. We accept the looser
+    // semantics here — concurrent sprint reassignment of the
+    // same issue is rare in practice, and the last write
+    // wins; the resulting state is a coherent (issue, sprint)
+    // pair either way. If this proves problematic, add a
+    // `version` or `updated_at` column to `sprint_issues`
+    // and check it here.
 
     let sprint_id_trimmed = form.sprint_id.trim();
     if sprint_id_trimmed.is_empty() {

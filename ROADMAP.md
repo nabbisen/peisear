@@ -30,20 +30,24 @@ out across five phases, one per minor release:
   (entities whose `updated_at` column predates 0.17.0) plus
   schema preparation (migration 0014) for the four
   remaining tables.
-- **Phase B — Key screens** *(target: 0.18.0)*. `/today`
-  panel collapsing, "what to read first" callout, project-
-  health explainability, issue-detail edit-mode URL, status
-  segment UI on the detail page. Personal-data API
-  endpoints (`/api/users/{id}/burnout` etc) land here,
-  gated by §11.5 authorization checks. **Also closes the
-  optimistic-lock rollout**: surfaces `Sprint::updated_at`,
-  `Team::updated_at`, `TeamMembership::updated_at`,
-  `CapacityRow::updated_at` to the application layer (the
-  columns and triggers landed in 0.17.0 via migration 0014;
-  Phase B widens the storage SELECTs and adds the handler-
-  level lock checks for sprint, team, membership, and
-  capacity mutations). With Phase B done, every domain-
-  entity mutation honours the §21.4 contract.
+- **Phase B — Key screens** *(0.18.0, shipped 2026-05-03)*.
+  `/today` panel collapsing + "what to read first" callout
+  (B-1), project-health explainability (B-2), issue-detail
+  edit-mode URL split with 308 legacy redirect (B-3), status
+  segment UI on the detail page — display-only ahead of the
+  Phase D direct-manipulation rollout (B-4). Personal-data
+  API endpoints (`/api/users/{id}/burnout`,
+  `/api/users/{id}/capacity`,
+  `/api/users/{id}/notifications`) ship with `ApiAppError` /
+  `ApiAuthUser` and §11.5 self-access enforcement (admin role
+  does NOT bypass — verified by integration test). Closes the
+  optimistic-lock rollout: `Sprint::updated_at`,
+  `Team::updated_at`, `TeamMembership::updated_at`, and
+  `CapacityRow::updated_at` are now plumbed through the
+  storage SELECTs and into handler-level lock checks for
+  sprint, team, membership, and capacity mutations. With
+  Phase B done, every domain-entity mutation honours the
+  §21.4 contract.
 - **Phase C — Missing surfaces** *(target: 0.19.0)*. Sub-issue
   hierarchy (parent_id approach, see §8.3 / appendix C),
   calendar (personal axis + project axis only — no team axis),

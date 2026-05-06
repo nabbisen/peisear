@@ -232,3 +232,198 @@ pub fn check_optimistic_lock(
     }
     Ok(())
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// ApiAppError — JSON-rendering sibling of AppError
+// ─────────────────────────────────────────────────────────────────────
+//
+// AppError's `IntoResponse` impl renders HTML error pages and
+// redirects unauthenticated requests to /login. That UX is right
+// for browser navigation but wrong for API endpoints, where the
+// caller is JavaScript (or another service) and expects:
+//
+// - JSON body it can parse;
+// - 401 (not 303 to /login) when unauthenticated;
+// - structured 409 conflicts that include `current_updated_at`
+//   so a future client-side "retry with fresh value" UX has
+//   the data it needs (peisear-feature-spec-v2.1 appendix E.3.3).
+//
+// This sibling type is wire-shape-compatible with AppError
+// (carries the same variants) but its IntoResponse is JSON.
+// `/api/*` handlers return Result<Json<T>, ApiAppError>;
+// everything else stays on AppError.
+//
+// We keep `ApiAppError` as its own enum rather than wrapping
+// AppError because (a) the cases each map to a specific JSON
+// shape, and (b) wrapping would force a `Display` round-trip
+// just to peel the JSON fields back out. A direct enum is
+// clearer.
+
+/// JSON-shape application error for `/api/*` endpoints.
+///
+/// Each variant maps to a fixed HTTP status + JSON body. The
+/// shapes match peisear-feature-spec-v2.1 §11.5 / appendix E.3.3.
+#[derive(Debug, thiserror::Error)]
+pub enum ApiAppError {
+    /// Caller did not supply a valid session. Status 401, body
+    /// `{ "error": "unauthorized", "message": "..." }`.
+    #[error("authentication required")]
+    Unauthorized,
+
+    /// Caller is authenticated but not authorised to access
+    /// this resource. Status 403, body
+    /// `{ "error": "forbidden", "message": "..." }`.
+    #[error("permission denied")]
+    Forbidden,
+
+    /// Resource doesn't exist (or doesn't exist *for this
+    /// caller* — we deliberately don't distinguish, to avoid
+    /// leaking presence). Status 404, body
+    /// `{ "error": "not_found", "message": "..." }`.
+    #[error("resource not found")]
+    NotFound,
+
+    /// Input validation failed. Status 400, body
+    /// `{ "error": "validation", "message": "..." }`.
+    #[error("validation failed: {0}")]
+    Validation(String),
+
+    /// Optimistic-lock conflict — a future Phase B/D
+    /// `/api/*` mutation endpoint will return this when the
+    /// caller submits with a stale `client_updated_at`.
+    /// Status 409, body
+    /// `{ "error": "conflict", "message": "...",
+    ///    "current_updated_at": "...", "entity_type": "...",
+    ///    "entity_id": "..." }`.
+    #[error("stale optimistic lock on {entity_type} {entity_id}")]
+    OptimisticLockConflict {
+        entity_type: &'static str,
+        entity_id: String,
+        current_updated_at: DateTime<Utc>,
+    },
+
+    /// Unhandled internal failure. Status 500, body
+    /// `{ "error": "internal", "message": "..." }`. The full
+    /// detail is logged server-side; the client gets a
+    /// stable generic message so internals don't leak.
+    #[error("internal error: {0}")]
+    Internal(String),
+}
+
+impl ApiAppError {
+    fn status(&self) -> StatusCode {
+        match self {
+            Self::Unauthorized => StatusCode::UNAUTHORIZED,
+            Self::Forbidden => StatusCode::FORBIDDEN,
+            Self::NotFound => StatusCode::NOT_FOUND,
+            Self::Validation(_) => StatusCode::BAD_REQUEST,
+            Self::OptimisticLockConflict { .. } => StatusCode::CONFLICT,
+            Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
+impl From<StorageError> for ApiAppError {
+    fn from(e: StorageError) -> Self {
+        match e {
+            StorageError::NotFound => Self::NotFound,
+            StorageError::Database(inner) => {
+                tracing::error!(error = %inner, "database error (api)");
+                Self::Internal("database error".into())
+            }
+            StorageError::Migration(inner) => {
+                tracing::error!(error = %inner, "migration error (api)");
+                Self::Internal("migration error".into())
+            }
+            StorageError::InvalidData(msg) => {
+                tracing::error!(%msg, "invalid data in storage (api)");
+                Self::Internal("invalid storage state".into())
+            }
+            StorageError::Bootstrap(msg) => Self::Internal(msg),
+            StorageError::Conflict(msg) => Self::Validation(msg),
+            StorageError::Validation(msg) => Self::Validation(msg),
+        }
+    }
+}
+
+impl From<AuthError> for ApiAppError {
+    fn from(e: AuthError) -> Self {
+        match e {
+            // JWT decode failures (expired or tampered cookie)
+            // map to 401 — symmetric with AppError, but here we
+            // do NOT redirect to /login: the client is
+            // JavaScript expecting JSON.
+            AuthError::Jwt(inner) => {
+                tracing::warn!(error = %inner, "jwt error (api)");
+                Self::Unauthorized
+            }
+            AuthError::PasswordHash(msg) => {
+                tracing::error!(%msg, "password hash error (api)");
+                Self::Internal("authentication subsystem error".into())
+            }
+        }
+    }
+}
+
+impl IntoResponse for ApiAppError {
+    fn into_response(self) -> Response {
+        if let Self::Internal(msg) = &self {
+            tracing::error!(%msg, "internal error (api)");
+        } else if let Self::OptimisticLockConflict {
+            entity_type,
+            entity_id,
+            ..
+        } = &self
+        {
+            tracing::info!(%entity_type, %entity_id, "optimistic-lock conflict (api)");
+        } else {
+            tracing::debug!(error = %self, "request error (api)");
+        }
+
+        let status = self.status();
+        // Use a single `error` keyword and a specific `message`
+        // so clients can switch on the keyword without parsing
+        // human-readable strings. Conflict variant adds the
+        // structured fields appendix E.3.3 specifies.
+        let body = match &self {
+            Self::Unauthorized => json!({
+                "error": "unauthorized",
+                "message": "Authentication required.",
+            }),
+            Self::Forbidden => json!({
+                "error": "forbidden",
+                "message": "You do not have permission to access this resource.",
+            }),
+            Self::NotFound => json!({
+                "error": "not_found",
+                "message": "Resource not found.",
+            }),
+            Self::Validation(msg) => json!({
+                "error": "validation",
+                "message": msg,
+            }),
+            Self::OptimisticLockConflict {
+                entity_type,
+                entity_id,
+                current_updated_at,
+            } => json!({
+                "error": "conflict",
+                "message": format!(
+                    "Someone else updated this {entity_type} while you \
+                     were editing. Reload and re-apply your change."
+                ),
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "current_updated_at": current_updated_at.to_rfc3339(),
+            }),
+            Self::Internal(_) => json!({
+                "error": "internal",
+                "message": "An internal error occurred. Please try again.",
+            }),
+        };
+
+        (status, axum::Json(body)).into_response()
+    }
+}
+
+pub type ApiAppResult<T> = Result<T, ApiAppError>;

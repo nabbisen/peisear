@@ -98,6 +98,42 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test optimistic_lock -- --test-threads=1
 
+  test-peisear-web-issue-edit-url:
+    name: peisear-web / issue_edit_url
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test issue_edit_url -- --test-threads=1
+
+  test-peisear-web-status-segment:
+    name: peisear-web / status_segment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test status_segment -- --test-threads=1
+
+  test-peisear-web-health-explainability:
+    name: peisear-web / health_explainability
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test health_explainability -- --test-threads=1
+
+  test-peisear-web-today-panel:
+    name: peisear-web / today_panel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test today_panel -- --test-threads=1
+
   test-peisear-notify:
     name: peisear-notify
     runs-on: ubuntu-latest

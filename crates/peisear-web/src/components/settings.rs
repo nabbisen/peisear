@@ -229,6 +229,16 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
     let delete_action = format!("/settings/capacity/{}/delete", row_id);
     let close_action = format!("/settings/capacity/{}/close", row_id);
 
+    // Optimistic-lock value for this row's three mutation
+    // forms (update / close / delete). Cloned per form because
+    // each form moves its own copy into the hidden input. Per
+    // peisear-feature-spec-v2.1 §21.4 the handler verifies
+    // these against the row's current `updated_at`.
+    let client_updated_at = row.updated_at.to_rfc3339();
+    let cua_update = client_updated_at.clone();
+    let cua_close = client_updated_at.clone();
+    let cua_delete = client_updated_at;
+
     let is_open_ended = row.period_end.is_none();
     let close_button = is_open_ended.then(|| {
         view! {
@@ -239,6 +249,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                 </summary>
                 <div class="dropdown-content card card-compact w-64 p-2 shadow bg-base-100 border border-base-300">
                     <form method="post" action=close_action class="flex gap-2 items-end">
+                        <input type="hidden" name="client_updated_at" value=cua_close/>
                         <label class="form-control flex-1">
                             <div class="label py-0">
                                 <span class="label-text text-xs">"Close on"</span>
@@ -264,6 +275,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                     <form method="post" action=update_action
                           class="dropdown-content card card-compact w-80 p-3 shadow bg-base-100 border border-base-300 z-10"
                           aria-label="Edit row">
+                        <input type="hidden" name="client_updated_at" value=cua_update/>
                         <label class="form-control">
                             <div class="label py-0">
                                 <span class="label-text text-xs">"Points"</span>
@@ -312,6 +324,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                     {close_button}
                     <form method="post" action=delete_action
                           onsubmit="return confirm('Remove this capacity row?')">
+                        <input type="hidden" name="client_updated_at" value=cua_delete/>
                         <button type="submit" class="btn btn-ghost btn-xs text-error"
                                 aria-label="Remove this row">
                             "Remove"

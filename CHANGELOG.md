@@ -5,7 +5,267 @@ All notable changes to peisear are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.18.0] — 2026-05-03
+
+### Added (Phase B PR3 — UI changes for /today + project detail + issue detail)
+
+Four UI surfaces get user-facing improvements per the V2.1
+brief's "minimal by default, signals reach you" principle. None
+of these change behaviour — they reorganise what's shown so
+the day-to-day surface stays calm and a user looking for
+detail can find it without scrolling.
+
+- **B-1 `/today` panel collapsing + "what to read first"
+  callout** (`crates/peisear-web/src/components/me.rs`):
+  - The "Right now" panel (WIP / Load) stays always-visible:
+    most-actionable, smallest surface, the answer to "should I
+    pick up another issue right now?"
+  - The "Rhythm" panel (Throughput / Long-stale / Pace) now
+    sits inside a default-closed `<details>`. Same content,
+    one click away. Per V2.1 §0.3 "Minimal by Default" — this
+    is "if you want to dig" data, not first-glance.
+  - The "Sustainability" / burnout panel keeps its existing
+    self-folding behaviour.
+  - New `compute_read_first()` helper picks at most ONE
+    callout from a strict priority chain:
+    1. Sustained burnout (overload streak ≥ watch threshold,
+       or stalled-assigned days ≥ watch threshold);
+    2. WIP > effective limit;
+    3. Long-stale issues count ≥ 1.
+    First match wins; nothing renders if none apply (the
+    default-quiet state). Callouts compete for attention;
+    surfacing two at once dilutes both.
+  - The callout renders as an `<aside role="note"
+    aria-label="What to read first">` above "Right now",
+    with a title and a one-sentence body. Phrasing is
+    descriptive, not evaluative ("WIP is over your limit"
+    rather than "you have too much WIP" — V2.1 §0.2).
+- **B-2 project-health explainability**
+  (`crates/peisear-core/src/lib.rs` +
+  `crates/peisear-web/src/components/issues.rs`):
+  - New `Indicator::human_explanation() -> Option<String>`
+    method. Returns `None` for Good and Insufficient (no
+    row); returns one neutral, descriptive sentence per
+    `IndicatorKind` for Watch and Concern.
+  - Examples:
+    - Throughput Concern → "Throughput is 5 / 12 (42%) —
+      fewer issues are reaching Done than the rest of the
+      project's history."
+    - LongStale Watch → "30% of in-flight issues haven't been
+      touched in over two weeks."
+    - BusFactor Watch → "67% of in-flight work is concentrated
+      on one person."
+  - The detail panel on the project page (the existing
+    `<details>` inside the HealthStrip) now renders these
+    explanations as a `<ul>` above the chip row — story
+    first, numbers underneath. Per decision B-E5: prefer
+    readability over calculation transparency.
+  - A duplicated `Indicator` struct that had crept in is
+    removed; there is now one canonical definition.
+- **B-3 issue edit URL split**
+  (`crates/peisear-web/src/handlers/issues.rs` +
+  `app.rs` + `components/issues.rs`):
+  - `GET /projects/{id}/issues/{issue_id}` now always renders
+    read-only.
+  - `GET /projects/{id}/issues/{issue_id}/edit` is the new
+    edit-mode URL.
+  - `?edit=1` on the legacy URL 308-redirects to the new
+    `/edit` URL — bookmarks and external links from before
+    0.18.0 still work. 308 (not 301) preserves the request
+    method, symmetric with the `/me`→`/today` migration that
+    landed in 0.17.0.
+  - URL-driven edit mode means refresh, browser-history back,
+    and "Open in new tab" all behave consistently. `/edit` is
+    a place, not a state hidden in a query parameter.
+  - Internally, the two handlers share `render_detail_or_edit`,
+    differing only in the `is_edit_mode` flag.
+- **B-4 status segment UI** (`components/issues.rs`):
+  - The single status badge on the issue detail page is
+    replaced with a three-segment Open / In Progress / Done
+    control. The current status is highlighted via
+    `btn-primary`; the other two are `btn-ghost` (recede).
+  - Display-only by design: `cursor-default`, `tabindex="-1"`,
+    `type="button"` with no click handler, `aria-pressed`
+    semantically conveys the active state. Direct-manipulation
+    status changes (clicking a segment to mutate) are
+    deliberately deferred to Phase D — this PR sets up the UI
+    affordance without the wiring, so the change can be
+    reviewed and lived with for a while before the
+    mutation path lands.
+  - The dedicated Edit button (top-right) remains the path to
+    change status. The edit form keeps its existing
+    `<select name="status">` widget, guarded by a regression
+    test that fails if the segment ever leaks into edit mode
+    ahead of Phase D.
+- **Tests**: 4 new test crates + 10 new tests:
+  - `tests/issue_edit_url.rs` — 3 tests (read-only render,
+    edit URL renders form, legacy `?edit=1` 308 redirect).
+  - `tests/status_segment.rs` — 2 tests (3-segment
+    aria-pressed render, edit form keeps `<select>`).
+  - `tests/health_explainability.rs` — 2 tests (project
+    health strip renders, explanation list omits Good/
+    Insufficient indicators).
+  - `tests/today_panel.rs` — 3 tests (Right now visible,
+    Rhythm folded by default, fresh user sees no callout).
+  - Total suite: 58 active / 1 ignored.
+
+### Added (Phase B PR2 — Personal Data API + ApiAppError)
+
+Three read-only JSON endpoints surface the same data the
+`/today` and `/inbox` HTML pages show, for JavaScript callers
+or future app-driven dashboards. Per
+[v2.1 spec §11.5](docs/spec/peisear-feature-spec-v2.1.md): the
+"self access only" boundary is enforced — admin status doesn't
+bypass it, and unauthenticated callers get JSON 401 (not an
+HTML redirect to /login).
+
+- **New endpoints**
+  - `GET /api/users/{user_id}/burnout` — JSON shape `{ user_id,
+    indicator, signals: [...], computed_at }`. The `signals`
+    array contains only signals that meaningfully fired
+    (overload streak above the watch threshold, stalled
+    assignments above the watch threshold, non-Steady drift
+    direction, cognitive switching), each with a stable
+    `code` (`"overload_streak"`,`"stalled_assigned"`,
+    `"estimation_drift"`, `"cognitive_switching"`) so
+    JS clients can switch on it without parsing the human
+    label. `indicator` follows the §1.4 / §4.4 ceiling at
+    Watch — never `Concern`.
+  - `GET /api/users/{user_id}/capacity` — JSON shape
+    `{ user_id, effective_today, rows: [...] }`. Mirrors the
+    `/settings` capacity table. Each row carries
+    `updated_at` (RFC3339) so clients can render
+    "updated X ago" without a separate request.
+  - `GET /api/users/{user_id}/notifications` — JSON shape
+    `{ user_id, unread_count, items: [...] }`. Returns the
+    most recent 50 notifications, mirroring the `/inbox`
+    HTML page. Older items remain accessible via the HTML
+    inbox until a paginated `?cursor=` shape lands (deferred).
+- **`ApiAppError` JSON-rendering sibling of `AppError`** in
+  `error.rs`. Same variants (`Unauthorized` → 401,
+  `Forbidden` → 403, `NotFound` → 404, `Validation` → 400,
+  `OptimisticLockConflict` → 409, `Internal` → 500) but the
+  `IntoResponse` impl emits JSON with a stable `error`
+  keyword and a `message` string, instead of HTML and login
+  redirects. `OptimisticLockConflict` includes the
+  appendix E.3.3 structured fields (`entity_type`,
+  `entity_id`, `current_updated_at`) so a future client-side
+  retry-with-fresh-value UX has the data it needs. `From<
+  StorageError>` and `From<AuthError>` conversions mirror
+  `AppError`'s — handlers using `ApiAppResult` get the same
+  `?` ergonomics.
+- **`ApiAuthUser` extractor** in `extractors.rs`. Delegates to
+  the existing `AuthUser` and translates its
+  `AppError::Unauthorized → 303 redirect` into
+  `ApiAppError::Unauthorized → 401 JSON`. The session-cookie
+  parsing path is shared, so 401 here means the same thing
+  it does on HTML pages — just with a different response
+  shape.
+- **`require_self()` helper** in `handlers/api_users.rs`.
+  Returns `Forbidden` if the path's `user_id` doesn't match
+  the authenticated session's user. Deliberately doesn't
+  distinguish "user doesn't exist" from "different user" —
+  the URL the caller already typed implies the existence
+  they're testing for, and 403 is more honest about why the
+  request was refused (per §11.5.2 wording).
+- **`/api/search` typeahead migrated** from `AuthUser` /
+  `AppResult` to `ApiAuthUser` / `ApiAppResult`. Phase A
+  shipped this endpoint with HTML-style auth (which
+  redirected unauthed JS clients to `/login`, leaking HTML
+  into the JSON parser); now it returns 401 JSON consistently
+  with the new endpoints.
+- **Tests** (`crates/peisear-web/tests/auth_boundary.rs`):
+  - 4 previously-`#[ignore]`d tests activated:
+    `burnout_endpoint_walls_off_other_users`,
+    `capacity_endpoint_walls_off_other_users`,
+    `notifications_endpoint_walls_off_other_users`,
+    `team_admin_cannot_read_member_personal_data` (the last
+    one was a `todo!()` placeholder; now implemented as
+    "Alice is admin of a team Bob is in, Alice's request
+    against Bob's `/burnout` returns 403").
+  - 4 new tests:
+    - `self_can_read_own_burnout`,
+    - `self_can_read_own_capacity`,
+    - `self_can_read_own_notifications` (positive cases that
+      a self-read returns 200 with a JSON body containing
+      the documented fields),
+    - `unauthed_api_users_returns_401_not_redirect` (the
+      key UX win of `ApiAppError`: validates that the
+      response is JSON `{"error":"unauthorized"}`, not an
+      HTML redirect).
+  - Test count: 10 active / 1 ignored (was 2 / 5). The
+    remaining ignored test (`cross_user_settings_post_returns_403`)
+    waits for an explicit user-scoped POST endpoint to land.
+  - Search test `search_endpoints_require_authentication`
+    tightened: was "303 OR 401" tolerated; now asserts
+    401 specifically for `/api/search` after the migration.
+  - Total suite: 48 active / 1 ignored.
+
+### Added (Phase B PR1 — optimistic-lock rollout completion)
+
+Closes the optimistic-lock rollout that 0.17.0 left
+half-finished: sprint, team, team-membership, and capacity-
+period mutations now honour the same §21.4 contract as issue
+and project mutations. The schema infrastructure (migration
+0014, `updated_at` columns + auto-bump triggers) shipped in
+0.17.0; this PR plumbs it through the application layer.
+
+- **Rust struct fields** for `Sprint::updated_at`,
+  `Team::updated_at`, `TeamMembership::updated_at`,
+  `CapacityRow::updated_at` — the columns added by migration
+  0014 are now exposed to the application layer.
+- **Storage SELECT widening** across nine query sites:
+  - `peisear-storage::sprints`: `find_by_id`, `list_for_team`,
+    `active_for_team`, the completed-sprints query (4 sites).
+    `map_sprint_row` signature widened to take 11 args.
+  - `peisear-storage::teams`: `find_by_id`, `find_by_slug`,
+    `teams_for_user`, `membership` (4 sites). The auth-only
+    `role_for` is unchanged — it returns just the role enum
+    and doesn't construct a TeamMembership.
+  - `peisear-storage::user_capacities`:
+    `effective_row_for_user`, `list_for_user`, `find` (3
+    sites). The points-only `effective_for_user` and the
+    join-detection `overlaps_existing` are unchanged.
+- **Sprint handlers** (`peisear-web::handlers::sprints`):
+  `update`, `start`, `complete`, `delete_sprint` now
+  re-read the sprint after the access check and call
+  `check_optimistic_lock` against `form.client_updated_at`.
+  `start` / `complete` / `delete_sprint` got a new
+  `LifecycleForm` body type carrying the lock value.
+  `assign_issue` is documented as join-table contention
+  (mutates `sprint_issues`, not the issue or sprint
+  directly) and deliberately doesn't lock — adding it would
+  require a `version` column on the join, which is out of
+  scope until concrete contention shows up in practice.
+- **Capacity handlers** (`peisear-web::handlers::settings`):
+  `update_capacity`, `delete_capacity`, `close_capacity`
+  re-read the row and lock-check before mutating. New
+  `CapacityDeleteForm` carries the lock value for the
+  body-less delete. `insert_capacity` is creation, not
+  mutation, so no lock check.
+- **UI form templates**:
+  - `SprintEditPage` renders the hidden `client_updated_at`
+    input from `sprint.updated_at.to_rfc3339()`.
+  - `SprintDetailPage` renders one hidden input per
+    lifecycle form (start / complete / delete planned /
+    delete completed) — each gets its own clone of the lock
+    value so the move semantics are clean.
+  - `render_capacity_row` adds hidden inputs to all three
+    capacity forms (update / close / delete) per row.
+- **Tests**:
+  - `crates/peisear-web/tests/optimistic_lock.rs` activates
+    the two `#[ignore]`d tests:
+    - `sprint_start_with_stale_timestamp_returns_409` —
+      creates a planned sprint, edits it (advancing
+      `updated_at` via the trigger), then POSTs `/start`
+      with the stale `client_updated_at`. Asserts 409.
+    - `capacity_period_edit_with_stale_timestamp_returns_409`
+      — parallel to the issue test: create row, update with
+      valid t0, update again with stale t0. Asserts 409.
+  - New fixture helpers `create_team_with_admin` and
+    `create_planned_sprint` in `tests/common/fixture.rs`.
+  - Test count: 6 active / 0 ignored (was 4 / 2). Total
+    suite: 40 active / 5 ignored.
 
 ## [0.17.0] — 2026-05-03
 

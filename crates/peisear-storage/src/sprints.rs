@@ -45,6 +45,7 @@ fn map_sprint_row(
     started_at: Option<DateTime<Utc>>,
     completed_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
 ) -> Sprint {
     Sprint {
         id,
@@ -57,6 +58,7 @@ fn map_sprint_row(
         started_at,
         completed_at,
         created_at,
+        updated_at,
     }
 }
 
@@ -64,10 +66,11 @@ pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Sprint>> 
     let row: Option<(
         String, String, String, Option<String>, NaiveDate, NaiveDate,
         String, Option<DateTime<Utc>>, Option<DateTime<Utc>>, DateTime<Utc>,
+        DateTime<Utc>,
     )> = sqlx::query_as(
         r#"
         SELECT id, team_id, name, goal, starts_on, ends_on,
-               status, started_at, completed_at, created_at
+               status, started_at, completed_at, created_at, updated_at
         FROM sprints
         WHERE id = ?1
         "#,
@@ -75,17 +78,20 @@ pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Sprint>> 
     .bind(id)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9)))
+    Ok(row.map(|r| {
+        map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10)
+    }))
 }
 
 pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Sprint>> {
     let rows: Vec<(
         String, String, String, Option<String>, NaiveDate, NaiveDate,
         String, Option<DateTime<Utc>>, Option<DateTime<Utc>>, DateTime<Utc>,
+        DateTime<Utc>,
     )> = sqlx::query_as(
         r#"
         SELECT id, team_id, name, goal, starts_on, ends_on,
-               status, started_at, completed_at, created_at
+               status, started_at, completed_at, created_at, updated_at
         FROM sprints
         WHERE team_id = ?1
         ORDER BY starts_on DESC, created_at DESC
@@ -96,7 +102,7 @@ pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Spri
     .await?;
     Ok(rows
         .into_iter()
-        .map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9))
+        .map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10))
         .collect())
 }
 
@@ -107,10 +113,11 @@ pub async fn active_for_team(pool: &Pool, team_id: &str) -> StorageResult<Option
     let row: Option<(
         String, String, String, Option<String>, NaiveDate, NaiveDate,
         String, Option<DateTime<Utc>>, Option<DateTime<Utc>>, DateTime<Utc>,
+        DateTime<Utc>,
     )> = sqlx::query_as(
         r#"
         SELECT id, team_id, name, goal, starts_on, ends_on,
-               status, started_at, completed_at, created_at
+               status, started_at, completed_at, created_at, updated_at
         FROM sprints
         WHERE team_id = ?1 AND status = 'active'
         ORDER BY started_at DESC
@@ -120,7 +127,9 @@ pub async fn active_for_team(pool: &Pool, team_id: &str) -> StorageResult<Option
     .bind(team_id)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9)))
+    Ok(row.map(|r| {
+        map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10)
+    }))
 }
 
 pub async fn insert(
@@ -551,10 +560,11 @@ pub async fn recent_completed_for_team(
         let rows: Vec<(
             String, String, String, Option<String>, NaiveDate, NaiveDate,
             String, Option<DateTime<Utc>>, Option<DateTime<Utc>>, DateTime<Utc>,
+            DateTime<Utc>,
         )> = sqlx::query_as(
             r#"
             SELECT id, team_id, name, goal, starts_on, ends_on,
-                   status, started_at, completed_at, created_at
+                   status, started_at, completed_at, created_at, updated_at
             FROM sprints
             WHERE team_id = ?1 AND status = 'completed'
             ORDER BY completed_at DESC
@@ -566,7 +576,9 @@ pub async fn recent_completed_for_team(
         .fetch_all(pool)
         .await?;
         rows.into_iter()
-            .map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9))
+            .map(|r| {
+                map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10)
+            })
             .collect()
     };
 
