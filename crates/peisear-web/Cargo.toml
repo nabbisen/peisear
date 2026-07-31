@@ -1,13 +1,13 @@
 [package]
-name = "peisear-web"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
+name        = "peisear-web"
 description = "Axum + Leptos SSR HTTP layer for peisear (issue tracker). Library only — the runnable binary lives in the `peisear` facade crate."
-readme = "README.md"
+readme      = "README.md"
+version.workspace       = true
+edition.workspace       = true
+rust-version.workspace  = true
+license.workspace       = true
+authors.workspace       = true
+repository.workspace    = true
 
 # Library only. The runnable binary is owned by the `peisear` facade
 # crate so that `cargo install peisear` is the public entry point.
@@ -17,27 +17,29 @@ readme = "README.md"
 path = "src/lib.rs"
 
 [dependencies]
-peisear-core = { workspace = true }
-peisear-auth = { workspace = true }
-peisear-storage = { workspace = true }
-peisear-notify = { workspace = true }
+peisear-core                = { workspace = true }
+peisear-auth                = { workspace = true }
+peisear-storage             = { workspace = true }
+peisear-notify              = { workspace = true }
 
-axum = { workspace = true }
-axum-extra = { workspace = true }
-chrono = { workspace = true }
-dotenvy = { workspace = true }
-leptos = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-serde_urlencoded = { workspace = true }
-thiserror = { workspace = true }
-time = { workspace = true }
-tokio = { workspace = true }
-tower = { workspace = true }
-tower-http = { workspace = true }
-tracing = { workspace = true }
-uuid = { workspace = true }
-validator = { workspace = true }
+axum                        = { workspace = true }
+axum-extra                  = { workspace = true }
+tower                       = { workspace = true }
+tower-http                  = { workspace = true }
+
+leptos                      = { workspace = true }
+chrono                      = { workspace = true }
+time                        = { workspace = true }
+validator                   = { workspace = true }
+
+dotenvy                     = { workspace = true }
+serde                       = { workspace = true }
+serde_json                  = { workspace = true }
+serde_urlencoded            = { workspace = true }
+thiserror                   = { workspace = true }
+tokio                       = { workspace = true }
+tracing                     = { workspace = true }
+uuid                        = { workspace = true }
 
 [dev-dependencies]
 # Integration tests live in `tests/` and use these crates. The
@@ -46,6 +48,6 @@ validator = { workspace = true }
 # matching the standard Rust convention for integration test
 # submodules. See peisear-feature-spec-v2.1.md §40 (Phase E
 # Security QA) for the test categories these dev-deps support.
-axum-test = { workspace = true }
-sqlx = { workspace = true }
-serde_urlencoded = { workspace = true }
+axum-test                   = { workspace = true }
+sqlx                        = { workspace = true }
+serde_urlencoded            = { workspace = true }

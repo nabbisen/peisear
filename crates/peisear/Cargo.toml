@@ -1,16 +1,16 @@
 [package]
-name = "peisear"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
-description.workspace = true
+name        = "peisear"
+description = "A minimal, sophisticated, solid, and easy issue tracker."
+readme      = "../../README.md"
+version.workspace       = true
+edition.workspace       = true
+rust-version.workspace  = true
+license.workspace       = true
+authors.workspace       = true
+categories.workspace    = true
+keywords.workspace      = true
+repository.workspace    = true
 documentation.workspace = true
-categories.workspace = true
-keywords.workspace = true
-readme = "../../README.md"
 
 # Public entry point on crates.io.
 #
@@ -25,16 +25,16 @@ name = "peisear"
 path = "src/main.rs"
 
 [dependencies]
-peisear-core = { workspace = true }
-peisear-auth = { workspace = true }
-peisear-storage = { workspace = true }
-peisear-notify = { workspace = true }
-peisear-web = { workspace = true }
+peisear-core                = { workspace = true }
+peisear-auth                = { workspace = true }
+peisear-storage             = { workspace = true }
+peisear-notify              = { workspace = true }
+peisear-web                 = { workspace = true }
 
 # Runtime dependencies needed by `main.rs`. The library API surfaces in
 # `peisear-web` (Config, AppState, build_router) re-export everything
 # else.
-axum = { workspace = true }
-tokio = { workspace = true }
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
+axum                        = { workspace = true }
+tokio                       = { workspace = true }
+tracing                     = { workspace = true }
+tracing-subscriber          = { workspace = true }

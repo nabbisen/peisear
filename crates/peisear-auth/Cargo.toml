@@ -1,18 +1,18 @@
 [package]
-name = "peisear-auth"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
+name        = "peisear-auth"
 description = "Password hashing and JWT helpers, framework-agnostic."
-readme = "README.md"
+readme      = "README.md"
+version.workspace       = true
+edition.workspace       = true
+rust-version.workspace  = true
+license.workspace       = true
+authors.workspace       = true
+repository.workspace    = true
 
 [dependencies]
-argon2 = { workspace = true }
-chrono = { workspace = true }
-jsonwebtoken = { workspace = true }
-rand_core = { workspace = true }
-serde = { workspace = true }
-thiserror = { workspace = true }
+argon2                      = { workspace = true }
+chrono                      = { workspace = true }
+jsonwebtoken                = { workspace = true }
+rand_core                   = { workspace = true }
+serde                       = { workspace = true }
+thiserror                   = { workspace = true }

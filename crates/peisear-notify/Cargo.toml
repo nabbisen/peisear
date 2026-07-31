@@ -1,23 +1,17 @@
 [package]
-name = "peisear-notify"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
+name        = "peisear-notify"
 description = "Notification dispatch pipeline: edge detection, channel routing, audit log."
-readme = "README.md"
+readme      = "README.md"
+version.workspace       = true
+edition.workspace       = true
+rust-version.workspace  = true
+license.workspace       = true
+authors.workspace       = true
+repository.workspace    = true
 
 [dependencies]
-peisear-core = { workspace = true }
-peisear-storage = { workspace = true }
-
-chrono = { workspace = true }
-serde_json = { workspace = true }
-thiserror = { workspace = true }
-tokio = { workspace = true }
-tracing = { workspace = true }
+peisear-core                = { workspace = true }
+peisear-storage             = { workspace = true }
 
 # Email transport. Three crates from the wasm-smtp family:
 # - `wasm-smtp`: SMTP protocol core (state machine, parsing,
@@ -31,10 +25,16 @@ tracing = { workspace = true }
 # upstream's `composing-messages.md`, mail-builder is the
 # recommended partner; enabling its pass-through feature on
 # wasm-smtp-tokio activates `SmtpClient::send_message`.
-wasm-smtp = { workspace = true }
-wasm-smtp-tokio = { workspace = true }
-wasm-smtp-cloudflare = { workspace = true }
-mail-builder = { workspace = true }
+wasm-smtp                   = { workspace = true }
+wasm-smtp-tokio             = { workspace = true }
+wasm-smtp-cloudflare        = { workspace = true }
+mail-builder                = { workspace = true }
+
+chrono                      = { workspace = true }
+serde_json                  = { workspace = true }
+thiserror                   = { workspace = true }
+tokio                       = { workspace = true }
+tracing                     = { workspace = true }
 
 [dev-dependencies]
 # For integration tests at tests/*.rs. We deliberately keep
@@ -42,4 +42,4 @@ mail-builder = { workspace = true }
 # trigger feature-resolution recompiles. The production deps
 # (peisear-storage, tokio) are already enough to write
 # integration tests against the dispatch pipeline.
-tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+tokio                       = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }

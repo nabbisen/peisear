@@ -9,7 +9,7 @@
 # provider, AI assistant, etc.) are meant to land.
 
 [workspace]
-resolver = "2"
+resolver = "3"
 members = [
     "crates/peisear-core",
     "crates/peisear-auth",
@@ -21,68 +21,37 @@ members = [
 
 [workspace.package]
 version = "0.19.1"
-edition = "2024"
-rust-version = "1.85"
-
-description = "A minimal, sophisticated, solid, and easy issue tracker."
-authors = ["nabbisen <nabbisen@scqr.net>"]
-license = "Apache-2.0"
-repository = "https://github.com/nabbisen/peisear"
-readme = "README.md"
-documentation = "https://docs.rs/peisear"
-
-categories = ["web-programming", "command-line-utilities"]
-keywords = ["issue-tracker", "kanban", "self-hosted", "leptos", "axum"]
+edition         = "2024"
+rust-version    = "1.85"
+license         = "Apache-2.0"
+authors         = ["nabbisen"]
+categories      = ["web-programming", "command-line-utilities"]
+keywords        = ["issue-tracker", "kanban", "self-hosted", "leptos", "axum"]
+repository      = "https://github.com/nabbisen/peisear"
+documentation   = "https://docs.rs/peisear"
 
 [workspace.dependencies]
-# ─── Domain / pure data ──────────────────────────────────────────────
-chrono = { version = "0.4", features = ["serde"] }
-serde = { version = "1", features = ["derive"] }
-thiserror = "2"
-tracing = "0.1"
-uuid = { version = "1", features = ["v4", "serde"] }
+# ─── Workspace‑local crates (consumed via `workspace = true`) ────────
+peisear-core                = { version = "0", path = "crates/peisear-core" }
+peisear-auth                = { version = "0", path = "crates/peisear-auth" }
+peisear-storage             = { version = "0", path = "crates/peisear-storage" }
+peisear-notify              = { version = "0", path = "crates/peisear-notify" }
+peisear-web                 = { version = "0", path = "crates/peisear-web" }
 
 # ─── Web / runtime ───────────────────────────────────────────────────
-axum = { version = "0.8", features = ["macros"] }
-axum-extra = { version = "0.12", features = ["cookie"] }
-tokio = { version = "1", features = ["full"] }
-tower = "0.5"
-tower-http = { version = "0.6", features = ["fs", "trace", "compression-gzip"] }
-
-# ─── Testing (dev-only across workspace) ─────────────────────────────
-# axum-test wraps a Router and presents an HTTP-like fluent API for
-# integration tests. We pick it over reqwest+real-server for two
-# reasons: (1) it doesn't bind to a real port, so test parallelism
-# isn't bottlenecked on port allocation; (2) it shares the runtime
-# with the test, avoiding the spawn-server-and-poll dance.
-# Cookie support is built-in (no feature flag) and required because
-# peisear authenticates via HTTP-only cookies — tests need to
-# exercise the full session lifecycle.
-axum-test = "20"
+axum                        = { version = "0.8", features = ["macros"] }
+axum-extra                  = { version = "0.12", features = ["cookie"] }
+tokio                       = { version = "1", features = ["full"] }
+tower                       = "0.5"
+tower-http                  = { version = "0.6", features = ["fs", "trace", "compression-gzip"] }
 
 # ─── Storage ─────────────────────────────────────────────────────────
-sqlx = { version = "0.8", default-features = false, features = [
-    "runtime-tokio-rustls",
-    "sqlite",
-    "macros",
-    "migrate",
-    "chrono",
-    "uuid",
-] }
+sqlx                        = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "macros", "migrate", "chrono", "uuid"] }
 
 # ─── Auth ────────────────────────────────────────────────────────────
-jsonwebtoken = "9"
-argon2 = "0.5"
-rand_core = { version = "0.6", features = ["std"] }
-
-# ─── Web‑layer specifics ─────────────────────────────────────────────
-dotenvy = "0.15"
-leptos = { version = "0.8", features = ["ssr"] }
-serde_json = "1"
-serde_urlencoded = "0.7"
-time = "0.3"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-validator = { version = "0.18", features = ["derive"] }
+jsonwebtoken                = "9"
+argon2                      = "0.5"
+rand_core                   = { version = "0.6", features = ["std"] }
 
 # ─── Notifications / mail transport ─────────────────────────────────
 # wasm-smtp 0.9 ships the SMTP protocol core. The `tokio`
@@ -98,25 +67,45 @@ validator = { version = "0.18", features = ["derive"] }
 # pass-through feature on wasm-smtp-tokio gives us
 # `SmtpClient::send_message`, which takes a
 # `mail_builder::MessageBuilder` directly.
-wasm-smtp = "0.9"
-wasm-smtp-tokio = { version = "0.9", features = ["mail-builder"] }
-wasm-smtp-cloudflare = "0.9"
-mail-builder = "0.4"
+wasm-smtp                   = "0.9"
+wasm-smtp-tokio             = { version = "0.9", features = ["mail-builder"] }
+wasm-smtp-cloudflare        = "0.9"
+mail-builder                = "0.4"
 
-# ─── Workspace‑local crates (consumed via `workspace = true`) ────────
-peisear-core = { version = "0.19.1", path = "crates/peisear-core" }
-peisear-auth = { version = "0.19.1", path = "crates/peisear-auth" }
-peisear-storage = { version = "0.19.1", path = "crates/peisear-storage" }
-peisear-notify = { version = "0.19.1", path = "crates/peisear-notify" }
-peisear-web = { version = "0.19.1", path = "crates/peisear-web" }
+# ─── Web‑layer specifics ─────────────────────────────────────────────
+dotenvy                     = "0.15"
+leptos                      = { version = "0.8", features = ["ssr"] }
+serde_urlencoded            = "0.7"
+time                        = "0.3"
+tracing-subscriber          = { version = "0.3", features = ["env-filter"] }
+validator                   = { version = "0.18", features = ["derive"] }
+
+# ─── Domain / pure data ──────────────────────────────────────────────
+chrono                      = { version = "0.4", features = ["serde"] }
+serde                       = { version = "1", features = ["derive"] }
+serde_json                  = "1"
+thiserror                   = "2"
+tracing                     = "0.1"
+uuid                        = { version = "1", features = ["v4", "serde"] }
+
+# ─── Testing (dev-only across workspace) ─────────────────────────────
+# axum-test wraps a Router and presents an HTTP-like fluent API for
+# integration tests. We pick it over reqwest+real-server for two
+# reasons: (1) it doesn't bind to a real port, so test parallelism
+# isn't bottlenecked on port allocation; (2) it shares the runtime
+# with the test, avoiding the spawn-server-and-poll dance.
+# Cookie support is built-in (no feature flag) and required because
+# peisear authenticates via HTTP-only cookies — tests need to
+# exercise the full session lifecycle.
+axum-test                   = "20"
 
 # Release profile applies to all workspace binaries.
 [profile.release]
-opt-level = 3
-lto = "thin"
-strip = "symbols"
-codegen-units = 1
+opt-level       = 3
+lto             = "thin"
+strip           = "symbols"
+codegen-units   = 1
 
 [profile.dev]
-opt-level = 0
-debug = 1
+opt-level       = 0
+debug           = 1
