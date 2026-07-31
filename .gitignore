@@ -1,15 +1,37 @@
-debug
 target
+node_modules
+bun.lock
+.wrangler
+build
+dist
+.cargo
+
+# tailwindcss
+style/tailwindcss/bin
+
+# custom
+/docs/book/
+/.git-exclude/
+
+# local operator configuration (real hosted D1/KV IDs - never commit)
+wrangler.*.local.toml
+# retired ambiguous staging filename, kept ignored defensively
+wrangler.local.toml
+
+# local Worker secrets and environment files (never commit populated values)
+.dev.vars*
+.env*
 
 **/*.rs.bk
 *.pdb
 .DS_Store
 **/mutants.out*/
 
-/data
-.env
 *.db
 *.db-journal
 *.db-shm
 *.db-wal
 
+# Custom
+/.git-exclude/
+*.local.json
