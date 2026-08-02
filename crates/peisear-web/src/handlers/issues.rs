@@ -175,10 +175,10 @@ fn apply_filter_and_sort(
             });
         }
         Some(SORT_CREATED) => {
-            issues.sort_by(|a, b| b.created_at.cmp(&a.created_at));
+            issues.sort_by_key(|i| std::cmp::Reverse(i.created_at));
         }
         Some(SORT_UPDATED) => {
-            issues.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
+            issues.sort_by_key(|i| std::cmp::Reverse(i.updated_at));
         }
         _ => {} // unknown/none → keep storage-layer order
     }
@@ -625,19 +625,21 @@ async fn render_detail_or_edit(
     };
 
     Ok(components::issues::render_issue_detail(
-        user,
-        project,
-        issue,
-        Priority::all().to_vec(),
-        IssueStatus::all().to_vec(),
-        assignees,
-        workload,
-        sprint_options,
-        current_sprint_id,
-        sub_issues,
-        parent_issue,
-        flash,
-        is_edit_mode,
+        components::issues::IssueDetailView {
+            user,
+            project,
+            issue,
+            priorities: Priority::all().to_vec(),
+            statuses: IssueStatus::all().to_vec(),
+            assignees,
+            workload,
+            sprint_options,
+            current_sprint_id,
+            sub_issues,
+            parent_issue,
+            flash,
+            editing: is_edit_mode,
+        },
     ))
 }
 

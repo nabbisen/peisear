@@ -1564,46 +1564,53 @@ pub fn render_new_sub_issue_form(
     })
 }
 
-pub fn render_issue_detail(
-    user: CurrentUser,
-    project: Project,
-    issue: Issue,
-    priorities: Vec<Priority>,
-    statuses: Vec<IssueStatus>,
-    assignees: Vec<AssigneeOption>,
-    workload: Vec<UserLoad>,
-    // Sprints in the project's team that the user can pick
-    // from. Empty vec when the project is personal (no team)
-    // or the team has no `planned`/`active` sprints.
-    sprint_options: Vec<(String, String)>,
-    // The sprint id this issue is currently in, if any.
-    current_sprint_id: Option<String>,
-    // Sub-issues of this issue (Phase C PR1). Always empty for
-    // sub-issues themselves (one-level rule); may be empty for
-    // top-level issues that haven't been broken down yet.
-    sub_issues: Vec<Issue>,
-    // The parent issue if this row is a sub-issue. Used for
-    // breadcrumb context.
-    parent_issue: Option<Issue>,
-    flash: Option<String>,
-    editing: bool,
-) -> Html<String> {
+/// Everything the issue detail page needs to render, grouped so
+/// `render_issue_detail` takes one parameter instead of thirteen
+/// (`clippy::too_many_arguments`, DEV-008). Internal to this crate —
+/// callers are handlers in the same crate, so it stays `pub(crate)`
+/// rather than exported.
+pub(crate) struct IssueDetailView {
+    pub user: CurrentUser,
+    pub project: Project,
+    pub issue: Issue,
+    pub priorities: Vec<Priority>,
+    pub statuses: Vec<IssueStatus>,
+    pub assignees: Vec<AssigneeOption>,
+    pub workload: Vec<UserLoad>,
+    /// Sprints in the project's team that the user can pick
+    /// from. Empty vec when the project is personal (no team)
+    /// or the team has no `planned`/`active` sprints.
+    pub sprint_options: Vec<(String, String)>,
+    /// The sprint id this issue is currently in, if any.
+    pub current_sprint_id: Option<String>,
+    /// Sub-issues of this issue (Phase C PR1). Always empty for
+    /// sub-issues themselves (one-level rule); may be empty for
+    /// top-level issues that haven't been broken down yet.
+    pub sub_issues: Vec<Issue>,
+    /// The parent issue if this row is a sub-issue. Used for
+    /// breadcrumb context.
+    pub parent_issue: Option<Issue>,
+    pub flash: Option<String>,
+    pub editing: bool,
+}
+
+pub(crate) fn render_issue_detail(view: IssueDetailView) -> Html<String> {
     super::render_to_html(move || {
         view! {
             <IssueDetailPage
-                user=user
-                project=project
-                issue=issue
-                priorities=priorities
-                statuses=statuses
-                assignees=assignees
-                workload=workload
-                sprint_options=sprint_options
-                current_sprint_id=current_sprint_id
-                sub_issues=sub_issues
-                parent_issue=parent_issue
-                flash=flash
-                editing=editing
+                user=view.user
+                project=view.project
+                issue=view.issue
+                priorities=view.priorities
+                statuses=view.statuses
+                assignees=view.assignees
+                workload=view.workload
+                sprint_options=view.sprint_options
+                current_sprint_id=view.current_sprint_id
+                sub_issues=view.sub_issues
+                parent_issue=view.parent_issue
+                flash=view.flash
+                editing=view.editing
             />
         }
     })

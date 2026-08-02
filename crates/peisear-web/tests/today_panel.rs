@@ -16,6 +16,7 @@
 //!    - sustained burnout; or
 //!    - WIP over the user's effective limit; or
 //!    - long-stale issues count > 0.
+//!
 //!    On a baseline empty/healthy account no callout renders.
 //!
 //! For a freshly-registered user with no issues and no
