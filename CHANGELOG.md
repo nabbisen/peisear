@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed (privacy)
+
+- **Workload chips disclosed a member's capacity and over-capacity state to
+  other project viewers** (RFC 007 `NFR-PRIV-001`, DEV-003). The project
+  detail screen's workload strip and the issue create/edit forms' workload
+  hint rendered `{in_flight}/{capacity} pt`, an "— already at N pt over
+  capacity" annotation, and a capacity-derived danger badge for every
+  member shown — all private data per `NFR-PRIV-001`, visible to anyone
+  with project access. Fixed by showing only in-flight load (permitted by
+  `NFR-PRIV-002`) on these three surfaces; the subject's own `/today` and
+  `/settings` are unaffected. An initial version of this fix also
+  suppressed the strip whenever it would show only one member, reasoning
+  from `NFR-PRIV-007` (aggregate suppression) — that reasoning was wrong
+  and the suppression has been removed: a chip labelled with one person's
+  name and their in-flight load is not an aggregate that could resolve to
+  an individual, it *is* individual workload, which `NFR-PRIV-002`
+  explicitly permits regardless of how many members a surface lists (see
+  `ISSUE-003`). Separately, and not addressed here: the query backing all
+  three surfaces returns only a project's owner, never other team
+  members — a pre-existing functional defect with its own consequences,
+  tracked for a dedicated RFC rather than folded into this privacy fix.
+
 ### Added (accessibility)
 
 - **Keyboard-operable status control on the kanban board** (RFC 007

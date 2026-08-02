@@ -6,9 +6,8 @@ use leptos::prelude::*;
 use super::{Column, layout::AppShell};
 use peisear_core::{
     AssigneeOption, CurrentUser, DisplayHealthState, Issue, IssueStatus, Priority, Project,
-    UserLoad, WorkloadState,
+    UserLoad,
     project_health::{HealthScore, Indicator, ProjectHealthReport},
-    projected_workload_state, workload_state,
 };
 
 /// Project-detail page: header + board/list view toggle.
@@ -179,7 +178,6 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
         .collect();
 
     let composite_chip = composite_row(&health.score);
-
     let indicator_rows = health
         .indicators
         .into_iter()
@@ -326,15 +324,22 @@ fn indicator_row(ind: Indicator) -> impl IntoView {
 }
 
 /// A horizontal strip of per-user load chips, one per assignee
-/// candidate. Renders an empty `<div>` if no users have in-flight
-/// issues AND no users have a configured capacity — that combination
-/// is the "early empty project" state where the strip would be
-/// visual noise.
+/// candidate. Renders an empty `<div>` when there is no in-flight
+/// work to show.
+///
+/// Shows only in-flight load, never a capacity value or a state
+/// derived from one (`NFR-PRIV-001`, `DEC-019`): another member's
+/// capacity, WIP limit, or over/under-capacity standing must not
+/// reach this surface in any form — text, colour, or attribute. A
+/// chip labelled with a person's name and their in-flight load is
+/// not an aggregate that could resolve to an individual — it *is*
+/// individual workload, which `NFR-PRIV-002` permits sharing
+/// regardless of how many members the strip lists (`ISSUE-003`
+/// ruling: an earlier `NFR-PRIV-007` single-member suppression here
+/// was a misapplication of that requirement and has been removed).
 #[component]
 fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
-    let any_signal = workload
-        .iter()
-        .any(|u| u.in_flight_issues > 0 || u.capacity_points.is_some());
+    let any_signal = workload.iter().any(|u| u.in_flight_issues > 0);
     if !any_signal {
         return view! { <div class="hidden"></div> }.into_any();
     }
@@ -342,12 +347,7 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
     let chips = workload
         .into_iter()
         .map(|u| {
-            let state = workload_state(&u);
-            let badge_class = format!("badge badge-sm {}", state.badge_class());
-            let label = match u.capacity_points {
-                None => format!("{} pt · no limit", u.in_flight_points),
-                Some(cap) => format!("{}/{} pt", u.in_flight_points, cap),
-            };
+            let label = format!("{} pt", u.in_flight_points);
             let title = format!(
                 "{} — {} in-flight issues",
                 u.display_name, u.in_flight_issues
@@ -356,7 +356,7 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
                 <div class="flex items-center gap-2 px-2 py-1 rounded border border-base-300 bg-base-100"
                      title=title>
                     <span class="text-xs font-medium">{u.display_name}</span>
-                    <span class=badge_class>{label}</span>
+                    <span class="badge badge-sm badge-ghost">{label}</span>
                 </div>
             }
         })
@@ -378,69 +378,33 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
     .into_any()
 }
 
-/// Inline hint shown below the issue form, summarising current workload
-/// per assignee candidate. SSR-only: this is a static snapshot rendered
-/// at request time. When this issue's edit form already has an
-/// `assignee_id` and `effort` selected, the hint additionally annotates
-/// the projected post-save state of that assignee — letting the user
-/// see whether their save will push someone into the warning zone.
+/// Inline hint shown below the issue form, summarising current
+/// in-flight workload per assignee candidate. SSR-only: this is a
+/// static snapshot rendered at request time.
 ///
-/// `current_effort` is the issue's existing effort (or `None` for the
-/// new-issue page); the hint uses it to compute the delta against the
-/// presumed new-effort guess. Without JS we cannot follow the form's
-/// live `<select>` value, so the hint reflects the page-load state
-/// only — still useful as context.
+/// Shows only in-flight load, never a capacity value or a state
+/// derived from one (`NFR-PRIV-001`, `DEC-019`) — the projected
+/// "would this push someone over capacity" annotation this hint
+/// used to show for the selected assignee is removed; it disclosed
+/// another member's capacity standing regardless of whether that
+/// member happened to be the viewer. Renders an empty `<div>` when
+/// there's nothing to show (see [`WorkloadStrip`]'s doc comment on
+/// why there is no single-member suppression here either —
+/// `ISSUE-003` ruling).
 #[component]
-fn WorkloadHint(
-    workload: Vec<UserLoad>,
-    current_assignee_id: Option<String>,
-    current_effort: Option<i64>,
-) -> impl IntoView {
+fn WorkloadHint(workload: Vec<UserLoad>) -> impl IntoView {
     if workload.is_empty() {
         return view! { <div class="hidden"></div> }.into_any();
     }
 
-    // The "selected" assignee gets a richer annotation showing the
-    // projected post-save state. For everyone else we just show the
-    // current snapshot.
-    let assignee_for_projection = current_assignee_id.clone();
     let chips = workload
         .into_iter()
         .map(|u| {
-            let state = workload_state(&u);
-            let badge = format!("badge badge-xs {}", state.badge_class());
-            let snapshot = match u.capacity_points {
-                None => format!("{} pt", u.in_flight_points),
-                Some(cap) => format!("{}/{} pt", u.in_flight_points, cap),
-            };
-            // If this user is the selected assignee AND we have an
-            // existing effort to compare against, project the state.
-            let projection = match (&assignee_for_projection, current_effort) {
-                (Some(aid), Some(eff)) if *aid == u.user_id && u.capacity_points.is_some() => {
-                    // The current issue is already counted in
-                    // in_flight_points; we are projecting the same
-                    // value, so the projected state equals the current
-                    // state. The hint's value here is in showing
-                    // capacity status to the editor explicitly.
-                    let projected_state = projected_workload_state(&u, 0);
-                    let hint = match projected_state {
-                        WorkloadState::Overloaded => Some(format!(
-                            " — already at {} pt over capacity",
-                            u.in_flight_points - u.capacity_points.unwrap_or(0)
-                        )),
-                        WorkloadState::Strained => Some(" — strained".to_string()),
-                        _ => None,
-                    };
-                    let _ = eff; // silence unused warning, intentionally non-functional for now
-                    hint
-                }
-                _ => None,
-            };
+            let snapshot = format!("{} pt", u.in_flight_points);
             view! {
                 <span class="inline-flex items-center gap-1">
                     <span class="text-base-content/70">{u.display_name}</span>
-                    <span class=badge>{snapshot}</span>
-                    {projection.map(|h| view! { <span class="text-warning">{h}</span> })}
+                    <span class="badge badge-xs badge-ghost">{snapshot}</span>
                 </span>
             }
         })
@@ -873,7 +837,7 @@ pub fn IssueNewPage(
                             </label>
                         </div>
 
-                        <WorkloadHint workload=workload current_assignee_id=None current_effort=None/>
+                        <WorkloadHint workload=workload/>
 
                         <div class="card-actions justify-end mt-2">
                             <a href=back_link class="btn btn-ghost btn-sm">"Cancel"</a>
@@ -1273,7 +1237,6 @@ fn IssueEditForm(
     let current_priority = issue.priority.as_str();
     let current_effort = issue.effort;
     let current_assignee_id = issue.assignee_id.clone();
-    let assignee_for_hint = current_assignee_id.clone();
     let title_value = issue.title.clone();
     let description = issue.description.clone();
     // RFC3339 captured at render time. The handler verifies
@@ -1376,7 +1339,7 @@ fn IssueEditForm(
                     </label>
                 </div>
 
-                <WorkloadHint workload=workload current_assignee_id=assignee_for_hint current_effort=current_effort/>
+                <WorkloadHint workload=workload/>
 
                 <div class="card-actions justify-end mt-2">
                     <a href=issue_href class="btn btn-ghost btn-sm">"Cancel"</a>

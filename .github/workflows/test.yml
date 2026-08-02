@@ -125,6 +125,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test board_keyboard -- --test-threads=1
 
+  test-peisear-web-workload-privacy:
+    name: peisear-web / workload_privacy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test workload_privacy -- --test-threads=1
+
   test-peisear-web-health-explainability:
     name: peisear-web / health_explainability
     runs-on: ubuntu-latest
