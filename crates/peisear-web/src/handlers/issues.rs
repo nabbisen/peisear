@@ -713,7 +713,39 @@ pub async fn delete(
     )))
 }
 
-// --- JSON endpoints for the kanban drag-and-drop UI ---
+// --- Kanban status-change endpoints: JSON (drag, DEV-001) and
+// form (keyboard, DEV-002). Both are thin wrappers around
+// `apply_status_change` — the lock check lives in exactly one
+// place so the two entry points cannot drift apart, which is the
+// defect DEV-001 exists to correct in the first place.
+
+/// Validate the lock, parse the target status, and write it.
+/// Shared by the JSON (`change_status`) and form
+/// (`change_status_form`) entry points.
+async fn apply_status_change(
+    state: &AppState,
+    user_id: &str,
+    project_id: &str,
+    issue_id: &str,
+    status_str: &str,
+    client_updated_at: &str,
+) -> AppResult<()> {
+    // Authorisation precedes concurrency.
+    let _project = projects::find_accessible(&state.db, project_id, user_id).await?;
+
+    let issue_now = issues::find(&state.db, issue_id, project_id).await?;
+    crate::error::check_optimistic_lock(
+        client_updated_at,
+        issue_now.updated_at,
+        "issue",
+        issue_id,
+    )?;
+
+    let status = IssueStatus::parse(status_str)
+        .ok_or_else(|| AppError::Validation("Invalid status".into()))?;
+    issues::update_status(&state.db, issue_id, project_id, user_id, status).await?;
+    Ok(())
+}
 
 #[derive(Debug, Deserialize)]
 pub struct StatusChange {
@@ -731,24 +763,64 @@ pub struct StatusChange {
     pub client_updated_at: String,
 }
 
+/// Drag-and-drop entry point (`board.js`). JSON body, `204` on
+/// success — the client re-renders itself rather than following a
+/// redirect.
 pub async fn change_status(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
     Path((project_id, issue_id)): Path<(String, String)>,
     Json(body): Json<StatusChange>,
 ) -> AppResult<StatusCode> {
-    let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
-
-    let issue_now = issues::find(&state.db, &issue_id, &project_id).await?;
-    crate::error::check_optimistic_lock(
-        &body.client_updated_at,
-        issue_now.updated_at,
-        "issue",
+    apply_status_change(
+        &state,
+        &user.id,
+        &project_id,
         &issue_id,
-    )?;
-
-    let status = IssueStatus::parse(&body.status)
-        .ok_or_else(|| AppError::Validation("Invalid status".into()))?;
-    issues::update_status(&state.db, &issue_id, &project_id, &user.id, status).await?;
+        &body.status,
+        &body.client_updated_at,
+    )
+    .await?;
     Ok(StatusCode::NO_CONTENT)
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StatusChangeForm {
+    pub status: String,
+    /// Same field, same validation, as [`StatusChange::client_updated_at`]
+    /// — see that doc comment. A plain HTML form cannot omit a
+    /// field the way a hand-built JSON body can, but a form
+    /// stripped of its hidden input (or replayed from a stale
+    /// page) still needs to fail the same way, hence the same
+    /// `#[serde(default)]` treatment here.
+    #[serde(default)]
+    pub client_updated_at: String,
+}
+
+/// Keyboard-operable entry point (per-card form on the board,
+/// DEV-002 / `FR-DM-002`). Plain form POST — no JavaScript
+/// involved — so the response is a redirect (Post/Redirect/Get)
+/// rather than a bare status code, landing the user back on the
+/// board.
+pub async fn change_status_form(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((project_id, issue_id)): Path<(String, String)>,
+    Form(body): Form<StatusChangeForm>,
+) -> AppResult<Redirect> {
+    apply_status_change(
+        &state,
+        &user.id,
+        &project_id,
+        &issue_id,
+        &body.status,
+        &body.client_updated_at,
+    )
+    .await?;
+    // The board view carries no filter/sort dimensions of its own
+    // beyond `view=board` (those belong to the list view — see
+    // `ProjectViewQuery`), so preserving "filter and sort context"
+    // here (`FR-NAV-005`) means returning to board mode, not losing
+    // it to the default view.
+    Ok(Redirect::to(&format!("/projects/{project_id}?view=board")))
 }

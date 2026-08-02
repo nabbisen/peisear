@@ -182,6 +182,14 @@ pub fn build_router(state: AppState) -> Router {
             "/projects/{id}/issues/{issue_id}/status",
             post(issues::change_status),
         )
+        // Keyboard-operable sibling of the JSON endpoint above
+        // (DEV-002, `FR-DM-002`): a plain form POST, no JavaScript
+        // required. Shares `apply_status_change`'s lock check with
+        // the drag path — see that function's doc comment.
+        .route(
+            "/projects/{id}/issues/{issue_id}/status/board",
+            post(issues::change_status_form),
+        )
         // Static assets served from the directory named "static" in the
         // working directory of the running binary. For typical
         // `cargo run`‑from‑workspace‑root usage this resolves to

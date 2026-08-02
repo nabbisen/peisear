@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added (accessibility)
 
+- **Keyboard-operable status control on the kanban board** (RFC 007
+  `FR-DM-002`, DEV-002). The board's only status-change path used to be a
+  mouse drag; `FR-DM-002` (P0) requires every direct-manipulation action to
+  have a keyboard equivalent, with no mouse-only action remaining. Each
+  card now also carries a plain `<form method="post">` with one submit
+  button per reachable target status — no JavaScript involved
+  (`DEC-021`), Post/Redirect/Get back to the board, targets ≥ 44×44px, and
+  an accessible name naming both the issue and the target status so a
+  screen reader doesn't read "Done" twenty times with no context. The new
+  form-encoded entry point (`POST .../status/board`) shares the same
+  `apply_status_change` lock check the drag path (`change_status`) uses —
+  one implementation, two entry points, so they cannot drift apart the way
+  the optimistic-lock bypass above did. One structural change was required
+  to add it: the card's outer element changed from `<a>` to `<div>`,
+  because a `<form>` cannot nest inside an `<a>` (invalid HTML) — the link
+  and the new form are now siblings, both children of the draggable
+  wrapper, so a drag still moves both together.
 - **Kanban status endpoint bypassed the optimistic-lock contract**
   (RFC 007 §10.6, DEV-001). `POST /projects/{id}/issues/{issue_id}/status`
   carried a "Phase A rollout" bypass that accepted and applied a status

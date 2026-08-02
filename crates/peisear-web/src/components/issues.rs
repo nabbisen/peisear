@@ -523,9 +523,13 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
     let date = issue.updated_at.format("%m-%d").to_string();
     let issue_id = issue.id.clone();
     // The optimistic-lock value the page rendered this card with.
-    // `board.js` reads it and sends it back on drop. §21.4 rejects
-    // a status change whose value no longer matches the stored row.
+    // `board.js` reads it and sends it back on drop (DEV-001); the
+    // keyboard status form below sends the same value in a hidden
+    // field (DEV-002). §21.4 rejects a status change whose value no
+    // longer matches the stored row, on either path — both go
+    // through the single `apply_status_change` lock check.
     let updated_at = issue.updated_at.to_rfc3339();
+    let updated_at_for_form = updated_at.clone();
     let effort_node = issue.effort.map(|e| {
         let label = format!("{e} pt");
         view! {
@@ -542,22 +546,68 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
             </span>
         }
     });
+
+    // Keyboard-operable status control (DEV-002, `FR-DM-002`): one
+    // submit button per status other than the card's current one.
+    // Plain form POST, no scripting (`DEC-021`). Each button names
+    // both the issue and the target status so a screen-reader user
+    // stepping through a column doesn't hear "Done, Done, Done"
+    // with no idea which issue each belongs to.
+    let status_form_action = format!("/projects/{}/issues/{}/status/board", project_id, issue.id);
+    let title_for_status = issue.title.clone();
+    let current_status = issue.status;
+    let status_buttons = IssueStatus::all()
+        .into_iter()
+        .filter(|s| *s != current_status)
+        .map(|target| {
+            let label = target.label();
+            let aria_label = format!("Move \"{title_for_status}\" to {label}");
+            view! {
+                <button
+                    type="submit"
+                    name="status"
+                    value=target.as_str()
+                    class="btn btn-ghost btn-xs min-h-11 min-w-11 px-2 normal-case"
+                    aria-label=aria_label>
+                    {label}
+                </button>
+            }
+        })
+        .collect_view();
+
     view! {
-        <a href=href
-           data-issue-id=issue_id
-           data-updated-at=updated_at
-           class="issue-card block bg-base-100 border border-base-300 hover:border-primary rounded-md p-3 shadow-sm cursor-grab active:cursor-grabbing transition"
-           draggable="true">
-            <div class="text-sm font-medium line-clamp-2">{issue.title}</div>
-            <div class="flex items-center justify-between gap-2 mt-2 text-[11px] text-base-content/60">
-                <div class="flex items-center gap-1 flex-wrap">
-                    <span class=badge>{issue.priority.label()}</span>
-                    {effort_node}
-                    {assignee_node}
+        // The outer element carries the drag identity
+        // (`board.js` matches `.issue-card`, reads
+        // `data-issue-id`/`data-updated-at`, and drags this whole
+        // node). It must be the draggable unit rather than the
+        // inner `<a>`, because a `<form>` cannot nest inside an
+        // `<a>` (invalid HTML) — the link and the form are siblings
+        // here, both children of this div, so dragging moves them
+        // together and the two controls stay paired after a drop.
+        <div
+            class="issue-card bg-base-100 border border-base-300 hover:border-primary rounded-md p-3 shadow-sm cursor-grab active:cursor-grabbing transition"
+            data-issue-id=issue_id
+            data-updated-at=updated_at
+            draggable="true">
+            <a href=href class="block">
+                <div class="text-sm font-medium line-clamp-2">{issue.title}</div>
+                <div class="flex items-center justify-between gap-2 mt-2 text-[11px] text-base-content/60">
+                    <div class="flex items-center gap-1 flex-wrap">
+                        <span class=badge>{issue.priority.label()}</span>
+                        {effort_node}
+                        {assignee_node}
+                    </div>
+                    <span>{date}</span>
                 </div>
-                <span>{date}</span>
-            </div>
-        </a>
+            </a>
+            <form
+                method="post"
+                action=status_form_action
+                class="flex flex-wrap items-center gap-1 mt-2 pt-2 border-t border-base-300">
+                <input type="hidden" name="client_updated_at" value=updated_at_for_form/>
+                {status_buttons}
+            </form>
+        </div>
     }
 }
 
