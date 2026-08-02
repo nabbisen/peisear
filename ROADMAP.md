@@ -6,11 +6,14 @@ each roadmap item lands in one well-defined crate — see
 [docs/architecture/crate-boundaries.md](docs/architecture/crate-boundaries.md)
 for the mapping.
 
+**The current plan is the Milestones, Release sequence, and Release
+cycle sections below**, agreed 2026-08-01. The phase narrative that
+follows immediately is retained as history: its structure still
+describes what shipped, but its target versions are superseded.
+
 ## Near-term
 
-The next few minor releases.
-
-### v2.1 spec implementation (active, multi-release)
+### v2.1 spec implementation (phases A–E — historical record)
 
 The [v2.1 feature specification](docs/spec/peisear-feature-spec-v2.1.md)
 defines a UI/UX overhaul (5-entry navigation, sub-issue
@@ -67,26 +70,105 @@ out across five phases, one per minor release:
   - **PR2 — Sprint planning page** *(target: 0.20.0)*.
     `/teams/{slug}/sprints/{id}/plan` with backlog → sprint
     list-based assignment UI. (DnD lands in Phase D.)
-    Detailed design: [`rfcs/0001-sprint-planning-page.md`](./rfcs/0001-sprint-planning-page.md).
+    Detailed design: [`rfcs/001-sprint-planning-page.md`](./rfcs/accepted/001-sprint-planning-page.md).
   - **PR3 — Calendar surfaces** *(target: 0.21.0)*.
     `/today/calendar` (personal axis) and
     `/projects/{id}/calendar` (project axis). No team axis
     per §10.2. Read-only display in this PR; DnD is Phase D.
-    Detailed design: [`rfcs/0002-calendar-surfaces.md`](./rfcs/0002-calendar-surfaces.md).
+    Detailed design: [`rfcs/002-calendar-surfaces.md`](./rfcs/accepted/002-calendar-surfaces.md).
   - **PR4 — Inbox refinements** *(target: 0.22.0)*.
     Notification preferences UI, mark-all-read, snooze.
-    Detailed design: [`rfcs/0003-inbox-refinements.md`](./rfcs/0003-inbox-refinements.md).
+    Detailed design: [`rfcs/003-inbox-refinements.md`](./rfcs/accepted/003-inbox-refinements.md).
 - **Phase D — Direct manipulation** *(target: 0.23.0)*. The
   five direct-manipulation surfaces (status click toggle,
   kanban DnD, calendar DnD, sprint-plan DnD, list reorder)
   rolled out in five sub-steps D-1 through D-5.
-  Detailed design: [`rfcs/0004-direct-manipulation.md`](./rfcs/0004-direct-manipulation.md).
-- **Phase E — Quality consolidation** *(target: 0.24.0)*.
+  Detailed design: [`rfcs/004-direct-manipulation.md`](./rfcs/proposed/004-direct-manipulation.md).
+- **Phase E — Quality consolidation** *(now 0.27.0)*.
   ABDD QA + Security QA. The §11.5 authorization assertions
   and §21.4 optimistic-lock assertions reach full coverage on
   all relevant endpoints. WCAG AA contrast, mobile completion
   for the four key flows, language consistency.
-  Detailed design: [`rfcs/0005-quality-consolidation.md`](./rfcs/0005-quality-consolidation.md).
+  Detailed design: [`rfcs/005-quality-consolidation.md`](./rfcs/proposed/005-quality-consolidation.md).
+
+*Phase target versions above are historical. The current plan is
+the milestone and release tables below, agreed 2026-08-01.*
+
+---
+
+## Milestones
+
+Releases are the unit of delivery; milestones are the unit of goal.
+
+| ID | Milestone | Met when | Releases |
+|---|---|---|---|
+| **M1** | Trustworthy foundation | Nothing the documents claim is untrue, and a mechanism keeps it that way | 0.20.0, 0.21.0 |
+| **M2** | Planned surfaces complete | The three designed-but-unbuilt surfaces ship | 0.22.0–0.24.0 |
+| **M3** | Definition of Done reachable | SPEC §41 conditions 3 and 5 become achievable rather than blocked | 0.25.0 |
+| **M4** | Direct manipulation | The five surfaces gain pointer affordances over working no-JS paths | 0.26.0 |
+| **M5** | Audit consolidation | Accessibility and security verified across everything shipped | 0.27.0 |
+
+M1 comes first because every later milestone adds surfaces that
+M1's mechanisms then police — the vocabulary guard in particular.
+Building M2 first would mean auditing it twice.
+
+## Release sequence
+
+| Version | Content | RFC | Milestone |
+|---|---|---|---|
+| **0.20.0** | Compliance pass — four P0/P1 corrections | [007](./rfcs/accepted/007-compliance-pass.md) | M1 |
+| **0.21.0** | i18n architecture + vocabulary guard | [006](./rfcs/proposed/006-i18n-architecture.md) | M1 |
+| **0.22.0** | Sprint planning page | [001](./rfcs/accepted/001-sprint-planning-page.md) | M2 |
+| **0.23.0** | Calendar surfaces | [002](./rfcs/accepted/002-calendar-surfaces.md) | M2 |
+| **0.24.0** | Inbox refinements | [003](./rfcs/accepted/003-inbox-refinements.md) | M2 |
+| **0.25.0** | Explainability — indicator basis, chart alternatives | 008 *(to write)* | M3 |
+| **0.26.0** | Direct manipulation | [004](./rfcs/proposed/004-direct-manipulation.md) | M4 |
+| **0.27.0** | Quality consolidation | [005](./rfcs/proposed/005-quality-consolidation.md) | M5 |
+
+Development continues in the 0.x series; no 1.0 transition is
+scheduled. That is an owner decision and is not inferable from RFC
+completion or architecture maturity.
+
+**Sprint planning is fixed at 0.22.0.** It has slipped twice — behind
+the compliance pass, then behind i18n. Each displacement was right on
+its own; the pattern is not. Any further displacement is an explicit
+decision, not a side effect.
+
+## Release cycle
+
+### Entry — before implementation starts
+
+1. Governing RFC is in `rfcs/accepted/`.
+2. Its open questions are resolved, or defaulted and recorded.
+3. Handoffs exist under `rfcs/handoffs/NNN-slug/`.
+4. The previous release's requirements amendments have been applied.
+
+### Exit — before the release is cut
+
+1. Every handoff reviewed and accepted, and committed as **one commit per
+   handoff, in dependency order**. Splitting review units without splitting
+   commits leaves the split notional — the reviewer cannot tell one unit's
+   work from another's.
+2. `cargo fmt --check`, `cargo clippy -D warnings`, and the full
+   per-crate test suite pass, **with captured logs**.
+3. Requirements amendments applied; nothing left recorded
+   `Divergent` without a compliance-gap entry.
+4. `CHANGELOG.md` records the *why*, not only the what.
+5. Affected documentation updated in the same release.
+6. Tarball built and extraction verified.
+7. Release recommendation issued; **owner approves**.
+
+Criterion 2 is the one that has historically failed. It is a gate,
+not an aspiration.
+
+---
+
+## Historical detail and deferred notes
+
+Shipped-feature histories, and options considered and deliberately
+not scheduled. Kept because the reasoning is worth more than the
+list — an option rejected for a recorded reason does not need
+re-deriving later.
 
 #### Test infrastructure (preparation, in 0.16.0 → 0.17.0)
 
@@ -470,12 +552,40 @@ for either route. SQLite will remain the default for single-node
 self-hosting; PostgreSQL unlocks multi-node, multi-user-at-scale
 deployments.
 
+**This is larger than the crate-shaping above suggests, and needs
+its own RFC before it is scheduled or promised.** The abstraction
+is ready; the *contracts underneath it* are not:
+
+- `updated_at` is maintained by **SQLite triggers**, and that is the
+  backbone of the optimistic-lock contract. A port means
+  re-implementing and re-verifying a P0 concurrency contract on a
+  second engine.
+- `issues::translate_trigger_error` string-matches SQLite `RAISE`
+  message text to produce validation errors. It does not survive
+  the port in any form.
+- SQLite's `CURRENT_TIMESTAMP` is whole-second; PostgreSQL's is not.
+  The two backends would therefore have **different concurrency
+  characteristics** on the same code — a correctness divergence, not
+  a configuration difference.
+- `NFR-CMP-003` requires state in a single file so that backup is a
+  file copy. PostgreSQL does not remove that guarantee for SQLite
+  users, but it does create a second supported topology with a
+  different operational story.
+
 ### OIDC / IDaaS integration
 
 Land the OIDC verifier alongside the JWT code in `peisear-auth`
 behind a feature flag. The web crate grows an OIDC callback
 handler; the rest of the architecture is unchanged. Supports
 discovery, PKCE, and refresh flows.
+
+**Requires a security review, not only a feature flag.** This
+modifies the authentication boundary, and the authorization
+boundary above it (`NFR-PRIV-003` — no administrator read path to
+member personal data) is the project's central guarantee. Any
+identity-provider integration must demonstrably preserve it,
+including where the provider supplies group or role claims that
+might be mistaken for authorization.
 
 ### Team model (Phase 1: flat teams)
 
