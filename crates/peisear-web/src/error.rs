@@ -226,8 +226,12 @@ pub fn check_optimistic_lock(
             // malformed lock value all land here — from the
             // user's perspective they are the same situation
             // (their page's version stamp can't be verified).
+            // Entity-neutral: this helper backs the issue, project,
+            // sprint, and capacity form paths, not just the board
+            // (DEV-001-004-review.md §1.4) — board.js carries its
+            // own board-specific wording for the board context.
             AppError::Validation(
-                "This page is showing an earlier version of the board. \
+                "This page is showing an earlier version. \
                  Reload to see the current state."
                     .into(),
             )
