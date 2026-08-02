@@ -40,6 +40,7 @@
 //! constraint. Documented; not addressed today.
 
 use chrono::NaiveDate;
+use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{Pool, StorageError, StorageResult};
@@ -61,6 +62,38 @@ pub struct CapacityRow {
     pub updated_at: chrono::DateTime<chrono::Utc>,
 }
 
+/// Raw `user_capacities` row exactly as sqlx decodes it. Kept
+/// private and distinct from the public [`CapacityRow`] above —
+/// this one exists purely to give the `SELECT` a named shape
+/// instead of an 8-element tuple; converting is a straight
+/// field-for-field move.
+#[derive(FromRow)]
+struct CapacityDbRow {
+    id: String,
+    user_id: String,
+    points: i64,
+    period_start: Option<NaiveDate>,
+    period_end: Option<NaiveDate>,
+    note: Option<String>,
+    created_at: chrono::DateTime<chrono::Utc>,
+    updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<CapacityDbRow> for CapacityRow {
+    fn from(r: CapacityDbRow) -> Self {
+        CapacityRow {
+            id: r.id,
+            user_id: r.user_id,
+            points: r.points,
+            period_start: r.period_start,
+            period_end: r.period_end,
+            note: r.note,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+        }
+    }
+}
+
 /// Find the row whose period covers `today`, returning its
 /// `points` value. `None` means no row covers today (the user
 /// has no capacity set, or all rows are out of range).
@@ -78,16 +111,7 @@ pub async fn effective_row_for_user(
     user_id: &str,
 ) -> StorageResult<Option<CapacityRow>> {
     let today = chrono::Utc::now().date_naive();
-    let row: Option<(
-        String,
-        String,
-        i64,
-        Option<NaiveDate>,
-        Option<NaiveDate>,
-        Option<String>,
-        chrono::DateTime<chrono::Utc>,
-        chrono::DateTime<chrono::Utc>,
-    )> = sqlx::query_as(
+    let row = sqlx::query_as::<_, CapacityDbRow>(
         r#"
         SELECT id, user_id, points, period_start, period_end, note, created_at, updated_at
         FROM user_capacities
@@ -102,16 +126,7 @@ pub async fn effective_row_for_user(
     .bind(today)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(|r| CapacityRow {
-        id: r.0,
-        user_id: r.1,
-        points: r.2,
-        period_start: r.3,
-        period_end: r.4,
-        note: r.5,
-        created_at: r.6,
-        updated_at: r.7,
-    }))
+    Ok(row.map(CapacityRow::from))
 }
 
 /// Find the row whose period covers `on_date`. Used by snapshot
@@ -149,16 +164,7 @@ pub async fn effective_for_user_on_date(
 /// `NULL period_start` (the open-beginning default) sorts first.
 /// Used by the `/settings` UI to render the capacity table.
 pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<CapacityRow>> {
-    let rows: Vec<(
-        String,
-        String,
-        i64,
-        Option<NaiveDate>,
-        Option<NaiveDate>,
-        Option<String>,
-        chrono::DateTime<chrono::Utc>,
-        chrono::DateTime<chrono::Utc>,
-    )> = sqlx::query_as(
+    let rows = sqlx::query_as::<_, CapacityDbRow>(
         r#"
         SELECT id, user_id, points, period_start, period_end, note, created_at, updated_at
         FROM user_capacities
@@ -173,34 +179,13 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Capa
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(|r| CapacityRow {
-            id: r.0,
-            user_id: r.1,
-            points: r.2,
-            period_start: r.3,
-            period_end: r.4,
-            note: r.5,
-            created_at: r.6,
-            updated_at: r.7,
-        })
-        .collect())
+    Ok(rows.into_iter().map(CapacityRow::from).collect())
 }
 
 /// Find one row by id (scoped to user_id for safety). Returns
 /// `None` when no such row exists for this user.
 pub async fn find(pool: &Pool, user_id: &str, id: &str) -> StorageResult<Option<CapacityRow>> {
-    let row: Option<(
-        String,
-        String,
-        i64,
-        Option<NaiveDate>,
-        Option<NaiveDate>,
-        Option<String>,
-        chrono::DateTime<chrono::Utc>,
-        chrono::DateTime<chrono::Utc>,
-    )> = sqlx::query_as(
+    let row = sqlx::query_as::<_, CapacityDbRow>(
         r#"
         SELECT id, user_id, points, period_start, period_end, note, created_at, updated_at
         FROM user_capacities
@@ -211,16 +196,7 @@ pub async fn find(pool: &Pool, user_id: &str, id: &str) -> StorageResult<Option<
     .bind(user_id)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(|r| CapacityRow {
-        id: r.0,
-        user_id: r.1,
-        points: r.2,
-        period_start: r.3,
-        period_end: r.4,
-        note: r.5,
-        created_at: r.6,
-        updated_at: r.7,
-    }))
+    Ok(row.map(CapacityRow::from))
 }
 
 /// Information about a row that conflicts with a proposed

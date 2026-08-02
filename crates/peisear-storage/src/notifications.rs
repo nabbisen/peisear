@@ -28,27 +28,29 @@
 
 use chrono::{DateTime, Utc};
 use peisear_core::notifications::{Notification, Preference, Severity};
+use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{Pool, StorageError, StorageResult};
 
+/// The content of a notification about to be persisted — every
+/// field but the recipient (`user_id`, kept as its own argument
+/// since it's the routing key, not content).
+pub struct NewNotification<'a> {
+    pub kind: &'a str,
+    pub severity: Severity,
+    pub title: &'a str,
+    pub body: &'a str,
+    pub payload_json: Option<&'a str>,
+    /// Channel ids that successfully delivered. Empty is allowed
+    /// (the row is then audit-only).
+    pub dispatched_via: &'a [&'a str],
+}
+
 /// Persist a new notification row. Returns the new id.
-///
-/// `dispatched_via` is a comma-separated list of channel ids
-/// that successfully delivered. Empty string is allowed (the
-/// row is then audit-only).
-pub async fn insert(
-    pool: &Pool,
-    user_id: &str,
-    kind: &str,
-    severity: Severity,
-    title: &str,
-    body: &str,
-    payload_json: Option<&str>,
-    dispatched_via: &[&str],
-) -> StorageResult<String> {
+pub async fn insert(pool: &Pool, user_id: &str, new: NewNotification<'_>) -> StorageResult<String> {
     let id = Uuid::new_v4().to_string();
-    let dispatched_str = dispatched_via.join(",");
+    let dispatched_str = new.dispatched_via.join(",");
 
     sqlx::query(
         r#"
@@ -59,15 +61,53 @@ pub async fn insert(
     )
     .bind(&id)
     .bind(user_id)
-    .bind(kind)
-    .bind(severity.as_str())
-    .bind(title)
-    .bind(body)
-    .bind(payload_json)
+    .bind(new.kind)
+    .bind(new.severity.as_str())
+    .bind(new.title)
+    .bind(new.body)
+    .bind(new.payload_json)
     .bind(&dispatched_str)
     .execute(pool)
     .await?;
     Ok(id)
+}
+
+/// Raw `notifications` row as returned by sqlx. Kept private —
+/// the public API returns [`Notification`], which parses
+/// `severity` and splits `dispatched_via` into a `Vec`.
+#[derive(FromRow)]
+struct NotificationRow {
+    id: String,
+    user_id: String,
+    kind: String,
+    severity: String,
+    title: String,
+    body: String,
+    payload_json: Option<String>,
+    created_at: DateTime<Utc>,
+    read_at: Option<DateTime<Utc>>,
+    dispatched_via: String,
+}
+
+impl From<NotificationRow> for Notification {
+    fn from(r: NotificationRow) -> Self {
+        Notification {
+            id: r.id,
+            user_id: r.user_id,
+            kind: r.kind,
+            severity: Severity::from_storage_str(&r.severity),
+            title: r.title,
+            body: r.body,
+            payload_json: r.payload_json,
+            created_at: r.created_at,
+            read_at: r.read_at,
+            dispatched_via: if r.dispatched_via.is_empty() {
+                Vec::new()
+            } else {
+                r.dispatched_via.split(',').map(|s| s.to_string()).collect()
+            },
+        }
+    }
 }
 
 /// Recent notifications for a user, newest first. Used by the
@@ -77,18 +117,7 @@ pub async fn recent_for_user(
     user_id: &str,
     limit: i64,
 ) -> StorageResult<Vec<Notification>> {
-    let rows: Vec<(
-        String,
-        String,
-        String,
-        String,
-        String,
-        String,
-        Option<String>,
-        DateTime<Utc>,
-        Option<DateTime<Utc>>,
-        String,
-    )> = sqlx::query_as(
+    let rows = sqlx::query_as::<_, NotificationRow>(
         r#"
         SELECT id, user_id, kind, severity, title, body, payload_json,
                created_at, read_at, dispatched_via
@@ -103,25 +132,7 @@ pub async fn recent_for_user(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(|r| Notification {
-            id: r.0,
-            user_id: r.1,
-            kind: r.2,
-            severity: Severity::from_storage_str(&r.3),
-            title: r.4,
-            body: r.5,
-            payload_json: r.6,
-            created_at: r.7,
-            read_at: r.8,
-            dispatched_via: if r.9.is_empty() {
-                Vec::new()
-            } else {
-                r.9.split(',').map(|s| s.to_string()).collect()
-            },
-        })
-        .collect())
+    Ok(rows.into_iter().map(Notification::from).collect())
 }
 
 /// Count of unread notifications. Used by the nav badge.

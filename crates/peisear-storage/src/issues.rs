@@ -146,17 +146,25 @@ pub async fn find(pool: &Pool, issue_id: &str, project_id: &str) -> StorageResul
         .and_then(IssueRow::into_issue)
 }
 
+/// The mutable content fields of an issue — everything a create
+/// or edit form supplies, as opposed to the id/project/actor
+/// coordinates that route the write. Shared between [`insert`]
+/// and [`update`] so both take the same shape.
+pub struct IssueFields<'a> {
+    pub title: &'a str,
+    pub description: &'a str,
+    pub status: IssueStatus,
+    pub priority: Priority,
+    pub effort: Option<i64>,
+    pub assignee_id: Option<&'a str>,
+}
+
 pub async fn insert(
     pool: &Pool,
     id: &str,
     project_id: &str,
     author_id: &str,
-    title: &str,
-    description: &str,
-    status: IssueStatus,
-    priority: Priority,
-    effort: Option<i64>,
-    assignee_id: Option<&str>,
+    fields: IssueFields<'_>,
 ) -> StorageResult<()> {
     // Open a transaction so the issue insert and the 'created'
     // event row land atomically. If anything fails, neither
@@ -171,7 +179,7 @@ pub async fn insert(
         "#,
     )
     .bind(project_id)
-    .bind(status.as_str())
+    .bind(fields.status.as_str())
     .fetch_one(&mut *tx)
     .await?;
 
@@ -186,13 +194,13 @@ pub async fn insert(
     .bind(id)
     .bind(project_id)
     .bind(author_id)
-    .bind(title)
-    .bind(description)
-    .bind(status.as_str())
-    .bind(priority.as_str())
+    .bind(fields.title)
+    .bind(fields.description)
+    .bind(fields.status.as_str())
+    .bind(fields.priority.as_str())
     .bind(next_pos)
-    .bind(effort)
-    .bind(assignee_id)
+    .bind(fields.effort)
+    .bind(fields.assignee_id)
     .execute(&mut *tx)
     .await?;
 
@@ -206,7 +214,7 @@ pub async fn insert(
         Some(author_id),
         issue_events::kind::CREATED,
         None,
-        Some(status.as_str()),
+        Some(fields.status.as_str()),
     )
     .await?;
 
@@ -371,12 +379,7 @@ pub async fn update(
     id: &str,
     project_id: &str,
     actor_id: &str,
-    title: &str,
-    description: &str,
-    status: IssueStatus,
-    priority: Priority,
-    effort: Option<i64>,
-    assignee_id: Option<&str>,
+    fields: IssueFields<'_>,
 ) -> StorageResult<()> {
     let mut tx = pool.begin().await?;
 
@@ -412,12 +415,12 @@ pub async fn update(
     )
     .bind(id)
     .bind(project_id)
-    .bind(title)
-    .bind(description)
-    .bind(status.as_str())
-    .bind(priority.as_str())
-    .bind(effort)
-    .bind(assignee_id)
+    .bind(fields.title)
+    .bind(fields.description)
+    .bind(fields.status.as_str())
+    .bind(fields.priority.as_str())
+    .bind(fields.effort)
+    .bind(fields.assignee_id)
     .execute(&mut *tx)
     .await?;
     if res.rows_affected() == 0 {
@@ -428,7 +431,7 @@ pub async fn update(
     // status_changed events to be the single source of truth for
     // the in-progress dwell-time analysis, so emitting them only
     // on real status moves is important.
-    if prev_status != status.as_str() {
+    if prev_status != fields.status.as_str() {
         issue_events::insert_event(
             &mut tx,
             id,
@@ -436,14 +439,14 @@ pub async fn update(
             Some(actor_id),
             issue_events::kind::STATUS_CHANGED,
             Some(&prev_status),
-            Some(status.as_str()),
+            Some(fields.status.as_str()),
         )
         .await?;
     }
 
-    if prev_effort != effort {
+    if prev_effort != fields.effort {
         let prev_str = prev_effort.map(|n| n.to_string());
-        let new_str = effort.map(|n| n.to_string());
+        let new_str = fields.effort.map(|n| n.to_string());
         issue_events::insert_event(
             &mut tx,
             id,
@@ -456,7 +459,7 @@ pub async fn update(
         .await?;
     }
 
-    let new_assignee_owned = assignee_id.map(|s| s.to_string());
+    let new_assignee_owned = fields.assignee_id.map(|s| s.to_string());
     if prev_assignee != new_assignee_owned {
         issue_events::insert_event(
             &mut tx,
@@ -465,7 +468,7 @@ pub async fn update(
             Some(actor_id),
             issue_events::kind::ASSIGNEE_CHANGED,
             prev_assignee.as_deref(),
-            assignee_id,
+            fields.assignee_id,
         )
         .await?;
     }

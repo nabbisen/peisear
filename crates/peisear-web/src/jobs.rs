@@ -220,12 +220,14 @@ async fn capture_one_user(
     user_metrics_snapshots::insert(
         db,
         user_id,
-        metrics.current_wip,
-        metrics.in_flight_points,
-        metrics.capacity_points,
-        over_capacity,
-        metrics.effective_wip_limit,
-        over_wip_limit,
+        user_metrics_snapshots::NewUserSnapshot {
+            current_wip: metrics.current_wip,
+            in_flight_points: metrics.in_flight_points,
+            capacity_points: metrics.capacity_points,
+            over_capacity,
+            effective_wip_limit: metrics.effective_wip_limit,
+            over_wip_limit,
+        },
     )
     .await?;
 

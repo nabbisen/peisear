@@ -8,6 +8,7 @@
 //! [`crate::user_burnout`]. Write API is one function called from
 //! the background job for each user with active assigned work.
 
+use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{Pool, StorageResult};
@@ -26,24 +27,28 @@ pub struct UserSnapshot {
     pub captured_at: chrono::DateTime<chrono::Utc>,
 }
 
-/// Insert one user-metrics snapshot row. Called by the
-/// background job tick.
+/// The measured values for one user-metrics snapshot. `user_id`
+/// is kept as [`insert`]'s own argument (the routing key); this
+/// bundles the rest — the load figures the background job
+/// computed for that user on this tick.
 ///
 /// `over_capacity` and `over_wip_limit` are passed in by the
 /// caller rather than computed here; the caller has already
 /// computed them as part of building a `PersonalMetrics` value
 /// and we want a single source of truth for the boolean
 /// definition.
-pub async fn insert(
-    pool: &Pool,
-    user_id: &str,
-    current_wip: i64,
-    in_flight_points: i64,
-    capacity_points: Option<i64>,
-    over_capacity: bool,
-    effective_wip_limit: i64,
-    over_wip_limit: bool,
-) -> StorageResult<()> {
+pub struct NewUserSnapshot {
+    pub current_wip: i64,
+    pub in_flight_points: i64,
+    pub capacity_points: Option<i64>,
+    pub over_capacity: bool,
+    pub effective_wip_limit: i64,
+    pub over_wip_limit: bool,
+}
+
+/// Insert one user-metrics snapshot row. Called by the
+/// background job tick.
+pub async fn insert(pool: &Pool, user_id: &str, snapshot: NewUserSnapshot) -> StorageResult<()> {
     let id = Uuid::new_v4().to_string();
     sqlx::query(
         r#"
@@ -56,15 +61,45 @@ pub async fn insert(
     )
     .bind(id)
     .bind(user_id)
-    .bind(current_wip)
-    .bind(in_flight_points)
-    .bind(capacity_points)
-    .bind(over_capacity as i64)
-    .bind(effective_wip_limit)
-    .bind(over_wip_limit as i64)
+    .bind(snapshot.current_wip)
+    .bind(snapshot.in_flight_points)
+    .bind(snapshot.capacity_points)
+    .bind(snapshot.over_capacity as i64)
+    .bind(snapshot.effective_wip_limit)
+    .bind(snapshot.over_wip_limit as i64)
     .execute(pool)
     .await?;
     Ok(())
+}
+
+/// Raw `user_metrics_snapshots` row as returned by sqlx. Kept
+/// private — the public API returns [`UserSnapshot`], whose
+/// `bool` fields this converts from the stored `0`/`1` integers.
+#[derive(FromRow)]
+struct UserSnapshotRow {
+    user_id: String,
+    current_wip: i64,
+    in_flight_points: i64,
+    capacity_points: Option<i64>,
+    over_capacity: i64,
+    effective_wip_limit: i64,
+    over_wip_limit: i64,
+    captured_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<UserSnapshotRow> for UserSnapshot {
+    fn from(r: UserSnapshotRow) -> Self {
+        UserSnapshot {
+            user_id: r.user_id,
+            current_wip: r.current_wip,
+            in_flight_points: r.in_flight_points,
+            capacity_points: r.capacity_points,
+            over_capacity: r.over_capacity != 0,
+            effective_wip_limit: r.effective_wip_limit,
+            over_wip_limit: r.over_wip_limit != 0,
+            captured_at: r.captured_at,
+        }
+    }
 }
 
 /// Recent snapshots for one user, ordered oldest → newest. Used
@@ -76,16 +111,7 @@ pub async fn recent_for_user(
     user_id: &str,
     window_days: i64,
 ) -> StorageResult<Vec<UserSnapshot>> {
-    let rows: Vec<(
-        String,
-        i64,
-        i64,
-        Option<i64>,
-        i64,
-        i64,
-        i64,
-        chrono::DateTime<chrono::Utc>,
-    )> = sqlx::query_as(
+    let rows = sqlx::query_as::<_, UserSnapshotRow>(
         r#"
         SELECT
             user_id, current_wip, in_flight_points, capacity_points,
@@ -102,19 +128,7 @@ pub async fn recent_for_user(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(|r| UserSnapshot {
-            user_id: r.0,
-            current_wip: r.1,
-            in_flight_points: r.2,
-            capacity_points: r.3,
-            over_capacity: r.4 != 0,
-            effective_wip_limit: r.5,
-            over_wip_limit: r.6 != 0,
-            captured_at: r.7,
-        })
-        .collect())
+    Ok(rows.into_iter().map(UserSnapshot::from).collect())
 }
 
 /// Users with at least one in-flight assigned issue, used by the

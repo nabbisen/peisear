@@ -27,20 +27,52 @@
 
 use chrono::{DateTime, Utc};
 use peisear_core::teams::{Team, TeamMembership, TeamRole};
+use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{Pool, StorageError, StorageResult};
 
+/// Raw `teams` row as returned by sqlx. Kept private — the public
+/// API returns [`peisear_core::teams::Team`].
+#[derive(FromRow)]
+struct TeamRow {
+    id: String,
+    name: String,
+    slug: String,
+    description: Option<String>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
+impl From<TeamRow> for Team {
+    fn from(r: TeamRow) -> Self {
+        Team {
+            id: r.id,
+            name: r.name,
+            slug: r.slug,
+            description: r.description,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+        }
+    }
+}
+
+/// `teams` row joined with the querying user's `role` in that
+/// team. Kept private, same reasoning as [`TeamRow`].
+#[derive(FromRow)]
+struct TeamRoleRow {
+    id: String,
+    name: String,
+    slug: String,
+    description: Option<String>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    role: String,
+}
+
 /// Find a team by its id. None if missing.
 pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Team>> {
-    let row: Option<(
-        String,
-        String,
-        String,
-        Option<String>,
-        DateTime<Utc>,
-        DateTime<Utc>,
-    )> = sqlx::query_as(
+    let row = sqlx::query_as::<_, TeamRow>(
         r#"
             SELECT id, name, slug, description, created_at, updated_at
             FROM teams
@@ -50,28 +82,12 @@ pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Team>> {
     .bind(id)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(
-        |(id, name, slug, description, created_at, updated_at)| Team {
-            id,
-            name,
-            slug,
-            description,
-            created_at,
-            updated_at,
-        },
-    ))
+    Ok(row.map(Team::from))
 }
 
 /// Find a team by URL slug. The hot lookup for `/teams/{slug}`.
 pub async fn find_by_slug(pool: &Pool, slug: &str) -> StorageResult<Option<Team>> {
-    let row: Option<(
-        String,
-        String,
-        String,
-        Option<String>,
-        DateTime<Utc>,
-        DateTime<Utc>,
-    )> = sqlx::query_as(
+    let row = sqlx::query_as::<_, TeamRow>(
         r#"
             SELECT id, name, slug, description, created_at, updated_at
             FROM teams
@@ -81,30 +97,13 @@ pub async fn find_by_slug(pool: &Pool, slug: &str) -> StorageResult<Option<Team>
     .bind(slug)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(
-        |(id, name, slug, description, created_at, updated_at)| Team {
-            id,
-            name,
-            slug,
-            description,
-            created_at,
-            updated_at,
-        },
-    ))
+    Ok(row.map(Team::from))
 }
 
 /// Teams the user is a member of, alphabetised by name. Used
 /// for the user nav and `/teams` page.
 pub async fn teams_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<(Team, TeamRole)>> {
-    let rows: Vec<(
-        String,
-        String,
-        String,
-        Option<String>,
-        DateTime<Utc>,
-        DateTime<Utc>,
-        String,
-    )> = sqlx::query_as(
+    let rows = sqlx::query_as::<_, TeamRoleRow>(
         r#"
         SELECT t.id, t.name, t.slug, t.description, t.created_at, t.updated_at, m.role
         FROM teams t
@@ -119,27 +118,25 @@ pub async fn teams_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<(Te
 
     Ok(rows
         .into_iter()
-        .filter_map(
-            |(id, name, slug, description, created_at, updated_at, role_str)| {
-                // Unknown role values are skipped; in practice the
-                // CHECK constraint prevents these, but we'd rather
-                // hide a row than panic on an unrecognised future
-                // role string.
-                TeamRole::from_storage_str(&role_str).map(|role| {
-                    (
-                        Team {
-                            id,
-                            name,
-                            slug,
-                            description,
-                            created_at,
-                            updated_at,
-                        },
-                        role,
-                    )
-                })
-            },
-        )
+        .filter_map(|r| {
+            // Unknown role values are skipped; in practice the
+            // CHECK constraint prevents these, but we'd rather
+            // hide a row than panic on an unrecognised future
+            // role string.
+            TeamRole::from_storage_str(&r.role).map(|role| {
+                (
+                    Team {
+                        id: r.id,
+                        name: r.name,
+                        slug: r.slug,
+                        description: r.description,
+                        created_at: r.created_at,
+                        updated_at: r.updated_at,
+                    },
+                    role,
+                )
+            })
+        })
         .collect())
 }
 
@@ -318,7 +315,7 @@ pub async fn add_member(
     user_id: &str,
     role: TeamRole,
 ) -> StorageResult<()> {
-    if let Some(_) = role_for(pool, team_id, user_id).await? {
+    if role_for(pool, team_id, user_id).await?.is_some() {
         return Err(StorageError::Conflict(format!(
             "User {user_id} is already a member of this team."
         )));

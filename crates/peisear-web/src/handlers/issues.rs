@@ -413,12 +413,14 @@ pub async fn create(
         &id,
         &project_id,
         &user.id,
-        form.title.trim(),
-        form.description.trim(),
-        status,
-        priority,
-        effort,
-        assignee_id.as_deref(),
+        issues::IssueFields {
+            title: form.title.trim(),
+            description: form.description.trim(),
+            status,
+            priority,
+            effort,
+            assignee_id: assignee_id.as_deref(),
+        },
     )
     .await?;
     Ok(Redirect::to(&format!("/projects/{project_id}/issues/{id}")))
@@ -683,12 +685,14 @@ pub async fn update(
         &issue_id,
         &project_id,
         &user.id,
-        form.title.trim(),
-        form.description.trim(),
-        status,
-        priority,
-        effort,
-        assignee_id.as_deref(),
+        issues::IssueFields {
+            title: form.title.trim(),
+            description: form.description.trim(),
+            status,
+            priority,
+            effort,
+            assignee_id: assignee_id.as_deref(),
+        },
     )
     .await?;
     Ok(Redirect::to(&format!(

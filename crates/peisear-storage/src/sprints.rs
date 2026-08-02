@@ -30,52 +30,50 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use peisear_core::sprints::{BurndownPoint, Sprint, SprintStatus, SprintSummary};
+use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{Pool, StorageError, StorageResult};
 
-fn map_sprint_row(
+/// Raw `sprints` row as returned by sqlx. Kept private — the
+/// public API returns [`peisear_core::sprints::Sprint`], which
+/// carries a parsed `SprintStatus` rather than the raw column
+/// string.
+#[derive(FromRow)]
+struct SprintRow {
     id: String,
     team_id: String,
     name: String,
     goal: Option<String>,
     starts_on: NaiveDate,
     ends_on: NaiveDate,
-    status_str: String,
+    status: String,
     started_at: Option<DateTime<Utc>>,
     completed_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
-) -> Sprint {
-    Sprint {
-        id,
-        team_id,
-        name,
-        goal,
-        starts_on,
-        ends_on,
-        status: SprintStatus::from_storage_str(&status_str),
-        started_at,
-        completed_at,
-        created_at,
-        updated_at,
+}
+
+impl From<SprintRow> for Sprint {
+    fn from(r: SprintRow) -> Self {
+        Sprint {
+            id: r.id,
+            team_id: r.team_id,
+            name: r.name,
+            goal: r.goal,
+            starts_on: r.starts_on,
+            ends_on: r.ends_on,
+            status: SprintStatus::from_storage_str(&r.status),
+            started_at: r.started_at,
+            completed_at: r.completed_at,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+        }
     }
 }
 
 pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Sprint>> {
-    let row: Option<(
-        String,
-        String,
-        String,
-        Option<String>,
-        NaiveDate,
-        NaiveDate,
-        String,
-        Option<DateTime<Utc>>,
-        Option<DateTime<Utc>>,
-        DateTime<Utc>,
-        DateTime<Utc>,
-    )> = sqlx::query_as(
+    let row = sqlx::query_as::<_, SprintRow>(
         r#"
         SELECT id, team_id, name, goal, starts_on, ends_on,
                status, started_at, completed_at, created_at, updated_at
@@ -86,23 +84,11 @@ pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Sprint>> 
     .bind(id)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10)))
+    Ok(row.map(Sprint::from))
 }
 
 pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Sprint>> {
-    let rows: Vec<(
-        String,
-        String,
-        String,
-        Option<String>,
-        NaiveDate,
-        NaiveDate,
-        String,
-        Option<DateTime<Utc>>,
-        Option<DateTime<Utc>>,
-        DateTime<Utc>,
-        DateTime<Utc>,
-    )> = sqlx::query_as(
+    let rows = sqlx::query_as::<_, SprintRow>(
         r#"
         SELECT id, team_id, name, goal, starts_on, ends_on,
                status, started_at, completed_at, created_at, updated_at
@@ -114,29 +100,14 @@ pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Spri
     .bind(team_id)
     .fetch_all(pool)
     .await?;
-    Ok(rows
-        .into_iter()
-        .map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10))
-        .collect())
+    Ok(rows.into_iter().map(Sprint::from).collect())
 }
 
 /// The (zero or one) currently active sprint. The application
 /// allows at most one `active` sprint per team — enforced at the
 /// `start` call site, not the schema level.
 pub async fn active_for_team(pool: &Pool, team_id: &str) -> StorageResult<Option<Sprint>> {
-    let row: Option<(
-        String,
-        String,
-        String,
-        Option<String>,
-        NaiveDate,
-        NaiveDate,
-        String,
-        Option<DateTime<Utc>>,
-        Option<DateTime<Utc>>,
-        DateTime<Utc>,
-        DateTime<Utc>,
-    )> = sqlx::query_as(
+    let row = sqlx::query_as::<_, SprintRow>(
         r#"
         SELECT id, team_id, name, goal, starts_on, ends_on,
                status, started_at, completed_at, created_at, updated_at
@@ -149,7 +120,7 @@ pub async fn active_for_team(pool: &Pool, team_id: &str) -> StorageResult<Option
     .bind(team_id)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10)))
+    Ok(row.map(Sprint::from))
 }
 
 pub async fn insert(
@@ -449,6 +420,18 @@ pub async fn summary(pool: &Pool, sprint_id: &str) -> StorageResult<SprintSummar
     })
 }
 
+/// One issue's contribution to a sprint's burndown, as read from
+/// the join in [`burndown`]. Kept private and local to this
+/// function's computation — not a table row on its own.
+#[derive(FromRow)]
+struct BurndownIssueRow {
+    id: String,
+    effort: Option<i64>,
+    status: String,
+    assigned_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+}
+
 /// Compute the burndown timeline for a sprint.
 ///
 /// Strategy:
@@ -474,8 +457,7 @@ pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<Burndow
         .await?
         .ok_or(StorageError::NotFound)?;
 
-    // (issue_id, effort, status, assigned_to_sprint_at, current_updated_at).
-    let issues: Vec<(String, Option<i64>, String, DateTime<Utc>, DateTime<Utc>)> = sqlx::query_as(
+    let issues: Vec<BurndownIssueRow> = sqlx::query_as(
         r#"
             SELECT i.id, i.effort, i.status, si.assigned_at, i.updated_at
             FROM sprint_issues si
@@ -509,7 +491,7 @@ pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<Burndow
 
     // For each issue currently linked to the sprint, find the
     // date it transitioned to `done` (or None if not done yet).
-    let issue_ids: Vec<String> = issues.iter().map(|i| i.0.clone()).collect();
+    let issue_ids: Vec<String> = issues.iter().map(|i| i.id.clone()).collect();
     let placeholders = issue_ids
         .iter()
         .enumerate()
@@ -547,19 +529,19 @@ pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<Burndow
         let mut committed: i64 = 0;
         let mut completed: i64 = 0;
 
-        for (id, effort, status, assigned_at, updated_at) in &issues {
-            let effort_pt = effort.unwrap_or(0);
+        for row in &issues {
+            let effort_pt = row.effort.unwrap_or(0);
             // Committed on day D if assigned at or before end-of-D.
-            if assigned_at.date_naive() <= day {
+            if row.assigned_at.date_naive() <= day {
                 committed += effort_pt;
             }
             // Completed on day D if there's a done-event on or
             // before D; otherwise fallback to updated_at if
             // current status is done. The fallback covers
             // issues that predate 0.8.0 events.
-            let done_date: Option<NaiveDate> = done_map.get(id).copied().or_else(|| {
-                if status == "done" {
-                    Some(updated_at.date_naive())
+            let done_date: Option<NaiveDate> = done_map.get(&row.id).copied().or_else(|| {
+                if row.status == "done" {
+                    Some(row.updated_at.date_naive())
                 } else {
                     None
                 }
@@ -595,19 +577,7 @@ pub async fn recent_completed_for_team(
     limit: i64,
 ) -> StorageResult<Vec<(Sprint, SprintSummary)>> {
     let sprints: Vec<Sprint> = {
-        let rows: Vec<(
-            String,
-            String,
-            String,
-            Option<String>,
-            NaiveDate,
-            NaiveDate,
-            String,
-            Option<DateTime<Utc>>,
-            Option<DateTime<Utc>>,
-            DateTime<Utc>,
-            DateTime<Utc>,
-        )> = sqlx::query_as(
+        let rows = sqlx::query_as::<_, SprintRow>(
             r#"
             SELECT id, team_id, name, goal, starts_on, ends_on,
                    status, started_at, completed_at, created_at, updated_at
@@ -621,9 +591,7 @@ pub async fn recent_completed_for_team(
         .bind(limit)
         .fetch_all(pool)
         .await?;
-        rows.into_iter()
-            .map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10))
-            .collect()
+        rows.into_iter().map(Sprint::from).collect()
     };
 
     let mut out = Vec::with_capacity(sprints.len());

@@ -188,12 +188,14 @@ async fn process_event(
     let id = notif_store::insert(
         &ctx.db,
         &event.user_id,
-        &event.kind,
-        event.severity,
-        &event.title,
-        &event.body,
-        event.payload_json.as_deref(),
-        &delivered_refs,
+        notif_store::NewNotification {
+            kind: &event.kind,
+            severity: event.severity,
+            title: &event.title,
+            body: &event.body,
+            payload_json: event.payload_json.as_deref(),
+            dispatched_via: &delivered_refs,
+        },
     )
     .await?;
 

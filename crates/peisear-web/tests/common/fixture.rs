@@ -53,12 +53,14 @@ pub async fn create_issue(db: &Pool, project_id: &str, author_id: &str, title: &
         &id,
         project_id,
         author_id,
-        title,
-        "Test issue body.",
-        IssueStatus::Open,
-        Priority::Medium,
-        None, // effort
-        None, // assignee
+        issues::IssueFields {
+            title,
+            description: "Test issue body.",
+            status: IssueStatus::Open,
+            priority: Priority::Medium,
+            effort: None,
+            assignee_id: None,
+        },
     )
     .await
     .expect("insert issue");

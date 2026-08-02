@@ -23,9 +23,49 @@
 //! keeps the access-control story clear.
 
 use peisear_core::project_health::ProjectHealthRaw;
+use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{Pool, StorageResult};
+
+/// Raw `metrics_snapshots` row as returned by sqlx. Kept private
+/// — the public API returns [`Snapshot`], which nests the raw
+/// counters inside [`ProjectHealthRaw`] rather than exposing them
+/// as a flat tuple.
+#[derive(FromRow)]
+struct SnapshotRow {
+    total_issues: i64,
+    done_issues: i64,
+    oldest_in_flight_age_days: Option<i64>,
+    recent_activity_count: i64,
+    in_flight_issues: i64,
+    top_assignee_in_flight_issues: i64,
+    long_stale_in_flight_issues: i64,
+    wip_violators: i64,
+    active_assignees: i64,
+    score_value: i64,
+    captured_at: chrono::DateTime<chrono::Utc>,
+}
+
+impl From<SnapshotRow> for Snapshot {
+    fn from(r: SnapshotRow) -> Self {
+        Snapshot {
+            raw: ProjectHealthRaw {
+                total_issues: r.total_issues,
+                done_issues: r.done_issues,
+                oldest_in_flight_age_days: r.oldest_in_flight_age_days,
+                recent_activity_count: r.recent_activity_count,
+                in_flight_issues: r.in_flight_issues,
+                top_assignee_in_flight_issues: r.top_assignee_in_flight_issues,
+                long_stale_in_flight_issues: r.long_stale_in_flight_issues,
+                wip_violators: r.wip_violators,
+                active_assignees: r.active_assignees,
+            },
+            score_value: r.score_value.clamp(0, 100) as u8,
+            captured_at: r.captured_at,
+        }
+    }
+}
 
 /// One snapshot row, deserialised from storage. Same shape as
 /// what the writer puts in.
@@ -89,19 +129,7 @@ pub async fn recent_for_project(
     min_days_ago: i64,
     max_days_ago: i64,
 ) -> StorageResult<Vec<Snapshot>> {
-    let rows: Vec<(
-        i64,
-        i64,
-        Option<i64>,
-        i64,
-        i64,
-        i64,
-        i64,
-        i64,
-        i64,
-        i64,
-        chrono::DateTime<chrono::Utc>,
-    )> = sqlx::query_as(
+    let rows = sqlx::query_as::<_, SnapshotRow>(
         r#"
         SELECT
             total_issues, done_issues, oldest_in_flight_age_days,
@@ -122,24 +150,7 @@ pub async fn recent_for_project(
     .fetch_all(pool)
     .await?;
 
-    Ok(rows
-        .into_iter()
-        .map(|r| Snapshot {
-            raw: ProjectHealthRaw {
-                total_issues: r.0,
-                done_issues: r.1,
-                oldest_in_flight_age_days: r.2,
-                recent_activity_count: r.3,
-                in_flight_issues: r.4,
-                top_assignee_in_flight_issues: r.5,
-                long_stale_in_flight_issues: r.6,
-                wip_violators: r.7,
-                active_assignees: r.8,
-            },
-            score_value: r.9.clamp(0, 100) as u8,
-            captured_at: r.10,
-        })
-        .collect())
+    Ok(rows.into_iter().map(Snapshot::from).collect())
 }
 
 /// Project IDs with at least one issue ever, used by the

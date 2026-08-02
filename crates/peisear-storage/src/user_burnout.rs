@@ -266,7 +266,7 @@ async fn estimation_drift_for_user(
 /// Median of a list of f64s. Mutates the input (sorts in place).
 /// We accept the mutation rather than clone because both call
 /// sites here already own the vec.
-fn median(xs: &mut Vec<f64>) -> f64 {
+fn median(xs: &mut [f64]) -> f64 {
     xs.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     let n = xs.len();
     if n == 0 {
