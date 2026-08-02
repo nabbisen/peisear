@@ -71,6 +71,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   returns the caller-supplied message as-is for this variant; the log-only
   `Display` impl is unchanged.
 
+### Changed (quality gates)
+
+- **`cargo fmt` and `cargo clippy -D warnings` had never passed** (`ISSUE-001`,
+  DEV-006, DEV-007). `NFR-MNT-007` records both as "Implemented in CI"; in
+  fact CI failed both checks on every push since it was introduced — 14 of
+  16 jobs (build, all test crates) passed throughout, so this was
+  formatting/lint debt, not a correctness regression. DEV-006 ran
+  `cargo fmt --all` once, mechanically, across 44 files (no semantic
+  change — verified by an unchanged clippy failure set and unchanged test
+  pass counts). DEV-007 then cleared all 21 pre-existing clippy errors in
+  `crates/peisear-storage` (14 `type_complexity`, 4 `too_many_arguments`,
+  1 `ptr_arg`, 1 `redundant_pattern_matching`) with named row types and
+  parameter structs, no behaviour or schema change. Fixing `peisear-storage`
+  exposed 3 further, previously invisible `clippy` findings in
+  `peisear-web` (masked until now by `peisear-storage`'s compile failure
+  blocking the lint pass from reaching it) — tracked separately as
+  `ISSUE-002`, not yet resolved.
+
 ## [0.19.1] — 2026-05-05
 
 ### Added (documentation)
