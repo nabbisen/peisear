@@ -79,6 +79,11 @@ impl AppError {
                  Please reload the page and re-apply your change so you don't \
                  overwrite their work."
             ),
+            // `Validation`'s `Display` impl (used for tracing/logs) is
+            // prefixed "validation failed: " for developer readability.
+            // That prefix is failure framing and must not reach the
+            // user (§1.7) — return the caller-supplied message as-is.
+            Self::Validation(msg) => msg.clone(),
             other => other.to_string(),
         }
     }
@@ -216,9 +221,16 @@ pub fn check_optimistic_lock(
 ) -> AppResult<()> {
     let client_dt = chrono::DateTime::parse_from_rfc3339(client_updated_at_str)
         .map_err(|_| {
-            AppError::Validation(format!(
-                "client_updated_at is not a valid RFC3339 timestamp: {client_updated_at_str:?}"
-            ))
+            // User-visible (§1.7): no failure vocabulary, no raw
+            // client input echoed back. A missing, empty, or
+            // malformed lock value all land here — from the
+            // user's perspective they are the same situation
+            // (their page's version stamp can't be verified).
+            AppError::Validation(
+                "This page is showing an earlier version of the board. \
+                 Reload to see the current state."
+                    .into(),
+            )
         })?
         .with_timezone(&chrono::Utc);
 

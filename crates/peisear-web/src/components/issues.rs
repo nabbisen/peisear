@@ -97,6 +97,12 @@ pub fn ProjectDetailPage(
 
             <WorkloadStrip workload=workload/>
 
+            // Populated by board.js when a status-change request is
+            // rejected or conflicts; empty (and hidden) otherwise.
+            {is_board.then(|| view! {
+                <div id="board-status" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
+            })}
+
             {if is_board {
                 view! { <BoardView project_id=project_id_for_board columns=columns assignees=assignees.clone()/> }.into_any()
             } else {
@@ -509,6 +515,10 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
     let badge = format!("badge badge-sm {}", issue.priority.badge_class());
     let date = issue.updated_at.format("%m-%d").to_string();
     let issue_id = issue.id.clone();
+    // The optimistic-lock value the page rendered this card with.
+    // `board.js` reads it and sends it back on drop. §21.4 rejects
+    // a status change whose value no longer matches the stored row.
+    let updated_at = issue.updated_at.to_rfc3339();
     let effort_node = issue.effort.map(|e| {
         let label = format!("{e} pt");
         view! {
@@ -528,6 +538,7 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
     view! {
         <a href=href
            data-issue-id=issue_id
+           data-updated-at=updated_at
            class="issue-card block bg-base-100 border border-base-300 hover:border-primary rounded-md p-3 shadow-sm cursor-grab active:cursor-grabbing transition"
            draggable="true">
             <div class="text-sm font-medium line-clamp-2">{issue.title}</div>

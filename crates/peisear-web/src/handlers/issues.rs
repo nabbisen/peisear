@@ -718,12 +718,15 @@ pub async fn delete(
 #[derive(Debug, Deserialize)]
 pub struct StatusChange {
     pub status: String,
-    /// RFC3339 timestamp captured at page render. The kanban
-    /// JS reads it from the card's `data-updated-at` attribute
-    /// and includes it in the JSON body. Validated against the
-    /// issue's current `updated_at` per §21.4. Optional during
-    /// the Phase A rollout window — once the JS embeds it for
-    /// every card, missing should be a 400.
+    /// RFC3339 timestamp captured at page render, rendered into
+    /// the card's `data-updated-at` attribute (`components/issues.rs`)
+    /// and sent back by `static/board.js` on drop. Validated
+    /// against the issue's current `updated_at` per §21.4 via
+    /// [`crate::error::check_optimistic_lock`]. `#[serde(default)]`
+    /// lets an absent field deserialize to `""` rather than
+    /// rejecting the request at the extractor (422); the empty
+    /// string is then rejected by the lock check itself (400),
+    /// consistent with every other mutation path.
     #[serde(default)]
     pub client_updated_at: String,
 }
@@ -736,25 +739,13 @@ pub async fn change_status(
 ) -> AppResult<StatusCode> {
     let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
 
-    // Optimistic lock check. We accept an empty
-    // client_updated_at during the Phase A rollout (kanban JS
-    // hasn't been updated yet) but emit a tracing line so we
-    // can spot whether real traffic is sending it.
-    if body.client_updated_at.is_empty() {
-        tracing::debug!(
-            %issue_id,
-            "kanban status change without client_updated_at \
-             (Phase A rollout: tracked, allowed)"
-        );
-    } else {
-        let issue_now = issues::find(&state.db, &issue_id, &project_id).await?;
-        crate::error::check_optimistic_lock(
-            &body.client_updated_at,
-            issue_now.updated_at,
-            "issue",
-            &issue_id,
-        )?;
-    }
+    let issue_now = issues::find(&state.db, &issue_id, &project_id).await?;
+    crate::error::check_optimistic_lock(
+        &body.client_updated_at,
+        issue_now.updated_at,
+        "issue",
+        &issue_id,
+    )?;
 
     let status = IssueStatus::parse(&body.status)
         .ok_or_else(|| AppError::Validation("Invalid status".into()))?;

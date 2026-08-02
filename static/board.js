@@ -11,6 +11,20 @@
 
   var dragging = null;
 
+  // §21.4 / §1.7: messages go into this status region rather than
+  // alert(); no failure vocabulary ("Failed", "Error").
+  var RELOAD_MESSAGE =
+    "This page is showing an earlier version of the board. Reload to see the current state.";
+  var CONFLICT_MESSAGE =
+    "Another member changed this issue first. The board now shows the current state.";
+  var UNAVAILABLE_MESSAGE =
+    "This status change could not be completed. The card has been returned to its previous column.";
+
+  function announce(message) {
+    var region = document.getElementById("board-status");
+    if (region) region.textContent = message;
+  }
+
   document.querySelectorAll(".issue-card").forEach(function (card) {
     card.addEventListener("dragstart", function (e) {
       dragging = card;
@@ -35,9 +49,32 @@
       e.preventDefault();
       col.classList.remove("bg-base-200");
       if (!dragging) return;
-      var issueId = dragging.dataset.issueId;
+
+      var card = dragging;
+      var issueId = card.dataset.issueId;
+      var clientUpdatedAt = card.dataset.updatedAt;
       var newStatus = col.dataset.status;
-      col.appendChild(dragging); // optimistic move
+      var originalColumn = card.parentElement;
+      var originalNextSibling = card.nextSibling;
+
+      function revert() {
+        if (originalNextSibling) {
+          originalColumn.insertBefore(card, originalNextSibling);
+        } else {
+          originalColumn.appendChild(card);
+        }
+      }
+
+      col.appendChild(card); // optimistic move
+
+      if (!clientUpdatedAt) {
+        // No lock value rendered on this card — the page is stale
+        // relative to this build. Do not send a request that would
+        // be rejected anyway; a silent no-op would be worse.
+        revert();
+        announce(RELOAD_MESSAGE);
+        return;
+      }
 
       fetch(
         "/projects/" +
@@ -48,16 +85,31 @@
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus }),
+          body: JSON.stringify({
+            status: newStatus,
+            client_updated_at: clientUpdatedAt,
+          }),
         },
       )
         .then(function (res) {
-          if (!res.ok) throw new Error("status " + res.status);
+          if (res.status === 409) {
+            revert();
+            announce(CONFLICT_MESSAGE);
+            // No automatic retry. Reload to pick up authoritative
+            // state (fresh updated_at values on every card).
+            window.location.reload();
+            return;
+          }
+          if (!res.ok) {
+            revert();
+            announce(UNAVAILABLE_MESSAGE);
+            return;
+          }
           window.location.reload();
         })
-        .catch(function (err) {
-          console.error("Failed to update status", err);
-          alert("Failed to update status. Please refresh.");
+        .catch(function () {
+          revert();
+          announce(UNAVAILABLE_MESSAGE);
         });
     });
   });

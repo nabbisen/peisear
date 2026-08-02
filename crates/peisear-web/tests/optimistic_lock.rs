@@ -120,6 +120,77 @@ async fn issue_status_change_with_stale_timestamp_returns_409() {
     );
 }
 
+#[tokio::test]
+async fn issue_status_change_with_missing_client_updated_at_is_rejected() {
+    // Regression test for §10.6: the kanban status endpoint used to
+    // accept a request with no client_updated_at at all and apply the
+    // mutation silently (Phase A rollout bypass that outlived Phase A
+    // by three releases). A missing lock value must be rejected like
+    // any other mutation path (`NFR-CONC-005`), and the row must be
+    // left unchanged.
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Test").await;
+    let issue_id = create_issue(&app.db, &project_id, &user_id, "T").await;
+
+    let url = format!("/projects/{project_id}/issues/{issue_id}/status");
+    let resp = app
+        .server
+        .post(&url)
+        .json(&serde_json::json!({ "status": "in_progress" }))
+        .await;
+
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::BAD_REQUEST,
+        "missing client_updated_at on status change must be rejected with 400, got {}",
+        resp.status_code()
+    );
+
+    let body = resp.text();
+    assert!(
+        !body.contains("Failed") && !body.contains("Error:"),
+        "rejection message must not use failure vocabulary, got: {body}"
+    );
+
+    let status_after = read_issue_status(&app, &issue_id).await;
+    assert_eq!(
+        status_after, "open",
+        "a rejected status change must not mutate the row"
+    );
+}
+
+#[tokio::test]
+async fn issue_status_change_with_empty_client_updated_at_is_rejected() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Test").await;
+    let issue_id = create_issue(&app.db, &project_id, &user_id, "T").await;
+
+    let resp = post_status_change(&app, &project_id, &issue_id, "", "in_progress").await;
+
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::BAD_REQUEST,
+        "empty client_updated_at on status change must be rejected with 400, got {}",
+        resp.status_code()
+    );
+
+    let body = resp.text();
+    assert!(
+        !body.contains("Failed") && !body.contains("Error:"),
+        "rejection message must not use failure vocabulary, got: {body}"
+    );
+
+    let status_after = read_issue_status(&app, &issue_id).await;
+    assert_eq!(
+        status_after, "open",
+        "a rejected status change must not mutate the row"
+    );
+}
+
 // -------------------------------------------------------------------
 // Project updates
 // -------------------------------------------------------------------
@@ -247,6 +318,17 @@ async fn read_issue_updated_at(app: &TestApp, issue_id: &str) -> String {
             .await
             .expect("read updated_at");
     updated_at.to_rfc3339()
+}
+
+/// Read an issue's current `status` column directly from the DB,
+/// so a rejection test can assert the mutation did not apply.
+async fn read_issue_status(app: &TestApp, issue_id: &str) -> String {
+    let (status,): (String,) = sqlx::query_as(r#"SELECT status FROM issues WHERE id = ?1"#)
+        .bind(issue_id)
+        .fetch_one(&app.db)
+        .await
+        .expect("read issue status");
+    status
 }
 
 /// Read project's current updated_at as RFC3339, parallel to

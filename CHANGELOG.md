@@ -5,6 +5,36 @@ All notable changes to peisear are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added (accessibility)
+
+- **Kanban status endpoint bypassed the optimistic-lock contract**
+  (RFC 007 §10.6, DEV-001). `POST /projects/{id}/issues/{issue_id}/status`
+  carried a "Phase A rollout" bypass that accepted and applied a status
+  mutation with no `client_updated_at` at all — the shipped kanban board
+  never sent one, so every drag-and-drop status change bypassed the
+  optimistic-lock contract (`NFR-CONC-001`, `NFR-CONC-005`) across four
+  releases (Phase A closed at 0.17.0; the bypass outlived it). Fixed by
+  routing every request, empty or not, through the same
+  `check_optimistic_lock` the form-based paths already use. A missing or
+  empty value now returns 400 and leaves the row unchanged, matching every
+  other mutation path. The board now renders `data-updated-at` on each
+  card and sends it back on drop; a stale value now surfaces as a real
+  409 conflict for the first time, so `static/board.js` gained rollback
+  (revert the card to its original column), a `role="status"` message
+  region in place of `alert()`, and removal of the "Failed to update
+  status" string (§1.7). `check_optimistic_lock`'s parse-failure message
+  no longer echoes the raw client value or uses developer vocabulary.
+- **`AppError::Validation`'s public message leaked "validation failed: "**
+  (found while fixing the above). `public_message()` fell through to the
+  `Display` impl used for tracing/logs, which is intentionally prefixed
+  for developer readability — but that made every validation error in the
+  application render with a "failed" prefix on the page the user sees,
+  which is failure framing prohibited by §1.7. `public_message()` now
+  returns the caller-supplied message as-is for this variant; the log-only
+  `Display` impl is unchanged.
+
 ## [0.19.1] — 2026-05-05
 
 ### Added (documentation)
