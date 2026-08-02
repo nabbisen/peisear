@@ -553,7 +553,15 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
             data-issue-id=issue_id
             data-updated-at=updated_at
             draggable="true">
-            <a href=href class="block">
+            // `draggable="false"`: an <a href> is draggable by
+            // browser default. Without this, dragstart still
+            // bubbles to the outer div's listener (so the drop
+            // logic works), but the drag itself is a link drag —
+            // carrying the href in dataTransfer and showing the
+            // link ghost — since two nested drag sources now
+            // exist (DEV-002-005-review.md §1.3). This makes the
+            // outer div the sole drag source.
+            <a href=href class="block" draggable="false">
                 <div class="text-sm font-medium line-clamp-2">{issue.title}</div>
                 <div class="flex items-center justify-between gap-2 mt-2 text-[11px] text-base-content/60">
                     <div class="flex items-center gap-1 flex-wrap">
