@@ -1,8 +1,10 @@
 //! peisear — a minimal, sophisticated, solid, and easy issue tracker.
 //!
 //! This is the public crates.io face of the project. The actual
-//! implementation is split across four sibling crates that this crate
-//! re-exports:
+//! implementation is split across five sibling crates; this crate
+//! re-exports four of them (`peisear-notify` is a dependency used
+//! internally by [`web`]'s dispatch and this crate's own startup
+//! logging, and is not re-exported here):
 //!
 //! - [`core`] — pure domain types (`User`, `Project`, `Issue`,
 //!   `IssueStatus`, `Priority`, `CurrentUser`).
