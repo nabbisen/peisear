@@ -158,7 +158,9 @@ pub async fn burnout(
         });
     }
 
-    let indicator = peisear_core::user_burnout::classify_overload_streak(&signals);
+    let indicator = peisear_core::DisplayHealthState::from(
+        peisear_core::user_burnout::classify_overload_streak(&signals),
+    );
 
     Ok(Json(BurnoutResponse {
         user_id: user.id,
@@ -168,13 +170,17 @@ pub async fn burnout(
     }))
 }
 
-fn indicator_str(i: peisear_core::HealthIndicator) -> &'static str {
-    use peisear_core::HealthIndicator::*;
+/// `indicator` observes the severity ceiling (`NFR-LANG-002`,
+/// external design §8.3): `DisplayHealthState` has no `Concern`
+/// variant to serialise, so `"concern"` cannot reach this response
+/// regardless of whether the underlying classifier could ever
+/// produce it.
+fn indicator_str(i: peisear_core::DisplayHealthState) -> &'static str {
+    use peisear_core::DisplayHealthState::*;
     match i {
         Insufficient => "insufficient",
         Good => "good",
         Watch => "watch",
-        Concern => "concern",
     }
 }
 

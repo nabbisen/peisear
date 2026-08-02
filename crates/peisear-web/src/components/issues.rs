@@ -5,9 +5,9 @@ use leptos::prelude::*;
 
 use super::{Column, layout::AppShell};
 use peisear_core::{
-    AssigneeOption, CurrentUser, HealthIndicator, Issue, IssueStatus, Priority, Project, UserLoad,
-    WorkloadState,
-    project_health::{Indicator, ProjectHealthReport},
+    AssigneeOption, CurrentUser, DisplayHealthState, Issue, IssueStatus, Priority, Project,
+    UserLoad, WorkloadState,
+    project_health::{HealthScore, Indicator, ProjectHealthReport},
     projected_workload_state, workload_state,
 };
 
@@ -160,13 +160,13 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
         .into_any();
     }
 
-    let score = health.score.value;
-    let score_state = health.score.state;
-    let score_badge = format!("badge badge-md {}", score_state.badge_class());
-    let (score_glyph, score_aria) = indicator_glyph(score_state);
-    let score_label = format!("Project health score: {} of 100 ({})", score, score_aria);
+    // §17.1 / FR-HLT-008: no headline score, no 0-100 figure
+    // anywhere in health presentation. The composite keeps its
+    // state badge, trend chip, and summary sentence — it just
+    // renders as one more chip alongside the individual
+    // indicators (composite_row below) instead of a separate,
+    // more prominent box carrying a number.
     let summary = health.score.summary.clone();
-    let trend_chip = render_trend_chip(health.score.trend);
 
     // Phase B PR3 (B-2): explainability — collect human-language
     // sentences describing each indicator that's not at Good.
@@ -177,6 +177,8 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
         .iter()
         .filter_map(|i| i.human_explanation())
         .collect();
+
+    let composite_chip = composite_row(&health.score);
 
     let indicator_rows = health
         .indicators
@@ -192,20 +194,7 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
                 </h3>
             </div>
 
-            <div class="flex flex-wrap items-center gap-3 mb-2"
-                 role="group"
-                 aria-label=score_label.clone()
-                 title=score_label>
-                <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100">
-                    <span class="text-xs text-base-content/70">"Score"</span>
-                    <span class=score_badge>
-                        <span class="mr-1" aria-hidden="true">{score_glyph}</span>
-                        {score} " / 100"
-                    </span>
-                    {trend_chip}
-                </div>
-                <p class="text-sm text-base-content/70">{summary}</p>
-            </div>
+            <p class="text-sm text-base-content/70 mb-2">{summary}</p>
 
             <details class="text-xs">
                 <summary class="cursor-pointer text-base-content/60 hover:text-base-content">
@@ -231,7 +220,11 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
                         }).collect_view()}
                     </ul>
                 })}
+                // The composite sits first but at the same visual
+                // weight as the six individual indicators —
+                // FR-HLT-008 requires "alongside", not "above".
                 <div class="mt-2 flex flex-wrap items-center gap-3">
+                    {composite_chip}
                     {indicator_rows}
                 </div>
             </details>
@@ -279,12 +272,38 @@ fn render_trend_chip(trend: peisear_core::project_health::Trend) -> impl IntoVie
     .into_any()
 }
 
+/// Render the composite score as one more chip, at the same visual
+/// weight as [`indicator_row`]'s output — `FR-HLT-008` requires it
+/// sit alongside the individual indicators, not above them as a
+/// headline, and carry no 0–100 figure. It keeps its state badge
+/// (clamped to the `Watch` ceiling) and its trend chip.
+fn composite_row(score: &HealthScore) -> impl IntoView {
+    let state = DisplayHealthState::from(score.state);
+    let badge_class = format!("badge badge-sm {}", state.badge_class());
+    let (glyph, aria_state) = state.glyph();
+    let aria_label = format!("Composite: {aria_state}.");
+    let trend_chip = render_trend_chip(score.trend);
+    view! {
+        <div class="flex items-center gap-2 px-2 py-1 rounded border border-base-300 bg-base-100"
+             role="group"
+             aria-label=aria_label.clone()
+             title=aria_label>
+            <span class="text-xs text-base-content/70">"Composite"</span>
+            <span class=badge_class>
+                <span aria-hidden="true">{glyph}</span>
+            </span>
+            {trend_chip}
+        </div>
+    }
+}
+
 /// Render one indicator chip (label + value + state badge with
 /// glyph). The glyph + aria-label combination satisfies the
 /// "color-only" anti-pattern check.
 fn indicator_row(ind: Indicator) -> impl IntoView {
-    let badge_class = format!("badge badge-sm {}", ind.state.badge_class());
-    let (glyph, aria_state) = indicator_glyph(ind.state);
+    let state = DisplayHealthState::from(ind.state);
+    let badge_class = format!("badge badge-sm {}", state.badge_class());
+    let (glyph, aria_state) = state.glyph();
     let aria_label = format!(
         "{}: {} ({}). {}",
         ind.label,
@@ -303,18 +322,6 @@ fn indicator_row(ind: Indicator) -> impl IntoView {
                 {ind.value_display}
             </span>
         </div>
-    }
-}
-
-/// Map a [`HealthIndicator`] to a glyph + screen-reader-friendly
-/// label. Keeps the icon → state mapping in one place so the
-/// HealthStrip and PersonalDashboard render the same vocabulary.
-fn indicator_glyph(state: HealthIndicator) -> (&'static str, &'static str) {
-    match state {
-        HealthIndicator::Insufficient => ("—", "no data"),
-        HealthIndicator::Good => ("✓", "good"),
-        HealthIndicator::Watch => ("⚠", "watch"),
-        HealthIndicator::Concern => ("✗", "concern"),
     }
 }
 

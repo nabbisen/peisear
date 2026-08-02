@@ -12,7 +12,7 @@ use leptos::prelude::*;
 
 use super::layout::AppShell;
 use peisear_core::{
-    CurrentUser, HealthIndicator,
+    CurrentUser, DisplayHealthState,
     personal_metrics::{
         PERSONAL_ACTIVITY_WINDOW_DAYS, PersonalMetrics, classify_long_stale, classify_wip,
     },
@@ -143,18 +143,6 @@ fn compute_read_first(
     None
 }
 
-/// Aria label and inline icon character for an indicator state.
-/// Accessibility: pair the colour-coded badge with text + glyph so
-/// users without colour vision still get the signal (V2.1 §3.4).
-fn indicator_glyph(state: HealthIndicator) -> (&'static str, &'static str) {
-    match state {
-        HealthIndicator::Insufficient => ("—", "no data"),
-        HealthIndicator::Good => ("✓", "good"),
-        HealthIndicator::Watch => ("⚠", "watch"),
-        HealthIndicator::Concern => ("✗", "concern"),
-    }
-}
-
 #[component]
 pub fn PersonalDashboard(
     user: CurrentUser,
@@ -181,10 +169,10 @@ pub fn PersonalDashboard(
         .into_any();
     };
 
-    let wip_state = classify_wip(&m);
-    let stale_state = classify_long_stale(&m);
-    let (wip_glyph, wip_aria) = indicator_glyph(wip_state);
-    let (stale_glyph, stale_aria) = indicator_glyph(stale_state);
+    let wip_state = DisplayHealthState::from(classify_wip(&m));
+    let stale_state = DisplayHealthState::from(classify_long_stale(&m));
+    let (wip_glyph, wip_aria) = wip_state.glyph();
+    let (stale_glyph, stale_aria) = stale_state.glyph();
 
     let wip_badge_class = format!("badge badge-sm {}", wip_state.badge_class());
     let stale_badge_class = format!("badge badge-sm {}", stale_state.badge_class());
@@ -454,17 +442,24 @@ fn render_burnout_panel(
         return view! { <span class="hidden"></span> }.into_any();
     }
 
-    let overload = classify_overload_streak(&signals);
-    let stalled = classify_stalled(&signals);
+    // Clamped at the source: these two classifiers never actually
+    // reach `Concern` today, but typing this as `DisplayHealthState`
+    // rather than the raw `HealthIndicator` makes that a structural
+    // fact instead of a claim resting on "the classifier never
+    // emits it" (the reasoning that produced the Watch-ceiling
+    // defect elsewhere — see DEV-004 / §17.1).
+    let overload = DisplayHealthState::from(classify_overload_streak(&signals));
+    let stalled = DisplayHealthState::from(classify_stalled(&signals));
 
-    // Watch ceiling enforced upstream by classify_*; we map glyphs
-    // ourselves to skip the Concern branch entirely for clarity.
-    let chip_classes = |ind: HealthIndicator| -> (&'static str, &'static str, &'static str) {
+    // We map glyphs ourselves to skip the Insufficient/Good split
+    // entirely for clarity — both look the same here: the panel is
+    // mostly muted unless something is up.
+    let chip_classes = |ind: DisplayHealthState| -> (&'static str, &'static str, &'static str) {
         match ind {
-            HealthIndicator::Watch => ("badge badge-sm badge-warning", "⚠", "watch"),
-            // Good or Insufficient — both look the same here:
-            // the panel is mostly muted unless something is up.
-            _ => ("badge badge-sm badge-ghost", "·", "steady"),
+            DisplayHealthState::Watch => ("badge badge-sm badge-warning", "⚠", "watch"),
+            DisplayHealthState::Good | DisplayHealthState::Insufficient => {
+                ("badge badge-sm badge-ghost", "·", "steady")
+            }
         }
     };
 
@@ -487,8 +482,8 @@ fn render_burnout_panel(
     );
 
     let summary = summarize(&signals);
-    let any_watch =
-        matches!(overload, HealthIndicator::Watch) || matches!(stalled, HealthIndicator::Watch);
+    let any_watch = matches!(overload, DisplayHealthState::Watch)
+        || matches!(stalled, DisplayHealthState::Watch);
 
     let drift_chip = render_drift_chip(signals.estimation_drift.as_ref());
     let switching_chip = render_switching_chip(signals.cognitive_switching.as_ref());

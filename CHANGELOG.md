@@ -26,6 +26,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   region in place of `alert()`, and removal of the "Failed to update
   status" string (§1.7). `check_optimistic_lock`'s parse-failure message
   no longer echoes the raw client value or uses developer vocabulary.
+- **Project-health presentation exceeded the `Watch` severity ceiling and
+  rendered a 0–100 score** (RFC 007 §10.2/§17.1, DEV-004). The project
+  detail screen rendered `"Score N / 100"` as a headline badge, and a
+  `Concern` severity — including danger (`badge-error`) colouring — was
+  reachable in presentation on both the health strip and `/today`'s WIP /
+  long-stale indicators, contradicting `FR-HLT-008` and `NFR-LANG-002`
+  (no user-visible label may exceed `Watch`; no 0–100 gauge). Fixed by
+  introducing `peisear_core::DisplayHealthState`, a three-state
+  (`Insufficient`/`Good`/`Watch`) presentation type that is the only shape
+  render code may use — `HealthIndicator::badge_class()` (which had the
+  `Concern → badge-error` mapping) is gone, so a render site that skips the
+  clamp fails to compile rather than silently leaking a state above the
+  ceiling. The internal four-state model is unchanged (`Concern` stays, for
+  computational accuracy — `FR-HLT-009`); only the render boundary changed.
+  The composite score no longer carries a number or heads the section — it
+  renders as one more chip at equal weight beside the six individual
+  indicators, keeping its badge, trend, and summary sentence, per
+  `FR-HLT-008` and external design §6 SCR-08. `/api/users/{id}/burnout`'s
+  `indicator` field can no longer serialise `"concern"`.
 - **`AppError::Validation`'s public message leaked "validation failed: "**
   (found while fixing the above). `public_message()` fell through to the
   `Display` impl used for tracing/logs, which is intentionally prefixed

@@ -100,3 +100,129 @@ async fn human_explanation_omits_good_indicators() {
         let _ = body;
     }
 }
+
+// -------------------------------------------------------------------
+// RFC 007 / DEV-004: severity ceiling (§17.1, FR-HLT-008, NFR-LANG-002)
+// -------------------------------------------------------------------
+//
+// A fresh project with exactly one open, incomplete issue drives
+// `classify_throughput` straight to `Concern`: `done_issues = 0`,
+// `total_issues = 1` → 0% → below the 30% Watch floor. This is
+// deliberate fixture data that actually reaches `Concern` — a
+// ceiling test over data that never approaches the ceiling proves
+// nothing (handoff §7).
+
+#[tokio::test]
+async fn health_presentation_clamps_concern_to_watch_vocabulary() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "P").await;
+    // Default priority is Medium (see fixture::create_issue) — no
+    // Urgent-priority badge exists on this page to confound the
+    // badge-error assertion below.
+    let _issue_id = create_issue(&app.db, &project_id, &user_id, "T").await;
+
+    let url = format!("/projects/{project_id}");
+    let resp = app.server.get(&url).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    assert!(
+        body.contains("Throughput is"),
+        "expected the fresh single-open-issue project to actually reach \
+         Concern on Throughput (0/1 done); the rest of this test's \
+         assertions are meaningless if it didn't. Body: {body}"
+    );
+
+    for bad in ["Concern", "danger", "failing", "critical"] {
+        assert!(
+            !body.contains(bad),
+            "health presentation must not expose a severity above Watch; \
+             found {bad:?} in the rendered page"
+        );
+    }
+}
+
+#[tokio::test]
+async fn health_presentation_uses_no_danger_colouring() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "P").await;
+    let _issue_id = create_issue(&app.db, &project_id, &user_id, "T").await;
+
+    let url = format!("/projects/{project_id}");
+    let resp = app.server.get(&url).await;
+    let body = resp.text();
+
+    assert!(
+        !body.contains("badge-error"),
+        "no health element may use danger colouring; got a badge-error \
+         class on a page with no Urgent-priority issue to explain it"
+    );
+}
+
+#[tokio::test]
+async fn health_presentation_has_no_headline_score() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "P").await;
+    let _issue_id = create_issue(&app.db, &project_id, &user_id, "T").await;
+
+    let url = format!("/projects/{project_id}");
+    let resp = app.server.get(&url).await;
+    let body = resp.text();
+
+    assert!(!body.contains("/ 100"), "no '/ 100' figure may remain");
+    assert!(!body.contains("of 100"), "no 'of 100' figure may remain");
+    assert!(!body.contains("Score"), "no 'Score' label may remain");
+}
+
+#[tokio::test]
+async fn composite_renders_beside_indicators_not_as_a_headline() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "P").await;
+    let _issue_id = create_issue(&app.db, &project_id, &user_id, "T").await;
+
+    let url = format!("/projects/{project_id}");
+    let resp = app.server.get(&url).await;
+    let body = resp.text();
+
+    let indicators_summary_idx = body
+        .find("Indicators")
+        .expect("Indicators details summary missing");
+    let composite_idx = body
+        .find("Composite")
+        .expect("composite chip missing from the page");
+    assert!(
+        composite_idx > indicators_summary_idx,
+        "the composite chip must render inside the same block as the \
+         individual indicators (after the 'Indicators' summary), not as \
+         a separate headline above it"
+    );
+}
+
+#[tokio::test]
+async fn burnout_api_never_returns_a_concern_indicator() {
+    // External design §8.3: `indicator` on this endpoint observes
+    // the severity ceiling. `DisplayHealthState` has no `Concern`
+    // variant to serialise, so this holds regardless of whether
+    // the underlying classifier could ever produce it.
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+
+    let url = format!("/api/users/{user_id}/burnout");
+    let resp = app.server.get(&url).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    assert!(
+        !body.contains("\"concern\""),
+        "burnout API must never return a concern indicator; got: {body}"
+    );
+}

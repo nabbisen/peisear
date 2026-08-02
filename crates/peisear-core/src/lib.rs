@@ -382,17 +382,61 @@ pub enum HealthIndicator {
     Concern,
 }
 
-impl HealthIndicator {
-    /// daisyUI badge class for rendering. The palette matches
-    /// [`WorkloadState::badge_class`] so the two indicator families
-    /// look visually coherent on the same page.
+/// The severity ceiling for presentation (`NFR-LANG-002`, `SPEC §28.2`):
+/// no user-visible surface or API response may display a state above
+/// `Watch`. `HealthIndicator` keeps `Concern` because it is accurate —
+/// computation is not the boundary being fixed here (`FR-HLT-009`). This
+/// type is the boundary: presentation code renders `DisplayHealthState`,
+/// never `HealthIndicator` directly, and the only way to obtain one is
+/// [`DisplayHealthState::clamp`], which folds `Concern` into `Watch`. A
+/// render site that forgets to clamp fails to compile rather than
+/// silently leaking a state above the ceiling.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DisplayHealthState {
+    Insufficient,
+    Good,
+    Watch,
+}
+
+impl DisplayHealthState {
+    /// Fold the internal four-state model to the three displayable
+    /// states. `Concern` becomes `Watch` — the ceiling, not a fourth
+    /// bucket.
+    pub fn clamp(state: HealthIndicator) -> Self {
+        match state {
+            HealthIndicator::Insufficient => Self::Insufficient,
+            HealthIndicator::Good => Self::Good,
+            HealthIndicator::Watch | HealthIndicator::Concern => Self::Watch,
+        }
+    }
+
+    /// daisyUI badge class. Only the ghost/success/warning palette is
+    /// reachable here — there is no danger class to reach for `Watch`,
+    /// unlike the unclamped [`HealthIndicator`] this replaces at the
+    /// render boundary.
     pub fn badge_class(&self) -> &'static str {
         match self {
             Self::Insufficient => "badge-ghost",
             Self::Good => "badge-success",
             Self::Watch => "badge-warning",
-            Self::Concern => "badge-error",
         }
+    }
+
+    /// Glyph + accessible-name fragment, paired with the badge so a
+    /// screen reader or colour-blind user gets the same signal a
+    /// sighted user gets from colour alone (`NFR-A11Y-004`).
+    pub fn glyph(&self) -> (&'static str, &'static str) {
+        match self {
+            Self::Insufficient => ("—", "no data"),
+            Self::Good => ("✓", "good"),
+            Self::Watch => ("⚠", "watch"),
+        }
+    }
+}
+
+impl From<HealthIndicator> for DisplayHealthState {
+    fn from(state: HealthIndicator) -> Self {
+        Self::clamp(state)
     }
 }
 
