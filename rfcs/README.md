@@ -1,129 +1,132 @@
 # peisear RFCs
 
-This folder collects design documents for upcoming work — one
-file per Roadmap theme. The format is small on purpose: most
-RFCs are not full specifications but contracts between whoever
-authored the decision and whoever picks up the implementation.
+Design records for this project. Governed by
+[RFC 000 — RFC lifecycle policy](./done/000-rfc-lifecycle-policy.md),
+which lives in `done/` per its own self-application clause.
 
-## Reading order
+**The folder is the source of truth for an RFC's state.** The `Status`
+field inside each file mirrors it; if the two disagree, the folder wins.
 
-The number prefix is *file ordering*, not strict precedence —
-themes can ship in parallel where dependencies allow. The
-typical sequence today:
+## Layout
 
-| RFC | Theme | Phase | Target version |
-|---|---|---|---|
-| [0001](./0001-sprint-planning-page.md) | Sprint planning page | C-PR2 | 0.20.0 |
-| [0002](./0002-calendar-surfaces.md) | Calendar surfaces | C-PR3 | 0.21.0 |
-| [0003](./0003-inbox-refinements.md) | Inbox refinements | C-PR4 | 0.22.0 |
-| [0004](./0004-direct-manipulation.md) | Direct manipulation | D | 0.23.0 |
-| [0005](./0005-quality-consolidation.md) | Quality consolidation | E | 0.24.0 |
+```
+rfcs/
+  README.md      ← this index
+  proposed/      ← open for review; implementer should not start
+  accepted/      ← review complete; implementer may start
+  done/          ← shipped
+  archive/       ← withdrawn or superseded
+  handoffs/      ← implementation companions, keyed by RFC number
+```
 
-When opening a new RFC, take the next free number (0006, 0007,
-…) and add an entry to the table above.
+This project uses the policy's **5-folder variant**. The policy
+recommends the 4-folder shape by default and reserves the fifth for
+projects where "the maintainer signed off" is a distinct event from
+"the implementer finished" — which holds here: the architect designs,
+the owner approves, the dev team implements.
+
+## Accepted
+
+Design settled. Implementation may begin.
+
+| ID | Title | Target |
+|----|-------|--------|
+| 007 | [0.20.0 compliance pass](./accepted/007-compliance-pass.md) — *has handoffs* | 0.20.0 |
+| 001 | [Sprint planning page](./accepted/001-sprint-planning-page.md) | 0.22.0 |
+| 002 | [Calendar surfaces](./accepted/002-calendar-surfaces.md) | 0.23.0 |
+| 003 | [Inbox refinements](./accepted/003-inbox-refinements.md) | 0.24.0 |
+
+## Proposed
+
+Open for review. Design may still change.
+
+| ID | Title | Target |
+|----|-------|--------|
+| 006 | [i18n architecture and vocabulary guard](./proposed/006-i18n-architecture.md) | 0.21.0 |
+| 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) | 0.25.0 |
+| 005 | [Quality consolidation](./proposed/005-quality-consolidation.md) | 0.26.0 |
+
+## Implemented
+
+| ID | Title | Shipped in |
+|----|-------|------------|
+| 000 | [RFC lifecycle policy](./done/000-rfc-lifecycle-policy.md) | policy in effect |
+
+## Archive
+
+None.
+
+## Handoffs
+
+A handoff is an optional implementation companion. It records **how to
+implement and verify** a decision; the RFC records **what was decided
+and why**. A handoff never overrides its RFC — if implementation
+uncovers a design conflict, the RFC is amended first.
+
+Handoffs have no lifecycle of their own. Their state is inherited from
+the RFC number they are keyed to.
+
+| Directory | Governing RFC |
+|---|---|
+| [`handoffs/007-compliance-pass/`](./handoffs/007-compliance-pass/README.md) | 007 |
+
+## Conventions
+
+- Filenames are `NNN-slug.md`, zero-padded to **three digits**.
+- Numbers are assigned at creation, are stable forever, and are never
+  reused — a withdrawn number stays withdrawn.
+- Moving a file between folders is what changes its state. Update the
+  `Status` field and this index in the same change, and sweep inbound
+  links (`grep -rn 'NNN-slug' rfcs ROADMAP.md docs`).
+- Take the next free number when opening an RFC: **008**.
 
 ## What an RFC is for
 
-- **Capture decisions before they're forgotten.** A discussion
-  in a chat ends; an RFC stays.
-- **Hand work off cleanly.** The implementer reads the RFC and
-  has enough to start without re-deriving the rationale.
-- **Surface unknowns.** "Open questions" near the bottom of
-  every RFC is a real section, not boilerplate. If the
-  implementer hits one of them, they decide and update the
-  RFC.
-
-What an RFC is **not** for: replacing
-`docs/spec/peisear-feature-spec-v2.1.md`. The spec is the
-canonical product description. RFCs are about the *next slice*
-of implementation work, with enough specificity that a person
-(or LLM) coming in cold can pick it up.
+- **Capture decisions before they're forgotten.** A discussion in chat
+  ends; an RFC stays.
+- **Hand work off cleanly.** The implementer reads it and can start
+  without re-deriving the rationale.
+- **Surface unknowns.** "Open questions" is a real section. If the
+  implementer hits one, they escalate rather than deciding.
 
 ## Template
 
-There are two shapes — pick by scale, not by formality:
+Two shapes — pick by scale, not formality.
 
 ### Lightweight (the default)
 
 ```markdown
-# RFC NNNN: Title
+# RFC NNN: Title
 
-**Status**: Draft | Accepted | Implemented | Superseded
-**Target**: <version, phase>
-**Related spec sections**: §X.Y, §A.B
+**Status**: Proposed
+**Target**: <version>
+**Related spec sections**: §X.Y
 **Last updated**: YYYY-MM-DD
 
 ## Summary
-
-One paragraph. What this changes and why now.
+One paragraph. What changes and why now.
 
 ## Design
-
-The shape of the change: routes, schema, components, data
-flow. Concrete enough that the implementer can begin without
-asking. Include code/SQL fragments where they sharpen the
-description.
+Routes, schema, components, data flow. Concrete enough to begin.
 
 ## Out of scope
-
-What's deliberately not in this RFC, with a pointer to where
-it lives instead. Common entries: future PRs in the same
-phase, deferred Phase D work, observability.
+What is deliberately excluded, and where it lives instead.
 
 ## Open questions
-
-Numbered list of unresolved decisions. Each entry names the
-options and a default-if-no-decision. The implementer is
-allowed to resolve these and update the RFC.
+Numbered. Each names the options and a default-if-no-decision.
 
 ## References
-
-Spec sections, prior CHANGELOG entries, related RFCs.
 ```
 
-### Detailed (medium-or-larger scope)
+### Detailed
 
-Add these four sections to the lightweight shape:
-
-- **Background** — why this change at all. Optional if obvious
-  from context.
-- **Requirements** — what must be true after the change ships.
-  Distinguish must-haves from nice-to-haves.
-- **Design** — replaces the lightweight "Design" section.
-  Architecture, data model changes, route table, UI sketches,
-  error paths.
-- **Test plan** — what proves the requirements are met. Mention
-  test crate names where relevant.
-- **Security & privacy considerations** — auth boundaries
-  affected, data exposure changes, audit-log implications.
-  Required when `§11.5` (privacy boundary) or `§21.4`
-  (optimistic lock) is in scope.
-
-Trigger the detailed shape when:
-
-- The change touches more than one crate boundary.
-- Schema migrations are involved.
-- The change affects `§11.5` privacy boundary or `§21.4`
-  optimistic lock.
-- The change introduces a new public-ish surface (URL, API
-  endpoint, exported helper).
-
-## Lifecycle
-
-- **Draft** — written, not yet accepted. Comments and revisions
-  expected.
-- **Accepted** — agreed by the author and primary reviewer.
-  Implementation can start.
-- **Implemented** — code merged. The RFC stays in the folder
-  as historical record.
-- **Superseded** — replaced by a newer RFC; link forward.
-
-When an RFC ships, update its status header but **do not
-delete the file**. Future readers benefit from the rationale
-trail more than from a tidy folder.
+Add **Background**, **Requirements**, **Test plan**, and **Security &
+privacy considerations**. Trigger the detailed shape when the change
+crosses a crate boundary, involves a migration, touches the §11.5
+privacy boundary or the §21.4 optimistic lock, or adds a public
+surface (URL, endpoint, exported helper).
 
 ## Language
 
-English, matching the rest of `docs/`. Code, SQL, and
-schema/migration fragments use the language of the artefact
-itself (Rust, SQL).
+English, matching the rest of the repository. Code, SQL, and schema
+fragments use the language of the artefact.

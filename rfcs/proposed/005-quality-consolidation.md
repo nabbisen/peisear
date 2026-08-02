@@ -1,6 +1,6 @@
 # RFC 0005: Quality consolidation
 
-**Status**: Draft
+**Status**: Proposed
 **Target**: 0.24.0 (Phase E)
 **Related spec sections**: §40 (Phase E plan), §11.5.5 (API
 authorization QA), §21.4 (optimistic-lock conflict),

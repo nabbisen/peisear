@@ -1,10 +1,21 @@
 # RFC 0004: Direct manipulation
 
-**Status**: Draft
-**Target**: 0.23.0 (Phase D, full)
+**Status**: Proposed
+**Target**: 0.25.0 (Phase D, full)
 **Related spec sections**: §22-27 (direct manipulation
 scenarios), §32 (keyboard alternatives), §39 (Phase D plan)
-**Last updated**: 2026-05-04
+**Governing decisions**: `DEC-021` (JavaScript posture),
+`DEC-018` (board keyboard control)
+**Last updated**: 2026-08-01
+
+> **Revision note (2026-08-01).** Revised to carry `DEC-021`, and
+> to correct three defects found on review: normative text that
+> used prohibited failure vocabulary (§1.7 / `FR-DM-005`); an
+> internal contradiction over `aria-grabbed`; and an undo path
+> that cannot work as specified because the mutation endpoint
+> returns no new lock value. Target shifted 0.23.0 → 0.25.0 with
+> the 2026-07-31 roadmap change. Substep sketches otherwise
+> unchanged.
 
 ## Summary
 
@@ -47,48 +58,113 @@ affordance scaffolding in place (status segment in B-4,
 sub-issues card in C-PR1) without the interaction; this RFC
 is where the interactions land.
 
-It's also where Leptos hydration starts paying for itself.
-Until now Leptos has been server-only — every render is a
-one-shot SSR. Phase D requires client-side state for in-
-flight optimistic updates. Decision E-4 from Phase A planning
-was "Leptos island for partial hydration"; D is where we
-test whether that decision survives contact.
+### JavaScript posture (`DEC-021`)
+
+`DEC-021` settles a question this RFC previously left open:
+
+> No JavaScript by default. JavaScript is permitted only as a
+> **named progressive enhancement** that guarantees keyboard
+> parity and full degradation without it.
+
+This is a stronger constraint than the original draft assumed.
+Keyboard parity alone is not sufficient — a keyboard path
+implemented *in JavaScript* still fails with scripting disabled.
+Every substep must work without JavaScript at all, and the
+pointer path enhances that working baseline.
+
+In practice this is already the direction of travel. `DEC-018`
+gives the board a form-POST status control ahead of this RFC
+(DEV-002), and DEV-001 puts the optimistic-lock contract on the
+status endpoint. D-2 therefore no longer introduces the board's
+*only* status path — it layers drag onto one that already works.
+The same shape applies to the other four substeps.
+
+Consequently the earlier framing — that Phase D is "where Leptos
+hydration starts paying for itself" — is withdrawn. Hydration
+would make JavaScript the primary render path, which `DEC-021`
+excludes. See open question 1, now resolved.
 
 ## Requirements
 
 ### Cross-cutting (apply to every substep)
 
+0. **A working no-JS path ships first.** Every action reachable
+   by drag must already be reachable by plain form POST, with
+   scripting disabled, *before* the pointer affordance is added.
+   The enhancement may not be the first implementation of the
+   action. A substep whose no-JS path does not yet exist must
+   ship that path as its own step.
 1. **Keyboard parity**: every action achievable by mouse drag
    is achievable by keyboard. No mouse-only action exists.
 2. **Optimistic update**: the UI moves immediately on the
    client; the request goes out behind it.
 3. **Rollback on failure**: if the server returns 4xx/5xx,
-   the UI reverts and shows an inline message ("status
-   couldn't change: stale data — refresh and retry"). The
-   message is text + icon, not just colour (§5.3 / §31).
+   the UI reverts and shows an inline message. The message is
+   text + icon, not just colour (§5.3 / §31).
+
+   The earlier draft's example wording — *"status couldn't
+   change: stale data — refresh and retry"* — is **withdrawn**:
+   it is failure framing, which §1.7 prohibits and `FR-DM-005`
+   forbids for conflicts specifically. Use the vocabulary in
+   the lock-conflict section below, aligned with the wording
+   DEV-001 establishes.
 4. **Undo toast for 5 seconds**: every successful mutation
    shows a toast with an Undo button. Clicking Undo issues
    the inverse mutation. After 5 seconds the toast
    disappears; the action is no longer un-doable through
    this path (the user can still issue the inverse action
    manually).
-5. **Optimistic-lock compatibility**: mutations that already
-   carry `client_updated_at` (issue, project) keep doing so.
-   On a 409, we do **not** retry-with-fresh-value silently
-   — that would defeat §21.4. We rollback and tell the user
-   to refresh.
-6. **No celebratory language** (§30 / §31): no "✓ Done!",
+5. **Optimistic-lock compatibility**: mutations carry
+   `client_updated_at`. On a 409 we do **not**
+   retry-with-fresh-value silently — that would defeat §21.4.
+   We rollback and tell the user the current state is now shown.
+
+   As of DEV-001 this applies to *every* status mutation
+   including the board's, and the lock check lives in one shared
+   function with two entry points. Substeps use that function;
+   none may introduce a second lock check.
+
+6. **The endpoint must return the new lock value.** Requirement
+   2 (optimistic update) implies a second action on the same
+   entity without an intervening page load — and requirement 4's
+   undo is exactly that. After a successful mutation the stored
+   `updated_at` has advanced (trigger-maintained, `DEC-013`), so
+   the value the client holds is stale the instant the mutation
+   succeeds.
+
+   **This is a blocker for D-1, not a detail.** `change_status`
+   currently returns `204 No Content` with no body, so the client
+   cannot learn the new value; undo as drafted would 409 every
+   time. External design §7.3 already specifies the correct
+   behaviour — "the server compares, then either updates and
+   returns the new timestamp, or returns 409". The endpoint does
+   not yet do the first half.
+
+   D-1 must therefore include: change the success response to
+   carry the new `updated_at`, and have the client update the
+   element's `data-updated-at` from it. Deliberately **not**
+   folded into DEV-001 — that is a P0 defect fix which is ready
+   to dispatch and should not be widened.
+7. **No celebratory language** (§30 / §31): no "✓ Done!",
    no confetti, no "great job". The toast for a status →
    Done move says "Moved to Done" and offers Undo. That's
    it.
-7. **All keyboard alternatives announce via `aria-live`**:
+8. **All keyboard alternatives announce via `aria-live`**:
    the same screen-reader announcement fires whether the
    action came from mouse or keyboard.
+9. **All copy routes through the i18n table.** RFC 0006 lands
+   at 0.21.0, four releases before this one, so every string
+   introduced here — toasts, conflict notices, announcements —
+   is table copy subject to the vocabulary guard. No inline
+   user-visible literals.
 
 ### Substep contracts
 
 Each substep RFC (0004a-e, future) commits to:
 
+- **Its no-JS baseline path** (requirement 0): which form POST
+  performs this action with scripting disabled, and whether that
+  path already exists or must ship first.
 - Concrete URL / endpoint for the underlying mutation, and
   whether it's an existing endpoint or new.
 - The keyboard binding (e.g. D-2's "Tab to issue, Space to
@@ -147,25 +223,32 @@ right and adds little for the action profiles peisear sees.
 
 #### Error-display surface
 
-When a mutation fails, the toast above is replaced by an
-error toast with:
+When a mutation does not succeed, the toast above is replaced
+by a notice with:
 
 - `role="alert"` (assertive — interrupting screen-reader
   flow is appropriate here).
-- Text describing the failure ("status couldn't change:
-  stale data").
-- Hint text ("Refresh and try again").
+- Neutral text describing what happened and what the current
+  state is. **Not** failure vocabulary: §1.7 prohibits
+  "Failed to…" and "Error:…", and `FR-DM-005` forbids failure
+  framing and danger colouring for conflicts specifically.
 - A close button.
 
-No retry button on the error toast. Retrying without a
-refresh is what §21.4 explicitly forbids.
+No retry button. Retrying without re-reading is what §21.4
+explicitly forbids.
 
 #### Lock-conflict handling
 
-When the server returns 409, the toast carries the
-spec-mandated language: "Someone else changed this just
-now. Refresh to see the latest." Do not auto-refresh — the
-user may have unsaved input on another part of the page.
+When the server returns 409, the notice carries the wording
+established by DEV-001, so board drag, board keyboard, and
+Phase D surfaces all say the same thing:
+
+> Another member changed this issue first. The board now shows
+> the current state.
+
+Adapt the second sentence per surface ("The list now shows…"),
+never the first. Do not auto-refresh — the user may have
+unsaved input elsewhere on the page. Neutral colouring only.
 
 #### Accessibility roll-up
 
@@ -205,9 +288,14 @@ sketches below are enough to plan the umbrella shape.
   selector at the top of `/projects/{id}`.
 - Drag from one status column to another → POST
   status change.
-- Keyboard: Tab to issue, Space to "pick up" (visual lift,
-  `aria-grabbed=true`), Arrow keys move column, Enter to
-  drop.
+- Keyboard: Tab to issue, Space to "pick up" (visual lift),
+  Arrow keys move column, Enter to drop. State is exposed
+  through a live region, **not** `aria-grabbed` — the earlier
+  draft contradicted its own accessibility roll-up, which
+  correctly names `aria-grabbed`/`aria-dropeffect` as
+  deprecated.
+- No-JS baseline: the per-card form control from `DEC-018` /
+  DEV-002, already shipped at 0.20.0.
 - Endpoint: same as D-1.
 - This substep needs new view-state schema if column order
   is configurable; ship with fixed Open/InProgress/Done
@@ -283,18 +371,26 @@ For the umbrella:
    relevant substep (D-1 status conflict, D-3 reschedule
    conflict). Assert the server still 409s; the client-side
    rollback path is unit-tested separately.
-3. **No-celebratory-language guard**: scan substep
-   templates for `✓`, `done!`, `great`, "yay" etc. as a
-   regex test in `tests/dm_language.rs`. Maintenance
-   guardrail.
+3. **Vocabulary**: no separate `tests/dm_language.rs` regex.
+   RFC 0006 ships the vocabulary guard at 0.21.0 and requirement
+   9 puts all Phase D copy in the table, so the existing guard
+   covers this surface. Extend the prohibited set with
+   celebration terms (`great`, `yay`, `✓ Done!`) if RFC 0006 has
+   not already; do not build a second checker.
 
 Each substep adds (in its own RFC and its own test crate):
 
+- **No-JS test**: the action completes with scripting disabled.
+  This is requirement 0's acceptance and is not optional.
 - Headless-browser test (e.g. via `axum-test` + a small JS
   evaluator if feasible, or fall back to template-output
   inspection) for the optimistic-update flow.
 - Keyboard test (template renders the right `aria-` attrs
   and key bindings).
+- **Undo round-trip test**: mutate, then undo within the window,
+  and assert the entity returns to its prior state — which
+  exercises requirement 6's returned lock value. If this test
+  cannot be written, requirement 6 has not been implemented.
 
 ## Security & privacy considerations
 
@@ -327,13 +423,16 @@ Each substep adds (in its own RFC and its own test crate):
 
 ## Open questions
 
-1. **Vanilla JS vs. Leptos hydration for the toast module**.
-   The cross-cutting infrastructure is small enough that
-   either works. Vanilla JS ships faster and avoids a
-   hydration-debugging discount window; Leptos sets us up
-   for richer interactions in D-3. *Default-if-no-decision:
-   vanilla JS for the umbrella module; revisit at D-3
-   if calendar interaction wants more.*
+1. ~~**Vanilla JS vs. Leptos hydration for the toast module**~~
+   — **Resolved by `DEC-021`: vanilla JS.** Hydration would make
+   JavaScript the primary render path, which "no JS by default"
+   excludes, and it would change how `peisear-web` ships assets
+   (wasm target, client bundle). Adopting it would need its own
+   RFC and owner sign-off. The enhancement layer stays vanilla
+   and small. This closes the D-3 revisit clause too — if the
+   calendar's interaction model turns out to need more than
+   vanilla JS can carry, that is a signal to reduce D-3's scope,
+   not to adopt hydration by the back door.
 2. **Toast position on mobile**. Bottom-right is desktop-
    sane but on mobile may sit under the system bar.
    *Default: top-right on mobile (one media query).*
@@ -346,7 +445,7 @@ Each substep adds (in its own RFC and its own test crate):
 ## Per-substep RFCs
 
 When each substep starts, open its RFC under
-`rfcs/0004a-direct-manipulation-status.md` etc. Use the
+`rfcs/proposed/004a-direct-manipulation-status.md` etc. Use the
 detailed template (this scope warrants it).
 
 The substep RFC inherits this umbrella's contract; it
@@ -361,3 +460,11 @@ specifies only what's new.
   named)
 - RFC 0001 — sprint planning page (what D-4 wires drag onto)
 - RFC 0002 — calendar surfaces (what D-3 wires drag onto)
+- RFC 0006 — i18n architecture and vocabulary guard
+  (requirement 9; supersedes the planned `dm_language` test)
+- `DEC-018`, `DEC-021` — approved decisions, 2026-07-31
+- DEV-001 — optimistic-lock repair; establishes the shared lock
+  check and the conflict wording this RFC adopts
+- DEV-002 — board keyboard status control; D-2's no-JS baseline
+- Requirements baseline §1.7; `FR-DM-002`, `FR-DM-005`,
+  `NFR-CONC-004`, external design §7.3, §15
