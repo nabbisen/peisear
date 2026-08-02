@@ -9,11 +9,7 @@ use peisear_storage::projects;
 use serde::Deserialize;
 use validator::Validate;
 
-use crate::{
-    AppError, AppResult, AppState,
-    components,
-    extractors::AuthUser,
-};
+use crate::{AppError, AppResult, AppState, components, extractors::AuthUser};
 
 #[derive(Debug, Deserialize)]
 pub struct FlashQuery {
@@ -45,7 +41,11 @@ pub async fn new_page(
             .into_iter()
             .filter(|(_, role)| role.can_write())
             .collect();
-    Ok(components::projects::render_project_new(user, writable_teams, None))
+    Ok(components::projects::render_project_new(
+        user,
+        writable_teams,
+        None,
+    ))
 }
 
 #[derive(Debug, Deserialize, Validate)]
@@ -116,7 +116,9 @@ pub async fn edit_page(
     Path(project_id): Path<String>,
 ) -> AppResult<impl IntoResponse> {
     let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
-    Ok(components::projects::render_project_edit(user, project, None))
+    Ok(components::projects::render_project_edit(
+        user, project, None,
+    ))
 }
 
 pub async fn update(

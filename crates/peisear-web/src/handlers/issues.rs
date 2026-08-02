@@ -613,10 +613,7 @@ async fn render_detail_or_edit(
         let all = peisear_storage::sprints::list_for_team(&state.db, team_id).await?;
         let opts: Vec<(String, String)> = all
             .into_iter()
-            .filter(|s| !matches!(
-                s.status,
-                peisear_core::sprints::SprintStatus::Completed
-            ))
+            .filter(|s| !matches!(s.status, peisear_core::sprints::SprintStatus::Completed))
             .map(|s| (s.id, s.name))
             .collect();
         let cur = peisear_storage::sprints::sprint_for_issue(&state.db, &issue_id).await?;

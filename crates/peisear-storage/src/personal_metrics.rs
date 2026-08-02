@@ -241,10 +241,7 @@ pub async fn for_user_in_project(
 /// The `/me` page uses this to give a global view rather than one
 /// scoped to a single project. Returns `None` if the user does
 /// not exist.
-pub async fn for_user_global(
-    pool: &Pool,
-    user_id: &str,
-) -> StorageResult<Option<PersonalMetrics>> {
+pub async fn for_user_global(pool: &Pool, user_id: &str) -> StorageResult<Option<PersonalMetrics>> {
     let user_row: Option<(String, Option<i64>)> = sqlx::query_as(
         r#"
         SELECT u.display_name, u.wip_limit
@@ -305,13 +302,8 @@ pub async fn for_user_global(
 
     let (current_wip, in_flight_points, recent_done_count, long_stale_count) = row;
 
-    let skew = active_estimation_skew(
-        pool,
-        user_id,
-        None,
-        PERSONAL_ACTIVITY_WINDOW_DAYS * 4,
-    )
-    .await?;
+    let skew =
+        active_estimation_skew(pool, user_id, None, PERSONAL_ACTIVITY_WINDOW_DAYS * 4).await?;
 
     Ok(Some(PersonalMetrics {
         user_id: user_id.to_string(),

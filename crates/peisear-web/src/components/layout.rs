@@ -74,10 +74,7 @@ pub fn AppShell(
 /// Shell used for unauthenticated pages (login, register, error):
 /// just the bare main container, no navbar.
 #[component]
-pub fn PublicShell(
-    #[prop(into)] title: String,
-    children: Children,
-) -> impl IntoView {
+pub fn PublicShell(#[prop(into)] title: String, children: Children) -> impl IntoView {
     view! {
         <Base title=title>
             <main class="container mx-auto px-4 py-6 max-w-6xl">

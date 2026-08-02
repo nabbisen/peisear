@@ -161,13 +161,13 @@ fn render_sprint_card(team_slug: String, s: Sprint, sum: SprintSummary) -> impl 
             sum.committed_points - sum.completed_points
         ),
         SprintStatus::Planned => {
-            format!("{} pt committed across {} issues", sum.committed_points, sum.committed_count)
+            format!(
+                "{} pt committed across {} issues",
+                sum.committed_points, sum.committed_count
+            )
         }
     };
-    let aria = format!(
-        "{} ({}, {}). {}",
-        s.name, status_label, dates, summary_text
-    );
+    let aria = format!("{} ({}, {}). {}", s.name, status_label, dates, summary_text);
 
     view! {
         <li>
@@ -484,7 +484,8 @@ pub fn SprintDetailPage(
                     <button type="submit" class="btn btn-ghost btn-sm text-error">"Delete"</button>
                 </form>
             </div>
-        }.into_any(),
+        }
+        .into_any(),
         SprintStatus::Active => view! {
             <div class="flex gap-2 flex-wrap">
                 <form method="post" action=complete_action>
@@ -496,7 +497,8 @@ pub fn SprintDetailPage(
                 </form>
                 <a href=edit_href class="btn btn-ghost btn-sm">"Edit"</a>
             </div>
-        }.into_any(),
+        }
+        .into_any(),
         SprintStatus::Completed => view! {
             <div class="flex gap-2 flex-wrap">
                 <form method="post" action=delete_action
@@ -506,7 +508,8 @@ pub fn SprintDetailPage(
                     <button type="submit" class="btn btn-ghost btn-sm text-error">"Delete"</button>
                 </form>
             </div>
-        }.into_any(),
+        }
+        .into_any(),
     });
 
     let burndown_card = (!matches!(sprint_status, SprintStatus::Planned) && !burndown.is_empty())

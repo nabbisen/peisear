@@ -133,8 +133,8 @@ async fn process_event(
         });
     }
 
-    let last = notif_store::last_dispatched_at_for_user_kind(&ctx.db, &event.user_id, &event.kind)
-        .await?;
+    let last =
+        notif_store::last_dispatched_at_for_user_kind(&ctx.db, &event.user_id, &event.kind).await?;
     if let Some(last_at) = last {
         let elapsed_hours = (Utc::now() - last_at).num_hours();
         if elapsed_hours < peisear_core::notifications::COOLDOWN_HOURS {
@@ -240,5 +240,8 @@ fn effective_channels_and_min_severity(
         None => peisear_core::notifications::DEFAULT_CHANNELS.to_vec(),
     };
 
-    (global_channels, peisear_core::notifications::DEFAULT_MIN_SEVERITY)
+    (
+        global_channels,
+        peisear_core::notifications::DEFAULT_MIN_SEVERITY,
+    )
 }

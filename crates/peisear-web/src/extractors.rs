@@ -40,8 +40,7 @@ where
             .ok_or(AppError::Unauthorized)?
             .value()
             .to_owned();
-        let claims =
-            jwt::verify(&token, &app.jwt_secret).map_err(|_| AppError::Unauthorized)?;
+        let claims = jwt::verify(&token, &app.jwt_secret).map_err(|_| AppError::Unauthorized)?;
 
         // Re-hydrate the user from the DB so deleted or altered accounts
         // are immediately invalidated rather than waiting for the JWT to

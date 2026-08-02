@@ -87,10 +87,7 @@ pub async fn list_in_project(pool: &Pool, project_id: &str) -> StorageResult<Vec
 /// project_health) where excluding sub-issues would skew the
 /// numbers — sub-issues represent real assigned work even if
 /// they're not shown on the kanban.
-pub async fn list_all_in_project(
-    pool: &Pool,
-    project_id: &str,
-) -> StorageResult<Vec<Issue>> {
+pub async fn list_all_in_project(pool: &Pool, project_id: &str) -> StorageResult<Vec<Issue>> {
     let rows = sqlx::query_as::<_, IssueRow>(
         r#"
         SELECT id, project_id, author_id, title, description,
@@ -114,10 +111,7 @@ pub async fn list_all_in_project(
 ///
 /// Empty vec if the parent has no children. The parent itself
 /// is not included.
-pub async fn list_sub_issues_of(
-    pool: &Pool,
-    parent_issue_id: &str,
-) -> StorageResult<Vec<Issue>> {
+pub async fn list_sub_issues_of(pool: &Pool, parent_issue_id: &str) -> StorageResult<Vec<Issue>> {
     let rows = sqlx::query_as::<_, IssueRow>(
         r#"
         SELECT id, project_id, author_id, title, description,
@@ -301,11 +295,7 @@ pub async fn insert_sub_issue(
 /// etc. all stay as they were.
 ///
 /// No-op if the issue is already top-level.
-pub async fn promote_to_top_level(
-    pool: &Pool,
-    id: &str,
-    project_id: &str,
-) -> StorageResult<()> {
+pub async fn promote_to_top_level(pool: &Pool, id: &str, project_id: &str) -> StorageResult<()> {
     sqlx::query(
         r#"
         UPDATE issues
@@ -541,25 +531,19 @@ pub async fn update_status(
     Ok(())
 }
 
-pub async fn delete(
-    pool: &Pool,
-    id: &str,
-    project_id: &str,
-    actor_id: &str,
-) -> StorageResult<()> {
+pub async fn delete(pool: &Pool, id: &str, project_id: &str, actor_id: &str) -> StorageResult<()> {
     let mut tx = pool.begin().await?;
 
     // Read the previous status / current state so we can record
     // it in the deletion event. After the DELETE, the cascade
     // SET NULL on issue_id loses the link, but the project_id and
     // event metadata still tell the story.
-    let prev_status: Option<String> = sqlx::query_scalar(
-        r#"SELECT status FROM issues WHERE id = ?1 AND project_id = ?2"#,
-    )
-    .bind(id)
-    .bind(project_id)
-    .fetch_optional(&mut *tx)
-    .await?;
+    let prev_status: Option<String> =
+        sqlx::query_scalar(r#"SELECT status FROM issues WHERE id = ?1 AND project_id = ?2"#)
+            .bind(id)
+            .bind(project_id)
+            .fetch_optional(&mut *tx)
+            .await?;
 
     if prev_status.is_none() {
         return Err(StorageError::NotFound);
@@ -625,9 +609,7 @@ pub async fn list_assignee_candidates(
     .fetch_all(pool)
     .await?
     .into_iter()
-    .map(|(id, display_name)| {
-        Ok(peisear_core::AssigneeOption { id, display_name })
-    })
+    .map(|(id, display_name)| Ok(peisear_core::AssigneeOption { id, display_name }))
     .collect()
 }
 
@@ -688,14 +670,16 @@ pub async fn project_workload(
     .fetch_all(pool)
     .await?
     .into_iter()
-    .map(|(user_id, display_name, capacity_points, in_flight_points, in_flight_issues)| {
-        Ok(peisear_core::UserLoad {
-            user_id,
-            display_name,
-            capacity_points,
-            in_flight_points: in_flight_points.unwrap_or(0),
-            in_flight_issues,
-        })
-    })
+    .map(
+        |(user_id, display_name, capacity_points, in_flight_points, in_flight_issues)| {
+            Ok(peisear_core::UserLoad {
+                user_id,
+                display_name,
+                capacity_points,
+                in_flight_points: in_flight_points.unwrap_or(0),
+                in_flight_issues,
+            })
+        },
+    )
     .collect()
 }

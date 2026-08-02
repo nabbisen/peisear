@@ -5,9 +5,10 @@ use leptos::prelude::*;
 
 use super::{Column, layout::AppShell};
 use peisear_core::{
-    AssigneeOption, CurrentUser, HealthIndicator, Issue, IssueStatus, Priority, Project,
-    UserLoad, WorkloadState, projected_workload_state, workload_state,
+    AssigneeOption, CurrentUser, HealthIndicator, Issue, IssueStatus, Priority, Project, UserLoad,
+    WorkloadState,
     project_health::{Indicator, ProjectHealthReport},
+    projected_workload_state, workload_state,
 };
 
 /// Project-detail page: header + board/list view toggle.
@@ -171,7 +172,11 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
         .filter_map(|i| i.human_explanation())
         .collect();
 
-    let indicator_rows = health.indicators.into_iter().map(indicator_row).collect_view();
+    let indicator_rows = health
+        .indicators
+        .into_iter()
+        .map(indicator_row)
+        .collect_view();
 
     view! {
         <section class="mb-4" aria-label="Project health">
@@ -406,9 +411,10 @@ fn WorkloadHint(
                     // capacity status to the editor explicitly.
                     let projected_state = projected_workload_state(&u, 0);
                     let hint = match projected_state {
-                        WorkloadState::Overloaded => {
-                            Some(format!(" — already at {} pt over capacity", u.in_flight_points - u.capacity_points.unwrap_or(0)))
-                        }
+                        WorkloadState::Overloaded => Some(format!(
+                            " — already at {} pt over capacity",
+                            u.in_flight_points - u.capacity_points.unwrap_or(0)
+                        )),
                         WorkloadState::Strained => Some(" — strained".to_string()),
                         _ => None,
                     };
@@ -498,11 +504,7 @@ fn assignee_label<'a>(id: &'a str, assignees: &'a [AssigneeOption]) -> &'a str {
 }
 
 #[component]
-fn IssueCard(
-    project_id: String,
-    issue: Issue,
-    assignees: Vec<AssigneeOption>,
-) -> impl IntoView {
+fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -> impl IntoView {
     let href = format!("/projects/{}/issues/{}", project_id, issue.id);
     let badge = format!("badge badge-sm {}", issue.priority.badge_class());
     let date = issue.updated_at.format("%m-%d").to_string();

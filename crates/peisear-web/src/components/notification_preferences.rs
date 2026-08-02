@@ -50,10 +50,8 @@ pub fn PreferencesPage(
     // user has not configured that kind, so the row renders
     // with system defaults (in_app on, others off, severity
     // info).
-    let pref_map: HashMap<String, Preference> = prefs
-        .into_iter()
-        .map(|p| (p.kind.clone(), p))
-        .collect();
+    let pref_map: HashMap<String, Preference> =
+        prefs.into_iter().map(|p| (p.kind.clone(), p)).collect();
 
     let kind_rows = kind::all_user_facing()
         .iter()
@@ -63,44 +61,48 @@ pub fn PreferencesPage(
         })
         .collect_view();
 
-    let banner = (!global_acknowledged).then(|| view! {
-        <section class="alert alert-info mb-4" role="status"
-                 aria-label="First-time email setup prompt">
-            <div class="flex-1">
-                <h2 class="font-medium">"Email notifications"</h2>
-                <p class="text-sm opacity-90 mt-1">
-                    "Would you like notifications by email as well as in-app? "
-                    "You can change this any time."
-                </p>
-            </div>
-            <form method="post" action="/settings/notifications/ack-global"
-                  class="flex gap-2 flex-wrap items-center">
-                <input type="hidden" name="email_opt_in" value="yes"/>
-                <button type="submit" class="btn btn-sm btn-primary">
-                    "Yes, send me email"
-                </button>
-            </form>
-            <form method="post" action="/settings/notifications/ack-global"
-                  class="flex gap-2">
-                <input type="hidden" name="email_opt_in" value="no"/>
-                <button type="submit" class="btn btn-sm btn-ghost">
-                    "Just in-app, thanks"
-                </button>
-            </form>
-        </section>
+    let banner = (!global_acknowledged).then(|| {
+        view! {
+            <section class="alert alert-info mb-4" role="status"
+                     aria-label="First-time email setup prompt">
+                <div class="flex-1">
+                    <h2 class="font-medium">"Email notifications"</h2>
+                    <p class="text-sm opacity-90 mt-1">
+                        "Would you like notifications by email as well as in-app? "
+                        "You can change this any time."
+                    </p>
+                </div>
+                <form method="post" action="/settings/notifications/ack-global"
+                      class="flex gap-2 flex-wrap items-center">
+                    <input type="hidden" name="email_opt_in" value="yes"/>
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        "Yes, send me email"
+                    </button>
+                </form>
+                <form method="post" action="/settings/notifications/ack-global"
+                      class="flex gap-2">
+                    <input type="hidden" name="email_opt_in" value="no"/>
+                    <button type="submit" class="btn btn-sm btn-ghost">
+                        "Just in-app, thanks"
+                    </button>
+                </form>
+            </section>
+        }
     });
 
     let email_status = if email_globally_on {
         view! {
             <span class="text-xs text-success">"✓ Email opt-in is on by default."</span>
-        }.into_any()
+        }
+        .into_any()
     } else {
         view! {
             <span class="text-xs text-base-content/60">
                 "Email opt-in is off (in-app only by default). "
                 "Per-kind overrides below."
             </span>
-        }.into_any()
+        }
+        .into_any()
     };
 
     view! {
@@ -190,7 +192,10 @@ fn render_kind_row(kind_id: &'static str, pref: Option<Preference>) -> impl Into
         Some(p) => p.channels.iter().any(|c| c == WEBHOOK),
         None => false,
     };
-    let min_sev = pref.as_ref().map(|p| p.min_severity).unwrap_or(Severity::Info);
+    let min_sev = pref
+        .as_ref()
+        .map(|p| p.min_severity)
+        .unwrap_or(Severity::Info);
     let info_selected = matches!(min_sev, Severity::Info);
 
     let in_app_name = format!("channel__{kind_id}__{IN_APP}");

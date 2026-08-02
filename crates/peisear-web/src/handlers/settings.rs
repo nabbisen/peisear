@@ -83,9 +83,9 @@ fn parse_positive_int(raw: &str, field_label: &str) -> Result<Option<i64>, AppEr
     if trimmed.is_empty() {
         return Ok(None);
     }
-    let n: i64 = trimmed.parse().map_err(|_| {
-        AppError::Validation(format!("{field_label} must be a positive integer."))
-    })?;
+    let n: i64 = trimmed
+        .parse()
+        .map_err(|_| AppError::Validation(format!("{field_label} must be a positive integer.")))?;
     if n <= 0 {
         return Err(AppError::Validation(format!(
             "{field_label} must be a positive integer."
@@ -101,11 +101,7 @@ fn parse_date(raw: &str, field_label: &str) -> Result<Option<NaiveDate>, AppErro
     }
     NaiveDate::parse_from_str(trimmed, "%Y-%m-%d")
         .map(Some)
-        .map_err(|_| {
-            AppError::Validation(format!(
-                "{field_label} must be in YYYY-MM-DD format."
-            ))
-        })
+        .map_err(|_| AppError::Validation(format!("{field_label} must be in YYYY-MM-DD format.")))
 }
 
 /// Translate a `Conflict` from storage into a redirect with the
@@ -113,8 +109,7 @@ fn parse_date(raw: &str, field_label: &str) -> Result<Option<NaiveDate>, AppErro
 /// the form is on a settings page that we'd like to re-render
 /// with the conflict explained, not a stark error page.
 fn redirect_with_conflict(message: &str) -> Redirect {
-    let encoded =
-        percent_encode_for_query(message);
+    let encoded = percent_encode_for_query(message);
     Redirect::to(&format!("/settings?error={}", encoded))
 }
 
@@ -161,15 +156,7 @@ pub async fn insert_capacity(
         Some(form.note.trim())
     };
 
-    match user_capacities::insert(
-        &state.db,
-        &user.id,
-        points,
-        period_start,
-        period_end,
-        note,
-    )
-    .await
+    match user_capacities::insert(&state.db, &user.id, points, period_start, period_end, note).await
     {
         Ok(_) => Ok(Redirect::to("/settings?flash=Capacity+row+added")),
         Err(peisear_storage::StorageError::Conflict(msg)) => Ok(redirect_with_conflict(&msg)),

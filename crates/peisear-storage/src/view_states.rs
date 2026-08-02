@@ -34,11 +34,7 @@ pub fn project_issues_key(project_id: &str) -> String {
 /// own those types. Returning the raw string also leaves
 /// migration room — a future view definition that adds a field
 /// can read old JSON without losing data.
-pub async fn get(
-    pool: &Pool,
-    user_id: &str,
-    view_key: &str,
-) -> StorageResult<Option<String>> {
+pub async fn get(pool: &Pool, user_id: &str, view_key: &str) -> StorageResult<Option<String>> {
     let row: Option<(String,)> = sqlx::query_as(
         r#"
         SELECT state_json
@@ -87,11 +83,7 @@ pub async fn upsert(
 /// default" UX. Idempotent — deleting a row that doesn't exist
 /// is not an error.
 #[allow(dead_code)]
-pub async fn delete(
-    pool: &Pool,
-    user_id: &str,
-    view_key: &str,
-) -> StorageResult<()> {
+pub async fn delete(pool: &Pool, user_id: &str, view_key: &str) -> StorageResult<()> {
     sqlx::query(
         r#"
         DELETE FROM user_view_states

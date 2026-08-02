@@ -29,8 +29,7 @@ async fn project_detail_breadcrumb_starts_with_today() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
-    let project_id =
-        create_personal_project(&app.db, &user_id, "Customer Portal").await;
+    let project_id = create_personal_project(&app.db, &user_id, "Customer Portal").await;
 
     let resp = app.server.get(&format!("/projects/{project_id}")).await;
     resp.assert_status(StatusCode::OK);
@@ -64,10 +63,8 @@ async fn issue_detail_breadcrumb_full_chain() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("bob");
     let user_id = register_and_login(&app, &user).await;
-    let project_id =
-        create_personal_project(&app.db, &user_id, "Customer Portal").await;
-    let issue_id =
-        create_issue(&app.db, &project_id, &user_id, "Login error").await;
+    let project_id = create_personal_project(&app.db, &user_id, "Customer Portal").await;
+    let issue_id = create_issue(&app.db, &project_id, &user_id, "Login error").await;
 
     let url = format!("/projects/{project_id}/issues/{issue_id}");
     let resp = app.server.get(&url).await;

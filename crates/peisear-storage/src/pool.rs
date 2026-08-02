@@ -1,8 +1,6 @@
 //! SQLite connection pool.
 
-use sqlx::sqlite::{
-    SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous,
-};
+use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
 use std::{path::Path, str::FromStr, time::Duration};
 
 use crate::{Pool, StorageError, StorageResult};

@@ -132,7 +132,8 @@ pub async fn typeahead(
     // Now back-fill: if issues didn't use all their share,
     // give projects more.
     let projects_keep = projects_keep.min(TYPEAHEAD_TOTAL - issues_keep)
-        + (project_count - projects_keep).min((TYPEAHEAD_TOTAL - projects_keep - issues_keep).max(0));
+        + (project_count - projects_keep)
+            .min((TYPEAHEAD_TOTAL - projects_keep - issues_keep).max(0));
 
     let projects: Vec<TypeaheadProject> = project_hits
         .into_iter()
@@ -220,8 +221,7 @@ pub async fn results_page(
     // can answer "is there a next page" without a second query.
     let fetch_limit = (page as i64) * RESULTS_PER_PAGE + 1;
 
-    let project_hits =
-        search::projects_by_name(&state.db, &user.id, &trimmed, fetch_limit).await?;
+    let project_hits = search::projects_by_name(&state.db, &user.id, &trimmed, fetch_limit).await?;
     let issue_hits =
         search::open_issues_by_title(&state.db, &user.id, &trimmed, fetch_limit).await?;
 

@@ -139,10 +139,7 @@ pub fn render_breadcrumb(items: Vec<BreadcrumbItem>) -> impl IntoView {
 /// produces a different page than the breadcrumb claims when
 /// the user arrived via a deep link (e.g. an email). Linking to
 /// the canonical parent URL is the predictable behaviour.
-pub fn render_back_link(
-    label: impl Into<String>,
-    href: impl Into<String>,
-) -> impl IntoView {
+pub fn render_back_link(label: impl Into<String>, href: impl Into<String>) -> impl IntoView {
     let label = label.into();
     let href = href.into();
     let aria = format!("Back to {label}");

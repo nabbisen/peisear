@@ -29,8 +29,7 @@ async fn list_view_renders_with_filter_toolbar() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
-    let project_id =
-        create_personal_project(&app.db, &user_id, "Test").await;
+    let project_id = create_personal_project(&app.db, &user_id, "Test").await;
     let _ = create_issue(&app.db, &project_id, &user_id, "First").await;
 
     let resp = app
@@ -46,20 +45,14 @@ async fn list_view_renders_with_filter_toolbar() {
         "list view missing filter/sort toolbar"
     );
     // Status select.
-    assert!(
-        body.contains(r#"name="status""#),
-        "missing status select"
-    );
+    assert!(body.contains(r#"name="status""#), "missing status select");
     // Assignee select.
     assert!(
         body.contains(r#"name="assignee""#),
         "missing assignee select"
     );
     // Sort select.
-    assert!(
-        body.contains(r#"name="sort""#),
-        "missing sort select"
-    );
+    assert!(body.contains(r#"name="sort""#), "missing sort select");
 }
 
 #[tokio::test]
@@ -69,8 +62,7 @@ async fn url_filter_filters_the_list() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
-    let project_id =
-        create_personal_project(&app.db, &user_id, "Test").await;
+    let project_id = create_personal_project(&app.db, &user_id, "Test").await;
 
     let _open = create_issue(&app.db, &project_id, &user_id, "Open issue").await;
     let other = create_issue(&app.db, &project_id, &user_id, "Done issue").await;
@@ -108,8 +100,7 @@ async fn explicit_filter_persists_as_default() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
-    let project_id =
-        create_personal_project(&app.db, &user_id, "Test").await;
+    let project_id = create_personal_project(&app.db, &user_id, "Test").await;
 
     let _open = create_issue(&app.db, &project_id, &user_id, "Open issue").await;
     let other = create_issue(&app.db, &project_id, &user_id, "Done issue").await;
@@ -156,8 +147,7 @@ async fn url_overrides_saved_default() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
-    let project_id =
-        create_personal_project(&app.db, &user_id, "Test").await;
+    let project_id = create_personal_project(&app.db, &user_id, "Test").await;
 
     let _open = create_issue(&app.db, &project_id, &user_id, "Open issue").await;
     let done = create_issue(&app.db, &project_id, &user_id, "Done issue").await;
@@ -203,12 +193,9 @@ async fn defaults_are_per_user() {
     let alice_app = TestApp::spawn().await;
     let alice = TestUser::new("alice");
     let alice_id = register_and_login(&alice_app, &alice).await;
-    let alice_project =
-        create_personal_project(&alice_app.db, &alice_id, "Alice's").await;
-    let _alice_open =
-        create_issue(&alice_app.db, &alice_project, &alice_id, "Alice open").await;
-    let alice_done =
-        create_issue(&alice_app.db, &alice_project, &alice_id, "Alice done").await;
+    let alice_project = create_personal_project(&alice_app.db, &alice_id, "Alice's").await;
+    let _alice_open = create_issue(&alice_app.db, &alice_project, &alice_id, "Alice open").await;
+    let alice_done = create_issue(&alice_app.db, &alice_project, &alice_id, "Alice done").await;
     sqlx::query(r#"UPDATE issues SET status = 'done' WHERE id = ?1"#)
         .bind(&alice_done)
         .execute(&alice_app.db)

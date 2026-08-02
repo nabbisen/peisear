@@ -36,9 +36,9 @@
 use std::time::Duration;
 
 use peisear_core::notifications::{Severity, channel as channel_id, kind as kind_id};
-use peisear_notify::{DispatchEvent, DispatchTx, dispatch_loop};
 use peisear_notify::config::{SmtpConfig, TlsMode};
 use peisear_notify::dispatch::DispatchContext;
+use peisear_notify::{DispatchEvent, DispatchTx, dispatch_loop};
 use peisear_storage::{Pool, notifications as notif_store, pool, users};
 use tokio::sync::mpsc;
 

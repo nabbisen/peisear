@@ -143,10 +143,7 @@ async fn legacy_notifications_post_endpoints_redirect_with_308() {
     assert_eq!(location, "/inbox/mark-all-read");
 
     // mark one as read — preserves the {id} path parameter
-    let resp = app
-        .server
-        .post("/notifications/some-notif-id/read")
-        .await;
+    let resp = app.server.post("/notifications/some-notif-id/read").await;
     assert_eq!(resp.status_code(), StatusCode::PERMANENT_REDIRECT);
     let location = resp
         .headers()

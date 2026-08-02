@@ -83,11 +83,7 @@ pub fn TeamsListPage(
 }
 
 fn render_team_card((team, role): (Team, TeamRole)) -> impl IntoView {
-    let aria = format!(
-        "{} (role: {})",
-        team.name,
-        role.human_name()
-    );
+    let aria = format!("{} (role: {})", team.name, role.human_name());
     let role_badge_class = match role {
         TeamRole::Admin => "badge badge-sm badge-primary",
         TeamRole::Member => "badge badge-sm badge-ghost",
@@ -122,11 +118,7 @@ fn render_team_card((team, role): (Team, TeamRole)) -> impl IntoView {
 }
 
 #[component]
-pub fn TeamNewPage(
-    user: CurrentUser,
-    unread_count: i64,
-    error: Option<String>,
-) -> impl IntoView {
+pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) -> impl IntoView {
     let error_block = error.map(|msg| {
         view! {
             <div role="alert" class="alert alert-warning text-sm mb-4">{msg}</div>
@@ -252,43 +244,45 @@ pub fn TeamDetailPage(
 
     let projects_section = render_projects_section(team_slug.clone(), is_admin, projects);
 
-    let add_member_form = is_admin.then(|| view! {
-        <details class="card bg-base-100 border border-base-300 shadow-sm mt-4">
-            <summary class="card-body cursor-pointer py-3 flex flex-row items-center gap-2">
-                <span class="font-medium">"Invite a member"</span>
-                <span class="text-xs text-base-content/50">"by email"</span>
-            </summary>
-            <div class="px-4 pb-4">
-                <form method="post"
-                      action=format!("/teams/{}/members", team_slug)
-                      class="flex flex-wrap items-end gap-3">
-                    <label class="form-control flex-1 min-w-[14rem]">
-                        <div class="label py-1">
-                            <span class="label-text text-sm">"Email"</span>
-                        </div>
-                        <input type="email" name="email" required=true
-                               placeholder="alice@example.com"
-                               class="input input-bordered input-sm w-full"/>
-                    </label>
-                    <label class="form-control">
-                        <div class="label py-1">
-                            <span class="label-text text-sm">"Role"</span>
-                        </div>
-                        <select name="role" class="select select-bordered select-sm">
-                            <option value="member" selected=true>"Member"</option>
-                            <option value="admin">"Admin"</option>
-                            <option value="viewer">"Viewer"</option>
-                        </select>
-                    </label>
-                    <button type="submit" class="btn btn-primary btn-sm">"Add"</button>
-                </form>
-                <p class="text-xs text-base-content/60 mt-2">
-                    "The user must have a peisear account already (registration via \
-                     email is not yet automatic from the invite — that's a Phase 2 \
-                     improvement)."
-                </p>
-            </div>
-        </details>
+    let add_member_form = is_admin.then(|| {
+        view! {
+            <details class="card bg-base-100 border border-base-300 shadow-sm mt-4">
+                <summary class="card-body cursor-pointer py-3 flex flex-row items-center gap-2">
+                    <span class="font-medium">"Invite a member"</span>
+                    <span class="text-xs text-base-content/50">"by email"</span>
+                </summary>
+                <div class="px-4 pb-4">
+                    <form method="post"
+                          action=format!("/teams/{}/members", team_slug)
+                          class="flex flex-wrap items-end gap-3">
+                        <label class="form-control flex-1 min-w-[14rem]">
+                            <div class="label py-1">
+                                <span class="label-text text-sm">"Email"</span>
+                            </div>
+                            <input type="email" name="email" required=true
+                                   placeholder="alice@example.com"
+                                   class="input input-bordered input-sm w-full"/>
+                        </label>
+                        <label class="form-control">
+                            <div class="label py-1">
+                                <span class="label-text text-sm">"Role"</span>
+                            </div>
+                            <select name="role" class="select select-bordered select-sm">
+                                <option value="member" selected=true>"Member"</option>
+                                <option value="admin">"Admin"</option>
+                                <option value="viewer">"Viewer"</option>
+                            </select>
+                        </label>
+                        <button type="submit" class="btn btn-primary btn-sm">"Add"</button>
+                    </form>
+                    <p class="text-xs text-base-content/60 mt-2">
+                        "The user must have a peisear account already (registration via \
+                         email is not yet automatic from the invite — that's a Phase 2 \
+                         improvement)."
+                    </p>
+                </div>
+            </details>
+        }
     });
 
     view! {
@@ -371,19 +365,18 @@ fn render_projects_section(
         .into_iter()
         .map(|p| {
             let href = format!("/projects/{}", p.id);
-            let unassign_action = format!(
-                "/teams/{}/projects/{}/unassign",
-                team_slug_owned, p.id
-            );
-            let unassign = is_admin.then(|| view! {
-                <form method="post" action=unassign_action
-                      onsubmit="return confirm('Detach this project from the team? \
-                                                It will become a personal project.')">
-                    <button type="submit" class="btn btn-ghost btn-xs"
-                            aria-label="Detach from team">
-                        "Detach"
-                    </button>
-                </form>
+            let unassign_action = format!("/teams/{}/projects/{}/unassign", team_slug_owned, p.id);
+            let unassign = is_admin.then(|| {
+                view! {
+                    <form method="post" action=unassign_action
+                          onsubmit="return confirm('Detach this project from the team? \
+                                                    It will become a personal project.')">
+                        <button type="submit" class="btn btn-ghost btn-xs"
+                                aria-label="Detach from team">
+                            "Detach"
+                        </button>
+                    </form>
+                }
             });
             view! {
                 <tr>
@@ -600,11 +593,7 @@ pub fn render_list(
     })
 }
 
-pub fn render_new(
-    user: CurrentUser,
-    unread_count: i64,
-    error: Option<String>,
-) -> Html<String> {
+pub fn render_new(user: CurrentUser, unread_count: i64, error: Option<String>) -> Html<String> {
     super::render_to_html(move || {
         view! { <TeamNewPage user=user unread_count=unread_count error=error/> }
     })

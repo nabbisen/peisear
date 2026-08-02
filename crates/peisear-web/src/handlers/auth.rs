@@ -15,11 +15,7 @@ use serde::Deserialize;
 use time::Duration as TimeDuration;
 use validator::Validate;
 
-use crate::{
-    AppError, AppResult, AppState,
-    components,
-    extractors::AUTH_COOKIE,
-};
+use crate::{AppError, AppResult, AppState, components, extractors::AUTH_COOKIE};
 
 #[derive(Debug, Deserialize)]
 pub struct AuthQuery {
@@ -44,7 +40,11 @@ pub struct RegisterForm {
         message = "Display name must be between 1 and 80 characters."
     ))]
     pub display_name: String,
-    #[validate(length(min = 8, max = 128, message = "Password must be at least 8 characters."))]
+    #[validate(length(
+        min = 8,
+        max = 128,
+        message = "Password must be at least 8 characters."
+    ))]
     pub password: String,
 }
 

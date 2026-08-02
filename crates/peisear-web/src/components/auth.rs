@@ -61,11 +61,7 @@ pub fn LoginPage(flash: Option<String>, email: String) -> impl IntoView {
 
 /// Registration form page.
 #[component]
-pub fn RegisterPage(
-    flash: Option<String>,
-    email: String,
-    display_name: String,
-) -> impl IntoView {
+pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) -> impl IntoView {
     view! {
         <PublicShell title="Create account — Issue Tracker">
             <div class="max-w-sm mx-auto mt-12">
@@ -116,11 +112,7 @@ pub fn render_login(flash: Option<String>, email: String) -> Html<String> {
 }
 
 /// Render [`RegisterPage`] to an HTML response.
-pub fn render_register(
-    flash: Option<String>,
-    email: String,
-    display_name: String,
-) -> Html<String> {
+pub fn render_register(flash: Option<String>, email: String, display_name: String) -> Html<String> {
     super::render_to_html(move || {
         view! { <RegisterPage flash=flash email=email display_name=display_name/> }
     })

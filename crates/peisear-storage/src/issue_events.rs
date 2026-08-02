@@ -145,23 +145,21 @@ pub async fn in_progress_seconds_for_issue(
     }
 
     // Pull current status to know whether we're still in_progress.
-    let current_status: Option<String> = sqlx::query_scalar(
-        r#"SELECT status FROM issues WHERE id = ?1"#,
-    )
-    .bind(issue_id)
-    .fetch_optional(pool)
-    .await?;
+    let current_status: Option<String> =
+        sqlx::query_scalar(r#"SELECT status FROM issues WHERE id = ?1"#)
+            .bind(issue_id)
+            .fetch_optional(pool)
+            .await?;
 
     let mut total_seconds = 0.0_f64;
     let mut window_start: Option<chrono::NaiveDateTime> = None;
 
     for (status, occurred_at) in &timeline {
-        let occurred_at = chrono::NaiveDateTime::parse_from_str(
-            occurred_at,
-            "%Y-%m-%d %H:%M:%S",
-        )
-        .ok();
-        let Some(occurred_at) = occurred_at else { continue };
+        let occurred_at =
+            chrono::NaiveDateTime::parse_from_str(occurred_at, "%Y-%m-%d %H:%M:%S").ok();
+        let Some(occurred_at) = occurred_at else {
+            continue;
+        };
 
         if status == "in_progress" {
             // Opening a window. If one is already open (which would

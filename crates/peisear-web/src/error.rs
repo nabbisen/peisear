@@ -164,8 +164,7 @@ impl IntoResponse for AppError {
         // whose `IntoResponse` returns the structured JSON.
         // Until then, HTML-only is consistent with the rest of
         // the error path.
-        let html =
-            crate::components::error_page::render_error(status.as_u16(), message.clone());
+        let html = crate::components::error_page::render_error(status.as_u16(), message.clone());
 
         // Empty body rendered would fall through to JSON; empty is
         // unlikely but we guard against it anyway.

@@ -31,10 +31,7 @@ pub fn build_router(state: AppState) -> Router {
         // Settings
         .route("/settings", get(settings::page))
         .route("/settings/capacity", post(settings::insert_capacity))
-        .route(
-            "/settings/capacity/{id}",
-            post(settings::update_capacity),
-        )
+        .route("/settings/capacity/{id}", post(settings::update_capacity))
         .route(
             "/settings/capacity/{id}/delete",
             post(settings::delete_capacity),
@@ -61,20 +58,11 @@ pub fn build_router(state: AppState) -> Router {
         // peisear-feature-spec-v2.1 §4.2). Old paths return 308
         // Permanent Redirect; see handlers::redirects for rationale.
         .route("/inbox", get(notifications::page))
-        .route(
-            "/inbox/mark-all-read",
-            post(notifications::mark_all_read),
-        )
-        .route(
-            "/inbox/{id}/read",
-            post(notifications::mark_read),
-        )
+        .route("/inbox/mark-all-read", post(notifications::mark_all_read))
+        .route("/inbox/{id}/read", post(notifications::mark_read))
         // Legacy /notifications redirects → /inbox (308, preserves
         // POST method for the two POST endpoints).
-        .route(
-            "/notifications",
-            get(redirects::notifications_to_inbox),
-        )
+        .route("/notifications", get(redirects::notifications_to_inbox))
         .route(
             "/notifications/mark-all-read",
             post(redirects::notifications_mark_all_read_to_inbox),
@@ -110,10 +98,7 @@ pub fn build_router(state: AppState) -> Router {
             get(sprints::list_page).post(sprints::create),
         )
         .route("/teams/{slug}/sprints/new", get(sprints::new_page))
-        .route(
-            "/teams/{slug}/sprints/{sprint_id}",
-            get(sprints::detail),
-        )
+        .route("/teams/{slug}/sprints/{sprint_id}", get(sprints::detail))
         .route(
             "/teams/{slug}/sprints/{sprint_id}/edit",
             get(sprints::edit_page).post(sprints::update),
@@ -155,10 +140,7 @@ pub fn build_router(state: AppState) -> Router {
             get(api_users::list_notifications),
         )
         // Projects
-        .route(
-            "/projects",
-            get(projects::list_page).post(projects::create),
-        )
+        .route("/projects", get(projects::list_page).post(projects::create))
         .route("/projects/new", get(projects::new_page))
         .route("/projects/{id}", get(issues::project_detail))
         .route(

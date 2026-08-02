@@ -132,8 +132,12 @@ pub async fn burnout(
         // fact for the user to interpret.
         use peisear_core::user_burnout::DriftDirection;
         let label = match drift.direction {
-            DriftDirection::Up => Some("Recent issues are taking longer per point than older ones."),
-            DriftDirection::Down => Some("Recent issues are completing faster per point than older ones."),
+            DriftDirection::Up => {
+                Some("Recent issues are taking longer per point than older ones.")
+            }
+            DriftDirection::Down => {
+                Some("Recent issues are completing faster per point than older ones.")
+            }
             DriftDirection::Steady => None,
         };
         if let Some(label) = label {

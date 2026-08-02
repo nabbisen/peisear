@@ -28,10 +28,7 @@
 //! parameterless ones beside the parameterized one keeps the
 //! redirect surface in one file.
 
-use axum::{
-    extract::Path,
-    response::Redirect,
-};
+use axum::{extract::Path, response::Redirect};
 
 /// `/me` (legacy) → `/today` (canonical).
 pub async fn me_to_today() -> Redirect {

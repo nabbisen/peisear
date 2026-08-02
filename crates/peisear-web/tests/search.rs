@@ -51,8 +51,7 @@ async fn typeahead_finds_project_by_name() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
-    let _project_id =
-        create_personal_project(&app.db, &user_id, "Customer Portal").await;
+    let _project_id = create_personal_project(&app.db, &user_id, "Customer Portal").await;
 
     let resp = app.server.get("/api/search?q=Customer").await;
     resp.assert_status(StatusCode::OK);
@@ -73,10 +72,8 @@ async fn typeahead_finds_open_issue_by_title() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
-    let project_id =
-        create_personal_project(&app.db, &user_id, "Customer Portal").await;
-    let _issue_id =
-        create_issue(&app.db, &project_id, &user_id, "Login error on submit").await;
+    let project_id = create_personal_project(&app.db, &user_id, "Customer Portal").await;
+    let _issue_id = create_issue(&app.db, &project_id, &user_id, "Login error on submit").await;
 
     let resp = app.server.get("/api/search?q=Login").await;
     resp.assert_status(StatusCode::OK);
@@ -99,8 +96,7 @@ async fn typeahead_excludes_done_issues() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
-    let project_id =
-        create_personal_project(&app.db, &user_id, "Project X").await;
+    let project_id = create_personal_project(&app.db, &user_id, "Project X").await;
     let _open = create_issue(&app.db, &project_id, &user_id, "alpha open").await;
     let done = create_issue(&app.db, &project_id, &user_id, "alpha done").await;
     sqlx::query(r#"UPDATE issues SET status = 'done' WHERE id = ?1"#)
@@ -129,8 +125,7 @@ async fn typeahead_does_not_leak_other_users_projects() {
     let alice_app = TestApp::spawn().await;
     let alice = TestUser::new("alice");
     let alice_id = register_and_login(&alice_app, &alice).await;
-    let _alice_project =
-        create_personal_project(&alice_app.db, &alice_id, "Alice's Portal").await;
+    let _alice_project = create_personal_project(&alice_app.db, &alice_id, "Alice's Portal").await;
 
     // Bob has a personal project. We need Bob to actually exist
     // in the DB shared by alice_app, so we register Bob via the
@@ -140,8 +135,7 @@ async fn typeahead_does_not_leak_other_users_projects() {
     common::auth::logout(&alice_app).await;
     let bob = TestUser::new("bob");
     let bob_id = register_and_login(&alice_app, &bob).await;
-    let _bob_project =
-        create_personal_project(&alice_app.db, &bob_id, "Bob's Portal").await;
+    let _bob_project = create_personal_project(&alice_app.db, &bob_id, "Bob's Portal").await;
 
     // Re-login as Alice for the search. axum-test's saved-cookie
     // jar carries the latest session; since Bob just logged in,
@@ -171,8 +165,7 @@ async fn typeahead_handles_like_meta_characters() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
-    let project_id =
-        create_personal_project(&app.db, &user_id, "Project X").await;
+    let project_id = create_personal_project(&app.db, &user_id, "Project X").await;
     // One issue with literal "%", one without.
     let _with_pct = create_issue(&app.db, &project_id, &user_id, "Done 100% test").await;
     let _without = create_issue(&app.db, &project_id, &user_id, "Done 100 test").await;
@@ -180,10 +173,7 @@ async fn typeahead_handles_like_meta_characters() {
     let resp = app.server.get("/api/search?q=100%25").await; // %25 = %
     resp.assert_status(StatusCode::OK);
     let body = resp.text();
-    assert!(
-        body.contains("Done 100% test"),
-        "should match literal %"
-    );
+    assert!(body.contains("Done 100% test"), "should match literal %");
     assert!(
         !body.contains("Done 100 test"),
         "must NOT match without %; that would mean LIKE meta wasn't escaped"
@@ -195,20 +185,15 @@ async fn results_page_renders_with_query() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
-    let project_id =
-        create_personal_project(&app.db, &user_id, "Customer Portal").await;
-    let _issue_id =
-        create_issue(&app.db, &project_id, &user_id, "Login error").await;
+    let project_id = create_personal_project(&app.db, &user_id, "Customer Portal").await;
+    let _issue_id = create_issue(&app.db, &project_id, &user_id, "Login error").await;
 
     let resp = app.server.get("/search?q=Login").await;
     resp.assert_status(StatusCode::OK);
     let body = resp.text();
     assert!(body.contains("Login error"), "results page missing issue");
     // Heading echoes the query.
-    assert!(
-        body.contains("Login"),
-        "results page should echo query"
-    );
+    assert!(body.contains("Login"), "results page should echo query");
     // Section headings present.
     assert!(body.contains("Projects"), "missing Projects section");
     assert!(body.contains("Open issues"), "missing Open issues section");

@@ -64,8 +64,16 @@ fn map_sprint_row(
 
 pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Sprint>> {
     let row: Option<(
-        String, String, String, Option<String>, NaiveDate, NaiveDate,
-        String, Option<DateTime<Utc>>, Option<DateTime<Utc>>, DateTime<Utc>,
+        String,
+        String,
+        String,
+        Option<String>,
+        NaiveDate,
+        NaiveDate,
+        String,
+        Option<DateTime<Utc>>,
+        Option<DateTime<Utc>>,
+        DateTime<Utc>,
         DateTime<Utc>,
     )> = sqlx::query_as(
         r#"
@@ -78,15 +86,21 @@ pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Sprint>> 
     .bind(id)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(|r| {
-        map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10)
-    }))
+    Ok(row.map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10)))
 }
 
 pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Sprint>> {
     let rows: Vec<(
-        String, String, String, Option<String>, NaiveDate, NaiveDate,
-        String, Option<DateTime<Utc>>, Option<DateTime<Utc>>, DateTime<Utc>,
+        String,
+        String,
+        String,
+        Option<String>,
+        NaiveDate,
+        NaiveDate,
+        String,
+        Option<DateTime<Utc>>,
+        Option<DateTime<Utc>>,
+        DateTime<Utc>,
         DateTime<Utc>,
     )> = sqlx::query_as(
         r#"
@@ -111,8 +125,16 @@ pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Spri
 /// `start` call site, not the schema level.
 pub async fn active_for_team(pool: &Pool, team_id: &str) -> StorageResult<Option<Sprint>> {
     let row: Option<(
-        String, String, String, Option<String>, NaiveDate, NaiveDate,
-        String, Option<DateTime<Utc>>, Option<DateTime<Utc>>, DateTime<Utc>,
+        String,
+        String,
+        String,
+        Option<String>,
+        NaiveDate,
+        NaiveDate,
+        String,
+        Option<DateTime<Utc>>,
+        Option<DateTime<Utc>>,
+        DateTime<Utc>,
         DateTime<Utc>,
     )> = sqlx::query_as(
         r#"
@@ -127,9 +149,7 @@ pub async fn active_for_team(pool: &Pool, team_id: &str) -> StorageResult<Option
     .bind(team_id)
     .fetch_optional(pool)
     .await?;
-    Ok(row.map(|r| {
-        map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10)
-    }))
+    Ok(row.map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10)))
 }
 
 pub async fn insert(
@@ -217,9 +237,7 @@ pub async fn start(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
     match sprint.status {
         SprintStatus::Planned => {}
         SprintStatus::Active => {
-            return Err(StorageError::Validation(
-                "Sprint is already active.".into(),
-            ));
+            return Err(StorageError::Validation("Sprint is already active.".into()));
         }
         SprintStatus::Completed => {
             return Err(StorageError::Validation(
@@ -325,10 +343,7 @@ pub async fn remove_issue(pool: &Pool, issue_id: &str) -> StorageResult<()> {
 /// a `sprint_issues` row, return it; otherwise look up the
 /// parent's row. The single query keeps the round-trip count
 /// at one whether the issue is top-level or sub.
-pub async fn sprint_for_issue(
-    pool: &Pool,
-    issue_id: &str,
-) -> StorageResult<Option<String>> {
+pub async fn sprint_for_issue(pool: &Pool, issue_id: &str) -> StorageResult<Option<String>> {
     let row: Option<(String,)> = sqlx::query_as(
         r#"
         SELECT sprint_id FROM sprint_issues
@@ -454,28 +469,24 @@ pub async fn summary(pool: &Pool, sprint_id: &str) -> StorageResult<SprintSummar
 /// We compute in Rust rather than SQL to keep the date-bucketing
 /// logic readable. The data volume is bounded (< 30 days × < 100
 /// issues = a few thousand rows in the worst case).
-pub async fn burndown(
-    pool: &Pool,
-    sprint_id: &str,
-) -> StorageResult<Vec<BurndownPoint>> {
+pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<BurndownPoint>> {
     let sprint = find_by_id(pool, sprint_id)
         .await?
         .ok_or(StorageError::NotFound)?;
 
     // (issue_id, effort, status, assigned_to_sprint_at, current_updated_at).
-    let issues: Vec<(String, Option<i64>, String, DateTime<Utc>, DateTime<Utc>)> =
-        sqlx::query_as(
-            r#"
+    let issues: Vec<(String, Option<i64>, String, DateTime<Utc>, DateTime<Utc>)> = sqlx::query_as(
+        r#"
             SELECT i.id, i.effort, i.status, si.assigned_at, i.updated_at
             FROM sprint_issues si
             JOIN issues i ON i.id = si.issue_id
             WHERE si.sprint_id = ?1
             ORDER BY si.assigned_at ASC
             "#,
-        )
-        .bind(sprint_id)
-        .fetch_all(pool)
-        .await?;
+    )
+    .bind(sprint_id)
+    .fetch_all(pool)
+    .await?;
 
     if issues.is_empty() {
         return Ok(Vec::new());
@@ -585,8 +596,16 @@ pub async fn recent_completed_for_team(
 ) -> StorageResult<Vec<(Sprint, SprintSummary)>> {
     let sprints: Vec<Sprint> = {
         let rows: Vec<(
-            String, String, String, Option<String>, NaiveDate, NaiveDate,
-            String, Option<DateTime<Utc>>, Option<DateTime<Utc>>, DateTime<Utc>,
+            String,
+            String,
+            String,
+            Option<String>,
+            NaiveDate,
+            NaiveDate,
+            String,
+            Option<DateTime<Utc>>,
+            Option<DateTime<Utc>>,
+            DateTime<Utc>,
             DateTime<Utc>,
         )> = sqlx::query_as(
             r#"
@@ -603,9 +622,7 @@ pub async fn recent_completed_for_team(
         .fetch_all(pool)
         .await?;
         rows.into_iter()
-            .map(|r| {
-                map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10)
-            })
+            .map(|r| map_sprint_row(r.0, r.1, r.2, r.3, r.4, r.5, r.6, r.7, r.8, r.9, r.10))
             .collect()
     };
 

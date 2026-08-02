@@ -219,10 +219,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
         row.points, from_str, to_str
     );
 
-    let from_value = row
-        .period_start
-        .map(|d| d.to_string())
-        .unwrap_or_default();
+    let from_value = row.period_start.map(|d| d.to_string()).unwrap_or_default();
     let to_value = row.period_end.map(|d| d.to_string()).unwrap_or_default();
 
     let update_action = format!("/settings/capacity/{}", row_id);

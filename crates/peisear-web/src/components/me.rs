@@ -17,8 +17,7 @@ use peisear_core::{
         PERSONAL_ACTIVITY_WINDOW_DAYS, PersonalMetrics, classify_long_stale, classify_wip,
     },
     user_burnout::{
-        DriftDirection, UserBurnoutSignals, classify_overload_streak, classify_stalled,
-        summarize,
+        DriftDirection, UserBurnoutSignals, classify_overload_streak, classify_stalled, summarize,
     },
 };
 
@@ -127,7 +126,11 @@ fn compute_read_first(
     // dashboard's most prominent slot when nothing more
     // urgent applies.
     if long_stale_count >= 1 {
-        let plural = if long_stale_count == 1 { "issue" } else { "issues" };
+        let plural = if long_stale_count == 1 {
+            "issue"
+        } else {
+            "issues"
+        };
         return Some(ReadFirst {
             title: "Some long-stale issues are still assigned to you.".to_string(),
             body: format!(
@@ -200,8 +203,7 @@ pub fn PersonalDashboard(
     // user_capacities row, surface a small "(this period)" hint
     // alongside the value. Tells the user "this number isn't your
     // permanent default — it's specific to a window".
-    let load_period_hint = capacity_is_period_bounded
-        && m.capacity_points.is_some();
+    let load_period_hint = capacity_is_period_bounded && m.capacity_points.is_some();
 
     let throughput_text = format!(
         "{} done in last {PERSONAL_ACTIVITY_WINDOW_DAYS}d",
@@ -220,8 +222,7 @@ pub fn PersonalDashboard(
     // sustainability panel renders insufficient-data chips: a user
     // with active work deserves to see "we're tracking but don't
     // have enough yet"; a fresh user with nothing assigned doesn't.
-    let user_is_active =
-        m.current_wip > 0 || m.in_flight_points > 0 || m.recent_done_count > 0;
+    let user_is_active = m.current_wip > 0 || m.in_flight_points > 0 || m.recent_done_count > 0;
 
     let skew_text = format_skew(m.estimation_skew_days_per_point);
 
@@ -486,8 +487,8 @@ fn render_burnout_panel(
     );
 
     let summary = summarize(&signals);
-    let any_watch = matches!(overload, HealthIndicator::Watch)
-        || matches!(stalled, HealthIndicator::Watch);
+    let any_watch =
+        matches!(overload, HealthIndicator::Watch) || matches!(stalled, HealthIndicator::Watch);
 
     let drift_chip = render_drift_chip(signals.estimation_drift.as_ref());
     let switching_chip = render_switching_chip(signals.cognitive_switching.as_ref());

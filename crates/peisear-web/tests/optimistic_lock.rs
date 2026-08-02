@@ -82,8 +82,7 @@ async fn issue_update_with_missing_client_updated_at_is_rejected() {
 
     let resp = post_issue_update(&app, &project_id, &issue_id, "", "edited").await;
     assert!(
-        resp.status_code() == StatusCode::BAD_REQUEST
-            || resp.status_code() == StatusCode::CONFLICT,
+        resp.status_code() == StatusCode::BAD_REQUEST || resp.status_code() == StatusCode::CONFLICT,
         "missing client_updated_at must be rejected (got {})",
         resp.status_code()
     );
@@ -179,20 +178,17 @@ async fn sprint_start_with_stale_timestamp_returns_409() {
     ensure_distinct_timestamp().await;
     let today = chrono::Utc::now().date_naive();
     let ends = today + chrono::Duration::days(14);
-    peisear_storage::sprints::update(
-        &app.db,
-        &sprint_id,
-        "Sprint 1 (renamed)",
-        None,
-        today,
-        ends,
-    )
-    .await
-    .expect("rename sprint");
+    peisear_storage::sprints::update(&app.db, &sprint_id, "Sprint 1 (renamed)", None, today, ends)
+        .await
+        .expect("rename sprint");
 
     // Now try to start with the stale t0.
     let url = format!("/teams/{team_slug}/sprints/{sprint_id}/start");
-    let resp = app.server.post(&url).form(&[("client_updated_at", t0.as_str())]).await;
+    let resp = app
+        .server
+        .post(&url)
+        .form(&[("client_updated_at", t0.as_str())])
+        .await;
     assert_eq!(
         resp.status_code(),
         StatusCode::CONFLICT,
@@ -367,11 +363,9 @@ async fn read_team_slug(app: &TestApp, team_id: &str) -> String {
 /// over the form path because we don't need to exercise form
 /// validation here — just need a row to lock against.
 async fn create_capacity_row(app: &TestApp, user_id: &str, points: i64) -> String {
-    peisear_storage::user_capacities::insert(
-        &app.db, user_id, points, None, None, None,
-    )
-    .await
-    .expect("insert capacity row")
+    peisear_storage::user_capacities::insert(&app.db, user_id, points, None, None, None)
+        .await
+        .expect("insert capacity row")
 }
 
 /// Read a capacity row's `updated_at`, RFC3339-formatted.

@@ -32,15 +32,14 @@
 use std::time::Duration;
 
 use peisear_core::project_health::compute_report;
+use peisear_notify::config::SmtpConfig;
+use peisear_notify::dispatch::DispatchContext;
 use peisear_notify::{
     DISPATCH_CHANNEL_BUFFER, DispatchEvent, DispatchTx, detect_burnout_overload_edge,
     detect_burnout_stalled_edge, dispatch_loop,
 };
-use peisear_notify::config::SmtpConfig;
-use peisear_notify::dispatch::DispatchContext;
 use peisear_storage::{
-    Pool, metrics_snapshots, personal_metrics, project_health, user_burnout,
-    user_metrics_snapshots,
+    Pool, metrics_snapshots, personal_metrics, project_health, user_burnout, user_metrics_snapshots,
 };
 use tokio::sync::{mpsc, oneshot};
 
@@ -95,11 +94,7 @@ pub fn spawn_all(db: Pool, smtp: Option<SmtpConfig>) -> Vec<oneshot::Sender<()>>
 /// Both pieces share the same tick rhythm so the two histories
 /// stay roughly synchronised; the streak math elsewhere assumes
 /// per-user snapshots are taken at roughly `SNAPSHOT_INTERVAL`.
-async fn snapshot_loop(
-    db: Pool,
-    mut shutdown: oneshot::Receiver<()>,
-    dispatch_tx: DispatchTx,
-) {
+async fn snapshot_loop(db: Pool, mut shutdown: oneshot::Receiver<()>, dispatch_tx: DispatchTx) {
     tracing::info!("snapshot_loop started");
 
     // Take an initial snapshot on startup so the first project
@@ -239,11 +234,9 @@ async fn capture_one_user(
     // dispatch — we just submit the candidate events.
     let current = user_burnout::for_user(db, user_id).await?;
     if let (Some(p), Some(c)) = (prior, current) {
-        if let Some(event) = detect_burnout_overload_edge(
-            user_id,
-            p.overload_streak_days,
-            c.overload_streak_days,
-        ) {
+        if let Some(event) =
+            detect_burnout_overload_edge(user_id, p.overload_streak_days, c.overload_streak_days)
+        {
             // try_send: if the dispatch channel is full,
             // drop the event with a warning log rather than
             // back-pressuring the snapshot loop. Edge events

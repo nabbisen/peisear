@@ -63,12 +63,8 @@ pub async fn list_page(
     // Velocity chart data: most recent completed sprints,
     // oldest-first for left-to-right reading.
     let velocity_window = peisear_core::sprints::VELOCITY_MEDIAN_WINDOW as i64;
-    let mut velocity_data = sprints::recent_completed_for_team(
-        &state.db,
-        &team.id,
-        velocity_window,
-    )
-    .await?;
+    let mut velocity_data =
+        sprints::recent_completed_for_team(&state.db, &team.id, velocity_window).await?;
     velocity_data.reverse();
 
     let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
@@ -395,12 +391,8 @@ pub async fn assign_issue(
     Form(form): Form<AssignIssueForm>,
 ) -> AppResult<Redirect> {
     // Verify the issue's project is accessible to the user.
-    let project = peisear_storage::projects::find_accessible(
-        &state.db,
-        &project_id,
-        &user.id,
-    )
-    .await?;
+    let project =
+        peisear_storage::projects::find_accessible(&state.db, &project_id, &user.id).await?;
 
     // Phase C PR1 (peisear-feature-spec-v2.1 §8.5): sub-issues
     // follow the parent's sprint. Reject explicit sprint
@@ -417,12 +409,9 @@ pub async fn assign_issue(
 
     // Personal projects (team_id None) can't have sprints
     // assigned, since sprints are team-scoped.
-    let team_id = project
-        .team_id
-        .clone()
-        .ok_or_else(|| AppError::Validation(
-            "Sprints are a team feature; this is a personal project.".into(),
-        ))?;
+    let team_id = project.team_id.clone().ok_or_else(|| {
+        AppError::Validation("Sprints are a team feature; this is a personal project.".into())
+    })?;
 
     let role = teams::role_for(&state.db, &team_id, &user.id).await?;
     let Some(role) = role else {

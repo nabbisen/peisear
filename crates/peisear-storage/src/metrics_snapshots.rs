@@ -90,7 +90,16 @@ pub async fn recent_for_project(
     max_days_ago: i64,
 ) -> StorageResult<Vec<Snapshot>> {
     let rows: Vec<(
-        i64, i64, Option<i64>, i64, i64, i64, i64, i64, i64, i64,
+        i64,
+        i64,
+        Option<i64>,
+        i64,
+        i64,
+        i64,
+        i64,
+        i64,
+        i64,
+        i64,
         chrono::DateTime<chrono::Utc>,
     )> = sqlx::query_as(
         r#"

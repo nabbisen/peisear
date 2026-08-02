@@ -33,48 +33,64 @@ use crate::{Pool, StorageError, StorageResult};
 
 /// Find a team by its id. None if missing.
 pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Team>> {
-    let row: Option<(String, String, String, Option<String>, DateTime<Utc>, DateTime<Utc>)> =
-        sqlx::query_as(
-            r#"
+    let row: Option<(
+        String,
+        String,
+        String,
+        Option<String>,
+        DateTime<Utc>,
+        DateTime<Utc>,
+    )> = sqlx::query_as(
+        r#"
             SELECT id, name, slug, description, created_at, updated_at
             FROM teams
             WHERE id = ?1
             "#,
-        )
-        .bind(id)
-        .fetch_optional(pool)
-        .await?;
-    Ok(row.map(|(id, name, slug, description, created_at, updated_at)| Team {
-        id,
-        name,
-        slug,
-        description,
-        created_at,
-        updated_at,
-    }))
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.map(
+        |(id, name, slug, description, created_at, updated_at)| Team {
+            id,
+            name,
+            slug,
+            description,
+            created_at,
+            updated_at,
+        },
+    ))
 }
 
 /// Find a team by URL slug. The hot lookup for `/teams/{slug}`.
 pub async fn find_by_slug(pool: &Pool, slug: &str) -> StorageResult<Option<Team>> {
-    let row: Option<(String, String, String, Option<String>, DateTime<Utc>, DateTime<Utc>)> =
-        sqlx::query_as(
-            r#"
+    let row: Option<(
+        String,
+        String,
+        String,
+        Option<String>,
+        DateTime<Utc>,
+        DateTime<Utc>,
+    )> = sqlx::query_as(
+        r#"
             SELECT id, name, slug, description, created_at, updated_at
             FROM teams
             WHERE slug = ?1
             "#,
-        )
-        .bind(slug)
-        .fetch_optional(pool)
-        .await?;
-    Ok(row.map(|(id, name, slug, description, created_at, updated_at)| Team {
-        id,
-        name,
-        slug,
-        description,
-        created_at,
-        updated_at,
-    }))
+    )
+    .bind(slug)
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.map(
+        |(id, name, slug, description, created_at, updated_at)| Team {
+            id,
+            name,
+            slug,
+            description,
+            created_at,
+            updated_at,
+        },
+    ))
 }
 
 /// Teams the user is a member of, alphabetised by name. Used
@@ -103,25 +119,27 @@ pub async fn teams_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<(Te
 
     Ok(rows
         .into_iter()
-        .filter_map(|(id, name, slug, description, created_at, updated_at, role_str)| {
-            // Unknown role values are skipped; in practice the
-            // CHECK constraint prevents these, but we'd rather
-            // hide a row than panic on an unrecognised future
-            // role string.
-            TeamRole::from_storage_str(&role_str).map(|role| {
-                (
-                    Team {
-                        id,
-                        name,
-                        slug,
-                        description,
-                        created_at,
-                        updated_at,
-                    },
-                    role,
-                )
-            })
-        })
+        .filter_map(
+            |(id, name, slug, description, created_at, updated_at, role_str)| {
+                // Unknown role values are skipped; in practice the
+                // CHECK constraint prevents these, but we'd rather
+                // hide a row than panic on an unrecognised future
+                // role string.
+                TeamRole::from_storage_str(&role_str).map(|role| {
+                    (
+                        Team {
+                            id,
+                            name,
+                            slug,
+                            description,
+                            created_at,
+                            updated_at,
+                        },
+                        role,
+                    )
+                })
+            },
+        )
         .collect())
 }
 
@@ -349,11 +367,7 @@ pub async fn update_role(
 /// Removing the last admin would orphan the team — application
 /// layer guards against that. The schema does not (we'd need a
 /// trigger for that and the application check is tractable).
-pub async fn remove_member(
-    pool: &Pool,
-    team_id: &str,
-    user_id: &str,
-) -> StorageResult<()> {
+pub async fn remove_member(pool: &Pool, team_id: &str, user_id: &str) -> StorageResult<()> {
     let res = sqlx::query(
         r#"
         DELETE FROM team_memberships

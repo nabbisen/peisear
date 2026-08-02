@@ -104,10 +104,8 @@ async fn detail_page_renders_sub_issues_section_for_top_level() {
     let user_id = register_and_login(&app, &user).await;
     let project_id = create_personal_project(&app.db, &user_id, "Proj").await;
     let parent_id = create_issue(&app.db, &project_id, &user_id, "Big task").await;
-    let _sub_id = insert_sub_issue_via_storage(
-        &app, &project_id, &parent_id, &user_id, "Small step",
-    )
-    .await;
+    let _sub_id =
+        insert_sub_issue_via_storage(&app, &project_id, &parent_id, &user_id, "Small step").await;
 
     let url = format!("/projects/{project_id}/issues/{parent_id}");
     let resp = app.server.get(&url).await;
@@ -138,7 +136,8 @@ async fn detail_page_omits_sub_issues_section_for_sub_issue() {
     let user_id = register_and_login(&app, &user).await;
     let project_id = create_personal_project(&app.db, &user_id, "Proj").await;
     let parent_id = create_issue(&app.db, &project_id, &user_id, "Big task").await;
-    let sub_id = insert_sub_issue_via_storage(&app, &project_id, &parent_id, &user_id, "Step").await;
+    let sub_id =
+        insert_sub_issue_via_storage(&app, &project_id, &parent_id, &user_id, "Step").await;
 
     let url = format!("/projects/{project_id}/issues/{sub_id}");
     let resp = app.server.get(&url).await;
@@ -207,8 +206,7 @@ async fn cannot_create_sub_issue_under_a_sub_issue() {
     let user_id = register_and_login(&app, &user).await;
     let project_id = create_personal_project(&app.db, &user_id, "Proj").await;
     let parent_id = create_issue(&app.db, &project_id, &user_id, "Top").await;
-    let sub_id =
-        insert_sub_issue_via_storage(&app, &project_id, &parent_id, &user_id, "Sub").await;
+    let sub_id = insert_sub_issue_via_storage(&app, &project_id, &parent_id, &user_id, "Sub").await;
 
     let url = format!("/projects/{project_id}/issues/{sub_id}/sub-issues/new");
     let resp = app
@@ -293,20 +291,12 @@ async fn cannot_assign_sprint_directly_to_sub_issue() {
     let sprint_id = common::fixture::create_planned_sprint(&app.db, &team_id, "S1").await;
 
     let project_id = uuid::Uuid::new_v4().to_string();
-    peisear_storage::projects::insert(
-        &app.db,
-        &project_id,
-        &user_id,
-        "TP",
-        "tp",
-        Some(&team_id),
-    )
-    .await
-    .expect("project insert");
+    peisear_storage::projects::insert(&app.db, &project_id, &user_id, "TP", "tp", Some(&team_id))
+        .await
+        .expect("project insert");
 
     let parent_id = create_issue(&app.db, &project_id, &user_id, "P").await;
-    let sub_id =
-        insert_sub_issue_via_storage(&app, &project_id, &parent_id, &user_id, "C").await;
+    let sub_id = insert_sub_issue_via_storage(&app, &project_id, &parent_id, &user_id, "C").await;
 
     let url = format!("/projects/{project_id}/issues/{sub_id}/sprint");
     let resp = app

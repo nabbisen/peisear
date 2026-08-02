@@ -190,11 +190,7 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Capa
 
 /// Find one row by id (scoped to user_id for safety). Returns
 /// `None` when no such row exists for this user.
-pub async fn find(
-    pool: &Pool,
-    user_id: &str,
-    id: &str,
-) -> StorageResult<Option<CapacityRow>> {
+pub async fn find(pool: &Pool, user_id: &str, id: &str) -> StorageResult<Option<CapacityRow>> {
     let row: Option<(
         String,
         String,
@@ -316,12 +312,19 @@ pub async fn insert(
             ));
         }
     }
-    if let Some(conflict) = overlaps_existing(pool, user_id, period_start, period_end, None).await? {
+    if let Some(conflict) = overlaps_existing(pool, user_id, period_start, period_end, None).await?
+    {
         return Err(StorageError::Conflict(format!(
             "row {} ({} to {}, {} pt) overlaps the proposed period",
             conflict.id,
-            conflict.period_start.map(|d| d.to_string()).unwrap_or_else(|| "—".into()),
-            conflict.period_end.map(|d| d.to_string()).unwrap_or_else(|| "—".into()),
+            conflict
+                .period_start
+                .map(|d| d.to_string())
+                .unwrap_or_else(|| "—".into()),
+            conflict
+                .period_end
+                .map(|d| d.to_string())
+                .unwrap_or_else(|| "—".into()),
             conflict.points,
         )));
     }
@@ -362,8 +365,14 @@ pub async fn update(
         return Err(StorageError::Conflict(format!(
             "row {} ({} to {}, {} pt) overlaps the proposed period",
             conflict.id,
-            conflict.period_start.map(|d| d.to_string()).unwrap_or_else(|| "—".into()),
-            conflict.period_end.map(|d| d.to_string()).unwrap_or_else(|| "—".into()),
+            conflict
+                .period_start
+                .map(|d| d.to_string())
+                .unwrap_or_else(|| "—".into()),
+            conflict
+                .period_end
+                .map(|d| d.to_string())
+                .unwrap_or_else(|| "—".into()),
             conflict.points,
         )));
     }
@@ -392,13 +401,11 @@ pub async fn update(
 
 /// Delete one row. Scoped to `user_id` for safety.
 pub async fn delete(pool: &Pool, user_id: &str, id: &str) -> StorageResult<()> {
-    let res = sqlx::query(
-        r#"DELETE FROM user_capacities WHERE id = ?1 AND user_id = ?2"#,
-    )
-    .bind(id)
-    .bind(user_id)
-    .execute(pool)
-    .await?;
+    let res = sqlx::query(r#"DELETE FROM user_capacities WHERE id = ?1 AND user_id = ?2"#)
+        .bind(id)
+        .bind(user_id)
+        .execute(pool)
+        .await?;
     if res.rows_affected() == 0 {
         return Err(StorageError::NotFound);
     }
@@ -416,7 +423,9 @@ pub async fn close_at(
     id: &str,
     new_period_end: NaiveDate,
 ) -> StorageResult<()> {
-    let row = find(pool, user_id, id).await?.ok_or(StorageError::NotFound)?;
+    let row = find(pool, user_id, id)
+        .await?
+        .ok_or(StorageError::NotFound)?;
     update(
         pool,
         user_id,

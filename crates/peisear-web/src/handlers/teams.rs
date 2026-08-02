@@ -61,11 +61,7 @@ pub async fn new_page(
     Query(q): Query<FlashQuery>,
 ) -> AppResult<impl IntoResponse> {
     let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
-    Ok(components::teams::render_new(
-        user,
-        unread_count,
-        q.error,
-    ))
+    Ok(components::teams::render_new(user, unread_count, q.error))
 }
 
 #[derive(Debug, Deserialize)]
@@ -212,9 +208,7 @@ pub async fn update(
         Some(form.description.trim())
     };
     teams::update_team(&state.db, &team.id, name, description).await?;
-    Ok(Redirect::to(&format!(
-        "/teams/{slug}?flash=Team+updated"
-    )))
+    Ok(Redirect::to(&format!("/teams/{slug}?flash=Team+updated")))
 }
 
 #[derive(Debug, Deserialize)]
@@ -252,9 +246,7 @@ pub async fn add_member(
     };
 
     match teams::add_member(&state.db, &team.id, &target.id, new_role).await {
-        Ok(()) => Ok(Redirect::to(&format!(
-            "/teams/{slug}?flash=Member+added"
-        ))),
+        Ok(()) => Ok(Redirect::to(&format!("/teams/{slug}?flash=Member+added"))),
         Err(peisear_storage::StorageError::Conflict(msg)) => {
             let encoded = percent_encode_query(&msg);
             Ok(Redirect::to(&format!("/teams/{slug}?error={encoded}")))
@@ -304,9 +296,7 @@ pub async fn update_member_role(
     }
 
     teams::update_role(&state.db, &team.id, &target_user_id, new_role).await?;
-    Ok(Redirect::to(&format!(
-        "/teams/{slug}?flash=Role+updated"
-    )))
+    Ok(Redirect::to(&format!("/teams/{slug}?flash=Role+updated")))
 }
 
 pub async fn remove_member(
@@ -348,9 +338,7 @@ pub async fn remove_member(
     if is_self_removal {
         Ok(Redirect::to("/teams?flash=You+left+the+team"))
     } else {
-        Ok(Redirect::to(&format!(
-            "/teams/{slug}?flash=Member+removed"
-        )))
+        Ok(Redirect::to(&format!("/teams/{slug}?flash=Member+removed")))
     }
 }
 

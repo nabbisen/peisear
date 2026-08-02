@@ -77,7 +77,13 @@ pub async fn recent_for_user(
     window_days: i64,
 ) -> StorageResult<Vec<UserSnapshot>> {
     let rows: Vec<(
-        String, i64, i64, Option<i64>, i64, i64, i64,
+        String,
+        i64,
+        i64,
+        Option<i64>,
+        i64,
+        i64,
+        i64,
         chrono::DateTime<chrono::Utc>,
     )> = sqlx::query_as(
         r#"

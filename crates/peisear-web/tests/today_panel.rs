@@ -87,7 +87,9 @@ async fn today_folds_rhythm_panel_by_default() {
     if let Some(idx) = body.find("Rhythm — open to see throughput") {
         // Walk backwards to find the most recent `<details`.
         let prefix = &body[..idx];
-        let last_details = prefix.rfind("<details").expect("details tag before Rhythm summary");
+        let last_details = prefix
+            .rfind("<details")
+            .expect("details tag before Rhythm summary");
         // The full opening tag ends at the next `>`.
         let tag_end = prefix[last_details..]
             .find('>')

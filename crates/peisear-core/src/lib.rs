@@ -616,24 +616,12 @@ pub mod project_health {
         /// to explain what the indicator measures.
         pub fn description(&self) -> &'static str {
             match self {
-                Self::Throughput => {
-                    "Share of issues that have reached Done."
-                }
-                Self::Staleness => {
-                    "Age of the oldest issue still Open or In Progress."
-                }
-                Self::Activity => {
-                    "Issues created or finished in the last 14 days."
-                }
-                Self::BusFactor => {
-                    "Concentration of in-flight work on a single user."
-                }
-                Self::LongStale => {
-                    "Share of in-flight issues untouched for over two weeks."
-                }
-                Self::WipCompliance => {
-                    "Share of active users currently over their WIP limit."
-                }
+                Self::Throughput => "Share of issues that have reached Done.",
+                Self::Staleness => "Age of the oldest issue still Open or In Progress.",
+                Self::Activity => "Issues created or finished in the last 14 days.",
+                Self::BusFactor => "Concentration of in-flight work on a single user.",
+                Self::LongStale => "Share of in-flight issues untouched for over two weeks.",
+                Self::WipCompliance => "Share of active users currently over their WIP limit.",
             }
         }
     }
@@ -709,21 +697,21 @@ pub mod project_health {
                 IndicatorKind::Throughput => format!(
                     "Throughput is {value} — fewer issues are reaching Done than the rest of the project's history."
                 ),
-                IndicatorKind::Staleness => format!(
-                    "The oldest in-flight issue has been open for {value}."
-                ),
-                IndicatorKind::Activity => format!(
-                    "Issue activity in the last two weeks is {value}."
-                ),
-                IndicatorKind::BusFactor => format!(
-                    "{value} of in-flight work is concentrated on one person."
-                ),
-                IndicatorKind::LongStale => format!(
-                    "{value} of in-flight issues haven't been touched in over two weeks."
-                ),
-                IndicatorKind::WipCompliance => format!(
-                    "{value} of active assignees are over their WIP limit."
-                ),
+                IndicatorKind::Staleness => {
+                    format!("The oldest in-flight issue has been open for {value}.")
+                }
+                IndicatorKind::Activity => {
+                    format!("Issue activity in the last two weeks is {value}.")
+                }
+                IndicatorKind::BusFactor => {
+                    format!("{value} of in-flight work is concentrated on one person.")
+                }
+                IndicatorKind::LongStale => {
+                    format!("{value} of in-flight issues haven't been touched in over two weeks.")
+                }
+                IndicatorKind::WipCompliance => {
+                    format!("{value} of active assignees are over their WIP limit.")
+                }
             })
         }
     }
@@ -1131,7 +1119,9 @@ pub mod project_health {
         if weight_total == 0.0 {
             return 50; // every indicator is Insufficient — neutral.
         }
-        ((weighted_sum / weight_total) * 100.0).round().clamp(0.0, 100.0) as u8
+        ((weighted_sum / weight_total) * 100.0)
+            .round()
+            .clamp(0.0, 100.0) as u8
     }
 
     fn classify_score(value: u8) -> HealthIndicator {
@@ -1152,9 +1142,7 @@ pub mod project_health {
         // by weight (heavier indicators surface first).
         let mut bad: Vec<&Indicator> = indicators
             .iter()
-            .filter(|i| {
-                matches!(i.state, HealthIndicator::Concern | HealthIndicator::Watch)
-            })
+            .filter(|i| matches!(i.state, HealthIndicator::Concern | HealthIndicator::Watch))
             .collect();
         bad.sort_by(|a, b| {
             // Concern outranks Watch, then heavier weight first.
@@ -1163,13 +1151,11 @@ pub mod project_health {
                 HealthIndicator::Watch => 1,
                 _ => 2,
             };
-            order(a.state)
-                .cmp(&order(b.state))
-                .then_with(|| {
-                    b.weight
-                        .partial_cmp(&a.weight)
-                        .unwrap_or(std::cmp::Ordering::Equal)
-                })
+            order(a.state).cmp(&order(b.state)).then_with(|| {
+                b.weight
+                    .partial_cmp(&a.weight)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
         });
 
         if bad.is_empty() {
@@ -1221,8 +1207,7 @@ pub mod personal_metrics {
     /// Window over which "I finished N issues" is counted on the
     /// personal throughput chip. Same window as
     /// [`super::project_health::ACTIVITY_WINDOW_DAYS`] for symmetry.
-    pub const PERSONAL_ACTIVITY_WINDOW_DAYS: i64 =
-        super::project_health::ACTIVITY_WINDOW_DAYS;
+    pub const PERSONAL_ACTIVITY_WINDOW_DAYS: i64 = super::project_health::ACTIVITY_WINDOW_DAYS;
 
     /// Snapshot of a single user's current load and recent rhythm,
     /// scoped to one project.
@@ -1537,8 +1522,8 @@ pub mod user_burnout {
     pub fn summarize(signals: &UserBurnoutSignals) -> String {
         let overload = classify_overload_streak(signals);
         let stalled = classify_stalled(signals);
-        let any_watch = matches!(overload, HealthIndicator::Watch)
-            || matches!(stalled, HealthIndicator::Watch);
+        let any_watch =
+            matches!(overload, HealthIndicator::Watch) || matches!(stalled, HealthIndicator::Watch);
 
         if !any_watch {
             return "Steady so far.".to_string();
@@ -1782,10 +1767,7 @@ pub mod notifications {
         prior_streak_days < threshold && current_streak_days >= threshold
     }
 
-    pub fn is_edge_into_watch_burnout_stalled(
-        prior_max_days: i64,
-        current_max_days: i64,
-    ) -> bool {
+    pub fn is_edge_into_watch_burnout_stalled(prior_max_days: i64, current_max_days: i64) -> bool {
         let threshold = crate::user_burnout::STALLED_WATCH_DAYS;
         prior_max_days < threshold && current_max_days >= threshold
     }

@@ -56,12 +56,10 @@ const STREAK_WINDOW_DAYS: i64 = 14;
 pub async fn for_user(pool: &Pool, user_id: &str) -> StorageResult<Option<UserBurnoutSignals>> {
     // Confirm the user exists (defensive — callers usually have
     // already done so via auth, but it's cheap to check).
-    let exists: Option<(String,)> = sqlx::query_as(
-        r#"SELECT id FROM users WHERE id = ?1"#,
-    )
-    .bind(user_id)
-    .fetch_optional(pool)
-    .await?;
+    let exists: Option<(String,)> = sqlx::query_as(r#"SELECT id FROM users WHERE id = ?1"#)
+        .bind(user_id)
+        .fetch_optional(pool)
+        .await?;
     if exists.is_none() {
         return Ok(None);
     }
@@ -223,11 +221,8 @@ async fn estimation_drift_for_user(
         };
 
         // Bucket by closed_at.
-        let closed_at = chrono::NaiveDateTime::parse_from_str(
-            &closed_at_str,
-            "%Y-%m-%d %H:%M:%S",
-        )
-        .ok();
+        let closed_at =
+            chrono::NaiveDateTime::parse_from_str(&closed_at_str, "%Y-%m-%d %H:%M:%S").ok();
         let Some(closed_at) = closed_at else { continue };
 
         if closed_at >= cutoff {
