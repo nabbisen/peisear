@@ -12,20 +12,19 @@
 //! - Authenticated as the *same* user: 200 OK (smoke-checked
 //!   in `smoke.rs`, not re-asserted here)
 //!
-//! ## Phase A status
+//! ## Coverage note (RFC 007 / DEV-005 item B)
 //!
-//! As of Phase A entry, the `/api/users/{user_id}/...` endpoints
-//! enumerated in §11.5.1 don't yet exist. This file holds:
-//!
-//! 1. Tests for endpoints that already exist and should already
-//!    enforce the boundary (e.g. `/me`).
-//! 2. `#[ignore]`d tests for endpoints that will exist after
-//!    Phase B/C, so the test inventory is in place when those
-//!    endpoints land.
-//!
-//! When a Phase B/C PR adds a new personal-data endpoint, the
-//! `#[ignore]` is removed in the same PR, and the test confirms
-//! the new authorization guard is wired correctly.
+//! This file used to hold a placeholder `#[ignore]`d test,
+//! `cross_user_settings_post_returns_403`, awaiting a user-scoped
+//! POST endpoint (`/api/users/{user_id}/wip-limit` or similar,
+//! `FR-API-006`) that has never been scheduled. It was withdrawn
+//! rather than left `#[ignore]`d — an ignored test on a privacy
+//! boundary reads as coverage that does not exist. Settings
+//! mutations (`/settings/wip-limit`, `/settings/capacity/*`) are
+//! session-scoped, not addressed by `user_id` in the path, so
+//! "cross-user POST" isn't expressible against them today. If
+//! `FR-API-006` ever lands a user-scoped POST surface, reinstate an
+//! equivalent test against it.
 
 mod common;
 
@@ -223,22 +222,6 @@ async fn team_admin_cannot_read_member_personal_data() {
     let url = format!("/api/users/{}/notifications", bob_id);
     let resp = app.server.get(&url).await;
     assert_eq!(resp.status_code(), StatusCode::FORBIDDEN);
-}
-
-// -------------------------------------------------------------------
-// Cross-user POST endpoints (preferences, capacity edit) —
-// Phase B (planned)
-// -------------------------------------------------------------------
-
-#[tokio::test]
-#[ignore = "user-scoped POSTs not yet exposed by user_id path — Phase B"]
-async fn cross_user_settings_post_returns_403() {
-    // Once /api/users/{user_id}/wip-limit (or similar) exists as
-    // an explicit user-scoped POST, Alice POSTing to Bob's URL
-    // must 403. Currently /settings/wip-limit is implicitly
-    // "self" — no need for this test until the explicit shape
-    // lands.
-    todo!("write once explicit user-scoped POSTs land");
 }
 
 // -------------------------------------------------------------------

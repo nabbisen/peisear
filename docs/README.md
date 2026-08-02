@@ -23,7 +23,7 @@ first.
 - [Workspace layout](architecture/workspace-layout.md) — every file,
   every directory, why it's there
 - [Crate boundaries](architecture/crate-boundaries.md) — why there are
-  four crates and what belongs in each
+  six crates and what belongs in each
 - [Leptos SSR](architecture/leptos-ssr.md) — why SSR-only mode, what it
   buys us, and what it rules out
 

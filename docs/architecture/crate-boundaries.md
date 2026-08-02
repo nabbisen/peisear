@@ -1,10 +1,10 @@
 # Crate Boundaries
 
-peisear is split into four implementation crates plus a thin facade
-crate, because the Roadmap has four kinds of work — each with a
+peisear is split into five implementation crates plus a thin facade
+crate, because the Roadmap has distinct kinds of work — each with a
 natural home — and crates.io needs a single name to install.
 
-## The four implementation crates
+## The five implementation crates
 
 ### `peisear-core` — the vocabulary
 
@@ -46,9 +46,22 @@ selected. `StorageError` is already abstract enough (`Database`,
 `Migration`, `InvalidData`, `NotFound`, `Bootstrap`) to hold either
 backend's errors.
 
+### `peisear-notify` — the notification dispatch pipeline
+
+Three stages connected by a tokio `mpsc::channel`: detection (a
+caller in `peisear-web` observes a state change and sends a
+`DispatchEvent`), filtering + delivery (resolves the user's
+notification preference, applies severity and cooldown filters,
+persists an audit row), and per-channel send (`in_app`, `email`,
+`webhook`). Depends on `peisear-core` (domain types) and
+`peisear-storage` (the audit row, preference lookups). The rule:
+**anything about deciding whether, and how, to notify a user lives
+here** — separate from `peisear-web` so the filtering/cooldown logic
+is testable without spinning up HTTP.
+
 ### `peisear-web` — the HTTP surface
 
-Depends on all three above. The rule: **anything with a URL, a
+Depends on all four above. The rule: **anything with a URL, a
 status code, or a `Set-Cookie` header lives here.** This is where
 axum, Leptos, extractors, handlers, and Leptos components all live.
 
@@ -64,10 +77,13 @@ facade.
 
 ### `peisear` — crates.io entry point
 
-Pulls in all four implementation crates and exposes them as
+Pulls in four of the five implementation crates and exposes them as
 `peisear::core`, `peisear::auth`, `peisear::storage`, and
-`peisear::web`. Owns `[[bin]] name = "peisear"` so that
-`cargo install peisear` ships the runnable server.
+`peisear::web`. (`peisear-notify` is a dependency of `peisear-web`,
+not re-exported separately here — external consumers of this facade
+get it transitively through `peisear::web`, not as its own module.)
+Owns `[[bin]] name = "peisear"` so that `cargo install peisear` ships
+the runnable server.
 
 The rule: **the facade is the public face on crates.io; it does not
 own logic.** `main.rs` is a fifteen-line bootstrap that calls into
@@ -108,7 +124,7 @@ into the next, and the leaks are one-directional and explicit.
 | Per-issue effort estimates | Column on `issues` (storage migration) + field on `Issue` (core) + form rendering (web) |
 | Per-period capacity limits | New table + queries in storage; new pages in web |
 | Project-health score | Computed query in storage; component in web |
-| AI assistant per user | New `peisear-ai` crate alongside the existing four, depending on core + async HTTP client; web wires it in |
+| AI assistant per user | New `peisear-ai` crate alongside the existing five, depending on core + async HTTP client; web wires it in |
 | **PostgreSQL backend** | Feature flag on `peisear-storage` or a sibling `…-postgres` crate. `Pool` alias and `StorageError` already in place |
 | **OIDC / IDaaS** | New module inside `peisear-auth` behind a feature flag; web adds a callback handler |
 | **CI/CD + IaC** | `infra/` directory: Dockerfile, compose.yaml, GitHub Actions, Terraform |

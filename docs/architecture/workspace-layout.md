@@ -1,6 +1,6 @@
 # Workspace Layout
 
-peisear is a Cargo workspace containing four published crates plus
+peisear is a Cargo workspace containing six published crates plus
 static assets and an `infra/` placeholder. The tree:
 
 ```
@@ -40,6 +40,12 @@ peisear/
 │   │                                #   StorageError, Pool alias
 │   │                                #   (SqlitePool today), per-table
 │   │                                #   query modules. sqlx + core only.
+│   │
+│   ├── peisear-notify/              # Notification dispatch pipeline.
+│   │   └── src/{lib,dispatch,edge,channel,email,config}.rs
+│   │                                #   Detection -> filter/cooldown ->
+│   │                                #   per-channel send. Depends on
+│   │                                #   core + storage only.
 │   │
 │   ├── peisear-web/                 # HTTP surface (library only).
 │   │   └── src/

@@ -89,6 +89,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   blocking the lint pass from reaching it) — tracked separately as
   `ISSUE-002`, not yet resolved.
 
+### Removed
+
+- **Withdrew the `#[ignore]`d `cross_user_settings_post_returns_403` test**
+  (DEV-005 item B, `RSK-003`). It asserted a boundary that cannot exist
+  while settings mutations (`/settings/wip-limit`, `/settings/capacity/*`)
+  are session-scoped rather than addressed by `user_id` in the path —
+  `FR-API-006`, which would introduce such a user-scoped POST surface, is
+  unscheduled. An `#[ignore]`d test on a privacy boundary reads as coverage
+  that does not exist, so it's withdrawn rather than left in place.
+  Reinstate an equivalent test if `FR-API-006` ever lands. Confirmed no
+  other test covers cross-user settings access before removing it.
+
+### Fixed (documentation)
+
+- **"Four crates" was wrong everywhere it appeared** (DEV-005 item C,
+  `TRK-024`). The workspace has six crates (`peisear-core`, `peisear-auth`,
+  `peisear-storage`, `peisear-notify`, `peisear-web`, `peisear`); `README.md`
+  and three `docs/architecture/` files said four and, in `crate-boundaries.md`
+  and `workspace-layout.md`'s case, didn't mention `peisear-notify` at all.
+  Corrected the counts and added the missing crate's entry to both documents
+  (short description in `crate-boundaries.md`; a tree entry in
+  `workspace-layout.md`). Left the kanban drag-and-drop description in
+  `README.md` untouched — it's accurate; the previously-recorded
+  `FR-DM-001` status was the error, corrected separately in the
+  requirements baseline amendments.
+
 ## [0.19.1] — 2026-05-05
 
 ### Added (documentation)

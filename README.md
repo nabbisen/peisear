@@ -58,9 +58,10 @@ The full guide is in [`docs/getting-started/`](docs/getting-started/README.md).
 - **One binary deploy.** Migrations embedded at compile time,
   templates compiled into the binary. Ship one executable plus
   `static/` and you're live.
-- **Workspace-first architecture.** Four crates — `core`, `auth`,
-  `storage`, `web` — with deliberately thin waists, so swapping
-  SQLite for Postgres or adding OIDC is a localised change.
+- **Workspace-first architecture.** Six crates — `core`, `auth`,
+  `storage`, `notify`, `web`, and a thin `peisear` facade — with
+  deliberately thin waists, so swapping SQLite for Postgres or
+  adding OIDC is a localised change.
 
 ## Design Notes
 
