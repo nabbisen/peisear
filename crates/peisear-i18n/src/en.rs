@@ -6,6 +6,25 @@
 //! adding an arm here and this function fails to compile. See
 //! `I18N-001`'s review request for a demonstration (temporarily
 //! removing an arm and capturing the resulting compiler error).
+//!
+//! The two `#![deny]`s below are what keep that guarantee from being
+//! able to quietly dissolve: without them, a future `_ => ...` arm
+//! added to any match in this file would compile cleanly and
+//! silently stop distinguishing a missing key from a handled one
+//! (`I18N-001-review.md` §4) — the exhaustiveness guarantee would go
+//! back to being a convention, exactly the failure mode this release
+//! exists to replace. Two lints, not one: `wildcard_enum_match_arm`
+//! alone does **not** fire when the wildcard covers exactly one
+//! remaining variant — verified empirically while implementing this
+//! correction, not assumed from the lint's name — which is precisely
+//! the shape a real regression would most likely take (one arm
+//! quietly swapped for `_`, not several at once).
+//! `match_wildcard_for_single_variants` covers that gap. Scoped to
+//! this module rather than crate-wide, since both are restriction
+//! lints that would also fire on unrelated matches over enums this
+//! crate doesn't own.
+#![deny(clippy::wildcard_enum_match_arm)]
+#![deny(clippy::match_wildcard_for_single_variants)]
 
 use crate::message::{EntityKind, Field, MessageKey};
 
