@@ -182,12 +182,12 @@ pub async fn in_progress_seconds_for_issue(
     // in_progress but our last event was 'in_progress' (which
     // shouldn't happen if events are written in sync with the
     // issues table, but be defensive), discard the orphan window.
-    if let Some(start) = window_start {
-        if current_status.as_deref() == Some("in_progress") {
-            let now = chrono::Utc::now().naive_utc();
-            let dur = (now - start).num_seconds().max(0) as f64;
-            total_seconds += dur;
-        }
+    if let Some(start) = window_start
+        && current_status.as_deref() == Some("in_progress")
+    {
+        let now = chrono::Utc::now().naive_utc();
+        let dur = (now - start).num_seconds().max(0) as f64;
+        total_seconds += dur;
     }
 
     Ok(Some(total_seconds))

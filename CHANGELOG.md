@@ -110,6 +110,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `peisear-web` (masked until now by `peisear-storage`'s compile failure
   blocking the lint pass from reaching it) — tracked separately as
   `ISSUE-002`, not yet resolved.
+- **`cargo fmt`/`cargo clippy` were never exercised at a pinned, reproducible
+  toolchain, and the declared MSRV was never built in CI** (DEV-005 item A,
+  `TRK-022`, `RSK-002`, `NFR-CMP-001`). `rust-toolchain.toml` now pins
+  `1.97.1` for `fmt`/`clippy` determinism across contributors and CI, kept
+  separate from the MSRV itself; `rust-version` in `Cargo.toml` is raised
+  from `1.85` (which does not build — `ISSUE-004`) to `1.88.0` (owner-
+  ratified, `DEC-044`), and a new CI job builds the workspace on `1.88.0`
+  so the MSRV claim is tested rather than asserted. Raising the declared
+  MSRV enlarged clippy's lint surface — `collapsible_if` is MSRV-aware and
+  only suggests let-chain syntax once the crate declares support for it —
+  surfacing 7 findings across two crates (6 in `peisear-storage`, 1 in
+  `peisear-web`'s `jobs.rs`), none pre-existing debt, all a direct
+  consequence of this handoff's own change (`ISSUE-005`). Rewritten as
+  let-chains rather than suppressed; `pool.rs`'s three-deep nesting
+  collapsed into one flat condition rather than a mechanical three-level
+  translation. No behaviour change; `cargo clippy --workspace --all-targets
+  -- -D warnings` remains at exit 0.
 
 ### Removed
 

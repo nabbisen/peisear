@@ -191,3 +191,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo build --workspace
+
+  # Exercises the declared MSRV (Cargo.toml's rust-version) so drift
+  # is caught the day it happens rather than months later (DEV-005
+  # item A, RSK-002, NFR-CMP-001 -- this is how ISSUE-004 came about).
+  # Build only, on the MSRV itself -- fmt/clippy run on the pinned
+  # rust-toolchain.toml version (1.97.1) above, not on the MSRV floor.
+  msrv:
+    name: cargo build (MSRV)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@1.88.0
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --workspace

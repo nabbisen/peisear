@@ -258,14 +258,13 @@ async fn capture_one_user(
             user_id,
             p.stalled_assigned_max_days,
             c.stalled_assigned_max_days,
-        ) {
-            if let Err(err) = dispatch_tx.try_send(event) {
-                tracing::warn!(
-                    user_id = %user_id,
-                    error = %err,
-                    "snapshot_loop: dispatch channel full or closed (stalled edge)",
-                );
-            }
+        ) && let Err(err) = dispatch_tx.try_send(event)
+        {
+            tracing::warn!(
+                user_id = %user_id,
+                error = %err,
+                "snapshot_loop: dispatch channel full or closed (stalled edge)",
+            );
         }
     }
 

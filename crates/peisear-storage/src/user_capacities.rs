@@ -279,14 +279,14 @@ pub async fn insert(
     period_end: Option<NaiveDate>,
     note: Option<&str>,
 ) -> StorageResult<String> {
-    if let (Some(s), Some(e)) = (period_start, period_end) {
-        if s > e {
-            // Defensive — the schema CHECK catches this too, but we
-            // produce a nicer error message before hitting the DB.
-            return Err(StorageError::Validation(
-                "period_start must be on or before period_end".into(),
-            ));
-        }
+    if let (Some(s), Some(e)) = (period_start, period_end)
+        && s > e
+    {
+        // Defensive — the schema CHECK catches this too, but we
+        // produce a nicer error message before hitting the DB.
+        return Err(StorageError::Validation(
+            "period_start must be on or before period_end".into(),
+        ));
     }
     if let Some(conflict) = overlaps_existing(pool, user_id, period_start, period_end, None).await?
     {

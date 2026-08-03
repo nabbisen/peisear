@@ -22,7 +22,7 @@ members = [
 [workspace.package]
 version = "0.19.1"
 edition         = "2024"
-rust-version    = "1.85"
+rust-version    = "1.88.0"
 license         = "Apache-2.0"
 authors         = ["nabbisen"]
 categories      = ["web-programming", "command-line-utilities"]

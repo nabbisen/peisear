@@ -546,10 +546,10 @@ pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<Burndow
                     None
                 }
             });
-            if let Some(d) = done_date {
-                if d <= day {
-                    completed += effort_pt;
-                }
+            if let Some(d) = done_date
+                && d <= day
+            {
+                completed += effort_pt;
             }
         }
 

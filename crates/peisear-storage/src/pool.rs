@@ -9,16 +9,15 @@ use crate::{Pool, StorageError, StorageResult};
 /// pragmas. Uses WAL for better concurrent reads; `foreign_keys` on.
 pub async fn connect(url: &str) -> StorageResult<Pool> {
     // Ensure the parent directory exists when the URL points at a file.
-    if let Some(path) = url.strip_prefix("sqlite://") {
-        if !path.is_empty() && path != ":memory:" {
-            if let Some(parent) = Path::new(path).parent() {
-                if !parent.as_os_str().is_empty() {
-                    tokio::fs::create_dir_all(parent)
-                        .await
-                        .map_err(|e| StorageError::Bootstrap(format!("create_dir_all: {e}")))?;
-                }
-            }
-        }
+    if let Some(path) = url.strip_prefix("sqlite://")
+        && !path.is_empty()
+        && path != ":memory:"
+        && let Some(parent) = Path::new(path).parent()
+        && !parent.as_os_str().is_empty()
+    {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| StorageError::Bootstrap(format!("create_dir_all: {e}")))?;
     }
 
     let opts = SqliteConnectOptions::from_str(url)?
