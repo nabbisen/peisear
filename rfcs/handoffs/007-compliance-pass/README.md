@@ -32,9 +32,15 @@ Four one-line changes, no re-implementation. See `.git-exclude/reviewed/`.
 | "four sibling crates" in `crates/peisear/src/lib.rs:4` — item C scope now permits doc comments under `crates/*/src` | DEV-005 | `DEV-002-005-review.md` §2.3 |
 | One commit per handoff, dependency order, DEV-006 first | all | `DEV-006-007-review.md` §3 |
 
-### Remaining work — one item
+### Remaining work — two items, in order
 
-**Everything in RFC 007 is complete and reviewed except DEV-005 item A.**
+1. **DEV-005 item A** — see below. The last outstanding *fix*.
+2. **[DEV-009](./DEV-009-release-candidate-0.20.0.md)** — release-candidate
+   preparation. Version bump, changelog close-out, cold-cache gate run,
+   tarball. **Depends on item A.** Do not tag or publish: the owner approves
+   the release first.
+
+**Everything else in RFC 007 is complete and reviewed.**
 
 Item A is **unblocked**: the owner ratified `rust-version` → `1.88.0`
 (`DEC-044`) on 2026-08-03, and the handoff's §4 has been reissued with the

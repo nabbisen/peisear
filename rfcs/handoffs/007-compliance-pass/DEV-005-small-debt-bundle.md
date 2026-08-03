@@ -83,6 +83,49 @@ day it happens, instead of three months later, which is exactly how ISSUE-004
 came about. If it goes red, that is the signal to raise the declared value
 deliberately — still not something to change silently.
 
+### Item A, part 2 — clear the lints the MSRV bump unlocks (added 2026-08-03)
+
+**Non-change scope narrowed for this item only.** §3's "no source code in
+`crates/*/src`" does **not** apply to part 2. It still applies to items B and C.
+
+Raising `rust-version` to `1.88.0` enlarges clippy's lint surface:
+`collapsible_if` is MSRV-aware and only suggests let-chains when the declared
+version supports them (1.88). Six `collapsible_if` findings appear in
+`peisear-storage` as a direct result — `issue_events.rs` ×1, `pool.rs` ×3,
+`sprints.rs` ×1, `user_capacities.rs` ×1.
+
+These are folded in rather than given their own handoff because **they are
+caused by this item's own change**, not pre-existing debt it revealed — the
+distinction from ISSUE-001 and ISSUE-002. Splitting them would commit the MSRV
+bump with a knowingly-red gate and fix it afterwards, which is not a state to
+put in the history of the release that made the gate green.
+
+**The six are a lower bound.** `peisear-storage` failing under clippy means
+`peisear-notify` and `peisear-web` were never linted in that run — the same
+masking as ISSUE-002. The MSRV unlock applies to every crate. Work iteratively:
+
+1. Fix the storage findings.
+2. Re-run `cargo clippy --workspace --all-targets -- -D warnings`.
+3. Fix whatever surfaces.
+4. Repeat until exit 0.
+
+Report the count at each round, as DEV-008 did. If the total exceeds **15**, or
+any finding requires a behaviour change, stop and escalate.
+
+**Choose the clearest form, not mechanically the suggested one.** A let-chain is
+usually the right collapse and reads better than the nesting it replaces. But
+`pool.rs:12-14` is one three-deep nest reported as three findings; collapsing the
+outermost may reshape the inner ones, and a restructure may read better than a
+three-condition chain. Say what you chose and why.
+
+**Do not suppress.** `#[allow(clippy::collapsible_if)]` is not available here,
+and neither is a `clippy.toml` `msrv` override set below the declared value —
+that would make the project tell its tooling something it does not believe.
+
+**Consequence to be aware of**: adopting let-chains means the source itself
+requires 1.88, where today only the dependency tree does. That is deliberate and
+accepted; it is recorded so it is not later discovered.
+
 ## 5. Item B — resolve the ignored authorisation test
 
 **Priority: P2.** `cross_user_settings_post_returns_403` in
