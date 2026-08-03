@@ -1,6 +1,6 @@
 # RFC 0006: Internationalisation architecture and vocabulary guard
 
-**Status**: Proposed
+**Status**: Accepted
 **Target**: 0.21.0
 **Related spec sections**: §3 (vocabulary), §28.6 (computation vs presentation), §34 (language and locale)
 **Related requirements**: `NFR-LANG-001`, `NFR-LANG-003`, `NFR-LANG-005`, `FR-HLT-006`, `FR-HLT-009`, `NFR-MNT-001`, `NFR-MNT-002`

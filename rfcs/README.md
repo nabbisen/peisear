@@ -31,7 +31,7 @@ Design settled. Implementation may begin.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 007 | [0.20.0 compliance pass](./accepted/007-compliance-pass.md) — *has handoffs* | 0.20.0 |
+| 006 | [i18n architecture and vocabulary guard](./accepted/006-i18n-architecture.md) — *has handoffs* | 0.21.0 |
 | 001 | [Sprint planning page](./accepted/001-sprint-planning-page.md) | 0.22.0 |
 | 002 | [Calendar surfaces](./accepted/002-calendar-surfaces.md) | 0.23.0 |
 | 003 | [Inbox refinements](./accepted/003-inbox-refinements.md) | 0.24.0 |
@@ -42,7 +42,6 @@ Open for review. Design may still change.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 006 | [i18n architecture and vocabulary guard](./proposed/006-i18n-architecture.md) | 0.21.0 |
 | 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) | 0.25.0 |
 | 005 | [Quality consolidation](./proposed/005-quality-consolidation.md) | 0.26.0 |
 
@@ -50,6 +49,7 @@ Open for review. Design may still change.
 
 | ID | Title | Shipped in |
 |----|-------|------------|
+| 007 | [0.20.0 compliance pass](./done/007-compliance-pass.md) | 0.20.0 |
 | 000 | [RFC lifecycle policy](./done/000-rfc-lifecycle-policy.md) | policy in effect |
 
 ## Archive
@@ -68,7 +68,8 @@ the RFC number they are keyed to.
 
 | Directory | Governing RFC |
 |---|---|
-| [`handoffs/007-compliance-pass/`](./handoffs/007-compliance-pass/README.md) | 007 |
+| [`handoffs/006-i18n-architecture/`](./handoffs/006-i18n-architecture/README.md) | 006 — active |
+| [`handoffs/007-compliance-pass/`](./handoffs/007-compliance-pass/README.md) | 007 — historical, RFC implemented |
 
 ## Conventions
 

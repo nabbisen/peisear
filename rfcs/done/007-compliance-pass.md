@@ -1,6 +1,6 @@
 # RFC 007: 0.20.0 compliance pass
 
-**Status**: Accepted
+**Status**: Implemented (0.20.0)
 **Target**: 0.20.0
 **Related spec sections**: §3 (vocabulary), §11.5 (privacy boundary), §21.4 (optimistic lock), §28.2/§28.4/§28.6 (health presentation), §32 (keyboard alternatives)
 **Related requirements**: `NFR-CONC-001`, `NFR-CONC-005`, `NFR-PRIV-001`, `NFR-PRIV-002`, `NFR-PRIV-007`, `FR-DM-001`, `FR-DM-002`, `FR-HLT-008`, `FR-HLT-009`, `NFR-LANG-001`, `NFR-LANG-002`
