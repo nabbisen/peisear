@@ -2157,6 +2157,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "peisear-i18n"
+version = "0.20.0"
+
+[[package]]
 name = "peisear-notify"
 version = "0.20.0"
 dependencies = [

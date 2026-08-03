@@ -1,0 +1,10 @@
+[package]
+name        = "peisear-i18n"
+description = "User-visible message keys, locale tables, and the §1.7 vocabulary guard."
+readme      = "README.md"
+version.workspace       = true
+edition.workspace       = true
+rust-version.workspace  = true
+license.workspace       = true
+authors.workspace       = true
+repository.workspace    = true

@@ -11,6 +11,7 @@
 [workspace]
 resolver = "3"
 members = [
+    "crates/peisear-i18n",
     "crates/peisear-core",
     "crates/peisear-auth",
     "crates/peisear-storage",
@@ -32,6 +33,7 @@ documentation   = "https://docs.rs/peisear"
 
 [workspace.dependencies]
 # ─── Workspace‑local crates (consumed via `workspace = true`) ────────
+peisear-i18n                = { version = "0", path = "crates/peisear-i18n" }
 peisear-core                = { version = "0", path = "crates/peisear-core" }
 peisear-auth                = { version = "0", path = "crates/peisear-auth" }
 peisear-storage             = { version = "0", path = "crates/peisear-storage" }
