@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.0] — 2026-08-03
+
 ### Fixed (privacy)
 
 - **Workload chips disclosed a member's capacity and over-capacity state to
@@ -47,7 +49,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to add it: the card's outer element changed from `<a>` to `<div>`,
   because a `<form>` cannot nest inside an `<a>` (invalid HTML) — the link
   and the new form are now siblings, both children of the draggable
-  wrapper, so a drag still moves both together.
+  wrapper, so a drag still moves both together. The inner `<a>` carries
+  `draggable="false"`: an anchor is draggable by browser default, and
+  without it the restructure left two nested drag sources, so a drag
+  would have carried the link's `href` instead of the card.
 - **Kanban status endpoint bypassed the optimistic-lock contract**
   (RFC 007 §10.6, DEV-001). `POST /projects/{id}/issues/{issue_id}/status`
   carried a "Phase A rollout" bypass that accepted and applied a status
@@ -62,9 +67,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   card and sends it back on drop; a stale value now surfaces as a real
   409 conflict for the first time, so `static/board.js` gained rollback
   (revert the card to its original column), a `role="status"` message
-  region in place of `alert()`, and removal of the "Failed to update
-  status" string (§1.7). `check_optimistic_lock`'s parse-failure message
-  no longer echoes the raw client value or uses developer vocabulary.
+  region in place of `alert()`, and removal of the failure-framed status
+  string §1.7 prohibits. `check_optimistic_lock`'s parse-failure message
+  no longer echoes the raw client value or uses developer vocabulary, and
+  was later reworded to be entity-neutral — the helper backs the issue,
+  project, sprint, and capacity form paths, not just the board, and the
+  original wording said "board" unconditionally.
 - **Project-health presentation exceeded the `Watch` severity ceiling and
   rendered a 0–100 score** (RFC 007 §10.2/§17.1, DEV-004). The project
   detail screen rendered `"Score N / 100"` as a headline badge, and a
@@ -109,7 +117,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exposed 3 further, previously invisible `clippy` findings in
   `peisear-web` (masked until now by `peisear-storage`'s compile failure
   blocking the lint pass from reaching it) — tracked separately as
-  `ISSUE-002`, not yet resolved.
+  `ISSUE-002` and resolved by DEV-008, below.
+- **`peisear-web` had never actually been linted** (`ISSUE-002`, DEV-008).
+  With `peisear-storage` clean, clippy proceeded far enough to reveal
+  `peisear-web`'s own findings for the first time — 2 known in advance
+  (`too_many_arguments` on `render_issue_detail`, `unnecessary_sort_by` ×2
+  in `apply_filter_and_sort`) plus one more that stayed masked until those
+  were cleared and the 13 integration test targets could compile at all
+  (`doc_lazy_continuation` in a test's module doc comment). Fixed:
+  `render_issue_detail`'s 13 positional arguments replaced by one
+  `IssueDetailView` parameter struct; the two descending sorts rewritten
+  `sort_by_key(Reverse(..))`, preserving stable ordering including for
+  equal keys; the doc comment's under-indented continuation line given
+  its own paragraph instead of the deeper indentation clippy suggested,
+  which would have nested it under the wrong bullet. No behaviour change.
+  `cargo clippy --workspace --all-targets -- -D warnings` reached exit 0
+  for the first time in the project's history.
 - **`cargo fmt`/`cargo clippy` were never exercised at a pinned, reproducible
   toolchain, and the declared MSRV was never built in CI** (DEV-005 item A,
   `TRK-022`, `RSK-002`, `NFR-CMP-001`). `rust-toolchain.toml` now pins
@@ -152,7 +175,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `workspace-layout.md`). Left the kanban drag-and-drop description in
   `README.md` untouched — it's accurate; the previously-recorded
   `FR-DM-001` status was the error, corrected separately in the
-  requirements baseline amendments.
+  requirements baseline amendments. `crates/peisear/src/lib.rs`'s own doc
+  comment carried the same "four sibling crates" claim; fixed separately
+  once this item's non-change scope was confirmed to permit doc comments
+  under `crates/*/src` — the implementation is five crates, of which the
+  facade re-exports four (`peisear-notify` is a dependency, not
+  re-exported).
 
 ## [0.19.1] — 2026-05-05
 
