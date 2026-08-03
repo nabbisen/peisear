@@ -28,13 +28,18 @@ a person reading code. None would have survived a lint over a string table.
 
 | # | Handoff | Scope | State |
 |---|---|---|---|
-| 1 | [I18N-001](./I18N-001-crate-and-guard.md) | `peisear-i18n` crate, `Locale`, key type, English table, **the guard**, CI wiring | **Ready** |
-| 2 | I18N-002 | `peisear-core` message descriptors — the `FR-HLT-009` boundary change | Blocked on 1 |
-| 3 | I18N-003 | `peisear-notify` bodies and email copy | Blocked on 1 |
-| 4 | I18N-004a–e | `peisear-web` by surface group: shell/nav · project/issue · team/sprint · today/inbox/settings · errors/validation | Blocked on 1 |
+| 1 | [I18N-001](./I18N-001-crate-and-guard.md) | `peisear-i18n` crate, `Locale`, key type, English table, **the guard**, CI wiring | **Approved** |
+| 2 | [I18N-002](./I18N-002-core-message-descriptors.md) | `peisear-core` emits descriptors — the `FR-HLT-009` boundary change, gap §10.8 | **Ready** |
+| 3 | [I18N-003](./I18N-003-notify-copy.md) | `peisear-notify` titles, bodies, email copy | **Ready** |
+| 4 | I18N-004a–e | `peisear-web` by surface group: shell/nav · project/issue · team/sprint · today/inbox/settings · errors/validation | Blocked on 2 |
 
-Handoffs 2–4 will be written once I18N-001 lands and the mechanism is real.
-Writing them against an unbuilt crate would be guessing at its API.
+**2 and 3 are genuinely parallel** — notify's copy is its own and does not
+depend on the core boundary change. Take either first, or both.
+
+**4 waits on 2**, not merely on 1: the health surfaces render what
+`human_explanation` produces, and writing their conversion before the
+descriptor shape exists would be guessing at it. The same reason 2 and 3 were
+held back until 1 landed.
 
 **0.21.0 is not complete until every shipped user-visible string is
 converted.** Partial migration is the failure mode to avoid: a guard covering
