@@ -448,7 +448,7 @@ impl From<HealthIndicator> for DisplayHealthState {
 /// unbalanced load distribution). The two will share
 /// [`HealthIndicator`] for their classification output.
 pub mod project_health {
-    use super::HealthIndicator;
+    use super::{DisplayHealthState, HealthIndicator};
     use peisear_i18n::{IndicatorLabel, MessageKey};
 
     /// The window in days over which "recent activity" is counted.
@@ -646,29 +646,25 @@ pub mod project_health {
     }
 
     impl IndicatorKind {
-        pub fn label(&self) -> &'static str {
-            match self {
-                Self::Throughput => "Throughput",
-                Self::Staleness => "Oldest in-flight",
-                Self::Activity => "Activity (14d)",
-                Self::BusFactor => "Bus factor",
-                Self::LongStale => "Long-stale",
-                Self::WipCompliance => "WIP compliance",
-            }
-        }
-
-        /// Convert to `peisear_i18n`'s parallel label enum, for
-        /// building a [`MessageKey`] that names this indicator
-        /// (`summarize`'s output). Deliberately not `label()` itself
-        /// returning an i18n type — `peisear-i18n` is a leaf crate
-        /// (`I18N-001` §4.1) and cannot know about `IndicatorKind`,
-        /// so the two enums exist in parallel and this is the
-        /// translation point. `label()`'s text and
-        /// `peisear_i18n`'s rendering of the equivalent
-        /// `IndicatorLabel` variant are the same six strings,
-        /// duplicated across the two crates rather than shared —
-        /// see I18N-002's review request for why, and the drift risk
-        /// that duplication carries.
+        /// Convert to `peisear_i18n`'s label enum, the sole remaining
+        /// source of this indicator's display name (`I18N-004`).
+        ///
+        /// This crate used to have its own `label()` returning the
+        /// same six strings directly (`&'static str`) — removed here.
+        /// `I18N-002` had already added `IndicatorLabel` in
+        /// `peisear-i18n` for use *inside* `summarize`'s sentences,
+        /// without noticing `label()` was a second copy of the same
+        /// six strings with nothing keeping them in sync (flagged in
+        /// I18N-002's review §1.4 as a fifth prose-producing function
+        /// I18N-002's own survey missed). `peisear-i18n` is a leaf
+        /// crate (`I18N-001` §4.1) and cannot know about
+        /// `IndicatorKind`, so this conversion method — not `label()`
+        /// itself returning an i18n type — is the translation point.
+        /// Every caller that used to read `label()` or
+        /// `Indicator.label` now goes through this plus
+        /// `peisear_i18n::MessageKey::IndicatorName` and a render
+        /// call; see `components/issues.rs`'s `indicator_row` in
+        /// `peisear-web`.
         pub fn to_i18n_label(self) -> IndicatorLabel {
             match self {
                 Self::Throughput => IndicatorLabel::Throughput,
@@ -705,9 +701,11 @@ pub mod project_health {
     /// shared.
     #[derive(Debug, Clone)]
     pub struct Indicator {
+        /// Also the source of this indicator's display name via
+        /// [`IndicatorKind::to_i18n_label`] — there is no separate
+        /// `label` field here since `I18N-004`; the six name strings
+        /// live only in `peisear-i18n` now.
         pub kind: IndicatorKind,
-        /// Display label, e.g. "Throughput".
-        pub label: &'static str,
         /// Descriptor for the display value, e.g. "5 / 7 (71%)" or
         /// "8 d" once rendered. `-web` renders it via
         /// `peisear_i18n::Locale::render` — this field carries the
@@ -791,11 +789,13 @@ pub mod project_health {
                 IndicatorKind::Activity => MessageKey::IndicatorExplanationActivity {
                     count: raw.recent_activity_count,
                 },
-                // ISSUE-006 finding 2: this arm renders a known-broken
-                // sentence for the active_assignees <= 1 case,
-                // preserved verbatim pending that ruling — see
-                // MessageKey::IndicatorExplanationBusFactorSolo's doc
-                // comment in peisear-i18n.
+                // ISSUE-006 finding 2, fixed in I18N-004: this used
+                // to feed the percentage-shaped template a
+                // non-percentage value for the solo case, producing
+                // a broken sentence. IndicatorExplanationBusFactorSolo
+                // is now its own sentence in peisear-i18n, typed
+                // parameters keeping the two cases structurally
+                // distinct rather than sharing one template.
                 IndicatorKind::BusFactor => {
                     if raw.active_assignees <= 1 {
                         MessageKey::IndicatorExplanationBusFactorSolo
@@ -808,11 +808,11 @@ pub mod project_health {
                     stale: raw.long_stale_in_flight_issues,
                     in_flight: raw.in_flight_issues,
                 },
-                // ISSUE-006 finding 3: this arm renders an awkward,
-                // doubled sentence, preserved verbatim pending
-                // ruling — see
-                // MessageKey::IndicatorExplanationWipCompliance's doc
-                // comment in peisear-i18n.
+                // ISSUE-006 finding 3, fixed in I18N-004: the count
+                // is now a typed parameter rather than an embedded
+                // "N over" string, which is what produced the
+                // doubling. Reproduced live before this fix — see
+                // I18N-004's review request.
                 IndicatorKind::WipCompliance => MessageKey::IndicatorExplanationWipCompliance {
                     count: raw.wip_violators,
                 },
@@ -1129,7 +1129,6 @@ pub mod project_health {
             .iter()
             .map(|&kind| Indicator {
                 kind,
-                label: kind.label(),
                 value_display: format_value(kind, &raw),
                 state: classify(kind, &raw),
                 normalized: normalize(kind, &raw),
@@ -1251,24 +1250,35 @@ pub mod project_health {
 
     /// Build the descriptor for the score header's natural-language
     /// summary. Foregrounds at most two indicators that are pulling
-    /// the score down; ignores `Insufficient` ones. `-web` renders
-    /// the result via `peisear_i18n::Locale::render` (`I18N-002`;
-    /// was `-> String` before this handoff).
+    /// the score down; ignores indicators the ceiling doesn't
+    /// display at all. `-web` renders the result via
+    /// `peisear_i18n::Locale::render` (`I18N-002`; was `-> String`
+    /// before this handoff).
     ///
-    /// The two `Concern`-state arms render a known `NFR-LANG-002`
-    /// violation (naming `Concern` directly in prose), preserved
-    /// verbatim pending `ISSUE-006` finding 1's ruling — see
-    /// `MessageKey::HealthSummaryOneConcern`'s doc comment in
-    /// `peisear-i18n`.
+    /// **`I18N-004`, fixing `ISSUE-006` finding 1.** Selection is
+    /// filtered by [`DisplayHealthState`], not [`HealthIndicator`] —
+    /// `DisplayHealthState` has no `Concern` variant, so a sentence
+    /// naming `Concern` directly cannot be constructed here,
+    /// structurally rather than by convention: the message-key match
+    /// below has nothing left to distinguish a former-`Concern`
+    /// indicator from a former-`Watch` one, because that information
+    /// was never carried past the filter. `HealthIndicator`'s
+    /// four-state ordering is still used, but only internally, in
+    /// the *ranking* below — a genuinely `Concern`-tier indicator
+    /// still leads over a `Watch`-tier one when both are present, per
+    /// `ISSUE-006-decision.md` §3 ("clamp at the point the state
+    /// reaches a sentence, not before the ranking"). This is DEV-004's
+    /// fix applied one layer down: DEV-004 clamped the type badges
+    /// and the composite chip render from; this clamps the type this
+    /// function's own output decision is made from.
     pub fn summarize(indicators: &[Indicator]) -> MessageKey {
-        // Collect concerning + watch states, sorted by severity then
-        // by weight (heavier indicators surface first).
         let mut bad: Vec<&Indicator> = indicators
             .iter()
-            .filter(|i| matches!(i.state, HealthIndicator::Concern | HealthIndicator::Watch))
+            .filter(|i| matches!(DisplayHealthState::from(i.state), DisplayHealthState::Watch))
             .collect();
         bad.sort_by(|a, b| {
-            // Concern outranks Watch, then heavier weight first.
+            // Internal ranking only, per the doc comment above --
+            // never consulted again once `bad` is filtered.
             let order = |s| match s {
                 HealthIndicator::Concern => 0,
                 HealthIndicator::Watch => 1,
@@ -1286,26 +1296,15 @@ pub mod project_health {
         }
 
         let lead = bad[0];
-        match (bad.len(), lead.state) {
-            (1, HealthIndicator::Concern) => MessageKey::HealthSummaryOneConcern {
+        if bad.len() == 1 {
+            MessageKey::HealthSummaryOneWatch {
                 label: lead.kind.to_i18n_label(),
-            },
-            (1, _) => MessageKey::HealthSummaryOneWatch {
-                label: lead.kind.to_i18n_label(),
-            },
-            (_, HealthIndicator::Concern) => {
-                let second = bad[1];
-                MessageKey::HealthSummaryConcernPlusOne {
-                    first: lead.kind.to_i18n_label(),
-                    second: second.kind.to_i18n_label(),
-                }
             }
-            _ => {
-                let second = bad[1];
-                MessageKey::HealthSummaryTwoWatch {
-                    first: lead.kind.to_i18n_label(),
-                    second: second.kind.to_i18n_label(),
-                }
+        } else {
+            let second = bad[1];
+            MessageKey::HealthSummaryTwoWatch {
+                first: lead.kind.to_i18n_label(),
+                second: second.kind.to_i18n_label(),
             }
         }
     }

@@ -9,7 +9,7 @@ use peisear_core::{
     UserLoad,
     project_health::{HealthScore, Indicator, ProjectHealthReport},
 };
-use peisear_i18n::Locale;
+use peisear_i18n::{Locale, MessageKey};
 
 /// Project-detail page: header + board/list view toggle.
 #[component]
@@ -306,10 +306,16 @@ fn indicator_row(ind: Indicator) -> impl IntoView {
     let state = DisplayHealthState::from(ind.state);
     let badge_class = format!("badge badge-sm {}", state.badge_class());
     let (glyph, aria_state) = state.glyph();
+    // I18N-004: the indicator's name no longer lives on `Indicator`
+    // itself (`IndicatorKind::label()` removed) — rendered here via
+    // the same MessageKey `summarize`'s sentences use.
+    let label_text = Locale::English.render(MessageKey::IndicatorName {
+        label: ind.kind.to_i18n_label(),
+    });
     let value_text = Locale::English.render(ind.value_display);
     let aria_label = format!(
         "{}: {} ({}). {}",
-        ind.label,
+        label_text,
         value_text,
         aria_state,
         ind.kind.description()
@@ -319,7 +325,7 @@ fn indicator_row(ind: Indicator) -> impl IntoView {
              role="group"
              aria-label=aria_label.clone()
              title=aria_label>
-            <span class="text-xs text-base-content/70">{ind.label}</span>
+            <span class="text-xs text-base-content/70">{label_text}</span>
             <span class=badge_class>
                 <span class="mr-1" aria-hidden="true">{glyph}</span>
                 {value_text}

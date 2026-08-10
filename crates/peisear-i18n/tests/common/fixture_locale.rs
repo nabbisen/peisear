@@ -44,6 +44,9 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::InvalidStatus => "[fx] bad status".to_string(),
         MessageKey::InvalidPriority => "[fx] bad priority".to_string(),
 
+        // ---- I18N-004: IndicatorKind ----
+        MessageKey::IndicatorName { label } => format!("[fx-name] {}", indicator_label(label)),
+
         // ---- I18N-002: format_value ----
         MessageKey::IndicatorValueUnavailable => "[fx-none]".to_string(),
         MessageKey::IndicatorValueThroughput { done, total } => {
@@ -80,21 +83,13 @@ pub fn render(key: MessageKey) -> String {
             format!("[fx] wip note: {count}")
         }
 
-        // ---- I18N-002: project_health::summarize ----
+        // ---- I18N-002/004: project_health::summarize ----
         MessageKey::HealthSummaryHealthy => "[fx-healthy]".to_string(),
         MessageKey::HealthSummaryOneWatch { label } => {
             format!("[fx] {} worth a look", indicator_label(label))
         }
-        MessageKey::HealthSummaryOneConcern { label } => {
-            format!("[fx] {} flagged", indicator_label(label))
-        }
         MessageKey::HealthSummaryTwoWatch { first, second } => format!(
             "[fx] {} and {} worth a look",
-            indicator_label(first),
-            indicator_label(second)
-        ),
-        MessageKey::HealthSummaryConcernPlusOne { first, second } => format!(
-            "[fx] {} flagged, {} too",
             indicator_label(first),
             indicator_label(second)
         ),

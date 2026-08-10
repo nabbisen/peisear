@@ -49,6 +49,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::InvalidStatus => "Invalid status".to_string(),
         MessageKey::InvalidPriority => "Invalid priority".to_string(),
 
+        // ---- I18N-004: IndicatorKind ----
+        MessageKey::IndicatorName { label } => indicator_label(label).to_string(),
+
         // ---- I18N-002: format_value ----
         MessageKey::IndicatorValueUnavailable => "—".to_string(),
         MessageKey::IndicatorValueThroughput { done, total } => throughput_value(done, total),
@@ -73,10 +76,10 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::IndicatorExplanationActivity { count } => {
             format!("Issue activity in the last two weeks is {count}.")
         }
-        // ISSUE-006 finding 2: preserved verbatim, not corrected here.
-        // See message.rs's doc comment on this variant.
+        // I18N-004 fix for ISSUE-006 finding 2 -- see message.rs's
+        // doc comment on this variant.
         MessageKey::IndicatorExplanationBusFactorSolo => {
-            "solo of in-flight work is concentrated on one person.".to_string()
+            "In-flight work is currently carried by one person.".to_string()
         }
         MessageKey::IndicatorExplanationBusFactor { pct } => {
             format!("{pct}% on top of in-flight work is concentrated on one person.")
@@ -84,28 +87,22 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::IndicatorExplanationLongStale { stale, in_flight } => format!(
             "{stale} / {in_flight} of in-flight issues haven't been touched in over two weeks."
         ),
-        // ISSUE-006 finding 3: preserved verbatim, not corrected here.
+        // I18N-004 fix for ISSUE-006 finding 3 -- the count is now a
+        // typed parameter rather than an embedded "N over" string,
+        // which is what produced the doubling.
         MessageKey::IndicatorExplanationWipCompliance { count } => {
-            format!("{count} over of active assignees are over their WIP limit.")
+            format!("{count} active assignees are over their WIP limit.")
         }
 
-        // ---- I18N-002: project_health::summarize ----
+        // ---- I18N-002/004: project_health::summarize ----
         MessageKey::HealthSummaryHealthy => "Looking healthy.".to_string(),
+        // I18N-004: the only two reachable shapes now -- see this
+        // variant's doc comment in message.rs.
         MessageKey::HealthSummaryOneWatch { label } => {
             format!("{} is worth a glance.", indicator_label(label))
         }
-        // ISSUE-006 finding 1: preserved verbatim, not corrected here.
-        MessageKey::HealthSummaryOneConcern { label } => {
-            format!("{} is a concern.", indicator_label(label))
-        }
         MessageKey::HealthSummaryTwoWatch { first, second } => format!(
             "{} and {} are worth a glance.",
-            indicator_label(first),
-            indicator_label(second)
-        ),
-        // ISSUE-006 finding 1: preserved verbatim, not corrected here.
-        MessageKey::HealthSummaryConcernPlusOne { first, second } => format!(
-            "{} is a concern; {} also needs attention.",
             indicator_label(first),
             indicator_label(second)
         ),

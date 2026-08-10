@@ -129,6 +129,20 @@ pub enum MessageKey {
     /// The `priority` form field didn't parse to a known `Priority`.
     InvalidPriority,
 
+    // ---- I18N-004: peisear_core::project_health::IndicatorKind ----
+    /// The indicator's own name, e.g. "Throughput", "Bus factor" —
+    /// what `IndicatorKind::label()` returned before this handoff
+    /// absorbed it. `I18N-002` introduced `IndicatorLabel` for use
+    /// as a parameter *inside* `summarize`'s sentences, but left
+    /// `label()` itself in `peisear-core` holding the same six
+    /// strings with nothing keeping the two in sync (`I18N-002`
+    /// review §1.4) — the standalone chip label and the sentence
+    /// parameter now share one rendering (`en.rs`'s `indicator_label`
+    /// helper), so there is exactly one place these strings live.
+    IndicatorName {
+        label: IndicatorLabel,
+    },
+
     // ---- I18N-002: peisear_core::project_health::format_value ----
     /// No value to show for this indicator (the raw counts it would
     /// divide by are zero). Shared across every indicator's
@@ -180,12 +194,13 @@ pub enum MessageKey {
     IndicatorExplanationActivity {
         count: i64,
     },
-    /// **`ISSUE-006` finding 2, preserved verbatim pending ruling.**
-    /// Renders "solo of in-flight work is concentrated on one
-    /// person." — a percentage-shaped template fed the non-
-    /// percentage value "solo". This is a live defect, not a
-    /// judgment call; see the issue report for why it was relocated
-    /// rather than corrected here.
+    /// **`I18N-004` fix for `ISSUE-006` finding 2.** Was "solo of
+    /// in-flight work is concentrated on one person." — a
+    /// percentage-shaped template fed the non-percentage value
+    /// "solo". Now its own plainly factual sentence, per
+    /// `ISSUE-006-decision.md` §3: no evaluation, no implied fault,
+    /// no directive ("consider spreading the load" would be a "you
+    /// should" in disguise, which §1.7 prohibits).
     IndicatorExplanationBusFactorSolo,
     IndicatorExplanationBusFactor {
         pct: i64,
@@ -194,35 +209,35 @@ pub enum MessageKey {
         stale: i64,
         in_flight: i64,
     },
-    /// **`ISSUE-006` finding 3, preserved verbatim pending ruling.**
-    /// Renders "N over of active assignees are over their WIP
-    /// limit." — awkward and doubled, same root cause as the
-    /// `BusFactor` case above, milder in effect.
+    /// **`I18N-004` fix for `ISSUE-006` finding 3.** Was "N over of
+    /// active assignees are over their WIP limit." — doubled and
+    /// awkward. Now takes the count as a typed parameter rather than
+    /// embedding a pre-formatted "N over" string, which is what
+    /// produced the doubling in the first place. Reproduced live
+    /// before this fix, per the ruling — see `I18N-004`'s review
+    /// request.
     IndicatorExplanationWipCompliance {
         count: i64,
     },
 
-    // ---- I18N-002: peisear_core::project_health::summarize ----
+    // ---- I18N-002/004: peisear_core::project_health::summarize ----
     HealthSummaryHealthy,
+    /// **`I18N-004`**: the only two reachable shapes since the
+    /// `ISSUE-006` finding 1 fix — `summarize` now selects between
+    /// these based on the clamped `DisplayHealthState`, which has no
+    /// `Concern` variant to select on. What was
+    /// `HealthSummaryOneConcern` (removed) and this variant now
+    /// render identically ("worth a glance") for a `Concern`-tier
+    /// lead indicator, same as a `Watch`-tier one — see
+    /// `ISSUE-006-decision.md` §3: "no new wording is needed; the
+    /// `Watch` sentences already exist and already read correctly."
     HealthSummaryOneWatch {
         label: IndicatorLabel,
     },
-    /// **`ISSUE-006` finding 1, preserved verbatim pending ruling.**
-    /// Renders "{label} is a concern." — names the unclamped
-    /// `Concern` state directly in prose, bypassing the
-    /// `NFR-LANG-002` Watch ceiling `DisplayHealthState` enforces
-    /// everywhere else. A live defect, not a judgment call.
-    HealthSummaryOneConcern {
-        label: IndicatorLabel,
-    },
+    /// **`I18N-004`**: see [`MessageKey::HealthSummaryOneWatch`]'s
+    /// doc comment — what was `HealthSummaryConcernPlusOne` (removed)
+    /// now renders through this variant too.
     HealthSummaryTwoWatch {
-        first: IndicatorLabel,
-        second: IndicatorLabel,
-    },
-    /// **`ISSUE-006` finding 1, preserved verbatim pending ruling.**
-    /// Renders "{first} is a concern; {second} also needs
-    /// attention." Same defect as `HealthSummaryOneConcern`.
-    HealthSummaryConcernPlusOne {
         first: IndicatorLabel,
         second: IndicatorLabel,
     },
@@ -297,9 +312,9 @@ impl MessageKey {
     ///
     /// Every closed-enum *value* still appears at least once somewhere
     /// in this list — `IndicatorLabel`'s six values are each exercised
-    /// through the single-label keys (`HealthSummaryOneWatch`,
-    /// `HealthSummaryOneConcern`), so the two-label keys only need one
-    /// illustrative pair rather than all 36 combinations.
+    /// through [`MessageKey::IndicatorName`] (`I18N-004`), so
+    /// `HealthSummaryTwoWatch` only needs one illustrative pair rather
+    /// than all 36 combinations.
     pub fn all() -> Vec<MessageKey> {
         let mut keys = vec![
             MessageKey::Forbidden,
@@ -332,15 +347,11 @@ impl MessageKey {
                 in_flight: 12,
             },
             MessageKey::IndicatorExplanationWipCompliance { count: 2 },
-            // -- I18N-002: project_health::summarize --
+            // -- I18N-002/004: project_health::summarize --
             MessageKey::HealthSummaryHealthy,
             MessageKey::HealthSummaryTwoWatch {
                 first: IndicatorLabel::Throughput,
                 second: IndicatorLabel::Staleness,
-            },
-            MessageKey::HealthSummaryConcernPlusOne {
-                first: IndicatorLabel::Activity,
-                second: IndicatorLabel::BusFactor,
             },
             // -- I18N-002: user_burnout::summarize --
             MessageKey::BurnoutSummarySteady,
@@ -373,8 +384,8 @@ impl MessageKey {
                 .into_iter()
                 .map(|field| MessageKey::FieldMustBePositiveInteger { field }),
         );
-        // Every IndicatorLabel value, exercised through the two
-        // single-label health-summary keys.
+        // Every IndicatorLabel value, exercised through the
+        // single-label health-summary key and the standalone name.
         keys.extend(
             IndicatorLabel::all()
                 .into_iter()
@@ -383,7 +394,7 @@ impl MessageKey {
         keys.extend(
             IndicatorLabel::all()
                 .into_iter()
-                .map(|label| MessageKey::HealthSummaryOneConcern { label }),
+                .map(|label| MessageKey::IndicatorName { label }),
         );
         keys
     }
