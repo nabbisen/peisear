@@ -29,17 +29,24 @@ a person reading code. None would have survived a lint over a string table.
 | # | Handoff | Scope | State |
 |---|---|---|---|
 | 1 | [I18N-001](./I18N-001-crate-and-guard.md) | `peisear-i18n` crate, `Locale`, key type, English table, **the guard**, CI wiring | **Approved** |
-| 2 | [I18N-002](./I18N-002-core-message-descriptors.md) | `peisear-core` emits descriptors — the `FR-HLT-009` boundary change, gap §10.8 | **Ready** |
-| 3 | [I18N-003](./I18N-003-notify-copy.md) | `peisear-notify` titles, bodies, email copy | **Ready** |
-| 4 | I18N-004a–e | `peisear-web` by surface group: shell/nav · project/issue · team/sprint · today/inbox/settings · errors/validation | Blocked on 2 |
+| 2 | [I18N-002](./I18N-002-core-message-descriptors.md) | `peisear-core` emits descriptors — gap §10.8 | **Approved** — correction landed in `f3b261b`, verified |
+| 3 | [I18N-003](./I18N-003-notify-copy.md) | `peisear-notify` titles, bodies, email copy | **Approved** |
+| 4 | [I18N-004](./I18N-004-health-explanation-defects.md) | **ISSUE-006 fix**: clamp `summarize` to `DisplayHealthState`; two new keys; fix the ceiling test; absorb `IndicatorKind::label()` | **Ready** |
+| 5 | I18N-005a–e | `peisear-web` by surface group: shell/nav · project/issue · team/sprint · today/inbox/settings · errors/validation | Blocked on 4 |
 
-**2 and 3 are genuinely parallel** — notify's copy is its own and does not
-depend on the core boundary change. Take either first, or both.
+**No corrections outstanding.** I18N-001, 002 and 003 are all approved and
+closed.
 
-**4 waits on 2**, not merely on 1: the health surfaces render what
-`human_explanation` produces, and writing their conversion before the
-descriptor shape exists would be guessing at it. The same reason 2 and 3 were
-held back until 1 landed.
+### Sequencing note
+
+**I18N-004 comes before the web conversions**, and they are renumbered
+accordingly. `ISSUE-006` found a **P0 `NFR-LANG-002` violation still shipping**
+— `summarize()` names the unclamped `Concern` state in prose, in the paragraph
+directly beneath the health heading. A P0 does not queue behind mechanism work.
+
+Ruling: [`ISSUE-006-decision.md`](../../../.git-exclude/reviewed/ISSUE-006-decision.md).
+It ships as **0.20.1**, approved by the owner — the 0.20.0 changelog claims the
+ceiling is enforced, and that claim is public and incomplete.
 
 **0.21.0 is not complete until every shipped user-visible string is
 converted.** Partial migration is the failure mode to avoid: a guard covering
