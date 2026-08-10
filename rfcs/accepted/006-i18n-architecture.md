@@ -161,6 +161,48 @@ Delivered as sequenced handoffs:
 Partial migration is the failure mode to avoid: a guard covering half the copy
 invites the belief that the copy is covered.
 
+### D6 — Conversion conventions
+
+*Added 2026-08-10, established by handoff I18N-005a and its review. Recorded
+here rather than in the handoff index because these are design decisions: they
+bind every conversion handoff, and a handoff index is not a design authority
+(RFC 000, "letting handoffs override RFC decisions").*
+
+1. **A `String` parameter carries user data only.** Anything that is our own
+   copy is a key.
+
+   I18N-005a shipped `BackToLabel { label: String }`. Three call sites passed
+   our own words as raw strings — the guard never saw them, and they had
+   already drifted to three different casings. A `String` parameter is a hole
+   in the guard's coverage whenever what flows into it is copy rather than
+   data, and the hole is invisible: the table looks fully converted.
+
+2. **Render inline; pre-bind only when earned.** A short helper —
+   `t(MessageKey::X)` — keeps rendering readable inside markup. Pre-bind only
+   where a string is reused, or where selecting it needs conditional logic.
+   Under this rule `Navbar` went from ten pre-bindings to two, which is what
+   keeps the preamble from growing with the string count.
+
+3. **Parameterise a closed set only when more than one message embeds it.**
+   Flat variants when a value always stands alone. `IndicatorLabel` earns its
+   shape by appearing in three sentence templates; navigation words appear in
+   one place each.
+
+4. **Attributes are copy.** `aria-label`, `title`, placeholder text — read by
+   users, some of whom have no other way to read the interface. Decorative
+   glyphs behind `aria-hidden`, and protocol values such as `role` and `type`,
+   are not.
+
+5. **"Rendered output unchanged" means semantically identical** — same visible
+   text, same attribute set, same values. Ordering may differ *only* where an
+   attribute became dynamic, which Leptos's SSR renderer causes by moving
+   `class` to the end of the tag. Verify tag by tag; report anything outside
+   those two categories.
+
+6. **Name keys for what the message says, not where it appears.** A key named
+   for its location is wrong the moment the layout changes, and the point of
+   the table is that copy outlives layout.
+
 ## Test plan
 
 | Check | Mechanism |
