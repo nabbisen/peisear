@@ -32,10 +32,22 @@ a person reading code. None would have survived a lint over a string table.
 | 2 | [I18N-002](./I18N-002-core-message-descriptors.md) | `peisear-core` emits descriptors — gap §10.8 | **Approved** — correction landed in `f3b261b`, verified |
 | 3 | [I18N-003](./I18N-003-notify-copy.md) | `peisear-notify` titles, bodies, email copy | **Approved** |
 | 4 | [I18N-004](./I18N-004-health-explanation-defects.md) | **ISSUE-006 fix**: clamp `summarize` to `DisplayHealthState`; two new keys; fix the ceiling test; absorb `IndicatorKind::label()` | **Ready** |
+| 4b | [REL-0.20.1](./REL-0.20.1-release-candidate.md) | Release candidate for the fix: version, changelog, gates, tarball | Ready when 4 is accepted |
 | 5 | I18N-005a–e | `peisear-web` by surface group: shell/nav · project/issue · team/sprint · today/inbox/settings · errors/validation | Blocked on 4 |
 
 **No corrections outstanding.** I18N-001, 002 and 003 are all approved and
 closed.
+
+### Two releases in one queue
+
+I18N-004 and REL-0.20.1 ship as **0.20.1**, a patch correcting work RFC 007
+delivered. Everything else here is **0.21.0** under RFC 006.
+
+Both sit in this directory because ISSUE-006 was found during RFC 006's
+execution. RFC 007 stays in `done/` — its work shipped — carrying a status note
+that the ceiling was not fully closed at 0.20.0. Reopening a completed RFC, or
+minting a new one for a two-defect fix, would represent that history less
+honestly than this does.
 
 ### Sequencing note
 

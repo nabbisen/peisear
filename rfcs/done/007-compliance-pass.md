@@ -1,6 +1,18 @@
 # RFC 007: 0.20.0 compliance pass
 
-**Status**: Implemented (0.20.0)
+**Status**: Implemented (0.20.0) — with a follow-up correction in 0.20.1
+
+> **Incompletely implemented, corrected in 0.20.1.** DEV-004 clamped the
+> severity ceiling on badge and glyph rendering and closed gaps §10.2 and
+> §10.10. It did not reach `project_health::summarize`, which renders the
+> unclamped state in **prose** in the summary paragraph beneath the health
+> heading — a third instance of the same violation, on the same screen,
+> recorded as §10.12 and found four days after this RFC was marked
+> implemented.
+>
+> This RFC is not reopened: its work shipped. The note is here so that
+> "Implemented" is not read as "the ceiling was fully closed at 0.20.0".
+> See `ISSUE-006-decision.md`, `DEC-046`, and handoff I18N-004.
 **Target**: 0.20.0
 **Related spec sections**: §3 (vocabulary), §11.5 (privacy boundary), §21.4 (optimistic lock), §28.2/§28.4/§28.6 (health presentation), §32 (keyboard alternatives)
 **Related requirements**: `NFR-CONC-001`, `NFR-CONC-005`, `NFR-PRIV-001`, `NFR-PRIV-002`, `NFR-PRIV-007`, `FR-DM-001`, `FR-DM-002`, `FR-HLT-008`, `FR-HLT-009`, `NFR-LANG-001`, `NFR-LANG-002`
