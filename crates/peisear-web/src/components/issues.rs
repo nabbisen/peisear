@@ -9,7 +9,9 @@ use peisear_core::{
     UserLoad,
     project_health::{HealthScore, Indicator, ProjectHealthReport},
 };
-use peisear_i18n::{Locale, MessageKey, NavSection};
+use peisear_i18n::{Field, Locale, MessageKey, NavSection};
+
+use super::t;
 
 /// Project-detail page: header + board/list view toggle.
 #[component]
@@ -33,7 +35,9 @@ pub fn ProjectDetailPage(
     /// "updated". Empty string = storage-default order.
     active_sort: String,
 ) -> impl IntoView {
-    let title = format!("{} — Issue Tracker", project.name);
+    let title = t(MessageKey::ProjectDetailPageTitle {
+        project_name: project.name.clone(),
+    });
     let is_board = view_mode == "board";
 
     let board_link = format!("/projects/{}?view=board", project.id);
@@ -68,7 +72,7 @@ pub fn ProjectDetailPage(
     let name_for_header = project.name.clone();
 
     let breadcrumb = super::breadcrumb::render_breadcrumb(vec![
-        super::breadcrumb::BreadcrumbItem::link("Projects", "/projects"),
+        super::breadcrumb::BreadcrumbItem::link(t(MessageKey::ProjectsSectionName), "/projects"),
         super::breadcrumb::BreadcrumbItem::current(name_for_breadcrumb),
     ]);
     let back_link = super::breadcrumb::render_back_link(NavSection::Projects, "/projects");
@@ -85,11 +89,11 @@ pub fn ProjectDetailPage(
 
                 <div class="flex items-center gap-2 shrink-0">
                     <div class="join">
-                        <a href=board_link class=board_classes>"Board"</a>
-                        <a href=list_link class=list_classes>"List"</a>
+                        <a href=board_link class=board_classes>{t(MessageKey::ViewToggleBoard)}</a>
+                        <a href=list_link class=list_classes>{t(MessageKey::ViewToggleList)}</a>
                     </div>
-                    <a href=edit_link class="btn btn-ghost btn-sm">"Edit"</a>
-                    <a href=new_issue_link class="btn btn-primary btn-sm">"New issue"</a>
+                    <a href=edit_link class="btn btn-ghost btn-sm">{t(MessageKey::EditWord)}</a>
+                    <a href=new_issue_link class="btn btn-primary btn-sm">{t(MessageKey::NewIssueLabel)}</a>
                 </div>
             </div>
 
@@ -153,7 +157,7 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
         return view! {
             <section class="mb-3">
                 <div class="text-xs text-base-content/60 italic">
-                    "No issues yet — health indicators will appear once work starts."
+                    {t(MessageKey::HealthEmptyMessage)}
                 </div>
             </section>
         }
@@ -166,7 +170,7 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
     // renders as one more chip alongside the individual
     // indicators (composite_row below) instead of a separate,
     // more prominent box carrying a number.
-    let summary = Locale::English.render(health.score.summary);
+    let summary = Locale::English.render(health.score.summary.clone());
 
     // Phase B PR3 (B-2): explainability — collect human-language
     // sentences describing each indicator that's not at Good.
@@ -189,10 +193,10 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
         .collect_view();
 
     view! {
-        <section class="mb-4" aria-label="Project health">
+        <section class="mb-4" aria-label=t(MessageKey::ProjectHealthSectionLabel)>
             <div class="flex items-center gap-2 mb-1">
                 <h3 class="text-xs uppercase tracking-wide text-base-content/60">
-                    "Health"
+                    {t(MessageKey::HealthHeading)}
                 </h3>
             </div>
 
@@ -200,7 +204,7 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
 
             <details class="text-xs">
                 <summary class="cursor-pointer text-base-content/60 hover:text-base-content">
-                    "Indicators"
+                    {t(MessageKey::IndicatorsSummaryLabel)}
                 </summary>
                 // Phase B PR3 (B-2): human-language
                 // explanation list. Each non-Good indicator
@@ -358,11 +362,13 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
     let chips = workload
         .into_iter()
         .map(|u| {
-            let label = format!("{} pt", u.in_flight_points);
-            let title = format!(
-                "{} — {} in-flight issues",
-                u.display_name, u.in_flight_issues
-            );
+            let label = t(MessageKey::PointsValue {
+                points: u.in_flight_points,
+            });
+            let title = t(MessageKey::WorkloadTitle {
+                display_name: u.display_name.clone(),
+                in_flight_issues: u.in_flight_issues,
+            });
             view! {
                 <div class="flex items-center gap-2 px-2 py-1 rounded border border-base-300 bg-base-100"
                      title=title>
@@ -377,10 +383,10 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
         <section class="mb-4">
             <div class="flex items-center gap-2 mb-1">
                 <h3 class="text-xs uppercase tracking-wide text-base-content/60">
-                    "Workload"
+                    {t(MessageKey::WorkloadHeading)}
                 </h3>
                 <a href="/settings" class="text-xs link link-hover opacity-60">
-                    "(set your capacity)"
+                    {t(MessageKey::WorkloadSetCapacityLink)}
                 </a>
             </div>
             <div class="flex flex-wrap items-center gap-2">{chips}</div>
@@ -411,7 +417,9 @@ fn WorkloadHint(workload: Vec<UserLoad>) -> impl IntoView {
     let chips = workload
         .into_iter()
         .map(|u| {
-            let snapshot = format!("{} pt", u.in_flight_points);
+            let snapshot = t(MessageKey::PointsValue {
+                points: u.in_flight_points,
+            });
             view! {
                 <span class="inline-flex items-center gap-1">
                     <span class="text-base-content/70">{u.display_name}</span>
@@ -423,7 +431,7 @@ fn WorkloadHint(workload: Vec<UserLoad>) -> impl IntoView {
 
     view! {
         <div class="text-xs text-base-content/60 -mt-1">
-            <span class="font-medium mr-2">"Workload:"</span>
+            <span class="font-medium mr-2">{t(MessageKey::WorkloadHintLabel)}</span>
             <span class="inline-flex items-center gap-3 flex-wrap">{chips}</span>
         </div>
     }
@@ -445,7 +453,9 @@ fn BoardView(
                     _ => "w-2 h-2 rounded-full bg-success",
                 };
                 let status_slug = column.status.as_str();
-                let label = column.status.label();
+                let label = t(MessageKey::IssueStatusName {
+                    label: column.status.to_i18n_label(),
+                });
                 let count = column.issues.len();
                 let is_empty = column.issues.is_empty();
                 let project_id = project_id.clone();
@@ -466,7 +476,7 @@ fn BoardView(
                             }).collect_view()}
                             {is_empty.then(|| view! {
                                 <div class="text-xs text-base-content/40 text-center py-4 italic">
-                                    "Drop issues here"
+                                    {t(MessageKey::EmptyBoardHint)}
                                 </div>
                             })}
                         </div>
@@ -506,9 +516,9 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
     let updated_at = issue.updated_at.to_rfc3339();
     let updated_at_for_form = updated_at.clone();
     let effort_node = issue.effort.map(|e| {
-        let label = format!("{e} pt");
+        let label = t(MessageKey::PointsValue { points: e });
         view! {
-            <span class="badge badge-sm badge-outline" title="Effort estimate">
+            <span class="badge badge-sm badge-outline" title=t(MessageKey::EffortEstimateTooltip)>
                 {label}
             </span>
         }
@@ -516,7 +526,7 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
     let assignee_node = issue.assignee_id.as_ref().map(|aid| {
         let name = assignee_label(aid, &assignees).to_string();
         view! {
-            <span class="badge badge-sm badge-ghost" title="Assignee">
+            <span class="badge badge-sm badge-ghost" title=t(MessageKey::FieldLabel { field: Field::Assignee })>
                 {name}
             </span>
         }
@@ -535,8 +545,13 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
         .into_iter()
         .filter(|s| *s != current_status)
         .map(|target| {
-            let label = target.label();
-            let aria_label = format!("Move \"{title_for_status}\" to {label}");
+            let label = t(MessageKey::IssueStatusName {
+                label: target.to_i18n_label(),
+            });
+            let aria_label = t(MessageKey::MoveIssueAriaLabel {
+                issue_title: title_for_status.clone(),
+                target: target.to_i18n_label(),
+            });
             view! {
                 <button
                     type="submit"
@@ -576,7 +591,7 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
                 <div class="text-sm font-medium line-clamp-2">{issue.title}</div>
                 <div class="flex items-center justify-between gap-2 mt-2 text-[11px] text-base-content/60">
                     <div class="flex items-center gap-1 flex-wrap">
-                        <span class=badge>{issue.priority.label()}</span>
+                        <span class=badge>{t(MessageKey::PriorityName { label: issue.priority.to_i18n_label() })}</span>
                         {effort_node}
                         {assignee_node}
                     </div>
@@ -625,7 +640,7 @@ fn ListView(
         // any user agent.
         <form method="get" action=toolbar_action
               class="flex flex-wrap items-end gap-2 mb-3"
-              aria-label="Filter and sort issues">
+              aria-label=t(MessageKey::FilterSortAriaLabel)>
             // Hidden field so toolbar submission keeps us in list
             // view. Without this, picking a filter would bounce
             // the user back to the board view default.
@@ -633,15 +648,16 @@ fn ListView(
 
             <label class="form-control">
                 <div class="label py-0">
-                    <span class="label-text text-xs">"Status"</span>
+                    <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Status })}</span>
                 </div>
                 <select name="status" class="select select-sm select-bordered">
-                    <option value="" selected=active_status.is_empty()>"All statuses"</option>
+                    <option value="" selected=active_status.is_empty()>{t(MessageKey::AllStatusesOption)}</option>
                     {IssueStatus::all().into_iter().map(|s| {
                         let s_str = s.as_str().to_string();
                         let selected = active_status == s_str;
+                        let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
                         view! {
-                            <option value=s_str.clone() selected=selected>{s.label()}</option>
+                            <option value=s_str.clone() selected=selected>{label}</option>
                         }
                     }).collect_view()}
                 </select>
@@ -649,13 +665,13 @@ fn ListView(
 
             <label class="form-control">
                 <div class="label py-0">
-                    <span class="label-text text-xs">"Assignee"</span>
+                    <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                 </div>
                 <select name="assignee" class="select select-sm select-bordered">
-                    <option value="" selected=active_assignee.is_empty()>"Anyone"</option>
+                    <option value="" selected=active_assignee.is_empty()>{t(MessageKey::AnyoneOption)}</option>
                     <option value="unassigned"
                             selected={active_assignee == "unassigned"}>
-                        "Unassigned"
+                        {t(MessageKey::UnassignedOption)}
                     </option>
                     {assignees_for_toolbar.into_iter().map(|a| {
                         let a_id = a.id.clone();
@@ -671,20 +687,20 @@ fn ListView(
 
             <label class="form-control">
                 <div class="label py-0">
-                    <span class="label-text text-xs">"Sort by"</span>
+                    <span class="label-text text-xs">{t(MessageKey::SortByFieldLabel)}</span>
                 </div>
                 <select name="sort" class="select select-sm select-bordered">
-                    <option value="" selected=active_sort.is_empty()>"Default"</option>
+                    <option value="" selected=active_sort.is_empty()>{t(MessageKey::SortDefaultOption)}</option>
                     <option value="priority"
-                            selected={active_sort == "priority"}>"Priority"</option>
+                            selected={active_sort == "priority"}>{t(MessageKey::FieldLabel { field: Field::Priority })}</option>
                     <option value="created"
-                            selected={active_sort == "created"}>"Recently created"</option>
+                            selected={active_sort == "created"}>{t(MessageKey::SortRecentlyCreatedOption)}</option>
                     <option value="updated"
-                            selected={active_sort == "updated"}>"Recently updated"</option>
+                            selected={active_sort == "updated"}>{t(MessageKey::SortRecentlyUpdatedOption)}</option>
                 </select>
             </label>
 
-            <button type="submit" class="btn btn-sm btn-primary">"Apply"</button>
+            <button type="submit" class="btn btn-sm btn-primary">{t(MessageKey::ApplyButton)}</button>
             // "Reset" links back to the bare list URL with no
             // filter/sort params. Per the handler logic, a bare
             // URL does NOT clear the saved server default — the
@@ -696,8 +712,8 @@ fn ListView(
             // links, who would otherwise lose their filter
             // every time.
             <a href=reset_href class="btn btn-sm btn-ghost"
-               aria-label="Show this list with no filter or sort applied">
-                "Reset"
+               aria-label=t(MessageKey::ResetFilterAriaLabel)>
+                {t(MessageKey::ResetLink)}
             </a>
         </form>
 
@@ -706,12 +722,12 @@ fn ListView(
                 <table class="table table-sm">
                     <thead>
                         <tr>
-                            <th>"Title"</th>
-                            <th class="w-32">"Status"</th>
-                            <th class="w-28">"Priority"</th>
-                            <th class="w-20">"Effort"</th>
-                            <th class="w-32">"Assignee"</th>
-                            <th class="w-32">"Updated"</th>
+                            <th>{t(MessageKey::FieldLabel { field: Field::Title })}</th>
+                            <th class="w-32">{t(MessageKey::FieldLabel { field: Field::Status })}</th>
+                            <th class="w-28">{t(MessageKey::FieldLabel { field: Field::Priority })}</th>
+                            <th class="w-20">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</th>
+                            <th class="w-32">{t(MessageKey::FieldLabel { field: Field::Assignee })}</th>
+                            <th class="w-32">{t(MessageKey::UpdatedColumnHeading)}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -719,13 +735,15 @@ fn ListView(
                             let href = format!("/projects/{}/issues/{}", project_id, issue.id);
                             let pri_class = format!("badge badge-sm {}", issue.priority.badge_class());
                             let updated = issue.updated_at.format("%Y-%m-%d %H:%M").to_string();
+                            let status_text = t(MessageKey::IssueStatusName { label: issue.status.to_i18n_label() });
+                            let priority_text = t(MessageKey::PriorityName { label: issue.priority.to_i18n_label() });
                             let effort_text = match issue.effort {
-                                Some(e) => format!("{e} pt"),
-                                None => "—".to_string(),
+                                Some(e) => t(MessageKey::PointsValue { points: e }),
+                                None => t(MessageKey::NoValuePlaceholder),
                             };
                             let assignee_text = match issue.assignee_id.as_ref() {
                                 Some(aid) => assignee_label(aid, &assignees).to_string(),
-                                None => "—".to_string(),
+                                None => t(MessageKey::NoValuePlaceholder),
                             };
                             view! {
                                 <tr class="hover">
@@ -734,8 +752,8 @@ fn ListView(
                                             {issue.title}
                                         </a>
                                     </td>
-                                    <td><span class="badge badge-sm badge-ghost">{issue.status.label()}</span></td>
-                                    <td><span class=pri_class>{issue.priority.label()}</span></td>
+                                    <td><span class="badge badge-sm badge-ghost">{status_text}</span></td>
+                                    <td><span class=pri_class>{priority_text}</span></td>
                                     <td class="text-xs text-base-content/70">{effort_text}</td>
                                     <td class="text-xs text-base-content/70">{assignee_text}</td>
                                     <td class="text-xs text-base-content/60">{updated}</td>
@@ -745,7 +763,7 @@ fn ListView(
                         {is_empty.then(|| view! {
                             <tr>
                                 <td colspan="6" class="text-center py-8 text-base-content/60 italic">
-                                    "No issues yet."
+                                    {t(MessageKey::EmptyIssueListMessage)}
                                 </td>
                             </tr>
                         })}
@@ -768,7 +786,9 @@ pub fn IssueNewPage(
     workload: Vec<UserLoad>,
     flash: Option<String>,
 ) -> impl IntoView {
-    let title = format!("New issue — {}", project.name);
+    let title = t(MessageKey::IssueNewPageTitle {
+        project_name: project.name.clone(),
+    });
     let back_link = format!("/projects/{}", project.id);
     let submit_action = format!("/projects/{}/issues/new", project.id);
     let name_for_breadcrumb = project.name.clone();
@@ -778,49 +798,51 @@ pub fn IssueNewPage(
         <AppShell title=title user=user flash=flash>
             <div class="max-w-2xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects">"Projects"</a></li>
+                    <li><a href="/projects">{t(MessageKey::ProjectsSectionName)}</a></li>
                     <li><a href=back_link_for_breadcrumb>{name_for_breadcrumb}</a></li>
-                    <li>"New issue"</li>
+                    <li>{t(MessageKey::NewIssueLabel)}</li>
                 </ul></div>
 
-                <h1 class="text-xl font-semibold mb-4">"New issue"</h1>
+                <h1 class="text-xl font-semibold mb-4">{t(MessageKey::NewIssueLabel)}</h1>
 
                 <div class="card bg-base-100 border border-base-300 shadow-sm">
                     <form method="post" action=submit_action class="card-body gap-3">
                         <label class="form-control w-full">
-                            <div class="label py-1"><span class="label-text text-sm">"Title"</span></div>
+                            <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Title })}</span></div>
                             <input type="text" name="title" required=true maxlength="200" autofocus=true
                                    class="input input-bordered input-sm w-full"
-                                   placeholder="What needs to happen?"/>
+                                   placeholder=t(MessageKey::NewIssueTitlePlaceholder)/>
                         </label>
 
                         <label class="form-control w-full">
-                            <div class="label py-1"><span class="label-text text-sm">"Description"</span></div>
+                            <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span></div>
                             <textarea name="description" rows="6" maxlength="10000"
                                       class="textarea textarea-bordered textarea-sm w-full font-mono text-xs"
-                                      placeholder="Describe the problem, the steps to reproduce, or the acceptance criteria."></textarea>
+                                      placeholder=t(MessageKey::NewIssueDescriptionPlaceholder)></textarea>
                         </label>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <label class="form-control w-full">
-                                <div class="label py-1"><span class="label-text text-sm">"Status"</span></div>
+                                <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Status })}</span></div>
                                 <select name="status" class="select select-bordered select-sm w-full">
                                     {statuses.into_iter().map(|s| {
                                         let selected = s.as_str() == "open";
+                                        let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
                                         view! {
-                                            <option value=s.as_str() selected=selected>{s.label()}</option>
+                                            <option value=s.as_str() selected=selected>{label}</option>
                                         }
                                     }).collect_view()}
                                 </select>
                             </label>
 
                             <label class="form-control w-full">
-                                <div class="label py-1"><span class="label-text text-sm">"Priority"</span></div>
+                                <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Priority })}</span></div>
                                 <select name="priority" class="select select-bordered select-sm w-full">
                                     {priorities.into_iter().map(|p| {
                                         let selected = p.as_str() == "medium";
+                                        let label = t(MessageKey::PriorityName { label: p.to_i18n_label() });
                                         view! {
-                                            <option value=p.as_str() selected=selected>{p.label()}</option>
+                                            <option value=p.as_str() selected=selected>{label}</option>
                                         }
                                     }).collect_view()}
                                 </select>
@@ -828,11 +850,11 @@ pub fn IssueNewPage(
 
                             <label class="form-control w-full">
                                 <div class="label py-1">
-                                    <span class="label-text text-sm">"Effort"</span>
-                                    <span class="label-text-alt text-xs opacity-60">"story points"</span>
+                                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</span>
+                                    <span class="label-text-alt text-xs opacity-60">{t(MessageKey::StoryPointsHint)}</span>
                                 </div>
                                 <select name="effort" class="select select-bordered select-sm w-full">
-                                    <option value="" selected=true>"—"</option>
+                                    <option value="" selected=true>{t(MessageKey::NoValuePlaceholder)}</option>
                                     {peisear_core::EFFORT_PRESETS.iter().map(|n| {
                                         view! {
                                             <option value=n.to_string()>{n.to_string()}</option>
@@ -843,10 +865,10 @@ pub fn IssueNewPage(
 
                             <label class="form-control w-full">
                                 <div class="label py-1">
-                                    <span class="label-text text-sm">"Assignee"</span>
+                                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                                 </div>
                                 <select name="assignee_id" class="select select-bordered select-sm w-full">
-                                    <option value="" selected=true>"—"</option>
+                                    <option value="" selected=true>{t(MessageKey::NoValuePlaceholder)}</option>
                                     {assignees.into_iter().map(|a| {
                                         view! {
                                             <option value=a.id>{a.display_name}</option>
@@ -859,8 +881,8 @@ pub fn IssueNewPage(
                         <WorkloadHint workload=workload/>
 
                         <div class="card-actions justify-end mt-2">
-                            <a href=back_link class="btn btn-ghost btn-sm">"Cancel"</a>
-                            <button type="submit" class="btn btn-primary btn-sm">"Create issue"</button>
+                            <a href=back_link class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
+                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::CreateIssueButton)}</button>
                         </div>
                     </form>
                 </div>
@@ -897,7 +919,9 @@ pub fn SubIssueNewPage(
     assignees: Vec<AssigneeOption>,
     flash: Option<String>,
 ) -> impl IntoView {
-    let title = format!("New sub-issue — {}", parent.title);
+    let title = t(MessageKey::SubIssueNewPageTitle {
+        parent_title: parent.title.clone(),
+    });
     let project_href = format!("/projects/{}", project.id);
     let parent_href = format!("/projects/{}/issues/{}", project.id, parent.id);
     let submit_action = format!(
@@ -912,49 +936,49 @@ pub fn SubIssueNewPage(
         <AppShell title=title user=user flash=flash>
             <div class="max-w-2xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects">"Projects"</a></li>
+                    <li><a href="/projects">{t(MessageKey::ProjectsSectionName)}</a></li>
                     <li><a href=project_href>{project_name}</a></li>
                     <li><a href=parent_href>{parent_title}</a></li>
-                    <li>"New sub-issue"</li>
+                    <li>{t(MessageKey::NewSubIssueLabel)}</li>
                 </ul></div>
 
-                <h1 class="text-xl font-semibold mb-1">"New sub-issue"</h1>
+                <h1 class="text-xl font-semibold mb-1">{t(MessageKey::NewSubIssueLabel)}</h1>
                 <p class="text-sm text-base-content/60 mb-4">
-                    "This sub-issue follows its parent's sprint. \
-                     You can give it its own assignee, status, priority, and effort."
+                    {t(MessageKey::SubIssueNewPageIntro)}
                 </p>
 
                 <div class="card bg-base-100 border border-base-300 shadow-sm">
                     <form method="post" action=submit_action class="card-body gap-3">
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Title"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Title })}</span>
                             </div>
                             <input type="text" name="title" required=true maxlength="200" autofocus=true
                                    class="input input-bordered input-sm w-full"
-                                   placeholder="What needs to happen for this part?"/>
+                                   placeholder=t(MessageKey::NewSubIssueTitlePlaceholder)/>
                         </label>
 
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Description"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span>
                             </div>
                             <textarea name="description" rows="6" maxlength="10000"
                                       class="textarea textarea-bordered textarea-sm w-full font-mono text-xs"
-                                      placeholder="Describe this sub-task in more detail if useful."></textarea>
+                                      placeholder=t(MessageKey::NewSubIssueDescriptionPlaceholder)></textarea>
                         </label>
 
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <label class="form-control w-full">
                                 <div class="label py-1">
-                                    <span class="label-text text-sm">"Status"</span>
+                                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Status })}</span>
                                 </div>
                                 <select name="status"
                                         class="select select-bordered select-sm w-full">
                                     {statuses.into_iter().map(|s| {
                                         let selected = s.as_str() == "open";
+                                        let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
                                         view! {
-                                            <option value=s.as_str() selected=selected>{s.label()}</option>
+                                            <option value=s.as_str() selected=selected>{label}</option>
                                         }
                                     }).collect_view()}
                                 </select>
@@ -962,14 +986,15 @@ pub fn SubIssueNewPage(
 
                             <label class="form-control w-full">
                                 <div class="label py-1">
-                                    <span class="label-text text-sm">"Priority"</span>
+                                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Priority })}</span>
                                 </div>
                                 <select name="priority"
                                         class="select select-bordered select-sm w-full">
                                     {priorities.into_iter().map(|p| {
                                         let selected = p.as_str() == "medium";
+                                        let label = t(MessageKey::PriorityName { label: p.to_i18n_label() });
                                         view! {
-                                            <option value=p.as_str() selected=selected>{p.label()}</option>
+                                            <option value=p.as_str() selected=selected>{label}</option>
                                         }
                                     }).collect_view()}
                                 </select>
@@ -977,12 +1002,12 @@ pub fn SubIssueNewPage(
 
                             <label class="form-control w-full">
                                 <div class="label py-1">
-                                    <span class="label-text text-sm">"Effort"</span>
-                                    <span class="label-text-alt text-xs opacity-60">"story points"</span>
+                                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</span>
+                                    <span class="label-text-alt text-xs opacity-60">{t(MessageKey::StoryPointsHint)}</span>
                                 </div>
                                 <select name="effort"
                                         class="select select-bordered select-sm w-full">
-                                    <option value="" selected=true>"—"</option>
+                                    <option value="" selected=true>{t(MessageKey::NoValuePlaceholder)}</option>
                                     {peisear_core::EFFORT_PRESETS.iter().map(|n| {
                                         view! {
                                             <option value=n.to_string()>{n.to_string()}</option>
@@ -993,11 +1018,11 @@ pub fn SubIssueNewPage(
 
                             <label class="form-control w-full">
                                 <div class="label py-1">
-                                    <span class="label-text text-sm">"Assignee"</span>
+                                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                                 </div>
                                 <select name="assignee_id"
                                         class="select select-bordered select-sm w-full">
-                                    <option value="" selected=true>"—"</option>
+                                    <option value="" selected=true>{t(MessageKey::NoValuePlaceholder)}</option>
                                     {assignees.into_iter().map(|a| {
                                         view! {
                                             <option value=a.id>{a.display_name}</option>
@@ -1008,8 +1033,8 @@ pub fn SubIssueNewPage(
                         </div>
 
                         <div class="card-actions justify-end mt-2">
-                            <a href=parent_href_for_cancel class="btn btn-ghost btn-sm">"Cancel"</a>
-                            <button type="submit" class="btn btn-primary btn-sm">"Create sub-issue"</button>
+                            <a href=parent_href_for_cancel class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
+                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::CreateSubIssueButton)}</button>
                         </div>
                     </form>
                 </div>
@@ -1043,7 +1068,10 @@ pub fn IssueDetailPage(
     flash: Option<String>,
     editing: bool,
 ) -> impl IntoView {
-    let title = format!("{} — {}", issue.title, project.name);
+    let title = t(MessageKey::IssueDetailPageTitle {
+        issue_title: issue.title.clone(),
+        project_name: project.name.clone(),
+    });
     let project_href = format!("/projects/{}", project.id);
     let issue_href = format!("/projects/{}/issues/{}", project.id, issue.id);
     // Phase B PR3 (B-3): edit URL is explicit, not a query
@@ -1116,20 +1144,18 @@ pub fn IssueDetailPage(
     let sub_issues_card = if issue.is_top_level() {
         Some(view! {
             <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
-                     aria-label="Sub-issues">
+                     aria-label=t(MessageKey::SubIssuesLabel)>
                 <div class="card-body py-3">
                     <div class="flex items-center justify-between mb-2">
-                        <h2 class="text-sm font-medium">"Sub-issues"</h2>
+                        <h2 class="text-sm font-medium">{t(MessageKey::SubIssuesLabel)}</h2>
                         <a href=new_sub_issue_href class="btn btn-ghost btn-xs">
-                            "+ Add sub-issue"
+                            {t(MessageKey::AddSubIssueLink)}
                         </a>
                     </div>
                     {if sub_issues.is_empty() {
                         view! {
                             <p class="text-xs italic text-base-content/50">
-                                "No sub-issues yet. Break this work into smaller pieces \
-                                 if it helps you track them — they share this issue's project \
-                                 and sprint, but can have their own assignee, status, and effort."
+                                {t(MessageKey::SubIssuesEmptyMessage)}
                             </p>
                         }.into_any()
                     } else {
@@ -1149,16 +1175,18 @@ pub fn IssueDetailPage(
                                             IssueStatus::Done => "badge-success",
                                         }
                                     );
-                                    let aria = format!(
-                                        "{}, status {}",
-                                        si.title,
-                                        si.status.label(),
-                                    );
+                                    let status_label = t(MessageKey::IssueStatusName {
+                                        label: si.status.to_i18n_label(),
+                                    });
+                                    let aria = t(MessageKey::SubIssueAriaLabel {
+                                        title: si.title.clone(),
+                                        status: si.status.to_i18n_label(),
+                                    });
                                     view! {
                                         <li class="py-2 flex items-center gap-2"
                                             aria-label=aria>
                                             <span class=status_badge_class>
-                                                {si.status.label()}
+                                                {status_label}
                                             </span>
                                             <a href=detail_href class="text-sm hover:underline flex-1">
                                                 {si.title}
@@ -1178,22 +1206,21 @@ pub fn IssueDetailPage(
 
     let sprint_card = show_sprint_picker.then(|| view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
-                 aria-label="Sprint assignment">
+                 aria-label=t(MessageKey::SprintAssignmentLabel)>
             <div class="card-body py-3">
                 <form method="post" action=sprint_action
                       class="flex items-center gap-2 flex-wrap">
-                    <label class="text-sm font-medium" for="sprint-select">"Sprint:"</label>
+                    <label class="text-sm font-medium" for="sprint-select">{t(MessageKey::SprintFieldLabel)}</label>
                     <select id="sprint-select" name="sprint_id"
                             class="select select-bordered select-sm flex-1 min-w-[14rem]"
-                            aria-label="Select sprint for this issue">
-                        <option value="" selected=no_sprint_selected>"(no sprint)"</option>
+                            aria-label=t(MessageKey::SprintSelectAriaLabel)>
+                        <option value="" selected=no_sprint_selected>{t(MessageKey::NoSprintOption)}</option>
                         {sprint_options_view}
                     </select>
-                    <button type="submit" class="btn btn-ghost btn-sm">"Save"</button>
+                    <button type="submit" class="btn btn-ghost btn-sm">{t(MessageKey::SaveButton)}</button>
                 </form>
                 <p class="text-xs text-base-content/60 mt-1">
-                    "Sprint assignment is independent from this issue's status and priority — \
-                     adding to a sprint commits the work; the team decides what 'committed' means."
+                    {t(MessageKey::SprintAssignmentHelperText)}
                 </p>
             </div>
         </section>
@@ -1207,7 +1234,10 @@ pub fn IssueDetailPage(
     // the parent.
     let breadcrumb_items = {
         let mut items = vec![
-            super::breadcrumb::BreadcrumbItem::link("Projects", "/projects"),
+            super::breadcrumb::BreadcrumbItem::link(
+                t(MessageKey::ProjectsSectionName),
+                "/projects",
+            ),
             super::breadcrumb::BreadcrumbItem::link(
                 project_name_for_breadcrumb,
                 project_href_for_breadcrumb.clone(),
@@ -1274,14 +1304,14 @@ fn IssueEditForm(
                 <input type="hidden" name="client_updated_at" value=client_updated_at/>
 
                 <label class="form-control w-full">
-                    <div class="label py-1"><span class="label-text text-sm">"Title"</span></div>
+                    <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Title })}</span></div>
                     <input type="text" name="title" required=true maxlength="200"
                            value=title_value
                            class="input input-bordered input-sm w-full"/>
                 </label>
 
                 <label class="form-control w-full">
-                    <div class="label py-1"><span class="label-text text-sm">"Description"</span></div>
+                    <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span></div>
                     <textarea name="description" rows="8" maxlength="10000"
                               class="textarea textarea-bordered textarea-sm w-full font-mono text-xs">
                         {description}
@@ -1290,24 +1320,26 @@ fn IssueEditForm(
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label class="form-control w-full">
-                        <div class="label py-1"><span class="label-text text-sm">"Status"</span></div>
+                        <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Status })}</span></div>
                         <select name="status" class="select select-bordered select-sm w-full">
                             {statuses.into_iter().map(|s| {
                                 let selected = s.as_str() == current_status;
+                                let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
                                 view! {
-                                    <option value=s.as_str() selected=selected>{s.label()}</option>
+                                    <option value=s.as_str() selected=selected>{label}</option>
                                 }
                             }).collect_view()}
                         </select>
                     </label>
 
                     <label class="form-control w-full">
-                        <div class="label py-1"><span class="label-text text-sm">"Priority"</span></div>
+                        <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Priority })}</span></div>
                         <select name="priority" class="select select-bordered select-sm w-full">
                             {priorities.into_iter().map(|p| {
                                 let selected = p.as_str() == current_priority;
+                                let label = t(MessageKey::PriorityName { label: p.to_i18n_label() });
                                 view! {
-                                    <option value=p.as_str() selected=selected>{p.label()}</option>
+                                    <option value=p.as_str() selected=selected>{label}</option>
                                 }
                             }).collect_view()}
                         </select>
@@ -1315,11 +1347,11 @@ fn IssueEditForm(
 
                     <label class="form-control w-full">
                         <div class="label py-1">
-                            <span class="label-text text-sm">"Effort"</span>
-                            <span class="label-text-alt text-xs opacity-60">"story points"</span>
+                            <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</span>
+                            <span class="label-text-alt text-xs opacity-60">{t(MessageKey::StoryPointsHint)}</span>
                         </div>
                         <select name="effort" class="select select-bordered select-sm w-full">
-                            <option value="" selected=current_effort.is_none()>"—"</option>
+                            <option value="" selected=current_effort.is_none()>{t(MessageKey::NoValuePlaceholder)}</option>
                             {peisear_core::EFFORT_PRESETS.iter().map(|n| {
                                 let selected = current_effort == Some(*n);
                                 view! {
@@ -1344,10 +1376,10 @@ fn IssueEditForm(
 
                     <label class="form-control w-full">
                         <div class="label py-1">
-                            <span class="label-text text-sm">"Assignee"</span>
+                            <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                         </div>
                         <select name="assignee_id" class="select select-bordered select-sm w-full">
-                            <option value="" selected=current_assignee_id.is_none()>"—"</option>
+                            <option value="" selected=current_assignee_id.is_none()>{t(MessageKey::NoValuePlaceholder)}</option>
                             {assignees.into_iter().map(|a| {
                                 let selected = current_assignee_id.as_deref() == Some(a.id.as_str());
                                 view! {
@@ -1361,8 +1393,8 @@ fn IssueEditForm(
                 <WorkloadHint workload=workload/>
 
                 <div class="card-actions justify-end mt-2">
-                    <a href=issue_href class="btn btn-ghost btn-sm">"Cancel"</a>
-                    <button type="submit" class="btn btn-primary btn-sm">"Save"</button>
+                    <a href=issue_href class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
+                    <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::SaveButton)}</button>
                 </div>
             </form>
         </div>
@@ -1384,7 +1416,7 @@ fn IssueView(
     let assignee_node = issue.assignee_id.as_ref().map(|aid| {
         let name = assignee_label(aid, &assignees).to_string();
         view! {
-            <span class="badge badge-sm badge-ghost" title="Assignee">
+            <span class="badge badge-sm badge-ghost" title=t(MessageKey::FieldLabel { field: Field::Assignee })>
                 {name}
             </span>
         }
@@ -1394,10 +1426,10 @@ fn IssueView(
         <div class="flex items-start justify-between gap-3 mb-3">
             <h1 class="text-xl font-semibold tracking-tight">{issue.title}</h1>
             <div class="flex gap-2 shrink-0">
-                <a href=edit_href.clone() class="btn btn-ghost btn-sm">"Edit"</a>
+                <a href=edit_href.clone() class="btn btn-ghost btn-sm">{t(MessageKey::EditWord)}</a>
                 <form method="post" action=delete_action
                       onsubmit="return confirm('Delete this issue? This cannot be undone.');">
-                    <button type="submit" class="btn btn-ghost btn-sm text-error">"Delete"</button>
+                    <button type="submit" class="btn btn-ghost btn-sm text-error">{t(MessageKey::DeleteButton)}</button>
                 </form>
             </div>
         </div>
@@ -1422,7 +1454,7 @@ fn IssueView(
         // announce "Open, pressed; In Progress, not pressed;
         // Done, not pressed" so the segmented semantics carry
         // through.
-        <div class="join mb-3" role="group" aria-label="Issue status">
+        <div class="join mb-3" role="group" aria-label=t(MessageKey::IssueStatusAriaLabel)>
             {IssueStatus::all().into_iter().map(|s| {
                 let is_current = s == issue.status;
                 let pressed = if is_current { "true" } else { "false" };
@@ -1440,32 +1472,33 @@ fn IssueView(
                 } else {
                     "join-item btn btn-sm btn-ghost cursor-default"
                 };
+                let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
                 view! {
                     <button type="button"
                             class=cls
                             aria-pressed=pressed
                             tabindex="-1">
-                        {s.label()}
+                        {label}
                     </button>
                 }
             }).collect_view()}
         </div>
 
         <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/70 mb-4">
-            <span class=pri_class>{issue.priority.label()}</span>
+            <span class=pri_class>{t(MessageKey::PriorityName { label: issue.priority.to_i18n_label() })}</span>
             {issue.effort.map(|e| {
-                let label = format!("{e} pt");
+                let label = t(MessageKey::PointsValue { points: e });
                 view! {
-                    <span class="badge badge-sm badge-outline" title="Effort estimate">
+                    <span class="badge badge-sm badge-outline" title=t(MessageKey::EffortEstimateTooltip)>
                         {label}
                     </span>
                 }
             })}
             {assignee_node}
             <span>"·"</span>
-            <span>"Created " {created}</span>
+            <span>{t(MessageKey::CreatedAt { formatted: created })}</span>
             <span>"·"</span>
-            <span>"Updated " {updated}</span>
+            <span>{t(MessageKey::UpdatedAt { formatted: updated })}</span>
         </div>
 
         <div class="card bg-base-100 border border-base-300 shadow-sm">
@@ -1478,7 +1511,7 @@ fn IssueView(
                     }.into_any()
                 } else {
                     view! {
-                        <p class="text-sm italic text-base-content/50">"No description provided."</p>
+                        <p class="text-sm italic text-base-content/50">{t(MessageKey::NoDescriptionProvided)}</p>
                     }.into_any()
                 }}
             </div>

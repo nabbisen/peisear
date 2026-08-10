@@ -38,20 +38,43 @@ impl EntityKind {
     }
 }
 
-/// A named form field, for validation messages that need to say
-/// which field was wrong. Closed and system-controlled for the same
-/// reason as [`EntityKind`] — the field being validated is a fixed
-/// property of the form, not something a user typed.
+/// A named form field. Closed and system-controlled for the same
+/// reason as [`EntityKind`] — the field itself is a fixed property of
+/// the form, not something a user typed.
+///
+/// `I18N-001` seeded this for validation messages
+/// (`FieldRequired`/`FieldMustBePositiveInteger`) only; `I18N-005b`
+/// widens it to standalone field labels
+/// ([`MessageKey::FieldLabel`]) — a table row heading and a
+/// validation message naming the same field are the same word
+/// ("Effort" either way), so one enum renders both rather than two
+/// enums risking the word drifting between them.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Field {
     EffortPoints,
     CapacityPoints,
     CloseDate,
+    Title,
+    Description,
+    Status,
+    Priority,
+    Assignee,
+    Name,
 }
 
 impl Field {
-    pub fn all() -> [Field; 3] {
-        [Field::EffortPoints, Field::CapacityPoints, Field::CloseDate]
+    pub fn all() -> [Field; 9] {
+        [
+            Field::EffortPoints,
+            Field::CapacityPoints,
+            Field::CloseDate,
+            Field::Title,
+            Field::Description,
+            Field::Status,
+            Field::Priority,
+            Field::Assignee,
+            Field::Name,
+        ]
     }
 }
 
@@ -119,6 +142,52 @@ impl NavSection {
     }
 }
 
+/// Which word `peisear_core::IssueStatus` renders as. Mirrors
+/// `IssueStatus` in shape (three variants, same order) but is a
+/// distinct type, for the same leaf-crate/no-cycle reason
+/// [`IndicatorLabel`] is distinct from `IndicatorKind` — see that
+/// type's doc comment. `IssueStatus::to_i18n_label` (`peisear-core`,
+/// `I18N-005b`) is the conversion at the boundary; the absorbed
+/// `IssueStatus::label()` this replaces is documented there.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IssueStatusLabel {
+    Open,
+    InProgress,
+    Done,
+}
+
+impl IssueStatusLabel {
+    pub fn all() -> [IssueStatusLabel; 3] {
+        [
+            IssueStatusLabel::Open,
+            IssueStatusLabel::InProgress,
+            IssueStatusLabel::Done,
+        ]
+    }
+}
+
+/// Which word `peisear_core::Priority` renders as. See
+/// [`IssueStatusLabel`]'s doc comment — same shape, same reason,
+/// same handoff.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PriorityLabel {
+    Low,
+    Medium,
+    High,
+    Urgent,
+}
+
+impl PriorityLabel {
+    pub fn all() -> [PriorityLabel; 4] {
+        [
+            PriorityLabel::Low,
+            PriorityLabel::Medium,
+            PriorityLabel::High,
+            PriorityLabel::Urgent,
+        ]
+    }
+}
+
 /// One message this crate can render, in every shipped locale.
 ///
 /// A key enum, not a string constant and not a `HashMap<&str, &str>`:
@@ -127,20 +196,19 @@ impl NavSection {
 /// (`RFC 006` requirement 2) rather than a runtime fallback to the
 /// key name.
 ///
-/// `Copy`-eligible for now: every parameter across every variant is
-/// itself `Copy` (closed enums, `i64`s). `I18N-005a`'s first draft
-/// added a `String` parameter
-/// ([`MessageKey::BackToLabel`], since removed —
-/// `I18N-005a-review.md` §2 found it was carrying our own copy, not
-/// user data, and replaced it with [`MessageKey::BackToSection`]) and
-/// lost `Copy` over it. `RFC 006` D4's "an issue titled 'velocity
-/// spike' is user data, not a violation" distinction means a
-/// genuinely open `String` parameter is expected to reappear soon —
-/// `005b`/`005c` convert surfaces where some names are ours and some
-/// are a user's title — and `Copy` will come off again then. Kept
-/// accurate to the current variant set rather than braced for that in
-/// advance.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// `Clone`, not `Copy`: `I18N-005b` converts project/issue surfaces
+/// where issue titles, project names, and display names are
+/// genuinely open user data (`RFC 006` D4), so several variants now
+/// carry `String` parameters
+/// ([`MessageKey::WorkloadTitle`], [`MessageKey::MoveIssueAriaLabel`],
+/// [`MessageKey::SubIssueAriaLabel`], the page-title keys,
+/// [`MessageKey::CreatedAt`]/[`MessageKey::UpdatedAt`]).
+/// `I18N-005a` removed and re-added this derive once already
+/// (`BackToLabel` turned out to be carrying our own copy, not user
+/// data — `I18N-005a-review.md` §2); this crossing is the real one
+/// `RFC 006` D3 anticipated, kept accurate to the variant set as it
+/// stands rather than guarded against in advance.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MessageKey {
     /// `AppError::Forbidden`'s public message.
     Forbidden,
@@ -390,6 +458,233 @@ pub enum MessageKey {
     /// call site.
     ErrorPageTitle,
     ErrorPageGoHomeLink,
+
+    // ---- I18N-005b: components/{issues,projects} ----
+    /// `IssueStatus`'s word ("Open"/"In Progress"/"Done"), absorbing
+    /// `IssueStatus::label()` — see that method's doc comment
+    /// (`peisear-core`).
+    IssueStatusName {
+        label: IssueStatusLabel,
+    },
+    /// `Priority`'s word, absorbing `Priority::label()`. See
+    /// [`MessageKey::IssueStatusName`].
+    PriorityName {
+        label: PriorityLabel,
+    },
+    /// A form field's name, standing alone — a table column heading,
+    /// a `<label>` body, or an attribute `title`. Reuses [`Field`],
+    /// widened by this handoff from validation-only to this use too;
+    /// see that type's doc comment for why one enum renders both
+    /// rather than risking the same word (e.g. "Effort") drifting
+    /// between a validation sentence and a field label.
+    FieldLabel {
+        field: Field,
+    },
+    /// "Projects" — the section name, reused identically as a
+    /// breadcrumb link and as the `/projects` list page's `<h1>`.
+    /// Distinct from [`MessageKey::BackToSection`]'s lowercase
+    /// "projects": same destination, different grammatical context,
+    /// not coupled (`I18N-005a-review.md` §10's "worth watching"
+    /// note — this is the second instance, now on record rather than
+    /// rediscovered).
+    ProjectsSectionName,
+    /// The board/list view-toggle buttons on the project detail page.
+    ViewToggleBoard,
+    ViewToggleList,
+    /// "Edit", standing alone — a button and a breadcrumb node reuse
+    /// this identically. Distinct from
+    /// [`MessageKey::EditProjectHeading`]'s "Edit project", a
+    /// different, longer phrase.
+    EditWord,
+    CancelButton,
+    SaveButton,
+    DeleteButton,
+    /// "—" — the shared "nothing set" placeholder for an optional
+    /// select or a table cell with no value (effort, assignee).
+    /// Eight identical occurrences across `issues.rs` folded into
+    /// one key rather than eight copies of the same glyph.
+    NoValuePlaceholder,
+    /// "story points", the hint text beside the Effort field.
+    StoryPointsHint,
+    /// "{points} pt" — a bare quantity with a unit suffix, the same
+    /// shape as [`MessageKey::IndicatorValueWipOver`]. Covers both
+    /// workload chips (a user's total in-flight points) and an
+    /// issue's own effort badge — same unit, same word, same
+    /// template; nothing about either use case changes what "pt"
+    /// means.
+    PointsValue {
+        points: i64,
+    },
+    /// `HealthStrip`'s early-return when a project has no issues yet.
+    /// Not part of I18N-002/I18N-004's already-converted health
+    /// explanation/summary/indicator-label surface — this specific
+    /// string was never touched by either.
+    HealthEmptyMessage,
+    /// `HealthStrip`'s wrapping `<section>` `aria-label`.
+    ProjectHealthSectionLabel,
+    HealthHeading,
+    /// `HealthStrip`'s `<details>` `<summary>` text.
+    IndicatorsSummaryLabel,
+    WorkloadHeading,
+    /// The workload strip's link to `/settings` for setting one's own
+    /// capacity.
+    WorkloadSetCapacityLink,
+    /// `WorkloadStrip`'s per-chip `title` attribute. `display_name`
+    /// is user data (per `RFC 006` D4); `in_flight_issues` is a
+    /// count. Replaces a `format!` that composed our copy directly
+    /// with a user's display name at the call site.
+    WorkloadTitle {
+        display_name: String,
+        in_flight_issues: i64,
+    },
+    /// `WorkloadHint`'s inline label, distinct from
+    /// [`MessageKey::WorkloadHeading`] by trailing punctuation and
+    /// context (a compact inline hint under a form, not a section
+    /// heading).
+    WorkloadHintLabel,
+    /// `BoardView`'s empty-column hint.
+    EmptyBoardHint,
+    /// The keyboard status-change button's `aria-label`
+    /// (`FR-DM-002`). `issue_title` is user data; `target` is the
+    /// destination status, a closed set — kept typed rather than a
+    /// pre-rendered `String` so the word itself has exactly one
+    /// source (`IssueStatusName`'s rendering), same reasoning as
+    /// [`MessageKey::SubIssueAriaLabel`].
+    MoveIssueAriaLabel {
+        issue_title: String,
+        target: IssueStatusLabel,
+    },
+    /// The filter/sort toolbar's `aria-label`.
+    FilterSortAriaLabel,
+    AllStatusesOption,
+    AnyoneOption,
+    UnassignedOption,
+    SortByFieldLabel,
+    SortDefaultOption,
+    SortRecentlyCreatedOption,
+    SortRecentlyUpdatedOption,
+    ApplyButton,
+    /// "Reset"'s `aria-label`, explaining what the link does beyond
+    /// what its short visible text says.
+    ResetFilterAriaLabel,
+    ResetLink,
+    /// The list view's "Updated" table column heading. Distinct from
+    /// [`MessageKey::UpdatedAt`]'s "Updated {value}" — a bare heading
+    /// noun versus a sentence fragment naming a value, different
+    /// grammatical shapes needing separate keys.
+    UpdatedColumnHeading,
+    EmptyIssueListMessage,
+    /// The board card's and issue-view's effort badge tooltip.
+    /// Distinct from [`MessageKey::FieldLabel`]`(Field::EffortPoints)`
+    /// ("Effort" alone) — this is the longer phrase "Effort
+    /// estimate", not a reuse of the shorter field-label word.
+    EffortEstimateTooltip,
+    /// `project.name` is user data. Composes the same way
+    /// [`MessageKey::ErrorPageTitle`]'s sibling keys do — one
+    /// complete title string per page, not a brand-name key
+    /// concatenated with a page name at the call site.
+    ProjectDetailPageTitle {
+        project_name: String,
+    },
+    /// See [`MessageKey::ProjectDetailPageTitle`].
+    IssueNewPageTitle {
+        project_name: String,
+    },
+    /// "New issue", reused identically as a button, a breadcrumb
+    /// node, and an `<h1>`.
+    NewIssueLabel,
+    NewIssueTitlePlaceholder,
+    NewIssueDescriptionPlaceholder,
+    CreateIssueButton,
+    SubIssueNewPageTitle {
+        parent_title: String,
+    },
+    /// "New sub-issue", reused as a breadcrumb node and an `<h1>`.
+    NewSubIssueLabel,
+    SubIssueNewPageIntro,
+    NewSubIssueTitlePlaceholder,
+    NewSubIssueDescriptionPlaceholder,
+    CreateSubIssueButton,
+    IssueDetailPageTitle {
+        issue_title: String,
+        project_name: String,
+    },
+    /// "Sub-issues", reused as a section `aria-label` and its
+    /// heading.
+    SubIssuesLabel,
+    /// "+ Add sub-issue" — the leading "+" is part of the link's
+    /// accessible name (not a decorative glyph behind
+    /// `aria-hidden`, unlike `I18N-005a`'s "●"/"←"), so it stays part
+    /// of this one string rather than being split out.
+    AddSubIssueLink,
+    SubIssuesEmptyMessage,
+    /// A sub-issue list row's `aria-label`. `title` is user data;
+    /// `status` is the closed-set status word, kept typed for the
+    /// same reason as [`MessageKey::MoveIssueAriaLabel`].
+    SubIssueAriaLabel {
+        title: String,
+        status: IssueStatusLabel,
+    },
+    SprintAssignmentLabel,
+    SprintFieldLabel,
+    SprintSelectAriaLabel,
+    NoSprintOption,
+    SprintAssignmentHelperText,
+    /// The read-only status segmented control's `aria-label`
+    /// (`FR-ISS-005`).
+    IssueStatusAriaLabel,
+    NoDescriptionProvided,
+    /// "Created {formatted}". `formatted` is an already-formatted
+    /// timestamp string (data, not copy) — replaces a source that
+    /// composed the literal prefix and the value as two adjacent
+    /// text nodes directly in the view, the same concatenation shape
+    /// `I18N-005a`'s `BackToLabel` correction closed for back-links.
+    CreatedAt {
+        formatted: String,
+    },
+    /// "Updated {formatted}". See [`MessageKey::CreatedAt`]; also
+    /// reused by `ProjectCard`.
+    UpdatedAt {
+        formatted: String,
+    },
+    ProjectsListPageTitle,
+    ProjectsSubheading,
+    /// "New project", reused as a button and an `<h1>`.
+    NewProjectLabel,
+    ProjectsEmptyMessage,
+    CreateFirstProjectButton,
+    /// `ProjectCard`'s empty-description placeholder. Distinct
+    /// wording from [`MessageKey::NoDescriptionProvided`] — both
+    /// existed independently before conversion; converting
+    /// byte-identically preserves the mismatch rather than
+    /// silently reconciling it (not this handoff's call to make).
+    NoDescriptionShort,
+    ProjectNewPageTitle,
+    /// `ProjectNewPage`'s breadcrumb terminal node.
+    NewBreadcrumbWord,
+    ProjectNamePlaceholder,
+    ProjectDescriptionPlaceholder,
+    TeamFieldLabel,
+    OptionalHint,
+    PersonalNoTeamOption,
+    TeamHelperText,
+    /// `ProjectNewPage`'s submit button. Distinct wording from
+    /// [`MessageKey::CreateFirstProjectButton`]'s "Create your first
+    /// project" — the empty-state CTA and the form's own submit
+    /// button are separately authored strings, converted
+    /// byte-identically rather than reconciled.
+    CreateProjectButton,
+    ProjectEditPageTitle {
+        project_name: String,
+    },
+    EditProjectHeading,
+    DeleteProjectHeading,
+    DeleteProjectWarning,
+    /// `handlers/issues.rs`'s post-delete flash banner, reached via
+    /// a `?flash=Issue+deleted` redirect query parameter.
+    IssueDeletedFlash,
+    /// `handlers/projects.rs`'s post-delete flash banner.
+    ProjectDeletedFlash,
 }
 
 impl MessageKey {
@@ -402,10 +697,10 @@ impl MessageKey {
     /// first kind):
     ///
     /// - **Closed system vocabulary** ([`EntityKind`], [`Field`],
-    ///   [`IndicatorLabel`], [`NavSection`]) — never open-ended user
-    ///   data, so every value is enumerated. This is genuinely "every
-    ///   entry of every locale table" for these: the full, finite
-    ///   output space.
+    ///   [`IndicatorLabel`], [`NavSection`], [`IssueStatusLabel`],
+    ///   [`PriorityLabel`]) — never open-ended user data, so every
+    ///   value is enumerated. This is genuinely "every entry of every
+    ///   locale table" for these: the full, finite output space.
     /// - **Open numeric parameters** (`i64` counts, days, percentages
     ///   — `I18N-002`'s new territory) — cannot be exhaustively
     ///   enumerated and don't need to be. The guard cares about the
@@ -489,6 +784,112 @@ impl MessageKey {
             MessageKey::BreadcrumbNavLabel,
             MessageKey::ErrorPageTitle,
             MessageKey::ErrorPageGoHomeLink,
+            // -- I18N-005b: components/{issues,projects} --
+            MessageKey::ProjectsSectionName,
+            MessageKey::ViewToggleBoard,
+            MessageKey::ViewToggleList,
+            MessageKey::EditWord,
+            MessageKey::CancelButton,
+            MessageKey::SaveButton,
+            MessageKey::DeleteButton,
+            MessageKey::NoValuePlaceholder,
+            MessageKey::StoryPointsHint,
+            MessageKey::PointsValue { points: 3 },
+            MessageKey::HealthEmptyMessage,
+            MessageKey::ProjectHealthSectionLabel,
+            MessageKey::HealthHeading,
+            MessageKey::IndicatorsSummaryLabel,
+            MessageKey::WorkloadHeading,
+            MessageKey::WorkloadSetCapacityLink,
+            MessageKey::WorkloadTitle {
+                display_name: "Alex Rivera".to_string(),
+                in_flight_issues: 4,
+            },
+            MessageKey::WorkloadHintLabel,
+            MessageKey::EmptyBoardHint,
+            MessageKey::MoveIssueAriaLabel {
+                issue_title: "Login error".to_string(),
+                target: IssueStatusLabel::InProgress,
+            },
+            MessageKey::FilterSortAriaLabel,
+            MessageKey::AllStatusesOption,
+            MessageKey::AnyoneOption,
+            MessageKey::UnassignedOption,
+            MessageKey::SortByFieldLabel,
+            MessageKey::SortDefaultOption,
+            MessageKey::SortRecentlyCreatedOption,
+            MessageKey::SortRecentlyUpdatedOption,
+            MessageKey::ApplyButton,
+            MessageKey::ResetFilterAriaLabel,
+            MessageKey::ResetLink,
+            MessageKey::UpdatedColumnHeading,
+            MessageKey::EmptyIssueListMessage,
+            MessageKey::EffortEstimateTooltip,
+            MessageKey::ProjectDetailPageTitle {
+                project_name: "Customer Portal".to_string(),
+            },
+            MessageKey::IssueNewPageTitle {
+                project_name: "Customer Portal".to_string(),
+            },
+            MessageKey::NewIssueLabel,
+            MessageKey::NewIssueTitlePlaceholder,
+            MessageKey::NewIssueDescriptionPlaceholder,
+            MessageKey::CreateIssueButton,
+            MessageKey::SubIssueNewPageTitle {
+                parent_title: "Login error".to_string(),
+            },
+            MessageKey::NewSubIssueLabel,
+            MessageKey::SubIssueNewPageIntro,
+            MessageKey::NewSubIssueTitlePlaceholder,
+            MessageKey::NewSubIssueDescriptionPlaceholder,
+            MessageKey::CreateSubIssueButton,
+            MessageKey::IssueDetailPageTitle {
+                issue_title: "Login error".to_string(),
+                project_name: "Customer Portal".to_string(),
+            },
+            MessageKey::SubIssuesLabel,
+            MessageKey::AddSubIssueLink,
+            MessageKey::SubIssuesEmptyMessage,
+            MessageKey::SubIssueAriaLabel {
+                title: "Fix redirect loop".to_string(),
+                status: IssueStatusLabel::Open,
+            },
+            MessageKey::SprintAssignmentLabel,
+            MessageKey::SprintFieldLabel,
+            MessageKey::SprintSelectAriaLabel,
+            MessageKey::NoSprintOption,
+            MessageKey::SprintAssignmentHelperText,
+            MessageKey::IssueStatusAriaLabel,
+            MessageKey::NoDescriptionProvided,
+            MessageKey::CreatedAt {
+                formatted: "2026-08-10 09:00".to_string(),
+            },
+            MessageKey::UpdatedAt {
+                formatted: "2026-08-10 09:00".to_string(),
+            },
+            MessageKey::ProjectsListPageTitle,
+            MessageKey::ProjectsSubheading,
+            MessageKey::NewProjectLabel,
+            MessageKey::ProjectsEmptyMessage,
+            MessageKey::CreateFirstProjectButton,
+            MessageKey::NoDescriptionShort,
+            MessageKey::ProjectNewPageTitle,
+            MessageKey::NewBreadcrumbWord,
+            MessageKey::ProjectNamePlaceholder,
+            MessageKey::ProjectDescriptionPlaceholder,
+            MessageKey::TeamFieldLabel,
+            MessageKey::OptionalHint,
+            MessageKey::PersonalNoTeamOption,
+            MessageKey::TeamHelperText,
+            MessageKey::CreateProjectButton,
+            MessageKey::ProjectEditPageTitle {
+                project_name: "Customer Portal".to_string(),
+            },
+            MessageKey::EditProjectHeading,
+            MessageKey::DeleteProjectHeading,
+            MessageKey::DeleteProjectWarning,
+            MessageKey::IssueDeletedFlash,
+            MessageKey::ProjectDeletedFlash,
         ];
         keys.extend(
             EntityKind::all()
@@ -522,6 +923,27 @@ impl MessageKey {
             NavSection::all()
                 .into_iter()
                 .map(|section| MessageKey::BackToSection { section }),
+        );
+        // Every IssueStatusLabel and PriorityLabel value, per I18N-005b's
+        // absorption of IssueStatus::label()/Priority::label().
+        keys.extend(
+            IssueStatusLabel::all()
+                .into_iter()
+                .map(|label| MessageKey::IssueStatusName { label }),
+        );
+        keys.extend(
+            PriorityLabel::all()
+                .into_iter()
+                .map(|label| MessageKey::PriorityName { label }),
+        );
+        // Every Field value, through the standalone label key
+        // I18N-005b adds — FieldRequired/FieldMustBePositiveInteger
+        // above already exercise every value through the validation
+        // sentences; this exercises the same set through FieldLabel.
+        keys.extend(
+            Field::all()
+                .into_iter()
+                .map(|field| MessageKey::FieldLabel { field }),
         );
         keys
     }

@@ -27,7 +27,7 @@ fn shipped_and_fixture_tables_contain_no_prohibited_vocabulary() {
     );
 
     for key in &keys {
-        let english = Locale::English.render(*key);
+        let english = Locale::English.render(key.clone());
         let violations = find_violations(&english);
         assert!(
             violations.is_empty(),
@@ -35,7 +35,7 @@ fn shipped_and_fixture_tables_contain_no_prohibited_vocabulary() {
             violations.iter().map(|v| v.phrase).collect::<Vec<_>>()
         );
 
-        let fixture = common::fixture_locale::render(*key);
+        let fixture = common::fixture_locale::render(key.clone());
         let violations = find_violations(&fixture);
         assert!(
             violations.is_empty(),

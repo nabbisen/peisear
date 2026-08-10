@@ -26,7 +26,9 @@
 #![deny(clippy::wildcard_enum_match_arm)]
 #![deny(clippy::match_wildcard_for_single_variants)]
 
-use crate::message::{EntityKind, Field, IndicatorLabel, MessageKey, NavSection};
+use crate::message::{
+    EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey, NavSection, PriorityLabel,
+};
 
 pub(crate) fn render(key: MessageKey) -> String {
     match key {
@@ -162,6 +164,134 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::BackToSection { section } => format!("Back to {}", nav_section(section)),
         MessageKey::ErrorPageTitle => "Error — Issue Tracker".to_string(),
         MessageKey::ErrorPageGoHomeLink => "Go home".to_string(),
+
+        // ---- I18N-005b: components/{issues,projects} ----
+        MessageKey::IssueStatusName { label } => issue_status_label(label).to_string(),
+        MessageKey::PriorityName { label } => priority_label(label).to_string(),
+        MessageKey::FieldLabel { field } => field_label(field).to_string(),
+        MessageKey::ProjectsSectionName => "Projects".to_string(),
+        MessageKey::ViewToggleBoard => "Board".to_string(),
+        MessageKey::ViewToggleList => "List".to_string(),
+        MessageKey::EditWord => "Edit".to_string(),
+        MessageKey::CancelButton => "Cancel".to_string(),
+        MessageKey::SaveButton => "Save".to_string(),
+        MessageKey::DeleteButton => "Delete".to_string(),
+        MessageKey::NoValuePlaceholder => "—".to_string(),
+        MessageKey::StoryPointsHint => "story points".to_string(),
+        MessageKey::PointsValue { points } => format!("{points} pt"),
+        MessageKey::HealthEmptyMessage => {
+            "No issues yet — health indicators will appear once work starts.".to_string()
+        }
+        MessageKey::ProjectHealthSectionLabel => "Project health".to_string(),
+        MessageKey::HealthHeading => "Health".to_string(),
+        MessageKey::IndicatorsSummaryLabel => "Indicators".to_string(),
+        MessageKey::WorkloadHeading => "Workload".to_string(),
+        MessageKey::WorkloadSetCapacityLink => "(set your capacity)".to_string(),
+        MessageKey::WorkloadTitle {
+            display_name,
+            in_flight_issues,
+        } => format!("{display_name} — {in_flight_issues} in-flight issues"),
+        MessageKey::WorkloadHintLabel => "Workload:".to_string(),
+        MessageKey::EmptyBoardHint => "Drop issues here".to_string(),
+        MessageKey::MoveIssueAriaLabel {
+            issue_title,
+            target,
+        } => format!("Move \"{issue_title}\" to {}", issue_status_label(target)),
+        MessageKey::FilterSortAriaLabel => "Filter and sort issues".to_string(),
+        MessageKey::AllStatusesOption => "All statuses".to_string(),
+        MessageKey::AnyoneOption => "Anyone".to_string(),
+        MessageKey::UnassignedOption => "Unassigned".to_string(),
+        MessageKey::SortByFieldLabel => "Sort by".to_string(),
+        MessageKey::SortDefaultOption => "Default".to_string(),
+        MessageKey::SortRecentlyCreatedOption => "Recently created".to_string(),
+        MessageKey::SortRecentlyUpdatedOption => "Recently updated".to_string(),
+        MessageKey::ApplyButton => "Apply".to_string(),
+        MessageKey::ResetFilterAriaLabel => {
+            "Show this list with no filter or sort applied".to_string()
+        }
+        MessageKey::ResetLink => "Reset".to_string(),
+        MessageKey::UpdatedColumnHeading => "Updated".to_string(),
+        MessageKey::EmptyIssueListMessage => "No issues yet.".to_string(),
+        MessageKey::EffortEstimateTooltip => "Effort estimate".to_string(),
+        MessageKey::ProjectDetailPageTitle { project_name } => {
+            format!("{project_name} — Issue Tracker")
+        }
+        MessageKey::IssueNewPageTitle { project_name } => format!("New issue — {project_name}"),
+        MessageKey::NewIssueLabel => "New issue".to_string(),
+        MessageKey::NewIssueTitlePlaceholder => "What needs to happen?".to_string(),
+        MessageKey::NewIssueDescriptionPlaceholder => {
+            "Describe the problem, the steps to reproduce, or the acceptance criteria.".to_string()
+        }
+        MessageKey::CreateIssueButton => "Create issue".to_string(),
+        MessageKey::SubIssueNewPageTitle { parent_title } => {
+            format!("New sub-issue — {parent_title}")
+        }
+        MessageKey::NewSubIssueLabel => "New sub-issue".to_string(),
+        MessageKey::SubIssueNewPageIntro => "This sub-issue follows its parent's sprint. \
+             You can give it its own assignee, status, priority, and effort."
+            .to_string(),
+        MessageKey::NewSubIssueTitlePlaceholder => {
+            "What needs to happen for this part?".to_string()
+        }
+        MessageKey::NewSubIssueDescriptionPlaceholder => {
+            "Describe this sub-task in more detail if useful.".to_string()
+        }
+        MessageKey::CreateSubIssueButton => "Create sub-issue".to_string(),
+        MessageKey::IssueDetailPageTitle {
+            issue_title,
+            project_name,
+        } => format!("{issue_title} — {project_name}"),
+        MessageKey::SubIssuesLabel => "Sub-issues".to_string(),
+        MessageKey::AddSubIssueLink => "+ Add sub-issue".to_string(),
+        MessageKey::SubIssuesEmptyMessage => {
+            "No sub-issues yet. Break this work into smaller pieces \
+             if it helps you track them — they share this issue's project \
+             and sprint, but can have their own assignee, status, and effort."
+                .to_string()
+        }
+        MessageKey::SubIssueAriaLabel { title, status } => {
+            format!("{title}, status {}", issue_status_label(status))
+        }
+        MessageKey::SprintAssignmentLabel => "Sprint assignment".to_string(),
+        MessageKey::SprintFieldLabel => "Sprint:".to_string(),
+        MessageKey::SprintSelectAriaLabel => "Select sprint for this issue".to_string(),
+        MessageKey::NoSprintOption => "(no sprint)".to_string(),
+        MessageKey::SprintAssignmentHelperText => {
+            "Sprint assignment is independent from this issue's status and priority — \
+             adding to a sprint commits the work; the team decides what 'committed' means."
+                .to_string()
+        }
+        MessageKey::IssueStatusAriaLabel => "Issue status".to_string(),
+        MessageKey::NoDescriptionProvided => "No description provided.".to_string(),
+        MessageKey::CreatedAt { formatted } => format!("Created {formatted}"),
+        MessageKey::UpdatedAt { formatted } => format!("Updated {formatted}"),
+        MessageKey::ProjectsListPageTitle => "Projects — Issue Tracker".to_string(),
+        MessageKey::ProjectsSubheading => "Your issue-tracking workspaces".to_string(),
+        MessageKey::NewProjectLabel => "New project".to_string(),
+        MessageKey::ProjectsEmptyMessage => "No projects yet.".to_string(),
+        MessageKey::CreateFirstProjectButton => "Create your first project".to_string(),
+        MessageKey::NoDescriptionShort => "No description".to_string(),
+        MessageKey::ProjectNewPageTitle => "New project — Issue Tracker".to_string(),
+        MessageKey::NewBreadcrumbWord => "New".to_string(),
+        MessageKey::ProjectNamePlaceholder => "e.g. Customer Portal".to_string(),
+        MessageKey::ProjectDescriptionPlaceholder => "What is this project about?".to_string(),
+        MessageKey::TeamFieldLabel => "Team".to_string(),
+        MessageKey::OptionalHint => "optional".to_string(),
+        MessageKey::PersonalNoTeamOption => "Personal (no team)".to_string(),
+        MessageKey::TeamHelperText => "If you choose a team, members of that team can see and \
+             contribute to this project per their team role."
+            .to_string(),
+        MessageKey::CreateProjectButton => "Create project".to_string(),
+        MessageKey::ProjectEditPageTitle { project_name } => {
+            format!("Edit {project_name} — Issue Tracker")
+        }
+        MessageKey::EditProjectHeading => "Edit project".to_string(),
+        MessageKey::DeleteProjectHeading => "Delete project".to_string(),
+        MessageKey::DeleteProjectWarning => {
+            "Permanently remove this project and all its issues.".to_string()
+        }
+        MessageKey::IssueDeletedFlash => "Issue deleted".to_string(),
+        MessageKey::ProjectDeletedFlash => "Project deleted".to_string(),
     }
 }
 
@@ -228,5 +358,28 @@ fn field_label(field: Field) -> &'static str {
         Field::EffortPoints => "Effort",
         Field::CapacityPoints => "Capacity points",
         Field::CloseDate => "Close date",
+        Field::Title => "Title",
+        Field::Description => "Description",
+        Field::Status => "Status",
+        Field::Priority => "Priority",
+        Field::Assignee => "Assignee",
+        Field::Name => "Name",
+    }
+}
+
+fn issue_status_label(label: IssueStatusLabel) -> &'static str {
+    match label {
+        IssueStatusLabel::Open => "Open",
+        IssueStatusLabel::InProgress => "In Progress",
+        IssueStatusLabel::Done => "Done",
+    }
+}
+
+fn priority_label(label: PriorityLabel) -> &'static str {
+    match label {
+        PriorityLabel::Low => "Low",
+        PriorityLabel::Medium => "Medium",
+        PriorityLabel::High => "High",
+        PriorityLabel::Urgent => "Urgent",
     }
 }

@@ -5,6 +5,7 @@ use axum::{
     extract::{Path, Query, State},
     response::{IntoResponse, Redirect},
 };
+use peisear_i18n::{Locale, MessageKey};
 use peisear_storage::projects;
 use serde::Deserialize;
 use validator::Validate;
@@ -158,5 +159,8 @@ pub async fn delete(
     Path(project_id): Path<String>,
 ) -> AppResult<Redirect> {
     projects::delete(&state.db, &project_id, &user.id).await?;
-    Ok(Redirect::to("/projects?flash=Project+deleted"))
+    let flash = Locale::English
+        .render(MessageKey::ProjectDeletedFlash)
+        .replace(' ', "+");
+    Ok(Redirect::to(&format!("/projects?flash={flash}")))
 }

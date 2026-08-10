@@ -8,6 +8,7 @@ use axum::{
     response::{IntoResponse, Redirect},
 };
 use peisear_core::{IssueStatus, Priority};
+use peisear_i18n::{Locale, MessageKey};
 use peisear_storage::{issues, metrics_snapshots, project_health, projects, view_states};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -710,8 +711,11 @@ pub async fn delete(
     // Access check.
     let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
     issues::delete(&state.db, &issue_id, &project_id, &user.id).await?;
+    let flash = Locale::English
+        .render(MessageKey::IssueDeletedFlash)
+        .replace(' ', "+");
     Ok(Redirect::to(&format!(
-        "/projects/{project_id}?flash=Issue+deleted"
+        "/projects/{project_id}?flash={flash}"
     )))
 }
 

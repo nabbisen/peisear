@@ -11,6 +11,7 @@
 //!   domain vocabulary without pulling in the web stack
 
 use chrono::{DateTime, Utc};
+use peisear_i18n::{IssueStatusLabel, PriorityLabel};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -75,11 +76,17 @@ impl IssueStatus {
         }
     }
 
-    pub fn label(&self) -> &'static str {
+    /// The word this status renders as, via `peisear-i18n`'s message
+    /// table. `I18N-005b` §4 calls this "the fifth prose function"
+    /// this crate held outside the table (`IndicatorKind::label()`,
+    /// `I18N-004`, was the first absorbed this way) — this crate
+    /// constructs the closed-set value; `peisear-i18n`'s
+    /// `MessageKey::IssueStatusName` owns the actual English word.
+    pub fn to_i18n_label(self) -> IssueStatusLabel {
         match self {
-            Self::Open => "Open",
-            Self::InProgress => "In Progress",
-            Self::Done => "Done",
+            Self::Open => IssueStatusLabel::Open,
+            Self::InProgress => IssueStatusLabel::InProgress,
+            Self::Done => IssueStatusLabel::Done,
         }
     }
 
@@ -122,12 +129,14 @@ impl Priority {
         }
     }
 
-    pub fn label(&self) -> &'static str {
+    /// See [`IssueStatus::to_i18n_label`] — same absorption, same
+    /// reason.
+    pub fn to_i18n_label(self) -> PriorityLabel {
         match self {
-            Self::Low => "Low",
-            Self::Medium => "Medium",
-            Self::High => "High",
-            Self::Urgent => "Urgent",
+            Self::Low => PriorityLabel::Low,
+            Self::Medium => PriorityLabel::Medium,
+            Self::High => PriorityLabel::High,
+            Self::Urgent => PriorityLabel::Urgent,
         }
     }
 

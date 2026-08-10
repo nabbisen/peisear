@@ -25,7 +25,9 @@
 #![deny(clippy::wildcard_enum_match_arm)]
 #![deny(clippy::match_wildcard_for_single_variants)]
 
-use peisear_i18n::{EntityKind, Field, IndicatorLabel, MessageKey, NavSection};
+use peisear_i18n::{
+    EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey, NavSection, PriorityLabel,
+};
 
 pub fn render(key: MessageKey) -> String {
     match key {
@@ -135,6 +137,113 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::BackToSection { section } => format!("[fx-back-to] {}", nav_section(section)),
         MessageKey::ErrorPageTitle => "[fx-error-title]".to_string(),
         MessageKey::ErrorPageGoHomeLink => "[fx-go-home]".to_string(),
+
+        // ---- I18N-005b: components/{issues,projects} ----
+        MessageKey::IssueStatusName { label } => {
+            format!("[fx-status] {}", issue_status_label(label))
+        }
+        MessageKey::PriorityName { label } => format!("[fx-priority] {}", priority_label(label)),
+        MessageKey::FieldLabel { field } => format!("[fx-field] {}", field_label(field)),
+        MessageKey::ProjectsSectionName => "[fx-projects-section]".to_string(),
+        MessageKey::ViewToggleBoard => "[fx-view-board]".to_string(),
+        MessageKey::ViewToggleList => "[fx-view-list]".to_string(),
+        MessageKey::EditWord => "[fx-edit]".to_string(),
+        MessageKey::CancelButton => "[fx-cancel]".to_string(),
+        MessageKey::SaveButton => "[fx-save]".to_string(),
+        MessageKey::DeleteButton => "[fx-delete]".to_string(),
+        MessageKey::NoValuePlaceholder => "[fx-no-value]".to_string(),
+        MessageKey::StoryPointsHint => "[fx-story-points]".to_string(),
+        MessageKey::PointsValue { points } => format!("[fx-points-{points}]"),
+        MessageKey::HealthEmptyMessage => "[fx-health-empty]".to_string(),
+        MessageKey::ProjectHealthSectionLabel => "[fx-health-section]".to_string(),
+        MessageKey::HealthHeading => "[fx-health-heading]".to_string(),
+        MessageKey::IndicatorsSummaryLabel => "[fx-indicators-summary]".to_string(),
+        MessageKey::WorkloadHeading => "[fx-workload-heading]".to_string(),
+        MessageKey::WorkloadSetCapacityLink => "[fx-set-capacity]".to_string(),
+        MessageKey::WorkloadTitle {
+            display_name,
+            in_flight_issues,
+        } => format!("[fx-workload-title] {display_name} {in_flight_issues}"),
+        MessageKey::WorkloadHintLabel => "[fx-workload-hint]".to_string(),
+        MessageKey::EmptyBoardHint => "[fx-empty-board]".to_string(),
+        MessageKey::MoveIssueAriaLabel {
+            issue_title,
+            target,
+        } => format!("[fx-move] {issue_title} {}", issue_status_label(target)),
+        MessageKey::FilterSortAriaLabel => "[fx-filter-sort]".to_string(),
+        MessageKey::AllStatusesOption => "[fx-all-statuses]".to_string(),
+        MessageKey::AnyoneOption => "[fx-anyone]".to_string(),
+        MessageKey::UnassignedOption => "[fx-unassigned]".to_string(),
+        MessageKey::SortByFieldLabel => "[fx-sort-by]".to_string(),
+        MessageKey::SortDefaultOption => "[fx-sort-default]".to_string(),
+        MessageKey::SortRecentlyCreatedOption => "[fx-sort-created]".to_string(),
+        MessageKey::SortRecentlyUpdatedOption => "[fx-sort-updated]".to_string(),
+        MessageKey::ApplyButton => "[fx-apply]".to_string(),
+        MessageKey::ResetFilterAriaLabel => "[fx-reset-aria]".to_string(),
+        MessageKey::ResetLink => "[fx-reset]".to_string(),
+        MessageKey::UpdatedColumnHeading => "[fx-updated-heading]".to_string(),
+        MessageKey::EmptyIssueListMessage => "[fx-empty-issues]".to_string(),
+        MessageKey::EffortEstimateTooltip => "[fx-effort-estimate]".to_string(),
+        MessageKey::ProjectDetailPageTitle { project_name } => {
+            format!("[fx-project-detail-title] {project_name}")
+        }
+        MessageKey::IssueNewPageTitle { project_name } => {
+            format!("[fx-new-issue-title] {project_name}")
+        }
+        MessageKey::NewIssueLabel => "[fx-new-issue]".to_string(),
+        MessageKey::NewIssueTitlePlaceholder => "[fx-new-issue-title-ph]".to_string(),
+        MessageKey::NewIssueDescriptionPlaceholder => "[fx-new-issue-desc-ph]".to_string(),
+        MessageKey::CreateIssueButton => "[fx-create-issue]".to_string(),
+        MessageKey::SubIssueNewPageTitle { parent_title } => {
+            format!("[fx-new-sub-issue-title] {parent_title}")
+        }
+        MessageKey::NewSubIssueLabel => "[fx-new-sub-issue]".to_string(),
+        MessageKey::SubIssueNewPageIntro => "[fx-sub-issue-intro]".to_string(),
+        MessageKey::NewSubIssueTitlePlaceholder => "[fx-new-sub-issue-title-ph]".to_string(),
+        MessageKey::NewSubIssueDescriptionPlaceholder => "[fx-new-sub-issue-desc-ph]".to_string(),
+        MessageKey::CreateSubIssueButton => "[fx-create-sub-issue]".to_string(),
+        MessageKey::IssueDetailPageTitle {
+            issue_title,
+            project_name,
+        } => format!("[fx-issue-detail-title] {issue_title} {project_name}"),
+        MessageKey::SubIssuesLabel => "[fx-sub-issues]".to_string(),
+        MessageKey::AddSubIssueLink => "[fx-add-sub-issue]".to_string(),
+        MessageKey::SubIssuesEmptyMessage => "[fx-sub-issues-empty]".to_string(),
+        MessageKey::SubIssueAriaLabel { title, status } => {
+            format!("[fx-sub-issue-aria] {title} {}", issue_status_label(status))
+        }
+        MessageKey::SprintAssignmentLabel => "[fx-sprint-assignment]".to_string(),
+        MessageKey::SprintFieldLabel => "[fx-sprint-field]".to_string(),
+        MessageKey::SprintSelectAriaLabel => "[fx-sprint-select]".to_string(),
+        MessageKey::NoSprintOption => "[fx-no-sprint]".to_string(),
+        MessageKey::SprintAssignmentHelperText => "[fx-sprint-helper]".to_string(),
+        MessageKey::IssueStatusAriaLabel => "[fx-issue-status-aria]".to_string(),
+        MessageKey::NoDescriptionProvided => "[fx-no-description-provided]".to_string(),
+        MessageKey::CreatedAt { formatted } => format!("[fx-created] {formatted}"),
+        MessageKey::UpdatedAt { formatted } => format!("[fx-updated] {formatted}"),
+        MessageKey::ProjectsListPageTitle => "[fx-projects-list-title]".to_string(),
+        MessageKey::ProjectsSubheading => "[fx-projects-subheading]".to_string(),
+        MessageKey::NewProjectLabel => "[fx-new-project]".to_string(),
+        MessageKey::ProjectsEmptyMessage => "[fx-projects-empty]".to_string(),
+        MessageKey::CreateFirstProjectButton => "[fx-create-first-project]".to_string(),
+        MessageKey::NoDescriptionShort => "[fx-no-description-short]".to_string(),
+        MessageKey::ProjectNewPageTitle => "[fx-project-new-title]".to_string(),
+        MessageKey::NewBreadcrumbWord => "[fx-new-breadcrumb]".to_string(),
+        MessageKey::ProjectNamePlaceholder => "[fx-project-name-ph]".to_string(),
+        MessageKey::ProjectDescriptionPlaceholder => "[fx-project-desc-ph]".to_string(),
+        MessageKey::TeamFieldLabel => "[fx-team-field]".to_string(),
+        MessageKey::OptionalHint => "[fx-optional]".to_string(),
+        MessageKey::PersonalNoTeamOption => "[fx-personal-no-team]".to_string(),
+        MessageKey::TeamHelperText => "[fx-team-helper]".to_string(),
+        MessageKey::CreateProjectButton => "[fx-create-project]".to_string(),
+        MessageKey::ProjectEditPageTitle { project_name } => {
+            format!("[fx-project-edit-title] {project_name}")
+        }
+        MessageKey::EditProjectHeading => "[fx-edit-project]".to_string(),
+        MessageKey::DeleteProjectHeading => "[fx-delete-project]".to_string(),
+        MessageKey::DeleteProjectWarning => "[fx-delete-project-warning]".to_string(),
+        MessageKey::IssueDeletedFlash => "[fx-issue-deleted]".to_string(),
+        MessageKey::ProjectDeletedFlash => "[fx-project-deleted]".to_string(),
     }
 }
 
@@ -154,6 +263,29 @@ fn field_label(field: Field) -> &'static str {
         Field::EffortPoints => "[fx-effort]",
         Field::CapacityPoints => "[fx-capacity-points]",
         Field::CloseDate => "[fx-close-date]",
+        Field::Title => "[fx-title]",
+        Field::Description => "[fx-description]",
+        Field::Status => "[fx-status-field]",
+        Field::Priority => "[fx-priority-field]",
+        Field::Assignee => "[fx-assignee]",
+        Field::Name => "[fx-name]",
+    }
+}
+
+fn issue_status_label(label: IssueStatusLabel) -> &'static str {
+    match label {
+        IssueStatusLabel::Open => "[fx-open]",
+        IssueStatusLabel::InProgress => "[fx-in-progress]",
+        IssueStatusLabel::Done => "[fx-done]",
+    }
+}
+
+fn priority_label(label: PriorityLabel) -> &'static str {
+    match label {
+        PriorityLabel::Low => "[fx-low]",
+        PriorityLabel::Medium => "[fx-medium]",
+        PriorityLabel::High => "[fx-high]",
+        PriorityLabel::Urgent => "[fx-urgent]",
     }
 }
 
