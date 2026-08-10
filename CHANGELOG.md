@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.1] — 2026-08-10
+
+### Fixed
+
+- **The project-health summary sentence could still name a severity above
+  `Watch`** (`ISSUE-006`, `I18N-004` — a patch on RFC 007's DEV-004 fix,
+  `NFR-LANG-002`, P0). 0.20.0's `DisplayHealthState` clamp was wired into
+  badge, glyph, and API rendering, but `project_health::summarize` — which
+  builds the summary paragraph directly beneath the health heading —
+  still selected from the internal four-state model directly, so a
+  project reaching the worst internal severity rendered that state's name
+  in the summary sentence itself. It survived 0.20.0's own ceiling test,
+  which matched an exact-case substring against the whole page body and
+  happened to pass against a page that rendered the word in lowercase
+  prose rather than the capitalised form the test checked for. Fixed
+  structurally rather than by rewording: the two message-table entries
+  that could render the unclamped severity are removed from
+  `peisear-i18n` outright, so no caller in any crate can construct that
+  sentence — not just `summarize`. The ceiling test is now case-insensitive
+  and checks the summary sentence specifically, not only the page as a
+  whole.
+- **Two health-indicator explanation sentences were grammatically
+  broken** (`ISSUE-006`, `I18N-004`). The bus-factor explanation for a
+  one-person project read as two sentence fragments concatenated
+  incorrectly, and the WIP-compliance explanation repeated its own
+  qualifier. Both were live defects, not edge cases — the WIP-compliance
+  one was confirmed reachable by reproducing it against a project with
+  one assignee over the default WIP limit before it was corrected. Both
+  now read as plain sentences; no wording elsewhere in either indicator's
+  explanation changed.
+
 ## [0.20.0] — 2026-08-03
 
 ### Fixed (privacy)
@@ -92,6 +123,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   indicators, keeping its badge, trend, and summary sentence, per
   `FR-HLT-008` and external design §6 SCR-08. `/api/users/{id}/burnout`'s
   `indicator` field can no longer serialise `"concern"`.
+
+  > **Correction (0.20.1):** this clamp covered badge, glyph, and API
+  > rendering only. The health strip's summary sentence — the paragraph
+  > directly beneath the heading — was not routed through it, and could
+  > still name the unclamped severity directly in prose. See
+  > `[0.20.1]` below.
 - **`AppError::Validation`'s public message leaked "validation failed: "**
   (found while fixing the above). `public_message()` fell through to the
   `Display` impl used for tracing/logs, which is intentionally prefixed
