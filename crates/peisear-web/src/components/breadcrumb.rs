@@ -42,6 +42,8 @@
 
 use leptos::prelude::*;
 
+use peisear_i18n::{Locale, MessageKey};
+
 /// One node in a breadcrumb trail.
 ///
 /// `href` is `None` for the **current page** — that node is
@@ -87,7 +89,10 @@ pub fn render_breadcrumb(items: Vec<BreadcrumbItem>) -> impl IntoView {
     // break the consistency the consolidation is designed to
     // enforce.
     let mut all = Vec::with_capacity(items.len() + 1);
-    all.push(BreadcrumbItem::link("Today", "/today"));
+    all.push(BreadcrumbItem::link(
+        Locale::English.render(MessageKey::NavLinkToday),
+        "/today",
+    ));
     all.extend(items);
 
     let nodes = all
@@ -122,7 +127,7 @@ pub fn render_breadcrumb(items: Vec<BreadcrumbItem>) -> impl IntoView {
     view! {
         // role/aria-label make the daisyUI `breadcrumbs` div
         // findable as the page's secondary navigation landmark.
-        <nav class="breadcrumbs text-sm" aria-label="Breadcrumb">
+        <nav class="breadcrumbs text-sm" aria-label=Locale::English.render(MessageKey::BreadcrumbNavLabel)>
             <ul>{nodes}</ul>
         </nav>
     }
@@ -142,14 +147,15 @@ pub fn render_breadcrumb(items: Vec<BreadcrumbItem>) -> impl IntoView {
 pub fn render_back_link(label: impl Into<String>, href: impl Into<String>) -> impl IntoView {
     let label = label.into();
     let href = href.into();
-    let aria = format!("Back to {label}");
+    let back_to = Locale::English.render(MessageKey::BackToLabel { label });
+    let back_to_aria = back_to.clone();
     view! {
         <a href=href
            class="inline-flex items-center gap-1 text-sm text-base-content/70 \
                   hover:text-base-content mb-3"
-           aria-label=aria>
+           aria-label=back_to_aria>
             <span aria-hidden="true">"← "</span>
-            <span>"Back to " {label}</span>
+            <span>{back_to}</span>
         </a>
     }
 }

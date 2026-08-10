@@ -8,6 +8,7 @@
 use leptos::prelude::*;
 
 use peisear_core::CurrentUser;
+use peisear_i18n::{Locale, MessageKey};
 
 /// Minimum HTML scaffold. Children render inside `<main>`.
 ///
@@ -86,24 +87,36 @@ pub fn PublicShell(#[prop(into)] title: String, children: Children) -> impl Into
 
 #[component]
 fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
-    let bell_aria = if unread_count > 0 {
-        format!("Notifications ({} unread)", unread_count)
+    let bell_aria = Locale::English.render(if unread_count > 0 {
+        MessageKey::NavBellLabelUnread {
+            count: unread_count,
+        }
     } else {
-        "Notifications".to_string()
-    };
+        MessageKey::NavBellLabelNone
+    });
     let unread_badge = (unread_count > 0).then(|| {
         view! {
             <span class="badge badge-sm badge-primary absolute -top-1 -right-1 px-1 min-h-0 h-4">
-                {if unread_count > 99 { "99+".to_string() } else { unread_count.to_string() }}
+                {Locale::English.render(MessageKey::NavBellCount { count: unread_count })}
             </span>
         }
     });
+    let brand_name = Locale::English.render(MessageKey::AppBrandName);
+    let search_form_label = Locale::English.render(MessageKey::NavSearchFormLabel);
+    let search_placeholder = Locale::English.render(MessageKey::NavSearchPlaceholder);
+    let search_query_label = Locale::English.render(MessageKey::NavSearchQueryLabel);
+    let search_suggestions_label = Locale::English.render(MessageKey::NavSearchSuggestionsLabel);
+    let link_today = Locale::English.render(MessageKey::NavLinkToday);
+    let link_teams = Locale::English.render(MessageKey::NavLinkTeams);
+    let link_inbox = Locale::English.render(MessageKey::NavLinkInbox);
+    let link_settings = Locale::English.render(MessageKey::NavLinkSettings);
+    let sign_out = Locale::English.render(MessageKey::NavSignOut);
 
     view! {
         <header class="navbar bg-base-100 shadow-sm border-b border-base-300 px-4">
             <div class="flex-1">
                 <a href="/projects" class="text-lg font-semibold tracking-tight">
-                    <span class="text-primary">"●"</span>" Issue Tracker"
+                    <span class="text-primary">"●"</span>" "{brand_name}
                 </a>
             </div>
 
@@ -124,21 +137,21 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                 <form method="get" action="/search"
                       class="relative"
                       role="search"
-                      aria-label="Search projects and open issues">
+                      aria-label=search_form_label>
                     <input type="search"
                            name="q"
-                           placeholder="Search..."
+                           placeholder=search_placeholder
                            autocomplete="off"
                            class="input input-bordered input-sm w-64"
                            data-typeahead="global"
-                           aria-label="Search query"/>
+                           aria-label=search_query_label/>
                     // Container the JS populates with the
                     // typeahead dropdown. Empty until the
                     // server returns hits.
                     <div data-typeahead-dropdown=""
                          class="absolute left-0 right-0 mt-1 z-50 hidden bg-base-100 border border-base-300 rounded-md shadow-lg max-h-96 overflow-y-auto"
                          role="listbox"
-                         aria-label="Search suggestions">
+                         aria-label=search_suggestions_label>
                     </div>
                 </form>
             </div>
@@ -167,13 +180,13 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                     </label>
                     <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-48 border border-base-300">
                         <li class="menu-title"><span class="text-xs opacity-70">{user.email}</span></li>
-                        <li><a href="/today">"Today"</a></li>
-                        <li><a href="/teams">"Teams"</a></li>
-                        <li><a href="/inbox">"Inbox"</a></li>
-                        <li><a href="/settings">"Settings"</a></li>
+                        <li><a href="/today">{link_today}</a></li>
+                        <li><a href="/teams">{link_teams}</a></li>
+                        <li><a href="/inbox">{link_inbox}</a></li>
+                        <li><a href="/settings">{link_settings}</a></li>
                         <li>
                             <form method="post" action="/logout">
-                                <button type="submit" class="text-error">"Sign out"</button>
+                                <button type="submit" class="text-error">{sign_out}</button>
                             </form>
                         </li>
                     </ul>

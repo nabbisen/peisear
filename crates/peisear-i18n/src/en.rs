@@ -143,6 +143,25 @@ pub(crate) fn render(key: MessageKey) -> String {
              May be worth a glance — sometimes a quick check-in turns out to be \
              all that's needed. Visit /today for context."
         ),
+
+        // ---- I18N-005a: components/{layout,breadcrumb,error_page} ----
+        MessageKey::AppBrandName => "Issue Tracker".to_string(),
+        MessageKey::NavBellLabelNone => "Notifications".to_string(),
+        MessageKey::NavBellLabelUnread { count } => format!("Notifications ({count} unread)"),
+        MessageKey::NavBellCount { count } => bell_count(count),
+        MessageKey::NavSearchFormLabel => "Search projects and open issues".to_string(),
+        MessageKey::NavSearchPlaceholder => "Search...".to_string(),
+        MessageKey::NavSearchQueryLabel => "Search query".to_string(),
+        MessageKey::NavSearchSuggestionsLabel => "Search suggestions".to_string(),
+        MessageKey::NavLinkToday => "Today".to_string(),
+        MessageKey::NavLinkTeams => "Teams".to_string(),
+        MessageKey::NavLinkInbox => "Inbox".to_string(),
+        MessageKey::NavLinkSettings => "Settings".to_string(),
+        MessageKey::NavSignOut => "Sign out".to_string(),
+        MessageKey::BreadcrumbNavLabel => "Breadcrumb".to_string(),
+        MessageKey::BackToLabel { label } => format!("Back to {label}"),
+        MessageKey::ErrorPageTitle => "Error — Issue Tracker".to_string(),
+        MessageKey::ErrorPageGoHomeLink => "Go home".to_string(),
     }
 }
 
@@ -154,6 +173,17 @@ pub(crate) fn render(key: MessageKey) -> String {
 fn throughput_value(done: i64, total: i64) -> String {
     let pct = (done * 100) / total;
     format!("{done} / {total} ({pct}%)")
+}
+
+/// The navbar bell badge's own visible number: `IndicatorValueActivity`'s
+/// bare-count shape, plus a display cap so the badge doesn't grow
+/// wider than its fixed-size circle for a busy inbox.
+fn bell_count(count: i64) -> String {
+    if count > 99 {
+        "99+".to_string()
+    } else {
+        count.to_string()
+    }
 }
 
 fn indicator_label(label: IndicatorLabel) -> &'static str {

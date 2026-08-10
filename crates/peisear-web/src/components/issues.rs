@@ -166,7 +166,7 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
     // renders as one more chip alongside the individual
     // indicators (composite_row below) instead of a separate,
     // more prominent box carrying a number.
-    let summary = Locale::English.render(health.score.summary);
+    let summary = Locale::English.render(health.score.summary.clone());
 
     // Phase B PR3 (B-2): explainability — collect human-language
     // sentences describing each indicator that's not at Good.

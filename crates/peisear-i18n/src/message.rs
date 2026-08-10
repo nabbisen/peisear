@@ -99,7 +99,15 @@ impl IndicatorLabel {
 /// which is what makes a missing rendering a compile-time error
 /// (`RFC 006` requirement 2) rather than a runtime fallback to the
 /// key name.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+///
+/// `Clone`, not `Copy`, since `I18N-005a`: [`MessageKey::BackToLabel`]
+/// carries an open `String` parameter (a page name — user data, per
+/// `RFC 006` D4's "an issue titled 'velocity spike' is user data, not
+/// a violation" distinction), and `String` cannot be `Copy`. Every
+/// prior variant was `Copy`-eligible only because no key had needed
+/// open string data yet; this is that boundary, reached rather than
+/// assumed away.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MessageKey {
     /// `AppError::Forbidden`'s public message.
     Forbidden,
@@ -287,6 +295,66 @@ pub enum MessageKey {
     NotificationBurnoutStalledBody {
         stalled_days: i64,
     },
+
+    // ---- I18N-005a: components/{layout,breadcrumb,error_page} ----
+    /// The application's name, standing alone (the navbar brand
+    /// link). Also spelled out in full inside composed page titles
+    /// such as [`MessageKey::ErrorPageTitle`] — those are each a
+    /// single complete message in their own right, not this key
+    /// concatenated with a page name at the call site (`RFC 006`
+    /// requirement 7).
+    AppBrandName,
+    /// Navbar bell `aria-label` when there are no unread
+    /// notifications. See [`MessageKey::NavBellLabelUnread`] for the
+    /// other reachable shape — kept as two keys, not one key with a
+    /// zero-count branch, matching the
+    /// [`MessageKey::BurnoutSummarySteady`] precedent.
+    NavBellLabelNone,
+    NavBellLabelUnread {
+        count: i64,
+    },
+    /// The bell badge's own visible number, separate from its
+    /// `aria-label`. Capped display ("99+") above 99 is a rendering
+    /// concern, not a second message — same shape as
+    /// [`MessageKey::IndicatorValueActivity`], a bare count with no
+    /// surrounding words.
+    NavBellCount {
+        count: i64,
+    },
+    NavSearchFormLabel,
+    NavSearchPlaceholder,
+    NavSearchQueryLabel,
+    NavSearchSuggestionsLabel,
+    /// Standalone nav-link words, each reused at more than one call
+    /// site (navbar dropdown item; `NavLinkToday` is also
+    /// `render_breadcrumb`'s hard-coded leading entry). Flat
+    /// variants rather than an enum-parameterised one: unlike
+    /// [`EntityKind`]/[`Field`]/[`IndicatorLabel`], no larger
+    /// sentence template ever embeds "which destination" as a
+    /// parameter — each word only ever stands alone.
+    NavLinkToday,
+    NavLinkTeams,
+    NavLinkInbox,
+    NavLinkSettings,
+    NavSignOut,
+    /// `render_breadcrumb`'s wrapping `<nav>` `aria-label`.
+    BreadcrumbNavLabel,
+    /// `render_back_link`'s "Back to {label}" — used for both the
+    /// link's `aria-label` and its visible text, so the two can
+    /// never drift (`I18N-005a` replaces the source's direct
+    /// literal-plus-interpolation `"Back to " {label}` in the view
+    /// with a render of this key, matching the fixed prefix in the
+    /// `aria-label`, which already went through `format!`). `label`
+    /// is the parent page's name — open user data, not vocabulary,
+    /// same category as an issue title.
+    BackToLabel {
+        label: String,
+    },
+    /// `ErrorPage`'s `<title>`. One complete string, not
+    /// [`MessageKey::AppBrandName`] concatenated with "Error" at the
+    /// call site.
+    ErrorPageTitle,
+    ErrorPageGoHomeLink,
 }
 
 impl MessageKey {
@@ -368,6 +436,26 @@ impl MessageKey {
             },
             MessageKey::NotificationBurnoutStalledTitle,
             MessageKey::NotificationBurnoutStalledBody { stalled_days: 10 },
+            // -- I18N-005a: components/{layout,breadcrumb,error_page} --
+            MessageKey::AppBrandName,
+            MessageKey::NavBellLabelNone,
+            MessageKey::NavBellLabelUnread { count: 3 },
+            MessageKey::NavBellCount { count: 3 },
+            MessageKey::NavSearchFormLabel,
+            MessageKey::NavSearchPlaceholder,
+            MessageKey::NavSearchQueryLabel,
+            MessageKey::NavSearchSuggestionsLabel,
+            MessageKey::NavLinkToday,
+            MessageKey::NavLinkTeams,
+            MessageKey::NavLinkInbox,
+            MessageKey::NavLinkSettings,
+            MessageKey::NavSignOut,
+            MessageKey::BreadcrumbNavLabel,
+            MessageKey::BackToLabel {
+                label: "Sprint 4".to_string(),
+            },
+            MessageKey::ErrorPageTitle,
+            MessageKey::ErrorPageGoHomeLink,
         ];
         keys.extend(
             EntityKind::all()

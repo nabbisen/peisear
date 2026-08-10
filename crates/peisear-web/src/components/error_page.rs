@@ -3,19 +3,23 @@
 use axum::response::Html;
 use leptos::prelude::*;
 
+use peisear_i18n::{Locale, MessageKey};
+
 use super::layout::PublicShell;
 
 #[component]
 pub fn ErrorPage(status: u16, #[prop(into)] message: String) -> impl IntoView {
+    let title = Locale::English.render(MessageKey::ErrorPageTitle);
+    let go_home = Locale::English.render(MessageKey::ErrorPageGoHomeLink);
     view! {
-        <PublicShell title="Error — Issue Tracker">
+        <PublicShell title=title>
             <div class="max-w-md mx-auto mt-12">
                 <div class="card bg-base-100 shadow border border-base-300">
                     <div class="card-body text-center">
                         <div class="text-5xl font-bold text-error">{status}</div>
                         <p class="text-base-content/70 mt-2">{message}</p>
                         <div class="card-actions justify-center mt-4">
-                            <a href="/" class="btn btn-primary btn-sm">"Go home"</a>
+                            <a href="/" class="btn btn-primary btn-sm">{go_home}</a>
                         </div>
                     </div>
                 </div>

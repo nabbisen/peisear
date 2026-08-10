@@ -116,6 +116,25 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::NotificationBurnoutStalledBody { stalled_days } => {
             format!("[fx] stalled body: {stalled_days}")
         }
+
+        // ---- I18N-005a: components/{layout,breadcrumb,error_page} ----
+        MessageKey::AppBrandName => "[fx-brand]".to_string(),
+        MessageKey::NavBellLabelNone => "[fx-bell-none]".to_string(),
+        MessageKey::NavBellLabelUnread { count } => format!("[fx-bell-unread-{count}]"),
+        MessageKey::NavBellCount { count } => format!("[fx-bell-count-{count}]"),
+        MessageKey::NavSearchFormLabel => "[fx-search-form]".to_string(),
+        MessageKey::NavSearchPlaceholder => "[fx-search-placeholder]".to_string(),
+        MessageKey::NavSearchQueryLabel => "[fx-search-query]".to_string(),
+        MessageKey::NavSearchSuggestionsLabel => "[fx-search-suggestions]".to_string(),
+        MessageKey::NavLinkToday => "[fx-today]".to_string(),
+        MessageKey::NavLinkTeams => "[fx-teams]".to_string(),
+        MessageKey::NavLinkInbox => "[fx-inbox]".to_string(),
+        MessageKey::NavLinkSettings => "[fx-settings]".to_string(),
+        MessageKey::NavSignOut => "[fx-sign-out]".to_string(),
+        MessageKey::BreadcrumbNavLabel => "[fx-breadcrumb]".to_string(),
+        MessageKey::BackToLabel { label } => format!("[fx-back-to] {label}"),
+        MessageKey::ErrorPageTitle => "[fx-error-title]".to_string(),
+        MessageKey::ErrorPageGoHomeLink => "[fx-go-home]".to_string(),
     }
 }
 
