@@ -2152,6 +2152,7 @@ name = "peisear-core"
 version = "0.20.0"
 dependencies = [
  "chrono",
+ "peisear-i18n",
  "serde",
  "thiserror 2.0.18",
 ]
@@ -2202,6 +2203,7 @@ dependencies = [
  "leptos",
  "peisear-auth",
  "peisear-core",
+ "peisear-i18n",
  "peisear-notify",
  "peisear-storage",
  "serde",

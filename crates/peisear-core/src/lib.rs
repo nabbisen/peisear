@@ -449,6 +449,7 @@ impl From<HealthIndicator> for DisplayHealthState {
 /// [`HealthIndicator`] for their classification output.
 pub mod project_health {
     use super::HealthIndicator;
+    use peisear_i18n::{IndicatorLabel, MessageKey};
 
     /// The window in days over which "recent activity" is counted.
     /// Two weeks is long enough to cover sprint cadences and short
@@ -656,6 +657,29 @@ pub mod project_health {
             }
         }
 
+        /// Convert to `peisear_i18n`'s parallel label enum, for
+        /// building a [`MessageKey`] that names this indicator
+        /// (`summarize`'s output). Deliberately not `label()` itself
+        /// returning an i18n type — `peisear-i18n` is a leaf crate
+        /// (`I18N-001` §4.1) and cannot know about `IndicatorKind`,
+        /// so the two enums exist in parallel and this is the
+        /// translation point. `label()`'s text and
+        /// `peisear_i18n`'s rendering of the equivalent
+        /// `IndicatorLabel` variant are the same six strings,
+        /// duplicated across the two crates rather than shared —
+        /// see I18N-002's review request for why, and the drift risk
+        /// that duplication carries.
+        pub fn to_i18n_label(self) -> IndicatorLabel {
+            match self {
+                Self::Throughput => IndicatorLabel::Throughput,
+                Self::Staleness => IndicatorLabel::Staleness,
+                Self::Activity => IndicatorLabel::Activity,
+                Self::BusFactor => IndicatorLabel::BusFactor,
+                Self::LongStale => IndicatorLabel::LongStale,
+                Self::WipCompliance => IndicatorLabel::WipCompliance,
+            }
+        }
+
         /// Short description shown as a tooltip / `<details>` body
         /// to explain what the indicator measures.
         pub fn description(&self) -> &'static str {
@@ -684,8 +708,12 @@ pub mod project_health {
         pub kind: IndicatorKind,
         /// Display label, e.g. "Throughput".
         pub label: &'static str,
-        /// Pre-formatted display value, e.g. "5 / 7 (71%)" or "8 d".
-        pub value_display: String,
+        /// Descriptor for the display value, e.g. "5 / 7 (71%)" or
+        /// "8 d" once rendered. `-web` renders it via
+        /// `peisear_i18n::Locale::render` — this field carries the
+        /// key, not the rendered text (`I18N-002`; was `String`
+        /// before this handoff).
+        pub value_display: MessageKey,
         /// Coarse-grained classification for badge colour /
         /// accessibility text.
         pub state: HealthIndicator,
@@ -726,36 +754,68 @@ pub mod project_health {
         /// "concerning", or "you need to" — the user reads
         /// these every day, and §0.2 wants the tool to be a
         /// dashboard, not a coach.
-        pub fn human_explanation(&self) -> Option<String> {
+        ///
+        /// Takes `raw` — the same [`ProjectHealthRaw`] `format_value`
+        /// derives this indicator's value from — rather than reading
+        /// `self.value_display`, so the typed parameters on the
+        /// returned [`MessageKey`] come from raw numbers, not a
+        /// pre-formatted string (`RFC 006` requirement 7: "if you
+        /// find yourself passing a `String` that was already
+        /// formatted, the formatting belongs on the presentation
+        /// side" — `I18N-002` §5.2). This is a signature change from
+        /// the pre-`I18N-002` `&self`-only method; every caller
+        /// already holds a [`ProjectHealthReport`], which carries
+        /// `raw` alongside `indicators`.
+        pub fn human_explanation(&self, raw: &ProjectHealthRaw) -> Option<MessageKey> {
             // Good and Insufficient produce no row.
             match self.state {
                 HealthIndicator::Good | HealthIndicator::Insufficient => return None,
                 HealthIndicator::Watch | HealthIndicator::Concern => {}
             }
 
-            // The verbal frame ("currently ...") matches across
-            // indicators so the explanations read as a coherent
-            // list rather than a grab-bag of sentence shapes.
-            let value = &self.value_display;
             Some(match self.kind {
-                IndicatorKind::Throughput => format!(
-                    "Throughput is {value} — fewer issues are reaching Done than the rest of the project's history."
-                ),
-                IndicatorKind::Staleness => {
-                    format!("The oldest in-flight issue has been open for {value}.")
-                }
-                IndicatorKind::Activity => {
-                    format!("Issue activity in the last two weeks is {value}.")
-                }
+                IndicatorKind::Throughput => MessageKey::IndicatorExplanationThroughput {
+                    done: raw.done_issues,
+                    total: raw.total_issues,
+                },
+                IndicatorKind::Staleness => MessageKey::IndicatorExplanationStaleness {
+                    // `Some` is guaranteed here: `classify_staleness`
+                    // only reaches `Watch`/`Concern` when
+                    // `oldest_in_flight_age_days` is `Some(d)` with
+                    // `d >= 14`; `None` classifies as `Good`, which
+                    // already returned above.
+                    days: raw
+                        .oldest_in_flight_age_days
+                        .expect("Staleness reaches Watch/Concern only when a value exists"),
+                },
+                IndicatorKind::Activity => MessageKey::IndicatorExplanationActivity {
+                    count: raw.recent_activity_count,
+                },
+                // ISSUE-006 finding 2: this arm renders a known-broken
+                // sentence for the active_assignees <= 1 case,
+                // preserved verbatim pending that ruling — see
+                // MessageKey::IndicatorExplanationBusFactorSolo's doc
+                // comment in peisear-i18n.
                 IndicatorKind::BusFactor => {
-                    format!("{value} of in-flight work is concentrated on one person.")
+                    if raw.active_assignees <= 1 {
+                        MessageKey::IndicatorExplanationBusFactorSolo
+                    } else {
+                        let pct = (raw.top_assignee_in_flight_issues * 100) / raw.in_flight_issues;
+                        MessageKey::IndicatorExplanationBusFactor { pct }
+                    }
                 }
-                IndicatorKind::LongStale => {
-                    format!("{value} of in-flight issues haven't been touched in over two weeks.")
-                }
-                IndicatorKind::WipCompliance => {
-                    format!("{value} of active assignees are over their WIP limit.")
-                }
+                IndicatorKind::LongStale => MessageKey::IndicatorExplanationLongStale {
+                    stale: raw.long_stale_in_flight_issues,
+                    in_flight: raw.in_flight_issues,
+                },
+                // ISSUE-006 finding 3: this arm renders an awkward,
+                // doubled sentence, preserved verbatim pending
+                // ruling — see
+                // MessageKey::IndicatorExplanationWipCompliance's doc
+                // comment in peisear-i18n.
+                IndicatorKind::WipCompliance => MessageKey::IndicatorExplanationWipCompliance {
+                    count: raw.wip_violators,
+                },
             })
         }
     }
@@ -817,10 +877,12 @@ pub mod project_health {
     pub struct HealthScore {
         pub value: u8,
         pub state: HealthIndicator,
-        /// One- or two-sentence natural-language summary,
-        /// foregrounding the worst indicators. Produced by
-        /// [`summarize`].
-        pub summary: String,
+        /// Descriptor for the one- or two-sentence natural-language
+        /// summary, foregrounding the worst indicators. Produced by
+        /// [`summarize`]; `-web` renders it via
+        /// `peisear_i18n::Locale::render` (`I18N-002`; was `String`
+        /// before this handoff).
+        pub summary: MessageKey,
         pub trend: Trend,
     }
 
@@ -948,50 +1010,59 @@ pub mod project_health {
         .clamp(0.0, 1.0)
     }
 
-    /// Format the per-indicator value for display, e.g.
-    /// `"5 / 7 (71%)"`, `"8 d"`, `"85% on top assignee"`.
-    pub fn format_value(kind: IndicatorKind, raw: &ProjectHealthRaw) -> String {
+    /// Descriptor for the per-indicator value display, e.g.
+    /// `"5 / 7 (71%)"`, `"8 d"`, `"85% on top"` once rendered. `-web`
+    /// renders it via `peisear_i18n::Locale::render` (`I18N-002`) —
+    /// this crate emits the key, it does not render it (`I18N-002`
+    /// §5.1, §8).
+    pub fn format_value(kind: IndicatorKind, raw: &ProjectHealthRaw) -> MessageKey {
         match kind {
             IndicatorKind::Throughput => {
                 if raw.total_issues == 0 {
-                    "—".to_string()
+                    MessageKey::IndicatorValueUnavailable
                 } else {
-                    let pct = (raw.done_issues * 100) / raw.total_issues;
-                    format!("{} / {} ({}%)", raw.done_issues, raw.total_issues, pct)
+                    MessageKey::IndicatorValueThroughput {
+                        done: raw.done_issues,
+                        total: raw.total_issues,
+                    }
                 }
             }
             IndicatorKind::Staleness => match raw.oldest_in_flight_age_days {
-                None => "—".to_string(),
-                Some(d) => format!("{d} d"),
+                None => MessageKey::IndicatorValueUnavailable,
+                Some(days) => MessageKey::IndicatorValueStaleness { days },
             },
-            IndicatorKind::Activity => format!("{}", raw.recent_activity_count),
+            IndicatorKind::Activity => MessageKey::IndicatorValueActivity {
+                count: raw.recent_activity_count,
+            },
             IndicatorKind::BusFactor => {
                 if raw.in_flight_issues == 0 {
-                    "—".to_string()
+                    MessageKey::IndicatorValueUnavailable
                 } else if raw.active_assignees <= 1 {
-                    "solo".to_string()
+                    MessageKey::IndicatorValueBusFactorSolo
                 } else {
                     let pct = (raw.top_assignee_in_flight_issues * 100) / raw.in_flight_issues;
-                    format!("{}% on top", pct)
+                    MessageKey::IndicatorValueBusFactor { pct }
                 }
             }
             IndicatorKind::LongStale => {
                 if raw.in_flight_issues == 0 {
-                    "—".to_string()
+                    MessageKey::IndicatorValueUnavailable
                 } else {
-                    format!(
-                        "{} / {}",
-                        raw.long_stale_in_flight_issues, raw.in_flight_issues
-                    )
+                    MessageKey::IndicatorValueLongStale {
+                        stale: raw.long_stale_in_flight_issues,
+                        in_flight: raw.in_flight_issues,
+                    }
                 }
             }
             IndicatorKind::WipCompliance => {
                 if raw.active_assignees == 0 {
-                    "—".to_string()
+                    MessageKey::IndicatorValueUnavailable
                 } else if raw.wip_violators == 0 {
-                    "all within".to_string()
+                    MessageKey::IndicatorValueWipAllWithin
                 } else {
-                    format!("{} over", raw.wip_violators)
+                    MessageKey::IndicatorValueWipOver {
+                        count: raw.wip_violators,
+                    }
                 }
             }
         }
@@ -1178,10 +1249,18 @@ pub mod project_health {
         }
     }
 
-    /// Build the natural-language summary for the score header.
-    /// Foregrounds at most two indicators that are pulling the
-    /// score down; ignores `Insufficient` ones.
-    pub fn summarize(indicators: &[Indicator]) -> String {
+    /// Build the descriptor for the score header's natural-language
+    /// summary. Foregrounds at most two indicators that are pulling
+    /// the score down; ignores `Insufficient` ones. `-web` renders
+    /// the result via `peisear_i18n::Locale::render` (`I18N-002`;
+    /// was `-> String` before this handoff).
+    ///
+    /// The two `Concern`-state arms render a known `NFR-LANG-002`
+    /// violation (naming `Concern` directly in prose), preserved
+    /// verbatim pending `ISSUE-006` finding 1's ruling — see
+    /// `MessageKey::HealthSummaryOneConcern`'s doc comment in
+    /// `peisear-i18n`.
+    pub fn summarize(indicators: &[Indicator]) -> MessageKey {
         // Collect concerning + watch states, sorted by severity then
         // by weight (heavier indicators surface first).
         let mut bad: Vec<&Indicator> = indicators
@@ -1203,25 +1282,30 @@ pub mod project_health {
         });
 
         if bad.is_empty() {
-            return "Looking healthy.".to_string();
+            return MessageKey::HealthSummaryHealthy;
         }
 
         let lead = bad[0];
         match (bad.len(), lead.state) {
-            (1, HealthIndicator::Concern) => {
-                format!("{} is a concern.", lead.label)
-            }
-            (1, _) => format!("{} is worth a glance.", lead.label),
+            (1, HealthIndicator::Concern) => MessageKey::HealthSummaryOneConcern {
+                label: lead.kind.to_i18n_label(),
+            },
+            (1, _) => MessageKey::HealthSummaryOneWatch {
+                label: lead.kind.to_i18n_label(),
+            },
             (_, HealthIndicator::Concern) => {
                 let second = bad[1];
-                format!(
-                    "{} is a concern; {} also needs attention.",
-                    lead.label, second.label
-                )
+                MessageKey::HealthSummaryConcernPlusOne {
+                    first: lead.kind.to_i18n_label(),
+                    second: second.kind.to_i18n_label(),
+                }
             }
             _ => {
                 let second = bad[1];
-                format!("{} and {} are worth a glance.", lead.label, second.label)
+                MessageKey::HealthSummaryTwoWatch {
+                    first: lead.kind.to_i18n_label(),
+                    second: second.kind.to_i18n_label(),
+                }
             }
         }
     }
@@ -1358,6 +1442,7 @@ pub mod personal_metrics {
 /// localised change.
 pub mod user_burnout {
     use super::HealthIndicator;
+    use peisear_i18n::MessageKey;
 
     /// Window (in days) over which the estimation drift comparison
     /// is computed. Four weeks gives two two-week halves: "now"
@@ -1563,32 +1648,37 @@ pub mod user_burnout {
     /// at"); the pattern facts get their own distinct chips so
     /// they're visually separated from "this is something to
     /// notice".
-    pub fn summarize(signals: &UserBurnoutSignals) -> String {
+    ///
+    /// Descriptor for the prompt; `-web` renders it via
+    /// `peisear_i18n::Locale::render` (`I18N-002`; was `-> String`
+    /// before this handoff). The pre-`I18N-002` version built this by
+    /// joining 0–2 independent clauses with `"; "` at runtime — string
+    /// concatenation, which `RFC 006` requirement 7 and the
+    /// `I18N-001` handoff both prohibit precisely because a guard
+    /// cannot see through it. The four reachable
+    /// `(overload_watch, stalled_watch)` combinations are enumerated
+    /// as four distinct keys instead — see
+    /// `MessageKey::BurnoutSummaryOverloadOnly`'s doc comment in
+    /// `peisear-i18n` for the replacement pattern.
+    pub fn summarize(signals: &UserBurnoutSignals) -> MessageKey {
         let overload = classify_overload_streak(signals);
         let stalled = classify_stalled(signals);
-        let any_watch =
-            matches!(overload, HealthIndicator::Watch) || matches!(stalled, HealthIndicator::Watch);
+        let overload_watch = matches!(overload, HealthIndicator::Watch);
+        let stalled_watch = matches!(stalled, HealthIndicator::Watch);
 
-        if !any_watch {
-            return "Steady so far.".to_string();
+        match (overload_watch, stalled_watch) {
+            (false, false) => MessageKey::BurnoutSummarySteady,
+            (true, false) => MessageKey::BurnoutSummaryOverloadOnly {
+                days: signals.overload_streak_days,
+            },
+            (false, true) => MessageKey::BurnoutSummaryStalledOnly {
+                days: signals.stalled_assigned_max_days,
+            },
+            (true, true) => MessageKey::BurnoutSummaryBoth {
+                overload_days: signals.overload_streak_days,
+                stalled_days: signals.stalled_assigned_max_days,
+            },
         }
-
-        let mut parts: Vec<String> = Vec::new();
-        if matches!(overload, HealthIndicator::Watch) {
-            parts.push(format!(
-                "you've been over capacity for {} recent snapshots — \
-                 consider whether some work can wait or move",
-                signals.overload_streak_days
-            ));
-        }
-        if matches!(stalled, HealthIndicator::Watch) {
-            parts.push(format!(
-                "an assigned issue has been stuck for {} days — \
-                 worth a quick check whether it's blocked",
-                signals.stalled_assigned_max_days
-            ));
-        }
-        parts.join("; ")
     }
 }
 

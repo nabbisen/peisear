@@ -26,7 +26,7 @@
 #![deny(clippy::wildcard_enum_match_arm)]
 #![deny(clippy::match_wildcard_for_single_variants)]
 
-use crate::message::{EntityKind, Field, MessageKey};
+use crate::message::{EntityKind, Field, IndicatorLabel, MessageKey};
 
 pub(crate) fn render(key: MessageKey) -> String {
     match key {
@@ -48,6 +48,108 @@ pub(crate) fn render(key: MessageKey) -> String {
         }
         MessageKey::InvalidStatus => "Invalid status".to_string(),
         MessageKey::InvalidPriority => "Invalid priority".to_string(),
+
+        // ---- I18N-002: format_value ----
+        MessageKey::IndicatorValueUnavailable => "—".to_string(),
+        MessageKey::IndicatorValueThroughput { done, total } => throughput_value(done, total),
+        MessageKey::IndicatorValueStaleness { days } => format!("{days} d"),
+        MessageKey::IndicatorValueActivity { count } => format!("{count}"),
+        MessageKey::IndicatorValueBusFactorSolo => "solo".to_string(),
+        MessageKey::IndicatorValueBusFactor { pct } => format!("{pct}% on top"),
+        MessageKey::IndicatorValueLongStale { stale, in_flight } => {
+            format!("{stale} / {in_flight}")
+        }
+        MessageKey::IndicatorValueWipAllWithin => "all within".to_string(),
+        MessageKey::IndicatorValueWipOver { count } => format!("{count} over"),
+
+        // ---- I18N-002: human_explanation ----
+        MessageKey::IndicatorExplanationThroughput { done, total } => format!(
+            "Throughput is {} — fewer issues are reaching Done than the rest of the project's history.",
+            throughput_value(done, total)
+        ),
+        MessageKey::IndicatorExplanationStaleness { days } => {
+            format!("The oldest in-flight issue has been open for {days} d.")
+        }
+        MessageKey::IndicatorExplanationActivity { count } => {
+            format!("Issue activity in the last two weeks is {count}.")
+        }
+        // ISSUE-006 finding 2: preserved verbatim, not corrected here.
+        // See message.rs's doc comment on this variant.
+        MessageKey::IndicatorExplanationBusFactorSolo => {
+            "solo of in-flight work is concentrated on one person.".to_string()
+        }
+        MessageKey::IndicatorExplanationBusFactor { pct } => {
+            format!("{pct}% on top of in-flight work is concentrated on one person.")
+        }
+        MessageKey::IndicatorExplanationLongStale { stale, in_flight } => format!(
+            "{stale} / {in_flight} of in-flight issues haven't been touched in over two weeks."
+        ),
+        // ISSUE-006 finding 3: preserved verbatim, not corrected here.
+        MessageKey::IndicatorExplanationWipCompliance { count } => {
+            format!("{count} over of active assignees are over their WIP limit.")
+        }
+
+        // ---- I18N-002: project_health::summarize ----
+        MessageKey::HealthSummaryHealthy => "Looking healthy.".to_string(),
+        MessageKey::HealthSummaryOneWatch { label } => {
+            format!("{} is worth a glance.", indicator_label(label))
+        }
+        // ISSUE-006 finding 1: preserved verbatim, not corrected here.
+        MessageKey::HealthSummaryOneConcern { label } => {
+            format!("{} is a concern.", indicator_label(label))
+        }
+        MessageKey::HealthSummaryTwoWatch { first, second } => format!(
+            "{} and {} are worth a glance.",
+            indicator_label(first),
+            indicator_label(second)
+        ),
+        // ISSUE-006 finding 1: preserved verbatim, not corrected here.
+        MessageKey::HealthSummaryConcernPlusOne { first, second } => format!(
+            "{} is a concern; {} also needs attention.",
+            indicator_label(first),
+            indicator_label(second)
+        ),
+
+        // ---- I18N-002: user_burnout::summarize ----
+        MessageKey::BurnoutSummarySteady => "Steady so far.".to_string(),
+        MessageKey::BurnoutSummaryOverloadOnly { days } => format!(
+            "you've been over capacity for {days} recent snapshots — \
+             consider whether some work can wait or move"
+        ),
+        MessageKey::BurnoutSummaryStalledOnly { days } => format!(
+            "an assigned issue has been stuck for {days} days — \
+             worth a quick check whether it's blocked"
+        ),
+        MessageKey::BurnoutSummaryBoth {
+            overload_days,
+            stalled_days,
+        } => format!(
+            "you've been over capacity for {overload_days} recent snapshots — \
+             consider whether some work can wait or move; \
+             an assigned issue has been stuck for {stalled_days} days — \
+             worth a quick check whether it's blocked"
+        ),
+    }
+}
+
+/// Shared by `IndicatorValueThroughput` and
+/// `IndicatorExplanationThroughput` so the two stay byte-identical in
+/// how they render the same underlying value — the explanation
+/// sentence embeds exactly what the value chip shows, not a
+/// re-derived approximation of it.
+fn throughput_value(done: i64, total: i64) -> String {
+    let pct = (done * 100) / total;
+    format!("{done} / {total} ({pct}%)")
+}
+
+fn indicator_label(label: IndicatorLabel) -> &'static str {
+    match label {
+        IndicatorLabel::Throughput => "Throughput",
+        IndicatorLabel::Staleness => "Oldest in-flight",
+        IndicatorLabel::Activity => "Activity (14d)",
+        IndicatorLabel::BusFactor => "Bus factor",
+        IndicatorLabel::LongStale => "Long-stale",
+        IndicatorLabel::WipCompliance => "WIP compliance",
     }
 }
 

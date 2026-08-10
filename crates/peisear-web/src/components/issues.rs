@@ -9,6 +9,7 @@ use peisear_core::{
     UserLoad,
     project_health::{HealthScore, Indicator, ProjectHealthReport},
 };
+use peisear_i18n::Locale;
 
 /// Project-detail page: header + board/list view toggle.
 #[component]
@@ -165,16 +166,19 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
     // renders as one more chip alongside the individual
     // indicators (composite_row below) instead of a separate,
     // more prominent box carrying a number.
-    let summary = health.score.summary.clone();
+    let summary = Locale::English.render(health.score.summary);
 
     // Phase B PR3 (B-2): explainability — collect human-language
     // sentences describing each indicator that's not at Good.
     // The list is computed before consuming `health.indicators`
-    // for the chip row below.
+    // for the chip row below. `human_explanation` takes `raw`
+    // (I18N-002) so its typed parameters come from the same raw
+    // numbers `format_value` uses, not a pre-formatted string.
     let explanations: Vec<String> = health
         .indicators
         .iter()
-        .filter_map(|i| i.human_explanation())
+        .filter_map(|i| i.human_explanation(&health.raw))
+        .map(|key| Locale::English.render(key))
         .collect();
 
     let composite_chip = composite_row(&health.score);
@@ -302,10 +306,11 @@ fn indicator_row(ind: Indicator) -> impl IntoView {
     let state = DisplayHealthState::from(ind.state);
     let badge_class = format!("badge badge-sm {}", state.badge_class());
     let (glyph, aria_state) = state.glyph();
+    let value_text = Locale::English.render(ind.value_display);
     let aria_label = format!(
         "{}: {} ({}). {}",
         ind.label,
-        ind.value_display,
+        value_text,
         aria_state,
         ind.kind.description()
     );
@@ -317,7 +322,7 @@ fn indicator_row(ind: Indicator) -> impl IntoView {
             <span class="text-xs text-base-content/70">{ind.label}</span>
             <span class=badge_class>
                 <span class="mr-1" aria-hidden="true">{glyph}</span>
-                {ind.value_display}
+                {value_text}
             </span>
         </div>
     }

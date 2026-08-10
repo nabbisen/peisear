@@ -20,6 +20,7 @@ use peisear_core::{
         DriftDirection, UserBurnoutSignals, classify_overload_streak, classify_stalled, summarize,
     },
 };
+use peisear_i18n::Locale;
 
 /// Format a coarse estimation-skew value into prose. Returns
 /// `None` if there isn't enough data to show.
@@ -481,7 +482,7 @@ fn render_burnout_panel(
         signals.stalled_assigned_max_days, stalled_aria
     );
 
-    let summary = summarize(&signals);
+    let summary = Locale::English.render(summarize(&signals));
     let any_watch = matches!(overload, DisplayHealthState::Watch)
         || matches!(stalled, DisplayHealthState::Watch);
 

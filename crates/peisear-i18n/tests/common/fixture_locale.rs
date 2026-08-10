@@ -11,7 +11,7 @@
 //! so a test comparing the two outputs proves rendering switches
 //! wholesale, not that it happens to differ in one place.
 
-use peisear_i18n::{EntityKind, Field, MessageKey};
+use peisear_i18n::{EntityKind, Field, IndicatorLabel, MessageKey};
 
 pub fn render(key: MessageKey) -> String {
     match key {
@@ -29,6 +29,74 @@ pub fn render(key: MessageKey) -> String {
         }
         MessageKey::InvalidStatus => "[fx] bad status".to_string(),
         MessageKey::InvalidPriority => "[fx] bad priority".to_string(),
+
+        // ---- I18N-002: format_value ----
+        MessageKey::IndicatorValueUnavailable => "[fx-none]".to_string(),
+        MessageKey::IndicatorValueThroughput { done, total } => {
+            format!("[fx] {done} of {total} done")
+        }
+        MessageKey::IndicatorValueStaleness { days } => format!("[fx] {days} days old"),
+        MessageKey::IndicatorValueActivity { count } => format!("[fx-activity-{count}]"),
+        MessageKey::IndicatorValueBusFactorSolo => "[fx-solo]".to_string(),
+        MessageKey::IndicatorValueBusFactor { pct } => format!("[fx] {pct} pct concentrated"),
+        MessageKey::IndicatorValueLongStale { stale, in_flight } => {
+            format!("[fx] {stale} of {in_flight} stale")
+        }
+        MessageKey::IndicatorValueWipAllWithin => "[fx-wip-ok]".to_string(),
+        MessageKey::IndicatorValueWipOver { count } => format!("[fx] {count} over wip"),
+
+        // ---- I18N-002: human_explanation ----
+        MessageKey::IndicatorExplanationThroughput { done, total } => {
+            format!("[fx] throughput note: {done} of {total}")
+        }
+        MessageKey::IndicatorExplanationStaleness { days } => {
+            format!("[fx] stale note: {days} days")
+        }
+        MessageKey::IndicatorExplanationActivity { count } => {
+            format!("[fx] activity note: {count}")
+        }
+        MessageKey::IndicatorExplanationBusFactorSolo => "[fx] solo note".to_string(),
+        MessageKey::IndicatorExplanationBusFactor { pct } => {
+            format!("[fx] concentration note: {pct} pct")
+        }
+        MessageKey::IndicatorExplanationLongStale { stale, in_flight } => {
+            format!("[fx] stale note: {stale} of {in_flight}")
+        }
+        MessageKey::IndicatorExplanationWipCompliance { count } => {
+            format!("[fx] wip note: {count}")
+        }
+
+        // ---- I18N-002: project_health::summarize ----
+        MessageKey::HealthSummaryHealthy => "[fx-healthy]".to_string(),
+        MessageKey::HealthSummaryOneWatch { label } => {
+            format!("[fx] {} worth a look", indicator_label(label))
+        }
+        MessageKey::HealthSummaryOneConcern { label } => {
+            format!("[fx] {} flagged", indicator_label(label))
+        }
+        MessageKey::HealthSummaryTwoWatch { first, second } => format!(
+            "[fx] {} and {} worth a look",
+            indicator_label(first),
+            indicator_label(second)
+        ),
+        MessageKey::HealthSummaryConcernPlusOne { first, second } => format!(
+            "[fx] {} flagged, {} too",
+            indicator_label(first),
+            indicator_label(second)
+        ),
+
+        // ---- I18N-002: user_burnout::summarize ----
+        MessageKey::BurnoutSummarySteady => "[fx-steady]".to_string(),
+        MessageKey::BurnoutSummaryOverloadOnly { days } => {
+            format!("[fx] overload note: {days} days")
+        }
+        MessageKey::BurnoutSummaryStalledOnly { days } => {
+            format!("[fx] stalled note: {days} days")
+        }
+        MessageKey::BurnoutSummaryBoth {
+            overload_days,
+            stalled_days,
+        } => format!("[fx] overload {overload_days}, stalled {stalled_days}"),
     }
 }
 
@@ -48,5 +116,16 @@ fn field_label(field: Field) -> &'static str {
         Field::EffortPoints => "[fx-effort]",
         Field::CapacityPoints => "[fx-capacity-points]",
         Field::CloseDate => "[fx-close-date]",
+    }
+}
+
+fn indicator_label(label: IndicatorLabel) -> &'static str {
+    match label {
+        IndicatorLabel::Throughput => "[fx-throughput]",
+        IndicatorLabel::Staleness => "[fx-staleness]",
+        IndicatorLabel::Activity => "[fx-activity]",
+        IndicatorLabel::BusFactor => "[fx-busfactor]",
+        IndicatorLabel::LongStale => "[fx-longstale]",
+        IndicatorLabel::WipCompliance => "[fx-wipcompliance]",
     }
 }

@@ -11,5 +11,6 @@ repository.workspace    = true
 
 [dependencies]
 chrono = { workspace = true }
+peisear-i18n = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }

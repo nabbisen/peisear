@@ -19,6 +19,7 @@ path = "src/lib.rs"
 [dependencies]
 peisear-core                = { workspace = true }
 peisear-auth                = { workspace = true }
+peisear-i18n                = { workspace = true }
 peisear-storage             = { workspace = true }
 peisear-notify              = { workspace = true }
 

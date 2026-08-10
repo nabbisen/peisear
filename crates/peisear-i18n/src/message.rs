@@ -55,6 +55,43 @@ impl Field {
     }
 }
 
+/// Which project-health indicator a message is about. Mirrors
+/// `peisear_core::project_health::IndicatorKind` in shape — six
+/// variants, same order — but is a distinct type, deliberately not
+/// reused from `peisear-core`.
+///
+/// `peisear-i18n` is a leaf crate with no workspace dependencies
+/// (`I18N-001` §4.1); `peisear-core` depends on it, never the
+/// reverse (`I18N-002` §5.1). If this crate imported
+/// `peisear_core::IndicatorKind` directly it would create exactly
+/// the cycle that design forbids. `peisear-core`'s `summarize` and
+/// `human_explanation`/`format_value` construct a value of *this*
+/// type from their own `IndicatorKind` at the call site (see
+/// `IndicatorKind::to_i18n_label` in `peisear-core`) when building a
+/// `MessageKey`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IndicatorLabel {
+    Throughput,
+    Staleness,
+    Activity,
+    BusFactor,
+    LongStale,
+    WipCompliance,
+}
+
+impl IndicatorLabel {
+    pub fn all() -> [IndicatorLabel; 6] {
+        [
+            IndicatorLabel::Throughput,
+            IndicatorLabel::Staleness,
+            IndicatorLabel::Activity,
+            IndicatorLabel::BusFactor,
+            IndicatorLabel::LongStale,
+            IndicatorLabel::WipCompliance,
+        ]
+    }
+}
+
 /// One message this crate can render, in every shipped locale.
 ///
 /// A key enum, not a string constant and not a `HashMap<&str, &str>`:
@@ -73,28 +110,174 @@ pub enum MessageKey {
     /// call at the point the error is constructed.
     InternalError,
     /// `AppError::OptimisticLockConflict`'s public message.
-    OptimisticLockConflict { entity: EntityKind },
+    OptimisticLockConflict {
+        entity: EntityKind,
+    },
     /// `check_optimistic_lock`'s parse-failure message — entity-
     /// neutral since 0.20.0 (`DEV-001-004-review.md` §1.4).
     LockValueUnreadable,
     /// A named field is required and was left blank.
-    FieldRequired { field: Field },
+    FieldRequired {
+        field: Field,
+    },
     /// A named field must be a positive integer.
-    FieldMustBePositiveInteger { field: Field },
+    FieldMustBePositiveInteger {
+        field: Field,
+    },
     /// The `status` form field didn't parse to a known `IssueStatus`.
     InvalidStatus,
     /// The `priority` form field didn't parse to a known `Priority`.
     InvalidPriority,
+
+    // ---- I18N-002: peisear_core::project_health::format_value ----
+    /// No value to show for this indicator (the raw counts it would
+    /// divide by are zero). Shared across every indicator's
+    /// zero-denominator case — genuinely the same message, not
+    /// several concepts collapsed into one (`I18N-001-review.md`
+    /// §2 Q1's distinction).
+    IndicatorValueUnavailable,
+    IndicatorValueThroughput {
+        done: i64,
+        total: i64,
+    },
+    IndicatorValueStaleness {
+        days: i64,
+    },
+    IndicatorValueActivity {
+        count: i64,
+    },
+    /// `active_assignees <= 1`. See `ISSUE-006` finding 2 — the
+    /// sibling `IndicatorExplanationBusFactorSolo` message built
+    /// from this value is grammatically broken, preserved verbatim
+    /// pending that ruling. This value key itself ("solo") is not
+    /// the defect; the explanation template that embeds it is.
+    IndicatorValueBusFactorSolo,
+    IndicatorValueBusFactor {
+        pct: i64,
+    },
+    IndicatorValueLongStale {
+        stale: i64,
+        in_flight: i64,
+    },
+    /// `wip_violators == 0`. Never actually reachable from
+    /// `human_explanation` (that state classifies as `Good`, which
+    /// short-circuits before an explanation is built) — included
+    /// for completeness of `format_value`'s own value set, which
+    /// `indicator_row` renders regardless of state.
+    IndicatorValueWipAllWithin,
+    IndicatorValueWipOver {
+        count: i64,
+    },
+
+    // ---- I18N-002: peisear_core::project_health::Indicator::human_explanation ----
+    IndicatorExplanationThroughput {
+        done: i64,
+        total: i64,
+    },
+    IndicatorExplanationStaleness {
+        days: i64,
+    },
+    IndicatorExplanationActivity {
+        count: i64,
+    },
+    /// **`ISSUE-006` finding 2, preserved verbatim pending ruling.**
+    /// Renders "solo of in-flight work is concentrated on one
+    /// person." — a percentage-shaped template fed the non-
+    /// percentage value "solo". This is a live defect, not a
+    /// judgment call; see the issue report for why it was relocated
+    /// rather than corrected here.
+    IndicatorExplanationBusFactorSolo,
+    IndicatorExplanationBusFactor {
+        pct: i64,
+    },
+    IndicatorExplanationLongStale {
+        stale: i64,
+        in_flight: i64,
+    },
+    /// **`ISSUE-006` finding 3, preserved verbatim pending ruling.**
+    /// Renders "N over of active assignees are over their WIP
+    /// limit." — awkward and doubled, same root cause as the
+    /// `BusFactor` case above, milder in effect.
+    IndicatorExplanationWipCompliance {
+        count: i64,
+    },
+
+    // ---- I18N-002: peisear_core::project_health::summarize ----
+    HealthSummaryHealthy,
+    HealthSummaryOneWatch {
+        label: IndicatorLabel,
+    },
+    /// **`ISSUE-006` finding 1, preserved verbatim pending ruling.**
+    /// Renders "{label} is a concern." — names the unclamped
+    /// `Concern` state directly in prose, bypassing the
+    /// `NFR-LANG-002` Watch ceiling `DisplayHealthState` enforces
+    /// everywhere else. A live defect, not a judgment call.
+    HealthSummaryOneConcern {
+        label: IndicatorLabel,
+    },
+    HealthSummaryTwoWatch {
+        first: IndicatorLabel,
+        second: IndicatorLabel,
+    },
+    /// **`ISSUE-006` finding 1, preserved verbatim pending ruling.**
+    /// Renders "{first} is a concern; {second} also needs
+    /// attention." Same defect as `HealthSummaryOneConcern`.
+    HealthSummaryConcernPlusOne {
+        first: IndicatorLabel,
+        second: IndicatorLabel,
+    },
+
+    // ---- I18N-002: peisear_core::user_burnout::summarize ----
+    BurnoutSummarySteady,
+    /// The source function built this by joining 0–2 independent
+    /// clauses with `"; "` at runtime — string concatenation, which
+    /// `RFC 006` requirement 7 and the `I18N-001` handoff both
+    /// prohibit precisely because a guard cannot see through it. The
+    /// four reachable combinations are enumerated as four distinct
+    /// keys instead: `BurnoutSummarySteady` (neither), this one
+    /// (overload only), `BurnoutSummaryStalledOnly` (stalled only),
+    /// `BurnoutSummaryBoth` (both) — the same replacement pattern
+    /// `I18N-001` used for `HashMap`-style lookups: one concrete
+    /// message per reachable shape, not a template assembled from
+    /// parts.
+    BurnoutSummaryOverloadOnly {
+        days: i64,
+    },
+    BurnoutSummaryStalledOnly {
+        days: i64,
+    },
+    BurnoutSummaryBoth {
+        overload_days: i64,
+        stalled_days: i64,
+    },
 }
 
 impl MessageKey {
-    /// Every key this crate defines, with every closed-set parameter
-    /// combination it can carry — the full, finite set of messages a
-    /// locale table must render. Parameters here ([`EntityKind`],
-    /// [`Field`]) are closed system vocabulary, never open-ended user
-    /// data, so full enumeration is both possible and meaningful: this
-    /// is what "every entry of every locale table" means in practice
-    /// for a guard that must not inspect interpolated user text.
+    /// Every key this crate defines, with representative parameter
+    /// values — the set a guard needs to walk to check every static
+    /// template this crate renders.
+    ///
+    /// Two different kinds of parameter, two different enumeration
+    /// strategies (an evolution from `I18N-001`, which only had the
+    /// first kind):
+    ///
+    /// - **Closed system vocabulary** ([`EntityKind`], [`Field`],
+    ///   [`IndicatorLabel`]) — never open-ended user data, so every
+    ///   value is enumerated. This is genuinely "every entry of every
+    ///   locale table" for these: the full, finite output space.
+    /// - **Open numeric parameters** (`i64` counts, days, percentages
+    ///   — `I18N-002`'s new territory) — cannot be exhaustively
+    ///   enumerated and don't need to be. The guard cares about the
+    ///   *static* vocabulary surrounding a number, not which digits
+    ///   appear (a count can't itself contain prohibited vocabulary).
+    ///   One representative sample value is enough to exercise each
+    ///   template.
+    ///
+    /// Every closed-enum *value* still appears at least once somewhere
+    /// in this list — `IndicatorLabel`'s six values are each exercised
+    /// through the single-label keys (`HealthSummaryOneWatch`,
+    /// `HealthSummaryOneConcern`), so the two-label keys only need one
+    /// illustrative pair rather than all 36 combinations.
     pub fn all() -> Vec<MessageKey> {
         let mut keys = vec![
             MessageKey::Forbidden,
@@ -103,6 +286,48 @@ impl MessageKey {
             MessageKey::LockValueUnreadable,
             MessageKey::InvalidStatus,
             MessageKey::InvalidPriority,
+            // -- I18N-002: format_value --
+            MessageKey::IndicatorValueUnavailable,
+            MessageKey::IndicatorValueThroughput { done: 5, total: 7 },
+            MessageKey::IndicatorValueStaleness { days: 8 },
+            MessageKey::IndicatorValueActivity { count: 12 },
+            MessageKey::IndicatorValueBusFactorSolo,
+            MessageKey::IndicatorValueBusFactor { pct: 62 },
+            MessageKey::IndicatorValueLongStale {
+                stale: 3,
+                in_flight: 12,
+            },
+            MessageKey::IndicatorValueWipAllWithin,
+            MessageKey::IndicatorValueWipOver { count: 2 },
+            // -- I18N-002: human_explanation --
+            MessageKey::IndicatorExplanationThroughput { done: 5, total: 7 },
+            MessageKey::IndicatorExplanationStaleness { days: 8 },
+            MessageKey::IndicatorExplanationActivity { count: 12 },
+            MessageKey::IndicatorExplanationBusFactorSolo,
+            MessageKey::IndicatorExplanationBusFactor { pct: 62 },
+            MessageKey::IndicatorExplanationLongStale {
+                stale: 3,
+                in_flight: 12,
+            },
+            MessageKey::IndicatorExplanationWipCompliance { count: 2 },
+            // -- I18N-002: project_health::summarize --
+            MessageKey::HealthSummaryHealthy,
+            MessageKey::HealthSummaryTwoWatch {
+                first: IndicatorLabel::Throughput,
+                second: IndicatorLabel::Staleness,
+            },
+            MessageKey::HealthSummaryConcernPlusOne {
+                first: IndicatorLabel::Activity,
+                second: IndicatorLabel::BusFactor,
+            },
+            // -- I18N-002: user_burnout::summarize --
+            MessageKey::BurnoutSummarySteady,
+            MessageKey::BurnoutSummaryOverloadOnly { days: 4 },
+            MessageKey::BurnoutSummaryStalledOnly { days: 6 },
+            MessageKey::BurnoutSummaryBoth {
+                overload_days: 4,
+                stalled_days: 6,
+            },
         ];
         keys.extend(
             EntityKind::all()
@@ -118,6 +343,18 @@ impl MessageKey {
             Field::all()
                 .into_iter()
                 .map(|field| MessageKey::FieldMustBePositiveInteger { field }),
+        );
+        // Every IndicatorLabel value, exercised through the two
+        // single-label health-summary keys.
+        keys.extend(
+            IndicatorLabel::all()
+                .into_iter()
+                .map(|label| MessageKey::HealthSummaryOneWatch { label }),
+        );
+        keys.extend(
+            IndicatorLabel::all()
+                .into_iter()
+                .map(|label| MessageKey::HealthSummaryOneConcern { label }),
         );
         keys
     }
