@@ -32,8 +32,27 @@ a person reading code. None would have survived a lint over a string table.
 | 2 | [I18N-002](./I18N-002-core-message-descriptors.md) | `peisear-core` emits descriptors — gap §10.8 | **Approved** — correction landed in `f3b261b`, verified |
 | 3 | [I18N-003](./I18N-003-notify-copy.md) | `peisear-notify` titles, bodies, email copy | **Approved** |
 | 4 | [I18N-004](./I18N-004-health-explanation-defects.md) | **ISSUE-006 fix**: clamp `summarize` to `DisplayHealthState`; two new keys; fix the ceiling test; absorb `IndicatorKind::label()` | **Ready** |
-| 4b | [REL-0.20.1](./REL-0.20.1-release-candidate.md) | Release candidate for the fix: version, changelog, gates, tarball | Ready when 4 is accepted |
-| 5 | I18N-005a–e | `peisear-web` by surface group: shell/nav · project/issue · team/sprint · today/inbox/settings · errors/validation | Blocked on 4 |
+| 4b | [REL-0.20.1](./REL-0.20.1-release-candidate.md) | Release candidate for the fix | **Released 0.20.1** |
+| 5a | [I18N-005a](./I18N-005a-shell-and-navigation.md) | Shell and navigation — `layout`, `breadcrumb`, `error_page`. **Establishes the pattern** | **Ready** |
+| 5b | I18N-005b | Project and issue — `components/issues.rs` (~35 literals), `projects.rs` (~13) | After 5a |
+| 5c | I18N-005c | Team and sprint — `sprints.rs` (~31), `teams.rs` (~20) | After 5a |
+| 5d | I18N-005d | Today, inbox, settings — `me.rs` (~35), `settings.rs` (~21), `notification_preferences.rs` (~19), `notifications.rs` (~11), `search.rs` (~8) | After 5a |
+| 5e | I18N-005e | Errors and validation — `error.rs` (~8), `auth.rs` (~11), handler-level validation. Partly seeded by I18N-001 | After 5a |
+
+**5a first and alone.** It converts about a dozen strings, which is the point:
+the decisions it makes about key naming, parameter shape, and how a converted
+component reads are inherited by roughly 250 more strings across 5b–e.
+Establishing that pattern on `me.rs`'s thirty-five would mean discovering a bad
+decision thirty-five strings in.
+
+**5b–e are parallel with each other** once 5a is accepted — disjoint files,
+though all add variants to the same `MessageKey` enum, so expect merge
+contention there and sequence commits accordingly.
+
+Counts are approximate, from a `"[A-Z][a-z]+( [a-z]+)+"` sweep. They size the
+work; they are not the survey. Each handoff requires its own honest count —
+see 5a §4.1 for why an undercount is the failure mode for this whole
+sub-series.
 
 **No corrections outstanding.** I18N-001, 002 and 003 are all approved and
 closed.
