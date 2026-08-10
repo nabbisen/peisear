@@ -250,6 +250,28 @@ pub enum MessageKey {
         overload_days: i64,
         stalled_days: i64,
     },
+
+    // ---- I18N-003: peisear_notify::edge notification title/body ----
+    /// `edge::detect_burnout_overload_edge`'s notification title.
+    NotificationBurnoutOverloadTitle,
+    /// `edge::detect_burnout_overload_edge`'s notification body.
+    /// Corrected from `/me` to `/today` during relocation — `/me`
+    /// was renamed in 0.17.0 (`FR-NAV-002`); the old path still
+    /// works via a 308 redirect, but user-facing copy shouldn't send
+    /// people through a compatibility redirect (`I18N-003` §4). This
+    /// is the one deliberate wording change in this handoff; every
+    /// other relocated string is byte-identical to its 0.20.0 source.
+    NotificationBurnoutOverloadBody {
+        streak_snapshots: i64,
+    },
+    /// `edge::detect_burnout_stalled_edge`'s notification title.
+    NotificationBurnoutStalledTitle,
+    /// `edge::detect_burnout_stalled_edge`'s notification body. Same
+    /// `/me` → `/today` correction as
+    /// [`MessageKey::NotificationBurnoutOverloadBody`].
+    NotificationBurnoutStalledBody {
+        stalled_days: i64,
+    },
 }
 
 impl MessageKey {
@@ -328,6 +350,13 @@ impl MessageKey {
                 overload_days: 4,
                 stalled_days: 6,
             },
+            // -- I18N-003: peisear_notify::edge --
+            MessageKey::NotificationBurnoutOverloadTitle,
+            MessageKey::NotificationBurnoutOverloadBody {
+                streak_snapshots: 3,
+            },
+            MessageKey::NotificationBurnoutStalledTitle,
+            MessageKey::NotificationBurnoutStalledBody { stalled_days: 10 },
         ];
         keys.extend(
             EntityKind::all()

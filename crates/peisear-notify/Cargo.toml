@@ -11,6 +11,7 @@ repository.workspace    = true
 
 [dependencies]
 peisear-core                = { workspace = true }
+peisear-i18n                = { workspace = true }
 peisear-storage             = { workspace = true }
 
 # Email transport. Three crates from the wasm-smtp family:

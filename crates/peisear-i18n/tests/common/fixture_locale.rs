@@ -97,6 +97,16 @@ pub fn render(key: MessageKey) -> String {
             overload_days,
             stalled_days,
         } => format!("[fx] overload {overload_days}, stalled {stalled_days}"),
+
+        // ---- I18N-003: peisear_notify::edge ----
+        MessageKey::NotificationBurnoutOverloadTitle => "[fx-overload-title]".to_string(),
+        MessageKey::NotificationBurnoutOverloadBody { streak_snapshots } => {
+            format!("[fx] overload body: {streak_snapshots}")
+        }
+        MessageKey::NotificationBurnoutStalledTitle => "[fx-stalled-title]".to_string(),
+        MessageKey::NotificationBurnoutStalledBody { stalled_days } => {
+            format!("[fx] stalled body: {stalled_days}")
+        }
     }
 }
 

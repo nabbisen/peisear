@@ -2168,6 +2168,7 @@ dependencies = [
  "chrono",
  "mail-builder",
  "peisear-core",
+ "peisear-i18n",
  "peisear-storage",
  "serde_json",
  "thiserror 2.0.18",

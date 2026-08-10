@@ -129,6 +129,23 @@ pub(crate) fn render(key: MessageKey) -> String {
              an assigned issue has been stuck for {stalled_days} days — \
              worth a quick check whether it's blocked"
         ),
+
+        // ---- I18N-003: peisear_notify::edge ----
+        MessageKey::NotificationBurnoutOverloadTitle => {
+            "Sustained over-capacity streak".to_string()
+        }
+        MessageKey::NotificationBurnoutOverloadBody { streak_snapshots } => format!(
+            "Your in-flight load has been over capacity for {streak_snapshots} \
+             consecutive snapshots. This is a description of the recent rhythm, \
+             not an evaluation of your work — many streaks have legitimate causes. \
+             You can review at /today."
+        ),
+        MessageKey::NotificationBurnoutStalledTitle => "Long-stalled assigned work".to_string(),
+        MessageKey::NotificationBurnoutStalledBody { stalled_days } => format!(
+            "An assigned issue has been in flight for {stalled_days} days. \
+             May be worth a glance — sometimes a quick check-in turns out to be \
+             all that's needed. Visit /today for context."
+        ),
     }
 }
 
