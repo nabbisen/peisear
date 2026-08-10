@@ -10,6 +10,20 @@
 //! below is deliberately unlike English (bracketed `[fx …]` tokens)
 //! so a test comparing the two outputs proves rendering switches
 //! wholesale, not that it happens to differ in one place.
+//!
+//! Same enforced-exhaustiveness lints as `src/en.rs`/`src/locale.rs`
+//! (`I18N-001-review.md` §4), extended here per
+//! `I18N-002-003-review.md` §1.5: this file's `match` matters more
+//! than test code usually would, since it's what proves the
+//! mechanism isn't English-shaped. A wildcard arm here would let
+//! the locale-switching test keep passing while silently not
+//! covering every key — the guard's own guard, unguarded. Both
+//! lints, not one — `match_wildcard_for_single_variants` is the one
+//! that catches the realistic single-arm-swapped-for-`_` regression
+//! (verified empirically in the `I18N-001` correction;
+//! `wildcard_enum_match_arm` alone does not fire on it).
+#![deny(clippy::wildcard_enum_match_arm)]
+#![deny(clippy::match_wildcard_for_single_variants)]
 
 use peisear_i18n::{EntityKind, Field, IndicatorLabel, MessageKey};
 
