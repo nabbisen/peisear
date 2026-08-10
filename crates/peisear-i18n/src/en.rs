@@ -26,7 +26,7 @@
 #![deny(clippy::wildcard_enum_match_arm)]
 #![deny(clippy::match_wildcard_for_single_variants)]
 
-use crate::message::{EntityKind, Field, IndicatorLabel, MessageKey};
+use crate::message::{EntityKind, Field, IndicatorLabel, MessageKey, NavSection};
 
 pub(crate) fn render(key: MessageKey) -> String {
     match key {
@@ -159,7 +159,7 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::NavLinkSettings => "Settings".to_string(),
         MessageKey::NavSignOut => "Sign out".to_string(),
         MessageKey::BreadcrumbNavLabel => "Breadcrumb".to_string(),
-        MessageKey::BackToLabel { label } => format!("Back to {label}"),
+        MessageKey::BackToSection { section } => format!("Back to {}", nav_section(section)),
         MessageKey::ErrorPageTitle => "Error — Issue Tracker".to_string(),
         MessageKey::ErrorPageGoHomeLink => "Go home".to_string(),
     }
@@ -183,6 +183,21 @@ fn bell_count(count: i64) -> String {
         "99+".to_string()
     } else {
         count.to_string()
+    }
+}
+
+/// The three destinations a back-link can name. Lowercase throughout,
+/// consistent with `NavSignOut`'s sentence-case convention ("Sign
+/// out", not "Sign Out") — the leading word of the enclosing "Back
+/// to " phrase carries the capital, not this word. `I18N-005a-review.md`
+/// §2's own evidence for why this needed a table: the two call sites
+/// this crate never saw had already drifted to "Projects" and
+/// "sprints".
+fn nav_section(section: NavSection) -> &'static str {
+    match section {
+        NavSection::Projects => "projects",
+        NavSection::Issues => "issues",
+        NavSection::Sprints => "sprints",
     }
 }
 

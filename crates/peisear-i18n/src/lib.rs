@@ -41,4 +41,4 @@ mod en;
 
 pub use guard::{PROHIBITED_TERMS, ProhibitedTerm, find_violations};
 pub use locale::Locale;
-pub use message::{EntityKind, Field, IndicatorLabel, MessageKey};
+pub use message::{EntityKind, Field, IndicatorLabel, MessageKey, NavSection};

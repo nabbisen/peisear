@@ -34,6 +34,8 @@
 use axum::response::Html;
 use leptos::prelude::*;
 
+use peisear_i18n::NavSection;
+
 use peisear_core::{
     CurrentUser,
     sprints::{BurndownPoint, Sprint, SprintStatus, SprintSummary},
@@ -534,7 +536,7 @@ pub fn SprintDetailPage(
                     super::breadcrumb::BreadcrumbItem::link("Sprints", sprints_href.clone()),
                     super::breadcrumb::BreadcrumbItem::current(sprint_name.clone()),
                 ])}
-                {super::breadcrumb::render_back_link("sprints", sprints_href)}
+                {super::breadcrumb::render_back_link(NavSection::Sprints, sprints_href)}
 
                 <div class="flex items-center justify-between gap-3 mb-2">
                     <div>

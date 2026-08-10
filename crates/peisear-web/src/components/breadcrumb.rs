@@ -42,7 +42,9 @@
 
 use leptos::prelude::*;
 
-use peisear_i18n::{Locale, MessageKey};
+use peisear_i18n::{MessageKey, NavSection};
+
+use super::t;
 
 /// One node in a breadcrumb trail.
 ///
@@ -89,10 +91,7 @@ pub fn render_breadcrumb(items: Vec<BreadcrumbItem>) -> impl IntoView {
     // break the consistency the consolidation is designed to
     // enforce.
     let mut all = Vec::with_capacity(items.len() + 1);
-    all.push(BreadcrumbItem::link(
-        Locale::English.render(MessageKey::NavLinkToday),
-        "/today",
-    ));
+    all.push(BreadcrumbItem::link(t(MessageKey::NavLinkToday), "/today"));
     all.extend(items);
 
     let nodes = all
@@ -127,13 +126,13 @@ pub fn render_breadcrumb(items: Vec<BreadcrumbItem>) -> impl IntoView {
     view! {
         // role/aria-label make the daisyUI `breadcrumbs` div
         // findable as the page's secondary navigation landmark.
-        <nav class="breadcrumbs text-sm" aria-label=Locale::English.render(MessageKey::BreadcrumbNavLabel)>
+        <nav class="breadcrumbs text-sm" aria-label=t(MessageKey::BreadcrumbNavLabel)>
             <ul>{nodes}</ul>
         </nav>
     }
 }
 
-/// Render a "← Back to {label}" button targeting `href`.
+/// Render a "← Back to {section}" button targeting `href`.
 ///
 /// Sits directly beneath the breadcrumb on detail pages. Adds a
 /// finger-friendly tap target on mobile, where the breadcrumb
@@ -144,10 +143,15 @@ pub fn render_breadcrumb(items: Vec<BreadcrumbItem>) -> impl IntoView {
 /// produces a different page than the breadcrumb claims when
 /// the user arrived via a deep link (e.g. an email). Linking to
 /// the canonical parent URL is the predictable behaviour.
-pub fn render_back_link(label: impl Into<String>, href: impl Into<String>) -> impl IntoView {
-    let label = label.into();
+///
+/// `section` is a [`NavSection`], not a `String`, per
+/// `I18N-005a-review.md` §2: every caller was naming one of our own
+/// destinations ("Projects", "sprints") rather than user data, and a
+/// raw string let those two drift to different capitalisation
+/// without the guard ever seeing either one.
+pub fn render_back_link(section: NavSection, href: impl Into<String>) -> impl IntoView {
     let href = href.into();
-    let back_to = Locale::English.render(MessageKey::BackToLabel { label });
+    let back_to = t(MessageKey::BackToSection { section });
     let back_to_aria = back_to.clone();
     view! {
         <a href=href

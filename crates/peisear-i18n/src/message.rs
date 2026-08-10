@@ -92,6 +92,33 @@ impl IndicatorLabel {
     }
 }
 
+/// A destination `render_back_link` can name — our own copy, never
+/// user data. `I18N-005a-review.md` §2: the original
+/// `render_back_link(label: impl Into<String>, ...)` let every
+/// caller pass a raw string, so "Projects" and "sprints" — the same
+/// construct, the same screen family — drifted to different
+/// capitalisation without the guard ever seeing either one. Shaped
+/// like [`IndicatorLabel`] rather than kept as an open `String`: the
+/// rule the review settles is that a `String` parameter carries user
+/// data only, and a back-link's own words ("projects", "issues",
+/// "sprints") are never that.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NavSection {
+    Projects,
+    Issues,
+    Sprints,
+}
+
+impl NavSection {
+    pub fn all() -> [NavSection; 3] {
+        [
+            NavSection::Projects,
+            NavSection::Issues,
+            NavSection::Sprints,
+        ]
+    }
+}
+
 /// One message this crate can render, in every shipped locale.
 ///
 /// A key enum, not a string constant and not a `HashMap<&str, &str>`:
@@ -100,14 +127,20 @@ impl IndicatorLabel {
 /// (`RFC 006` requirement 2) rather than a runtime fallback to the
 /// key name.
 ///
-/// `Clone`, not `Copy`, since `I18N-005a`: [`MessageKey::BackToLabel`]
-/// carries an open `String` parameter (a page name — user data, per
-/// `RFC 006` D4's "an issue titled 'velocity spike' is user data, not
-/// a violation" distinction), and `String` cannot be `Copy`. Every
-/// prior variant was `Copy`-eligible only because no key had needed
-/// open string data yet; this is that boundary, reached rather than
-/// assumed away.
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// `Copy`-eligible for now: every parameter across every variant is
+/// itself `Copy` (closed enums, `i64`s). `I18N-005a`'s first draft
+/// added a `String` parameter
+/// ([`MessageKey::BackToLabel`], since removed —
+/// `I18N-005a-review.md` §2 found it was carrying our own copy, not
+/// user data, and replaced it with [`MessageKey::BackToSection`]) and
+/// lost `Copy` over it. `RFC 006` D4's "an issue titled 'velocity
+/// spike' is user data, not a violation" distinction means a
+/// genuinely open `String` parameter is expected to reappear soon —
+/// `005b`/`005c` convert surfaces where some names are ours and some
+/// are a user's title — and `Copy` will come off again then. Kept
+/// accurate to the current variant set rather than braced for that in
+/// advance.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MessageKey {
     /// `AppError::Forbidden`'s public message.
     Forbidden,
@@ -339,16 +372,18 @@ pub enum MessageKey {
     NavSignOut,
     /// `render_breadcrumb`'s wrapping `<nav>` `aria-label`.
     BreadcrumbNavLabel,
-    /// `render_back_link`'s "Back to {label}" — used for both the
+    /// `render_back_link`'s "Back to {section}" — used for both the
     /// link's `aria-label` and its visible text, so the two can
     /// never drift (`I18N-005a` replaces the source's direct
     /// literal-plus-interpolation `"Back to " {label}` in the view
     /// with a render of this key, matching the fixed prefix in the
-    /// `aria-label`, which already went through `format!`). `label`
-    /// is the parent page's name — open user data, not vocabulary,
-    /// same category as an issue title.
-    BackToLabel {
-        label: String,
+    /// `aria-label`, which already went through `format!`).
+    /// [`NavSection`], not a `String`: see that type's doc comment —
+    /// `I18N-005a-review.md` §2 found the original `String` version
+    /// let two call sites' copy ("Projects", "sprints") drift to
+    /// different capitalisation outside the guard's reach.
+    BackToSection {
+        section: NavSection,
     },
     /// `ErrorPage`'s `<title>`. One complete string, not
     /// [`MessageKey::AppBrandName`] concatenated with "Error" at the
@@ -367,9 +402,10 @@ impl MessageKey {
     /// first kind):
     ///
     /// - **Closed system vocabulary** ([`EntityKind`], [`Field`],
-    ///   [`IndicatorLabel`]) — never open-ended user data, so every
-    ///   value is enumerated. This is genuinely "every entry of every
-    ///   locale table" for these: the full, finite output space.
+    ///   [`IndicatorLabel`], [`NavSection`]) — never open-ended user
+    ///   data, so every value is enumerated. This is genuinely "every
+    ///   entry of every locale table" for these: the full, finite
+    ///   output space.
     /// - **Open numeric parameters** (`i64` counts, days, percentages
     ///   — `I18N-002`'s new territory) — cannot be exhaustively
     ///   enumerated and don't need to be. The guard cares about the
@@ -451,9 +487,6 @@ impl MessageKey {
             MessageKey::NavLinkSettings,
             MessageKey::NavSignOut,
             MessageKey::BreadcrumbNavLabel,
-            MessageKey::BackToLabel {
-                label: "Sprint 4".to_string(),
-            },
             MessageKey::ErrorPageTitle,
             MessageKey::ErrorPageGoHomeLink,
         ];
@@ -483,6 +516,12 @@ impl MessageKey {
             IndicatorLabel::all()
                 .into_iter()
                 .map(|label| MessageKey::IndicatorName { label }),
+        );
+        // Every NavSection value, per I18N-005a-review.md §2.
+        keys.extend(
+            NavSection::all()
+                .into_iter()
+                .map(|section| MessageKey::BackToSection { section }),
         );
         keys
     }

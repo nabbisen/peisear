@@ -25,7 +25,7 @@
 #![deny(clippy::wildcard_enum_match_arm)]
 #![deny(clippy::match_wildcard_for_single_variants)]
 
-use peisear_i18n::{EntityKind, Field, IndicatorLabel, MessageKey};
+use peisear_i18n::{EntityKind, Field, IndicatorLabel, MessageKey, NavSection};
 
 pub fn render(key: MessageKey) -> String {
     match key {
@@ -132,7 +132,7 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::NavLinkSettings => "[fx-settings]".to_string(),
         MessageKey::NavSignOut => "[fx-sign-out]".to_string(),
         MessageKey::BreadcrumbNavLabel => "[fx-breadcrumb]".to_string(),
-        MessageKey::BackToLabel { label } => format!("[fx-back-to] {label}"),
+        MessageKey::BackToSection { section } => format!("[fx-back-to] {}", nav_section(section)),
         MessageKey::ErrorPageTitle => "[fx-error-title]".to_string(),
         MessageKey::ErrorPageGoHomeLink => "[fx-go-home]".to_string(),
     }
@@ -154,6 +154,14 @@ fn field_label(field: Field) -> &'static str {
         Field::EffortPoints => "[fx-effort]",
         Field::CapacityPoints => "[fx-capacity-points]",
         Field::CloseDate => "[fx-close-date]",
+    }
+}
+
+fn nav_section(section: NavSection) -> &'static str {
+    match section {
+        NavSection::Projects => "[fx-projects]",
+        NavSection::Issues => "[fx-issues]",
+        NavSection::Sprints => "[fx-sprints]",
     }
 }
 

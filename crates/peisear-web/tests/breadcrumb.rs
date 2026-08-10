@@ -53,8 +53,8 @@ async fn project_detail_breadcrumb_starts_with_today() {
     );
     // 4. Back link to projects list.
     assert!(
-        body.contains("Back to Projects"),
-        "project detail page missing 'Back to Projects' affordance"
+        body.contains("Back to projects"),
+        "project detail page missing 'Back to projects' affordance"
     );
 }
 

@@ -47,6 +47,18 @@ where
     Html(format!("<!DOCTYPE html>{body}"))
 }
 
+/// Shorthand for `Locale::English.render(key)` — the only locale this
+/// crate ever renders (`NFR-LANG-005`). `I18N-005a-review.md` §6:
+/// the full call was too long to sit comfortably inline in markup, so
+/// components pre-bound every rendered string to a `let` even where
+/// it was only used once. Short enough to inline, so pre-binding can
+/// go back to being a choice — made when a string is used more than
+/// once or needs conditional logic to select, not a requirement for
+/// every rendered string.
+pub(crate) fn t(key: peisear_i18n::MessageKey) -> String {
+    peisear_i18n::Locale::English.render(key)
+}
+
 /// Column of issues on the kanban board, grouped by status. Shared
 /// between [`issues::ProjectDetailPage`] and its handler.
 #[derive(Debug, Clone)]

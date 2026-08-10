@@ -9,7 +9,7 @@ use peisear_core::{
     UserLoad,
     project_health::{HealthScore, Indicator, ProjectHealthReport},
 };
-use peisear_i18n::{Locale, MessageKey};
+use peisear_i18n::{Locale, MessageKey, NavSection};
 
 /// Project-detail page: header + board/list view toggle.
 #[component]
@@ -71,7 +71,7 @@ pub fn ProjectDetailPage(
         super::breadcrumb::BreadcrumbItem::link("Projects", "/projects"),
         super::breadcrumb::BreadcrumbItem::current(name_for_breadcrumb),
     ]);
-    let back_link = super::breadcrumb::render_back_link("Projects", "/projects");
+    let back_link = super::breadcrumb::render_back_link(NavSection::Projects, "/projects");
 
     view! {
         <AppShell title=title user=user flash=flash>
@@ -166,7 +166,7 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
     // renders as one more chip alongside the individual
     // indicators (composite_row below) instead of a separate,
     // more prominent box carrying a number.
-    let summary = Locale::English.render(health.score.summary.clone());
+    let summary = Locale::English.render(health.score.summary);
 
     // Phase B PR3 (B-2): explainability — collect human-language
     // sentences describing each indicator that's not at Good.
@@ -1231,7 +1231,7 @@ pub fn IssueDetailPage(
             <div class="max-w-3xl mx-auto">
                 {super::breadcrumb::render_breadcrumb(breadcrumb_items)}
                 {super::breadcrumb::render_back_link(
-                    "issues",
+                    NavSection::Issues,
                     project_href_for_breadcrumb,
                 )}
                 {body}

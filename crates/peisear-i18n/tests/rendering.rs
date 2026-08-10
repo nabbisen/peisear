@@ -13,8 +13,8 @@ use peisear_i18n::{Locale, MessageKey};
 #[test]
 fn fixture_locale_renders_every_key_differently_from_english() {
     for key in MessageKey::all() {
-        let english = Locale::English.render(key.clone());
-        let fixture = common::fixture_locale::render(key.clone());
+        let english = Locale::English.render(key);
+        let fixture = common::fixture_locale::render(key);
         assert_ne!(
             english, fixture,
             "{key:?} rendered identically in English and the fixture locale — \
@@ -55,8 +55,8 @@ fn no_rendered_output_contains_a_key_shaped_literal() {
 
     for key in MessageKey::all() {
         for rendered in [
-            Locale::English.render(key.clone()),
-            common::fixture_locale::render(key.clone()),
+            Locale::English.render(key),
+            common::fixture_locale::render(key),
         ] {
             for word in rendered.split_whitespace() {
                 let trimmed = word.trim_matches(|c: char| !c.is_alphanumeric() && c != '.');
