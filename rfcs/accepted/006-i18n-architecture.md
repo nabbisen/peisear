@@ -203,6 +203,29 @@ bind every conversion handoff, and a handoff index is not a design authority
    for its location is wrong the moment the layout changes, and the point of
    the table is that copy outlives layout.
 
+7. **Copy is not assembled from literals in Rust.** A user-visible sentence is
+   one `MessageKey`, rendered by one arm in one locale table. Do not build it
+   with `format!`, or select its wording in a `match` that yields `String`s,
+   or concatenate fragments at the call site.
+
+   *Added 2026-08-11, from I18N-007's review.* The immediate reason is
+   reorderability — a second locale cannot rearrange a sentence Rust has
+   already assembled, which is why rule 1 and the `IndicatorAriaLabel`
+   correction exist. The reason it is a rule rather than advice is
+   `prose_scan.rs`: that guard is scoped to template positions — attribute
+   values and `view!` text nodes — so copy assembled into a `String` binding
+   before it reaches markup is invisible to it. `render_trend_chip` and `/me`'s
+   load and throughput chips each carried English prose in exactly that shape
+   for four handoffs, through four completeness claims, and the guard written
+   to catch them still cannot see them.
+
+   Widening the guard was measured and rejected: a blanket `format!` filter
+   flagged twelve non-copy sites (CSS class construction, form field names)
+   against six real ones. So the blind spot closes by construction instead —
+   no copy is written in that shape, and the rule is the check. Composing from
+   another message's **key** is fine and is the intended pattern; composing
+   from another message's **rendered text** is what this prohibits.
+
 ## Test plan
 
 | Check | Mechanism |

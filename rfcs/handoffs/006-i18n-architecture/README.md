@@ -48,7 +48,8 @@ a person reading code. None would have survived a lint over a string table.
 | 5d | [I18N-005d](./I18N-005d-today-inbox-settings.md) | Today, inbox, settings, search | 5a |
 | 5e | [I18N-005e](./I18N-005e-errors-and-validation.md) | Errors, validation, auth | 5a |
 | 6 | [I18N-006](./I18N-006-remaining-prose-surface.md) | `peisear-core` and `peisear-storage` prose, `BurnoutSignal.label`, validator-literal scan test | 5b–e |
-| 7 | [I18N-007](./I18N-007-completion-sweep.md) | Five remaining copy sites, and the literal-scan test that replaces the completion survey; **completes 0.21.0** | 6 |
+| 7 | [I18N-007](./I18N-007-completion-sweep.md) | Five remaining copy sites, and the literal-scan test that replaces the completion survey | 6 |
+| 7b | [REL-0.21.0](./REL-0.21.0-release-candidate.md) | Two scan-test corrections, then the release candidate | 7 |
 
 5b–e are parallel with each other. They all add variants to the same
 `MessageKey` enum, so expect merge contention there and sequence commits
