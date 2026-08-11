@@ -696,7 +696,6 @@ pub fn render(key: MessageKey) -> String {
         // ---- I18N-005e: handlers/issues.rs ----
         MessageKey::InvalidAssigneeMessage => "[fx-invalid-assignee]".to_string(),
         MessageKey::SubIssueCannotNestLongMessage => "[fx-sub-issue-nest-long]".to_string(),
-        MessageKey::SubIssueCannotNestShortMessage => "[fx-sub-issue-nest-short]".to_string(),
 
         // ---- I18N-005e: handlers/sprints.rs ----
         MessageKey::SprintNameRequiredMessage => "[fx-sprint-name-required]".to_string(),

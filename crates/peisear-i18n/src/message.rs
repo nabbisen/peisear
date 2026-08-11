@@ -1298,16 +1298,17 @@ pub enum MessageKey {
         total_events_observed: i64,
         window_days: i64,
     },
-    /// **Found, not fixed** (`I18N-005d` §2/§10's "read oddly"
-    /// question, the `ISSUE-006` precedent applied to this screen):
-    /// the source's sentence reads "median N / active day pickups
-    /// per active day (...)" — the median value's own " / active
-    /// day" suffix collides with the surrounding template's "pickups
-    /// per active day", so "per active day" appears twice. Converted
-    /// byte-exactly (recomposed from typed `median: f64` in this
-    /// arm, not threaded in as a pre-rendered `String`, per
-    /// `I18N-005c-review` §3) rather than silently reworded — flagged
-    /// in the review request instead.
+    /// `COPY-001` §2 fix: originally embedded
+    /// [`MessageKey::SwitchingMedianValue`]'s own " / active day"
+    /// suffix into a template that appended "pickups per active
+    /// day", so a screen reader heard "per active day" twice — found
+    /// at `I18N-005d`, correctly left unreworded there under the
+    /// no-rewording rule, and ruled a real defect here. Now formats
+    /// the median number itself (`switching_median_number`, the same
+    /// one-decimal rule `switching_median_text` uses for the chip)
+    /// with no suffix, composed from the typed `median: f64` in this
+    /// arm rather than a pre-rendered `String`, per
+    /// `I18N-005c-review` §3.
     SwitchingAriaLabel {
         median: f64,
         total_events_observed: i64,
@@ -1583,15 +1584,17 @@ pub enum MessageKey {
 
     // ---- I18N-005e: handlers/issues.rs ----
     InvalidAssigneeMessage,
-    /// The `new_sub_issue_form` (GET, form-render-time) wording.
-    /// Distinct from [`MessageKey::SubIssueCannotNestShortMessage`]
-    /// (`create_sub_issue`, POST, submission-time) — found as an
-    /// existing inconsistency between the two call sites, not
-    /// introduced by this handoff; kept as two keys rather than
-    /// unified, per the no-rewording rule. Flagged in the review
-    /// request for an architect ruling on whether to unify.
+    /// Used by both `new_sub_issue_form` (GET, form-render-time) and
+    /// `create_sub_issue` (POST, submission-time). A distinct, shorter
+    /// `SubIssueCannotNestShortMessage` existed at the POST site until
+    /// `COPY-001` §3 unified them: external design §10.4 rule 4 says
+    /// an error describes what happened *and* what would resolve it,
+    /// the long form does both and the short form is the same
+    /// rejection with the resolution removed, and both sites are a
+    /// full-width error surface with room for the longer sentence.
+    /// Not a preference for longer copy — a user just told they can't
+    /// do something needs to know what they can do instead.
     SubIssueCannotNestLongMessage,
-    SubIssueCannotNestShortMessage,
 
     // ---- I18N-005e: handlers/sprints.rs ----
     SprintNameRequiredMessage,
@@ -1664,11 +1667,17 @@ pub enum MessageKey {
 
     // ---- I18N-006: peisear-storage/src/user_capacities.rs ----
     /// `insert`'s pre-check before the schema `CHECK` constraint.
-    /// The wording names the raw field identifiers
-    /// (`period_start`/`period_end`) rather than a friendlier
-    /// phrase — found, not introduced, and kept byte-exact under
-    /// no-rewording; flagged in the review request as a possible
-    /// copy-quality finding.
+    /// `COPY-001` §4 fix: used to name the raw field identifiers
+    /// (`period_start`/`period_end`) rather than a phrase a user
+    /// reads, found at `I18N-006` and correctly left unreworded
+    /// there under no-rewording. The normative replacement `COPY-001`
+    /// specified assumed the capacity-row form's inputs are labelled
+    /// "Start date"/"End date"; they are actually
+    /// [`MessageKey::FromDateFieldLabel`]/[`MessageKey::ToDateFieldLabel`]
+    /// ("From (YYYY-MM-DD)"/"To (YYYY-MM-DD)") — matched to the
+    /// actual labels instead of the assumed ones, per that handoff's
+    /// own instruction to do exactly that and report it, which this
+    /// comment and the review request both do.
     PeriodStartMustPrecedeEndMessage,
     /// `insert` and `update`'s overlap-conflict message — identical
     /// at both call sites, so one key. `period_start`/`period_end`
@@ -2366,7 +2375,6 @@ impl MessageKey {
             MessageKey::InvalidInputFallbackMessage,
             MessageKey::InvalidAssigneeMessage,
             MessageKey::SubIssueCannotNestLongMessage,
-            MessageKey::SubIssueCannotNestShortMessage,
             MessageKey::SprintNameRequiredMessage,
             MessageKey::SubIssueFollowsParentSprintMessage,
             MessageKey::SprintsPersonalProjectMessage,

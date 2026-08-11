@@ -702,7 +702,7 @@ pub(crate) fn render(key: MessageKey) -> String {
             "Switching pattern: median {} pickups per active day ({total_events_observed} \
              total events over {window_days} days). For context only — high or low here \
              is not a quality judgement.",
-            switching_median_text(median)
+            switching_median_number(median)
         ),
 
         // ---- I18N-005d: components/settings ----
@@ -925,9 +925,6 @@ pub(crate) fn render(key: MessageKey) -> String {
              issue first, or add this work as a sibling sub-issue under the same parent."
                 .to_string()
         }
-        MessageKey::SubIssueCannotNestShortMessage => {
-            "Sub-issues cannot have their own sub-issues.".to_string()
-        }
 
         // ---- I18N-005e: handlers/sprints.rs ----
         MessageKey::SprintNameRequiredMessage => "Sprint name is required.".to_string(),
@@ -999,7 +996,7 @@ pub(crate) fn render(key: MessageKey) -> String {
 
         // ---- I18N-006: peisear-storage/src/user_capacities.rs ----
         MessageKey::PeriodStartMustPrecedeEndMessage => {
-            "period_start must be on or before period_end".to_string()
+            "The From date must be on or before the To date.".to_string()
         }
         MessageKey::CapacityPeriodOverlapMessage {
             row_id,
@@ -1296,17 +1293,25 @@ fn drift_trend_phrase(direction: DriftDirectionLabel) -> &'static str {
     }
 }
 
-/// Shared by `MessageKey::SwitchingMedianValue` and
-/// `MessageKey::SwitchingAriaLabel` so both stay byte-identical in
-/// how they render the same value — see `SwitchingAriaLabel`'s doc
-/// comment for the found-not-fixed "per active day" repetition this
-/// produces when embedded in the aria sentence.
-fn switching_median_text(median: f64) -> String {
+/// The one-decimal rounding rule shared by the chip
+/// (`switching_median_text`, below) and the aria sentence
+/// (`MessageKey::SwitchingAriaLabel`), so the two surfaces cannot
+/// disagree about decimals (`COPY-001` §2) — only the chip's " /
+/// active day" suffix is surface-specific, which is why it lives in
+/// `switching_median_text` and not here.
+fn switching_median_number(median: f64) -> String {
     if median.fract() < 0.05 {
-        format!("{median:.0} / active day")
+        format!("{median:.0}")
     } else {
-        format!("{median:.1} / active day")
+        format!("{median:.1}")
     }
+}
+
+/// Shared by `MessageKey::SwitchingMedianValue` and, via
+/// `switching_median_number`, `MessageKey::SwitchingAriaLabel` — see
+/// that helper's doc comment.
+fn switching_median_text(median: f64) -> String {
+    format!("{} / active day", switching_median_number(median))
 }
 
 fn notification_kind_label(kind: NotificationKindLabel) -> &'static str {

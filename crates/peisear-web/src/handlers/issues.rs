@@ -474,7 +474,7 @@ pub async fn create_sub_issue(
     let parent = issues::find(&state.db, &parent_issue_id, &project_id).await?;
     if parent.is_sub_issue() {
         return Err(AppError::Validation(t(
-            MessageKey::SubIssueCannotNestShortMessage,
+            MessageKey::SubIssueCannotNestLongMessage,
         )));
     }
 
