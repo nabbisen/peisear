@@ -32,7 +32,7 @@ use peisear_i18n::{Locale, MessageKey};
 use peisear_storage::{notifications as notif_store, projects, teams, users};
 use serde::Deserialize;
 
-use crate::{AppError, AppResult, AppState, components, extractors::AuthUser};
+use crate::{AppError, AppResult, AppState, components, components::t, extractors::AuthUser};
 
 #[derive(Debug, Deserialize)]
 pub struct FlashQuery {
@@ -82,7 +82,7 @@ pub async fn create(
 ) -> AppResult<Redirect> {
     let name = form.name.trim();
     if name.is_empty() {
-        return Err(AppError::Validation("Team name is required.".into()));
+        return Err(AppError::Validation(t(MessageKey::TeamNameRequiredMessage)));
     }
     let slug_candidate = if form.slug.trim().is_empty() {
         slugify(name)
@@ -90,11 +90,9 @@ pub async fn create(
         slugify(&form.slug)
     };
     if slug_candidate.is_empty() {
-        return Err(AppError::Validation(
-            "Could not derive a URL slug from the name. Try setting one explicitly \
-             (lowercase letters, digits, hyphens)."
-                .into(),
-        ));
+        return Err(AppError::Validation(t(
+            MessageKey::SlugDerivationFailedMessage,
+        )));
     }
     let description = if form.description.trim().is_empty() {
         None
@@ -206,7 +204,7 @@ pub async fn update(
     }
     let name = form.name.trim();
     if name.is_empty() {
-        return Err(AppError::Validation("Team name is required.".into()));
+        return Err(AppError::Validation(t(MessageKey::TeamNameRequiredMessage)));
     }
     let description = if form.description.trim().is_empty() {
         None
@@ -246,7 +244,7 @@ pub async fn add_member(
 
     let email = form.email.trim();
     let new_role = TeamRole::from_storage_str(form.role.trim())
-        .ok_or_else(|| AppError::Validation("Invalid role.".into()))?;
+        .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidRoleMessage)))?;
 
     let target = users::find_by_email(&state.db, email).await?;
     let Some(target) = target else {
@@ -295,7 +293,7 @@ pub async fn update_member_role(
     }
 
     let new_role = TeamRole::from_storage_str(form.role.trim())
-        .ok_or_else(|| AppError::Validation("Invalid role.".into()))?;
+        .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidRoleMessage)))?;
 
     // Refuse to demote the last admin.
     if !matches!(new_role, TeamRole::Admin) {

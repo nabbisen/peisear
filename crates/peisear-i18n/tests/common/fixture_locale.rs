@@ -45,6 +45,9 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::FieldMustBePositiveInteger { field } => {
             format!("[fx] {} needs a positive whole number", field_label(field))
         }
+        MessageKey::FieldMustBeDateFormat { field } => {
+            format!("[fx-date-format] {}", field_label(field))
+        }
         MessageKey::InvalidStatus => "[fx] bad status".to_string(),
         MessageKey::InvalidPriority => "[fx] bad priority".to_string(),
 
@@ -664,6 +667,64 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::PreferencesSavedFlash => "[fx-preferences-saved]".to_string(),
         MessageKey::AllNotificationsSilencedFlash => "[fx-all-notifs-silenced]".to_string(),
         MessageKey::MarkedAsReadFlash { count } => format!("[fx-marked-as-read] {count}"),
+
+        // ---- I18N-005e: error.rs (ApiAppError) ----
+        MessageKey::ApiUnauthorizedMessage => "[fx-api-unauthorized]".to_string(),
+        MessageKey::ApiForbiddenMessage => "[fx-api-forbidden]".to_string(),
+        MessageKey::ApiNotFoundMessage => "[fx-api-not-found]".to_string(),
+        MessageKey::ApiOptimisticLockConflictMessage { entity } => {
+            format!("[fx-api-lock-conflict] {}", entity_label(entity))
+        }
+
+        // ---- I18N-005e: components/auth.rs, handlers/auth.rs ----
+        MessageKey::LoginPageTitle => "[fx-login-title]".to_string(),
+        MessageKey::RegisterPageTitle => "[fx-register-title]".to_string(),
+        MessageKey::SignInTaglineText => "[fx-sign-in-tagline]".to_string(),
+        MessageKey::RegisterTaglineText => "[fx-register-tagline]".to_string(),
+        MessageKey::SignInWord => "[fx-sign-in-word]".to_string(),
+        MessageKey::CreateAccountButton => "[fx-create-account-button]".to_string(),
+        MessageKey::PasswordFieldLabel => "[fx-password-field]".to_string(),
+        MessageKey::DisplayNameFieldLabel => "[fx-display-name-field]".to_string(),
+        MessageKey::PasswordMinLengthHint => "[fx-password-hint]".to_string(),
+        MessageKey::NoAccountPrompt => "[fx-no-account-prompt]".to_string(),
+        MessageKey::CreateOneLinkWord => "[fx-create-one-link]".to_string(),
+        MessageKey::AlreadyHaveAccountPrompt => "[fx-already-have-account]".to_string(),
+        MessageKey::InvalidCredentialsMessage => "[fx-invalid-credentials]".to_string(),
+        MessageKey::EmailAlreadyExistsMessage => "[fx-email-already-exists]".to_string(),
+        MessageKey::InvalidInputFallbackMessage => "[fx-invalid-input-fallback]".to_string(),
+
+        // ---- I18N-005e: handlers/issues.rs ----
+        MessageKey::InvalidAssigneeMessage => "[fx-invalid-assignee]".to_string(),
+        MessageKey::SubIssueCannotNestLongMessage => "[fx-sub-issue-nest-long]".to_string(),
+        MessageKey::SubIssueCannotNestShortMessage => "[fx-sub-issue-nest-short]".to_string(),
+
+        // ---- I18N-005e: handlers/sprints.rs ----
+        MessageKey::SprintNameRequiredMessage => "[fx-sprint-name-required]".to_string(),
+        MessageKey::SubIssueFollowsParentSprintMessage => {
+            "[fx-sub-issue-follows-parent]".to_string()
+        }
+        MessageKey::SprintsPersonalProjectMessage => "[fx-sprints-personal-project]".to_string(),
+        MessageKey::SprintProjectTeamMismatchMessage => {
+            "[fx-sprint-project-team-mismatch]".to_string()
+        }
+        MessageKey::CannotAssignToCompletedSprintMessage => {
+            "[fx-cannot-assign-completed-sprint]".to_string()
+        }
+
+        // ---- I18N-005e: handlers/teams.rs ----
+        MessageKey::TeamNameRequiredMessage => "[fx-team-name-required]".to_string(),
+        MessageKey::SlugDerivationFailedMessage => "[fx-slug-derivation-failed]".to_string(),
+        MessageKey::InvalidRoleMessage => "[fx-invalid-role]".to_string(),
+
+        // ---- I18N-005e: handlers/settings.rs ----
+        MessageKey::CapacityPointsRequiredMessage => "[fx-capacity-points-required]".to_string(),
+        MessageKey::WipLimitMustBePositiveIntegerMessage => {
+            "[fx-wip-limit-positive-int]".to_string()
+        }
+        MessageKey::PeriodStartMustBeDateFormatMessage => {
+            "[fx-period-start-date-format]".to_string()
+        }
+        MessageKey::PeriodEndMustBeDateFormatMessage => "[fx-period-end-date-format]".to_string(),
     }
 }
 

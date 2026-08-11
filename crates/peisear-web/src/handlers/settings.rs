@@ -23,11 +23,11 @@ use axum::{
     response::{IntoResponse, Redirect},
 };
 use chrono::NaiveDate;
-use peisear_i18n::{Locale, MessageKey};
+use peisear_i18n::{Field, Locale, MessageKey};
 use peisear_storage::{user_capacities, users};
 use serde::Deserialize;
 
-use crate::{AppError, AppResult, AppState, components, extractors::AuthUser};
+use crate::{AppError, AppResult, AppState, components, components::t, extractors::AuthUser};
 
 #[derive(Debug, Deserialize)]
 pub struct FlashQuery {
@@ -79,30 +79,34 @@ pub struct CapacityForm {
     pub note: String,
 }
 
-fn parse_positive_int(raw: &str, field_label: &str) -> Result<Option<i64>, AppError> {
+fn parse_positive_int(
+    raw: &str,
+    invalid_message: impl Fn() -> String,
+) -> Result<Option<i64>, AppError> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
         return Ok(None);
     }
     let n: i64 = trimmed
         .parse()
-        .map_err(|_| AppError::Validation(format!("{field_label} must be a positive integer.")))?;
+        .map_err(|_| AppError::Validation(invalid_message()))?;
     if n <= 0 {
-        return Err(AppError::Validation(format!(
-            "{field_label} must be a positive integer."
-        )));
+        return Err(AppError::Validation(invalid_message()));
     }
     Ok(Some(n))
 }
 
-fn parse_date(raw: &str, field_label: &str) -> Result<Option<NaiveDate>, AppError> {
+fn parse_date(
+    raw: &str,
+    invalid_message: impl Fn() -> String,
+) -> Result<Option<NaiveDate>, AppError> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
         return Ok(None);
     }
     NaiveDate::parse_from_str(trimmed, "%Y-%m-%d")
         .map(Some)
-        .map_err(|_| AppError::Validation(format!("{field_label} must be in YYYY-MM-DD format.")))
+        .map_err(|_| AppError::Validation(invalid_message()))
 }
 
 /// Translate a `Conflict` from storage into a redirect with the
@@ -136,7 +140,9 @@ pub async fn update_wip_limit(
     State(state): State<AppState>,
     Form(form): Form<WipLimitForm>,
 ) -> AppResult<Redirect> {
-    let wip = parse_positive_int(&form.wip_limit, "WIP limit")?;
+    let wip = parse_positive_int(&form.wip_limit, || {
+        t(MessageKey::WipLimitMustBePositiveIntegerMessage)
+    })?;
     users::set_wip_limit(&state.db, &user.id, wip).await?;
     let flash = Locale::English
         .render(MessageKey::WipLimitSavedFlash)
@@ -150,10 +156,18 @@ pub async fn insert_capacity(
     State(state): State<AppState>,
     Form(form): Form<CapacityForm>,
 ) -> AppResult<Redirect> {
-    let points = parse_positive_int(&form.points, "Capacity points")?
-        .ok_or_else(|| AppError::Validation("Capacity points are required.".into()))?;
-    let period_start = parse_date(&form.period_start, "Period start")?;
-    let period_end = parse_date(&form.period_end, "Period end")?;
+    let points = parse_positive_int(&form.points, || {
+        t(MessageKey::FieldMustBePositiveInteger {
+            field: Field::CapacityPoints,
+        })
+    })?
+    .ok_or_else(|| AppError::Validation(t(MessageKey::CapacityPointsRequiredMessage)))?;
+    let period_start = parse_date(&form.period_start, || {
+        t(MessageKey::PeriodStartMustBeDateFormatMessage)
+    })?;
+    let period_end = parse_date(&form.period_end, || {
+        t(MessageKey::PeriodEndMustBeDateFormatMessage)
+    })?;
     let note = if form.note.trim().is_empty() {
         None
     } else {
@@ -210,14 +224,22 @@ pub async fn update_capacity(
     crate::error::check_optimistic_lock(
         &form.client_updated_at,
         current.updated_at,
-        "capacity_period",
+        peisear_i18n::EntityKind::CapacityPeriod,
         &row_id,
     )?;
 
-    let points = parse_positive_int(&form.points, "Capacity points")?
-        .ok_or_else(|| AppError::Validation("Capacity points are required.".into()))?;
-    let period_start = parse_date(&form.period_start, "Period start")?;
-    let period_end = parse_date(&form.period_end, "Period end")?;
+    let points = parse_positive_int(&form.points, || {
+        t(MessageKey::FieldMustBePositiveInteger {
+            field: Field::CapacityPoints,
+        })
+    })?
+    .ok_or_else(|| AppError::Validation(t(MessageKey::CapacityPointsRequiredMessage)))?;
+    let period_start = parse_date(&form.period_start, || {
+        t(MessageKey::PeriodStartMustBeDateFormatMessage)
+    })?;
+    let period_end = parse_date(&form.period_end, || {
+        t(MessageKey::PeriodEndMustBeDateFormatMessage)
+    })?;
     let note = if form.note.trim().is_empty() {
         None
     } else {
@@ -266,7 +288,7 @@ pub async fn delete_capacity(
     crate::error::check_optimistic_lock(
         &form.client_updated_at,
         current.updated_at,
-        "capacity_period",
+        peisear_i18n::EntityKind::CapacityPeriod,
         &row_id,
     )?;
 
@@ -299,12 +321,20 @@ pub async fn close_capacity(
     crate::error::check_optimistic_lock(
         &form.client_updated_at,
         current.updated_at,
-        "capacity_period",
+        peisear_i18n::EntityKind::CapacityPeriod,
         &row_id,
     )?;
 
-    let period_end = parse_date(&form.period_end, "Close date")?
-        .ok_or_else(|| AppError::Validation("Close date is required.".into()))?;
+    let period_end = parse_date(&form.period_end, || {
+        t(MessageKey::FieldMustBeDateFormat {
+            field: Field::CloseDate,
+        })
+    })?
+    .ok_or_else(|| {
+        AppError::Validation(t(MessageKey::FieldRequired {
+            field: Field::CloseDate,
+        }))
+    })?;
     user_capacities::close_at(&state.db, &user.id, &row_id, period_end).await?;
     let flash = Locale::English
         .render(MessageKey::RowClosedFlash)

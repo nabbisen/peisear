@@ -12,8 +12,11 @@ use axum::{
 };
 use chrono::{DateTime, Utc};
 use peisear_auth::AuthError;
+use peisear_i18n::{EntityKind, MessageKey};
 use peisear_storage::StorageError;
 use serde_json::json;
+
+use crate::components::t;
 
 #[derive(Debug, thiserror::Error)]
 pub enum AppError {
@@ -39,18 +42,21 @@ pub enum AppError {
     /// `updated_at` so the response can carry it (per
     /// peisear-feature-spec-v2.1 appendix E.3.3).
     ///
-    /// `entity_type` is a short kind tag (`"issue"`, `"sprint"`,
-    /// `"project"`, `"team"`, `"capacity_period"`,
-    /// `"team_membership"`).
+    /// `entity_type` is the closed set of entity kinds this
+    /// conflict can name (`I18N-005e`: was `&'static str`, now the
+    /// `peisear-i18n` enum that already existed for exactly this
+    /// purpose — `I18N-001` seeded `MessageKey::OptimisticLockConflict`
+    /// against it but nothing constructed `AppError` with a typed
+    /// value until now).
     ///
     /// The HTML response renders an explanatory page urging the
     /// user to refresh and re-apply their edit. The JSON
     /// response (for `/api/*` endpoints) returns the structured
     /// shape from the spec so a future client-side conflict-
     /// resolution UI has the data it needs.
-    #[error("stale optimistic lock on {entity_type} {entity_id}")]
+    #[error("stale optimistic lock on {entity_type:?} {entity_id}")]
     OptimisticLockConflict {
-        entity_type: &'static str,
+        entity_type: EntityKind,
         entity_id: String,
         current_updated_at: DateTime<Utc>,
     },
@@ -73,18 +79,34 @@ impl AppError {
 
     pub fn public_message(&self) -> String {
         match self {
-            Self::Internal(_) => "An internal error occurred. Please try again.".to_string(),
-            Self::OptimisticLockConflict { entity_type, .. } => format!(
-                "Someone else updated this {entity_type} while you were editing. \
-                 Please reload the page and re-apply your change so you don't \
-                 overwrite their work."
-            ),
+            // `IntoResponse` (below) redirects `Unauthorized` to `/login`
+            // before `public_message()` is ever called, so this arm is
+            // unreachable in practice — kept as a harmless string rather
+            // than `unreachable!()` so a future refactor that removed
+            // that guard would degrade to a generic message instead of
+            // panicking.
+            Self::Unauthorized => "authentication required".to_string(),
+            Self::Forbidden => t(MessageKey::Forbidden),
+            Self::NotFound => t(MessageKey::NotFound),
+            Self::Internal(_) => t(MessageKey::InternalError),
+            Self::OptimisticLockConflict { entity_type, .. } => {
+                t(MessageKey::OptimisticLockConflict {
+                    entity: *entity_type,
+                })
+            }
             // `Validation`'s `Display` impl (used for tracing/logs) is
             // prefixed "validation failed: " for developer readability.
             // That prefix is failure framing and must not reach the
             // user (§1.7) — return the caller-supplied message as-is.
             Self::Validation(msg) => msg.clone(),
-            other => other.to_string(),
+            // `I18N-005e` fix: `Conflict`'s `Display` impl is prefixed
+            // "conflict: " the same way `Validation`'s is — but unlike
+            // `Validation`, nothing stripped it before this handoff,
+            // so every `AppError::Conflict(msg)` rendered as
+            // "conflict: {msg}" to the user. Same bug class DEV-001
+            // fixed on `Validation`, found here on `Conflict` while
+            // converting — fixed, not just converted around.
+            Self::Conflict(msg) => msg.clone(),
         }
     }
 }
@@ -142,7 +164,7 @@ impl IntoResponse for AppError {
         {
             // Stale-update conflicts are normal during concurrent
             // editing; log at info, not warn — we expect them.
-            tracing::info!(%entity_type, %entity_id, "optimistic-lock conflict");
+            tracing::info!(?entity_type, %entity_id, "optimistic-lock conflict");
         } else {
             tracing::debug!(error = %self, "request error");
         }
@@ -216,7 +238,7 @@ pub type AppResult<T> = Result<T, AppError>;
 pub fn check_optimistic_lock(
     client_updated_at_str: &str,
     current_updated_at: chrono::DateTime<chrono::Utc>,
-    entity_type: &'static str,
+    entity_type: EntityKind,
     entity_id: impl Into<String>,
 ) -> AppResult<()> {
     let client_dt = chrono::DateTime::parse_from_rfc3339(client_updated_at_str)
@@ -230,11 +252,7 @@ pub fn check_optimistic_lock(
             // sprint, and capacity form paths, not just the board
             // (DEV-001-004-review.md §1.4) — board.js carries its
             // own board-specific wording for the board context.
-            AppError::Validation(
-                "This page is showing an earlier version. \
-                 Reload to see the current state."
-                    .into(),
-            )
+            AppError::Validation(t(MessageKey::LockValueUnreadable))
         })?
         .with_timezone(&chrono::Utc);
 
@@ -274,6 +292,28 @@ pub fn check_optimistic_lock(
 // just to peel the JSON fields back out. A direct enum is
 // clearer.
 
+/// The `entity_type` JSON field's wire value — a stable identifier
+/// clients branch on (`FR-API-004`'s "the code is not copy, it is a
+/// contract" applies here the same way it does to the `error`
+/// field), not copy, so it does not go through `peisear_i18n`.
+/// `I18N-005e`: `entity_type` used to be the `&'static str` passed
+/// straight through to `json!`; now that it is a typed `EntityKind`
+/// (see `AppError::OptimisticLockConflict`'s doc comment), this
+/// mapping keeps the wire value byte-identical to what it was before
+/// — `EntityKind` has no `Serialize` derive on purpose, since a
+/// derive's default casing (`"CapacityPeriod"`) would silently
+/// change the contract.
+fn entity_kind_wire_str(entity: EntityKind) -> &'static str {
+    match entity {
+        EntityKind::Issue => "issue",
+        EntityKind::Project => "project",
+        EntityKind::Sprint => "sprint",
+        EntityKind::Team => "team",
+        EntityKind::CapacityPeriod => "capacity_period",
+        EntityKind::TeamMembership => "team_membership",
+    }
+}
+
 /// JSON-shape application error for `/api/*` endpoints.
 ///
 /// Each variant maps to a fixed HTTP status + JSON body. The
@@ -310,9 +350,9 @@ pub enum ApiAppError {
     /// `{ "error": "conflict", "message": "...",
     ///    "current_updated_at": "...", "entity_type": "...",
     ///    "entity_id": "..." }`.
-    #[error("stale optimistic lock on {entity_type} {entity_id}")]
+    #[error("stale optimistic lock on {entity_type:?} {entity_id}")]
     OptimisticLockConflict {
-        entity_type: &'static str,
+        entity_type: EntityKind,
         entity_id: String,
         current_updated_at: DateTime<Utc>,
     },
@@ -390,7 +430,7 @@ impl IntoResponse for ApiAppError {
             ..
         } = &self
         {
-            tracing::info!(%entity_type, %entity_id, "optimistic-lock conflict (api)");
+            tracing::info!(?entity_type, %entity_id, "optimistic-lock conflict (api)");
         } else {
             tracing::debug!(error = %self, "request error (api)");
         }
@@ -403,15 +443,15 @@ impl IntoResponse for ApiAppError {
         let body = match &self {
             Self::Unauthorized => json!({
                 "error": "unauthorized",
-                "message": "Authentication required.",
+                "message": t(MessageKey::ApiUnauthorizedMessage),
             }),
             Self::Forbidden => json!({
                 "error": "forbidden",
-                "message": "You do not have permission to access this resource.",
+                "message": t(MessageKey::ApiForbiddenMessage),
             }),
             Self::NotFound => json!({
                 "error": "not_found",
-                "message": "Resource not found.",
+                "message": t(MessageKey::ApiNotFoundMessage),
             }),
             Self::Validation(msg) => json!({
                 "error": "validation",
@@ -423,17 +463,16 @@ impl IntoResponse for ApiAppError {
                 current_updated_at,
             } => json!({
                 "error": "conflict",
-                "message": format!(
-                    "Someone else updated this {entity_type} while you \
-                     were editing. Reload and re-apply your change."
-                ),
-                "entity_type": entity_type,
+                "message": t(MessageKey::ApiOptimisticLockConflictMessage {
+                    entity: *entity_type,
+                }),
+                "entity_type": entity_kind_wire_str(*entity_type),
                 "entity_id": entity_id,
                 "current_updated_at": current_updated_at.to_rfc3339(),
             }),
             Self::Internal(_) => json!({
                 "error": "internal",
-                "message": "An internal error occurred. Please try again.",
+                "message": t(MessageKey::InternalError),
             }),
         };
 

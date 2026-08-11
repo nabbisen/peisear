@@ -50,6 +50,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::FieldMustBePositiveInteger { field } => {
             format!("{} must be a positive integer.", field_label(field))
         }
+        MessageKey::FieldMustBeDateFormat { field } => {
+            format!("{} must be in YYYY-MM-DD format.", field_label(field))
+        }
         MessageKey::InvalidStatus => "Invalid status".to_string(),
         MessageKey::InvalidPriority => "Invalid priority".to_string(),
 
@@ -882,6 +885,85 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::PreferencesSavedFlash => "Preferences saved".to_string(),
         MessageKey::AllNotificationsSilencedFlash => "All notifications silenced".to_string(),
         MessageKey::MarkedAsReadFlash { count } => format!("Marked {count} as read"),
+
+        // ---- I18N-005e: error.rs (ApiAppError) ----
+        MessageKey::ApiUnauthorizedMessage => "Authentication required.".to_string(),
+        MessageKey::ApiForbiddenMessage => {
+            "You do not have permission to access this resource.".to_string()
+        }
+        MessageKey::ApiNotFoundMessage => "Resource not found.".to_string(),
+        MessageKey::ApiOptimisticLockConflictMessage { entity } => format!(
+            "Someone else updated this {} while you were editing. Reload and re-apply your change.",
+            entity_label(entity)
+        ),
+
+        // ---- I18N-005e: components/auth.rs, handlers/auth.rs ----
+        MessageKey::LoginPageTitle => "Sign in — Issue Tracker".to_string(),
+        MessageKey::RegisterPageTitle => "Create account — Issue Tracker".to_string(),
+        MessageKey::SignInTaglineText => "Sign in to your workspace".to_string(),
+        MessageKey::RegisterTaglineText => "Create your account".to_string(),
+        MessageKey::SignInWord => "Sign in".to_string(),
+        MessageKey::CreateAccountButton => "Create account".to_string(),
+        MessageKey::PasswordFieldLabel => "Password".to_string(),
+        MessageKey::DisplayNameFieldLabel => "Display name".to_string(),
+        MessageKey::PasswordMinLengthHint => "8+ characters".to_string(),
+        MessageKey::NoAccountPrompt => "No account? ".to_string(),
+        MessageKey::CreateOneLinkWord => "Create one".to_string(),
+        MessageKey::AlreadyHaveAccountPrompt => "Already have an account? ".to_string(),
+        MessageKey::InvalidCredentialsMessage => "Invalid email or password.".to_string(),
+        MessageKey::EmailAlreadyExistsMessage => {
+            "An account with this email already exists.".to_string()
+        }
+        MessageKey::InvalidInputFallbackMessage => "Invalid input.".to_string(),
+
+        // ---- I18N-005e: handlers/issues.rs ----
+        MessageKey::InvalidAssigneeMessage => {
+            "Selected user is not a valid assignee for this project.".to_string()
+        }
+        MessageKey::SubIssueCannotNestLongMessage => {
+            "Sub-issues cannot have their own sub-issues. Promote the parent to a top-level \
+             issue first, or add this work as a sibling sub-issue under the same parent."
+                .to_string()
+        }
+        MessageKey::SubIssueCannotNestShortMessage => {
+            "Sub-issues cannot have their own sub-issues.".to_string()
+        }
+
+        // ---- I18N-005e: handlers/sprints.rs ----
+        MessageKey::SprintNameRequiredMessage => "Sprint name is required.".to_string(),
+        MessageKey::SubIssueFollowsParentSprintMessage => {
+            "Sub-issues follow the parent's sprint. Change the parent's sprint instead.".to_string()
+        }
+        MessageKey::SprintsPersonalProjectMessage => {
+            "Sprints are a team feature; this is a personal project.".to_string()
+        }
+        MessageKey::SprintProjectTeamMismatchMessage => {
+            "Sprint and project must belong to the same team.".to_string()
+        }
+        MessageKey::CannotAssignToCompletedSprintMessage => {
+            "Cannot assign issues to a completed sprint.".to_string()
+        }
+
+        // ---- I18N-005e: handlers/teams.rs ----
+        MessageKey::TeamNameRequiredMessage => "Team name is required.".to_string(),
+        MessageKey::SlugDerivationFailedMessage => {
+            "Could not derive a URL slug from the name. Try setting one explicitly \
+             (lowercase letters, digits, hyphens)."
+                .to_string()
+        }
+        MessageKey::InvalidRoleMessage => "Invalid role.".to_string(),
+
+        // ---- I18N-005e: handlers/settings.rs ----
+        MessageKey::CapacityPointsRequiredMessage => "Capacity points are required.".to_string(),
+        MessageKey::WipLimitMustBePositiveIntegerMessage => {
+            "WIP limit must be a positive integer.".to_string()
+        }
+        MessageKey::PeriodStartMustBeDateFormatMessage => {
+            "Period start must be in YYYY-MM-DD format.".to_string()
+        }
+        MessageKey::PeriodEndMustBeDateFormatMessage => {
+            "Period end must be in YYYY-MM-DD format.".to_string()
+        }
     }
 }
 

@@ -2,15 +2,17 @@
 
 use axum::response::Html;
 use leptos::prelude::*;
+use peisear_i18n::{Field, MessageKey};
 
 use super::layout::PublicShell;
+use super::t;
 
 #[component]
-fn Brand(subtitle: &'static str) -> impl IntoView {
+fn Brand(subtitle: String) -> impl IntoView {
     view! {
         <div class="text-center mb-6">
             <div class="text-2xl font-semibold tracking-tight">
-                <span class="text-primary">"●"</span>" Issue Tracker"
+                <span class="text-primary">"●"</span>" "{t(MessageKey::AppBrandName)}
             </div>
             <div class="text-sm text-base-content/60 mt-1">{subtitle}</div>
         </div>
@@ -26,31 +28,31 @@ fn FlashInline(flash: Option<String>) -> impl IntoView {
 #[component]
 pub fn LoginPage(flash: Option<String>, email: String) -> impl IntoView {
     view! {
-        <PublicShell title="Sign in — Issue Tracker">
+        <PublicShell title=t(MessageKey::LoginPageTitle)>
             <div class="max-w-sm mx-auto mt-12">
-                <Brand subtitle="Sign in to your workspace"/>
+                <Brand subtitle=t(MessageKey::SignInTaglineText)/>
                 <div class="card bg-base-100 shadow border border-base-300">
                     <form method="post" action="/login" class="card-body gap-3">
                         <FlashInline flash=flash/>
 
                         <label class="form-control w-full">
-                            <div class="label py-1"><span class="label-text text-sm">"Email"</span></div>
+                            <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Email })}</span></div>
                             <input type="email" name="email" autocomplete="email" required=true
                                    value=email
                                    class="input input-bordered input-sm w-full"/>
                         </label>
 
                         <label class="form-control w-full">
-                            <div class="label py-1"><span class="label-text text-sm">"Password"</span></div>
+                            <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::PasswordFieldLabel)}</span></div>
                             <input type="password" name="password" autocomplete="current-password"
                                    required=true minlength="8"
                                    class="input input-bordered input-sm w-full"/>
                         </label>
 
-                        <button type="submit" class="btn btn-primary btn-sm mt-2">"Sign in"</button>
+                        <button type="submit" class="btn btn-primary btn-sm mt-2">{t(MessageKey::SignInWord)}</button>
                         <div class="text-center text-xs mt-1 text-base-content/60">
-                            "No account? "
-                            <a href="/register" class="link link-primary">"Create one"</a>
+                            {t(MessageKey::NoAccountPrompt)}
+                            <a href="/register" class="link link-primary">{t(MessageKey::CreateOneLinkWord)}</a>
                         </div>
                     </form>
                 </div>
@@ -63,22 +65,22 @@ pub fn LoginPage(flash: Option<String>, email: String) -> impl IntoView {
 #[component]
 pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) -> impl IntoView {
     view! {
-        <PublicShell title="Create account — Issue Tracker">
+        <PublicShell title=t(MessageKey::RegisterPageTitle)>
             <div class="max-w-sm mx-auto mt-12">
-                <Brand subtitle="Create your account"/>
+                <Brand subtitle=t(MessageKey::RegisterTaglineText)/>
                 <div class="card bg-base-100 shadow border border-base-300">
                     <form method="post" action="/register" class="card-body gap-3">
                         <FlashInline flash=flash/>
 
                         <label class="form-control w-full">
-                            <div class="label py-1"><span class="label-text text-sm">"Display name"</span></div>
+                            <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::DisplayNameFieldLabel)}</span></div>
                             <input type="text" name="display_name" required=true maxlength="80"
                                    value=display_name
                                    class="input input-bordered input-sm w-full"/>
                         </label>
 
                         <label class="form-control w-full">
-                            <div class="label py-1"><span class="label-text text-sm">"Email"</span></div>
+                            <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Email })}</span></div>
                             <input type="email" name="email" autocomplete="email" required=true
                                    value=email
                                    class="input input-bordered input-sm w-full"/>
@@ -86,18 +88,18 @@ pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) 
 
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Password"</span>
-                                <span class="label-text-alt text-xs opacity-60">"8+ characters"</span>
+                                <span class="label-text text-sm">{t(MessageKey::PasswordFieldLabel)}</span>
+                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::PasswordMinLengthHint)}</span>
                             </div>
                             <input type="password" name="password" autocomplete="new-password"
                                    required=true minlength="8"
                                    class="input input-bordered input-sm w-full"/>
                         </label>
 
-                        <button type="submit" class="btn btn-primary btn-sm mt-2">"Create account"</button>
+                        <button type="submit" class="btn btn-primary btn-sm mt-2">{t(MessageKey::CreateAccountButton)}</button>
                         <div class="text-center text-xs mt-1 text-base-content/60">
-                            "Already have an account? "
-                            <a href="/login" class="link link-primary">"Sign in"</a>
+                            {t(MessageKey::AlreadyHaveAccountPrompt)}
+                            <a href="/login" class="link link-primary">{t(MessageKey::SignInWord)}</a>
                         </div>
                     </form>
                 </div>

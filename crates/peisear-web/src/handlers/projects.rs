@@ -138,7 +138,7 @@ pub async fn update(
     crate::error::check_optimistic_lock(
         &form.client_updated_at,
         current.updated_at,
-        "project",
+        peisear_i18n::EntityKind::Project,
         &project_id,
     )?;
 

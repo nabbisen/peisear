@@ -15,11 +15,11 @@ use axum::{
 };
 use chrono::NaiveDate;
 use peisear_core::sprints::SprintStatus;
-use peisear_i18n::{Locale, MessageKey};
+use peisear_i18n::{Field, Locale, MessageKey};
 use peisear_storage::{notifications as notif_store, sprints, teams};
 use serde::Deserialize;
 
-use crate::{AppError, AppResult, AppState, components, extractors::AuthUser};
+use crate::{AppError, AppResult, AppState, components, components::t, extractors::AuthUser};
 
 #[derive(Debug, Deserialize)]
 pub struct FlashQuery {
@@ -119,13 +119,13 @@ pub struct SprintForm {
     pub client_updated_at: String,
 }
 
-fn parse_date_required(raw: &str, field: &str) -> AppResult<NaiveDate> {
+fn parse_date_required(raw: &str, field: Field) -> AppResult<NaiveDate> {
     let trimmed = raw.trim();
     if trimmed.is_empty() {
-        return Err(AppError::Validation(format!("{field} is required.")));
+        return Err(AppError::Validation(t(MessageKey::FieldRequired { field })));
     }
     NaiveDate::parse_from_str(trimmed, "%Y-%m-%d")
-        .map_err(|_| AppError::Validation(format!("{field} must be in YYYY-MM-DD format.")))
+        .map_err(|_| AppError::Validation(t(MessageKey::FieldMustBeDateFormat { field })))
 }
 
 pub async fn create(
@@ -140,15 +140,17 @@ pub async fn create(
     }
     let name = form.name.trim();
     if name.is_empty() {
-        return Err(AppError::Validation("Sprint name is required.".into()));
+        return Err(AppError::Validation(t(
+            MessageKey::SprintNameRequiredMessage,
+        )));
     }
     let goal = if form.goal.trim().is_empty() {
         None
     } else {
         Some(form.goal.trim())
     };
-    let starts_on = parse_date_required(&form.starts_on, "Start date")?;
-    let ends_on = parse_date_required(&form.ends_on, "End date")?;
+    let starts_on = parse_date_required(&form.starts_on, Field::StartDate)?;
+    let ends_on = parse_date_required(&form.ends_on, Field::EndDate)?;
 
     match sprints::insert(&state.db, &team.id, name, goal, starts_on, ends_on).await {
         Ok(id) => {
@@ -247,21 +249,23 @@ pub async fn update(
     crate::error::check_optimistic_lock(
         &form.client_updated_at,
         sprint.updated_at,
-        "sprint",
+        peisear_i18n::EntityKind::Sprint,
         &sprint_id,
     )?;
 
     let name = form.name.trim();
     if name.is_empty() {
-        return Err(AppError::Validation("Sprint name is required.".into()));
+        return Err(AppError::Validation(t(
+            MessageKey::SprintNameRequiredMessage,
+        )));
     }
     let goal = if form.goal.trim().is_empty() {
         None
     } else {
         Some(form.goal.trim())
     };
-    let starts_on = parse_date_required(&form.starts_on, "Start date")?;
-    let ends_on = parse_date_required(&form.ends_on, "End date")?;
+    let starts_on = parse_date_required(&form.starts_on, Field::StartDate)?;
+    let ends_on = parse_date_required(&form.ends_on, Field::EndDate)?;
 
     match sprints::update(&state.db, &sprint.id, name, goal, starts_on, ends_on).await {
         Ok(()) => {
@@ -306,7 +310,7 @@ pub async fn start(
     crate::error::check_optimistic_lock(
         &form.client_updated_at,
         sprint.updated_at,
-        "sprint",
+        peisear_i18n::EntityKind::Sprint,
         &sprint_id,
     )?;
     match sprints::start(&state.db, &sprint.id).await {
@@ -348,7 +352,7 @@ pub async fn complete(
     crate::error::check_optimistic_lock(
         &form.client_updated_at,
         sprint.updated_at,
-        "sprint",
+        peisear_i18n::EntityKind::Sprint,
         &sprint_id,
     )?;
     match sprints::complete(&state.db, &sprint.id).await {
@@ -384,7 +388,7 @@ pub async fn delete_sprint(
     crate::error::check_optimistic_lock(
         &form.client_updated_at,
         sprint.updated_at,
-        "sprint",
+        peisear_i18n::EntityKind::Sprint,
         &sprint_id,
     )?;
     sprints::delete(&state.db, &sprint.id).await?;
@@ -425,17 +429,17 @@ pub async fn assign_issue(
     // `sprint_for_issue`.
     let issue = peisear_storage::issues::find(&state.db, &issue_id, &project_id).await?;
     if issue.is_sub_issue() {
-        return Err(AppError::Validation(
-            "Sub-issues follow the parent's sprint. Change the parent's sprint instead."
-                .to_string(),
-        ));
+        return Err(AppError::Validation(t(
+            MessageKey::SubIssueFollowsParentSprintMessage,
+        )));
     }
 
     // Personal projects (team_id None) can't have sprints
     // assigned, since sprints are team-scoped.
-    let team_id = project.team_id.clone().ok_or_else(|| {
-        AppError::Validation("Sprints are a team feature; this is a personal project.".into())
-    })?;
+    let team_id = project
+        .team_id
+        .clone()
+        .ok_or_else(|| AppError::Validation(t(MessageKey::SprintsPersonalProjectMessage)))?;
 
     let role = teams::role_for(&state.db, &team_id, &user.id).await?;
     let Some(role) = role else {
@@ -468,16 +472,16 @@ pub async fn assign_issue(
             .await?
             .ok_or(AppError::NotFound)?;
         if sprint.team_id != team_id {
-            return Err(AppError::Validation(
-                "Sprint and project must belong to the same team.".into(),
-            ));
+            return Err(AppError::Validation(t(
+                MessageKey::SprintProjectTeamMismatchMessage,
+            )));
         }
         // Refuse to assign to a completed sprint — historical
         // sprint summaries should remain stable.
         if matches!(sprint.status, SprintStatus::Completed) {
-            return Err(AppError::Validation(
-                "Cannot assign issues to a completed sprint.".into(),
-            ));
+            return Err(AppError::Validation(t(
+                MessageKey::CannotAssignToCompletedSprintMessage,
+            )));
         }
         sprints::add_issue(&state.db, &sprint.id, &issue_id).await?;
     }

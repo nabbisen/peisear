@@ -26,7 +26,7 @@ pub(crate) fn format_validation(errors: &validator::ValidationErrors) -> String 
         }
     }
     if out.is_empty() {
-        "Invalid input.".to_string()
+        crate::components::t(peisear_i18n::MessageKey::InvalidInputFallbackMessage)
     } else {
         out.join(" ")
     }

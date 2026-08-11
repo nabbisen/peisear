@@ -10,12 +10,13 @@ use axum_extra::extract::{
     cookie::{Cookie, SameSite},
 };
 use peisear_auth::{jwt, password};
+use peisear_i18n::MessageKey;
 use peisear_storage::users;
 use serde::Deserialize;
 use time::Duration as TimeDuration;
 use validator::Validate;
 
-use crate::{AppError, AppResult, AppState, components, extractors::AUTH_COOKIE};
+use crate::{AppError, AppResult, AppState, components, components::t, extractors::AUTH_COOKIE};
 
 #[derive(Debug, Deserialize)]
 pub struct AuthQuery {
@@ -60,9 +61,7 @@ pub async fn register_submit(
     let display_name = form.display_name.trim().to_string();
 
     if users::find_by_email(&state.db, &email).await?.is_some() {
-        return Err(AppError::Conflict(
-            "An account with this email already exists.".into(),
-        ));
+        return Err(AppError::Conflict(t(MessageKey::EmailAlreadyExistsMessage)));
     }
 
     let hash = password::hash(&form.password)?;
@@ -107,7 +106,9 @@ pub async fn login_submit(
     };
 
     if !ok {
-        return Err(AppError::Validation("Invalid email or password.".into()));
+        return Err(AppError::Validation(t(
+            MessageKey::InvalidCredentialsMessage,
+        )));
     }
     let user = user.expect("ok implies user present");
 

@@ -369,6 +369,12 @@ pub enum MessageKey {
     FieldMustBePositiveInteger {
         field: Field,
     },
+    /// A named field must be a `YYYY-MM-DD` date. `I18N-005e`: reused
+    /// between `sprints.rs`'s start/end date validation (`Field::StartDate`/
+    /// `Field::EndDate`, matching `I18N-005c`'s field-label wording exactly).
+    FieldMustBeDateFormat {
+        field: Field,
+    },
     /// The `status` form field didn't parse to a known `IssueStatus`.
     InvalidStatus,
     /// The `priority` form field didn't parse to a known `Priority`.
@@ -1479,6 +1485,99 @@ pub enum MessageKey {
     MarkedAsReadFlash {
         count: i64,
     },
+
+    // ---- I18N-005e: error.rs (ApiAppError — the AppError-side keys
+    // ---- Forbidden/NotFound/InternalError/OptimisticLockConflict/
+    // ---- LockValueUnreadable were already seeded by I18N-001 and are
+    // ---- wired into AppError::public_message() by this handoff, not
+    // ---- re-declared here) ----
+    /// `ApiAppError::Unauthorized`'s JSON `message` field. Distinct
+    /// wording from [`MessageKey::Forbidden`] ("permission denied") —
+    /// the API surface writes a fuller sentence for its JSON
+    /// consumers; not unified, since the two are genuinely different
+    /// text for different response shapes (HTML body word vs. JSON
+    /// message sentence).
+    ApiUnauthorizedMessage,
+    ApiForbiddenMessage,
+    ApiNotFoundMessage,
+    /// `ApiAppError::OptimisticLockConflict`'s JSON `message` field.
+    /// Shorter than [`MessageKey::OptimisticLockConflict`]'s HTML
+    /// wording ("Reload and re-apply your change." vs. "Please
+    /// reload the page and re-apply your change so you don't
+    /// overwrite their work.") — genuinely different text in the
+    /// current source, kept as two keys per the no-rewording rule.
+    ApiOptimisticLockConflictMessage {
+        entity: EntityKind,
+    },
+
+    // ---- I18N-005e: components/auth.rs, handlers/auth.rs ----
+    LoginPageTitle,
+    RegisterPageTitle,
+    SignInTaglineText,
+    RegisterTaglineText,
+    /// "Sign in" — reused as the login form's submit button and the
+    /// register page's footer link back to `/login`.
+    SignInWord,
+    CreateAccountButton,
+    PasswordFieldLabel,
+    DisplayNameFieldLabel,
+    PasswordMinLengthHint,
+    NoAccountPrompt,
+    CreateOneLinkWord,
+    AlreadyHaveAccountPrompt,
+    /// `FR-AUTH-002`: a failed login must not disclose which field
+    /// was wrong. `handlers/auth.rs::login_submit` already converges
+    /// unknown-account and wrong-password onto this single message
+    /// through one code path (verified, not just converted
+    /// faithfully) — asserted indistinguishable by
+    /// `login_failure_message_is_identical_for_unknown_account_and_wrong_password`
+    /// per `I18N-005e` §7's explicit requirement. Converting this
+    /// must not split it into per-field keys, however tempting the
+    /// symmetry (`I18N-005e` §3/§9).
+    InvalidCredentialsMessage,
+    EmailAlreadyExistsMessage,
+    /// `handlers.rs::format_validation`'s fallback when a `validator`
+    /// error fires without a custom `message` — reachable only
+    /// defensively today (every derive rule in this codebase
+    /// currently supplies a `message`), but user-facing.
+    InvalidInputFallbackMessage,
+
+    // ---- I18N-005e: handlers/issues.rs ----
+    InvalidAssigneeMessage,
+    /// The `new_sub_issue_form` (GET, form-render-time) wording.
+    /// Distinct from [`MessageKey::SubIssueCannotNestShortMessage`]
+    /// (`create_sub_issue`, POST, submission-time) — found as an
+    /// existing inconsistency between the two call sites, not
+    /// introduced by this handoff; kept as two keys rather than
+    /// unified, per the no-rewording rule. Flagged in the review
+    /// request for an architect ruling on whether to unify.
+    SubIssueCannotNestLongMessage,
+    SubIssueCannotNestShortMessage,
+
+    // ---- I18N-005e: handlers/sprints.rs ----
+    SprintNameRequiredMessage,
+    SubIssueFollowsParentSprintMessage,
+    SprintsPersonalProjectMessage,
+    SprintProjectTeamMismatchMessage,
+    CannotAssignToCompletedSprintMessage,
+
+    // ---- I18N-005e: handlers/teams.rs ----
+    TeamNameRequiredMessage,
+    SlugDerivationFailedMessage,
+    InvalidRoleMessage,
+
+    // ---- I18N-005e: handlers/settings.rs ----
+    /// "Capacity points are required." — kept as its own literal
+    /// rather than routed through [`MessageKey::FieldRequired`]
+    /// (`Field::CapacityPoints` renders "Capacity points", and
+    /// `FieldRequired`'s template is "{field} is required." — the
+    /// grammatical number doesn't match: "Capacity points *are*
+    /// required.", not "*is*". Reusing the generic template would
+    /// silently reword the sentence.
+    CapacityPointsRequiredMessage,
+    WipLimitMustBePositiveIntegerMessage,
+    PeriodStartMustBeDateFormatMessage,
+    PeriodEndMustBeDateFormatMessage,
 }
 
 impl MessageKey {
@@ -2032,6 +2131,39 @@ impl MessageKey {
             MessageKey::PreferencesSavedFlash,
             MessageKey::AllNotificationsSilencedFlash,
             MessageKey::MarkedAsReadFlash { count: 3 },
+            MessageKey::ApiUnauthorizedMessage,
+            MessageKey::ApiForbiddenMessage,
+            MessageKey::ApiNotFoundMessage,
+            MessageKey::LoginPageTitle,
+            MessageKey::RegisterPageTitle,
+            MessageKey::SignInTaglineText,
+            MessageKey::RegisterTaglineText,
+            MessageKey::SignInWord,
+            MessageKey::CreateAccountButton,
+            MessageKey::PasswordFieldLabel,
+            MessageKey::DisplayNameFieldLabel,
+            MessageKey::PasswordMinLengthHint,
+            MessageKey::NoAccountPrompt,
+            MessageKey::CreateOneLinkWord,
+            MessageKey::AlreadyHaveAccountPrompt,
+            MessageKey::InvalidCredentialsMessage,
+            MessageKey::EmailAlreadyExistsMessage,
+            MessageKey::InvalidInputFallbackMessage,
+            MessageKey::InvalidAssigneeMessage,
+            MessageKey::SubIssueCannotNestLongMessage,
+            MessageKey::SubIssueCannotNestShortMessage,
+            MessageKey::SprintNameRequiredMessage,
+            MessageKey::SubIssueFollowsParentSprintMessage,
+            MessageKey::SprintsPersonalProjectMessage,
+            MessageKey::SprintProjectTeamMismatchMessage,
+            MessageKey::CannotAssignToCompletedSprintMessage,
+            MessageKey::TeamNameRequiredMessage,
+            MessageKey::SlugDerivationFailedMessage,
+            MessageKey::InvalidRoleMessage,
+            MessageKey::CapacityPointsRequiredMessage,
+            MessageKey::WipLimitMustBePositiveIntegerMessage,
+            MessageKey::PeriodStartMustBeDateFormatMessage,
+            MessageKey::PeriodEndMustBeDateFormatMessage,
         ];
         keys.extend(
             EntityKind::all()
@@ -2039,9 +2171,19 @@ impl MessageKey {
                 .map(|entity| MessageKey::OptimisticLockConflict { entity }),
         );
         keys.extend(
+            EntityKind::all()
+                .into_iter()
+                .map(|entity| MessageKey::ApiOptimisticLockConflictMessage { entity }),
+        );
+        keys.extend(
             Field::all()
                 .into_iter()
                 .map(|field| MessageKey::FieldRequired { field }),
+        );
+        keys.extend(
+            Field::all()
+                .into_iter()
+                .map(|field| MessageKey::FieldMustBeDateFormat { field }),
         );
         keys.extend(
             Field::all()

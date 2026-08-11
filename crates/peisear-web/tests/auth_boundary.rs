@@ -225,6 +225,65 @@ async fn team_admin_cannot_read_member_personal_data() {
 }
 
 // -------------------------------------------------------------------
+// Login-failure indistinguishability — I18N-005e §7 / FR-AUTH-002
+// -------------------------------------------------------------------
+
+/// `FR-AUTH-002`: a failed login must not disclose which field was
+/// wrong. `handlers/auth.rs::login_submit` already converges
+/// "unknown account" and "wrong password" onto the same code path
+/// and the same `MessageKey::InvalidCredentialsMessage` — this test
+/// is the assertion `I18N-005e` §7 explicitly asks for, so a future
+/// change that reintroduces per-field wording fails a test instead
+/// of only a code review.
+#[tokio::test]
+async fn login_failure_message_is_identical_for_unknown_account_and_wrong_password() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    // Register normally, but don't keep the session — we want two
+    // fresh unauthenticated login attempts against the same server.
+    common::auth::register(&app, &user).await;
+    common::auth::logout(&app).await;
+
+    // Case 1: unknown account entirely.
+    let unknown_email = format!("no-such-user-{}@example.com", user.email);
+    let resp_unknown = app
+        .server
+        .post("/login")
+        .form(&[
+            ("email", unknown_email.as_str()),
+            ("password", "wrong-password-entirely"),
+        ])
+        .await;
+
+    // Case 2: real account, wrong password.
+    let resp_wrong_password = app
+        .server
+        .post("/login")
+        .form(&[
+            ("email", user.email.as_str()),
+            ("password", "wrong-password-entirely"),
+        ])
+        .await;
+
+    assert_eq!(
+        resp_unknown.status_code(),
+        resp_wrong_password.status_code(),
+        "unknown-account and wrong-password login failures must return the same status"
+    );
+    assert_eq!(
+        resp_unknown.text(),
+        resp_wrong_password.text(),
+        "unknown-account and wrong-password login failures must render byte-identical \
+         bodies — a difference here would let an attacker enumerate valid accounts"
+    );
+    assert!(
+        resp_unknown.text().contains("Invalid email or password."),
+        "expected the neutral InvalidCredentialsMessage text in the error response; got: {}",
+        resp_unknown.text()
+    );
+}
+
+// -------------------------------------------------------------------
 // Positive cases — self access on /api/users/{user_id}/* succeeds
 // -------------------------------------------------------------------
 

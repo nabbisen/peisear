@@ -15,7 +15,7 @@ use validator::Validate;
 
 use crate::{
     AppError, AppResult, AppState,
-    components::{self, Column},
+    components::{self, Column, t},
     extractors::AuthUser,
 };
 
@@ -351,13 +351,17 @@ fn parse_effort(raw: &str) -> Result<Option<i64>, AppError> {
     if trimmed.is_empty() {
         return Ok(None);
     }
-    let n: i64 = trimmed
-        .parse()
-        .map_err(|_| AppError::Validation("Effort must be a positive integer.".into()))?;
+    let n: i64 = trimmed.parse().map_err(|_| {
+        AppError::Validation(t(MessageKey::FieldMustBePositiveInteger {
+            field: peisear_i18n::Field::EffortPoints,
+        }))
+    })?;
     if n <= 0 {
-        return Err(AppError::Validation(
-            "Effort must be a positive integer.".into(),
-        ));
+        return Err(AppError::Validation(t(
+            MessageKey::FieldMustBePositiveInteger {
+                field: peisear_i18n::Field::EffortPoints,
+            },
+        )));
     }
     Ok(Some(n))
 }
@@ -383,9 +387,7 @@ async fn validate_assignee(
     if candidates.iter().any(|c| c.id == trimmed) {
         Ok(Some(trimmed.to_string()))
     } else {
-        Err(AppError::Validation(
-            "Selected user is not a valid assignee for this project.".into(),
-        ))
+        Err(AppError::Validation(t(MessageKey::InvalidAssigneeMessage)))
     }
 }
 
@@ -402,9 +404,9 @@ pub async fn create(
     let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
 
     let status = IssueStatus::parse(&form.status)
-        .ok_or_else(|| AppError::Validation("Invalid status".into()))?;
+        .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidStatus)))?;
     let priority = Priority::parse(&form.priority)
-        .ok_or_else(|| AppError::Validation("Invalid priority".into()))?;
+        .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidPriority)))?;
     let effort = parse_effort(&form.effort)?;
     let assignee_id = validate_assignee(&state.db, &project_id, &form.assignee_id).await?;
 
@@ -445,11 +447,9 @@ pub async fn new_sub_issue_form(
     // not allowed). The trigger would catch this at the SQL
     // level, but bouncing here gives a better error.
     if parent.is_sub_issue() {
-        return Err(AppError::Validation(
-            "Sub-issues cannot have their own sub-issues. Promote the parent to a top-level \
-             issue first, or add this work as a sibling sub-issue under the same parent."
-                .to_string(),
-        ));
+        return Err(AppError::Validation(t(
+            MessageKey::SubIssueCannotNestLongMessage,
+        )));
     }
 
     let assignees = issues::list_assignee_candidates(&state.db, &project_id).await?;
@@ -473,15 +473,15 @@ pub async fn create_sub_issue(
     // Existence + project-membership check on the parent.
     let parent = issues::find(&state.db, &parent_issue_id, &project_id).await?;
     if parent.is_sub_issue() {
-        return Err(AppError::Validation(
-            "Sub-issues cannot have their own sub-issues.".into(),
-        ));
+        return Err(AppError::Validation(t(
+            MessageKey::SubIssueCannotNestShortMessage,
+        )));
     }
 
     let status = IssueStatus::parse(&form.status)
-        .ok_or_else(|| AppError::Validation("Invalid status".into()))?;
+        .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidStatus)))?;
     let priority = Priority::parse(&form.priority)
-        .ok_or_else(|| AppError::Validation("Invalid priority".into()))?;
+        .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidPriority)))?;
     let effort = parse_effort(&form.effort)?;
     let assignee_id = validate_assignee(&state.db, &project_id, &form.assignee_id).await?;
 
@@ -672,14 +672,14 @@ pub async fn update(
     crate::error::check_optimistic_lock(
         &form.client_updated_at,
         issue_now.updated_at,
-        "issue",
+        peisear_i18n::EntityKind::Issue,
         &issue_id,
     )?;
 
     let status = IssueStatus::parse(&form.status)
-        .ok_or_else(|| AppError::Validation("Invalid status".into()))?;
+        .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidStatus)))?;
     let priority = Priority::parse(&form.priority)
-        .ok_or_else(|| AppError::Validation("Invalid priority".into()))?;
+        .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidPriority)))?;
     let effort = parse_effort(&form.effort)?;
     let assignee_id = validate_assignee(&state.db, &project_id, &form.assignee_id).await?;
 
@@ -743,12 +743,12 @@ async fn apply_status_change(
     crate::error::check_optimistic_lock(
         client_updated_at,
         issue_now.updated_at,
-        "issue",
+        peisear_i18n::EntityKind::Issue,
         issue_id,
     )?;
 
     let status = IssueStatus::parse(status_str)
-        .ok_or_else(|| AppError::Validation("Invalid status".into()))?;
+        .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidStatus)))?;
     issues::update_status(&state.db, issue_id, project_id, user_id, status).await?;
     Ok(())
 }
