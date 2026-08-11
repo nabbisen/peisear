@@ -16,6 +16,16 @@ appears here.
 `components/sprints.rs` (~31 literals) and `components/teams.rs` (~20), plus
 user-visible strings in the matching handlers.
 
+**Validation messages are not in scope.** `AppError::Validation(...)` calls in
+these handlers belong to **I18N-005e**, which owns validation copy across
+`handlers/*` — they are a coherent class with a shared §1.7 failure-framing
+risk, and converting them together lets one reviewer catch inconsistency across
+the set. Other handler strings — flash messages, redirect copy — are yours.
+
+*(Scope corrected 2026-08-10 after I18N-005b hit the same overlap; the original
+wording was ambiguous between this handoff and 005e.)*
+
+
 ## 2. The normative footnote — the one thing in this group that must not move
 
 `components/teams.rs` renders the team-detail privacy footnote required by

@@ -16,6 +16,16 @@ Pattern rules are in the queue README.
 `notification_preferences.rs` (~19), `notifications.rs` (~11),
 `search.rs` (~8), plus user-visible strings in the matching handlers.
 
+**Validation messages are not in scope.** `AppError::Validation(...)` calls in
+these handlers belong to **I18N-005e**, which owns validation copy across
+`handlers/*` — they are a coherent class with a shared §1.7 failure-framing
+risk, and converting them together lets one reviewer catch inconsistency across
+the set. Other handler strings — flash messages, redirect copy — are yours.
+
+*(Scope corrected 2026-08-10 after I18N-005b hit the same overlap; the original
+wording was ambiguous between this handoff and 005e.)*
+
+
 The largest group by string count, and the one whose copy carries the most
 product weight.
 
