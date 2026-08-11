@@ -66,6 +66,44 @@ If your change is functional, it should come with tests. peisear
 leans on integration tests that exercise the axum router end to end;
 unit tests are appropriate where logic is pure and self-contained.
 
+**Run tests per crate and per target, not `cargo test --workspace`
+in one shot** (`DEC-007`):
+
+```bash
+cargo test -p peisear-core    --lib
+cargo test -p peisear-auth    --lib
+cargo test -p peisear-storage --lib
+cargo test -p peisear-i18n
+cargo test -p peisear-notify  -- --test-threads=1
+for t in auth_boundary board_keyboard breadcrumb health_explainability \
+         issue_edit_url optimistic_lock search smoke status_segment \
+         sub_issues today_panel view_state workload_privacy; do
+  cargo test -p peisear-web --test "$t" -- --test-threads=1
+done
+```
+
+This isolates each test binary's link step (keeps peak linker memory
+bounded — the combined `--workspace` build links several large
+crates: sqlx, leptos, axum, the wasm-smtp family) and gives clean
+per-target failure attribution. It is also required, not just
+convenient: `QA-001` found that `cargo test --workspace` fails
+intermittently — roughly one run in two, on a different test each
+time — for a reason with nothing to do with any test's own
+correctness (a `TestApp::spawn` temp-directory collision, fixed in
+`peisear-web/tests/common/server.rs`). The procedure above never
+triggers it.
+
+**Before opening a PR that touches `crates/peisear-web/tests/`, or
+before cutting a release candidate, also run `cargo test --workspace`
+three times in a row and confirm every run passes.** This is
+deliberately the *other* condition — the one a contributor reaches
+for without thinking, by typing the obvious command — because an
+isolation procedure that only ever gets run in isolation can hide a
+defect in the harness producing every other gate result, which is
+exactly what happened here. Three, not one, because a single pass at
+a roughly 50% per-run failure rate proves nothing; re-measure and
+adjust the count if the observed rate changes materially.
+
 ### Documentation
 
 Public API changes require doc updates:

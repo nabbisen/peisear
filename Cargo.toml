@@ -100,6 +100,14 @@ uuid                        = { version = "1", features = ["v4", "serde"] }
 # peisear authenticates via HTTP-only cookies — tests need to
 # exercise the full session lifecycle.
 axum-test                   = "20"
+# TestApp::spawn's temp DB directory used to be named from a
+# nanosecond clock reading alone -- two tests entering it in the
+# same tick collided on the same directory and `test.db` (QA-001,
+# baseline §10.13). tempfile::TempDir guarantees a unique path (it
+# combines pid, a process-local atomic counter, and randomness, not
+# just the clock) and cleans up on drop, closing the "temp files
+# accumulate under /tmp forever" half of the same finding.
+tempfile                    = "3"
 
 # Release profile applies to all workspace binaries.
 [profile.release]
