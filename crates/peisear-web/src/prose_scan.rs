@@ -117,12 +117,23 @@ fn is_allowlisted(v: &Violation) -> bool {
         .any(|a| v.file.ends_with(a.file) && v.text.contains(a.snippet))
 }
 
-/// Best-effort removal of `#[cfg(test)] ... { ... }` item bodies so
+/// Best-effort removal of `#[cfg(test)]`-attributed item bodies so
 /// test-only code never trips the scan. Brace-counts without
 /// skipping over string literals, so a `{`/`}` embedded in a string
 /// inside a `#[cfg(test)]` block could throw the count off -- no
 /// file in scope has one today; this is forward cover, not a
 /// guarantee.
+///
+/// `I18N-007-review.md` §3.1: a brace-less item (`use`/`const`/
+/// `static`/`type`, terminated by `;` rather than a `{...}` body)
+/// used to blind the scan for the *entire rest of the file* --
+/// `after.find('{')` would walk past the marker's own item and
+/// match some unrelated brace much further down, swallowing every
+/// real attribute/text-node literal in between. Demonstrated in
+/// review by planting `#[cfg(test)] use std::fmt as _unused_fmt;`
+/// above an already-caught literal; the scan passed, silently. Fixed
+/// by checking whether `;` or `{` comes first after the marker: `;`
+/// first means a brace-less item, and the item ends there.
 fn strip_cfg_test_blocks(src: &str) -> String {
     const MARKER: &str = "#[cfg(test)]";
     let mut result = String::with_capacity(src.len());
@@ -130,14 +141,14 @@ fn strip_cfg_test_blocks(src: &str) -> String {
     while let Some(idx) = rest.find(MARKER) {
         result.push_str(&rest[..idx]);
         let after = &rest[idx..];
-        match after.find('{') {
-            None => {
-                rest = &after[MARKER.len()..];
-            }
-            Some(brace_rel) => {
+        let brace_pos = after.find('{');
+        let semi_pos = after.find(';');
+        let end = match (brace_pos, semi_pos) {
+            (Some(b), Some(s)) if s < b => s + 1,
+            (Some(b), _) => {
                 let bytes = after.as_bytes();
                 let mut depth = 0usize;
-                let mut i = brace_rel;
+                let mut i = b;
                 let mut end = after.len();
                 while i < bytes.len() {
                     match bytes[i] {
@@ -153,9 +164,12 @@ fn strip_cfg_test_blocks(src: &str) -> String {
                     }
                     i += 1;
                 }
-                rest = &after[end..];
+                end
             }
-        }
+            (None, Some(s)) => s + 1,
+            (None, None) => MARKER.len(),
+        };
+        rest = &after[end..];
     }
     result.push_str(rest);
     result
@@ -213,6 +227,22 @@ fn has_alpha_word_outside_braces(s: &str) -> bool {
 
 fn looks_like_percent_pattern(s: &str) -> bool {
     s.contains('%')
+}
+
+/// A line that is nothing but one balanced `{expr}` block -- e.g.
+/// `{t(MessageKey::Something)}` on its own line. `I18N-007-review.md`
+/// §3.2: a standalone text node sitting between two such expression
+/// children (fragment composition -- a literal connector between two
+/// converted fragments) has neither a tag-close before it nor a
+/// tag-open after it, so the original tag-only boundary check missed
+/// it. Verified this addition does not reintroduce either
+/// false-positive family the tag-boundary check was built to
+/// exclude: the six CSS-class match arms (`if is_board {` / `} else
+/// {`) neither start with `{` nor end with `}` as a whole trimmed
+/// line, and `root.rs`'s lone `}` closing `health()` is one
+/// character, not a `{...}` pair.
+fn looks_like_complete_expression(l: &str) -> bool {
+    l.len() >= 2 && l.starts_with('{') && l.ends_with('}')
 }
 
 fn line_of(haystack: &str, byte_idx: usize) -> usize {
@@ -286,10 +316,14 @@ fn scan_standalone_text_nodes(stripped: &str, rel_path: &str, out: &mut Vec<Viol
         if !has_alpha_word_outside_braces(inner) || looks_like_percent_pattern(inner) {
             continue;
         }
-        // Only a genuine view! child if a tag closes just before and
-        // opens just after -- distinguishes `"Committed"` between
-        // `<span>`/`</span>` from a standalone format!()/match-arm
-        // literal, whose neighbours are Rust syntax instead.
+        // A genuine view! child either has a tag closing just before
+        // it and opening just after (`"Committed"` between
+        // `<span>`/`</span>`), or sits between two complete `{expr}`
+        // template expressions (fragment composition -- see
+        // `looks_like_complete_expression`'s doc comment). Either
+        // shape distinguishes it from a standalone format!()/
+        // match-arm literal, whose neighbours are ordinary Rust
+        // syntax instead.
         let prev = lines[..i]
             .iter()
             .rev()
@@ -299,8 +333,8 @@ fn scan_standalone_text_nodes(stripped: &str, rel_path: &str, out: &mut Vec<Viol
             .iter()
             .map(|l| l.trim())
             .find(|l| !l.is_empty());
-        let prev_ok = prev.is_some_and(|l| l.ends_with('>'));
-        let next_ok = next.is_some_and(|l| l.starts_with('<'));
+        let prev_ok = prev.is_some_and(|l| l.ends_with('>') || looks_like_complete_expression(l));
+        let next_ok = next.is_some_and(|l| l.starts_with('<') || looks_like_complete_expression(l));
         if prev_ok && next_ok {
             out.push(Violation {
                 file: rel_path.to_string(),
