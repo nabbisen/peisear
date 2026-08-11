@@ -38,7 +38,7 @@ use peisear_core::notifications::{
 use peisear_i18n::{MessageKey, NotificationChannelLabel, NotificationKindLabel};
 
 use super::layout::AppShell;
-use super::t;
+use super::{kind_label_for, t};
 
 #[component]
 pub fn PreferencesPage(
@@ -174,19 +174,6 @@ pub fn PreferencesPage(
                 </details>
             </div>
         </AppShell>
-    }
-}
-
-/// The closed set of notification kinds this preferences page
-/// renders rows for (`kind::all_user_facing()`) — always resolves.
-/// Defensive `Option` return matches `IssueStatus::parse`'s shape for
-/// an id that could, in principle, be unrecognised.
-fn kind_label_for(kind_id: &str) -> Option<NotificationKindLabel> {
-    match kind_id {
-        kind::BURNOUT_OVERLOAD => Some(NotificationKindLabel::BurnoutOverload),
-        kind::BURNOUT_STALLED => Some(NotificationKindLabel::BurnoutStalled),
-        kind::PROJECT_TREND_DECLINE => Some(NotificationKindLabel::ProjectTrendDecline),
-        _ => None,
     }
 }
 

@@ -23,34 +23,10 @@ use leptos::prelude::*;
 
 use peisear_core::CurrentUser;
 use peisear_core::notifications::{Notification, Severity, kind};
-use peisear_i18n::{MessageKey, NotificationChannelLabel, NotificationKindLabel};
+use peisear_i18n::{MessageKey, NotificationKindLabel};
 
 use super::layout::AppShell;
-use super::t;
-
-/// See `notification_preferences::kind_label_for` — same shape, same
-/// reason.
-fn kind_label_for(kind_id: &str) -> Option<NotificationKindLabel> {
-    match kind_id {
-        kind::BURNOUT_OVERLOAD => Some(NotificationKindLabel::BurnoutOverload),
-        kind::BURNOUT_STALLED => Some(NotificationKindLabel::BurnoutStalled),
-        kind::PROJECT_TREND_DECLINE => Some(NotificationKindLabel::ProjectTrendDecline),
-        _ => None,
-    }
-}
-
-/// See `kind_label_for`. Notification rows can carry any channel
-/// string a future release adds; unrecognised channels fall back to
-/// their raw id, matching `channel::human_name`'s previous
-/// `_ => id` behaviour.
-fn channel_label_for(channel_id: &str) -> Option<NotificationChannelLabel> {
-    match channel_id {
-        peisear_core::notifications::channel::IN_APP => Some(NotificationChannelLabel::InApp),
-        peisear_core::notifications::channel::EMAIL => Some(NotificationChannelLabel::Email),
-        peisear_core::notifications::channel::WEBHOOK => Some(NotificationChannelLabel::Webhook),
-        _ => None,
-    }
-}
+use super::{channel_label_for, kind_label_for, t};
 
 #[component]
 pub fn InboxPage(

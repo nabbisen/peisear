@@ -66,3 +66,78 @@ pub struct Column {
     pub status: peisear_core::IssueStatus,
     pub issues: Vec<peisear_core::Issue>,
 }
+
+/// The closed set of notification kinds `notification_preferences`'s
+/// and `notifications`'s pages render — always resolves in practice
+/// (`kind::all_user_facing()` is the only source of kind ids reaching
+/// either page today). Defensive `Option` return matches
+/// `IssueStatus::parse`'s shape for an id that could, in principle,
+/// be unrecognised; callers fall back to the raw id.
+///
+/// `I18N-005d-review.md` §2.1: this used to be defined identically in
+/// both `notifications.rs` and `notification_preferences.rs` — the
+/// fourth instance this release of the same "second copy invisible
+/// until something consolidates it" pattern (two back-link casings,
+/// three nav-destination casings, a hand-rolled issue-status word in
+/// `sprints.rs`). One mapping, one place, now.
+pub(crate) fn kind_label_for(kind_id: &str) -> Option<peisear_i18n::NotificationKindLabel> {
+    use peisear_core::notifications::kind;
+    use peisear_i18n::NotificationKindLabel;
+    match kind_id {
+        kind::BURNOUT_OVERLOAD => Some(NotificationKindLabel::BurnoutOverload),
+        kind::BURNOUT_STALLED => Some(NotificationKindLabel::BurnoutStalled),
+        kind::PROJECT_TREND_DECLINE => Some(NotificationKindLabel::ProjectTrendDecline),
+        _ => None,
+    }
+}
+
+/// See [`kind_label_for`] — same shape, same reason, same
+/// deduplication. Notification rows can carry any channel string a
+/// future release adds; unrecognised channels fall back to their raw
+/// id.
+pub(crate) fn channel_label_for(
+    channel_id: &str,
+) -> Option<peisear_i18n::NotificationChannelLabel> {
+    use peisear_core::notifications::channel;
+    use peisear_i18n::NotificationChannelLabel;
+    match channel_id {
+        channel::IN_APP => Some(NotificationChannelLabel::InApp),
+        channel::EMAIL => Some(NotificationChannelLabel::Email),
+        channel::WEBHOOK => Some(NotificationChannelLabel::Webhook),
+        _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `I18N-005d-review.md` §2.2: `kind_label_for`/`channel_label_for`
+    /// end in `_ => None`, so there is no type for the compiler to be
+    /// exhaustive over at this seam — adding a notification kind or
+    /// channel in `peisear-core` without updating the map here would
+    /// ship a raw id to a user's inbox with no compile error, no
+    /// guard rejection. This test converts that hole into a failing
+    /// test the moment a kind/channel is declared without a label.
+    #[test]
+    fn every_declared_notification_kind_has_a_label() {
+        for kind_id in peisear_core::notifications::kind::all_user_facing() {
+            assert!(
+                kind_label_for(kind_id).is_some(),
+                "notifications::kind::{kind_id:?} has no NotificationKindLabel mapping in \
+                 kind_label_for — add one so it doesn't ship its raw id to a user's inbox"
+            );
+        }
+    }
+
+    #[test]
+    fn every_declared_notification_channel_has_a_label() {
+        for channel_id in peisear_core::notifications::channel::all() {
+            assert!(
+                channel_label_for(channel_id).is_some(),
+                "notifications::channel::{channel_id:?} has no NotificationChannelLabel \
+                 mapping in channel_label_for — add one so it doesn't ship its raw id"
+            );
+        }
+    }
+}
