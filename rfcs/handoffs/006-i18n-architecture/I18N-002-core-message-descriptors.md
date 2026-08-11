@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-03
 **Priority**: P1 — closes compliance gap §10.8
-**Governing RFC**: [006](../../accepted/006-i18n-architecture.md) §D3
+**Governing RFC**: [006](../../done/006-i18n-architecture.md) §D3
 **Depends on**: I18N-001 (landed)
 **Blocks**: I18N-004a–e — the web surfaces render what this produces
 **Parallel with**: I18N-003 (notify has its own copy)

@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-10
 **Priority**: P1
-**Governing RFC**: [006](../../accepted/006-i18n-architecture.md) §D5
+**Governing RFC**: [006](../../done/006-i18n-architecture.md) §D5
 **Depends on**: I18N-002 (landed)
 **Establishes the pattern** that I18N-005b–e follow.
 

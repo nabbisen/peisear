@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-03
 **Priority**: P1
-**Governing RFC**: [006](../../accepted/006-i18n-architecture.md) — requirement 4
+**Governing RFC**: [006](../../done/006-i18n-architecture.md) — requirement 4
 **Depends on**: I18N-001 (landed)
 **Parallel with**: I18N-002 — notify's copy is its own; no ordering between them
 

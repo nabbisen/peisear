@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-03
 **Priority**: **P0** — `NFR-LANG-002`, currently violated in shipped code
-**Governing RFC**: [006](../../accepted/006-i18n-architecture.md); ruling
+**Governing RFC**: [006](../../done/006-i18n-architecture.md); ruling
 [`ISSUE-006-decision.md`](../../../.git-exclude/reviewed/ISSUE-006-decision.md)
 **Depends on**: I18N-002 (landed)
 **Blocks**: I18N-005a–e

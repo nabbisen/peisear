@@ -1,11 +1,30 @@
 # RFC 0006: Internationalisation architecture and vocabulary guard
 
-**Status**: Accepted
-**Target**: 0.21.0
+**Status**: Implemented (0.21.0)
+**Target**: 0.21.0 — shipped 2026-08-11, published to crates.io
+
+> **Implemented, with two follow-ups that are not corrections.** The
+> architecture shipped as designed across eleven handoffs. Two things remain
+> open and neither reopens this RFC:
+>
+> - **`COPY-001`** — six wording items each handoff found and correctly
+>   declined to fix under no-rewording. Three turned out to be defects and
+>   three turned out to be correct; see the handoff.
+> - **The nine `onsubmit` confirmation dialogs**, allowlisted in
+>   `prose_scan.rs`. They are copy living outside the table, but the reason
+>   is architectural (external design §17.4) and not this RFC's to settle.
+>
+> **What this RFC got wrong and the process caught.** §D6 was written after
+> the first conversion handoff rather than before it, and grew by five rules
+> across the series — each added because an implementer hit an ambiguity and
+> escalated it. Rule 7 was added *after* the release, from a defect the guard
+> could not see. A design document that stabilises only under execution is
+> not a failure of the document; it is an argument against believing any
+> version of it that has not been executed against.
 **Related spec sections**: §3 (vocabulary), §28.6 (computation vs presentation), §34 (language and locale)
 **Related requirements**: `NFR-LANG-001`, `NFR-LANG-003`, `NFR-LANG-005`, `FR-HLT-006`, `FR-HLT-009`, `NFR-MNT-001`, `NFR-MNT-002`
 **Governing decision**: `DEC-022`
-**Last updated**: 2026-07-31
+**Last updated**: 2026-08-11
 
 ## Summary
 

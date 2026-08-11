@@ -1,7 +1,9 @@
 # Handoffs — RFC 006, i18n architecture and vocabulary guard
 
 Implementation companions for
-[RFC 006](../../accepted/006-i18n-architecture.md), target **0.21.0**.
+[RFC 006](../../done/006-i18n-architecture.md). **Shipped as 0.21.0** on
+2026-08-11; the RFC is in `done/`. `COPY-001` is a post-release follow-up and
+is the only outstanding item.
 
 **This file is an index, not a status board.** It lists what each handoff
 covers and what it depends on. It changes when a handoff is added — not when
@@ -49,7 +51,8 @@ a person reading code. None would have survived a lint over a string table.
 | 5e | [I18N-005e](./I18N-005e-errors-and-validation.md) | Errors, validation, auth | 5a |
 | 6 | [I18N-006](./I18N-006-remaining-prose-surface.md) | `peisear-core` and `peisear-storage` prose, `BurnoutSignal.label`, validator-literal scan test | 5b–e |
 | 7 | [I18N-007](./I18N-007-completion-sweep.md) | Five remaining copy sites, and the literal-scan test that replaces the completion survey | 6 |
-| 7b | [REL-0.21.0](./REL-0.21.0-release-candidate.md) | Two scan-test corrections, then the release candidate | 7 |
+| 7b | [REL-0.21.0](./REL-0.21.0-release-candidate.md) | Two scan-test corrections, then the release candidate; **0.21.0 shipped** | 7 |
+| COPY-001 | [COPY-001](./COPY-001-deferred-wording.md) | The six deferred wording items, ruled — three defects, three not. **0.22.0**, post-release | 7b |
 
 5b–e are parallel with each other. They all add variants to the same
 `MessageKey` enum, so expect merge contention there and sequence commits

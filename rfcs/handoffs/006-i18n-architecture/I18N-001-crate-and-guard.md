@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-03
 **Priority**: P1 — closes two standing P0 verification gaps
-**Governing RFC**: [006](../../accepted/006-i18n-architecture.md)
+**Governing RFC**: [006](../../done/006-i18n-architecture.md)
 **Depends on**: nothing. First unit of 0.21.0.
 **Blocks**: I18N-002, I18N-003, I18N-004a–e — all of them.
 

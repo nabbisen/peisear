@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-11
 **Priority**: release-blocking
-**Governing RFC**: [006](../../accepted/006-i18n-architecture.md)
+**Governing RFC**: [006](../../done/006-i18n-architecture.md)
 **Depends on**: **I18N-007's two corrections landed** (`I18N-007-review.md` §3).
 Nothing to package before then.
 
