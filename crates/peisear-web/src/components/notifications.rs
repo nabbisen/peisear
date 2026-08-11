@@ -23,8 +23,34 @@ use leptos::prelude::*;
 
 use peisear_core::CurrentUser;
 use peisear_core::notifications::{Notification, Severity, kind};
+use peisear_i18n::{MessageKey, NotificationChannelLabel, NotificationKindLabel};
 
 use super::layout::AppShell;
+use super::t;
+
+/// See `notification_preferences::kind_label_for` — same shape, same
+/// reason.
+fn kind_label_for(kind_id: &str) -> Option<NotificationKindLabel> {
+    match kind_id {
+        kind::BURNOUT_OVERLOAD => Some(NotificationKindLabel::BurnoutOverload),
+        kind::BURNOUT_STALLED => Some(NotificationKindLabel::BurnoutStalled),
+        kind::PROJECT_TREND_DECLINE => Some(NotificationKindLabel::ProjectTrendDecline),
+        _ => None,
+    }
+}
+
+/// See `kind_label_for`. Notification rows can carry any channel
+/// string a future release adds; unrecognised channels fall back to
+/// their raw id, matching `channel::human_name`'s previous
+/// `_ => id` behaviour.
+fn channel_label_for(channel_id: &str) -> Option<NotificationChannelLabel> {
+    match channel_id {
+        peisear_core::notifications::channel::IN_APP => Some(NotificationChannelLabel::InApp),
+        peisear_core::notifications::channel::EMAIL => Some(NotificationChannelLabel::Email),
+        peisear_core::notifications::channel::WEBHOOK => Some(NotificationChannelLabel::Webhook),
+        _ => None,
+    }
+}
 
 #[component]
 pub fn InboxPage(
@@ -37,31 +63,37 @@ pub fn InboxPage(
     let has_unread = unread_count > 0;
 
     let header_status_text = if items.is_empty() {
-        "No notifications yet.".to_string()
+        t(MessageKey::NoNotificationsYetStatus)
     } else if has_unread {
-        format!("{} unread of {}.", unread_count, items.len())
+        t(MessageKey::UnreadOfTotalStatus {
+            unread_count,
+            total: items.len() as i64,
+        })
     } else {
-        format!("All read. {} total.", items.len())
+        t(MessageKey::AllReadStatus {
+            total: items.len() as i64,
+        })
     };
 
     let row_views = items.into_iter().map(render_row).collect_view();
+    let notifications_heading = t(MessageKey::NotificationsSectionName);
 
     view! {
-        <AppShell title="Notifications".to_string()
+        <AppShell title=t(MessageKey::NotificationsSectionName)
                   user=user
                   flash=flash
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <h1 class="text-xl font-semibold">"Notifications"</h1>
+                        <h1 class="text-xl font-semibold">{notifications_heading}</h1>
                         <p class="text-sm text-base-content/60">{header_status_text}</p>
                     </div>
                     {has_unread.then(|| view! {
                         <form method="post" action="/inbox/mark-all-read">
                             <button type="submit" class="btn btn-sm btn-ghost"
-                                    aria-label="Mark all notifications as read">
-                                "Mark all read"
+                                    aria-label=t(MessageKey::MarkAllReadAriaLabel)>
+                                {t(MessageKey::MarkAllReadButton)}
                             </button>
                         </form>
                     })}
@@ -79,20 +111,19 @@ pub fn InboxPage(
                                 </svg>
                             </div>
                             <p class="text-sm text-base-content/60">
-                                "You'll see notifications here when something needs a glance — "
-                                "warnings about your workload, project health changes, that sort of thing."
+                                {t(MessageKey::InboxEmptyMessage)}
                             </p>
                             <p class="text-xs text-base-content/50 mt-1">
-                                "Configure delivery in "
-                                <a href="/settings/notifications" class="link link-primary">"settings"</a>
-                                "."
+                                {t(MessageKey::InboxEmptyFooterLead)}
+                                <a href="/settings/notifications" class="link link-primary">{t(MessageKey::SettingsLinkWord)}</a>
+                                {t(MessageKey::InboxEmptyFooterTail)}
                             </p>
                         </div>
                     </div>
                 })}
 
                 {has_items.then(|| view! {
-                    <ul class="space-y-2" aria-label="Notification list">
+                    <ul class="space-y-2" aria-label=t(MessageKey::NotificationListAriaLabel)>
                         {row_views}
                     </ul>
                 })}
@@ -113,15 +144,17 @@ fn render_row(n: Notification) -> impl IntoView {
         severity_class, unread_class
     );
 
-    let kind_label = kind::human_name(&n.kind).to_string();
+    let kind = kind_label_for(&n.kind);
+    let kind_label = kind
+        .map(|k| t(MessageKey::NotificationKindName { kind: k }))
+        .unwrap_or_else(|| n.kind.clone());
     let timestamp = n.created_at.format("%Y-%m-%d %H:%M UTC").to_string();
-    let aria = format!(
-        "{} notification: {} ({}, {}).",
-        if is_unread { "Unread" } else { "Read" },
-        n.title,
-        kind_label,
-        timestamp,
-    );
+    let aria = t(MessageKey::NotificationRowAriaLabel {
+        is_unread,
+        title: n.title.clone(),
+        kind: kind.unwrap_or(NotificationKindLabel::BurnoutOverload),
+        timestamp: timestamp.clone(),
+    });
 
     let link_target = link_target_for_kind(&n.kind);
     let mark_read_action = format!("/inbox/{}/read", n.id);
@@ -131,7 +164,11 @@ fn render_row(n: Notification) -> impl IntoView {
         Some(
             n.dispatched_via
                 .iter()
-                .map(|c| peisear_core::notifications::channel::human_name(c).to_string())
+                .map(|c| {
+                    channel_label_for(c)
+                        .map(|ch| t(MessageKey::NotificationChannelName { channel: ch }))
+                        .unwrap_or_else(|| c.clone())
+                })
                 .collect::<Vec<_>>()
                 .join(", "),
         )
@@ -145,7 +182,7 @@ fn render_row(n: Notification) -> impl IntoView {
                         <div class="flex items-baseline gap-2 flex-wrap">
                             {is_unread.then(|| view! {
                                 <span class="badge badge-xs badge-primary"
-                                      aria-label="Unread">
+                                      aria-label=t(MessageKey::UnreadWord)>
                                     "•"
                                 </span>
                             })}
@@ -157,14 +194,14 @@ fn render_row(n: Notification) -> impl IntoView {
                         <p class="text-sm text-base-content/70 mt-1">{n.body}</p>
                         <div class="text-xs text-base-content/50 mt-2 flex items-center gap-3 flex-wrap">
                             <span>{timestamp}</span>
-                            {dispatched_text.map(|t| view! {
+                            {dispatched_text.map(|dispatched| view! {
                                 <span class="opacity-70">
-                                    "Sent via " {t}
+                                    {t(MessageKey::SentViaPrefix)} {dispatched}
                                 </span>
                             })}
-                            {link_target.map(|t| view! {
-                                <a href={t} class="link link-primary">
-                                    "View context →"
+                            {link_target.map(|target| view! {
+                                <a href={target} class="link link-primary">
+                                    {t(MessageKey::ViewContextLinkLabel)}
                                 </a>
                             })}
                         </div>
@@ -173,8 +210,8 @@ fn render_row(n: Notification) -> impl IntoView {
                         <form method="post" action=mark_read_action>
                             <button type="submit"
                                     class="btn btn-ghost btn-xs"
-                                    aria-label="Mark as read">
-                                "Mark read"
+                                    aria-label=t(MessageKey::MarkAsReadAriaLabel)>
+                                {t(MessageKey::MarkReadButton)}
                             </button>
                         </form>
                     })}

@@ -11,6 +11,7 @@ use axum::{
     extract::{Path, Query, State},
     response::{IntoResponse, Redirect},
 };
+use peisear_i18n::{Locale, MessageKey};
 use peisear_storage::notifications as notif_store;
 use serde::Deserialize;
 
@@ -56,6 +57,8 @@ pub async fn mark_all_read(
     State(state): State<AppState>,
 ) -> AppResult<Redirect> {
     let n = notif_store::mark_all_read(&state.db, &user.id).await?;
-    let target = format!("/inbox?flash=Marked+{n}+as+read");
-    Ok(Redirect::to(&target))
+    let flash = Locale::English
+        .render(MessageKey::MarkedAsReadFlash { count: n })
+        .replace(' ', "+");
+    Ok(Redirect::to(&format!("/inbox?flash={flash}")))
 }

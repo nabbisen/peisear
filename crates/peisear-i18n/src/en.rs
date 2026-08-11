@@ -27,8 +27,9 @@
 #![deny(clippy::match_wildcard_for_single_variants)]
 
 use crate::message::{
-    EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey, NavSection, PriorityLabel,
-    SprintStatusLabel, TeamRoleLabel,
+    DriftDirectionLabel, EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey,
+    NavSection, NotificationChannelLabel, NotificationKindLabel, PriorityLabel, SprintStatusLabel,
+    TeamRoleLabel,
 };
 
 pub(crate) fn render(key: MessageKey) -> String {
@@ -506,6 +507,381 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::NoUserWithEmailFound { email } => {
             format!("No user with email '{email}' was found.")
         }
+
+        // ---- I18N-005d: components/me ----
+        MessageKey::PaceValue { days_per_point } => format!("≈ {days_per_point:.1} d / pt"),
+        MessageKey::ReadFirstOverloadTitle => "You've been over capacity for a while.".to_string(),
+        MessageKey::ReadFirstOverloadBody {
+            overload_streak_days,
+            window_days,
+        } => format!(
+            "Over capacity for {overload_streak_days} of the last {window_days} snapshots. \
+             A short break or a backlog re-prioritisation often helps here."
+        ),
+        MessageKey::ReadFirstStalledTitle => {
+            "An assigned issue hasn't moved in a while.".to_string()
+        }
+        MessageKey::ReadFirstStalledBody {
+            stalled_assigned_max_days,
+        } => format!(
+            "Your oldest in-flight assigned issue has been open for \
+             {stalled_assigned_max_days} days. Worth a look — it may be blocked, or worth \
+             re-scoping."
+        ),
+        MessageKey::ReadFirstWipTitle => "WIP is over your limit.".to_string(),
+        MessageKey::ReadFirstWipBody {
+            current_wip,
+            effective_wip_limit,
+        } => format!(
+            "You have {current_wip} issues in progress; your effective limit is \
+             {effective_wip_limit}. Pushing one to Done before starting more keeps focus crisp."
+        ),
+        MessageKey::ReadFirstLongStaleTitle => {
+            "Some long-stale issues are still assigned to you.".to_string()
+        }
+        MessageKey::ReadFirstLongStaleBody { long_stale_count } => {
+            let plural = if long_stale_count == 1 {
+                "issue"
+            } else {
+                "issues"
+            };
+            format!(
+                "{long_stale_count} {plural} haven't been touched in over two weeks. \
+                 Closing or re-assigning them clears your queue."
+            )
+        }
+        MessageKey::PersonalDashboardTitle => "My dashboard".to_string(),
+        MessageKey::NothingToShowMessage => "Nothing to show yet.".to_string(),
+        MessageKey::PersonalDashboardSubtitle { display_name } => {
+            format!("Personal metrics for {display_name}. Visible only to you.")
+        }
+        MessageKey::ReadFirstAriaLabel => "What to read first".to_string(),
+        MessageKey::RightNowHeading => "Right now".to_string(),
+        MessageKey::WipChipLabel => "WIP".to_string(),
+        MessageKey::LoadChipLabel => "Load".to_string(),
+        MessageKey::LoadChipTooltip => "Sum of effort across your in-flight issues".to_string(),
+        MessageKey::PeriodHintTooltip => {
+            "Your capacity for today comes from a row with a period; check Settings.".to_string()
+        }
+        MessageKey::ThisPeriodHint => "(this period)".to_string(),
+        MessageKey::RhythmAriaLabel => {
+            "Rhythm — open to see throughput, long-stale count, and pace".to_string()
+        }
+        MessageKey::RhythmSummaryLabel => "Rhythm".to_string(),
+        MessageKey::ThroughputTooltip => "Issues you have moved to Done".to_string(),
+        MessageKey::ThroughputChipLabel => "Throughput".to_string(),
+        MessageKey::LongStaleChipLabel => "Long-stale".to_string(),
+        MessageKey::PaceTooltip => {
+            "Coarse calendar-time-per-point on recent done issues. Phase 1 approximation; \
+             do not over-interpret."
+                .to_string()
+        }
+        MessageKey::PaceChipLabel => "Pace".to_string(),
+        MessageKey::WhatDoTheseMeanLabel => "What do these mean?".to_string(),
+        MessageKey::WipGlossaryDefinition => {
+            " — issues currently In Progress assigned to you, vs. your effective WIP limit. \
+             Limit comes from your personal setting, the project default, or the system \
+             default of 3."
+                .to_string()
+        }
+        MessageKey::LoadGlossaryDefinition => {
+            " — sum of effort points across your in-flight (Open or In Progress) issues, \
+             vs. your capacity if you've set one."
+                .to_string()
+        }
+        MessageKey::ThroughputGlossaryDefinition { window_days } => {
+            format!(" — issues you have moved to Done in the last {window_days} days.")
+        }
+        MessageKey::LongStaleGlossaryDefinition { window_days } => format!(
+            " — in-flight issues assigned to you that have not been touched in over \
+             {window_days} days."
+        ),
+        MessageKey::PaceGlossaryDefinition => {
+            " — active in-progress time per story point on your recently-completed \
+             estimated issues, reconstructed from the issue event log. Treat as a \
+             self-reflection prompt rather than a measurement; the number reflects how \
+             recent issues actually went, not how future ones will."
+                .to_string()
+        }
+        MessageKey::SustainabilityHeading => "Sustainability".to_string(),
+        MessageKey::SustainabilityGlossaryDefinition => {
+            " — a couple of streak-style signals based on the periodic snapshots taken in \
+             the background: how many consecutive snapshots you have been over capacity, \
+             and how long your oldest assigned issue has been without a status change. The \
+             panel is muted by default and only opens itself when something is worth a \
+             glance. Visible to you only."
+                .to_string()
+        }
+        MessageKey::PatternsSubheading => "Patterns".to_string(),
+        MessageKey::PatternsGlossaryDefinition => {
+            " — descriptive numbers about your recent rhythm: whether your \
+             dwell-time-per-point is drifting, and how often you switch to in_progress on \
+             a typical active day. These are facts about how the last few weeks went, not \
+             judgements. They sit inside the Sustainability panel and have no warning \
+             palette of their own. Visible to you only."
+                .to_string()
+        }
+        MessageKey::OverloadStreakChipLabel => "Over-capacity streak".to_string(),
+        MessageKey::OldestStalledChipLabel => "Oldest stalled".to_string(),
+        MessageKey::PatternsDisclaimer => {
+            "These are descriptions of recent rhythm, not evaluations. Many patterns have \
+             legitimate reasons behind them."
+                .to_string()
+        }
+        MessageKey::SustainabilityPrivacyNote => {
+            "These signals are visible to you only. They are not used for evaluation; \
+             they exist so you can pace yourself."
+                .to_string()
+        }
+        MessageKey::OverloadStreakValue {
+            overload_streak_days,
+            window_days,
+        } => format!("{overload_streak_days} of last {window_days}"),
+        MessageKey::StalledDaysValue {
+            stalled_assigned_max_days,
+        } => format!("{stalled_assigned_max_days} d"),
+        MessageKey::OverloadStreakAriaLabel {
+            overload_streak_days,
+            is_watch,
+        } => format!(
+            "Overload streak: {overload_streak_days} consecutive snapshots over capacity \
+             ({}).",
+            if is_watch { "watch" } else { "steady" }
+        ),
+        MessageKey::StalledAriaLabel {
+            stalled_assigned_max_days,
+            is_watch,
+        } => format!(
+            "Oldest stalled assigned issue: {stalled_assigned_max_days} days ({}).",
+            if is_watch { "watch" } else { "steady" }
+        ),
+        MessageKey::DriftInsufficientDataAriaLabel => {
+            "Estimation drift: not enough completed estimated work in the last 28 days \
+             to compare halves of the window."
+                .to_string()
+        }
+        MessageKey::PaceDriftChipLabel => "Pace drift".to_string(),
+        MessageKey::NeedMoreDataLabel => "need more data".to_string(),
+        MessageKey::DriftDirectionWord { direction } => drift_direction_word(direction).to_string(),
+        MessageKey::DriftValueLine {
+            recent_median_days_per_point,
+            older_median_days_per_point,
+        } => format!(
+            "recent {recent_median_days_per_point:.2} vs. {older_median_days_per_point:.2} \
+             d / pt"
+        ),
+        MessageKey::DriftAriaLabel {
+            recent_median_days_per_point,
+            older_median_days_per_point,
+            window_days,
+            direction,
+        } => format!(
+            "Estimation drift: recent {recent_median_days_per_point:.2} d/pt vs. older \
+             {older_median_days_per_point:.2} d/pt over the last {window_days} days ({}).",
+            drift_trend_phrase(direction)
+        ),
+        MessageKey::SwitchingInsufficientDataAriaLabel => {
+            "Switching pattern: not enough events in the last 14 days to characterise a \
+             rhythm."
+                .to_string()
+        }
+        MessageKey::SwitchingChipLabel => "Switching".to_string(),
+        MessageKey::SwitchingMedianValue { median } => switching_median_text(median),
+        MessageKey::SwitchingSampleLine {
+            total_events_observed,
+            window_days,
+        } => format!("{total_events_observed} events over {window_days} d"),
+        MessageKey::SwitchingAriaLabel {
+            median,
+            total_events_observed,
+            window_days,
+        } => format!(
+            "Switching pattern: median {} pickups per active day ({total_events_observed} \
+             total events over {window_days} days). For context only — high or low here \
+             is not a quality judgement.",
+            switching_median_text(median)
+        ),
+
+        // ---- I18N-005d: components/settings ----
+        MessageKey::WipLimitExplanation { default_wip_limit } => format!(
+            "How many issues you want to have In Progress at once. This is about \
+             cognitive load — a small number of actively-worked issues, distinct from \
+             the points-budget above. Leave blank to use the project default (or \
+             {default_wip_limit})."
+        ),
+        MessageKey::NoCapacitySetTodayLabel => "no capacity set for today".to_string(),
+        MessageKey::ConflictLabel => "Conflict: ".to_string(),
+        MessageKey::CapacityOverlapGuidanceLead => {
+            "Close the conflicting row first (use the ".to_string()
+        }
+        MessageKey::CloseOnDateActionWord => "Close on date".to_string(),
+        MessageKey::CapacityOverlapGuidanceTail => {
+            " action), or adjust the new period so it doesn't overlap.".to_string()
+        }
+        MessageKey::SettingsSectionName => "Settings".to_string(),
+        MessageKey::SettingsSubtitle { display_name } => {
+            format!("Personal preferences for {display_name}.")
+        }
+        MessageKey::CapacitySectionAriaLabel => "Capacity".to_string(),
+        MessageKey::WorkloadCapacityHeading => "Workload capacity".to_string(),
+        MessageKey::CapacityExplanationParagraph => {
+            "Capacity rows describe how many story points you can comfortably carry, \
+             optionally bounded by a period. The row whose period covers today is your \
+             effective capacity. Periods may not overlap; leave both bounds blank for an \
+             open-ended default."
+                .to_string()
+        }
+        MessageKey::EffectiveCapacityTodayAriaLabel { points } => match points {
+            Some(p) => format!("Effective capacity today: {p} pt"),
+            None => "Effective capacity today: no capacity set for today".to_string(),
+        },
+        MessageKey::EffectiveTodayLabel => "Effective today: ".to_string(),
+        MessageKey::CapacityRowsTableAriaLabel => "Capacity rows".to_string(),
+        MessageKey::PointsColumnHeading => "Points".to_string(),
+        MessageKey::FromColumnHeading => "From".to_string(),
+        MessageKey::FromDateFieldLabel => "From (YYYY-MM-DD)".to_string(),
+        MessageKey::ToColumnHeading => "To".to_string(),
+        MessageKey::ToDateFieldLabel => "To (YYYY-MM-DD)".to_string(),
+        MessageKey::NoteColumnHeading => "Note".to_string(),
+        MessageKey::ActionsColumnHeading => "Actions".to_string(),
+        MessageKey::AddCapacityRowSummary => "Add a capacity row".to_string(),
+        MessageKey::AddCapacityRowFormAriaLabel => "Add capacity row".to_string(),
+        MessageKey::PointsPlaceholderExample => "e.g. 10".to_string(),
+        MessageKey::NoteFieldPlaceholder => "optional context".to_string(),
+        MessageKey::AddRowButton => "Add row".to_string(),
+        MessageKey::CapacityOverlapHelperText => {
+            "Both date fields are optional. Leave blank to mean \"from the dawn of \
+             time\" (start) or \"until further notice\" (end). Adding a row that \
+             overlaps an existing one will fail; close the existing row first."
+                .to_string()
+        }
+        MessageKey::WipLimitLabel => "WIP limit".to_string(),
+        MessageKey::InProgressIssuesHint => "in-progress issues".to_string(),
+        MessageKey::CapacityRowAriaLabel { points, from, to } => {
+            format!("Capacity {points} points, period {from} to {to}.")
+        }
+        MessageKey::CloseOnDateSummary => "Close on date…".to_string(),
+        MessageKey::CloseThisRowAriaLabel => "Close this row on a specific date".to_string(),
+        MessageKey::CloseOnLabel => "Close on".to_string(),
+        MessageKey::CloseButton => "Close".to_string(),
+        MessageKey::EditRowAriaLabel => "Edit row".to_string(),
+        MessageKey::RemoveThisRowAriaLabel => "Remove this row".to_string(),
+
+        // ---- I18N-005d: components/{notification_preferences,notifications} ----
+        MessageKey::EmailNotificationsHeading => "Email notifications".to_string(),
+        MessageKey::FirstTimeEmailPromptAriaLabel => "First-time email setup prompt".to_string(),
+        MessageKey::EmailOptInPromptBody => {
+            "Would you like notifications by email as well as in-app? You can change \
+             this any time."
+                .to_string()
+        }
+        MessageKey::EmailOptInYesButton => "Yes, send me email".to_string(),
+        MessageKey::EmailOptInNoButton => "Just in-app, thanks".to_string(),
+        MessageKey::EmailOptInOnStatus => "✓ Email opt-in is on by default.".to_string(),
+        MessageKey::EmailOptInOffStatus => {
+            "Email opt-in is off (in-app only by default). Per-kind overrides below.".to_string()
+        }
+        MessageKey::NotificationPreferencesPageTitle => "Notification preferences".to_string(),
+        MessageKey::NotificationsSectionName => "Notifications".to_string(),
+        MessageKey::SilenceAllAriaLabel => "Silence all notification kinds".to_string(),
+        MessageKey::SilenceAllButton => "Silence all".to_string(),
+        MessageKey::DefaultsInAppLead => "Defaults: in-app delivery on for all kinds. ".to_string(),
+        MessageKey::PerKindDeliverySummary => "Per-kind delivery".to_string(),
+        MessageKey::ClickToExpandHint => "Click to expand".to_string(),
+        MessageKey::NotificationKindsTableAriaLabel => "Notification kinds".to_string(),
+        MessageKey::KindColumnHeading => "Kind".to_string(),
+        MessageKey::MinSeverityColumnHeading => "Min severity".to_string(),
+        MessageKey::ChannelStubDisclaimer => {
+            "Email and webhook are stubs in this release — they log the dispatch \
+             attempt but don't yet send. The channel structure is ready for the \
+             upcoming wasm-smtp integration."
+                .to_string()
+        }
+        MessageKey::SavePreferencesButton => "Save preferences".to_string(),
+        MessageKey::NotificationKindPreferencesAriaLabel { kind } => {
+            format!("{} preferences", notification_kind_label(kind))
+        }
+        MessageKey::InAppForKindAriaLabel { kind } => {
+            format!("In-app for {}", notification_kind_label(kind))
+        }
+        MessageKey::EmailForKindAriaLabel { kind } => {
+            format!("Email for {}", notification_kind_label(kind))
+        }
+        MessageKey::WebhookForKindAriaLabel { kind } => {
+            format!("Webhook for {}", notification_kind_label(kind))
+        }
+        MessageKey::MinSeverityForKindAriaLabel { kind } => {
+            format!("Minimum severity for {}", notification_kind_label(kind))
+        }
+        MessageKey::AllSeverityOption => "All".to_string(),
+        MessageKey::WatchOnlySeverityOption => "Watch only".to_string(),
+        MessageKey::NotificationKindName { kind } => notification_kind_label(kind).to_string(),
+        MessageKey::NotificationChannelName { channel } => {
+            notification_channel_label(channel).to_string()
+        }
+        MessageKey::NoNotificationsYetStatus => "No notifications yet.".to_string(),
+        MessageKey::UnreadOfTotalStatus {
+            unread_count,
+            total,
+        } => {
+            format!("{unread_count} unread of {total}.")
+        }
+        MessageKey::AllReadStatus { total } => format!("All read. {total} total."),
+        MessageKey::MarkAllReadAriaLabel => "Mark all notifications as read".to_string(),
+        MessageKey::MarkAllReadButton => "Mark all read".to_string(),
+        MessageKey::InboxEmptyMessage => {
+            "You'll see notifications here when something needs a glance — warnings \
+             about your workload, project health changes, that sort of thing."
+                .to_string()
+        }
+        MessageKey::InboxEmptyFooterLead => "Configure delivery in ".to_string(),
+        MessageKey::SettingsLinkWord => "settings".to_string(),
+        MessageKey::InboxEmptyFooterTail => ".".to_string(),
+        MessageKey::NotificationListAriaLabel => "Notification list".to_string(),
+        MessageKey::UnreadWord => "Unread".to_string(),
+        MessageKey::ReadWord => "Read".to_string(),
+        MessageKey::NotificationRowAriaLabel {
+            is_unread,
+            title,
+            kind,
+            timestamp,
+        } => format!(
+            "{} notification: {title} ({}, {timestamp}).",
+            if is_unread { "Unread" } else { "Read" },
+            notification_kind_label(kind)
+        ),
+        MessageKey::SentViaPrefix => "Sent via ".to_string(),
+        MessageKey::ViewContextLinkLabel => "View context →".to_string(),
+        MessageKey::MarkAsReadAriaLabel => "Mark as read".to_string(),
+        MessageKey::MarkReadButton => "Mark read".to_string(),
+
+        // ---- I18N-005d: components/search ----
+        MessageKey::SearchWord => "Search".to_string(),
+        MessageKey::SearchPageTitleWithQuery { q } => format!("Search: {q}"),
+        MessageKey::SearchFieldLabel => "Search projects and open issues".to_string(),
+        MessageKey::SearchPlaceholder => "Type to search...".to_string(),
+        MessageKey::ResultsForHeadingPrefix => "Results for ".to_string(),
+        MessageKey::NoQueryGuidanceMessage => {
+            "Enter a search term above to find projects and open issues.".to_string()
+        }
+        MessageKey::OpenIssuesSectionName => "Open issues".to_string(),
+        MessageKey::NoMatchesInCategoryMessage => "No matches in this category.".to_string(),
+        MessageKey::PreviousPageLink => "← Previous".to_string(),
+        MessageKey::NextPageLink => "Next →".to_string(),
+        MessageKey::ProjectHitTypeLabel => "Project".to_string(),
+        MessageKey::OpenIssueHitTypePrefix { project_name } => {
+            format!("Open issue · {project_name}")
+        }
+
+        // ---- I18N-005d: handlers/{settings,notification_preferences,notifications} ----
+        MessageKey::WipLimitSavedFlash => "WIP limit saved".to_string(),
+        MessageKey::CapacityRowAddedFlash => "Capacity row added".to_string(),
+        MessageKey::CapacityRowUpdatedFlash => "Capacity row updated".to_string(),
+        MessageKey::CapacityRowRemovedFlash => "Capacity row removed".to_string(),
+        MessageKey::RowClosedFlash => "Row closed".to_string(),
+        MessageKey::PreferencesSavedFlash => "Preferences saved".to_string(),
+        MessageKey::AllNotificationsSilencedFlash => "All notifications silenced".to_string(),
+        MessageKey::MarkedAsReadFlash { count } => format!("Marked {count} as read"),
     }
 }
 
@@ -648,5 +1024,54 @@ fn priority_label(label: PriorityLabel) -> &'static str {
         PriorityLabel::Medium => "Medium",
         PriorityLabel::High => "High",
         PriorityLabel::Urgent => "Urgent",
+    }
+}
+
+fn drift_direction_word(direction: DriftDirectionLabel) -> &'static str {
+    match direction {
+        DriftDirectionLabel::Up => "longer per point",
+        DriftDirectionLabel::Down => "shorter per point",
+        DriftDirectionLabel::Steady => "steady",
+    }
+}
+
+/// The longer "trending ..." phrase used only inside
+/// `MessageKey::DriftAriaLabel`'s composed sentence — distinct
+/// wording from `drift_direction_word`'s short chip form, same
+/// `DriftDirectionLabel`.
+fn drift_trend_phrase(direction: DriftDirectionLabel) -> &'static str {
+    match direction {
+        DriftDirectionLabel::Up => "trending up",
+        DriftDirectionLabel::Down => "trending down",
+        DriftDirectionLabel::Steady => "roughly steady",
+    }
+}
+
+/// Shared by `MessageKey::SwitchingMedianValue` and
+/// `MessageKey::SwitchingAriaLabel` so both stay byte-identical in
+/// how they render the same value — see `SwitchingAriaLabel`'s doc
+/// comment for the found-not-fixed "per active day" repetition this
+/// produces when embedded in the aria sentence.
+fn switching_median_text(median: f64) -> String {
+    if median.fract() < 0.05 {
+        format!("{median:.0} / active day")
+    } else {
+        format!("{median:.1} / active day")
+    }
+}
+
+fn notification_kind_label(kind: NotificationKindLabel) -> &'static str {
+    match kind {
+        NotificationKindLabel::BurnoutOverload => "Sustained over-capacity streak",
+        NotificationKindLabel::BurnoutStalled => "Long-stalled assigned work",
+        NotificationKindLabel::ProjectTrendDecline => "Project health decline",
+    }
+}
+
+fn notification_channel_label(channel: NotificationChannelLabel) -> &'static str {
+    match channel {
+        NotificationChannelLabel::InApp => "In-app",
+        NotificationChannelLabel::Email => "Email",
+        NotificationChannelLabel::Webhook => "Webhook",
     }
 }

@@ -22,6 +22,7 @@ use peisear_core::notifications::{
     channel::{ALL_CHANNELS, EMAIL, IN_APP, WEBHOOK},
     kind,
 };
+use peisear_i18n::{Locale, MessageKey};
 use peisear_storage::notifications as notif_store;
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -122,9 +123,12 @@ pub async fn save_preferences(
         notif_store::upsert_preference(&state.db, &user.id, k, &chans, sev).await?;
     }
 
-    Ok(Redirect::to(
-        "/settings/notifications?flash=Preferences+saved",
-    ))
+    let flash = Locale::English
+        .render(MessageKey::PreferencesSavedFlash)
+        .replace(' ', "+");
+    Ok(Redirect::to(&format!(
+        "/settings/notifications?flash={flash}"
+    )))
 }
 
 /// "Silence all" convenience: set every user-facing kind's
@@ -140,7 +144,10 @@ pub async fn silence_all(
     // first-login email opt-in record, conceptually different
     // from per-kind silencing.
     let _ = (IN_APP, WEBHOOK); // silence "unused import" warning shape
-    Ok(Redirect::to(
-        "/settings/notifications?flash=All+notifications+silenced",
-    ))
+    let flash = Locale::English
+        .render(MessageKey::AllNotificationsSilencedFlash)
+        .replace(' ', "+");
+    Ok(Redirect::to(&format!(
+        "/settings/notifications?flash={flash}"
+    )))
 }

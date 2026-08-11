@@ -42,6 +42,7 @@ mod en;
 pub use guard::{PROHIBITED_TERMS, ProhibitedTerm, find_violations};
 pub use locale::Locale;
 pub use message::{
-    EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey, NavSection, PriorityLabel,
-    SprintStatusLabel, TeamRoleLabel,
+    DriftDirectionLabel, EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey,
+    NavSection, NotificationChannelLabel, NotificationKindLabel, PriorityLabel, SprintStatusLabel,
+    TeamRoleLabel,
 };

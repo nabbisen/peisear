@@ -11,6 +11,7 @@ use axum::response::Html;
 use leptos::prelude::*;
 
 use super::layout::AppShell;
+use super::t;
 use peisear_core::{
     CurrentUser, DisplayHealthState,
     personal_metrics::{
@@ -20,7 +21,7 @@ use peisear_core::{
         DriftDirection, UserBurnoutSignals, classify_overload_streak, classify_stalled, summarize,
     },
 };
-use peisear_i18n::Locale;
+use peisear_i18n::{Locale, MessageKey};
 
 /// Format a coarse estimation-skew value into prose. Returns
 /// `None` if there isn't enough data to show.
@@ -39,7 +40,9 @@ fn format_skew(days_per_point: Option<f64>) -> Option<String> {
     if skew < 0.05 {
         return None;
     }
-    Some(format!("≈ {:.1} d / pt", skew))
+    Some(t(MessageKey::PaceValue {
+        days_per_point: skew,
+    }))
 }
 
 /// One callout's worth of "what to read first." Carries the
@@ -88,22 +91,19 @@ fn compute_read_first(
     if let Some(b) = burnout {
         if b.overload_streak_days >= peisear_core::user_burnout::OVERLOAD_STREAK_WATCH {
             return Some(ReadFirst {
-                title: "You've been over capacity for a while.".to_string(),
-                body: format!(
-                    "Over capacity for {} of the last {} snapshots. \
-                     A short break or a backlog re-prioritisation often helps here.",
-                    b.overload_streak_days, b.window_days
-                ),
+                title: t(MessageKey::ReadFirstOverloadTitle),
+                body: t(MessageKey::ReadFirstOverloadBody {
+                    overload_streak_days: b.overload_streak_days,
+                    window_days: b.window_days,
+                }),
             });
         }
         if b.stalled_assigned_max_days >= peisear_core::user_burnout::STALLED_WATCH_DAYS {
             return Some(ReadFirst {
-                title: "An assigned issue hasn't moved in a while.".to_string(),
-                body: format!(
-                    "Your oldest in-flight assigned issue has been open for {} days. \
-                     Worth a look — it may be blocked, or worth re-scoping.",
-                    b.stalled_assigned_max_days
-                ),
+                title: t(MessageKey::ReadFirstStalledTitle),
+                body: t(MessageKey::ReadFirstStalledBody {
+                    stalled_assigned_max_days: b.stalled_assigned_max_days,
+                }),
             });
         }
     }
@@ -113,12 +113,11 @@ fn compute_read_first(
     // the limit, not over it.
     if current_wip > effective_wip_limit {
         return Some(ReadFirst {
-            title: "WIP is over your limit.".to_string(),
-            body: format!(
-                "You have {current_wip} issues in progress; your effective \
-                 limit is {effective_wip_limit}. Pushing one to Done before \
-                 starting more keeps focus crisp."
-            ),
+            title: t(MessageKey::ReadFirstWipTitle),
+            body: t(MessageKey::ReadFirstWipBody {
+                current_wip,
+                effective_wip_limit,
+            }),
         });
     }
 
@@ -127,17 +126,9 @@ fn compute_read_first(
     // dashboard's most prominent slot when nothing more
     // urgent applies.
     if long_stale_count >= 1 {
-        let plural = if long_stale_count == 1 {
-            "issue"
-        } else {
-            "issues"
-        };
         return Some(ReadFirst {
-            title: "Some long-stale issues are still assigned to you.".to_string(),
-            body: format!(
-                "{long_stale_count} {plural} haven't been touched in over two \
-                 weeks. Closing or re-assigning them clears your queue."
-            ),
+            title: t(MessageKey::ReadFirstLongStaleTitle),
+            body: t(MessageKey::ReadFirstLongStaleBody { long_stale_count }),
         });
     }
 
@@ -158,11 +149,11 @@ pub fn PersonalDashboard(
     // happen, but treat it gracefully).
     let Some(m) = metrics else {
         return view! {
-            <AppShell title="My dashboard".to_string() user=user flash=flash>
+            <AppShell title=t(MessageKey::PersonalDashboardTitle) user=user flash=flash>
                 <div class="max-w-2xl mx-auto">
-                    <h1 class="text-xl font-semibold mb-4">"My dashboard"</h1>
+                    <h1 class="text-xl font-semibold mb-4">{t(MessageKey::PersonalDashboardTitle)}</h1>
                     <p class="text-sm text-base-content/60 italic">
-                        "Nothing to show yet."
+                        {t(MessageKey::NothingToShowMessage)}
                     </p>
                 </div>
             </AppShell>
@@ -246,11 +237,11 @@ pub fn PersonalDashboard(
     );
 
     view! {
-        <AppShell title="My dashboard".to_string() user=user flash=flash>
+        <AppShell title=t(MessageKey::PersonalDashboardTitle) user=user flash=flash>
             <div class="max-w-3xl mx-auto">
-                <h1 class="text-xl font-semibold mb-1">"My dashboard"</h1>
+                <h1 class="text-xl font-semibold mb-1">{t(MessageKey::PersonalDashboardTitle)}</h1>
                 <p class="text-sm text-base-content/60 mb-4">
-                    "Personal metrics for " {display_name} ". Visible only to you."
+                    {t(MessageKey::PersonalDashboardSubtitle { display_name })}
                 </p>
 
                 // Phase B PR3 (B-1) "what to read first"
@@ -265,7 +256,7 @@ pub fn PersonalDashboard(
                     let body = rf.body;
                     view! {
                         <aside role="note"
-                               aria-label="What to read first"
+                               aria-label=t(MessageKey::ReadFirstAriaLabel)
                                class="alert alert-info bg-info/10 border border-info/40 \
                                       text-base-content mb-6 items-start">
                             <div class="grow">
@@ -278,14 +269,14 @@ pub fn PersonalDashboard(
 
                 <section class="mb-6" aria-label="Current load">
                     <h2 class="text-xs uppercase tracking-wide text-base-content/60 mb-2">
-                        "Right now"
+                        {t(MessageKey::RightNowHeading)}
                     </h2>
                     <div class="flex flex-wrap items-center gap-3">
                         <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
                              role="group"
                              aria-label=wip_aria_label.clone()
                              title=wip_aria_label>
-                            <span class="text-xs text-base-content/70">"WIP"</span>
+                            <span class="text-xs text-base-content/70">{t(MessageKey::WipChipLabel)}</span>
                             <span class=wip_badge_class>
                                 <span class="mr-1" aria-hidden="true">{wip_glyph}</span>
                                 {wip_value}
@@ -293,14 +284,13 @@ pub fn PersonalDashboard(
                         </div>
 
                         <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
-                             title="Sum of effort across your in-flight issues">
-                            <span class="text-xs text-base-content/70">"Load"</span>
+                             title=t(MessageKey::LoadChipTooltip)>
+                            <span class="text-xs text-base-content/70">{t(MessageKey::LoadChipLabel)}</span>
                             <span class="badge badge-sm badge-ghost">{load_text}</span>
                             {load_period_hint.then(|| view! {
                                 <span class="text-xs text-base-content/50 italic"
-                                      title="Your capacity for today comes from a row \
-                                             with a period; check Settings.">
-                                    "(this period)"
+                                      title=t(MessageKey::PeriodHintTooltip)>
+                                    {t(MessageKey::ThisPeriodHint)}
                                 </span>
                             })}
                         </div>
@@ -316,14 +306,13 @@ pub fn PersonalDashboard(
                 <details class="mb-6">
                     <summary class="cursor-pointer text-xs uppercase tracking-wide \
                                     text-base-content/60 mb-2 inline-block"
-                             aria-label="Rhythm — open to see throughput, long-stale count, \
-                                         and pace">
-                        "Rhythm"
+                             aria-label=t(MessageKey::RhythmAriaLabel)>
+                        {t(MessageKey::RhythmSummaryLabel)}
                     </summary>
                     <div class="flex flex-wrap items-center gap-3 mt-2">
                         <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
-                             title="Issues you have moved to Done">
-                            <span class="text-xs text-base-content/70">"Throughput"</span>
+                             title=t(MessageKey::ThroughputTooltip)>
+                            <span class="text-xs text-base-content/70">{t(MessageKey::ThroughputChipLabel)}</span>
                             <span class="badge badge-sm badge-ghost">{throughput_text}</span>
                         </div>
 
@@ -331,7 +320,7 @@ pub fn PersonalDashboard(
                              role="group"
                              aria-label=stale_aria_label.clone()
                              title=stale_aria_label>
-                            <span class="text-xs text-base-content/70">"Long-stale"</span>
+                            <span class="text-xs text-base-content/70">{t(MessageKey::LongStaleChipLabel)}</span>
                             <span class=stale_badge_class>
                                 <span class="mr-1" aria-hidden="true">{stale_glyph}</span>
                                 {stale_text}
@@ -340,8 +329,8 @@ pub fn PersonalDashboard(
 
                         {skew_text.map(|s| view! {
                             <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
-                                 title="Coarse calendar-time-per-point on recent done issues. Phase 1 approximation; do not over-interpret.">
-                                <span class="text-xs text-base-content/70">"Pace"</span>
+                                 title=t(MessageKey::PaceTooltip)>
+                                <span class="text-xs text-base-content/70">{t(MessageKey::PaceChipLabel)}</span>
                                 <span class="badge badge-sm badge-ghost">{s}</span>
                             </div>
                         })}
@@ -352,37 +341,35 @@ pub fn PersonalDashboard(
 
                 <section class="text-xs text-base-content/60">
                     <details>
-                        <summary class="cursor-pointer">"What do these mean?"</summary>
+                        <summary class="cursor-pointer">{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
                         <div class="mt-2 space-y-2">
                             <p>
-                                <strong>"WIP"</strong>
-                                " — issues currently In Progress assigned to you, vs. your effective WIP limit. Limit comes from your personal setting, the project default, or the system default of 3."
+                                <strong>{t(MessageKey::WipChipLabel)}</strong>
+                                {t(MessageKey::WipGlossaryDefinition)}
                             </p>
                             <p>
-                                <strong>"Load"</strong>
-                                " — sum of effort points across your in-flight (Open or In Progress) issues, vs. your capacity if you've set one."
+                                <strong>{t(MessageKey::LoadChipLabel)}</strong>
+                                {t(MessageKey::LoadGlossaryDefinition)}
                             </p>
                             <p>
-                                <strong>"Throughput"</strong>
-                                " — issues you have moved to Done in the last "
-                                {PERSONAL_ACTIVITY_WINDOW_DAYS} " days."
+                                <strong>{t(MessageKey::ThroughputChipLabel)}</strong>
+                                {t(MessageKey::ThroughputGlossaryDefinition { window_days: PERSONAL_ACTIVITY_WINDOW_DAYS })}
                             </p>
                             <p>
-                                <strong>"Long-stale"</strong>
-                                " — in-flight issues assigned to you that have not been touched in over "
-                                {PERSONAL_ACTIVITY_WINDOW_DAYS} " days."
+                                <strong>{t(MessageKey::LongStaleChipLabel)}</strong>
+                                {t(MessageKey::LongStaleGlossaryDefinition { window_days: PERSONAL_ACTIVITY_WINDOW_DAYS })}
                             </p>
                             <p>
-                                <strong>"Pace"</strong>
-                                " — active in-progress time per story point on your recently-completed estimated issues, reconstructed from the issue event log. Treat as a self-reflection prompt rather than a measurement; the number reflects how recent issues actually went, not how future ones will."
+                                <strong>{t(MessageKey::PaceChipLabel)}</strong>
+                                {t(MessageKey::PaceGlossaryDefinition)}
                             </p>
                             <p>
-                                <strong>"Sustainability"</strong>
-                                " — a couple of streak-style signals based on the periodic snapshots taken in the background: how many consecutive snapshots you have been over capacity, and how long your oldest assigned issue has been without a status change. The panel is muted by default and only opens itself when something is worth a glance. Visible to you only."
+                                <strong>{t(MessageKey::SustainabilityHeading)}</strong>
+                                {t(MessageKey::SustainabilityGlossaryDefinition)}
                             </p>
                             <p>
-                                <strong>"Patterns"</strong>
-                                " — descriptive numbers about your recent rhythm: whether your dwell-time-per-point is drifting, and how often you switch to in_progress on a typical active day. These are facts about how the last few weeks went, not judgements. They sit inside the Sustainability panel and have no warning palette of their own. Visible to you only."
+                                <strong>{t(MessageKey::PatternsSubheading)}</strong>
+                                {t(MessageKey::PatternsGlossaryDefinition)}
                             </p>
                         </div>
                     </details>
@@ -464,23 +451,27 @@ fn render_burnout_panel(
         }
     };
 
-    let (overload_badge, overload_glyph, overload_aria) = chip_classes(overload);
-    let (stalled_badge, stalled_glyph, stalled_aria) = chip_classes(stalled);
+    let (overload_badge, overload_glyph, _) = chip_classes(overload);
+    let (stalled_badge, stalled_glyph, _) = chip_classes(stalled);
+    let overload_is_watch = matches!(overload, DisplayHealthState::Watch);
+    let stalled_is_watch = matches!(stalled, DisplayHealthState::Watch);
 
-    let overload_value = format!(
-        "{} of last {}",
-        signals.overload_streak_days, signals.window_days
-    );
-    let stalled_value = format!("{} d", signals.stalled_assigned_max_days);
+    let overload_value = t(MessageKey::OverloadStreakValue {
+        overload_streak_days: signals.overload_streak_days,
+        window_days: signals.window_days,
+    });
+    let stalled_value = t(MessageKey::StalledDaysValue {
+        stalled_assigned_max_days: signals.stalled_assigned_max_days,
+    });
 
-    let overload_aria_label = format!(
-        "Overload streak: {} consecutive snapshots over capacity ({}).",
-        signals.overload_streak_days, overload_aria
-    );
-    let stalled_aria_label = format!(
-        "Oldest stalled assigned issue: {} days ({}).",
-        signals.stalled_assigned_max_days, stalled_aria
-    );
+    let overload_aria_label = t(MessageKey::OverloadStreakAriaLabel {
+        overload_streak_days: signals.overload_streak_days,
+        is_watch: overload_is_watch,
+    });
+    let stalled_aria_label = t(MessageKey::StalledAriaLabel {
+        stalled_assigned_max_days: signals.stalled_assigned_max_days,
+        is_watch: stalled_is_watch,
+    });
 
     let summary = Locale::English.render(summarize(&signals));
     let any_watch = matches!(overload, DisplayHealthState::Watch)
@@ -489,10 +480,14 @@ fn render_burnout_panel(
     let drift_chip = render_drift_chip(signals.estimation_drift.as_ref());
     let switching_chip = render_switching_chip(signals.cognitive_switching.as_ref());
 
+    let sustainability_heading = t(MessageKey::SustainabilityHeading);
+    let sustainability_heading_aria = sustainability_heading.clone();
+    let patterns_subheading = t(MessageKey::PatternsSubheading);
+
     view! {
-        <section class="mb-6" aria-label="Sustainability">
+        <section class="mb-6" aria-label=sustainability_heading_aria>
             <h2 class="text-xs uppercase tracking-wide text-base-content/60 mb-2">
-                "Sustainability"
+                {sustainability_heading}
             </h2>
             <details open=any_watch>
                 <summary class="cursor-pointer text-sm text-base-content/80 mb-2">
@@ -504,7 +499,7 @@ fn render_burnout_panel(
                              role="group"
                              aria-label=overload_aria_label.clone()
                              title=overload_aria_label>
-                            <span class="text-xs text-base-content/70">"Over-capacity streak"</span>
+                            <span class="text-xs text-base-content/70">{t(MessageKey::OverloadStreakChipLabel)}</span>
                             <span class=overload_badge>
                                 <span class="mr-1" aria-hidden="true">{overload_glyph}</span>
                                 {overload_value}
@@ -514,7 +509,7 @@ fn render_burnout_panel(
                              role="group"
                              aria-label=stalled_aria_label.clone()
                              title=stalled_aria_label>
-                            <span class="text-xs text-base-content/70">"Oldest stalled"</span>
+                            <span class="text-xs text-base-content/70">{t(MessageKey::OldestStalledChipLabel)}</span>
                             <span class=stalled_badge>
                                 <span class="mr-1" aria-hidden="true">{stalled_glyph}</span>
                                 {stalled_value}
@@ -524,21 +519,18 @@ fn render_burnout_panel(
                 })}
                 <div class="mt-3">
                     <h3 class="text-xs uppercase tracking-wide text-base-content/50 mb-1">
-                        "Patterns"
+                        {patterns_subheading}
                     </h3>
                     <div class="flex flex-wrap items-center gap-3">
                         {drift_chip}
                         {switching_chip}
                     </div>
                     <p class="mt-1 text-xs text-base-content/50 italic">
-                        "These are descriptions of recent rhythm, \
-                         not evaluations. Many patterns have legitimate \
-                         reasons behind them."
+                        {t(MessageKey::PatternsDisclaimer)}
                     </p>
                 </div>
                 <p class="mt-2 text-xs text-base-content/60 italic">
-                    "These signals are visible to you only. They are not used \
-                     for evaluation; they exist so you can pace yourself."
+                    {t(MessageKey::SustainabilityPrivacyNote)}
                 </p>
             </details>
         </section>
@@ -564,55 +556,52 @@ fn render_drift_chip(
         // Insufficient-data chip. Neutral palette, italic label,
         // explicit aria so screen readers don't experience this
         // as a vanished element.
-        let aria = "Estimation drift: not enough completed estimated work \
-                    in the last 28 days to compare halves of the window.";
+        let aria = t(MessageKey::DriftInsufficientDataAriaLabel);
+        let aria_title = aria.clone();
         return view! {
             <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
                  role="group"
                  aria-label=aria
-                 title=aria>
-                <span class="text-xs text-base-content/70">"Pace drift"</span>
+                 title=aria_title>
+                <span class="text-xs text-base-content/70">{t(MessageKey::PaceDriftChipLabel)}</span>
                 <span class="badge badge-sm badge-ghost italic">
-                    <span class="mr-1" aria-hidden="true">"—"</span>
-                    "need more data"
+                    <span class="mr-1" aria-hidden="true">{t(MessageKey::NoValuePlaceholder)}</span>
+                    {t(MessageKey::NeedMoreDataLabel)}
                 </span>
             </div>
         }
         .into_any();
     };
 
-    let (glyph, direction_label) = match drift.direction {
-        DriftDirection::Up => ("↑", "longer per point"),
-        DriftDirection::Down => ("↓", "shorter per point"),
-        DriftDirection::Steady => ("→", "steady"),
+    let direction = drift.direction.to_i18n_label();
+    let glyph = match drift.direction {
+        DriftDirection::Up => "↑",
+        DriftDirection::Down => "↓",
+        DriftDirection::Steady => "→",
     };
+    let direction_label = t(MessageKey::DriftDirectionWord { direction });
 
     // Show both halves on the chip itself (Q4=A: visible context).
     // The arrow is the headline; the two numbers underneath give
     // the user the "by how much" answer without a tooltip.
-    let value_line = format!(
-        "recent {:.2} vs. {:.2} d / pt",
-        drift.recent_median_days_per_point, drift.older_median_days_per_point,
-    );
+    let value_line = t(MessageKey::DriftValueLine {
+        recent_median_days_per_point: drift.recent_median_days_per_point,
+        older_median_days_per_point: drift.older_median_days_per_point,
+    });
 
-    let aria = format!(
-        "Estimation drift: recent {:.2} d/pt vs. older {:.2} d/pt over the last {} days ({}).",
-        drift.recent_median_days_per_point,
-        drift.older_median_days_per_point,
-        drift.window_days,
-        match drift.direction {
-            DriftDirection::Up => "trending up",
-            DriftDirection::Down => "trending down",
-            DriftDirection::Steady => "roughly steady",
-        }
-    );
+    let aria = t(MessageKey::DriftAriaLabel {
+        recent_median_days_per_point: drift.recent_median_days_per_point,
+        older_median_days_per_point: drift.older_median_days_per_point,
+        window_days: drift.window_days,
+        direction,
+    });
 
     view! {
         <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
              role="group"
              aria-label=aria.clone()
              title=aria>
-            <span class="text-xs text-base-content/70">"Pace drift"</span>
+            <span class="text-xs text-base-content/70">{t(MessageKey::PaceDriftChipLabel)}</span>
             <span class="badge badge-sm badge-ghost">
                 <span class="mr-1" aria-hidden="true">{glyph}</span>
                 {direction_label}
@@ -633,17 +622,17 @@ fn render_switching_chip(
     switching: Option<&peisear_core::user_burnout::CognitiveSwitchingPattern>,
 ) -> impl IntoView {
     let Some(s) = switching else {
-        let aria = "Switching pattern: not enough events in the last 14 days \
-                    to characterise a rhythm.";
+        let aria = t(MessageKey::SwitchingInsufficientDataAriaLabel);
+        let aria_title = aria.clone();
         return view! {
             <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
                  role="group"
                  aria-label=aria
-                 title=aria>
-                <span class="text-xs text-base-content/70">"Switching"</span>
+                 title=aria_title>
+                <span class="text-xs text-base-content/70">{t(MessageKey::SwitchingChipLabel)}</span>
                 <span class="badge badge-sm badge-ghost italic">
-                    <span class="mr-1" aria-hidden="true">"—"</span>
-                    "need more data"
+                    <span class="mr-1" aria-hidden="true">{t(MessageKey::NoValuePlaceholder)}</span>
+                    {t(MessageKey::NeedMoreDataLabel)}
                 </span>
             </div>
         }
@@ -654,28 +643,26 @@ fn render_switching_chip(
     // The two numbers together let the user contextualise the
     // median ("4 / day, but only over 7 active days" reads quite
     // differently from "4 / day over 14 active days").
-    let median_value = if s.switches_per_day_median.fract() < 0.05 {
-        format!("{:.0} / active day", s.switches_per_day_median)
-    } else {
-        format!("{:.1} / active day", s.switches_per_day_median)
-    };
-    let sample_line = format!(
-        "{} events over {} d",
-        s.total_events_observed, s.window_days
-    );
+    let median_value = t(MessageKey::SwitchingMedianValue {
+        median: s.switches_per_day_median,
+    });
+    let sample_line = t(MessageKey::SwitchingSampleLine {
+        total_events_observed: s.total_events_observed,
+        window_days: s.window_days,
+    });
 
-    let aria = format!(
-        "Switching pattern: median {} pickups per active day ({} total events over {} days). \
-         For context only — high or low here is not a quality judgement.",
-        median_value, s.total_events_observed, s.window_days
-    );
+    let aria = t(MessageKey::SwitchingAriaLabel {
+        median: s.switches_per_day_median,
+        total_events_observed: s.total_events_observed,
+        window_days: s.window_days,
+    });
 
     view! {
         <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
              role="group"
              aria-label=aria.clone()
              title=aria>
-            <span class="text-xs text-base-content/70">"Switching"</span>
+            <span class="text-xs text-base-content/70">{t(MessageKey::SwitchingChipLabel)}</span>
             <span class="badge badge-sm badge-ghost">
                 {median_value}
             </span>

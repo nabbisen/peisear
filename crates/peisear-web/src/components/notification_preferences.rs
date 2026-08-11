@@ -35,8 +35,10 @@ use peisear_core::notifications::{
     channel::{EMAIL, IN_APP, WEBHOOK},
     kind,
 };
+use peisear_i18n::{MessageKey, NotificationChannelLabel, NotificationKindLabel};
 
 use super::layout::AppShell;
+use super::t;
 
 #[component]
 pub fn PreferencesPage(
@@ -64,26 +66,25 @@ pub fn PreferencesPage(
     let banner = (!global_acknowledged).then(|| {
         view! {
             <section class="alert alert-info mb-4" role="status"
-                     aria-label="First-time email setup prompt">
+                     aria-label=t(MessageKey::FirstTimeEmailPromptAriaLabel)>
                 <div class="flex-1">
-                    <h2 class="font-medium">"Email notifications"</h2>
+                    <h2 class="font-medium">{t(MessageKey::EmailNotificationsHeading)}</h2>
                     <p class="text-sm opacity-90 mt-1">
-                        "Would you like notifications by email as well as in-app? "
-                        "You can change this any time."
+                        {t(MessageKey::EmailOptInPromptBody)}
                     </p>
                 </div>
                 <form method="post" action="/settings/notifications/ack-global"
                       class="flex gap-2 flex-wrap items-center">
                     <input type="hidden" name="email_opt_in" value="yes"/>
                     <button type="submit" class="btn btn-sm btn-primary">
-                        "Yes, send me email"
+                        {t(MessageKey::EmailOptInYesButton)}
                     </button>
                 </form>
                 <form method="post" action="/settings/notifications/ack-global"
                       class="flex gap-2">
                     <input type="hidden" name="email_opt_in" value="no"/>
                     <button type="submit" class="btn btn-sm btn-ghost">
-                        "Just in-app, thanks"
+                        {t(MessageKey::EmailOptInNoButton)}
                     </button>
                 </form>
             </section>
@@ -92,37 +93,39 @@ pub fn PreferencesPage(
 
     let email_status = if email_globally_on {
         view! {
-            <span class="text-xs text-success">"✓ Email opt-in is on by default."</span>
+            <span class="text-xs text-success">{t(MessageKey::EmailOptInOnStatus)}</span>
         }
         .into_any()
     } else {
         view! {
             <span class="text-xs text-base-content/60">
-                "Email opt-in is off (in-app only by default). "
-                "Per-kind overrides below."
+                {t(MessageKey::EmailOptInOffStatus)}
             </span>
         }
         .into_any()
     };
 
+    let notifications_heading = t(MessageKey::NotificationsSectionName);
+    let notifications_breadcrumb = notifications_heading.clone();
+
     view! {
-        <AppShell title="Notification preferences".to_string()
+        <AppShell title=t(MessageKey::NotificationPreferencesPageTitle)
                   user=user
                   flash={None::<String>}
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/settings">"Settings"</a></li>
-                    <li>"Notifications"</li>
+                    <li><a href="/settings">{t(MessageKey::SettingsSectionName)}</a></li>
+                    <li>{notifications_breadcrumb}</li>
                 </ul></div>
                 <div class="flex items-center justify-between mb-4">
-                    <h1 class="text-xl font-semibold">"Notifications"</h1>
+                    <h1 class="text-xl font-semibold">{notifications_heading}</h1>
                     <form method="post" action="/settings/notifications/silence-all"
                           onsubmit="return confirm('Silence all notification kinds? \
                                                     You can re-enable them any time.')">
                         <button type="submit" class="btn btn-sm btn-ghost text-base-content/60"
-                                aria-label="Silence all notification kinds">
-                            "Silence all"
+                                aria-label=t(MessageKey::SilenceAllAriaLabel)>
+                            {t(MessageKey::SilenceAllButton)}
                         </button>
                     </form>
                 </div>
@@ -130,27 +133,27 @@ pub fn PreferencesPage(
                 {banner}
 
                 <p class="text-sm text-base-content/70 mb-3">
-                    "Defaults: in-app delivery on for all kinds. " {email_status}
+                    {t(MessageKey::DefaultsInAppLead)} {email_status}
                 </p>
 
                 <details class="card bg-base-100 border border-base-300 shadow-sm">
                     <summary class="card-body cursor-pointer py-3 flex flex-row items-center justify-between gap-2">
-                        <span class="font-medium">"Per-kind delivery"</span>
+                        <span class="font-medium">{t(MessageKey::PerKindDeliverySummary)}</span>
                         <span class="text-xs text-base-content/50">
-                            "Click to expand"
+                            {t(MessageKey::ClickToExpandHint)}
                         </span>
                     </summary>
                     <div class="px-4 pb-4">
                         <form method="post" action="/settings/notifications" class="space-y-4">
                             <div class="overflow-x-auto">
-                                <table class="table table-sm" aria-label="Notification kinds">
+                                <table class="table table-sm" aria-label=t(MessageKey::NotificationKindsTableAriaLabel)>
                                     <thead>
                                         <tr>
-                                            <th>"Kind"</th>
-                                            <th class="text-center">"In-app"</th>
-                                            <th class="text-center">"Email"</th>
-                                            <th class="text-center">"Webhook"</th>
-                                            <th>"Min severity"</th>
+                                            <th>{t(MessageKey::KindColumnHeading)}</th>
+                                            <th class="text-center">{t(MessageKey::NotificationChannelName { channel: NotificationChannelLabel::InApp })}</th>
+                                            <th class="text-center">{t(MessageKey::NotificationChannelName { channel: NotificationChannelLabel::Email })}</th>
+                                            <th class="text-center">{t(MessageKey::NotificationChannelName { channel: NotificationChannelLabel::Webhook })}</th>
+                                            <th>{t(MessageKey::MinSeverityColumnHeading)}</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -159,13 +162,11 @@ pub fn PreferencesPage(
                                 </table>
                             </div>
                             <p class="text-xs text-base-content/50 italic">
-                                "Email and webhook are stubs in this release — they log "
-                                "the dispatch attempt but don't yet send. The channel "
-                                "structure is ready for the upcoming wasm-smtp integration."
+                                {t(MessageKey::ChannelStubDisclaimer)}
                             </p>
                             <div class="text-right">
                                 <button type="submit" class="btn btn-sm btn-primary">
-                                    "Save preferences"
+                                    {t(MessageKey::SavePreferencesButton)}
                                 </button>
                             </div>
                         </form>
@@ -176,8 +177,24 @@ pub fn PreferencesPage(
     }
 }
 
+/// The closed set of notification kinds this preferences page
+/// renders rows for (`kind::all_user_facing()`) — always resolves.
+/// Defensive `Option` return matches `IssueStatus::parse`'s shape for
+/// an id that could, in principle, be unrecognised.
+fn kind_label_for(kind_id: &str) -> Option<NotificationKindLabel> {
+    match kind_id {
+        kind::BURNOUT_OVERLOAD => Some(NotificationKindLabel::BurnoutOverload),
+        kind::BURNOUT_STALLED => Some(NotificationKindLabel::BurnoutStalled),
+        kind::PROJECT_TREND_DECLINE => Some(NotificationKindLabel::ProjectTrendDecline),
+        _ => None,
+    }
+}
+
 fn render_kind_row(kind_id: &'static str, pref: Option<Preference>) -> impl IntoView {
-    let label = kind::human_name(kind_id);
+    let label = kind_label_for(kind_id);
+    let label_text = label
+        .map(|k| t(MessageKey::NotificationKindName { kind: k }))
+        .unwrap_or_else(|| kind_id.to_string());
 
     let in_app_checked = match &pref {
         Some(p) => p.channels.iter().any(|c| c == IN_APP),
@@ -203,29 +220,31 @@ fn render_kind_row(kind_id: &'static str, pref: Option<Preference>) -> impl Into
     let webhook_name = format!("channel__{kind_id}__{WEBHOOK}");
     let sev_name = format!("min_severity__{kind_id}");
 
+    let row_kind = label.unwrap_or(NotificationKindLabel::BurnoutOverload);
+
     view! {
-        <tr aria-label=format!("{} preferences", label)>
-            <td class="font-medium">{label}</td>
+        <tr aria-label=t(MessageKey::NotificationKindPreferencesAriaLabel { kind: row_kind })>
+            <td class="font-medium">{label_text}</td>
             <td class="text-center">
                 <input type="checkbox" name=in_app_name class="checkbox checkbox-xs"
                        checked=in_app_checked
-                       aria-label=format!("In-app for {}", label)/>
+                       aria-label=t(MessageKey::InAppForKindAriaLabel { kind: row_kind })/>
             </td>
             <td class="text-center">
                 <input type="checkbox" name=email_name class="checkbox checkbox-xs"
                        checked=email_checked
-                       aria-label=format!("Email for {}", label)/>
+                       aria-label=t(MessageKey::EmailForKindAriaLabel { kind: row_kind })/>
             </td>
             <td class="text-center">
                 <input type="checkbox" name=webhook_name class="checkbox checkbox-xs"
                        checked=webhook_checked
-                       aria-label=format!("Webhook for {}", label)/>
+                       aria-label=t(MessageKey::WebhookForKindAriaLabel { kind: row_kind })/>
             </td>
             <td>
                 <select name=sev_name class="select select-bordered select-xs"
-                        aria-label=format!("Minimum severity for {}", label)>
-                    <option value="info" selected=info_selected>"All"</option>
-                    <option value="watch" selected={!info_selected}>"Watch only"</option>
+                        aria-label=t(MessageKey::MinSeverityForKindAriaLabel { kind: row_kind })>
+                    <option value="info" selected=info_selected>{t(MessageKey::AllSeverityOption)}</option>
+                    <option value="watch" selected={!info_selected}>{t(MessageKey::WatchOnlySeverityOption)}</option>
                 </select>
             </td>
         </tr>

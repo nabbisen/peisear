@@ -23,6 +23,7 @@ use axum::{
     response::{IntoResponse, Redirect},
 };
 use chrono::NaiveDate;
+use peisear_i18n::{Locale, MessageKey};
 use peisear_storage::{user_capacities, users};
 use serde::Deserialize;
 
@@ -137,7 +138,10 @@ pub async fn update_wip_limit(
 ) -> AppResult<Redirect> {
     let wip = parse_positive_int(&form.wip_limit, "WIP limit")?;
     users::set_wip_limit(&state.db, &user.id, wip).await?;
-    Ok(Redirect::to("/settings?flash=WIP+limit+saved"))
+    let flash = Locale::English
+        .render(MessageKey::WipLimitSavedFlash)
+        .replace(' ', "+");
+    Ok(Redirect::to(&format!("/settings?flash={flash}")))
 }
 
 /// Insert a new capacity row.
@@ -158,7 +162,12 @@ pub async fn insert_capacity(
 
     match user_capacities::insert(&state.db, &user.id, points, period_start, period_end, note).await
     {
-        Ok(_) => Ok(Redirect::to("/settings?flash=Capacity+row+added")),
+        Ok(_) => {
+            let flash = Locale::English
+                .render(MessageKey::CapacityRowAddedFlash)
+                .replace(' ', "+");
+            Ok(Redirect::to(&format!("/settings?flash={flash}")))
+        }
         Err(peisear_storage::StorageError::Conflict(msg)) => Ok(redirect_with_conflict(&msg)),
         Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
         Err(e) => Err(e.into()),
@@ -226,7 +235,12 @@ pub async fn update_capacity(
     )
     .await
     {
-        Ok(()) => Ok(Redirect::to("/settings?flash=Capacity+row+updated")),
+        Ok(()) => {
+            let flash = Locale::English
+                .render(MessageKey::CapacityRowUpdatedFlash)
+                .replace(' ', "+");
+            Ok(Redirect::to(&format!("/settings?flash={flash}")))
+        }
         Err(peisear_storage::StorageError::Conflict(msg)) => Ok(redirect_with_conflict(&msg)),
         Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
         Err(e) => Err(e.into()),
@@ -257,7 +271,10 @@ pub async fn delete_capacity(
     )?;
 
     user_capacities::delete(&state.db, &user.id, &row_id).await?;
-    Ok(Redirect::to("/settings?flash=Capacity+row+removed"))
+    let flash = Locale::English
+        .render(MessageKey::CapacityRowRemovedFlash)
+        .replace(' ', "+");
+    Ok(Redirect::to(&format!("/settings?flash={flash}")))
 }
 
 #[derive(Debug, Deserialize)]
@@ -289,5 +306,8 @@ pub async fn close_capacity(
     let period_end = parse_date(&form.period_end, "Close date")?
         .ok_or_else(|| AppError::Validation("Close date is required.".into()))?;
     user_capacities::close_at(&state.db, &user.id, &row_id, period_end).await?;
-    Ok(Redirect::to("/settings?flash=Row+closed"))
+    let flash = Locale::English
+        .render(MessageKey::RowClosedFlash)
+        .replace(' ', "+");
+    Ok(Redirect::to(&format!("/settings?flash={flash}")))
 }

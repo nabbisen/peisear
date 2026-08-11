@@ -246,6 +246,76 @@ impl TeamRoleLabel {
     }
 }
 
+/// Which phrase `peisear_core::user_burnout::DriftDirection` renders
+/// as. See [`IssueStatusLabel`]'s doc comment. `DriftDirection::to_i18n_label`
+/// (`peisear-core`, `I18N-005d`) absorbs two local `match` statements
+/// in `me.rs` — a short chip word and a longer "trending ..." phrase,
+/// both keyed off this one enum via two different `MessageKey`s
+/// ([`MessageKey::DriftDirectionWord`], the trend phrase composed
+/// inline in [`MessageKey::DriftAriaLabel`]'s render arm).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DriftDirectionLabel {
+    Up,
+    Down,
+    Steady,
+}
+
+impl DriftDirectionLabel {
+    pub fn all() -> [DriftDirectionLabel; 3] {
+        [
+            DriftDirectionLabel::Up,
+            DriftDirectionLabel::Down,
+            DriftDirectionLabel::Steady,
+        ]
+    }
+}
+
+/// Which word `peisear_core::notifications::kind::human_name` (a
+/// free function over string constants, not a Rust enum — the
+/// storage layer needs a comma-separated string, per that module's
+/// own doc comment) renders as. `I18N-005d` absorbs the function;
+/// unlike the enum-backed `*Label` types above, the string-id ->
+/// label mapping lives in `peisear-web` (the boundary crossing
+/// `peisear-core`'s `to_i18n_label()` methods normally do, but
+/// `peisear-i18n` cannot depend on `peisear-core` to provide one, and
+/// turning `kind`/`channel` into real enums would be an unrelated,
+/// broader storage-layer refactor this handoff doesn't touch).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NotificationKindLabel {
+    BurnoutOverload,
+    BurnoutStalled,
+    ProjectTrendDecline,
+}
+
+impl NotificationKindLabel {
+    pub fn all() -> [NotificationKindLabel; 3] {
+        [
+            NotificationKindLabel::BurnoutOverload,
+            NotificationKindLabel::BurnoutStalled,
+            NotificationKindLabel::ProjectTrendDecline,
+        ]
+    }
+}
+
+/// See [`NotificationKindLabel`]'s doc comment — same shape, same
+/// reason, absorbing `peisear_core::notifications::channel::human_name`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NotificationChannelLabel {
+    InApp,
+    Email,
+    Webhook,
+}
+
+impl NotificationChannelLabel {
+    pub fn all() -> [NotificationChannelLabel; 3] {
+        [
+            NotificationChannelLabel::InApp,
+            NotificationChannelLabel::Email,
+            NotificationChannelLabel::Webhook,
+        ]
+    }
+}
+
 /// One message this crate can render, in every shipped locale.
 ///
 /// A key enum, not a string constant and not a `HashMap<&str, &str>`:
@@ -266,7 +336,15 @@ impl TeamRoleLabel {
 /// data — `I18N-005a-review.md` §2); this crossing is the real one
 /// `RFC 006` D3 anticipated, kept accurate to the variant set as it
 /// stands rather than guarded against in advance.
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// `PartialEq`, not `Eq`: `I18N-005d` adds `f64` fields (pace and
+/// drift figures — genuinely numeric display data, not enumerable
+/// closed vocabulary), and `f64` has no `Eq` impl. No code in this
+/// crate or its consumers compares `MessageKey` values for equality
+/// today (`Debug` and `Clone` cover every real use); `PartialEq` is
+/// kept for parity with the rest of the crate's derive conventions,
+/// not because something depends on it.
+#[derive(Debug, Clone, PartialEq)]
 pub enum MessageKey {
     /// `AppError::Forbidden`'s public message.
     Forbidden,
@@ -1020,6 +1098,387 @@ pub enum MessageKey {
     NoUserWithEmailFound {
         email: String,
     },
+
+    // ---- I18N-005d: components/me ----
+    /// A coarse estimation-skew value. `days_per_point` is data
+    /// (the filtering that decides whether to show it at all —
+    /// finite, positive, not near-zero — stays in `peisear-web`;
+    /// this key only renders an already-decided-worth-showing
+    /// value).
+    PaceValue {
+        days_per_point: f64,
+    },
+    ReadFirstOverloadTitle,
+    ReadFirstOverloadBody {
+        overload_streak_days: i64,
+        window_days: i64,
+    },
+    ReadFirstStalledTitle,
+    ReadFirstStalledBody {
+        stalled_assigned_max_days: i64,
+    },
+    ReadFirstWipTitle,
+    ReadFirstWipBody {
+        current_wip: i64,
+        effective_wip_limit: i64,
+    },
+    ReadFirstLongStaleTitle,
+    /// The "issue"/"issues" pluralisation happens inside this key's
+    /// own render arm, not as a separate `String` parameter — a
+    /// word this crate authors is never data, so it can't cross the
+    /// boundary as a `String` (rule 1), and it isn't reused by any
+    /// other template (rule 3 doesn't call for an enum either).
+    ReadFirstLongStaleBody {
+        long_stale_count: i64,
+    },
+    PersonalDashboardTitle,
+    NothingToShowMessage,
+    /// `FR-PER-001`/`NFR-PRIV-001`: `/today`'s privacy claim.
+    /// `display_name` is genuine user data. Asserted byte-exact by
+    /// `personal_dashboard_privacy_subtitle_renders_byte_identically`
+    /// per `I18N-005d` §7's explicit requirement.
+    PersonalDashboardSubtitle {
+        display_name: String,
+    },
+    ReadFirstAriaLabel,
+    RightNowHeading,
+    WipChipLabel,
+    LoadChipLabel,
+    LoadChipTooltip,
+    PeriodHintTooltip,
+    ThisPeriodHint,
+    RhythmAriaLabel,
+    RhythmSummaryLabel,
+    ThroughputTooltip,
+    ThroughputChipLabel,
+    LongStaleChipLabel,
+    PaceTooltip,
+    PaceChipLabel,
+    WhatDoTheseMeanLabel,
+    /// The glossary's `<strong>"WIP"</strong>` term reuses
+    /// [`MessageKey::WipChipLabel`]; this is only the definition
+    /// clause that follows it, split at the existing `<strong>`
+    /// boundary per the sanctioned-composition rule (`I18N-005c-review`
+    /// §6 — markup requires the split, each fragment is independently
+    /// meaningful).
+    WipGlossaryDefinition,
+    LoadGlossaryDefinition,
+    ThroughputGlossaryDefinition {
+        window_days: i64,
+    },
+    LongStaleGlossaryDefinition {
+        window_days: i64,
+    },
+    PaceGlossaryDefinition,
+    /// Reused as the section `aria-label`, the section `<h2>`, and
+    /// the glossary's `<strong>"Sustainability"</strong>` term — the
+    /// identical word, standalone role, in three places.
+    SustainabilityHeading,
+    SustainabilityGlossaryDefinition,
+    /// Reused as the `<h3>` and the glossary's
+    /// `<strong>"Patterns"</strong>` term.
+    PatternsSubheading,
+    PatternsGlossaryDefinition,
+    OverloadStreakChipLabel,
+    OldestStalledChipLabel,
+    PatternsDisclaimer,
+    /// The panel-level privacy note. Deliberately not unified with
+    /// [`MessageKey::PersonalDashboardSubtitle`]'s "Visible only to
+    /// you." — different sentence, different wording, both genuine.
+    SustainabilityPrivacyNote,
+    OverloadStreakValue {
+        overload_streak_days: i64,
+        window_days: i64,
+    },
+    StalledDaysValue {
+        stalled_assigned_max_days: i64,
+    },
+    /// `is_watch` is the two-value collapse `me.rs`'s own
+    /// `chip_classes` closure already performs locally (`Watch` vs.
+    /// `Good`/`Insufficient` collapsed to "watch"/"steady") — not
+    /// sourced from `DisplayHealthState::glyph()` (that function is
+    /// `I18N-006`'s still-undispatched gap; see the review request's
+    /// finding). A `bool` rather than a two-value enum: this word
+    /// choice isn't a `peisear-core` domain concept with a name of
+    /// its own, just a local presentation collapse, reused across
+    /// exactly these two templates.
+    OverloadStreakAriaLabel {
+        overload_streak_days: i64,
+        is_watch: bool,
+    },
+    StalledAriaLabel {
+        stalled_assigned_max_days: i64,
+        is_watch: bool,
+    },
+    /// The 28-day window is `user_burnout::DRIFT_WINDOW_DAYS`,
+    /// hardcoded in the source as a literal rather than
+    /// interpolated — converted as-is (`I18N-005d` "convert it, do
+    /// not improve it"), not switched to a parameter.
+    DriftInsufficientDataAriaLabel,
+    PaceDriftChipLabel,
+    /// "need more data" — reused by both the drift and switching
+    /// insufficient-data chips.
+    NeedMoreDataLabel,
+    /// The chip's own short word ("longer per point" / "shorter per
+    /// point" / "steady"). See [`MessageKey::DriftAriaLabel`] for the
+    /// longer "trending ..." phrase built from the same
+    /// [`DriftDirectionLabel`].
+    DriftDirectionWord {
+        direction: DriftDirectionLabel,
+    },
+    DriftValueLine {
+        recent_median_days_per_point: f64,
+        older_median_days_per_point: f64,
+    },
+    /// Composes the full sentence — including the long "trending
+    /// ..." phrase — from typed data in this one render arm, per
+    /// `I18N-005c-review` §3's correction: not a pre-rendered
+    /// `String` threaded in from [`MessageKey::DriftDirectionWord`]
+    /// or [`MessageKey::DriftValueLine`].
+    DriftAriaLabel {
+        recent_median_days_per_point: f64,
+        older_median_days_per_point: f64,
+        window_days: i64,
+        direction: DriftDirectionLabel,
+    },
+    /// The 14-day window is `user_burnout::SWITCHING_WINDOW_DAYS`,
+    /// same "converted as-is" note as
+    /// [`MessageKey::DriftInsufficientDataAriaLabel`].
+    SwitchingInsufficientDataAriaLabel,
+    SwitchingChipLabel,
+    SwitchingMedianValue {
+        median: f64,
+    },
+    SwitchingSampleLine {
+        total_events_observed: i64,
+        window_days: i64,
+    },
+    /// **Found, not fixed** (`I18N-005d` §2/§10's "read oddly"
+    /// question, the `ISSUE-006` precedent applied to this screen):
+    /// the source's sentence reads "median N / active day pickups
+    /// per active day (...)" — the median value's own " / active
+    /// day" suffix collides with the surrounding template's "pickups
+    /// per active day", so "per active day" appears twice. Converted
+    /// byte-exactly (recomposed from typed `median: f64` in this
+    /// arm, not threaded in as a pre-rendered `String`, per
+    /// `I18N-005c-review` §3) rather than silently reworded — flagged
+    /// in the review request instead.
+    SwitchingAriaLabel {
+        median: f64,
+        total_events_observed: i64,
+        window_days: i64,
+    },
+
+    // ---- I18N-005d: components/settings ----
+    /// Merges what was two sentences at the call site (a static
+    /// lead plus a `format!`-composed hint) into one key taking the
+    /// raw `default_wip_limit: i64`, avoiding the
+    /// pre-rendered-`String`-as-parameter shape `I18N-005c-review`
+    /// §3 corrected elsewhere.
+    WipLimitExplanation {
+        default_wip_limit: i64,
+    },
+    NoCapacitySetTodayLabel,
+    ConflictLabel,
+    /// `SCR-22`'s overlap-rejection guidance, split at the existing
+    /// `<em>"Close on date"</em>` boundary (sanctioned composition,
+    /// `I18N-005c-review` §6). [`MessageKey::CloseOnDateActionWord`]
+    /// is the emphasised middle fragment.
+    CapacityOverlapGuidanceLead,
+    CloseOnDateActionWord,
+    CapacityOverlapGuidanceTail,
+    /// Reused as the page `<title>`, the breadcrumb leaf, and the
+    /// `<h1>` — identical word, three standalone-heading roles.
+    SettingsSectionName,
+    /// `display_name` is genuine user data.
+    SettingsSubtitle {
+        display_name: String,
+    },
+    CapacitySectionAriaLabel,
+    WorkloadCapacityHeading,
+    CapacityExplanationParagraph,
+    /// Composes "Effective capacity today: ..." from the raw
+    /// `Option<i64>` in one arm, rather than embedding the
+    /// pre-rendered `effective_label` `String` the component used to
+    /// build separately (same class of fix as `I18N-005c-review` §3).
+    EffectiveCapacityTodayAriaLabel {
+        points: Option<i64>,
+    },
+    EffectiveTodayLabel,
+    CapacityRowsTableAriaLabel,
+    /// Reused: the table column heading and both forms' field label
+    /// (add-row and edit-row) all say bare "Points".
+    PointsColumnHeading,
+    /// Reused: the table column heading and the edit-row form's
+    /// field label both say bare "From".
+    FromColumnHeading,
+    /// The add-row form's field label spells out the format —
+    /// different text from [`MessageKey::FromColumnHeading`], not
+    /// unified.
+    FromDateFieldLabel,
+    ToColumnHeading,
+    ToDateFieldLabel,
+    /// Reused: the table column heading and both forms' field label.
+    NoteColumnHeading,
+    ActionsColumnHeading,
+    AddCapacityRowSummary,
+    AddCapacityRowFormAriaLabel,
+    PointsPlaceholderExample,
+    NoteFieldPlaceholder,
+    AddRowButton,
+    CapacityOverlapHelperText,
+    /// Reused as the section `aria-label`, the section `<h2>`, and
+    /// the WIP-limit form field's own label — identical word, three
+    /// standalone roles.
+    WipLimitLabel,
+    InProgressIssuesHint,
+    /// `from`/`to` are formatted dates or [`MessageKey::NoValuePlaceholder`]'s
+    /// "—" — formatted data, not copy (`I18N-005c-review` §3's
+    /// carve-out for `dates: String` applies the same way here).
+    CapacityRowAriaLabel {
+        points: i64,
+        from: String,
+        to: String,
+    },
+    CloseOnDateSummary,
+    CloseThisRowAriaLabel,
+    CloseOnLabel,
+    CloseButton,
+    EditRowAriaLabel,
+    RemoveThisRowAriaLabel,
+
+    // ---- I18N-005d: components/{notification_preferences,notifications} ----
+    EmailNotificationsHeading,
+    FirstTimeEmailPromptAriaLabel,
+    EmailOptInPromptBody,
+    EmailOptInYesButton,
+    EmailOptInNoButton,
+    EmailOptInOnStatus,
+    EmailOptInOffStatus,
+    NotificationPreferencesPageTitle,
+    /// Reused as this page's breadcrumb leaf and `<h1>`, and as
+    /// `/inbox`'s own page `<title>`/`<h1>` — identical word across
+    /// both pages, same standalone-heading role.
+    NotificationsSectionName,
+    SilenceAllAriaLabel,
+    SilenceAllButton,
+    DefaultsInAppLead,
+    PerKindDeliverySummary,
+    ClickToExpandHint,
+    NotificationKindsTableAriaLabel,
+    KindColumnHeading,
+    MinSeverityColumnHeading,
+    ChannelStubDisclaimer,
+    SavePreferencesButton,
+    NotificationKindPreferencesAriaLabel {
+        kind: NotificationKindLabel,
+    },
+    InAppForKindAriaLabel {
+        kind: NotificationKindLabel,
+    },
+    EmailForKindAriaLabel {
+        kind: NotificationKindLabel,
+    },
+    WebhookForKindAriaLabel {
+        kind: NotificationKindLabel,
+    },
+    MinSeverityForKindAriaLabel {
+        kind: NotificationKindLabel,
+    },
+    AllSeverityOption,
+    WatchOnlySeverityOption,
+    /// Absorbs `peisear_core::notifications::kind::human_name` — see
+    /// [`NotificationKindLabel`]'s doc comment. Also reused as the
+    /// per-kind row's visible label.
+    NotificationKindName {
+        kind: NotificationKindLabel,
+    },
+    /// Absorbs `peisear_core::notifications::channel::human_name` —
+    /// see [`NotificationChannelLabel`]'s doc comment. Reused as the
+    /// preferences table's In-app/Email/Webhook column headings
+    /// (identical words) and the inbox row's "Sent via ..." list.
+    NotificationChannelName {
+        channel: NotificationChannelLabel,
+    },
+    NoNotificationsYetStatus,
+    UnreadOfTotalStatus {
+        unread_count: i64,
+        total: i64,
+    },
+    AllReadStatus {
+        total: i64,
+    },
+    MarkAllReadAriaLabel,
+    MarkAllReadButton,
+    InboxEmptyMessage,
+    /// Split around the `<a href="/settings/notifications">` link
+    /// (sanctioned composition, `I18N-005c-review` §6).
+    /// [`MessageKey::SettingsLinkWord`] is the link text.
+    InboxEmptyFooterLead,
+    /// Lowercase "settings" as the inline link text — distinct from
+    /// [`MessageKey::SettingsSectionName`]'s capitalised standalone
+    /// heading, same non-coupling as `NavLinkToday` vs. the lowercase
+    /// back-link "today" (`I18N-005a`).
+    SettingsLinkWord,
+    InboxEmptyFooterTail,
+    NotificationListAriaLabel,
+    /// Reused as the unread badge's own `aria-label` and as the
+    /// composed row `aria-label`'s internal word choice (with
+    /// [`MessageKey::ReadWord`]) — one word, two render sites.
+    UnreadWord,
+    ReadWord,
+    /// `is_unread` drives the internal `Unread`/`Read` word choice
+    /// (via [`MessageKey::UnreadWord`]/[`MessageKey::ReadWord`],
+    /// rendered inline in this arm rather than threaded in as a
+    /// pre-rendered `String`). `title` is genuine user data;
+    /// `timestamp` is formatted data, not copy.
+    NotificationRowAriaLabel {
+        is_unread: bool,
+        title: String,
+        kind: NotificationKindLabel,
+        timestamp: String,
+    },
+    SentViaPrefix,
+    ViewContextLinkLabel,
+    MarkAsReadAriaLabel,
+    MarkReadButton,
+
+    // ---- I18N-005d: components/search ----
+    /// Reused as the page `<title>` (empty-query case), the submit
+    /// button, and the search form's own `aria-label` — identical
+    /// word, three standalone roles.
+    SearchWord,
+    /// `q` is genuine user data (the search query, echoed back).
+    SearchPageTitleWithQuery {
+        q: String,
+    },
+    SearchFieldLabel,
+    SearchPlaceholder,
+    ResultsForHeadingPrefix,
+    /// `SCR-24`'s blank-query guidance — copy, must survive
+    /// conversion intact per `I18N-005d` §5.
+    NoQueryGuidanceMessage,
+    OpenIssuesSectionName,
+    NoMatchesInCategoryMessage,
+    PreviousPageLink,
+    NextPageLink,
+    ProjectHitTypeLabel,
+    /// `project_name` is genuine user data.
+    OpenIssueHitTypePrefix {
+        project_name: String,
+    },
+
+    // ---- I18N-005d: handlers/{settings,notification_preferences,notifications} ----
+    WipLimitSavedFlash,
+    CapacityRowAddedFlash,
+    CapacityRowUpdatedFlash,
+    CapacityRowRemovedFlash,
+    RowClosedFlash,
+    PreferencesSavedFlash,
+    AllNotificationsSilencedFlash,
+    MarkedAsReadFlash {
+        count: i64,
+    },
 }
 
 impl MessageKey {
@@ -1033,7 +1492,9 @@ impl MessageKey {
     ///
     /// - **Closed system vocabulary** ([`EntityKind`], [`Field`],
     ///   [`IndicatorLabel`], [`NavSection`], [`IssueStatusLabel`],
-    ///   [`PriorityLabel`], [`SprintStatusLabel`], [`TeamRoleLabel`])
+    ///   [`PriorityLabel`], [`SprintStatusLabel`], [`TeamRoleLabel`],
+    ///   [`DriftDirectionLabel`], [`NotificationKindLabel`],
+    ///   [`NotificationChannelLabel`])
     ///   — never open-ended user data, so every value is enumerated.
     ///   This is genuinely "every entry of every locale table" for
     ///   these: the full, finite output space.
@@ -1369,6 +1830,208 @@ impl MessageKey {
             MessageKey::NoUserWithEmailFound {
                 email: "alice@example.com".to_string(),
             },
+            MessageKey::PaceValue {
+                days_per_point: 2.3,
+            },
+            MessageKey::ReadFirstOverloadTitle,
+            MessageKey::ReadFirstOverloadBody {
+                overload_streak_days: 3,
+                window_days: 5,
+            },
+            MessageKey::ReadFirstStalledTitle,
+            MessageKey::ReadFirstStalledBody {
+                stalled_assigned_max_days: 10,
+            },
+            MessageKey::ReadFirstWipTitle,
+            MessageKey::ReadFirstWipBody {
+                current_wip: 5,
+                effective_wip_limit: 3,
+            },
+            MessageKey::ReadFirstLongStaleTitle,
+            MessageKey::ReadFirstLongStaleBody {
+                long_stale_count: 1,
+            },
+            MessageKey::PersonalDashboardTitle,
+            MessageKey::NothingToShowMessage,
+            MessageKey::PersonalDashboardSubtitle {
+                display_name: "Alex".to_string(),
+            },
+            MessageKey::ReadFirstAriaLabel,
+            MessageKey::RightNowHeading,
+            MessageKey::WipChipLabel,
+            MessageKey::LoadChipLabel,
+            MessageKey::LoadChipTooltip,
+            MessageKey::PeriodHintTooltip,
+            MessageKey::ThisPeriodHint,
+            MessageKey::RhythmAriaLabel,
+            MessageKey::RhythmSummaryLabel,
+            MessageKey::ThroughputTooltip,
+            MessageKey::ThroughputChipLabel,
+            MessageKey::LongStaleChipLabel,
+            MessageKey::PaceTooltip,
+            MessageKey::PaceChipLabel,
+            MessageKey::WhatDoTheseMeanLabel,
+            MessageKey::WipGlossaryDefinition,
+            MessageKey::LoadGlossaryDefinition,
+            MessageKey::ThroughputGlossaryDefinition { window_days: 30 },
+            MessageKey::LongStaleGlossaryDefinition { window_days: 30 },
+            MessageKey::PaceGlossaryDefinition,
+            MessageKey::SustainabilityHeading,
+            MessageKey::SustainabilityGlossaryDefinition,
+            MessageKey::PatternsSubheading,
+            MessageKey::PatternsGlossaryDefinition,
+            MessageKey::OverloadStreakChipLabel,
+            MessageKey::OldestStalledChipLabel,
+            MessageKey::PatternsDisclaimer,
+            MessageKey::SustainabilityPrivacyNote,
+            MessageKey::OverloadStreakValue {
+                overload_streak_days: 3,
+                window_days: 5,
+            },
+            MessageKey::StalledDaysValue {
+                stalled_assigned_max_days: 10,
+            },
+            MessageKey::OverloadStreakAriaLabel {
+                overload_streak_days: 3,
+                is_watch: true,
+            },
+            MessageKey::StalledAriaLabel {
+                stalled_assigned_max_days: 10,
+                is_watch: false,
+            },
+            MessageKey::DriftInsufficientDataAriaLabel,
+            MessageKey::PaceDriftChipLabel,
+            MessageKey::NeedMoreDataLabel,
+            MessageKey::DriftValueLine {
+                recent_median_days_per_point: 1.5,
+                older_median_days_per_point: 1.2,
+            },
+            MessageKey::SwitchingInsufficientDataAriaLabel,
+            MessageKey::SwitchingChipLabel,
+            MessageKey::SwitchingMedianValue { median: 4.0 },
+            MessageKey::SwitchingSampleLine {
+                total_events_observed: 12,
+                window_days: 14,
+            },
+            MessageKey::SwitchingAriaLabel {
+                median: 4.3,
+                total_events_observed: 12,
+                window_days: 14,
+            },
+            MessageKey::WipLimitExplanation {
+                default_wip_limit: 3,
+            },
+            MessageKey::NoCapacitySetTodayLabel,
+            MessageKey::ConflictLabel,
+            MessageKey::CapacityOverlapGuidanceLead,
+            MessageKey::CloseOnDateActionWord,
+            MessageKey::CapacityOverlapGuidanceTail,
+            MessageKey::SettingsSectionName,
+            MessageKey::SettingsSubtitle {
+                display_name: "Alex".to_string(),
+            },
+            MessageKey::CapacitySectionAriaLabel,
+            MessageKey::WorkloadCapacityHeading,
+            MessageKey::CapacityExplanationParagraph,
+            MessageKey::EffectiveCapacityTodayAriaLabel { points: Some(8) },
+            MessageKey::EffectiveTodayLabel,
+            MessageKey::CapacityRowsTableAriaLabel,
+            MessageKey::PointsColumnHeading,
+            MessageKey::FromColumnHeading,
+            MessageKey::FromDateFieldLabel,
+            MessageKey::ToColumnHeading,
+            MessageKey::ToDateFieldLabel,
+            MessageKey::NoteColumnHeading,
+            MessageKey::ActionsColumnHeading,
+            MessageKey::AddCapacityRowSummary,
+            MessageKey::AddCapacityRowFormAriaLabel,
+            MessageKey::PointsPlaceholderExample,
+            MessageKey::NoteFieldPlaceholder,
+            MessageKey::AddRowButton,
+            MessageKey::CapacityOverlapHelperText,
+            MessageKey::WipLimitLabel,
+            MessageKey::InProgressIssuesHint,
+            MessageKey::CapacityRowAriaLabel {
+                points: 8,
+                from: "2026-08-01".to_string(),
+                to: "2026-08-31".to_string(),
+            },
+            MessageKey::CloseOnDateSummary,
+            MessageKey::CloseThisRowAriaLabel,
+            MessageKey::CloseOnLabel,
+            MessageKey::CloseButton,
+            MessageKey::EditRowAriaLabel,
+            MessageKey::RemoveThisRowAriaLabel,
+            MessageKey::EmailNotificationsHeading,
+            MessageKey::FirstTimeEmailPromptAriaLabel,
+            MessageKey::EmailOptInPromptBody,
+            MessageKey::EmailOptInYesButton,
+            MessageKey::EmailOptInNoButton,
+            MessageKey::EmailOptInOnStatus,
+            MessageKey::EmailOptInOffStatus,
+            MessageKey::NotificationPreferencesPageTitle,
+            MessageKey::NotificationsSectionName,
+            MessageKey::SilenceAllAriaLabel,
+            MessageKey::SilenceAllButton,
+            MessageKey::DefaultsInAppLead,
+            MessageKey::PerKindDeliverySummary,
+            MessageKey::ClickToExpandHint,
+            MessageKey::NotificationKindsTableAriaLabel,
+            MessageKey::KindColumnHeading,
+            MessageKey::MinSeverityColumnHeading,
+            MessageKey::ChannelStubDisclaimer,
+            MessageKey::SavePreferencesButton,
+            MessageKey::AllSeverityOption,
+            MessageKey::WatchOnlySeverityOption,
+            MessageKey::NoNotificationsYetStatus,
+            MessageKey::UnreadOfTotalStatus {
+                unread_count: 2,
+                total: 5,
+            },
+            MessageKey::AllReadStatus { total: 5 },
+            MessageKey::MarkAllReadAriaLabel,
+            MessageKey::MarkAllReadButton,
+            MessageKey::InboxEmptyMessage,
+            MessageKey::InboxEmptyFooterLead,
+            MessageKey::SettingsLinkWord,
+            MessageKey::InboxEmptyFooterTail,
+            MessageKey::NotificationListAriaLabel,
+            MessageKey::UnreadWord,
+            MessageKey::ReadWord,
+            MessageKey::NotificationRowAriaLabel {
+                is_unread: true,
+                title: "Overload streak".to_string(),
+                kind: NotificationKindLabel::BurnoutOverload,
+                timestamp: "2026-08-11 09:00 UTC".to_string(),
+            },
+            MessageKey::SentViaPrefix,
+            MessageKey::ViewContextLinkLabel,
+            MessageKey::MarkAsReadAriaLabel,
+            MessageKey::MarkReadButton,
+            MessageKey::SearchWord,
+            MessageKey::SearchPageTitleWithQuery {
+                q: "kanban".to_string(),
+            },
+            MessageKey::SearchFieldLabel,
+            MessageKey::SearchPlaceholder,
+            MessageKey::ResultsForHeadingPrefix,
+            MessageKey::NoQueryGuidanceMessage,
+            MessageKey::OpenIssuesSectionName,
+            MessageKey::NoMatchesInCategoryMessage,
+            MessageKey::PreviousPageLink,
+            MessageKey::NextPageLink,
+            MessageKey::ProjectHitTypeLabel,
+            MessageKey::OpenIssueHitTypePrefix {
+                project_name: "Frontend Engineering".to_string(),
+            },
+            MessageKey::WipLimitSavedFlash,
+            MessageKey::CapacityRowAddedFlash,
+            MessageKey::CapacityRowUpdatedFlash,
+            MessageKey::CapacityRowRemovedFlash,
+            MessageKey::RowClosedFlash,
+            MessageKey::PreferencesSavedFlash,
+            MessageKey::AllNotificationsSilencedFlash,
+            MessageKey::MarkedAsReadFlash { count: 3 },
         ];
         keys.extend(
             EntityKind::all()
@@ -1436,6 +2099,34 @@ impl MessageKey {
             TeamRoleLabel::all()
                 .into_iter()
                 .map(|label| MessageKey::TeamRoleName { label }),
+        );
+        // Every DriftDirectionLabel value, per I18N-005d's absorption
+        // of DriftDirection's two local matches in me.rs.
+        keys.extend(
+            DriftDirectionLabel::all()
+                .into_iter()
+                .map(|direction| MessageKey::DriftDirectionWord { direction }),
+        );
+        keys.extend(DriftDirectionLabel::all().into_iter().map(|direction| {
+            MessageKey::DriftAriaLabel {
+                recent_median_days_per_point: 1.5,
+                older_median_days_per_point: 1.2,
+                window_days: 28,
+                direction,
+            }
+        }));
+        // Every NotificationKindLabel and NotificationChannelLabel
+        // value, per I18N-005d's absorption of
+        // notifications::kind::human_name()/channel::human_name().
+        keys.extend(
+            NotificationKindLabel::all()
+                .into_iter()
+                .map(|kind| MessageKey::NotificationKindName { kind }),
+        );
+        keys.extend(
+            NotificationChannelLabel::all()
+                .into_iter()
+                .map(|channel| MessageKey::NotificationChannelName { channel }),
         );
         keys
     }

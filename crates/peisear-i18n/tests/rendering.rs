@@ -70,6 +70,20 @@ fn no_rendered_output_contains_a_key_shaped_literal() {
     }
 }
 
+/// `I18N-005d` §7: `/today`'s privacy claim (`FR-PER-001`/`NFR-PRIV-001`)
+/// must survive conversion — a conversion that dropped it would be invisible
+/// to every other test, since nothing else on this screen depends on the
+/// exact wording.
+#[test]
+fn personal_dashboard_privacy_subtitle_renders_byte_identically() {
+    assert_eq!(
+        Locale::English.render(MessageKey::PersonalDashboardSubtitle {
+            display_name: "Alex".to_string(),
+        }),
+        "Personal metrics for Alex. Visible only to you."
+    );
+}
+
 /// `I18N-005c` §5: `FR-TEAM-005`'s privacy footnote is a requirement-quoted
 /// string ("management role, not an oversight role" is the acceptance
 /// criterion) — "semantically identical" isn't a tight enough bar for it, so

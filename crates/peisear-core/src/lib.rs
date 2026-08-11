@@ -1513,6 +1513,20 @@ pub mod user_burnout {
         Steady,
     }
 
+    impl DriftDirection {
+        /// See `TeamRole::to_i18n_label` — same absorption, same
+        /// reason. `I18N-005d` finds `me.rs` matching on this enum
+        /// twice locally (a short chip word and a longer "trending
+        /// ..." phrase) rather than through the message table.
+        pub fn to_i18n_label(self) -> peisear_i18n::DriftDirectionLabel {
+            match self {
+                Self::Up => peisear_i18n::DriftDirectionLabel::Up,
+                Self::Down => peisear_i18n::DriftDirectionLabel::Down,
+                Self::Steady => peisear_i18n::DriftDirectionLabel::Steady,
+            }
+        }
+    }
+
     /// Computed estimation drift over the configured window. Built
     /// by `peisear-storage::user_burnout::estimation_drift_for_user`.
     ///
@@ -1788,16 +1802,6 @@ pub mod notifications {
         /// first).
         pub const ALL_CHANNELS: &[&str] = &[IN_APP, EMAIL, WEBHOOK];
 
-        /// Pretty name for UI labels.
-        pub fn human_name(id: &str) -> &str {
-            match id {
-                IN_APP => "In-app",
-                EMAIL => "Email",
-                WEBHOOK => "Webhook",
-                _ => id,
-            }
-        }
-
         /// All channels known to this build. Used by the
         /// preferences page to render the full toggle list.
         pub fn all() -> &'static [&'static str] {
@@ -1818,17 +1822,6 @@ pub mod notifications {
         pub const BURNOUT_OVERLOAD: &str = "burnout_overload";
         pub const BURNOUT_STALLED: &str = "burnout_stalled";
         pub const PROJECT_TREND_DECLINE: &str = "project_trend_decline";
-
-        /// Pretty label for the preferences UI. Unknown kinds
-        /// render with their raw id.
-        pub fn human_name(k: &str) -> &str {
-            match k {
-                BURNOUT_OVERLOAD => "Sustained over-capacity streak",
-                BURNOUT_STALLED => "Long-stalled assigned work",
-                PROJECT_TREND_DECLINE => "Project health decline",
-                _ => k,
-            }
-        }
 
         /// Canonical kinds shown on the preferences page (in
         /// this order). `GLOBAL` is intentionally absent.

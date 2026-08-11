@@ -12,9 +12,11 @@ use axum::response::Html;
 use leptos::prelude::*;
 
 use peisear_core::CurrentUser;
+use peisear_i18n::MessageKey;
 use peisear_storage::search::SearchHit;
 
 use super::layout::AppShell;
+use super::t;
 
 #[allow(clippy::too_many_arguments)]
 pub fn render_results(
@@ -52,9 +54,9 @@ fn SearchResultsPage(
     has_more_issues: bool,
 ) -> impl IntoView {
     let title = if q.is_empty() {
-        "Search".to_string()
+        t(MessageKey::SearchWord)
     } else {
-        format!("Search: {q}")
+        t(MessageKey::SearchPageTitleWithQuery { q: q.clone() })
     };
     let q_for_form = q.clone();
     let q_for_heading = q.clone();
@@ -70,39 +72,39 @@ fn SearchResultsPage(
             // navbar typeahead.
             <form method="get" action="/search"
                   class="mb-6 flex gap-2 items-end max-w-xl"
-                  aria-label="Search">
+                  aria-label=t(MessageKey::SearchWord)>
                 <label class="form-control flex-1">
                     <div class="label py-0">
-                        <span class="label-text text-sm">"Search projects and open issues"</span>
+                        <span class="label-text text-sm">{t(MessageKey::SearchFieldLabel)}</span>
                     </div>
                     <input type="search"
                            name="q"
                            value=q_for_form
                            autofocus=true
-                           placeholder="Type to search..."
+                           placeholder=t(MessageKey::SearchPlaceholder)
                            class="input input-bordered input-sm w-full"/>
                 </label>
-                <button type="submit" class="btn btn-sm btn-primary">"Search"</button>
+                <button type="submit" class="btn btn-sm btn-primary">{t(MessageKey::SearchWord)}</button>
             </form>
 
             {if has_query {
                 view! {
                     <h1 class="text-xl font-semibold mb-4">
-                        "Results for "
+                        {t(MessageKey::ResultsForHeadingPrefix)}
                         <span class="font-mono">{format!("\"{q_for_heading}\"")}</span>
                     </h1>
                 }.into_any()
             } else {
                 view! {
                     <p class="text-sm text-base-content/60">
-                        "Enter a search term above to find projects and open issues."
+                        {t(MessageKey::NoQueryGuidanceMessage)}
                     </p>
                 }.into_any()
             }}
 
             {has_query.then(|| view! {
                 <SearchSection
-                    section_title="Projects".to_string()
+                    section_title=t(MessageKey::ProjectsSectionName)
                     hits=projects
                     page=page
                     has_more=has_more_projects
@@ -110,7 +112,7 @@ fn SearchResultsPage(
                     section_kind=SectionKind::Projects
                 />
                 <SearchSection
-                    section_title="Open issues".to_string()
+                    section_title=t(MessageKey::OpenIssuesSectionName)
                     hits=issues
                     page=page
                     has_more=has_more_issues
@@ -157,7 +159,7 @@ fn SearchSection(
             {if is_empty {
                 view! {
                     <p class="text-sm text-base-content/60 italic mb-2">
-                        "No matches in this category."
+                        {t(MessageKey::NoMatchesInCategoryMessage)}
                     </p>
                 }.into_any()
             } else {
@@ -175,7 +177,7 @@ fn SearchSection(
                             urlencode(&q_prev), prev_page);
                         view! {
                             <a href=prev_url class="link link-hover">
-                                "← Previous"
+                                {t(MessageKey::PreviousPageLink)}
                             </a>
                         }
                     })}
@@ -184,7 +186,7 @@ fn SearchSection(
                             urlencode(&q_next), next_page);
                         view! {
                             <a href=next_url class="link link-hover">
-                                "Next →"
+                                {t(MessageKey::NextPageLink)}
                             </a>
                         }
                     })}
@@ -203,7 +205,7 @@ fn SearchHitRow(hit: SearchHit) -> impl IntoView {
                 <li>
                     <a href=url class="block px-3 py-2 hover:bg-base-200">
                         <div class="font-medium">{name}</div>
-                        <div class="text-xs text-base-content/60">"Project"</div>
+                        <div class="text-xs text-base-content/60">{t(MessageKey::ProjectHitTypeLabel)}</div>
                     </a>
                 </li>
             }
@@ -221,7 +223,7 @@ fn SearchHitRow(hit: SearchHit) -> impl IntoView {
                     <a href=url class="block px-3 py-2 hover:bg-base-200">
                         <div class="font-medium">{title}</div>
                         <div class="text-xs text-base-content/60">
-                            "Open issue · "{project_name}
+                            {t(MessageKey::OpenIssueHitTypePrefix { project_name })}
                         </div>
                     </a>
                 </li>

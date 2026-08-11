@@ -25,7 +25,9 @@ use axum::response::Html;
 use leptos::prelude::*;
 
 use super::layout::AppShell;
+use super::t;
 use peisear_core::{CurrentUser, personal_metrics::DEFAULT_WIP_LIMIT};
+use peisear_i18n::MessageKey;
 use peisear_storage::user_capacities::CapacityRow;
 
 #[component]
@@ -39,12 +41,13 @@ pub fn SettingsPage(
 ) -> impl IntoView {
     let wip_value = wip_limit.map(|n| n.to_string()).unwrap_or_default();
     let display_name = user.display_name.clone();
-    let default_wip_hint =
-        format!("Leave blank to use the project default (or {DEFAULT_WIP_LIMIT}).");
 
+    let effective_label_aria = t(MessageKey::EffectiveCapacityTodayAriaLabel {
+        points: effective_today,
+    });
     let effective_label = match effective_today {
-        Some(n) => format!("{n} pt"),
-        None => "no capacity set for today".to_string(),
+        Some(n) => t(MessageKey::PointsValue { points: n }),
+        None => t(MessageKey::NoCapacitySetTodayLabel),
     };
 
     let capacity_rows_view = capacity_rows
@@ -57,58 +60,57 @@ pub fn SettingsPage(
             <div role="alert"
                  class="alert alert-warning text-sm mb-4"
                  aria-live="polite">
-                <span class="font-medium">"Conflict: "</span>
+                <span class="font-medium">{t(MessageKey::ConflictLabel)}</span>
                 <span>{msg.clone()}</span>
                 <p class="text-xs mt-1 opacity-80">
-                    "Close the conflicting row first (use the "
-                    <em>"Close on date"</em>
-                    " action), or adjust the new period so it doesn't overlap."
+                    {t(MessageKey::CapacityOverlapGuidanceLead)}
+                    <em>{t(MessageKey::CloseOnDateActionWord)}</em>
+                    {t(MessageKey::CapacityOverlapGuidanceTail)}
                 </p>
             </div>
         }
     });
 
+    let settings_heading = t(MessageKey::SettingsSectionName);
+    let settings_breadcrumb = settings_heading.clone();
+
     view! {
-        <AppShell title="Settings".to_string() user=user flash=flash>
+        <AppShell title=t(MessageKey::SettingsSectionName) user=user flash=flash>
             <div class="max-w-3xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li>"Settings"</li>
+                    <li>{settings_breadcrumb}</li>
                 </ul></div>
-                <h1 class="text-xl font-semibold mb-1">"Settings"</h1>
+                <h1 class="text-xl font-semibold mb-1">{settings_heading}</h1>
                 <p class="text-sm text-base-content/60 mb-6">
-                    "Personal preferences for " {display_name} "."
+                    {t(MessageKey::SettingsSubtitle { display_name })}
                 </p>
 
                 {error_block}
 
                 <section class="card bg-base-100 border border-base-300 shadow-sm mb-4"
-                         aria-label="Capacity">
+                         aria-label=t(MessageKey::CapacitySectionAriaLabel)>
                     <div class="card-body gap-3">
-                        <h2 class="text-base font-medium">"Workload capacity"</h2>
+                        <h2 class="text-base font-medium">{t(MessageKey::WorkloadCapacityHeading)}</h2>
                         <p class="text-sm text-base-content/70">
-                            "Capacity rows describe how many story points you \
-                             can comfortably carry, optionally bounded by a \
-                             period. The row whose period covers today is \
-                             your effective capacity. Periods may not overlap; \
-                             leave both bounds blank for an open-ended default."
+                            {t(MessageKey::CapacityExplanationParagraph)}
                         </p>
 
                         <div class="text-sm py-2 px-3 rounded bg-base-200/60"
                              role="status"
-                             aria-label=format!("Effective capacity today: {}", effective_label.clone())>
-                            <span class="text-base-content/60">"Effective today: "</span>
-                            <span class="font-medium">{effective_label.clone()}</span>
+                             aria-label=effective_label_aria>
+                            <span class="text-base-content/60">{t(MessageKey::EffectiveTodayLabel)}</span>
+                            <span class="font-medium">{effective_label}</span>
                         </div>
 
                         <div class="overflow-x-auto">
-                            <table class="table table-sm" aria-label="Capacity rows">
+                            <table class="table table-sm" aria-label=t(MessageKey::CapacityRowsTableAriaLabel)>
                                 <thead>
                                     <tr>
-                                        <th>"Points"</th>
-                                        <th>"From"</th>
-                                        <th>"To"</th>
-                                        <th>"Note"</th>
-                                        <th>"Actions"</th>
+                                        <th>{t(MessageKey::PointsColumnHeading)}</th>
+                                        <th>{t(MessageKey::FromColumnHeading)}</th>
+                                        <th>{t(MessageKey::ToColumnHeading)}</th>
+                                        <th>{t(MessageKey::NoteColumnHeading)}</th>
+                                        <th>{t(MessageKey::ActionsColumnHeading)}</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -119,71 +121,65 @@ pub fn SettingsPage(
 
                         <details class="mt-2">
                             <summary class="cursor-pointer text-sm">
-                                "Add a capacity row"
+                                {t(MessageKey::AddCapacityRowSummary)}
                             </summary>
                             <form method="post" action="/settings/capacity"
                                   class="mt-3 flex flex-wrap items-end gap-3"
-                                  aria-label="Add capacity row">
+                                  aria-label=t(MessageKey::AddCapacityRowFormAriaLabel)>
                                 <label class="form-control">
                                     <div class="label py-1">
-                                        <span class="label-text text-sm">"Points"</span>
+                                        <span class="label-text text-sm">{t(MessageKey::PointsColumnHeading)}</span>
                                     </div>
                                     <input type="number" name="points" min="1" max="999"
                                            required
-                                           placeholder="e.g. 10"
+                                           placeholder=t(MessageKey::PointsPlaceholderExample)
                                            class="input input-bordered input-sm w-24"/>
                                 </label>
                                 <label class="form-control">
                                     <div class="label py-1">
-                                        <span class="label-text text-sm">"From (YYYY-MM-DD)"</span>
+                                        <span class="label-text text-sm">{t(MessageKey::FromDateFieldLabel)}</span>
                                     </div>
                                     <input type="date" name="period_start"
                                            class="input input-bordered input-sm"/>
                                 </label>
                                 <label class="form-control">
                                     <div class="label py-1">
-                                        <span class="label-text text-sm">"To (YYYY-MM-DD)"</span>
+                                        <span class="label-text text-sm">{t(MessageKey::ToDateFieldLabel)}</span>
                                     </div>
                                     <input type="date" name="period_end"
                                            class="input input-bordered input-sm"/>
                                 </label>
                                 <label class="form-control flex-1 min-w-[12rem]">
                                     <div class="label py-1">
-                                        <span class="label-text text-sm">"Note"</span>
+                                        <span class="label-text text-sm">{t(MessageKey::NoteColumnHeading)}</span>
                                     </div>
                                     <input type="text" name="note" maxlength="120"
-                                           placeholder="optional context"
+                                           placeholder=t(MessageKey::NoteFieldPlaceholder)
                                            class="input input-bordered input-sm w-full"/>
                                 </label>
                                 <button type="submit" class="btn btn-primary btn-sm">
-                                    "Add row"
+                                    {t(MessageKey::AddRowButton)}
                                 </button>
                             </form>
                             <p class="mt-2 text-xs text-base-content/60">
-                                "Both date fields are optional. Leave blank to mean \
-                                 \"from the dawn of time\" (start) or \"until further \
-                                 notice\" (end). Adding a row that overlaps an \
-                                 existing one will fail; close the existing row first."
+                                {t(MessageKey::CapacityOverlapHelperText)}
                             </p>
                         </details>
                     </div>
                 </section>
 
                 <section class="card bg-base-100 border border-base-300 shadow-sm"
-                         aria-label="WIP limit">
+                         aria-label=t(MessageKey::WipLimitLabel)>
                     <form method="post" action="/settings/wip-limit"
                           class="card-body gap-3">
-                        <h2 class="text-base font-medium">"WIP limit"</h2>
+                        <h2 class="text-base font-medium">{t(MessageKey::WipLimitLabel)}</h2>
                         <p class="text-sm text-base-content/70">
-                            "How many issues you want to have In Progress at once. \
-                             This is about cognitive load — a small number of \
-                             actively-worked issues, distinct from the points-budget \
-                             above. " {default_wip_hint}
+                            {t(MessageKey::WipLimitExplanation { default_wip_limit: DEFAULT_WIP_LIMIT })}
                         </p>
                         <label class="form-control w-full max-w-xs">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"WIP limit"</span>
-                                <span class="label-text-alt text-xs opacity-60">"in-progress issues"</span>
+                                <span class="label-text text-sm">{t(MessageKey::WipLimitLabel)}</span>
+                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::InProgressIssuesHint)}</span>
                             </div>
                             <input type="number" name="wip_limit" min="1" max="99"
                                    value=wip_value
@@ -191,7 +187,7 @@ pub fn SettingsPage(
                                    class="input input-bordered input-sm w-full"/>
                         </label>
                         <div class="card-actions justify-end mt-2">
-                            <button type="submit" class="btn btn-primary btn-sm">"Save"</button>
+                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::SaveButton)}</button>
                         </div>
                     </form>
                 </section>
@@ -208,16 +204,17 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
     let from_str = row
         .period_start
         .map(|d| d.to_string())
-        .unwrap_or_else(|| "—".into());
+        .unwrap_or_else(|| t(MessageKey::NoValuePlaceholder));
     let to_str = row
         .period_end
         .map(|d| d.to_string())
-        .unwrap_or_else(|| "—".into());
+        .unwrap_or_else(|| t(MessageKey::NoValuePlaceholder));
     let note_text = row.note.clone().unwrap_or_default();
-    let aria = format!(
-        "Capacity {} points, period {} to {}.",
-        row.points, from_str, to_str
-    );
+    let aria = t(MessageKey::CapacityRowAriaLabel {
+        points: row.points,
+        from: from_str.clone(),
+        to: to_str.clone(),
+    });
 
     let from_value = row.period_start.map(|d| d.to_string()).unwrap_or_default();
     let to_value = row.period_end.map(|d| d.to_string()).unwrap_or_default();
@@ -241,20 +238,20 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
         view! {
             <details class="dropdown dropdown-end">
                 <summary class="btn btn-ghost btn-xs"
-                         aria-label="Close this row on a specific date">
-                    "Close on date…"
+                         aria-label=t(MessageKey::CloseThisRowAriaLabel)>
+                    {t(MessageKey::CloseOnDateSummary)}
                 </summary>
                 <div class="dropdown-content card card-compact w-64 p-2 shadow bg-base-100 border border-base-300">
                     <form method="post" action=close_action class="flex gap-2 items-end">
                         <input type="hidden" name="client_updated_at" value=cua_close/>
                         <label class="form-control flex-1">
                             <div class="label py-0">
-                                <span class="label-text text-xs">"Close on"</span>
+                                <span class="label-text text-xs">{t(MessageKey::CloseOnLabel)}</span>
                             </div>
                             <input type="date" name="period_end" required
                                    class="input input-bordered input-xs"/>
                         </label>
-                        <button type="submit" class="btn btn-primary btn-xs">"Close"</button>
+                        <button type="submit" class="btn btn-primary btn-xs">{t(MessageKey::CloseButton)}</button>
                     </form>
                 </div>
             </details>
@@ -267,15 +264,15 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                 <details class="dropdown">
                     <summary class="cursor-pointer">
                         <span class="font-medium">{row.points}</span>
-                        " pt"
+                        {t(MessageKey::PointsUnitSuffix)}
                     </summary>
                     <form method="post" action=update_action
                           class="dropdown-content card card-compact w-80 p-3 shadow bg-base-100 border border-base-300 z-10"
-                          aria-label="Edit row">
+                          aria-label=t(MessageKey::EditRowAriaLabel)>
                         <input type="hidden" name="client_updated_at" value=cua_update/>
                         <label class="form-control">
                             <div class="label py-0">
-                                <span class="label-text text-xs">"Points"</span>
+                                <span class="label-text text-xs">{t(MessageKey::PointsColumnHeading)}</span>
                             </div>
                             <input type="number" name="points" min="1" max="999"
                                    value=row.points.to_string()
@@ -283,7 +280,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                         </label>
                         <label class="form-control mt-1">
                             <div class="label py-0">
-                                <span class="label-text text-xs">"From"</span>
+                                <span class="label-text text-xs">{t(MessageKey::FromColumnHeading)}</span>
                             </div>
                             <input type="date" name="period_start"
                                    value=from_value
@@ -291,7 +288,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                         </label>
                         <label class="form-control mt-1">
                             <div class="label py-0">
-                                <span class="label-text text-xs">"To"</span>
+                                <span class="label-text text-xs">{t(MessageKey::ToColumnHeading)}</span>
                             </div>
                             <input type="date" name="period_end"
                                    value=to_value
@@ -299,14 +296,14 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                         </label>
                         <label class="form-control mt-1">
                             <div class="label py-0">
-                                <span class="label-text text-xs">"Note"</span>
+                                <span class="label-text text-xs">{t(MessageKey::NoteColumnHeading)}</span>
                             </div>
                             <input type="text" name="note" maxlength="120"
                                    value=note_text
                                    class="input input-bordered input-xs"/>
                         </label>
                         <button type="submit" class="btn btn-primary btn-xs mt-2">
-                            "Save"
+                            {t(MessageKey::SaveButton)}
                         </button>
                     </form>
                 </details>
@@ -323,8 +320,8 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                           onsubmit="return confirm('Remove this capacity row?')">
                         <input type="hidden" name="client_updated_at" value=cua_delete/>
                         <button type="submit" class="btn btn-ghost btn-xs text-error"
-                                aria-label="Remove this row">
-                            "Remove"
+                                aria-label=t(MessageKey::RemoveThisRowAriaLabel)>
+                            {t(MessageKey::RemoveButton)}
                         </button>
                     </form>
                 </div>

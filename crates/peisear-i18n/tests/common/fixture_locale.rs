@@ -26,8 +26,9 @@
 #![deny(clippy::match_wildcard_for_single_variants)]
 
 use peisear_i18n::{
-    EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey, NavSection, PriorityLabel,
-    SprintStatusLabel, TeamRoleLabel,
+    DriftDirectionLabel, EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey,
+    NavSection, NotificationChannelLabel, NotificationKindLabel, PriorityLabel, SprintStatusLabel,
+    TeamRoleLabel,
 };
 
 pub fn render(key: MessageKey) -> String {
@@ -396,6 +397,273 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::TeamUpdatedFlash => "[fx-team-updated]".to_string(),
         MessageKey::ProjectDetachedFlash => "[fx-project-detached]".to_string(),
         MessageKey::NoUserWithEmailFound { email } => format!("[fx-no-user-email] {email}"),
+
+        // ---- I18N-005d: components/me ----
+        MessageKey::PaceValue { days_per_point } => format!("[fx-pace-value] {days_per_point}"),
+        MessageKey::ReadFirstOverloadTitle => "[fx-rf-overload-title]".to_string(),
+        MessageKey::ReadFirstOverloadBody {
+            overload_streak_days,
+            window_days,
+        } => format!("[fx-rf-overload-body] {overload_streak_days} {window_days}"),
+        MessageKey::ReadFirstStalledTitle => "[fx-rf-stalled-title]".to_string(),
+        MessageKey::ReadFirstStalledBody {
+            stalled_assigned_max_days,
+        } => format!("[fx-rf-stalled-body] {stalled_assigned_max_days}"),
+        MessageKey::ReadFirstWipTitle => "[fx-rf-wip-title]".to_string(),
+        MessageKey::ReadFirstWipBody {
+            current_wip,
+            effective_wip_limit,
+        } => format!("[fx-rf-wip-body] {current_wip} {effective_wip_limit}"),
+        MessageKey::ReadFirstLongStaleTitle => "[fx-rf-long-stale-title]".to_string(),
+        MessageKey::ReadFirstLongStaleBody { long_stale_count } => {
+            format!("[fx-rf-long-stale-body] {long_stale_count}")
+        }
+        MessageKey::PersonalDashboardTitle => "[fx-dashboard-title]".to_string(),
+        MessageKey::NothingToShowMessage => "[fx-nothing-to-show]".to_string(),
+        MessageKey::PersonalDashboardSubtitle { display_name } => {
+            format!("[fx-dashboard-subtitle] {display_name}")
+        }
+        MessageKey::ReadFirstAriaLabel => "[fx-rf-aria]".to_string(),
+        MessageKey::RightNowHeading => "[fx-right-now]".to_string(),
+        MessageKey::WipChipLabel => "[fx-wip-chip]".to_string(),
+        MessageKey::LoadChipLabel => "[fx-load-chip]".to_string(),
+        MessageKey::LoadChipTooltip => "[fx-load-tooltip]".to_string(),
+        MessageKey::PeriodHintTooltip => "[fx-period-hint-tooltip]".to_string(),
+        MessageKey::ThisPeriodHint => "[fx-this-period]".to_string(),
+        MessageKey::RhythmAriaLabel => "[fx-rhythm-aria]".to_string(),
+        MessageKey::RhythmSummaryLabel => "[fx-rhythm-summary]".to_string(),
+        MessageKey::ThroughputTooltip => "[fx-throughput-tooltip]".to_string(),
+        MessageKey::ThroughputChipLabel => "[fx-throughput-chip]".to_string(),
+        MessageKey::LongStaleChipLabel => "[fx-long-stale-chip]".to_string(),
+        MessageKey::PaceTooltip => "[fx-pace-tooltip]".to_string(),
+        MessageKey::PaceChipLabel => "[fx-pace-chip]".to_string(),
+        MessageKey::WhatDoTheseMeanLabel => "[fx-what-do-these-mean]".to_string(),
+        MessageKey::WipGlossaryDefinition => "[fx-wip-glossary-def]".to_string(),
+        MessageKey::LoadGlossaryDefinition => "[fx-load-glossary-def]".to_string(),
+        MessageKey::ThroughputGlossaryDefinition { window_days } => {
+            format!("[fx-throughput-glossary-def] {window_days}")
+        }
+        MessageKey::LongStaleGlossaryDefinition { window_days } => {
+            format!("[fx-long-stale-glossary-def] {window_days}")
+        }
+        MessageKey::PaceGlossaryDefinition => "[fx-pace-glossary-def]".to_string(),
+        MessageKey::SustainabilityHeading => "[fx-sustainability-heading]".to_string(),
+        MessageKey::SustainabilityGlossaryDefinition => {
+            "[fx-sustainability-glossary-def]".to_string()
+        }
+        MessageKey::PatternsSubheading => "[fx-patterns-subheading]".to_string(),
+        MessageKey::PatternsGlossaryDefinition => "[fx-patterns-glossary-def]".to_string(),
+        MessageKey::OverloadStreakChipLabel => "[fx-overload-streak-chip]".to_string(),
+        MessageKey::OldestStalledChipLabel => "[fx-oldest-stalled-chip]".to_string(),
+        MessageKey::PatternsDisclaimer => "[fx-patterns-disclaimer]".to_string(),
+        MessageKey::SustainabilityPrivacyNote => "[fx-sustainability-privacy]".to_string(),
+        MessageKey::OverloadStreakValue {
+            overload_streak_days,
+            window_days,
+        } => format!("[fx-overload-streak-value] {overload_streak_days} {window_days}"),
+        MessageKey::StalledDaysValue {
+            stalled_assigned_max_days,
+        } => format!("[fx-stalled-days-value] {stalled_assigned_max_days}"),
+        MessageKey::OverloadStreakAriaLabel {
+            overload_streak_days,
+            is_watch,
+        } => format!("[fx-overload-streak-aria] {overload_streak_days} {is_watch}"),
+        MessageKey::StalledAriaLabel {
+            stalled_assigned_max_days,
+            is_watch,
+        } => format!("[fx-stalled-aria] {stalled_assigned_max_days} {is_watch}"),
+        MessageKey::DriftInsufficientDataAriaLabel => "[fx-drift-insufficient-aria]".to_string(),
+        MessageKey::PaceDriftChipLabel => "[fx-pace-drift-chip]".to_string(),
+        MessageKey::NeedMoreDataLabel => "[fx-need-more-data]".to_string(),
+        MessageKey::DriftDirectionWord { direction } => {
+            format!(
+                "[fx-drift-direction-word] {}",
+                drift_direction_word(direction)
+            )
+        }
+        MessageKey::DriftValueLine {
+            recent_median_days_per_point,
+            older_median_days_per_point,
+        } => format!(
+            "[fx-drift-value-line] {recent_median_days_per_point} {older_median_days_per_point}"
+        ),
+        MessageKey::DriftAriaLabel {
+            recent_median_days_per_point,
+            older_median_days_per_point,
+            window_days,
+            direction,
+        } => format!(
+            "[fx-drift-aria] {recent_median_days_per_point} {older_median_days_per_point} \
+             {window_days} {}",
+            drift_direction_word(direction)
+        ),
+        MessageKey::SwitchingInsufficientDataAriaLabel => {
+            "[fx-switching-insufficient-aria]".to_string()
+        }
+        MessageKey::SwitchingChipLabel => "[fx-switching-chip]".to_string(),
+        MessageKey::SwitchingMedianValue { median } => format!("[fx-switching-median] {median}"),
+        MessageKey::SwitchingSampleLine {
+            total_events_observed,
+            window_days,
+        } => format!("[fx-switching-sample] {total_events_observed} {window_days}"),
+        MessageKey::SwitchingAriaLabel {
+            median,
+            total_events_observed,
+            window_days,
+        } => format!("[fx-switching-aria] {median} {total_events_observed} {window_days}"),
+
+        // ---- I18N-005d: components/settings ----
+        MessageKey::WipLimitExplanation { default_wip_limit } => {
+            format!("[fx-wip-limit-explanation] {default_wip_limit}")
+        }
+        MessageKey::NoCapacitySetTodayLabel => "[fx-no-capacity-today]".to_string(),
+        MessageKey::ConflictLabel => "[fx-conflict-label]".to_string(),
+        MessageKey::CapacityOverlapGuidanceLead => "[fx-overlap-guidance-lead]".to_string(),
+        MessageKey::CloseOnDateActionWord => "[fx-close-on-date-word]".to_string(),
+        MessageKey::CapacityOverlapGuidanceTail => "[fx-overlap-guidance-tail]".to_string(),
+        MessageKey::SettingsSectionName => "[fx-settings-section]".to_string(),
+        MessageKey::SettingsSubtitle { display_name } => {
+            format!("[fx-settings-subtitle] {display_name}")
+        }
+        MessageKey::CapacitySectionAriaLabel => "[fx-capacity-section-aria]".to_string(),
+        MessageKey::WorkloadCapacityHeading => "[fx-workload-capacity-heading]".to_string(),
+        MessageKey::CapacityExplanationParagraph => "[fx-capacity-explanation]".to_string(),
+        MessageKey::EffectiveCapacityTodayAriaLabel { points } => {
+            format!("[fx-effective-capacity-aria] {points:?}")
+        }
+        MessageKey::EffectiveTodayLabel => "[fx-effective-today-label]".to_string(),
+        MessageKey::CapacityRowsTableAriaLabel => "[fx-capacity-rows-table-aria]".to_string(),
+        MessageKey::PointsColumnHeading => "[fx-points-heading]".to_string(),
+        MessageKey::FromColumnHeading => "[fx-from-heading]".to_string(),
+        MessageKey::FromDateFieldLabel => "[fx-from-date-field]".to_string(),
+        MessageKey::ToColumnHeading => "[fx-to-heading]".to_string(),
+        MessageKey::ToDateFieldLabel => "[fx-to-date-field]".to_string(),
+        MessageKey::NoteColumnHeading => "[fx-note-heading]".to_string(),
+        MessageKey::ActionsColumnHeading => "[fx-actions-heading]".to_string(),
+        MessageKey::AddCapacityRowSummary => "[fx-add-capacity-summary]".to_string(),
+        MessageKey::AddCapacityRowFormAriaLabel => "[fx-add-capacity-form-aria]".to_string(),
+        MessageKey::PointsPlaceholderExample => "[fx-points-placeholder]".to_string(),
+        MessageKey::NoteFieldPlaceholder => "[fx-note-placeholder]".to_string(),
+        MessageKey::AddRowButton => "[fx-add-row-button]".to_string(),
+        MessageKey::CapacityOverlapHelperText => "[fx-overlap-helper-text]".to_string(),
+        MessageKey::WipLimitLabel => "[fx-wip-limit-label]".to_string(),
+        MessageKey::InProgressIssuesHint => "[fx-in-progress-hint]".to_string(),
+        MessageKey::CapacityRowAriaLabel { points, from, to } => {
+            format!("[fx-capacity-row-aria] {points} {from} {to}")
+        }
+        MessageKey::CloseOnDateSummary => "[fx-close-on-date-summary]".to_string(),
+        MessageKey::CloseThisRowAriaLabel => "[fx-close-this-row-aria]".to_string(),
+        MessageKey::CloseOnLabel => "[fx-close-on-label]".to_string(),
+        MessageKey::CloseButton => "[fx-close-button]".to_string(),
+        MessageKey::EditRowAriaLabel => "[fx-edit-row-aria]".to_string(),
+        MessageKey::RemoveThisRowAriaLabel => "[fx-remove-row-aria]".to_string(),
+
+        // ---- I18N-005d: components/{notification_preferences,notifications} ----
+        MessageKey::EmailNotificationsHeading => "[fx-email-notifications-heading]".to_string(),
+        MessageKey::FirstTimeEmailPromptAriaLabel => "[fx-first-time-email-aria]".to_string(),
+        MessageKey::EmailOptInPromptBody => "[fx-email-optin-body]".to_string(),
+        MessageKey::EmailOptInYesButton => "[fx-email-optin-yes]".to_string(),
+        MessageKey::EmailOptInNoButton => "[fx-email-optin-no]".to_string(),
+        MessageKey::EmailOptInOnStatus => "[fx-email-optin-on]".to_string(),
+        MessageKey::EmailOptInOffStatus => "[fx-email-optin-off]".to_string(),
+        MessageKey::NotificationPreferencesPageTitle => "[fx-notif-prefs-title]".to_string(),
+        MessageKey::NotificationsSectionName => "[fx-notifications-section]".to_string(),
+        MessageKey::SilenceAllAriaLabel => "[fx-silence-all-aria]".to_string(),
+        MessageKey::SilenceAllButton => "[fx-silence-all-button]".to_string(),
+        MessageKey::DefaultsInAppLead => "[fx-defaults-in-app-lead]".to_string(),
+        MessageKey::PerKindDeliverySummary => "[fx-per-kind-delivery]".to_string(),
+        MessageKey::ClickToExpandHint => "[fx-click-to-expand]".to_string(),
+        MessageKey::NotificationKindsTableAriaLabel => "[fx-notif-kinds-table-aria]".to_string(),
+        MessageKey::KindColumnHeading => "[fx-kind-heading]".to_string(),
+        MessageKey::MinSeverityColumnHeading => "[fx-min-severity-heading]".to_string(),
+        MessageKey::ChannelStubDisclaimer => "[fx-channel-stub-disclaimer]".to_string(),
+        MessageKey::SavePreferencesButton => "[fx-save-preferences-button]".to_string(),
+        MessageKey::NotificationKindPreferencesAriaLabel { kind } => {
+            format!("[fx-kind-prefs-aria] {}", notification_kind_label(kind))
+        }
+        MessageKey::InAppForKindAriaLabel { kind } => {
+            format!(
+                "[fx-in-app-for-kind-aria] {}",
+                notification_kind_label(kind)
+            )
+        }
+        MessageKey::EmailForKindAriaLabel { kind } => {
+            format!("[fx-email-for-kind-aria] {}", notification_kind_label(kind))
+        }
+        MessageKey::WebhookForKindAriaLabel { kind } => {
+            format!(
+                "[fx-webhook-for-kind-aria] {}",
+                notification_kind_label(kind)
+            )
+        }
+        MessageKey::MinSeverityForKindAriaLabel { kind } => format!(
+            "[fx-min-severity-for-kind-aria] {}",
+            notification_kind_label(kind)
+        ),
+        MessageKey::AllSeverityOption => "[fx-all-severity-option]".to_string(),
+        MessageKey::WatchOnlySeverityOption => "[fx-watch-only-severity-option]".to_string(),
+        MessageKey::NotificationKindName { kind } => {
+            format!("[fx-kind-name] {}", notification_kind_label(kind))
+        }
+        MessageKey::NotificationChannelName { channel } => {
+            format!("[fx-channel-name] {}", notification_channel_label(channel))
+        }
+        MessageKey::NoNotificationsYetStatus => "[fx-no-notifications-yet]".to_string(),
+        MessageKey::UnreadOfTotalStatus {
+            unread_count,
+            total,
+        } => {
+            format!("[fx-unread-of-total] {unread_count} {total}")
+        }
+        MessageKey::AllReadStatus { total } => format!("[fx-all-read-status] {total}"),
+        MessageKey::MarkAllReadAriaLabel => "[fx-mark-all-read-aria]".to_string(),
+        MessageKey::MarkAllReadButton => "[fx-mark-all-read-button]".to_string(),
+        MessageKey::InboxEmptyMessage => "[fx-inbox-empty-message]".to_string(),
+        MessageKey::InboxEmptyFooterLead => "[fx-inbox-empty-footer-lead]".to_string(),
+        MessageKey::SettingsLinkWord => "[fx-settings-link-word]".to_string(),
+        MessageKey::InboxEmptyFooterTail => "[fx-inbox-empty-footer-tail]".to_string(),
+        MessageKey::NotificationListAriaLabel => "[fx-notif-list-aria]".to_string(),
+        MessageKey::UnreadWord => "[fx-unread-word]".to_string(),
+        MessageKey::ReadWord => "[fx-read-word]".to_string(),
+        MessageKey::NotificationRowAriaLabel {
+            is_unread,
+            title,
+            kind,
+            timestamp,
+        } => format!(
+            "[fx-notif-row-aria] {is_unread} {title} {} {timestamp}",
+            notification_kind_label(kind)
+        ),
+        MessageKey::SentViaPrefix => "[fx-sent-via-prefix]".to_string(),
+        MessageKey::ViewContextLinkLabel => "[fx-view-context-link]".to_string(),
+        MessageKey::MarkAsReadAriaLabel => "[fx-mark-as-read-aria]".to_string(),
+        MessageKey::MarkReadButton => "[fx-mark-read-button]".to_string(),
+
+        // ---- I18N-005d: components/search ----
+        MessageKey::SearchWord => "[fx-search-word]".to_string(),
+        MessageKey::SearchPageTitleWithQuery { q } => format!("[fx-search-title-query] {q}"),
+        MessageKey::SearchFieldLabel => "[fx-search-field-label]".to_string(),
+        MessageKey::SearchPlaceholder => "[fx-search-placeholder-fx]".to_string(),
+        MessageKey::ResultsForHeadingPrefix => "[fx-results-for-prefix]".to_string(),
+        MessageKey::NoQueryGuidanceMessage => "[fx-no-query-guidance]".to_string(),
+        MessageKey::OpenIssuesSectionName => "[fx-open-issues-section]".to_string(),
+        MessageKey::NoMatchesInCategoryMessage => "[fx-no-matches-category]".to_string(),
+        MessageKey::PreviousPageLink => "[fx-previous-page-link]".to_string(),
+        MessageKey::NextPageLink => "[fx-next-page-link]".to_string(),
+        MessageKey::ProjectHitTypeLabel => "[fx-project-hit-type]".to_string(),
+        MessageKey::OpenIssueHitTypePrefix { project_name } => {
+            format!("[fx-open-issue-hit-type] {project_name}")
+        }
+
+        // ---- I18N-005d: handlers/{settings,notification_preferences,notifications} ----
+        MessageKey::WipLimitSavedFlash => "[fx-wip-limit-saved]".to_string(),
+        MessageKey::CapacityRowAddedFlash => "[fx-capacity-row-added]".to_string(),
+        MessageKey::CapacityRowUpdatedFlash => "[fx-capacity-row-updated]".to_string(),
+        MessageKey::CapacityRowRemovedFlash => "[fx-capacity-row-removed]".to_string(),
+        MessageKey::RowClosedFlash => "[fx-row-closed]".to_string(),
+        MessageKey::PreferencesSavedFlash => "[fx-preferences-saved]".to_string(),
+        MessageKey::AllNotificationsSilencedFlash => "[fx-all-notifs-silenced]".to_string(),
+        MessageKey::MarkedAsReadFlash { count } => format!("[fx-marked-as-read] {count}"),
     }
 }
 
@@ -478,5 +746,29 @@ fn indicator_label(label: IndicatorLabel) -> &'static str {
         IndicatorLabel::BusFactor => "[fx-busfactor]",
         IndicatorLabel::LongStale => "[fx-longstale]",
         IndicatorLabel::WipCompliance => "[fx-wipcompliance]",
+    }
+}
+
+fn drift_direction_word(direction: DriftDirectionLabel) -> &'static str {
+    match direction {
+        DriftDirectionLabel::Up => "[fx-drift-up]",
+        DriftDirectionLabel::Down => "[fx-drift-down]",
+        DriftDirectionLabel::Steady => "[fx-drift-steady]",
+    }
+}
+
+fn notification_kind_label(kind: NotificationKindLabel) -> &'static str {
+    match kind {
+        NotificationKindLabel::BurnoutOverload => "[fx-kind-burnout-overload]",
+        NotificationKindLabel::BurnoutStalled => "[fx-kind-burnout-stalled]",
+        NotificationKindLabel::ProjectTrendDecline => "[fx-kind-project-trend-decline]",
+    }
+}
+
+fn notification_channel_label(channel: NotificationChannelLabel) -> &'static str {
+    match channel {
+        NotificationChannelLabel::InApp => "[fx-channel-in-app]",
+        NotificationChannelLabel::Email => "[fx-channel-email]",
+        NotificationChannelLabel::Webhook => "[fx-channel-webhook]",
     }
 }
