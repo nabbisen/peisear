@@ -7,6 +7,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] — 2026-08-11
+
+This is not "internationalisation" — `NFR-LANG-005` keeps a second locale
+deferred, and one locale ships. What changed is that `§1.7`'s vocabulary
+constraint, recorded for two releases as *"Implemented by convention; no
+automated guard exists"*, **became checkable**. 0.20.0 and 0.20.1 were the
+first evidence that checking finds real defects a person reading code had
+already missed twice; this release finishes the job and adds a second guard
+that keeps checking after the conversion is done.
+
+### Added
+
+- **`peisear-i18n`, a new crate: the message table, the English locale, and
+  a vocabulary guard** (`I18N-001`). `MessageKey` is an enum, not a string
+  constant or a `HashMap` — a `match` over it that omits a variant fails to
+  compile, so a locale that doesn't handle every key is a build error, not
+  a runtime gap. `find_violations` walks every key's rendered text against
+  `§1.7`'s prohibited-vocabulary list (evaluative and failure-framed
+  language) as a test, not a convention.
+- **Every user-visible string `peisear-core`, `peisear-notify`, and
+  `peisear-web` construct now renders from that table** (`I18N-002`,
+  `I18N-003`, `I18N-005a`–`e`, `I18N-006`): shell and navigation; project,
+  issue, team, and sprint pages; the today/inbox/settings dashboards and
+  search; every error, validation, and auth message; `peisear-core`'s
+  health-indicator descriptions and the `DisplayHealthState` accessible-name
+  word; `peisear-storage`'s validation and conflict messages (now typed
+  `MessageKey`, not `String`, carried across the `peisear-web` boundary and
+  rendered there); the personal-burnout JSON endpoint's signal labels. The
+  seven `validator`-derive messages that a proc-macro attribute cannot
+  route through a function call are scanned by `find_violations` directly
+  instead, closing the one category the table itself cannot reach.
+- **A test that scans `peisear-web`'s own source for hardcoded copy**
+  (`I18N-007`). `peisear-web/src/prose_scan.rs` walks
+  `src/components/**` and `src/handlers/**` at test time and fails on a
+  literal `aria-label`/`title`/`placeholder`/`onsubmit` attribute value or
+  a bare text node in a `view!` body, with a nine-entry allowlist for the
+  `onsubmit="return confirm(...)"` dialogs pending a separate decision on
+  the confirmation pattern. Four earlier handoffs each declared their
+  surface complete in prose and each was followed by another find; this
+  replaces that claim with something that keeps checking.
+
+### Fixed
+
+- **`AppError::Conflict` rendered its internal `"conflict: "` log prefix
+  to users** (found during `I18N-005e`). `public_message()` had no arm for
+  `Conflict`, so it fell through to the `Display` impl meant for
+  tracing/logs, and every conflict response — including the duplicate-
+  email registration rejection — read `"conflict: {message}"` instead of
+  the message alone. The same bug class as 0.20.0's `Validation` prefix
+  leak, on a sibling variant nobody had checked. Fixed by making every
+  `AppError` arm in `public_message()` explicit, with no catch-all: a
+  catch-all silently absorbs a future variant the same way a wildcard
+  match arm does, which is the exact failure this release exists to make
+  impossible rather than watch for.
+
+### What the guard covers, and what it does not
+
+Stated so it is not over-trusted, extending the queue README's original
+list with what `prose_scan.rs` adds and cannot see:
+
+- It covers copy, not interpolated data — an issue titled with a term the
+  guard's own vocabulary list prohibits is user data, not a violation.
+- It catches vocabulary, not tone.
+- It cannot see through runtime concatenation, which is why composing a
+  user-visible sentence from more than one rendered fragment is prohibited
+  by convention (`RFC 006` §D6).
+- `prose_scan.rs` sees a literal sitting in a template attribute or text
+  position. It cannot see copy assembled by `format!()`/`match` into a
+  `String` binding before that binding reaches markup — a real blind spot,
+  evaluated and left open rather than papered over with a noisier
+  heuristic (a wider filter was tried and produced twelve false positives
+  for every one real defect it would have caught).
+- `prose_scan.rs` scans `src/components/**` and `src/handlers/**` only.
+  `static/search.js`'s type-ahead copy is not Rust and is outside it,
+  permanently.
+- Nine `onsubmit="return confirm(...)"` dialogs are allowlisted, not
+  converted, pending a decision on the confirmation pattern itself.
+
+**No claim that every user-visible string is covered.** The scan test and
+its allowlist are the check going forward; this entry points at them
+instead of asserting completeness in prose.
+
 ## [0.20.1] — 2026-08-10
 
 ### Fixed
