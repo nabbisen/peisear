@@ -325,8 +325,21 @@ pub(crate) fn render(key: MessageKey) -> String {
             name,
             status,
             dates,
-            summary,
-        } => format!("{name} ({status}, {dates}). {summary}"),
+            completed_points,
+            committed_points,
+            carried_over_points,
+            committed_count,
+        } => {
+            let status_text = sprint_status_label(status);
+            let summary_text = sprint_card_summary_text(
+                status,
+                completed_points,
+                committed_points,
+                carried_over_points,
+                committed_count,
+            );
+            format!("{name} ({status_text}, {dates}). {summary_text}")
+        }
         MessageKey::VelocityBarAriaLabel {
             name,
             completed_points,
@@ -586,6 +599,38 @@ fn sprint_status_label(label: SprintStatusLabel) -> &'static str {
         SprintStatusLabel::Planned => "Planned",
         SprintStatusLabel::Active => "Active",
         SprintStatusLabel::Completed => "Completed",
+    }
+}
+
+/// Same three templates as `MessageKey::SprintCardSummary*`
+/// (deliberately not shared with those arms — I18N-005c-review §3's
+/// point is that `SprintCardAriaLabel` composes its own summary
+/// clause from typed data in one place, not that the two sibling
+/// keys must be deduplicated against each other). `carried_over_points`
+/// and `committed_count` are unused outside their own status branch;
+/// callers pass `0` for whichever doesn't apply.
+fn sprint_card_summary_text(
+    status: SprintStatusLabel,
+    completed_points: i64,
+    committed_points: i64,
+    carried_over_points: i64,
+    committed_count: i64,
+) -> String {
+    match status {
+        SprintStatusLabel::Completed => format!(
+            "{completed_points} of {committed_points} pt completed · \
+             {carried_over_points} carried over"
+        ),
+        SprintStatusLabel::Active => {
+            let in_flight_points = committed_points - completed_points;
+            format!(
+                "{completed_points} of {committed_points} pt completed · \
+                 {in_flight_points} pt in flight"
+            )
+        }
+        SprintStatusLabel::Planned => {
+            format!("{committed_points} pt committed across {committed_count} issues")
+        }
     }
 }
 

@@ -174,9 +174,12 @@ fn render_sprint_card(team_slug: String, s: Sprint, sum: SprintSummary) -> impl 
     };
     let aria = t(MessageKey::SprintCardAriaLabel {
         name: s.name.clone(),
-        status: status_label.clone(),
+        status: s.status.to_i18n_label(),
         dates: dates.clone(),
-        summary: summary_text.clone(),
+        completed_points: sum.completed_points,
+        committed_points: sum.committed_points,
+        carried_over_points: sum.carried_over_points,
+        committed_count: sum.committed_count,
     });
 
     view! {

@@ -277,8 +277,15 @@ pub fn render(key: MessageKey) -> String {
             name,
             status,
             dates,
-            summary,
-        } => format!("[fx-sprint-card-aria] {name} {status} {dates} {summary}"),
+            completed_points,
+            committed_points,
+            carried_over_points,
+            committed_count,
+        } => format!(
+            "[fx-sprint-card-aria] {name} {} {dates} {completed_points} {committed_points} \
+             {carried_over_points} {committed_count}",
+            sprint_status_label(status)
+        ),
         MessageKey::VelocityBarAriaLabel {
             name,
             completed_points,

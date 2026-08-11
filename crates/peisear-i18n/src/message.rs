@@ -786,19 +786,30 @@ pub enum MessageKey {
         committed_points: i64,
         committed_count: i64,
     },
-    /// A sprint card's `aria-label`, composing `name` (user data),
-    /// `dates` (a formatted range — data), and `status`/`summary`
-    /// (already-rendered output of
-    /// [`MessageKey::SprintStatusName`]/the `SprintCardSummary*`
-    /// keys above — not raw literals authored at the call site, so
-    /// embedding them as `String` parameters here doesn't reproduce
-    /// the `BackToLabel` mistake: nothing that flows into this key is
-    /// copy this crate wrote fresh).
+    /// A sprint card's `aria-label`. `name` and `dates` are data
+    /// (user text, a formatted range); `status` is the typed
+    /// [`SprintStatusLabel`] rather than a pre-rendered `String` —
+    /// I18N-005c-review §3's correction. The original shape passed
+    /// `status`/`summary` as already-rendered `String`s composed
+    /// from [`MessageKey::SprintStatusName`]/the `SprintCardSummary*`
+    /// keys above, reasoning that wasn't the `BackToLabel` mistake
+    /// (every fragment did come from the table). It was still wrong:
+    /// runtime string concatenation assembles the sentence outside
+    /// any single render arm, so no guard check ever sees the whole
+    /// — the assembled-sentence half of the concatenation
+    /// prohibition, not the raw-literal half. The four count fields
+    /// below are the same typed data `SprintCardSummary*` render
+    /// from; this key's own render arm composes the summary clause
+    /// once, matching on `status`, rather than receiving someone
+    /// else's pre-rendered output.
     SprintCardAriaLabel {
         name: String,
-        status: String,
+        status: SprintStatusLabel,
         dates: String,
-        summary: String,
+        completed_points: i64,
+        committed_points: i64,
+        carried_over_points: i64,
+        committed_count: i64,
     },
     /// The velocity bar chart's per-bar-group `aria-label`. `name` is
     /// user data; the two counts are data.
@@ -1238,9 +1249,12 @@ impl MessageKey {
             },
             MessageKey::SprintCardAriaLabel {
                 name: "Sprint 4".to_string(),
-                status: "Active".to_string(),
+                status: SprintStatusLabel::Active,
                 dates: "2026-08-01 → 2026-08-14".to_string(),
-                summary: "5 of 10 pt completed · 5 pt in flight".to_string(),
+                completed_points: 5,
+                committed_points: 10,
+                carried_over_points: 0,
+                committed_count: 4,
             },
             MessageKey::VelocityBarAriaLabel {
                 name: "Sprint 3".to_string(),
