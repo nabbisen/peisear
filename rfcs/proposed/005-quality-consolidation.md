@@ -241,6 +241,47 @@ satisfy ABDD/security after later PRs landed. Grep for:
 Each gets resolved: either fixed, ticketed for a future RFC,
 or annotated with cause.
 
+### 9. The test harness itself — pulled forward to 0.22.0
+
+*Added 2026-08-11 from baseline `§10.13`, found while reviewing
+`REL-0.21.0`.*
+
+`TestApp::spawn` names its temporary database directory from
+`SystemTime::now().as_nanos()` alone. Two tests entering it in
+the same clock tick share a directory and a `test.db`;
+`create_dir_all` succeeds on an existing directory, so nothing
+signals the collision and the second arrival fails with
+`SqliteError { code: 5, "database is locked" }`. Roughly one
+`cargo test --workspace` run in two, on a different test each
+time. Reproduced at `0.20.1` as well, so it is not new.
+
+**Why it belongs to this RFC.** Phase E is where test debt is
+paid, and this is test debt of the most consequential kind:
+the harness that produces every gate result in this project.
+
+**Why it does not wait for 0.24.0.** Every release from here
+runs those gates. A suite that fails half the time on the
+obvious command trains people to re-run rather than read, and
+that habit is what a flaky test costs — not the minutes.
+
+Two parts:
+
+1. Make the suffix unique — process id and an atomic counter
+   alongside the clock, or a crate that guarantees it. Prefer
+   the crate: a hand-rolled unique-name scheme is what failed.
+2. **Add a repeated full-workspace run to the gate set.**
+   `DEC-007` mandates per-crate and per-target runs *for
+   isolation*, and that procedure never triggers the
+   collision. Every gate log this project has captured is
+   honest and green, and the defect lived underneath all of
+   them.
+
+Item 2 is the finding, not item 1. **An isolation procedure
+adopted to make results trustworthy hid a defect in the thing
+producing them.** A gate set needs at least one run under the
+conditions a contributor will actually use, or it measures
+only the conditions it chose.
+
 ## Test plan
 
 The Phase E test plan is largely the audit work itself; the
