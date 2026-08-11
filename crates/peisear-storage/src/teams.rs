@@ -240,16 +240,18 @@ pub async fn insert(
 ) -> StorageResult<String> {
     if slug.is_empty() {
         return Err(StorageError::Validation(
-            "Team URL slug cannot be empty.".into(),
+            peisear_i18n::MessageKey::TeamSlugCannotBeEmptyMessage,
         ));
     }
 
     // Pre-check for slug collision so we can return a clean
     // Conflict rather than the SQLite error string.
     if find_by_slug(pool, slug).await?.is_some() {
-        return Err(StorageError::Conflict(format!(
-            "A team with slug '{slug}' already exists."
-        )));
+        return Err(StorageError::Conflict(
+            peisear_i18n::MessageKey::TeamSlugAlreadyExistsMessage {
+                slug: slug.to_string(),
+            },
+        ));
     }
 
     let id = Uuid::new_v4().to_string();
@@ -316,9 +318,11 @@ pub async fn add_member(
     role: TeamRole,
 ) -> StorageResult<()> {
     if role_for(pool, team_id, user_id).await?.is_some() {
-        return Err(StorageError::Conflict(format!(
-            "User {user_id} is already a member of this team."
-        )));
+        return Err(StorageError::Conflict(
+            peisear_i18n::MessageKey::UserAlreadyTeamMemberMessage {
+                user_id: user_id.to_string(),
+            },
+        ));
     }
     sqlx::query(
         r#"

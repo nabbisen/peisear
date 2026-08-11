@@ -286,8 +286,10 @@ fn render_trend_chip(trend: peisear_core::project_health::Trend) -> impl IntoVie
 fn composite_row(score: &HealthScore) -> impl IntoView {
     let state = DisplayHealthState::from(score.state);
     let badge_class = format!("badge badge-sm {}", state.badge_class());
-    let (glyph, aria_state) = state.glyph();
-    let aria_label = format!("Composite: {aria_state}.");
+    let glyph = state.glyph();
+    let aria_label = t(MessageKey::CompositeAriaLabel {
+        state: state.to_i18n_label(),
+    });
     let trend_chip = render_trend_chip(score.trend);
     view! {
         <div class="flex items-center gap-2 px-2 py-1 rounded border border-base-300 bg-base-100"
@@ -309,21 +311,19 @@ fn composite_row(score: &HealthScore) -> impl IntoView {
 fn indicator_row(ind: Indicator) -> impl IntoView {
     let state = DisplayHealthState::from(ind.state);
     let badge_class = format!("badge badge-sm {}", state.badge_class());
-    let (glyph, aria_state) = state.glyph();
+    let glyph = state.glyph();
     // I18N-004: the indicator's name no longer lives on `Indicator`
     // itself (`IndicatorKind::label()` removed) — rendered here via
     // the same MessageKey `summarize`'s sentences use.
     let label_text = Locale::English.render(MessageKey::IndicatorName {
         label: ind.kind.to_i18n_label(),
     });
-    let value_text = Locale::English.render(ind.value_display);
-    let aria_label = format!(
-        "{}: {} ({}). {}",
-        label_text,
-        value_text,
-        aria_state,
-        ind.kind.description()
-    );
+    let value_text = Locale::English.render(ind.value_display.clone());
+    let aria_label = t(MessageKey::IndicatorAriaLabel {
+        label: ind.kind.to_i18n_label(),
+        value: Box::new(ind.value_display),
+        state: state.to_i18n_label(),
+    });
     view! {
         <div class="flex items-center gap-2 px-2 py-1 rounded border border-base-300 bg-base-100"
              role="group"

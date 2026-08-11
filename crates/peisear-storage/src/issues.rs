@@ -359,16 +359,30 @@ pub async fn demote_to_sub_issue(
 /// if the migration ever changes the strings.
 fn translate_trigger_error(e: sqlx::Error) -> StorageError {
     let msg = e.to_string();
-    // Known trigger messages from migration 0015.
+    // Known trigger messages from migration 0015, paired with the
+    // MessageKey that carries the same text (I18N-006 §5 — the
+    // needle text itself is unchanged, only the returned type is).
     let known = [
-        "sub-issue cannot have a sub-issue",
-        "sub-issue must share project with its parent",
-        "an issue cannot be its own parent",
-        "cannot demote an issue that has its own sub-issues",
+        (
+            "sub-issue cannot have a sub-issue",
+            peisear_i18n::MessageKey::SubIssueCannotHaveSubIssueMessage,
+        ),
+        (
+            "sub-issue must share project with its parent",
+            peisear_i18n::MessageKey::SubIssueMustShareProjectMessage,
+        ),
+        (
+            "an issue cannot be its own parent",
+            peisear_i18n::MessageKey::IssueCannotBeOwnParentMessage,
+        ),
+        (
+            "cannot demote an issue that has its own sub-issues",
+            peisear_i18n::MessageKey::CannotDemoteIssueWithSubIssuesMessage,
+        ),
     ];
-    for needle in known.iter() {
+    for (needle, key) in known.into_iter() {
         if msg.contains(needle) {
-            return StorageError::Validation(needle.to_string());
+            return StorageError::Validation(key);
         }
     }
     e.into()

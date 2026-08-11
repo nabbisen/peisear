@@ -161,7 +161,7 @@ pub async fn create(
                 "/teams/{slug}/sprints/{id}?flash={flash}"
             )))
         }
-        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
+        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(t(msg))),
         Err(e) => Err(e.into()),
     }
 }
@@ -276,7 +276,7 @@ pub async fn update(
                 "/teams/{slug}/sprints/{sprint_id}?flash={flash}"
             )))
         }
-        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
+        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(t(msg))),
         Err(e) => Err(e.into()),
     }
 }
@@ -323,12 +323,12 @@ pub async fn start(
             )))
         }
         Err(peisear_storage::StorageError::Conflict(msg)) => {
-            let encoded = percent_encode_query(&msg);
+            let encoded = percent_encode_query(&t(msg));
             Ok(Redirect::to(&format!(
                 "/teams/{slug}/sprints/{sprint_id}?error={encoded}"
             )))
         }
-        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
+        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(t(msg))),
         Err(e) => Err(e.into()),
     }
 }
@@ -364,7 +364,7 @@ pub async fn complete(
                 "/teams/{slug}/sprints/{sprint_id}?flash={flash}"
             )))
         }
-        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
+        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(t(msg))),
         Err(e) => Err(e.into()),
     }
 }

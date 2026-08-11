@@ -163,17 +163,18 @@ pub fn PersonalDashboard(
 
     let wip_state = DisplayHealthState::from(classify_wip(&m));
     let stale_state = DisplayHealthState::from(classify_long_stale(&m));
-    let (wip_glyph, wip_aria) = wip_state.glyph();
-    let (stale_glyph, stale_aria) = stale_state.glyph();
+    let wip_glyph = wip_state.glyph();
+    let stale_glyph = stale_state.glyph();
 
     let wip_badge_class = format!("badge badge-sm {}", wip_state.badge_class());
     let stale_badge_class = format!("badge badge-sm {}", stale_state.badge_class());
 
     let wip_value = format!("{} / {}", m.current_wip, m.effective_wip_limit);
-    let wip_aria_label = format!(
-        "WIP: {} of {} ({}).",
-        m.current_wip, m.effective_wip_limit, wip_aria
-    );
+    let wip_aria_label = t(MessageKey::WipAriaLabel {
+        current_wip: m.current_wip,
+        effective_wip_limit: m.effective_wip_limit,
+        state: wip_state.to_i18n_label(),
+    });
 
     let load_text = match m.capacity_points {
         Some(cap) => format!("{} / {} pt", m.in_flight_points, cap),
@@ -191,10 +192,10 @@ pub fn PersonalDashboard(
     );
 
     let stale_text = format!("{}", m.long_stale_count);
-    let stale_aria_label = format!(
-        "Long-stale assigned issues: {} ({}).",
-        m.long_stale_count, stale_aria
-    );
+    let stale_aria_label = t(MessageKey::LongStaleAriaLabel {
+        long_stale_count: m.long_stale_count,
+        state: stale_state.to_i18n_label(),
+    });
 
     // The user is "structurally active" if they have any current
     // WIP, any in-flight points (open or in_progress with effort),

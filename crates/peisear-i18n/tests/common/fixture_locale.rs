@@ -26,9 +26,9 @@
 #![deny(clippy::match_wildcard_for_single_variants)]
 
 use peisear_i18n::{
-    DriftDirectionLabel, EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey,
-    NavSection, NotificationChannelLabel, NotificationKindLabel, PriorityLabel, SprintStatusLabel,
-    TeamRoleLabel,
+    DriftDirectionLabel, EntityKind, Field, HealthStateLabel, IndicatorLabel, IssueStatusLabel,
+    MessageKey, NavSection, NotificationChannelLabel, NotificationKindLabel, PriorityLabel,
+    SprintStatusLabel, TeamRoleLabel,
 };
 
 pub fn render(key: MessageKey) -> String {
@@ -725,6 +725,91 @@ pub fn render(key: MessageKey) -> String {
             "[fx-period-start-date-format]".to_string()
         }
         MessageKey::PeriodEndMustBeDateFormatMessage => "[fx-period-end-date-format]".to_string(),
+
+        // ---- I18N-006: peisear-core/src/lib.rs ----
+        MessageKey::IndicatorDescription { label } => {
+            format!("[fx-indicator-description] {}", indicator_label(label))
+        }
+        MessageKey::WipAriaLabel {
+            current_wip,
+            effective_wip_limit,
+            state,
+        } => format!(
+            "[fx-wip-aria] {current_wip}/{effective_wip_limit} {}",
+            health_state_label(state)
+        ),
+        MessageKey::LongStaleAriaLabel {
+            long_stale_count,
+            state,
+        } => format!(
+            "[fx-long-stale-aria] {long_stale_count} {}",
+            health_state_label(state)
+        ),
+        MessageKey::CompositeAriaLabel { state } => {
+            format!("[fx-composite-aria] {}", health_state_label(state))
+        }
+        MessageKey::IndicatorAriaLabel {
+            label,
+            value,
+            state,
+        } => format!(
+            "[fx-indicator-aria] {} {} {}",
+            indicator_label(label),
+            render(*value),
+            health_state_label(state)
+        ),
+
+        // ---- I18N-006: peisear-storage/src/user_capacities.rs ----
+        MessageKey::PeriodStartMustPrecedeEndMessage => "[fx-period-start-precede-end]".to_string(),
+        MessageKey::CapacityPeriodOverlapMessage {
+            row_id,
+            period_start,
+            period_end,
+            points,
+        } => format!("[fx-capacity-overlap] {row_id} {period_start} {period_end} {points}"),
+
+        // ---- I18N-006: peisear-storage/src/sprints.rs ----
+        MessageKey::SprintEndDateMustBeOnOrAfterStartMessage => {
+            "[fx-sprint-end-after-start]".to_string()
+        }
+        MessageKey::SprintAlreadyActiveMessage => "[fx-sprint-already-active]".to_string(),
+        MessageKey::SprintCannotRestartCompletedMessage => "[fx-sprint-cannot-restart]".to_string(),
+        MessageKey::OtherSprintActiveInTeamMessage { sprint_name } => {
+            format!("[fx-other-sprint-active] {sprint_name}")
+        }
+        MessageKey::SprintNotStartedYetMessage => "[fx-sprint-not-started]".to_string(),
+        MessageKey::SprintAlreadyCompletedMessage => "[fx-sprint-already-completed]".to_string(),
+
+        // ---- I18N-006: peisear-storage/src/teams.rs ----
+        MessageKey::TeamSlugCannotBeEmptyMessage => "[fx-team-slug-empty]".to_string(),
+        MessageKey::TeamSlugAlreadyExistsMessage { slug } => {
+            format!("[fx-team-slug-exists] {slug}")
+        }
+        MessageKey::UserAlreadyTeamMemberMessage { user_id } => {
+            format!("[fx-user-already-member] {user_id}")
+        }
+
+        // ---- I18N-006: peisear-storage/src/issues.rs (translate_trigger_error) ----
+        MessageKey::SubIssueCannotHaveSubIssueMessage => "[fx-sub-issue-cannot-nest]".to_string(),
+        MessageKey::SubIssueMustShareProjectMessage => "[fx-sub-issue-share-project]".to_string(),
+        MessageKey::IssueCannotBeOwnParentMessage => "[fx-issue-own-parent]".to_string(),
+        MessageKey::CannotDemoteIssueWithSubIssuesMessage => {
+            "[fx-cannot-demote-with-subs]".to_string()
+        }
+
+        // ---- I18N-006: handlers/api_users.rs (BurnoutSignal.label) ----
+        MessageKey::OverloadStreakSignalMessage {
+            overload_streak_days,
+            window_days,
+        } => format!("[fx-overload-streak-signal] {overload_streak_days}/{window_days}"),
+        MessageKey::StalledAssignedSignalMessage {
+            stalled_assigned_max_days,
+        } => format!("[fx-stalled-assigned-signal] {stalled_assigned_max_days}"),
+        MessageKey::EstimationDriftUpSignalMessage => "[fx-drift-up-signal]".to_string(),
+        MessageKey::EstimationDriftDownSignalMessage => "[fx-drift-down-signal]".to_string(),
+        MessageKey::CognitiveSwitchingSignalMessage {
+            switches_per_day_median,
+        } => format!("[fx-switching-signal] {switches_per_day_median:.1}"),
     }
 }
 
@@ -807,6 +892,14 @@ fn indicator_label(label: IndicatorLabel) -> &'static str {
         IndicatorLabel::BusFactor => "[fx-busfactor]",
         IndicatorLabel::LongStale => "[fx-longstale]",
         IndicatorLabel::WipCompliance => "[fx-wipcompliance]",
+    }
+}
+
+fn health_state_label(state: HealthStateLabel) -> &'static str {
+    match state {
+        HealthStateLabel::Insufficient => "[fx-hs-insufficient]",
+        HealthStateLabel::Good => "[fx-hs-good]",
+        HealthStateLabel::Watch => "[fx-hs-watch]",
     }
 }
 

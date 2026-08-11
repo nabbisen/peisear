@@ -2185,6 +2185,7 @@ version = "0.20.1"
 dependencies = [
  "chrono",
  "peisear-core",
+ "peisear-i18n",
  "sqlx",
  "thiserror 2.0.18",
  "tokio",

@@ -431,14 +431,29 @@ impl DisplayHealthState {
         }
     }
 
-    /// Glyph + accessible-name fragment, paired with the badge so a
-    /// screen reader or colour-blind user gets the same signal a
-    /// sighted user gets from colour alone (`NFR-A11Y-004`).
-    pub fn glyph(&self) -> (&'static str, &'static str) {
+    /// Glyph shown paired with the badge so a colour-blind user gets
+    /// the same signal a sighted user gets from colour alone
+    /// (`NFR-A11Y-004`). Not language — stays in this crate
+    /// (`I18N-006` §3). Its former second element, the accessible-name
+    /// word, is [`DisplayHealthState::to_i18n_label`] now.
+    pub fn glyph(&self) -> &'static str {
         match self {
-            Self::Insufficient => ("—", "no data"),
-            Self::Good => ("✓", "good"),
-            Self::Watch => ("⚠", "watch"),
+            Self::Insufficient => "—",
+            Self::Good => "✓",
+            Self::Watch => "⚠",
+        }
+    }
+
+    /// The accessible-name word `glyph()` used to return as its
+    /// second element (`I18N-006` §3 — split the symbol, which is
+    /// not language, from the word, which is). Same absorption shape
+    /// as `TeamRole::to_i18n_label`/`SprintStatus::to_i18n_label`/
+    /// `DriftDirection::to_i18n_label`.
+    pub fn to_i18n_label(&self) -> peisear_i18n::HealthStateLabel {
+        match self {
+            Self::Insufficient => peisear_i18n::HealthStateLabel::Insufficient,
+            Self::Good => peisear_i18n::HealthStateLabel::Good,
+            Self::Watch => peisear_i18n::HealthStateLabel::Watch,
         }
     }
 }
@@ -682,19 +697,6 @@ pub mod project_health {
                 Self::BusFactor => IndicatorLabel::BusFactor,
                 Self::LongStale => IndicatorLabel::LongStale,
                 Self::WipCompliance => IndicatorLabel::WipCompliance,
-            }
-        }
-
-        /// Short description shown as a tooltip / `<details>` body
-        /// to explain what the indicator measures.
-        pub fn description(&self) -> &'static str {
-            match self {
-                Self::Throughput => "Share of issues that have reached Done.",
-                Self::Staleness => "Age of the oldest issue still Open or In Progress.",
-                Self::Activity => "Issues created or finished in the last 14 days.",
-                Self::BusFactor => "Concentration of in-flight work on a single user.",
-                Self::LongStale => "Share of in-flight issues untouched for over two weeks.",
-                Self::WipCompliance => "Share of active users currently over their WIP limit.",
             }
         }
     }

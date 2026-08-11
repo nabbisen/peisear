@@ -133,7 +133,7 @@ pub async fn insert(
 ) -> StorageResult<String> {
     if starts_on > ends_on {
         return Err(StorageError::Validation(
-            "Sprint end date must be on or after start date.".into(),
+            peisear_i18n::MessageKey::SprintEndDateMustBeOnOrAfterStartMessage,
         ));
     }
     let id = Uuid::new_v4().to_string();
@@ -164,7 +164,7 @@ pub async fn update(
 ) -> StorageResult<()> {
     if starts_on > ends_on {
         return Err(StorageError::Validation(
-            "Sprint end date must be on or after start date.".into(),
+            peisear_i18n::MessageKey::SprintEndDateMustBeOnOrAfterStartMessage,
         ));
     }
     let res = sqlx::query(
@@ -208,20 +208,22 @@ pub async fn start(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
     match sprint.status {
         SprintStatus::Planned => {}
         SprintStatus::Active => {
-            return Err(StorageError::Validation("Sprint is already active.".into()));
+            return Err(StorageError::Validation(
+                peisear_i18n::MessageKey::SprintAlreadyActiveMessage,
+            ));
         }
         SprintStatus::Completed => {
             return Err(StorageError::Validation(
-                "Cannot restart a completed sprint.".into(),
+                peisear_i18n::MessageKey::SprintCannotRestartCompletedMessage,
             ));
         }
     }
     if let Some(other) = active_for_team(pool, &sprint.team_id).await? {
-        return Err(StorageError::Conflict(format!(
-            "Another sprint ({}) is currently active in this team. Complete \
-             it before starting a new one.",
-            other.name
-        )));
+        return Err(StorageError::Conflict(
+            peisear_i18n::MessageKey::OtherSprintActiveInTeamMessage {
+                sprint_name: other.name,
+            },
+        ));
     }
     sqlx::query(
         r#"
@@ -246,12 +248,12 @@ pub async fn complete(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
         SprintStatus::Active => {}
         SprintStatus::Planned => {
             return Err(StorageError::Validation(
-                "Sprint hasn't been started yet.".into(),
+                peisear_i18n::MessageKey::SprintNotStartedYetMessage,
             ));
         }
         SprintStatus::Completed => {
             return Err(StorageError::Validation(
-                "Sprint is already completed.".into(),
+                peisear_i18n::MessageKey::SprintAlreadyCompletedMessage,
             ));
         }
     }

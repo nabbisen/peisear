@@ -32,10 +32,11 @@ use axum::{
     Json,
     extract::{Path, State},
 };
+use peisear_i18n::MessageKey;
 use peisear_storage::{notifications, user_burnout, user_capacities};
 use serde::Serialize;
 
-use crate::{ApiAppError, ApiAppResult, AppState, extractors::ApiAuthUser};
+use crate::{ApiAppError, ApiAppResult, AppState, components::t, extractors::ApiAuthUser};
 
 /// Enforce the "self access only" boundary. Returns
 /// `ApiAppError::Forbidden` if the path's `user_id` doesn't
@@ -102,20 +103,19 @@ pub async fn burnout(
     if signals.overload_streak_days >= peisear_core::user_burnout::OVERLOAD_STREAK_WATCH {
         signal_list.push(BurnoutSignal {
             code: "overload_streak".into(),
-            label: format!(
-                "Over capacity for {} of the last {} snapshots.",
-                signals.overload_streak_days, signals.window_days
-            ),
+            label: t(MessageKey::OverloadStreakSignalMessage {
+                overload_streak_days: signals.overload_streak_days,
+                window_days: signals.window_days,
+            }),
         });
     }
 
     if signals.stalled_assigned_max_days >= peisear_core::user_burnout::STALLED_WATCH_DAYS {
         signal_list.push(BurnoutSignal {
             code: "stalled_assigned".into(),
-            label: format!(
-                "Oldest in-flight assigned issue hasn't moved in {} days.",
-                signals.stalled_assigned_max_days
-            ),
+            label: t(MessageKey::StalledAssignedSignalMessage {
+                stalled_assigned_max_days: signals.stalled_assigned_max_days,
+            }),
         });
     }
 
@@ -132,18 +132,14 @@ pub async fn burnout(
         // fact for the user to interpret.
         use peisear_core::user_burnout::DriftDirection;
         let label = match drift.direction {
-            DriftDirection::Up => {
-                Some("Recent issues are taking longer per point than older ones.")
-            }
-            DriftDirection::Down => {
-                Some("Recent issues are completing faster per point than older ones.")
-            }
+            DriftDirection::Up => Some(MessageKey::EstimationDriftUpSignalMessage),
+            DriftDirection::Down => Some(MessageKey::EstimationDriftDownSignalMessage),
             DriftDirection::Steady => None,
         };
         if let Some(label) = label {
             signal_list.push(BurnoutSignal {
                 code: "estimation_drift".into(),
-                label: label.to_string(),
+                label: t(label),
             });
         }
     }
@@ -151,10 +147,9 @@ pub async fn burnout(
     if let Some(switching) = &signals.cognitive_switching {
         signal_list.push(BurnoutSignal {
             code: "cognitive_switching".into(),
-            label: format!(
-                "Switching between {:.1} issues per active day on average.",
-                switching.switches_per_day_median
-            ),
+            label: t(MessageKey::CognitiveSwitchingSignalMessage {
+                switches_per_day_median: switching.switches_per_day_median,
+            }),
         });
     }
 

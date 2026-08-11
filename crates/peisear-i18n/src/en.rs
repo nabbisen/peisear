@@ -27,9 +27,9 @@
 #![deny(clippy::match_wildcard_for_single_variants)]
 
 use crate::message::{
-    DriftDirectionLabel, EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey,
-    NavSection, NotificationChannelLabel, NotificationKindLabel, PriorityLabel, SprintStatusLabel,
-    TeamRoleLabel,
+    DriftDirectionLabel, EntityKind, Field, HealthStateLabel, IndicatorLabel, IssueStatusLabel,
+    MessageKey, NavSection, NotificationChannelLabel, NotificationKindLabel, PriorityLabel,
+    SprintStatusLabel, TeamRoleLabel,
 };
 
 pub(crate) fn render(key: MessageKey) -> String {
@@ -964,6 +964,113 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::PeriodEndMustBeDateFormatMessage => {
             "Period end must be in YYYY-MM-DD format.".to_string()
         }
+
+        // ---- I18N-006: peisear-core/src/lib.rs ----
+        MessageKey::IndicatorDescription { label } => indicator_description(label).to_string(),
+        MessageKey::WipAriaLabel {
+            current_wip,
+            effective_wip_limit,
+            state,
+        } => format!(
+            "WIP: {current_wip} of {effective_wip_limit} ({}).",
+            health_state_label(state)
+        ),
+        MessageKey::LongStaleAriaLabel {
+            long_stale_count,
+            state,
+        } => format!(
+            "Long-stale assigned issues: {long_stale_count} ({}).",
+            health_state_label(state)
+        ),
+        MessageKey::CompositeAriaLabel { state } => {
+            format!("Composite: {}.", health_state_label(state))
+        }
+        MessageKey::IndicatorAriaLabel {
+            label,
+            value,
+            state,
+        } => format!(
+            "{}: {} ({}). {}",
+            indicator_label(label),
+            render(*value),
+            health_state_label(state),
+            indicator_description(label)
+        ),
+
+        // ---- I18N-006: peisear-storage/src/user_capacities.rs ----
+        MessageKey::PeriodStartMustPrecedeEndMessage => {
+            "period_start must be on or before period_end".to_string()
+        }
+        MessageKey::CapacityPeriodOverlapMessage {
+            row_id,
+            period_start,
+            period_end,
+            points,
+        } => format!(
+            "row {row_id} ({period_start} to {period_end}, {points} pt) overlaps the proposed period"
+        ),
+
+        // ---- I18N-006: peisear-storage/src/sprints.rs ----
+        MessageKey::SprintEndDateMustBeOnOrAfterStartMessage => {
+            "Sprint end date must be on or after start date.".to_string()
+        }
+        MessageKey::SprintAlreadyActiveMessage => "Sprint is already active.".to_string(),
+        MessageKey::SprintCannotRestartCompletedMessage => {
+            "Cannot restart a completed sprint.".to_string()
+        }
+        MessageKey::OtherSprintActiveInTeamMessage { sprint_name } => format!(
+            "Another sprint ({sprint_name}) is currently active in this team. Complete \
+             it before starting a new one."
+        ),
+        MessageKey::SprintNotStartedYetMessage => "Sprint hasn't been started yet.".to_string(),
+        MessageKey::SprintAlreadyCompletedMessage => "Sprint is already completed.".to_string(),
+
+        // ---- I18N-006: peisear-storage/src/teams.rs ----
+        MessageKey::TeamSlugCannotBeEmptyMessage => "Team URL slug cannot be empty.".to_string(),
+        MessageKey::TeamSlugAlreadyExistsMessage { slug } => {
+            format!("A team with slug '{slug}' already exists.")
+        }
+        MessageKey::UserAlreadyTeamMemberMessage { user_id } => {
+            format!("User {user_id} is already a member of this team.")
+        }
+
+        // ---- I18N-006: peisear-storage/src/issues.rs (translate_trigger_error) ----
+        MessageKey::SubIssueCannotHaveSubIssueMessage => {
+            "sub-issue cannot have a sub-issue".to_string()
+        }
+        MessageKey::SubIssueMustShareProjectMessage => {
+            "sub-issue must share project with its parent".to_string()
+        }
+        MessageKey::IssueCannotBeOwnParentMessage => {
+            "an issue cannot be its own parent".to_string()
+        }
+        MessageKey::CannotDemoteIssueWithSubIssuesMessage => {
+            "cannot demote an issue that has its own sub-issues".to_string()
+        }
+
+        // ---- I18N-006: handlers/api_users.rs (BurnoutSignal.label) ----
+        MessageKey::OverloadStreakSignalMessage {
+            overload_streak_days,
+            window_days,
+        } => {
+            format!("Over capacity for {overload_streak_days} of the last {window_days} snapshots.")
+        }
+        MessageKey::StalledAssignedSignalMessage {
+            stalled_assigned_max_days,
+        } => format!(
+            "Oldest in-flight assigned issue hasn't moved in {stalled_assigned_max_days} days."
+        ),
+        MessageKey::EstimationDriftUpSignalMessage => {
+            "Recent issues are taking longer per point than older ones.".to_string()
+        }
+        MessageKey::EstimationDriftDownSignalMessage => {
+            "Recent issues are completing faster per point than older ones.".to_string()
+        }
+        MessageKey::CognitiveSwitchingSignalMessage {
+            switches_per_day_median,
+        } => format!(
+            "Switching between {switches_per_day_median:.1} issues per active day on average."
+        ),
     }
 }
 
@@ -1000,6 +1107,33 @@ fn nav_section(section: NavSection) -> &'static str {
         NavSection::Projects => "projects",
         NavSection::Issues => "issues",
         NavSection::Sprints => "sprints",
+    }
+}
+
+/// The six indicator explanation sentences `IndicatorKind::description()`
+/// used to hardcode before `I18N-006` §4 removed it. Shared by
+/// `MessageKey::IndicatorDescription`'s own arm and by
+/// `MessageKey::IndicatorAriaLabel`'s composed sentence, same
+/// helper-sharing shape as `indicator_label`.
+fn indicator_description(label: IndicatorLabel) -> &'static str {
+    match label {
+        IndicatorLabel::Throughput => "Share of issues that have reached Done.",
+        IndicatorLabel::Staleness => "Age of the oldest issue still Open or In Progress.",
+        IndicatorLabel::Activity => "Issues created or finished in the last 14 days.",
+        IndicatorLabel::BusFactor => "Concentration of in-flight work on a single user.",
+        IndicatorLabel::LongStale => "Share of in-flight issues untouched for over two weeks.",
+        IndicatorLabel::WipCompliance => "Share of active users currently over their WIP limit.",
+    }
+}
+
+/// The three `DisplayHealthState::glyph()` accessible-name words,
+/// typed since `I18N-006` §3 split them from the (non-language)
+/// symbol, which stays in `peisear-core`.
+fn health_state_label(state: HealthStateLabel) -> &'static str {
+    match state {
+        HealthStateLabel::Insufficient => "no data",
+        HealthStateLabel::Good => "good",
+        HealthStateLabel::Watch => "watch",
     }
 }
 

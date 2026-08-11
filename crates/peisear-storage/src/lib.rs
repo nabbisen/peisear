@@ -61,17 +61,21 @@ pub enum StorageError {
     /// Application-level invariant violation: the proposed write
     /// would conflict with existing data, but the conflict is
     /// detectable cleanly enough to return a useful message.
-    /// Used by `user_capacities` for period overlaps. The string
-    /// is intended to be operator-readable.
-    #[error("conflict: {0}")]
-    Conflict(String),
+    /// Used by `user_capacities` for period overlaps. Carries a
+    /// [`peisear_i18n::MessageKey`], not a rendered `String`
+    /// (`I18N-006` §5) — `peisear-web` renders it at the crossing
+    /// boundary via `From<StorageError>`.
+    #[error("conflict: {0:?}")]
+    Conflict(peisear_i18n::MessageKey),
 
     /// The proposed write fails a domain rule before the SQL
     /// constraint catches it. Distinct from `Database(...)` so the
     /// web layer can map it to `400 Bad Request` instead of
-    /// `500 Internal Server Error`.
-    #[error("validation: {0}")]
-    Validation(String),
+    /// `500 Internal Server Error`. Carries a
+    /// [`peisear_i18n::MessageKey`], not a rendered `String`
+    /// (`I18N-006` §5) — same rationale as `Conflict` above.
+    #[error("validation: {0:?}")]
+    Validation(peisear_i18n::MessageKey),
 }
 
 pub type StorageResult<T> = Result<T, StorageError>;

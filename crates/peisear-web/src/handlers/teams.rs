@@ -113,10 +113,10 @@ pub async fn create(
             // Re-render the form with the conflict in the
             // error query param. The form is on `/teams/new`,
             // so redirect there.
-            let encoded = percent_encode_query(&msg);
+            let encoded = percent_encode_query(&t(msg));
             Ok(Redirect::to(&format!("/teams/new?error={encoded}")))
         }
-        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
+        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(t(msg))),
         Err(e) => Err(e.into()),
     }
 }
@@ -263,7 +263,7 @@ pub async fn add_member(
             Ok(Redirect::to(&format!("/teams/{slug}?flash={flash}")))
         }
         Err(peisear_storage::StorageError::Conflict(msg)) => {
-            let encoded = percent_encode_query(&msg);
+            let encoded = percent_encode_query(&t(msg));
             Ok(Redirect::to(&format!("/teams/{slug}?error={encoded}")))
         }
         Err(e) => Err(e.into()),

@@ -128,8 +128,11 @@ impl From<StorageError> for AppError {
                 Self::Internal("invalid storage state".into())
             }
             StorageError::Bootstrap(msg) => Self::Internal(msg),
-            StorageError::Conflict(msg) => Self::Conflict(msg),
-            StorageError::Validation(msg) => Self::Validation(msg),
+            // Rendered here, at the crossing boundary, so AppError's
+            // own Conflict/Validation shapes (already String, per
+            // I18N-005e) don't ripple (I18N-006 §5).
+            StorageError::Conflict(key) => Self::Conflict(t(key)),
+            StorageError::Validation(key) => Self::Validation(t(key)),
         }
     }
 }
@@ -395,8 +398,11 @@ impl From<StorageError> for ApiAppError {
                 Self::Internal("invalid storage state".into())
             }
             StorageError::Bootstrap(msg) => Self::Internal(msg),
-            StorageError::Conflict(msg) => Self::Validation(msg),
-            StorageError::Validation(msg) => Self::Validation(msg),
+            // Same 400-not-409 gap Finding 5 (I18N-005e review §4)
+            // already recorded as a precondition for RFC 004 D-1 —
+            // not this handoff's to fix, only to carry forward.
+            StorageError::Conflict(key) => Self::Validation(t(key)),
+            StorageError::Validation(key) => Self::Validation(t(key)),
         }
     }
 }

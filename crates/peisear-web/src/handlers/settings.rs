@@ -182,8 +182,8 @@ pub async fn insert_capacity(
                 .replace(' ', "+");
             Ok(Redirect::to(&format!("/settings?flash={flash}")))
         }
-        Err(peisear_storage::StorageError::Conflict(msg)) => Ok(redirect_with_conflict(&msg)),
-        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
+        Err(peisear_storage::StorageError::Conflict(msg)) => Ok(redirect_with_conflict(&t(msg))),
+        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(t(msg))),
         Err(e) => Err(e.into()),
     }
 }
@@ -263,8 +263,8 @@ pub async fn update_capacity(
                 .replace(' ', "+");
             Ok(Redirect::to(&format!("/settings?flash={flash}")))
         }
-        Err(peisear_storage::StorageError::Conflict(msg)) => Ok(redirect_with_conflict(&msg)),
-        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
+        Err(peisear_storage::StorageError::Conflict(msg)) => Ok(redirect_with_conflict(&t(msg))),
+        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(t(msg))),
         Err(e) => Err(e.into()),
     }
 }

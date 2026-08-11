@@ -285,24 +285,25 @@ pub async fn insert(
         // Defensive — the schema CHECK catches this too, but we
         // produce a nicer error message before hitting the DB.
         return Err(StorageError::Validation(
-            "period_start must be on or before period_end".into(),
+            peisear_i18n::MessageKey::PeriodStartMustPrecedeEndMessage,
         ));
     }
     if let Some(conflict) = overlaps_existing(pool, user_id, period_start, period_end, None).await?
     {
-        return Err(StorageError::Conflict(format!(
-            "row {} ({} to {}, {} pt) overlaps the proposed period",
-            conflict.id,
-            conflict
-                .period_start
-                .map(|d| d.to_string())
-                .unwrap_or_else(|| "—".into()),
-            conflict
-                .period_end
-                .map(|d| d.to_string())
-                .unwrap_or_else(|| "—".into()),
-            conflict.points,
-        )));
+        return Err(StorageError::Conflict(
+            peisear_i18n::MessageKey::CapacityPeriodOverlapMessage {
+                row_id: conflict.id,
+                period_start: conflict
+                    .period_start
+                    .map(|d| d.to_string())
+                    .unwrap_or_else(|| "—".into()),
+                period_end: conflict
+                    .period_end
+                    .map(|d| d.to_string())
+                    .unwrap_or_else(|| "—".into()),
+                points: conflict.points,
+            },
+        ));
     }
 
     let id = Uuid::new_v4().to_string();
@@ -338,19 +339,20 @@ pub async fn update(
     if let Some(conflict) =
         overlaps_existing(pool, user_id, period_start, period_end, Some(id)).await?
     {
-        return Err(StorageError::Conflict(format!(
-            "row {} ({} to {}, {} pt) overlaps the proposed period",
-            conflict.id,
-            conflict
-                .period_start
-                .map(|d| d.to_string())
-                .unwrap_or_else(|| "—".into()),
-            conflict
-                .period_end
-                .map(|d| d.to_string())
-                .unwrap_or_else(|| "—".into()),
-            conflict.points,
-        )));
+        return Err(StorageError::Conflict(
+            peisear_i18n::MessageKey::CapacityPeriodOverlapMessage {
+                row_id: conflict.id,
+                period_start: conflict
+                    .period_start
+                    .map(|d| d.to_string())
+                    .unwrap_or_else(|| "—".into()),
+                period_end: conflict
+                    .period_end
+                    .map(|d| d.to_string())
+                    .unwrap_or_else(|| "—".into()),
+                points: conflict.points,
+            },
+        ));
     }
 
     let res = sqlx::query(

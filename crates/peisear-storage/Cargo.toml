@@ -11,6 +11,7 @@ repository.workspace    = true
 
 [dependencies]
 peisear-core                = { workspace = true }
+peisear-i18n                = { workspace = true }
 
 chrono                      = { workspace = true }
 sqlx                        = { workspace = true }

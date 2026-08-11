@@ -316,6 +316,27 @@ impl NotificationChannelLabel {
     }
 }
 
+/// Which word `peisear_core::DisplayHealthState::to_i18n_label`
+/// renders as. `I18N-006` §3: `glyph()` used to return this as its
+/// second tuple element (`(symbol, word)`) alongside the non-language
+/// symbol; the symbol stays in `peisear-core`, the word comes here.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HealthStateLabel {
+    Insufficient,
+    Good,
+    Watch,
+}
+
+impl HealthStateLabel {
+    pub fn all() -> [HealthStateLabel; 3] {
+        [
+            HealthStateLabel::Insufficient,
+            HealthStateLabel::Good,
+            HealthStateLabel::Watch,
+        ]
+    }
+}
+
 /// One message this crate can render, in every shipped locale.
 ///
 /// A key enum, not a string constant and not a `HashMap<&str, &str>`:
@@ -1578,6 +1599,134 @@ pub enum MessageKey {
     WipLimitMustBePositiveIntegerMessage,
     PeriodStartMustBeDateFormatMessage,
     PeriodEndMustBeDateFormatMessage,
+
+    // ---- I18N-006: peisear-core/src/lib.rs ----
+    /// The six indicator explanation sentences. Replaces
+    /// `IndicatorKind::description()`, removed entirely (`I18N-006`
+    /// §4) — reuses [`IndicatorLabel`], the same closed-set enum
+    /// [`MessageKey::IndicatorName`] already keys off of.
+    IndicatorDescription {
+        label: IndicatorLabel,
+    },
+    /// `me.rs`'s WIP chip aria-label. Was `format!("WIP: {} of {}
+    /// ({}).", current_wip, effective_wip_limit, wip_aria)` where
+    /// `wip_aria` came from `glyph()`'s removed second element —
+    /// left unconverted by `I18N-005d` specifically because of that
+    /// dependency; `glyph()`'s split (`I18N-006` §3) unblocks it.
+    WipAriaLabel {
+        current_wip: i64,
+        effective_wip_limit: i64,
+        state: HealthStateLabel,
+    },
+    /// `me.rs`'s long-stale chip aria-label. Same `glyph()`
+    /// dependency and history as [`MessageKey::WipAriaLabel`].
+    LongStaleAriaLabel {
+        long_stale_count: i64,
+        state: HealthStateLabel,
+    },
+    /// `HealthStrip`'s composite-score chip aria-label
+    /// (`components/issues.rs::composite_row`).
+    CompositeAriaLabel {
+        state: HealthStateLabel,
+    },
+    /// `HealthStrip`'s per-indicator chip aria-label
+    /// (`components/issues.rs::indicator_row`) — composes the name,
+    /// value, state word and description into one sentence. The
+    /// value is a boxed `MessageKey` (`ind.value_display`, already
+    /// typed since `I18N-002`) rendered recursively in the same
+    /// `en.rs` arm, not threaded in as a pre-rendered `String` —
+    /// the composition rule this release has enforced since
+    /// `I18N-005c` §3 applies here too, even though the value is
+    /// itself a message rather than raw data.
+    IndicatorAriaLabel {
+        label: IndicatorLabel,
+        value: Box<MessageKey>,
+        state: HealthStateLabel,
+    },
+
+    // ---- I18N-006: peisear-storage/src/user_capacities.rs ----
+    /// `insert`'s pre-check before the schema `CHECK` constraint.
+    /// The wording names the raw field identifiers
+    /// (`period_start`/`period_end`) rather than a friendlier
+    /// phrase — found, not introduced, and kept byte-exact under
+    /// no-rewording; flagged in the review request as a possible
+    /// copy-quality finding.
+    PeriodStartMustPrecedeEndMessage,
+    /// `insert` and `update`'s overlap-conflict message — identical
+    /// at both call sites, so one key. `period_start`/`period_end`
+    /// carry the conflicting row's already-formatted dates (or "—"
+    /// for open-ended), not copy.
+    CapacityPeriodOverlapMessage {
+        row_id: String,
+        period_start: String,
+        period_end: String,
+        points: i64,
+    },
+
+    // ---- I18N-006: peisear-storage/src/sprints.rs ----
+    /// `insert` and `update`'s date-order check — identical wording
+    /// at both call sites, so one key.
+    SprintEndDateMustBeOnOrAfterStartMessage,
+    SprintAlreadyActiveMessage,
+    SprintCannotRestartCompletedMessage,
+    /// `start`'s single-active-sprint-per-team conflict.
+    /// `sprint_name` is the other sprint's name — genuine data, not
+    /// copy.
+    OtherSprintActiveInTeamMessage {
+        sprint_name: String,
+    },
+    SprintNotStartedYetMessage,
+    SprintAlreadyCompletedMessage,
+
+    // ---- I18N-006: peisear-storage/src/teams.rs ----
+    TeamSlugCannotBeEmptyMessage,
+    /// `slug` is the caller-proposed value that collided — genuine
+    /// data, not copy.
+    TeamSlugAlreadyExistsMessage {
+        slug: String,
+    },
+    /// `user_id` renders the raw id rather than a display name,
+    /// because storage has no name to hand at this boundary —
+    /// found, not introduced; converted as-is under no-rewording.
+    UserAlreadyTeamMemberMessage {
+        user_id: String,
+    },
+
+    // ---- I18N-006: peisear-storage/src/issues.rs (translate_trigger_error) ----
+    /// The four `RAISE`-matched needle strings from migration 0015,
+    /// unchanged (`DEC-011` — the match array itself is not this
+    /// handoff's to touch, only the returned type). The rendered
+    /// text is the needle text verbatim; SQLite's trigger wording
+    /// *is* the user-facing message here.
+    SubIssueCannotHaveSubIssueMessage,
+    SubIssueMustShareProjectMessage,
+    IssueCannotBeOwnParentMessage,
+    CannotDemoteIssueWithSubIssuesMessage,
+
+    // ---- I18N-006: handlers/api_users.rs (BurnoutSignal.label) ----
+    /// `code: "overload_streak"`.
+    OverloadStreakSignalMessage {
+        overload_streak_days: i64,
+        window_days: i64,
+    },
+    /// `code: "stalled_assigned"`.
+    StalledAssignedSignalMessage {
+        stalled_assigned_max_days: i64,
+    },
+    /// `code: "estimation_drift"`, `DriftDirection::Up`. Distinct
+    /// wording from [`MessageKey::DriftValueLine`]'s "up"/"down"
+    /// phrasing elsewhere — found, not unified, joining `I18N-005d`'s
+    /// "per active day" duplication in the queue for a copy pass.
+    EstimationDriftUpSignalMessage,
+    /// `code: "estimation_drift"`, `DriftDirection::Down`.
+    EstimationDriftDownSignalMessage,
+    /// `code: "cognitive_switching"`. Distinct wording from
+    /// [`MessageKey::SwitchingMedianValue`]'s "per active day"
+    /// phrasing — same found-not-unified disposition as the drift
+    /// pair above.
+    CognitiveSwitchingSignalMessage {
+        switches_per_day_median: f64,
+    },
 }
 
 impl MessageKey {
@@ -2164,6 +2313,67 @@ impl MessageKey {
             MessageKey::WipLimitMustBePositiveIntegerMessage,
             MessageKey::PeriodStartMustBeDateFormatMessage,
             MessageKey::PeriodEndMustBeDateFormatMessage,
+            // -- I18N-006: peisear-core/src/lib.rs --
+            MessageKey::WipAriaLabel {
+                current_wip: 5,
+                effective_wip_limit: 3,
+                state: HealthStateLabel::Watch,
+            },
+            MessageKey::LongStaleAriaLabel {
+                long_stale_count: 2,
+                state: HealthStateLabel::Watch,
+            },
+            MessageKey::CompositeAriaLabel {
+                state: HealthStateLabel::Good,
+            },
+            MessageKey::IndicatorAriaLabel {
+                label: IndicatorLabel::Throughput,
+                value: Box::new(MessageKey::IndicatorValueThroughput { done: 5, total: 7 }),
+                state: HealthStateLabel::Good,
+            },
+            // -- I18N-006: peisear-storage/src/user_capacities.rs --
+            MessageKey::PeriodStartMustPrecedeEndMessage,
+            MessageKey::CapacityPeriodOverlapMessage {
+                row_id: "row-1".to_string(),
+                period_start: "2026-08-01".to_string(),
+                period_end: "2026-08-14".to_string(),
+                points: 10,
+            },
+            // -- I18N-006: peisear-storage/src/sprints.rs --
+            MessageKey::SprintEndDateMustBeOnOrAfterStartMessage,
+            MessageKey::SprintAlreadyActiveMessage,
+            MessageKey::SprintCannotRestartCompletedMessage,
+            MessageKey::OtherSprintActiveInTeamMessage {
+                sprint_name: "Sprint 4".to_string(),
+            },
+            MessageKey::SprintNotStartedYetMessage,
+            MessageKey::SprintAlreadyCompletedMessage,
+            // -- I18N-006: peisear-storage/src/teams.rs --
+            MessageKey::TeamSlugCannotBeEmptyMessage,
+            MessageKey::TeamSlugAlreadyExistsMessage {
+                slug: "frontend-engineering".to_string(),
+            },
+            MessageKey::UserAlreadyTeamMemberMessage {
+                user_id: "user-1".to_string(),
+            },
+            // -- I18N-006: peisear-storage/src/issues.rs (translate_trigger_error) --
+            MessageKey::SubIssueCannotHaveSubIssueMessage,
+            MessageKey::SubIssueMustShareProjectMessage,
+            MessageKey::IssueCannotBeOwnParentMessage,
+            MessageKey::CannotDemoteIssueWithSubIssuesMessage,
+            // -- I18N-006: handlers/api_users.rs (BurnoutSignal.label) --
+            MessageKey::OverloadStreakSignalMessage {
+                overload_streak_days: 3,
+                window_days: 5,
+            },
+            MessageKey::StalledAssignedSignalMessage {
+                stalled_assigned_max_days: 10,
+            },
+            MessageKey::EstimationDriftUpSignalMessage,
+            MessageKey::EstimationDriftDownSignalMessage,
+            MessageKey::CognitiveSwitchingSignalMessage {
+                switches_per_day_median: 1.8,
+            },
         ];
         keys.extend(
             EntityKind::all()
@@ -2201,6 +2411,13 @@ impl MessageKey {
             IndicatorLabel::all()
                 .into_iter()
                 .map(|label| MessageKey::IndicatorName { label }),
+        );
+        // Every IndicatorLabel value again, through the description
+        // key I18N-006 adds (IndicatorKind::description() absorption).
+        keys.extend(
+            IndicatorLabel::all()
+                .into_iter()
+                .map(|label| MessageKey::IndicatorDescription { label }),
         );
         // Every NavSection value, per I18N-005a-review.md §2.
         keys.extend(
