@@ -9,7 +9,7 @@ use peisear_core::{
     UserLoad,
     project_health::{HealthScore, Indicator, ProjectHealthReport},
 };
-use peisear_i18n::{Field, Locale, MessageKey, NavSection};
+use peisear_i18n::{Field, Locale, MessageKey, NavSection, TrendDirectionLabel};
 
 use super::t;
 
@@ -254,16 +254,32 @@ fn render_trend_chip(trend: peisear_core::project_health::Trend) -> impl IntoVie
     use peisear_core::project_health::Trend;
     let (glyph, label, aria) = match trend {
         Trend::Unavailable => return view! { <span class="hidden"></span> }.into_any(),
-        Trend::Flat => ("→", "flat".to_string(), "trend: roughly flat".to_string()),
+        Trend::Flat => (
+            "→",
+            t(MessageKey::TrendLabelFlat),
+            t(MessageKey::TrendAriaFlat),
+        ),
         Trend::Up { delta } => (
             "↑",
-            format!("+{delta}"),
-            format!("trend: up by {delta} points"),
+            t(MessageKey::TrendLabel {
+                direction: TrendDirectionLabel::Up,
+                delta,
+            }),
+            t(MessageKey::TrendAriaLabel {
+                direction: TrendDirectionLabel::Up,
+                delta,
+            }),
         ),
         Trend::Down { delta } => (
             "↓",
-            format!("-{delta}"),
-            format!("trend: down by {delta} points"),
+            t(MessageKey::TrendLabel {
+                direction: TrendDirectionLabel::Down,
+                delta,
+            }),
+            t(MessageKey::TrendAriaLabel {
+                direction: TrendDirectionLabel::Down,
+                delta,
+            }),
         ),
     };
     view! {
@@ -296,7 +312,7 @@ fn composite_row(score: &HealthScore) -> impl IntoView {
              role="group"
              aria-label=aria_label.clone()
              title=aria_label>
-            <span class="text-xs text-base-content/70">"Composite"</span>
+            <span class="text-xs text-base-content/70">{t(MessageKey::CompositeLabel)}</span>
             <span class=badge_class>
                 <span aria-hidden="true">{glyph}</span>
             </span>

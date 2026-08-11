@@ -337,6 +337,24 @@ impl HealthStateLabel {
     }
 }
 
+/// Which word `components/issues.rs::render_trend_chip` renders for
+/// a non-flat `peisear_core::project_health::Trend`. `Trend::Flat`
+/// has no delta and a different sentence shape ("roughly flat" vs.
+/// "up/down by N points"), so it is not a third variant here --
+/// `MessageKey::TrendLabelFlat`/`TrendAriaFlat` cover it directly
+/// (`I18N-007` §2 item 1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TrendDirectionLabel {
+    Up,
+    Down,
+}
+
+impl TrendDirectionLabel {
+    pub fn all() -> [TrendDirectionLabel; 2] {
+        [TrendDirectionLabel::Up, TrendDirectionLabel::Down]
+    }
+}
+
 /// One message this crate can render, in every shipped locale.
 ///
 /// A key enum, not a string constant and not a `HashMap<&str, &str>`:
@@ -1727,6 +1745,54 @@ pub enum MessageKey {
     CognitiveSwitchingSignalMessage {
         switches_per_day_median: f64,
     },
+
+    // ---- I18N-007: components/issues.rs (render_trend_chip) ----
+    /// `Trend::Flat`'s chip word.
+    TrendLabelFlat,
+    /// `Trend::Up`/`Down`'s chip word -- `delta` is data (the point
+    /// figure), the sign is implied by `direction`.
+    TrendLabel {
+        direction: TrendDirectionLabel,
+        delta: u8,
+    },
+    /// `Trend::Flat`'s aria/title sentence.
+    TrendAriaFlat,
+    /// `Trend::Up`/`Down`'s aria/title sentence.
+    TrendAriaLabel {
+        direction: TrendDirectionLabel,
+        delta: u8,
+    },
+
+    // ---- I18N-007: components/issues.rs (composite_row) ----
+    CompositeLabel,
+
+    // ---- I18N-007: components/sprints.rs (burndown legend) ----
+    /// Deliberately NOT [`MessageKey::CaptionWordCommitted`] /
+    /// [`MessageKey::CaptionWordCompleted`] (`I18N-005c`), which
+    /// render lowercase ("committed"/"completed") for the caption
+    /// directly below this legend. Reusing them here would force a
+    /// casing compromise on one side or the other -- the fifth
+    /// instance of the inflection question this release has hit
+    /// (`I18N-006-review.md` §6's precedent for recording rather than
+    /// absorbing). Recorded, not bent.
+    BurndownLegendCommitted,
+    BurndownLegendCompleted,
+
+    // ---- I18N-007: components/me.rs ----
+    CurrentLoadSectionLabel,
+    /// `load_text` when the user has a capacity figure set.
+    LoadWithCapacityValue {
+        in_flight_points: i64,
+        capacity_points: i64,
+    },
+    /// `load_text` when the user has no capacity figure set.
+    LoadNoCapacityValue {
+        in_flight_points: i64,
+    },
+    RecentThroughputValue {
+        recent_done_count: i64,
+        window_days: i64,
+    },
 }
 
 impl MessageKey {
@@ -2374,7 +2440,40 @@ impl MessageKey {
             MessageKey::CognitiveSwitchingSignalMessage {
                 switches_per_day_median: 1.8,
             },
+            // -- I18N-007: components/issues.rs (render_trend_chip) --
+            MessageKey::TrendLabelFlat,
+            MessageKey::TrendAriaFlat,
+            // -- I18N-007: components/issues.rs (composite_row) --
+            MessageKey::CompositeLabel,
+            // -- I18N-007: components/sprints.rs (burndown legend) --
+            MessageKey::BurndownLegendCommitted,
+            MessageKey::BurndownLegendCompleted,
+            // -- I18N-007: components/me.rs --
+            MessageKey::CurrentLoadSectionLabel,
+            MessageKey::LoadWithCapacityValue {
+                in_flight_points: 4,
+                capacity_points: 10,
+            },
+            MessageKey::LoadNoCapacityValue {
+                in_flight_points: 4,
+            },
+            MessageKey::RecentThroughputValue {
+                recent_done_count: 2,
+                window_days: 14,
+            },
         ];
+        keys.extend(TrendDirectionLabel::all().into_iter().map(|direction| {
+            MessageKey::TrendLabel {
+                direction,
+                delta: 3,
+            }
+        }));
+        keys.extend(TrendDirectionLabel::all().into_iter().map(|direction| {
+            MessageKey::TrendAriaLabel {
+                direction,
+                delta: 3,
+            }
+        }));
         keys.extend(
             EntityKind::all()
                 .into_iter()

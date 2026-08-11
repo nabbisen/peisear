@@ -28,7 +28,7 @@
 use peisear_i18n::{
     DriftDirectionLabel, EntityKind, Field, HealthStateLabel, IndicatorLabel, IssueStatusLabel,
     MessageKey, NavSection, NotificationChannelLabel, NotificationKindLabel, PriorityLabel,
-    SprintStatusLabel, TeamRoleLabel,
+    SprintStatusLabel, TeamRoleLabel, TrendDirectionLabel,
 };
 
 pub fn render(key: MessageKey) -> String {
@@ -810,6 +810,39 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::CognitiveSwitchingSignalMessage {
             switches_per_day_median,
         } => format!("[fx-switching-signal] {switches_per_day_median:.1}"),
+
+        // ---- I18N-007: components/issues.rs (render_trend_chip) ----
+        MessageKey::TrendLabelFlat => "[fx-trend-flat]".to_string(),
+        MessageKey::TrendLabel { direction, delta } => match direction {
+            TrendDirectionLabel::Up => format!("[fx-trend-up] {delta}"),
+            TrendDirectionLabel::Down => format!("[fx-trend-down] {delta}"),
+        },
+        MessageKey::TrendAriaFlat => "[fx-trend-aria-flat]".to_string(),
+        MessageKey::TrendAriaLabel { direction, delta } => match direction {
+            TrendDirectionLabel::Up => format!("[fx-trend-aria-up] {delta}"),
+            TrendDirectionLabel::Down => format!("[fx-trend-aria-down] {delta}"),
+        },
+
+        // ---- I18N-007: components/issues.rs (composite_row) ----
+        MessageKey::CompositeLabel => "[fx-composite-label]".to_string(),
+
+        // ---- I18N-007: components/sprints.rs (burndown legend) ----
+        MessageKey::BurndownLegendCommitted => "[fx-legend-committed]".to_string(),
+        MessageKey::BurndownLegendCompleted => "[fx-legend-completed]".to_string(),
+
+        // ---- I18N-007: components/me.rs ----
+        MessageKey::CurrentLoadSectionLabel => "[fx-current-load]".to_string(),
+        MessageKey::LoadWithCapacityValue {
+            in_flight_points,
+            capacity_points,
+        } => format!("[fx-load-with-capacity] {in_flight_points}/{capacity_points}"),
+        MessageKey::LoadNoCapacityValue { in_flight_points } => {
+            format!("[fx-load-no-capacity] {in_flight_points}")
+        }
+        MessageKey::RecentThroughputValue {
+            recent_done_count,
+            window_days,
+        } => format!("[fx-recent-throughput] {recent_done_count}/{window_days}"),
     }
 }
 

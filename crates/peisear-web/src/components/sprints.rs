@@ -749,12 +749,12 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
                     <span>
                         <span class="inline-block w-3 h-0.5 mr-1"
                               style="background: oklch(70% 0.04 240)"></span>
-                        "Committed"
+                        {t(MessageKey::BurndownLegendCommitted)}
                     </span>
                     <span>
                         <span class="inline-block w-3 h-0.5 mr-1"
                               style="background: oklch(55% 0.14 240)"></span>
-                        "Completed"
+                        {t(MessageKey::BurndownLegendCompleted)}
                     </span>
                 </div>
             </div>

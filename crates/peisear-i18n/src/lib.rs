@@ -44,5 +44,5 @@ pub use locale::Locale;
 pub use message::{
     DriftDirectionLabel, EntityKind, Field, HealthStateLabel, IndicatorLabel, IssueStatusLabel,
     MessageKey, NavSection, NotificationChannelLabel, NotificationKindLabel, PriorityLabel,
-    SprintStatusLabel, TeamRoleLabel,
+    SprintStatusLabel, TeamRoleLabel, TrendDirectionLabel,
 };

@@ -23,6 +23,8 @@ pub mod error;
 pub mod extractors;
 pub mod handlers;
 pub mod jobs;
+#[cfg(test)]
+mod prose_scan;
 pub mod state;
 
 pub use app::build_router;

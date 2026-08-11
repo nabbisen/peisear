@@ -177,8 +177,13 @@ pub fn PersonalDashboard(
     });
 
     let load_text = match m.capacity_points {
-        Some(cap) => format!("{} / {} pt", m.in_flight_points, cap),
-        None => format!("{} pt · no limit", m.in_flight_points),
+        Some(cap) => t(MessageKey::LoadWithCapacityValue {
+            in_flight_points: m.in_flight_points,
+            capacity_points: cap,
+        }),
+        None => t(MessageKey::LoadNoCapacityValue {
+            in_flight_points: m.in_flight_points,
+        }),
     };
     // 0.12.0: when today's capacity comes from a period-bounded
     // user_capacities row, surface a small "(this period)" hint
@@ -186,10 +191,10 @@ pub fn PersonalDashboard(
     // permanent default — it's specific to a window".
     let load_period_hint = capacity_is_period_bounded && m.capacity_points.is_some();
 
-    let throughput_text = format!(
-        "{} done in last {PERSONAL_ACTIVITY_WINDOW_DAYS}d",
-        m.recent_done_count
-    );
+    let throughput_text = t(MessageKey::RecentThroughputValue {
+        recent_done_count: m.recent_done_count,
+        window_days: PERSONAL_ACTIVITY_WINDOW_DAYS,
+    });
 
     let stale_text = format!("{}", m.long_stale_count);
     let stale_aria_label = t(MessageKey::LongStaleAriaLabel {
@@ -268,7 +273,7 @@ pub fn PersonalDashboard(
                     }
                 })}
 
-                <section class="mb-6" aria-label="Current load">
+                <section class="mb-6" aria-label=t(MessageKey::CurrentLoadSectionLabel)>
                     <h2 class="text-xs uppercase tracking-wide text-base-content/60 mb-2">
                         {t(MessageKey::RightNowHeading)}
                     </h2>

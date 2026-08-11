@@ -29,7 +29,7 @@
 use crate::message::{
     DriftDirectionLabel, EntityKind, Field, HealthStateLabel, IndicatorLabel, IssueStatusLabel,
     MessageKey, NavSection, NotificationChannelLabel, NotificationKindLabel, PriorityLabel,
-    SprintStatusLabel, TeamRoleLabel,
+    SprintStatusLabel, TeamRoleLabel, TrendDirectionLabel,
 };
 
 pub(crate) fn render(key: MessageKey) -> String {
@@ -1071,6 +1071,39 @@ pub(crate) fn render(key: MessageKey) -> String {
         } => format!(
             "Switching between {switches_per_day_median:.1} issues per active day on average."
         ),
+
+        // ---- I18N-007: components/issues.rs (render_trend_chip) ----
+        MessageKey::TrendLabelFlat => "flat".to_string(),
+        MessageKey::TrendLabel { direction, delta } => match direction {
+            TrendDirectionLabel::Up => format!("+{delta}"),
+            TrendDirectionLabel::Down => format!("-{delta}"),
+        },
+        MessageKey::TrendAriaFlat => "trend: roughly flat".to_string(),
+        MessageKey::TrendAriaLabel { direction, delta } => match direction {
+            TrendDirectionLabel::Up => format!("trend: up by {delta} points"),
+            TrendDirectionLabel::Down => format!("trend: down by {delta} points"),
+        },
+
+        // ---- I18N-007: components/issues.rs (composite_row) ----
+        MessageKey::CompositeLabel => "Composite".to_string(),
+
+        // ---- I18N-007: components/sprints.rs (burndown legend) ----
+        MessageKey::BurndownLegendCommitted => "Committed".to_string(),
+        MessageKey::BurndownLegendCompleted => "Completed".to_string(),
+
+        // ---- I18N-007: components/me.rs ----
+        MessageKey::CurrentLoadSectionLabel => "Current load".to_string(),
+        MessageKey::LoadWithCapacityValue {
+            in_flight_points,
+            capacity_points,
+        } => format!("{in_flight_points} / {capacity_points} pt"),
+        MessageKey::LoadNoCapacityValue { in_flight_points } => {
+            format!("{in_flight_points} pt · no limit")
+        }
+        MessageKey::RecentThroughputValue {
+            recent_done_count,
+            window_days,
+        } => format!("{recent_done_count} done in last {window_days}d"),
     }
 }
 
