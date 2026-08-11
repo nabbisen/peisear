@@ -69,3 +69,25 @@ fn no_rendered_output_contains_a_key_shaped_literal() {
         }
     }
 }
+
+/// `I18N-005c` §5: `FR-TEAM-005`'s privacy footnote is a requirement-quoted
+/// string ("management role, not an oversight role" is the acceptance
+/// criterion) — "semantically identical" isn't a tight enough bar for it, so
+/// this pins the exact bytes `TeamPrivacyFootnote` must render as.
+///
+/// This is the current source's actual wording, converted byte-exactly per
+/// the handoff. It differs from the handoff §2's quoted "normative" text
+/// (which reads "visible to all members... burnout panel, /today... Admin is
+/// a management role") — that divergence is a pre-existing discrepancy
+/// between the shipped copy and the requirement doc, escalated in this
+/// handoff's review request rather than resolved by editing either one.
+#[test]
+fn team_privacy_footnote_renders_byte_identically() {
+    assert_eq!(
+        Locale::English.render(MessageKey::TeamPrivacyFootnote),
+        "Privacy note: project trends and workload distribution are visible \
+         to all team members. Personal sustainability data (your burnout panel, \
+         your dashboard) remains visible to you only — admin role is a \
+         management role, not an oversight role."
+    );
+}

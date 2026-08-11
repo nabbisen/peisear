@@ -1941,6 +1941,7 @@ pub mod notifications {
 /// individual signals (burnout panel, personal dashboard).
 /// Admin is a managerial role, not a surveilling one.
 pub mod teams {
+    use peisear_i18n::TeamRoleLabel;
     use serde::{Deserialize, Serialize};
 
     /// Per-team role. String-typed in storage; this enum is the
@@ -1968,11 +1969,16 @@ pub mod teams {
             }
         }
 
-        pub fn human_name(self) -> &'static str {
+        /// The word this role renders as, via `peisear-i18n`'s message
+        /// table. `I18N-005c` §4's "parameterise" instruction absorbs
+        /// this the same way `I18N-005b` absorbed
+        /// `IssueStatus::label()`/`Priority::label()` — see those
+        /// methods' doc comments in this crate.
+        pub fn to_i18n_label(self) -> TeamRoleLabel {
             match self {
-                Self::Admin => "Admin",
-                Self::Member => "Member",
-                Self::Viewer => "Viewer",
+                Self::Admin => TeamRoleLabel::Admin,
+                Self::Member => TeamRoleLabel::Member,
+                Self::Viewer => TeamRoleLabel::Viewer,
             }
         }
 
@@ -2103,6 +2109,7 @@ pub mod teams {
 /// sprint" event is the signal we want a person to make
 /// deliberately, not the calendar.
 pub mod sprints {
+    use peisear_i18n::SprintStatusLabel;
     use serde::{Deserialize, Serialize};
 
     /// Sprint lifecycle. Transitions are admin actions; see
@@ -2125,11 +2132,13 @@ pub mod sprints {
             }
         }
 
-        pub fn human_name(self) -> &'static str {
+        /// See `TeamRole::to_i18n_label` — same absorption, same
+        /// reason.
+        pub fn to_i18n_label(self) -> SprintStatusLabel {
             match self {
-                Self::Planned => "Planned",
-                Self::Active => "Active",
-                Self::Completed => "Completed",
+                Self::Planned => SprintStatusLabel::Planned,
+                Self::Active => SprintStatusLabel::Active,
+                Self::Completed => SprintStatusLabel::Completed,
             }
         }
 

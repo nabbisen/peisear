@@ -15,6 +15,7 @@ use axum::{
 };
 use chrono::NaiveDate;
 use peisear_core::sprints::SprintStatus;
+use peisear_i18n::{Locale, MessageKey};
 use peisear_storage::{notifications as notif_store, sprints, teams};
 use serde::Deserialize;
 
@@ -150,9 +151,14 @@ pub async fn create(
     let ends_on = parse_date_required(&form.ends_on, "End date")?;
 
     match sprints::insert(&state.db, &team.id, name, goal, starts_on, ends_on).await {
-        Ok(id) => Ok(Redirect::to(&format!(
-            "/teams/{slug}/sprints/{id}?flash=Sprint+created"
-        ))),
+        Ok(id) => {
+            let flash = Locale::English
+                .render(MessageKey::SprintCreatedFlash)
+                .replace(' ', "+");
+            Ok(Redirect::to(&format!(
+                "/teams/{slug}/sprints/{id}?flash={flash}"
+            )))
+        }
         Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
         Err(e) => Err(e.into()),
     }
@@ -258,9 +264,14 @@ pub async fn update(
     let ends_on = parse_date_required(&form.ends_on, "End date")?;
 
     match sprints::update(&state.db, &sprint.id, name, goal, starts_on, ends_on).await {
-        Ok(()) => Ok(Redirect::to(&format!(
-            "/teams/{slug}/sprints/{sprint_id}?flash=Sprint+updated"
-        ))),
+        Ok(()) => {
+            let flash = Locale::English
+                .render(MessageKey::SprintUpdatedFlash)
+                .replace(' ', "+");
+            Ok(Redirect::to(&format!(
+                "/teams/{slug}/sprints/{sprint_id}?flash={flash}"
+            )))
+        }
         Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
         Err(e) => Err(e.into()),
     }
@@ -299,9 +310,14 @@ pub async fn start(
         &sprint_id,
     )?;
     match sprints::start(&state.db, &sprint.id).await {
-        Ok(()) => Ok(Redirect::to(&format!(
-            "/teams/{slug}/sprints/{sprint_id}?flash=Sprint+started"
-        ))),
+        Ok(()) => {
+            let flash = Locale::English
+                .render(MessageKey::SprintStartedFlash)
+                .replace(' ', "+");
+            Ok(Redirect::to(&format!(
+                "/teams/{slug}/sprints/{sprint_id}?flash={flash}"
+            )))
+        }
         Err(peisear_storage::StorageError::Conflict(msg)) => {
             let encoded = percent_encode_query(&msg);
             Ok(Redirect::to(&format!(
@@ -336,9 +352,14 @@ pub async fn complete(
         &sprint_id,
     )?;
     match sprints::complete(&state.db, &sprint.id).await {
-        Ok(()) => Ok(Redirect::to(&format!(
-            "/teams/{slug}/sprints/{sprint_id}?flash=Sprint+completed"
-        ))),
+        Ok(()) => {
+            let flash = Locale::English
+                .render(MessageKey::SprintCompletedFlash)
+                .replace(' ', "+");
+            Ok(Redirect::to(&format!(
+                "/teams/{slug}/sprints/{sprint_id}?flash={flash}"
+            )))
+        }
         Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(msg)),
         Err(e) => Err(e.into()),
     }
@@ -367,8 +388,11 @@ pub async fn delete_sprint(
         &sprint_id,
     )?;
     sprints::delete(&state.db, &sprint.id).await?;
+    let flash = Locale::English
+        .render(MessageKey::SprintDeletedFlash)
+        .replace(' ', "+");
     Ok(Redirect::to(&format!(
-        "/teams/{slug}/sprints?flash=Sprint+deleted"
+        "/teams/{slug}/sprints?flash={flash}"
     )))
 }
 
@@ -457,8 +481,11 @@ pub async fn assign_issue(
         }
         sprints::add_issue(&state.db, &sprint.id, &issue_id).await?;
     }
+    let flash = Locale::English
+        .render(MessageKey::SprintAssignmentSavedFlash)
+        .replace(' ', "+");
     Ok(Redirect::to(&format!(
-        "/projects/{project_id}/issues/{issue_id}?flash=Sprint+assignment+saved"
+        "/projects/{project_id}/issues/{issue_id}?flash={flash}"
     )))
 }
 

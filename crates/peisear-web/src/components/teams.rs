@@ -9,6 +9,7 @@
 use axum::response::Html;
 use chrono::{DateTime, Utc};
 use leptos::prelude::*;
+use peisear_i18n::{Field, MessageKey, TeamRoleLabel};
 
 use peisear_core::{
     CurrentUser, Project,
@@ -16,6 +17,7 @@ use peisear_core::{
 };
 
 use super::layout::AppShell;
+use super::t;
 
 #[component]
 pub fn TeamsListPage(
@@ -35,14 +37,14 @@ pub fn TeamsListPage(
     });
 
     view! {
-        <AppShell title="Teams".to_string()
+        <AppShell title=t(MessageKey::NavLinkTeams)
                   user=user
                   flash=flash
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 <div class="flex items-center justify-between mb-4">
-                    <h1 class="text-xl font-semibold">"Teams"</h1>
-                    <a href="/teams/new" class="btn btn-primary btn-sm">"+ New team"</a>
+                    <h1 class="text-xl font-semibold">{t(MessageKey::NavLinkTeams)}</h1>
+                    <a href="/teams/new" class="btn btn-primary btn-sm">{t(MessageKey::NewTeamLink)}</a>
                 </div>
 
                 {error_block}
@@ -61,19 +63,17 @@ pub fn TeamsListPage(
                                 </svg>
                             </div>
                             <p class="text-sm text-base-content/60">
-                                "Teams group people who collaborate on projects. \
-                                 You can keep working with personal projects without joining a team — \
-                                 teams are optional."
+                                {t(MessageKey::TeamsEmptyIntro)}
                             </p>
                             <p class="text-xs text-base-content/50 mt-1">
-                                "Create one if a project will involve more than just you."
+                                {t(MessageKey::TeamsEmptyCta)}
                             </p>
                         </div>
                     </div>
                 })}
 
                 {has_teams.then(|| view! {
-                    <ul class="space-y-3" aria-label="Your teams">
+                    <ul class="space-y-3" aria-label=t(MessageKey::YourTeamsAriaLabel)>
                         {team_rows}
                     </ul>
                 })}
@@ -83,7 +83,10 @@ pub fn TeamsListPage(
 }
 
 fn render_team_card((team, role): (Team, TeamRole)) -> impl IntoView {
-    let aria = format!("{} (role: {})", team.name, role.human_name());
+    let aria = t(MessageKey::TeamRoleAriaLabel {
+        team_name: team.name.clone(),
+        role: role.to_i18n_label(),
+    });
     let role_badge_class = match role {
         TeamRole::Admin => "badge badge-sm badge-primary",
         TeamRole::Member => "badge badge-sm badge-ghost",
@@ -91,7 +94,9 @@ fn render_team_card((team, role): (Team, TeamRole)) -> impl IntoView {
     };
 
     let href = format!("/teams/{}", team.slug);
-    let role_label = role.human_name();
+    let role_label = t(MessageKey::TeamRoleName {
+        label: role.to_i18n_label(),
+    });
     let description_text = team.description.clone().unwrap_or_default();
     let description = (!description_text.is_empty()).then(|| {
         view! {
@@ -126,17 +131,17 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
     });
 
     view! {
-        <AppShell title="New team".to_string()
+        <AppShell title=t(MessageKey::NewTeamLabel)
                   user=user
                   flash={None::<String>}
                   unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams">"Teams"</a></li>
-                    <li>"New"</li>
+                    <li><a href="/teams">{t(MessageKey::NavLinkTeams)}</a></li>
+                    <li>{t(MessageKey::NewBreadcrumbWord)}</li>
                 </ul></div>
 
-                <h1 class="text-xl font-semibold mb-4">"New team"</h1>
+                <h1 class="text-xl font-semibold mb-4">{t(MessageKey::NewTeamLabel)}</h1>
 
                 {error_block}
 
@@ -144,43 +149,42 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                     <form method="post" action="/teams" class="card-body gap-3">
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Name"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Name })}</span>
                             </div>
                             <input type="text" name="name" required=true maxlength="120" autofocus=true
-                                   placeholder="e.g. Frontend Engineering"
+                                   placeholder=t(MessageKey::TeamNamePlaceholder)
                                    class="input input-bordered input-sm w-full"/>
                         </label>
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"URL slug"</span>
-                                <span class="label-text-alt text-xs opacity-60">"optional — auto-derived"</span>
+                                <span class="label-text text-sm">{t(MessageKey::SlugFieldLabel)}</span>
+                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::OptionalAutoDerivedHint)}</span>
                             </div>
                             <input type="text" name="slug" maxlength="64"
                                    pattern="[a-z0-9\\-]+"
-                                   placeholder="e.g. frontend-eng"
+                                   placeholder=t(MessageKey::SlugPlaceholder)
                                    class="input input-bordered input-sm w-full"/>
                             <div class="label py-1">
                                 <span class="label-text-alt text-xs text-base-content/60">
-                                    "Lowercase letters, digits, and hyphens. Used in the team's URL."
+                                    {t(MessageKey::SlugHelperText)}
                                 </span>
                             </div>
                         </label>
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Description"</span>
-                                <span class="label-text-alt text-xs opacity-60">"optional"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span>
+                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="description" rows="3" maxlength="500"
-                                      placeholder="What does this team work on?"
+                                      placeholder=t(MessageKey::TeamDescriptionPlaceholder)
                                       class="textarea textarea-bordered textarea-sm w-full"></textarea>
                         </label>
                         <p class="text-xs text-base-content/60">
-                            "You'll be added as the team's admin. You can invite \
-                             others by email after the team is created."
+                            {t(MessageKey::NewTeamIntro)}
                         </p>
                         <div class="card-actions justify-end mt-2">
-                            <a href="/teams" class="btn btn-ghost btn-sm">"Cancel"</a>
-                            <button type="submit" class="btn btn-primary btn-sm">"Create team"</button>
+                            <a href="/teams" class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
+                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::CreateTeamButton)}</button>
                         </div>
                     </form>
                 </div>
@@ -216,8 +220,8 @@ pub fn TeamDetailPage(
         let edit_href = format!("/teams/{}/edit", team_slug);
         view! {
             <a href=edit_href class="btn btn-sm btn-ghost"
-               aria-label="Edit team settings">
-                "Settings"
+               aria-label=t(MessageKey::EditTeamSettingsAriaLabel)>
+                {t(MessageKey::NavLinkSettings)}
             </a>
         }
     });
@@ -243,13 +247,15 @@ pub fn TeamDetailPage(
     };
 
     let projects_section = render_projects_section(team_slug.clone(), is_admin, projects);
+    let members_heading = t(MessageKey::MembersHeading);
+    let members_heading_aria = members_heading.clone();
 
     let add_member_form = is_admin.then(|| {
         view! {
             <details class="card bg-base-100 border border-base-300 shadow-sm mt-4">
                 <summary class="card-body cursor-pointer py-3 flex flex-row items-center gap-2">
-                    <span class="font-medium">"Invite a member"</span>
-                    <span class="text-xs text-base-content/50">"by email"</span>
+                    <span class="font-medium">{t(MessageKey::InviteMemberSummary)}</span>
+                    <span class="text-xs text-base-content/50">{t(MessageKey::ByEmailHint)}</span>
                 </summary>
                 <div class="px-4 pb-4">
                     <form method="post"
@@ -257,28 +263,26 @@ pub fn TeamDetailPage(
                           class="flex flex-wrap items-end gap-3">
                         <label class="form-control flex-1 min-w-[14rem]">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Email"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Email })}</span>
                             </div>
                             <input type="email" name="email" required=true
-                                   placeholder="alice@example.com"
+                                   placeholder=t(MessageKey::EmailPlaceholderExample)
                                    class="input input-bordered input-sm w-full"/>
                         </label>
                         <label class="form-control">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Role"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Role })}</span>
                             </div>
                             <select name="role" class="select select-bordered select-sm">
-                                <option value="member" selected=true>"Member"</option>
-                                <option value="admin">"Admin"</option>
-                                <option value="viewer">"Viewer"</option>
+                                <option value="member" selected=true>{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Member })}</option>
+                                <option value="admin">{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Admin })}</option>
+                                <option value="viewer">{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Viewer })}</option>
                             </select>
                         </label>
-                        <button type="submit" class="btn btn-primary btn-sm">"Add"</button>
+                        <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::AddButton)}</button>
                     </form>
                     <p class="text-xs text-base-content/60 mt-2">
-                        "The user must have a peisear account already (registration via \
-                         email is not yet automatic from the invite — that's a Phase 2 \
-                         improvement)."
+                        {t(MessageKey::InviteHelperText)}
                     </p>
                 </div>
             </details>
@@ -292,7 +296,7 @@ pub fn TeamDetailPage(
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams">"Teams"</a></li>
+                    <li><a href="/teams">{t(MessageKey::NavLinkTeams)}</a></li>
                     <li>{team_name.clone()}</li>
                 </ul></div>
 
@@ -311,24 +315,24 @@ pub fn TeamDetailPage(
                 <div class="flex gap-2 flex-wrap mb-4">
                     <a href=format!("/teams/{}/sprints", team_slug.clone())
                        class="btn btn-sm btn-outline">
-                        "Sprints"
+                        {t(MessageKey::SprintsSectionName)}
                     </a>
                 </div>
 
                 {projects_section}
 
                 <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
-                         aria-label="Members">
+                         aria-label=members_heading_aria>
                     <div class="card-body gap-3">
-                        <h2 class="text-base font-medium">"Members"</h2>
+                        <h2 class="text-base font-medium">{members_heading}</h2>
                         <div class="overflow-x-auto">
-                            <table class="table table-sm" aria-label="Team members">
+                            <table class="table table-sm" aria-label=t(MessageKey::TeamMembersAriaLabel)>
                                 <thead>
                                     <tr>
-                                        <th>"Name"</th>
-                                        <th>"Email"</th>
-                                        <th>"Role"</th>
-                                        <th>"Joined"</th>
+                                        <th>{t(MessageKey::FieldLabel { field: Field::Name })}</th>
+                                        <th>{t(MessageKey::FieldLabel { field: Field::Email })}</th>
+                                        <th>{t(MessageKey::FieldLabel { field: Field::Role })}</th>
+                                        <th>{t(MessageKey::JoinedColumnHeading)}</th>
                                         <th></th>
                                     </tr>
                                 </thead>
@@ -343,10 +347,7 @@ pub fn TeamDetailPage(
                 {add_member_form}
 
                 <p class="text-xs text-base-content/50 italic mt-4">
-                    "Privacy note: project trends and workload distribution are visible \
-                     to all team members. Personal sustainability data (your burnout panel, \
-                     your dashboard) remains visible to you only — admin role is a \
-                     management role, not an oversight role."
+                    {t(MessageKey::TeamPrivacyFootnote)}
                 </p>
             </div>
         </AppShell>
@@ -372,8 +373,8 @@ fn render_projects_section(
                           onsubmit="return confirm('Detach this project from the team? \
                                                     It will become a personal project.')">
                         <button type="submit" class="btn btn-ghost btn-xs"
-                                aria-label="Detach from team">
-                            "Detach"
+                                aria-label=t(MessageKey::DetachFromTeamAriaLabel)>
+                            {t(MessageKey::DetachButton)}
                         </button>
                     </form>
                 }
@@ -391,14 +392,16 @@ fn render_projects_section(
         })
         .collect_view();
 
+    let projects_heading = t(MessageKey::ProjectsSectionName);
+    let projects_heading_aria = projects_heading.clone();
     view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
-                 aria-label="Projects">
+                 aria-label=projects_heading_aria>
             <div class="card-body gap-3">
-                <h2 class="text-base font-medium">"Projects"</h2>
+                <h2 class="text-base font-medium">{projects_heading}</h2>
                 {has_projects.then(|| view! {
                     <div class="overflow-x-auto">
-                        <table class="table table-sm" aria-label="Team projects">
+                        <table class="table table-sm" aria-label=t(MessageKey::TeamProjectsAriaLabel)>
                             <tbody>
                                 {project_rows}
                             </tbody>
@@ -407,9 +410,7 @@ fn render_projects_section(
                 })}
                 {(!has_projects).then(|| view! {
                     <p class="text-sm text-base-content/60 italic">
-                        "No projects yet. Create one and assign it to this team \
-                         from the new-project form, or move an existing personal \
-                         project here from its settings."
+                        {t(MessageKey::NoProjectsInTeamMessage)}
                     </p>
                 })}
             </div>
@@ -443,10 +444,10 @@ fn render_member_row(
                 <form method="post" action=role_action class="inline-block">
                     <select name="role" onchange="this.form.submit()"
                             class="select select-bordered select-xs"
-                            aria-label="Change role">
-                        <option value="admin" selected=admin_selected>"Admin"</option>
-                        <option value="member" selected=member_selected>"Member"</option>
-                        <option value="viewer" selected=viewer_selected>"Viewer"</option>
+                            aria-label=t(MessageKey::ChangeRoleAriaLabel)>
+                        <option value="admin" selected=admin_selected>{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Admin })}</option>
+                        <option value="member" selected=member_selected>{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Member })}</option>
+                        <option value="viewer" selected=viewer_selected>{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Viewer })}</option>
                     </select>
                 </form>
             </td>
@@ -455,7 +456,7 @@ fn render_member_row(
     } else {
         view! {
             <td>
-                <span class="text-sm">{role.human_name()}</span>
+                <span class="text-sm">{t(MessageKey::TeamRoleName { label: role.to_i18n_label() })}</span>
             </td>
         }
         .into_any()
@@ -468,8 +469,8 @@ fn render_member_row(
                 <form method="post" action=remove_action
                       onsubmit="return confirm('Leave this team?')">
                     <button type="submit" class="btn btn-ghost btn-xs text-base-content/60"
-                            aria-label="Leave team">
-                        "Leave"
+                            aria-label=t(MessageKey::LeaveTeamAriaLabel)>
+                        {t(MessageKey::LeaveButton)}
                     </button>
                 </form>
             </td>
@@ -481,8 +482,8 @@ fn render_member_row(
                 <form method="post" action=remove_action
                       onsubmit="return confirm('Remove this member from the team?')">
                     <button type="submit" class="btn btn-ghost btn-xs text-error"
-                            aria-label="Remove member">
-                        "Remove"
+                            aria-label=t(MessageKey::RemoveMemberAriaLabel)>
+                        {t(MessageKey::RemoveButton)}
                     </button>
                 </form>
             </td>
@@ -495,7 +496,7 @@ fn render_member_row(
     view! {
         <tr>
             <td>{display_name}{is_self.then(|| view! {
-                <span class="text-xs opacity-60 ml-1">"(you)"</span>
+                <span class="text-xs opacity-60 ml-1">{t(MessageKey::YouSuffix)}</span>
             })}</td>
             <td class="text-sm text-base-content/70">{email}</td>
             {role_cell}
@@ -525,18 +526,18 @@ pub fn TeamEditPage(
     });
 
     view! {
-        <AppShell title=format!("Edit {}", team_name)
+        <AppShell title=t(MessageKey::EditTeamPageTitle { team_name: team_name.clone() })
                   user=user
                   flash={None::<String>}
                   unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams">"Teams"</a></li>
+                    <li><a href="/teams">{t(MessageKey::NavLinkTeams)}</a></li>
                     <li><a href=back_href.clone()>{team_name.clone()}</a></li>
-                    <li>"Settings"</li>
+                    <li>{t(MessageKey::NavLinkSettings)}</li>
                 </ul></div>
 
-                <h1 class="text-xl font-semibold mb-4">"Team settings"</h1>
+                <h1 class="text-xl font-semibold mb-4">{t(MessageKey::TeamSettingsHeading)}</h1>
 
                 {error_block}
 
@@ -544,7 +545,7 @@ pub fn TeamEditPage(
                     <form method="post" action=edit_action class="card-body gap-3">
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Name"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Name })}</span>
                             </div>
                             <input type="text" name="name" required=true maxlength="120"
                                    value=team_name
@@ -552,7 +553,7 @@ pub fn TeamEditPage(
                         </label>
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Description"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span>
                             </div>
                             <textarea name="description" rows="3" maxlength="500"
                                       class="textarea textarea-bordered textarea-sm w-full">
@@ -560,11 +561,11 @@ pub fn TeamEditPage(
                             </textarea>
                         </label>
                         <p class="text-xs text-base-content/60">
-                            "Slug (URL identifier) is fixed at create time."
+                            {t(MessageKey::SlugFixedNotice)}
                         </p>
                         <div class="card-actions justify-end mt-2">
-                            <a href=back_href class="btn btn-ghost btn-sm">"Cancel"</a>
-                            <button type="submit" class="btn btn-primary btn-sm">"Save"</button>
+                            <a href=back_href class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
+                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::SaveButton)}</button>
                         </div>
                     </form>
                 </div>

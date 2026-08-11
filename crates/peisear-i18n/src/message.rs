@@ -60,10 +60,22 @@ pub enum Field {
     Priority,
     Assignee,
     Name,
+    /// `I18N-005c`: sprint start/end date, reused between the new-sprint
+    /// and edit-sprint forms.
+    StartDate,
+    EndDate,
+    /// A sprint's goal field, same two-form reuse as `StartDate`.
+    Goal,
+    /// A team member's role, reused between the invite form and the
+    /// member table's column heading.
+    Role,
+    /// Reused between the invite-member form and the member table's
+    /// column heading.
+    Email,
 }
 
 impl Field {
-    pub fn all() -> [Field; 9] {
+    pub fn all() -> [Field; 14] {
         [
             Field::EffortPoints,
             Field::CapacityPoints,
@@ -74,6 +86,11 @@ impl Field {
             Field::Priority,
             Field::Assignee,
             Field::Name,
+            Field::StartDate,
+            Field::EndDate,
+            Field::Goal,
+            Field::Role,
+            Field::Email,
         ]
     }
 }
@@ -184,6 +201,47 @@ impl PriorityLabel {
             PriorityLabel::Medium,
             PriorityLabel::High,
             PriorityLabel::Urgent,
+        ]
+    }
+}
+
+/// Which word `peisear_core::sprints::SprintStatus` renders as. See
+/// [`IssueStatusLabel`]'s doc comment — same shape, same reason.
+/// `SprintStatus::to_i18n_label` (`peisear-core`, `I18N-005c`) is the
+/// conversion at the boundary, absorbing `SprintStatus::human_name()`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SprintStatusLabel {
+    Planned,
+    Active,
+    Completed,
+}
+
+impl SprintStatusLabel {
+    pub fn all() -> [SprintStatusLabel; 3] {
+        [
+            SprintStatusLabel::Planned,
+            SprintStatusLabel::Active,
+            SprintStatusLabel::Completed,
+        ]
+    }
+}
+
+/// Which word `peisear_core::teams::TeamRole` renders as. See
+/// [`IssueStatusLabel`]'s doc comment. `TeamRole::to_i18n_label`
+/// (`peisear-core`, `I18N-005c`) absorbs `TeamRole::human_name()`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TeamRoleLabel {
+    Admin,
+    Member,
+    Viewer,
+}
+
+impl TeamRoleLabel {
+    pub fn all() -> [TeamRoleLabel; 3] {
+        [
+            TeamRoleLabel::Admin,
+            TeamRoleLabel::Member,
+            TeamRoleLabel::Viewer,
         ]
     }
 }
@@ -685,6 +743,272 @@ pub enum MessageKey {
     IssueDeletedFlash,
     /// `handlers/projects.rs`'s post-delete flash banner.
     ProjectDeletedFlash,
+
+    // ---- I18N-005c: components/{sprints,teams} ----
+    /// `SprintStatus`'s word ("Planned"/"Active"/"Completed"),
+    /// absorbing `SprintStatus::human_name()` — see that method's doc
+    /// comment (`peisear-core`).
+    SprintStatusName {
+        label: SprintStatusLabel,
+    },
+    /// `TeamRole`'s word, absorbing `TeamRole::human_name()`. See
+    /// [`MessageKey::SprintStatusName`].
+    TeamRoleName {
+        label: TeamRoleLabel,
+    },
+    NewSprintLink,
+    SprintsPageTitle {
+        team_name: String,
+    },
+    /// "Sprints", reused as a breadcrumb node, an `<h1>`, and the
+    /// team-detail page's link into the sprints list.
+    SprintsSectionName,
+    SprintsListAriaLabel,
+    /// A sprint card's summary line for a completed sprint. The
+    /// sibling of [`MessageKey::CaptionWordCarriedOver`]'s lowercase,
+    /// mid-sentence use — this is the whole-sentence context
+    /// `FLAGGED ITEM #2` (the survey) found first. All three
+    /// `SprintCardSummary*` variants are separate keys, one per
+    /// reachable `SprintStatus`, rather than one key with a status
+    /// parameter — the three sentences share no common template, only
+    /// a family resemblance.
+    SprintCardSummaryCompleted {
+        completed_points: i64,
+        committed_points: i64,
+        carried_over_points: i64,
+    },
+    SprintCardSummaryActive {
+        completed_points: i64,
+        committed_points: i64,
+        in_flight_points: i64,
+    },
+    SprintCardSummaryPlanned {
+        committed_points: i64,
+        committed_count: i64,
+    },
+    /// A sprint card's `aria-label`, composing `name` (user data),
+    /// `dates` (a formatted range — data), and `status`/`summary`
+    /// (already-rendered output of
+    /// [`MessageKey::SprintStatusName`]/the `SprintCardSummary*`
+    /// keys above — not raw literals authored at the call site, so
+    /// embedding them as `String` parameters here doesn't reproduce
+    /// the `BackToLabel` mistake: nothing that flows into this key is
+    /// copy this crate wrote fresh).
+    SprintCardAriaLabel {
+        name: String,
+        status: String,
+        dates: String,
+        summary: String,
+    },
+    /// The velocity bar chart's per-bar-group `aria-label`. `name` is
+    /// user data; the two counts are data.
+    VelocityBarAriaLabel {
+        name: String,
+        completed_points: i64,
+        carried_over_points: i64,
+    },
+    /// Two complete sentences, not a shared prefix plus a conditional
+    /// continuation — matches the `BurnoutSummary` precedent of one
+    /// key per reachable shape rather than splicing fragments in the
+    /// view.
+    SprintsEmptyMessageAdmin,
+    SprintsEmptyMessageNonAdmin,
+    SprintsOptionalNote,
+    CompletedWorkHeading,
+    RecentCompletedSprintsAriaLabel,
+    /// Velocity chart caption, split at its existing `<strong>`
+    /// boundaries — three plain-text keys plus two shared
+    /// emphasised-word keys, rendered in the same relative positions
+    /// the source's literal text nodes held. Not concatenation of a
+    /// template with a value (rule 1's concern): every piece is our
+    /// own copy, split only where the view already split it for
+    /// visual emphasis.
+    VelocityCaptionLead,
+    /// "completed", lowercase and mid-sentence — shared between the
+    /// velocity and burndown captions, which both emphasise this
+    /// exact word. Distinct from
+    /// [`MessageKey::CompletedStatLabel`]'s standalone, title-case
+    /// use (same word, different grammatical context, same
+    /// non-coupling `I18N-005a-review.md` §10 already noted for
+    /// "Projects"/"projects").
+    CaptionWordCompleted,
+    VelocityCaptionMiddle,
+    /// "carried over", lowercase and mid-sentence. Distinct from
+    /// [`MessageKey::CarriedOverHeading`]'s standalone, title-case
+    /// use.
+    CaptionWordCarriedOver,
+    VelocityCaptionTail,
+    BarChartAriaLabel,
+    MedianLabel {
+        median: i64,
+    },
+    /// "New sprint", reused as the page `<title>` and the `<h1>`.
+    NewSprintLabel,
+    SprintNamePlaceholder,
+    GoalFieldPlaceholder,
+    /// "The sprint will be created in " — split at the source's
+    /// `<strong>` boundary around "planned", same shape as the
+    /// velocity/burndown captions.
+    SprintPlannedNoticeLead,
+    /// "planned", lowercase and mid-sentence. Deliberately **not**
+    /// [`MessageKey::SprintStatusName`]`(SprintStatusLabel::Planned)`
+    /// reused — that renders "Planned" (title case, standalone badge
+    /// use); this is the same non-coupling as
+    /// [`MessageKey::CaptionWordCompleted`].
+    CaptionWordPlanned,
+    SprintPlannedNoticeTail,
+    CreateSprintButton,
+    /// "Start sprint", identical text reused for both the button's
+    /// `aria-label` and its visible label.
+    StartSprintLabel,
+    /// See [`MessageKey::StartSprintLabel`].
+    CompleteSprintLabel,
+    /// "Goal: " — deliberately **not** combined with the goal value
+    /// into one `"Goal: {goal}"` key the way
+    /// [`MessageKey::CreatedAt`]/[`MessageKey::UpdatedAt`] combine
+    /// their prefix and value: the source wraps only this prefix in
+    /// its own `opacity-60` span, styled distinctly from the value
+    /// that follows it — combining would either lose that styling
+    /// split or extend it to the value too, a visible change this
+    /// handoff isn't authorised to make. Unlike the "Back to " defect
+    /// `I18N-005a-review.md` §2 closed, this prefix is a complete,
+    /// closed, guard-covered string in its own right — no user data
+    /// flows through this key, so nothing here can carry copy the
+    /// guard can't see.
+    GoalFieldPrefixLabel,
+    /// "Summary", reused for both a section `aria-label` and its
+    /// `<h2>`.
+    SummaryHeading,
+    /// Reused between the sprint-detail summary card's stat heading
+    /// and the burndown chart's legend — same word, same meaning, in
+    /// two places on the same page.
+    CommittedStatLabel,
+    CompletedStatLabel,
+    InFlightStatLabel,
+    /// "Carried over", the standalone stat-card heading. See
+    /// [`MessageKey::CaptionWordCarriedOver`] for the lowercase,
+    /// mid-sentence sibling this is deliberately not coupled to.
+    CarriedOverHeading,
+    /// "pt", the bare unit suffix rendered as its own DOM node next
+    /// to a raw number (not composed via `format!` the way
+    /// [`MessageKey::PointsValue`] is) — the sprint summary card's
+    /// four stat tiles all share this shape.
+    PointsUnitSuffix,
+    /// "{count} issues" — reused across the summary card's four stat
+    /// tiles.
+    IssuesCountText {
+        count: i64,
+    },
+    BurndownHeading,
+    BurndownSectionAriaLabel,
+    BurndownCaptionLead,
+    /// "committed", lowercase and mid-sentence, burndown caption only
+    /// — distinct from [`MessageKey::CommittedStatLabel`]'s
+    /// standalone use, same non-coupling reasoning as
+    /// [`MessageKey::CaptionWordCompleted`].
+    CaptionWordCommitted,
+    BurndownCaptionMiddle,
+    BurndownCaptionTail,
+    /// `first_label`/`last_label` are formatted dates (data);
+    /// `max_val` is a count (data).
+    BurndownChartAriaLabel {
+        first_label: String,
+        last_label: String,
+        max_val: i64,
+    },
+    IssuesInSprintAriaLabel,
+    IssuesHeading,
+    NoIssuesInSprintMessage,
+    SprintIssuesAriaLabel,
+    EditSprintPageTitle {
+        sprint_name: String,
+    },
+    EditSprintHeading,
+    NewTeamLink,
+    TeamsEmptyIntro,
+    TeamsEmptyCta,
+    YourTeamsAriaLabel,
+    /// `team_name` is user data; `role` is the closed-set role word,
+    /// kept typed for the same reason as
+    /// [`MessageKey::MoveIssueAriaLabel`] (`I18N-005b`).
+    TeamRoleAriaLabel {
+        team_name: String,
+        role: TeamRoleLabel,
+    },
+    /// "New team", reused as the page `<title>` and the `<h1>`.
+    NewTeamLabel,
+    TeamNamePlaceholder,
+    SlugFieldLabel,
+    OptionalAutoDerivedHint,
+    SlugPlaceholder,
+    SlugHelperText,
+    TeamDescriptionPlaceholder,
+    NewTeamIntro,
+    CreateTeamButton,
+    EditTeamSettingsAriaLabel,
+    /// "Settings", reused as the team-detail page's settings link and
+    /// the edit-page breadcrumb — the same bare word
+    /// [`MessageKey::NavLinkSettings`] (`I18N-005a`) already renders
+    /// for the global settings link. Same word, context-free at the
+    /// call site (the surrounding page tells the reader which
+    /// settings); reused rather than duplicated.
+    InviteMemberSummary,
+    ByEmailHint,
+    EmailPlaceholderExample,
+    AddButton,
+    InviteHelperText,
+    /// "Members", reused for a section `aria-label` and its `<h2>`.
+    MembersHeading,
+    TeamMembersAriaLabel,
+    JoinedColumnHeading,
+    /// `TeamDetailPage`'s `FR-TEAM-005` privacy footnote. Converted
+    /// byte-identically from the current source — see the review
+    /// request for the discrepancy found between this text and the
+    /// handoff's quoted paraphrase of the requirement, escalated
+    /// rather than resolved by editing either one.
+    TeamPrivacyFootnote,
+    DetachFromTeamAriaLabel,
+    DetachButton,
+    TeamProjectsAriaLabel,
+    NoProjectsInTeamMessage,
+    ChangeRoleAriaLabel,
+    LeaveTeamAriaLabel,
+    LeaveButton,
+    RemoveMemberAriaLabel,
+    RemoveButton,
+    /// "(you)", the self-identifying suffix next to a member's name
+    /// in the members table.
+    YouSuffix,
+    EditTeamPageTitle {
+        team_name: String,
+    },
+    TeamSettingsHeading,
+    SlugFixedNotice,
+    SprintCreatedFlash,
+    SprintUpdatedFlash,
+    SprintStartedFlash,
+    SprintCompletedFlash,
+    SprintDeletedFlash,
+    SprintAssignmentSavedFlash,
+    TeamCreatedFlash,
+    MemberAddedFlash,
+    RoleUpdatedFlash,
+    /// The demotion-path last-admin guard. Distinct wording from
+    /// [`MessageKey::LastAdminRemovalError`] — both share a stem but
+    /// diverge after it, describing the specific action each guards;
+    /// converted as two keys rather than unified, matching the
+    /// "no rewording" rule.
+    LastAdminDemotionError,
+    LastAdminRemovalError,
+    YouLeftTeamFlash,
+    MemberRemovedFlash,
+    TeamUpdatedFlash,
+    ProjectDetachedFlash,
+    /// `email` is the user-typed search input, echoed back — genuine
+    /// user data, per `RFC 006` D4.
+    NoUserWithEmailFound {
+        email: String,
+    },
 }
 
 impl MessageKey {
@@ -698,9 +1022,10 @@ impl MessageKey {
     ///
     /// - **Closed system vocabulary** ([`EntityKind`], [`Field`],
     ///   [`IndicatorLabel`], [`NavSection`], [`IssueStatusLabel`],
-    ///   [`PriorityLabel`]) — never open-ended user data, so every
-    ///   value is enumerated. This is genuinely "every entry of every
-    ///   locale table" for these: the full, finite output space.
+    ///   [`PriorityLabel`], [`SprintStatusLabel`], [`TeamRoleLabel`])
+    ///   — never open-ended user data, so every value is enumerated.
+    ///   This is genuinely "every entry of every locale table" for
+    ///   these: the full, finite output space.
     /// - **Open numeric parameters** (`i64` counts, days, percentages
     ///   — `I18N-002`'s new territory) — cannot be exhaustively
     ///   enumerated and don't need to be. The guard cares about the
@@ -890,6 +1215,146 @@ impl MessageKey {
             MessageKey::DeleteProjectWarning,
             MessageKey::IssueDeletedFlash,
             MessageKey::ProjectDeletedFlash,
+            // -- I18N-005c: components/{sprints,teams} --
+            MessageKey::NewSprintLink,
+            MessageKey::SprintsPageTitle {
+                team_name: "Frontend Engineering".to_string(),
+            },
+            MessageKey::SprintsSectionName,
+            MessageKey::SprintsListAriaLabel,
+            MessageKey::SprintCardSummaryCompleted {
+                completed_points: 8,
+                committed_points: 10,
+                carried_over_points: 2,
+            },
+            MessageKey::SprintCardSummaryActive {
+                completed_points: 5,
+                committed_points: 10,
+                in_flight_points: 5,
+            },
+            MessageKey::SprintCardSummaryPlanned {
+                committed_points: 10,
+                committed_count: 4,
+            },
+            MessageKey::SprintCardAriaLabel {
+                name: "Sprint 4".to_string(),
+                status: "Active".to_string(),
+                dates: "2026-08-01 → 2026-08-14".to_string(),
+                summary: "5 of 10 pt completed · 5 pt in flight".to_string(),
+            },
+            MessageKey::VelocityBarAriaLabel {
+                name: "Sprint 3".to_string(),
+                completed_points: 8,
+                carried_over_points: 2,
+            },
+            MessageKey::SprintsEmptyMessageAdmin,
+            MessageKey::SprintsEmptyMessageNonAdmin,
+            MessageKey::SprintsOptionalNote,
+            MessageKey::CompletedWorkHeading,
+            MessageKey::RecentCompletedSprintsAriaLabel,
+            MessageKey::VelocityCaptionLead,
+            MessageKey::CaptionWordCompleted,
+            MessageKey::VelocityCaptionMiddle,
+            MessageKey::CaptionWordCarriedOver,
+            MessageKey::VelocityCaptionTail,
+            MessageKey::BarChartAriaLabel,
+            MessageKey::MedianLabel { median: 5 },
+            MessageKey::NewSprintLabel,
+            MessageKey::SprintNamePlaceholder,
+            MessageKey::GoalFieldPlaceholder,
+            MessageKey::SprintPlannedNoticeLead,
+            MessageKey::CaptionWordPlanned,
+            MessageKey::SprintPlannedNoticeTail,
+            MessageKey::CreateSprintButton,
+            MessageKey::StartSprintLabel,
+            MessageKey::CompleteSprintLabel,
+            MessageKey::GoalFieldPrefixLabel,
+            MessageKey::SummaryHeading,
+            MessageKey::CommittedStatLabel,
+            MessageKey::CompletedStatLabel,
+            MessageKey::InFlightStatLabel,
+            MessageKey::CarriedOverHeading,
+            MessageKey::PointsUnitSuffix,
+            MessageKey::IssuesCountText { count: 4 },
+            MessageKey::BurndownHeading,
+            MessageKey::BurndownSectionAriaLabel,
+            MessageKey::BurndownCaptionLead,
+            MessageKey::CaptionWordCommitted,
+            MessageKey::BurndownCaptionMiddle,
+            MessageKey::BurndownCaptionTail,
+            MessageKey::BurndownChartAriaLabel {
+                first_label: "08-01".to_string(),
+                last_label: "08-14".to_string(),
+                max_val: 20,
+            },
+            MessageKey::IssuesInSprintAriaLabel,
+            MessageKey::IssuesHeading,
+            MessageKey::NoIssuesInSprintMessage,
+            MessageKey::SprintIssuesAriaLabel,
+            MessageKey::EditSprintPageTitle {
+                sprint_name: "Sprint 4".to_string(),
+            },
+            MessageKey::EditSprintHeading,
+            MessageKey::NewTeamLink,
+            MessageKey::TeamsEmptyIntro,
+            MessageKey::TeamsEmptyCta,
+            MessageKey::YourTeamsAriaLabel,
+            MessageKey::TeamRoleAriaLabel {
+                team_name: "Frontend Engineering".to_string(),
+                role: TeamRoleLabel::Admin,
+            },
+            MessageKey::NewTeamLabel,
+            MessageKey::TeamNamePlaceholder,
+            MessageKey::SlugFieldLabel,
+            MessageKey::OptionalAutoDerivedHint,
+            MessageKey::SlugPlaceholder,
+            MessageKey::SlugHelperText,
+            MessageKey::TeamDescriptionPlaceholder,
+            MessageKey::NewTeamIntro,
+            MessageKey::CreateTeamButton,
+            MessageKey::EditTeamSettingsAriaLabel,
+            MessageKey::InviteMemberSummary,
+            MessageKey::ByEmailHint,
+            MessageKey::EmailPlaceholderExample,
+            MessageKey::AddButton,
+            MessageKey::InviteHelperText,
+            MessageKey::MembersHeading,
+            MessageKey::TeamMembersAriaLabel,
+            MessageKey::JoinedColumnHeading,
+            MessageKey::TeamPrivacyFootnote,
+            MessageKey::DetachFromTeamAriaLabel,
+            MessageKey::DetachButton,
+            MessageKey::TeamProjectsAriaLabel,
+            MessageKey::NoProjectsInTeamMessage,
+            MessageKey::ChangeRoleAriaLabel,
+            MessageKey::LeaveTeamAriaLabel,
+            MessageKey::LeaveButton,
+            MessageKey::RemoveMemberAriaLabel,
+            MessageKey::RemoveButton,
+            MessageKey::YouSuffix,
+            MessageKey::EditTeamPageTitle {
+                team_name: "Frontend Engineering".to_string(),
+            },
+            MessageKey::TeamSettingsHeading,
+            MessageKey::SlugFixedNotice,
+            MessageKey::SprintCreatedFlash,
+            MessageKey::SprintUpdatedFlash,
+            MessageKey::SprintStartedFlash,
+            MessageKey::SprintCompletedFlash,
+            MessageKey::SprintDeletedFlash,
+            MessageKey::SprintAssignmentSavedFlash,
+            MessageKey::TeamCreatedFlash,
+            MessageKey::MemberAddedFlash,
+            MessageKey::RoleUpdatedFlash,
+            MessageKey::LastAdminDemotionError,
+            MessageKey::LastAdminRemovalError,
+            MessageKey::YouLeftTeamFlash,
+            MessageKey::MemberRemovedFlash,
+            MessageKey::TeamUpdatedFlash,
+            MessageKey::ProjectDetachedFlash,
+            MessageKey::NoUserWithEmailFound {
+                email: "alice@example.com".to_string(),
+            },
         ];
         keys.extend(
             EntityKind::all()
@@ -944,6 +1409,19 @@ impl MessageKey {
             Field::all()
                 .into_iter()
                 .map(|field| MessageKey::FieldLabel { field }),
+        );
+        // Every SprintStatusLabel and TeamRoleLabel value, per
+        // I18N-005c's absorption of
+        // SprintStatus::human_name()/TeamRole::human_name().
+        keys.extend(
+            SprintStatusLabel::all()
+                .into_iter()
+                .map(|label| MessageKey::SprintStatusName { label }),
+        );
+        keys.extend(
+            TeamRoleLabel::all()
+                .into_iter()
+                .map(|label| MessageKey::TeamRoleName { label }),
         );
         keys
     }

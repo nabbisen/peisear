@@ -28,6 +28,7 @@
 
 use crate::message::{
     EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey, NavSection, PriorityLabel,
+    SprintStatusLabel, TeamRoleLabel,
 };
 
 pub(crate) fn render(key: MessageKey) -> String {
@@ -292,6 +293,206 @@ pub(crate) fn render(key: MessageKey) -> String {
         }
         MessageKey::IssueDeletedFlash => "Issue deleted".to_string(),
         MessageKey::ProjectDeletedFlash => "Project deleted".to_string(),
+
+        // ---- I18N-005c: components/{sprints,teams} ----
+        MessageKey::SprintStatusName { label } => sprint_status_label(label).to_string(),
+        MessageKey::TeamRoleName { label } => team_role_label(label).to_string(),
+        MessageKey::NewSprintLink => "+ New sprint".to_string(),
+        MessageKey::SprintsPageTitle { team_name } => format!("Sprints — {team_name}"),
+        MessageKey::SprintsSectionName => "Sprints".to_string(),
+        MessageKey::SprintsListAriaLabel => "Sprint list".to_string(),
+        MessageKey::SprintCardSummaryCompleted {
+            completed_points,
+            committed_points,
+            carried_over_points,
+        } => format!(
+            "{completed_points} of {committed_points} pt completed · \
+             {carried_over_points} carried over"
+        ),
+        MessageKey::SprintCardSummaryActive {
+            completed_points,
+            committed_points,
+            in_flight_points,
+        } => format!(
+            "{completed_points} of {committed_points} pt completed · \
+             {in_flight_points} pt in flight"
+        ),
+        MessageKey::SprintCardSummaryPlanned {
+            committed_points,
+            committed_count,
+        } => format!("{committed_points} pt committed across {committed_count} issues"),
+        MessageKey::SprintCardAriaLabel {
+            name,
+            status,
+            dates,
+            summary,
+        } => format!("{name} ({status}, {dates}). {summary}"),
+        MessageKey::VelocityBarAriaLabel {
+            name,
+            completed_points,
+            carried_over_points,
+        } => format!(
+            "{name}: {completed_points} pt completed, {carried_over_points} pt carried over"
+        ),
+        MessageKey::SprintsEmptyMessageAdmin => {
+            "No sprints yet. Create one to start time-boxing your team's work.".to_string()
+        }
+        MessageKey::SprintsEmptyMessageNonAdmin => {
+            "No sprints yet. An admin can create one when the team is ready to time-box work."
+                .to_string()
+        }
+        MessageKey::SprintsOptionalNote => {
+            "Sprints are optional — you can use peisear without them.".to_string()
+        }
+        MessageKey::CompletedWorkHeading => "Completed work this period".to_string(),
+        MessageKey::RecentCompletedSprintsAriaLabel => "Recent completed sprints".to_string(),
+        MessageKey::VelocityCaptionLead => "Each pair of bars: ".to_string(),
+        MessageKey::CaptionWordCompleted => "completed".to_string(),
+        MessageKey::VelocityCaptionMiddle => " (filled) and ".to_string(),
+        MessageKey::CaptionWordCarriedOver => "carried over".to_string(),
+        MessageKey::VelocityCaptionTail => {
+            " (light). The dotted line is the median completed across these sprints. \
+             Numbers describe what happened — they don't grade it."
+                .to_string()
+        }
+        MessageKey::BarChartAriaLabel => "Bar chart of recent sprint outcomes".to_string(),
+        MessageKey::MedianLabel { median } => format!("median {median}"),
+        MessageKey::NewSprintLabel => "New sprint".to_string(),
+        MessageKey::SprintNamePlaceholder => "e.g. Sprint 5".to_string(),
+        MessageKey::GoalFieldPlaceholder => "What's this sprint trying to achieve?".to_string(),
+        MessageKey::SprintPlannedNoticeLead => "The sprint will be created in ".to_string(),
+        MessageKey::CaptionWordPlanned => "planned".to_string(),
+        MessageKey::SprintPlannedNoticeTail => {
+            " state. Start it explicitly when you're ready — the calendar \
+             dates don't auto-promote."
+                .to_string()
+        }
+        MessageKey::CreateSprintButton => "Create sprint".to_string(),
+        MessageKey::StartSprintLabel => "Start sprint".to_string(),
+        MessageKey::CompleteSprintLabel => "Complete sprint".to_string(),
+        MessageKey::GoalFieldPrefixLabel => "Goal: ".to_string(),
+        MessageKey::SummaryHeading => "Summary".to_string(),
+        MessageKey::CommittedStatLabel => "Committed".to_string(),
+        MessageKey::CompletedStatLabel => "Completed".to_string(),
+        MessageKey::InFlightStatLabel => "In flight".to_string(),
+        MessageKey::CarriedOverHeading => "Carried over".to_string(),
+        MessageKey::PointsUnitSuffix => "pt".to_string(),
+        MessageKey::IssuesCountText { count } => format!("{count} issues"),
+        MessageKey::BurndownHeading => "Burndown".to_string(),
+        MessageKey::BurndownSectionAriaLabel => "Sprint burndown".to_string(),
+        MessageKey::BurndownCaptionLead => "Two cumulative lines: ".to_string(),
+        MessageKey::CaptionWordCommitted => "committed".to_string(),
+        MessageKey::BurndownCaptionMiddle => " (the work added to the sprint) and ".to_string(),
+        MessageKey::BurndownCaptionTail => " (work finished). The gap between them is in flight. \
+             No ideal line, no prediction — what's happening is what you see."
+            .to_string(),
+        MessageKey::BurndownChartAriaLabel {
+            first_label,
+            last_label,
+            max_val,
+        } => format!("Burndown chart from {first_label} to {last_label}, max value {max_val}"),
+        MessageKey::IssuesInSprintAriaLabel => "Issues in sprint".to_string(),
+        MessageKey::IssuesHeading => "Issues".to_string(),
+        MessageKey::NoIssuesInSprintMessage => {
+            "No issues in this sprint yet. Open an issue and select this sprint \
+             from the sprint dropdown to add it."
+                .to_string()
+        }
+        MessageKey::SprintIssuesAriaLabel => "Sprint issues".to_string(),
+        MessageKey::EditSprintPageTitle { sprint_name } => format!("Edit {sprint_name}"),
+        MessageKey::EditSprintHeading => "Edit sprint".to_string(),
+        MessageKey::NewTeamLink => "+ New team".to_string(),
+        MessageKey::TeamsEmptyIntro => {
+            "Teams group people who collaborate on projects. You can keep working \
+             with personal projects without joining a team — teams are optional."
+                .to_string()
+        }
+        MessageKey::TeamsEmptyCta => {
+            "Create one if a project will involve more than just you.".to_string()
+        }
+        MessageKey::YourTeamsAriaLabel => "Your teams".to_string(),
+        MessageKey::TeamRoleAriaLabel { team_name, role } => {
+            format!("{team_name} (role: {})", team_role_label(role))
+        }
+        MessageKey::NewTeamLabel => "New team".to_string(),
+        MessageKey::TeamNamePlaceholder => "e.g. Frontend Engineering".to_string(),
+        MessageKey::SlugFieldLabel => "URL slug".to_string(),
+        MessageKey::OptionalAutoDerivedHint => "optional — auto-derived".to_string(),
+        MessageKey::SlugPlaceholder => "e.g. frontend-eng".to_string(),
+        MessageKey::SlugHelperText => {
+            "Lowercase letters, digits, and hyphens. Used in the team's URL.".to_string()
+        }
+        MessageKey::TeamDescriptionPlaceholder => "What does this team work on?".to_string(),
+        MessageKey::NewTeamIntro => {
+            "You'll be added as the team's admin. You can invite others by email \
+             after the team is created."
+                .to_string()
+        }
+        MessageKey::CreateTeamButton => "Create team".to_string(),
+        MessageKey::EditTeamSettingsAriaLabel => "Edit team settings".to_string(),
+        MessageKey::InviteMemberSummary => "Invite a member".to_string(),
+        MessageKey::ByEmailHint => "by email".to_string(),
+        MessageKey::EmailPlaceholderExample => "alice@example.com".to_string(),
+        MessageKey::AddButton => "Add".to_string(),
+        MessageKey::InviteHelperText => {
+            "The user must have a peisear account already (registration via email \
+             is not yet automatic from the invite — that's a Phase 2 improvement)."
+                .to_string()
+        }
+        MessageKey::MembersHeading => "Members".to_string(),
+        MessageKey::TeamMembersAriaLabel => "Team members".to_string(),
+        MessageKey::JoinedColumnHeading => "Joined".to_string(),
+        MessageKey::TeamPrivacyFootnote => {
+            "Privacy note: project trends and workload distribution are visible \
+             to all team members. Personal sustainability data (your burnout panel, \
+             your dashboard) remains visible to you only — admin role is a \
+             management role, not an oversight role."
+                .to_string()
+        }
+        MessageKey::DetachFromTeamAriaLabel => "Detach from team".to_string(),
+        MessageKey::DetachButton => "Detach".to_string(),
+        MessageKey::TeamProjectsAriaLabel => "Team projects".to_string(),
+        MessageKey::NoProjectsInTeamMessage => {
+            "No projects yet. Create one and assign it to this team from the \
+             new-project form, or move an existing personal project here from \
+             its settings."
+                .to_string()
+        }
+        MessageKey::ChangeRoleAriaLabel => "Change role".to_string(),
+        MessageKey::LeaveTeamAriaLabel => "Leave team".to_string(),
+        MessageKey::LeaveButton => "Leave".to_string(),
+        MessageKey::RemoveMemberAriaLabel => "Remove member".to_string(),
+        MessageKey::RemoveButton => "Remove".to_string(),
+        MessageKey::YouSuffix => "(you)".to_string(),
+        MessageKey::EditTeamPageTitle { team_name } => format!("Edit {team_name}"),
+        MessageKey::TeamSettingsHeading => "Team settings".to_string(),
+        MessageKey::SlugFixedNotice => "Slug (URL identifier) is fixed at create time.".to_string(),
+        MessageKey::SprintCreatedFlash => "Sprint created".to_string(),
+        MessageKey::SprintUpdatedFlash => "Sprint updated".to_string(),
+        MessageKey::SprintStartedFlash => "Sprint started".to_string(),
+        MessageKey::SprintCompletedFlash => "Sprint completed".to_string(),
+        MessageKey::SprintDeletedFlash => "Sprint deleted".to_string(),
+        MessageKey::SprintAssignmentSavedFlash => "Sprint assignment saved".to_string(),
+        MessageKey::TeamCreatedFlash => "Team created".to_string(),
+        MessageKey::MemberAddedFlash => "Member added".to_string(),
+        MessageKey::RoleUpdatedFlash => "Role updated".to_string(),
+        MessageKey::LastAdminDemotionError => {
+            "This is the last admin of the team — promote another member to admin \
+             first, then change this role."
+                .to_string()
+        }
+        MessageKey::LastAdminRemovalError => {
+            "This is the last admin of the team — assign another admin before \
+             removing this one."
+                .to_string()
+        }
+        MessageKey::YouLeftTeamFlash => "You left the team".to_string(),
+        MessageKey::MemberRemovedFlash => "Member removed".to_string(),
+        MessageKey::TeamUpdatedFlash => "Team updated".to_string(),
+        MessageKey::ProjectDetachedFlash => "Project detached".to_string(),
+        MessageKey::NoUserWithEmailFound { email } => {
+            format!("No user with email '{email}' was found.")
+        }
     }
 }
 
@@ -364,6 +565,11 @@ fn field_label(field: Field) -> &'static str {
         Field::Priority => "Priority",
         Field::Assignee => "Assignee",
         Field::Name => "Name",
+        Field::StartDate => "Start date",
+        Field::EndDate => "End date",
+        Field::Goal => "Goal",
+        Field::Role => "Role",
+        Field::Email => "Email",
     }
 }
 
@@ -372,6 +578,22 @@ fn issue_status_label(label: IssueStatusLabel) -> &'static str {
         IssueStatusLabel::Open => "Open",
         IssueStatusLabel::InProgress => "In Progress",
         IssueStatusLabel::Done => "Done",
+    }
+}
+
+fn sprint_status_label(label: SprintStatusLabel) -> &'static str {
+    match label {
+        SprintStatusLabel::Planned => "Planned",
+        SprintStatusLabel::Active => "Active",
+        SprintStatusLabel::Completed => "Completed",
+    }
+}
+
+fn team_role_label(label: TeamRoleLabel) -> &'static str {
+    match label {
+        TeamRoleLabel::Admin => "Admin",
+        TeamRoleLabel::Member => "Member",
+        TeamRoleLabel::Viewer => "Viewer",
     }
 }
 

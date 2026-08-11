@@ -34,15 +34,16 @@
 use axum::response::Html;
 use leptos::prelude::*;
 
-use peisear_i18n::NavSection;
+use peisear_i18n::{Field, MessageKey, NavSection};
 
 use peisear_core::{
-    CurrentUser,
+    CurrentUser, IssueStatus,
     sprints::{BurndownPoint, Sprint, SprintStatus, SprintSummary},
     teams::{Team, TeamRole},
 };
 
 use super::layout::AppShell;
+use super::t;
 
 // ──────────────────────────────────────────────────────────────
 // Listing page
@@ -76,7 +77,7 @@ pub fn SprintsListPage(
 
     let new_button = is_admin.then(|| {
         view! {
-            <a href=new_href class="btn btn-primary btn-sm">"+ New sprint"</a>
+            <a href=new_href class="btn btn-primary btn-sm">{t(MessageKey::NewSprintLink)}</a>
         }
     });
 
@@ -90,20 +91,26 @@ pub fn SprintsListPage(
             .collect_view()
     };
 
+    let empty_message = if is_admin {
+        t(MessageKey::SprintsEmptyMessageAdmin)
+    } else {
+        t(MessageKey::SprintsEmptyMessageNonAdmin)
+    };
+
     view! {
-        <AppShell title=format!("Sprints — {}", team_name.clone())
+        <AppShell title=t(MessageKey::SprintsPageTitle { team_name: team_name.clone() })
                   user=user
                   flash=flash
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams">"Teams"</a></li>
+                    <li><a href="/teams">{t(MessageKey::NavLinkTeams)}</a></li>
                     <li><a href=team_href>{team_name.clone()}</a></li>
-                    <li>"Sprints"</li>
+                    <li>{t(MessageKey::SprintsSectionName)}</li>
                 </ul></div>
 
                 <div class="flex items-center justify-between mb-4">
-                    <h1 class="text-xl font-semibold">"Sprints"</h1>
+                    <h1 class="text-xl font-semibold">{t(MessageKey::SprintsSectionName)}</h1>
                     {new_button}
                 </div>
 
@@ -115,21 +122,17 @@ pub fn SprintsListPage(
                     <div class="card bg-base-100 border border-base-300 shadow-sm">
                         <div class="card-body items-center text-center py-12">
                             <p class="text-sm text-base-content/60">
-                                "No sprints yet. " {if is_admin {
-                                    "Create one to start time-boxing your team's work."
-                                } else {
-                                    "An admin can create one when the team is ready to time-box work."
-                                }}
+                                {empty_message.clone()}
                             </p>
                             <p class="text-xs text-base-content/50 mt-1">
-                                "Sprints are optional — you can use peisear without them."
+                                {t(MessageKey::SprintsOptionalNote)}
                             </p>
                         </div>
                     </div>
                 })}
 
                 {has_sprints.then(|| view! {
-                    <ul class="space-y-3 mt-4" aria-label="Sprint list">
+                    <ul class="space-y-3 mt-4" aria-label=t(MessageKey::SprintsListAriaLabel)>
                         {sprint_rows}
                     </ul>
                 })}
@@ -145,31 +148,36 @@ fn render_sprint_card(team_slug: String, s: Sprint, sum: SprintSummary) -> impl 
         SprintStatus::Planned => "badge badge-sm badge-ghost",
         SprintStatus::Completed => "badge badge-sm badge-outline",
     };
-    let status_label = s.status.human_name();
+    let status_label = t(MessageKey::SprintStatusName {
+        label: s.status.to_i18n_label(),
+    });
     let dates = format!(
         "{} → {}",
         s.starts_on.format("%Y-%m-%d"),
         s.ends_on.format("%Y-%m-%d")
     );
     let summary_text = match s.status {
-        SprintStatus::Completed => format!(
-            "{} of {} pt completed · {} carried over",
-            sum.completed_points, sum.committed_points, sum.carried_over_points
-        ),
-        SprintStatus::Active => format!(
-            "{} of {} pt completed · {} pt in flight",
-            sum.completed_points,
-            sum.committed_points,
-            sum.committed_points - sum.completed_points
-        ),
-        SprintStatus::Planned => {
-            format!(
-                "{} pt committed across {} issues",
-                sum.committed_points, sum.committed_count
-            )
-        }
+        SprintStatus::Completed => t(MessageKey::SprintCardSummaryCompleted {
+            completed_points: sum.completed_points,
+            committed_points: sum.committed_points,
+            carried_over_points: sum.carried_over_points,
+        }),
+        SprintStatus::Active => t(MessageKey::SprintCardSummaryActive {
+            completed_points: sum.completed_points,
+            committed_points: sum.committed_points,
+            in_flight_points: sum.committed_points - sum.completed_points,
+        }),
+        SprintStatus::Planned => t(MessageKey::SprintCardSummaryPlanned {
+            committed_points: sum.committed_points,
+            committed_count: sum.committed_count,
+        }),
     };
-    let aria = format!("{} ({}, {}). {}", s.name, status_label, dates, summary_text);
+    let aria = t(MessageKey::SprintCardAriaLabel {
+        name: s.name.clone(),
+        status: status_label.clone(),
+        dates: dates.clone(),
+        summary: summary_text.clone(),
+    });
 
     view! {
         <li>
@@ -250,10 +258,11 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>) -> impl IntoView {
             let carried_y = margin_t + plot_h - carried_h;
             let label_y = margin_t + plot_h + 14;
             let name = sprint.name.clone();
-            let aria = format!(
-                "{}: {} pt completed, {} pt carried over",
-                name, summ.completed_points, summ.carried_over_points
-            );
+            let aria = t(MessageKey::VelocityBarAriaLabel {
+                name: name.clone(),
+                completed_points: summ.completed_points,
+                carried_over_points: summ.carried_over_points,
+            });
 
             view! {
                 <g aria-label=aria>
@@ -277,16 +286,15 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>) -> impl IntoView {
 
     view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm mb-4"
-                 aria-label="Recent completed sprints">
+                 aria-label=t(MessageKey::RecentCompletedSprintsAriaLabel)>
             <div class="card-body">
-                <h2 class="text-base font-medium">"Completed work this period"</h2>
+                <h2 class="text-base font-medium">{t(MessageKey::CompletedWorkHeading)}</h2>
                 <p class="text-xs text-base-content/60">
-                    "Each pair of bars: " <strong>"completed"</strong>
-                    " (filled) and " <strong>"carried over"</strong>
-                    " (light). The dotted line is the median completed across these sprints. \
-                     Numbers describe what happened — they don't grade it."
+                    {t(MessageKey::VelocityCaptionLead)} <strong>{t(MessageKey::CaptionWordCompleted)}</strong>
+                    {t(MessageKey::VelocityCaptionMiddle)} <strong>{t(MessageKey::CaptionWordCarriedOver)}</strong>
+                    {t(MessageKey::VelocityCaptionTail)}
                 </p>
-                <div role="img" aria-label="Bar chart of recent sprint outcomes">
+                <div role="img" aria-label=t(MessageKey::BarChartAriaLabel)>
                     <svg viewBox=format!("0 0 {} {}", chart_w, chart_h)
                          xmlns="http://www.w3.org/2000/svg"
                          class="w-full h-auto">
@@ -307,7 +315,7 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>) -> impl IntoView {
                         <text x=chart_w - margin_r y=median_label_y
                               font-size="10" fill="currentColor"
                               opacity="0.6" text-anchor="end">
-                            {format!("median {}", median)}
+                            {t(MessageKey::MedianLabel { median })}
                         </text>
                         {bars}
                     </svg>
@@ -341,19 +349,19 @@ pub fn SprintNewPage(
     });
 
     view! {
-        <AppShell title="New sprint".to_string()
+        <AppShell title=t(MessageKey::NewSprintLabel)
                   user=user
                   flash={None::<String>}
                   unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams">"Teams"</a></li>
+                    <li><a href="/teams">{t(MessageKey::NavLinkTeams)}</a></li>
                     <li><a href=team_href>{team_name}</a></li>
-                    <li><a href=sprints_href>"Sprints"</a></li>
-                    <li>"New"</li>
+                    <li><a href=sprints_href>{t(MessageKey::SprintsSectionName)}</a></li>
+                    <li>{t(MessageKey::NewBreadcrumbWord)}</li>
                 </ul></div>
 
-                <h1 class="text-xl font-semibold mb-4">"New sprint"</h1>
+                <h1 class="text-xl font-semibold mb-4">{t(MessageKey::NewSprintLabel)}</h1>
 
                 {error_block}
 
@@ -361,23 +369,23 @@ pub fn SprintNewPage(
                     <form method="post" action=action class="card-body gap-3">
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Name"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Name })}</span>
                             </div>
                             <input type="text" name="name" required=true maxlength="120" autofocus=true
-                                   placeholder="e.g. Sprint 5"
+                                   placeholder=t(MessageKey::SprintNamePlaceholder)
                                    class="input input-bordered input-sm w-full"/>
                         </label>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="form-control w-full">
                                 <div class="label py-1">
-                                    <span class="label-text text-sm">"Start date"</span>
+                                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::StartDate })}</span>
                                 </div>
                                 <input type="date" name="starts_on" required=true
                                        class="input input-bordered input-sm w-full"/>
                             </label>
                             <label class="form-control w-full">
                                 <div class="label py-1">
-                                    <span class="label-text text-sm">"End date"</span>
+                                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EndDate })}</span>
                                 </div>
                                 <input type="date" name="ends_on" required=true
                                        class="input input-bordered input-sm w-full"/>
@@ -385,20 +393,19 @@ pub fn SprintNewPage(
                         </div>
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Goal"</span>
-                                <span class="label-text-alt text-xs opacity-60">"optional"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Goal })}</span>
+                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="goal" rows="3" maxlength="500"
-                                      placeholder="What's this sprint trying to achieve?"
+                                      placeholder=t(MessageKey::GoalFieldPlaceholder)
                                       class="textarea textarea-bordered textarea-sm w-full"></textarea>
                         </label>
                         <p class="text-xs text-base-content/60">
-                            "The sprint will be created in " <strong>"planned"</strong>
-                            " state. Start it explicitly when you're ready — the calendar \
-                             dates don't auto-promote."
+                            {t(MessageKey::SprintPlannedNoticeLead)} <strong>{t(MessageKey::CaptionWordPlanned)}</strong>
+                            {t(MessageKey::SprintPlannedNoticeTail)}
                         </p>
                         <div class="card-actions justify-end mt-2">
-                            <button type="submit" class="btn btn-primary btn-sm">"Create sprint"</button>
+                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::CreateSprintButton)}</button>
                         </div>
                     </form>
                 </div>
@@ -459,7 +466,9 @@ pub fn SprintDetailPage(
         SprintStatus::Planned => "badge badge-ghost",
         SprintStatus::Completed => "badge badge-outline",
     };
-    let status_label = sprint_status.human_name();
+    let status_label = t(MessageKey::SprintStatusName {
+        label: sprint_status.to_i18n_label(),
+    });
 
     let error_block = error.map(|msg| {
         view! {
@@ -474,16 +483,16 @@ pub fn SprintDetailPage(
                 <form method="post" action=start_action>
                     <input type="hidden" name="client_updated_at" value=cua_start/>
                     <button type="submit" class="btn btn-primary btn-sm"
-                            aria-label="Start sprint">
-                        "Start sprint"
+                            aria-label=t(MessageKey::StartSprintLabel)>
+                        {t(MessageKey::StartSprintLabel)}
                     </button>
                 </form>
-                <a href=edit_href class="btn btn-ghost btn-sm">"Edit"</a>
+                <a href=edit_href class="btn btn-ghost btn-sm">{t(MessageKey::EditWord)}</a>
                 <form method="post" action=delete_action.clone()
                       onsubmit="return confirm('Delete this planned sprint? \
                                                 Issues currently linked to it will be unlinked.')">
                     <input type="hidden" name="client_updated_at" value=cua_delete_planned/>
-                    <button type="submit" class="btn btn-ghost btn-sm text-error">"Delete"</button>
+                    <button type="submit" class="btn btn-ghost btn-sm text-error">{t(MessageKey::DeleteButton)}</button>
                 </form>
             </div>
         }
@@ -493,11 +502,11 @@ pub fn SprintDetailPage(
                 <form method="post" action=complete_action>
                     <input type="hidden" name="client_updated_at" value=cua_complete/>
                     <button type="submit" class="btn btn-primary btn-sm"
-                            aria-label="Complete sprint">
-                        "Complete sprint"
+                            aria-label=t(MessageKey::CompleteSprintLabel)>
+                        {t(MessageKey::CompleteSprintLabel)}
                     </button>
                 </form>
-                <a href=edit_href class="btn btn-ghost btn-sm">"Edit"</a>
+                <a href=edit_href class="btn btn-ghost btn-sm">{t(MessageKey::EditWord)}</a>
             </div>
         }
         .into_any(),
@@ -507,7 +516,7 @@ pub fn SprintDetailPage(
                       onsubmit="return confirm('Delete this completed sprint? \
                                                 Historical numbers will be lost.')">
                     <input type="hidden" name="client_updated_at" value=cua_delete_completed/>
-                    <button type="submit" class="btn btn-ghost btn-sm text-error">"Delete"</button>
+                    <button type="submit" class="btn btn-ghost btn-sm text-error">{t(MessageKey::DeleteButton)}</button>
                 </form>
             </div>
         }
@@ -528,12 +537,12 @@ pub fn SprintDetailPage(
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 {super::breadcrumb::render_breadcrumb(vec![
-                    super::breadcrumb::BreadcrumbItem::link("Teams", "/teams"),
+                    super::breadcrumb::BreadcrumbItem::link(t(MessageKey::NavLinkTeams), "/teams"),
                     super::breadcrumb::BreadcrumbItem::link(
                         team_name,
                         team_href.clone(),
                     ),
-                    super::breadcrumb::BreadcrumbItem::link("Sprints", sprints_href.clone()),
+                    super::breadcrumb::BreadcrumbItem::link(t(MessageKey::SprintsSectionName), sprints_href.clone()),
                     super::breadcrumb::BreadcrumbItem::current(sprint_name.clone()),
                 ])}
                 {super::breadcrumb::render_back_link(NavSection::Sprints, sprints_href)}
@@ -547,7 +556,7 @@ pub fn SprintDetailPage(
                         <p class="text-sm text-base-content/70 mt-1">{dates}</p>
                         {goal_text.map(|g| view! {
                             <p class="text-sm text-base-content/80 mt-2 italic">
-                                <span class="opacity-60">"Goal: "</span>{g}
+                                <span class="opacity-60">{t(MessageKey::GoalFieldPrefixLabel)}</span>{g}
                             </p>
                         })}
                     </div>
@@ -569,49 +578,50 @@ pub fn SprintDetailPage(
 fn render_summary_card(status: SprintStatus, sum: SprintSummary) -> impl IntoView {
     let in_flight_pt = (sum.committed_points - sum.completed_points).max(0);
     let in_flight_count = (sum.committed_count - sum.completed_count).max(0);
-    let label = "Summary";
+    let label = t(MessageKey::SummaryHeading);
+    let label_for_aria = label.clone();
 
     view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
-                 aria-label=label>
+                 aria-label=label_for_aria>
             <div class="card-body">
                 <h2 class="text-base font-medium">{label}</h2>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
                     <div>
-                        <div class="text-xs text-base-content/60">"Committed"</div>
+                        <div class="text-xs text-base-content/60">{t(MessageKey::CommittedStatLabel)}</div>
                         <div class="text-lg font-semibold tabular-nums">
-                            {sum.committed_points} <span class="text-sm font-normal opacity-60">"pt"</span>
+                            {sum.committed_points} <span class="text-sm font-normal opacity-60">{t(MessageKey::PointsUnitSuffix)}</span>
                         </div>
                         <div class="text-xs text-base-content/50">
-                            {format!("{} issues", sum.committed_count)}
+                            {t(MessageKey::IssuesCountText { count: sum.committed_count })}
                         </div>
                     </div>
                     <div>
-                        <div class="text-xs text-base-content/60">"Completed"</div>
+                        <div class="text-xs text-base-content/60">{t(MessageKey::CompletedStatLabel)}</div>
                         <div class="text-lg font-semibold tabular-nums">
-                            {sum.completed_points} <span class="text-sm font-normal opacity-60">"pt"</span>
+                            {sum.completed_points} <span class="text-sm font-normal opacity-60">{t(MessageKey::PointsUnitSuffix)}</span>
                         </div>
                         <div class="text-xs text-base-content/50">
-                            {format!("{} issues", sum.completed_count)}
+                            {t(MessageKey::IssuesCountText { count: sum.completed_count })}
                         </div>
                     </div>
                     <div>
-                        <div class="text-xs text-base-content/60">"In flight"</div>
+                        <div class="text-xs text-base-content/60">{t(MessageKey::InFlightStatLabel)}</div>
                         <div class="text-lg font-semibold tabular-nums">
-                            {in_flight_pt} <span class="text-sm font-normal opacity-60">"pt"</span>
+                            {in_flight_pt} <span class="text-sm font-normal opacity-60">{t(MessageKey::PointsUnitSuffix)}</span>
                         </div>
                         <div class="text-xs text-base-content/50">
-                            {format!("{} issues", in_flight_count)}
+                            {t(MessageKey::IssuesCountText { count: in_flight_count })}
                         </div>
                     </div>
                     {(matches!(status, SprintStatus::Completed)).then(|| view! {
                         <div>
-                            <div class="text-xs text-base-content/60">"Carried over"</div>
+                            <div class="text-xs text-base-content/60">{t(MessageKey::CarriedOverHeading)}</div>
                             <div class="text-lg font-semibold tabular-nums">
-                                {sum.carried_over_points} <span class="text-sm font-normal opacity-60">"pt"</span>
+                                {sum.carried_over_points} <span class="text-sm font-normal opacity-60">{t(MessageKey::PointsUnitSuffix)}</span>
                             </div>
                             <div class="text-xs text-base-content/50">
-                                {format!("{} issues", sum.carried_over_count)}
+                                {t(MessageKey::IssuesCountText { count: sum.carried_over_count })}
                             </div>
                         </div>
                     })}
@@ -679,24 +689,24 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
         .last()
         .map(|p| p.day.format("%m-%d").to_string())
         .unwrap_or_default();
-    let aria_label_text = format!(
-        "Burndown chart from {} to {}, max value {}",
-        first_label, last_label, max_val
-    );
+    let aria_label_text = t(MessageKey::BurndownChartAriaLabel {
+        first_label: first_label.clone(),
+        last_label: last_label.clone(),
+        max_val,
+    });
     let max_label_y = margin_t + 4;
     let baseline_y = margin_t + plot_h;
     let date_label_y = baseline_y + 14;
 
     view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
-                 aria-label="Sprint burndown">
+                 aria-label=t(MessageKey::BurndownSectionAriaLabel)>
             <div class="card-body">
-                <h2 class="text-base font-medium">"Burndown"</h2>
+                <h2 class="text-base font-medium">{t(MessageKey::BurndownHeading)}</h2>
                 <p class="text-xs text-base-content/60">
-                    "Two cumulative lines: " <strong>"committed"</strong>
-                    " (the work added to the sprint) and " <strong>"completed"</strong>
-                    " (work finished). The gap between them is in flight. \
-                     No ideal line, no prediction — what's happening is what you see."
+                    {t(MessageKey::BurndownCaptionLead)} <strong>{t(MessageKey::CaptionWordCommitted)}</strong>
+                    {t(MessageKey::BurndownCaptionMiddle)} <strong>{t(MessageKey::CaptionWordCompleted)}</strong>
+                    {t(MessageKey::BurndownCaptionTail)}
                 </p>
                 <div role="img" aria-label=aria_label_text>
                     <svg viewBox=format!("0 0 {} {}", chart_w, chart_h)
@@ -758,18 +768,20 @@ fn render_issues_table(
         .into_iter()
         .map(|(issue_id, project_id, title, effort, status)| {
             let href = format!("/projects/{}/issues/{}", project_id, issue_id);
-            let status_label = match status.as_str() {
-                "open" => "Open",
-                "in_progress" => "In progress",
-                "done" => "Done",
-                _ => "—",
+            let status_label = match IssueStatus::parse(&status) {
+                Some(s) => t(MessageKey::IssueStatusName {
+                    label: s.to_i18n_label(),
+                }),
+                None => t(MessageKey::NoValuePlaceholder),
             };
             let status_class = match status.as_str() {
                 "done" => "badge badge-xs badge-outline",
                 "in_progress" => "badge badge-xs badge-primary",
                 _ => "badge badge-xs badge-ghost",
             };
-            let effort_text = effort.map(|e| format!("{} pt", e)).unwrap_or_default();
+            let effort_text = effort
+                .map(|e| t(MessageKey::PointsValue { points: e }))
+                .unwrap_or_default();
             view! {
                 <tr>
                     <td>
@@ -786,23 +798,22 @@ fn render_issues_table(
 
     view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
-                 aria-label="Issues in sprint">
+                 aria-label=t(MessageKey::IssuesInSprintAriaLabel)>
             <div class="card-body">
-                <h2 class="text-base font-medium">"Issues"</h2>
+                <h2 class="text-base font-medium">{t(MessageKey::IssuesHeading)}</h2>
                 {(!has).then(|| view! {
                     <p class="text-sm text-base-content/60 italic">
-                        "No issues in this sprint yet. Open an issue and select this \
-                         sprint from the sprint dropdown to add it."
+                        {t(MessageKey::NoIssuesInSprintMessage)}
                     </p>
                 })}
                 {has.then(|| view! {
                     <div class="overflow-x-auto">
-                        <table class="table table-sm" aria-label="Sprint issues">
+                        <table class="table table-sm" aria-label=t(MessageKey::SprintIssuesAriaLabel)>
                             <thead>
                                 <tr>
-                                    <th>"Title"</th>
-                                    <th>"Effort"</th>
-                                    <th>"Status"</th>
+                                    <th>{t(MessageKey::FieldLabel { field: Field::Title })}</th>
+                                    <th>{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</th>
+                                    <th>{t(MessageKey::FieldLabel { field: Field::Status })}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -851,20 +862,20 @@ pub fn SprintEditPage(
     });
 
     view! {
-        <AppShell title=format!("Edit {}", sprint_name.clone())
+        <AppShell title=t(MessageKey::EditSprintPageTitle { sprint_name: sprint_name.clone() })
                   user=user
                   flash={None::<String>}
                   unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams">"Teams"</a></li>
+                    <li><a href="/teams">{t(MessageKey::NavLinkTeams)}</a></li>
                     <li><a href=team_href>{team_name}</a></li>
-                    <li><a href=sprints_href>"Sprints"</a></li>
+                    <li><a href=sprints_href>{t(MessageKey::SprintsSectionName)}</a></li>
                     <li><a href=detail_href.clone()>{sprint_name.clone()}</a></li>
-                    <li>"Edit"</li>
+                    <li>{t(MessageKey::EditWord)}</li>
                 </ul></div>
 
-                <h1 class="text-xl font-semibold mb-4">"Edit sprint"</h1>
+                <h1 class="text-xl font-semibold mb-4">{t(MessageKey::EditSprintHeading)}</h1>
 
                 {error_block}
 
@@ -873,7 +884,7 @@ pub fn SprintEditPage(
                         <input type="hidden" name="client_updated_at" value=client_updated_at/>
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Name"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Name })}</span>
                             </div>
                             <input type="text" name="name" required=true maxlength="120"
                                    value=sprint_name
@@ -882,7 +893,7 @@ pub fn SprintEditPage(
                         <div class="grid grid-cols-2 gap-3">
                             <label class="form-control w-full">
                                 <div class="label py-1">
-                                    <span class="label-text text-sm">"Start date"</span>
+                                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::StartDate })}</span>
                                 </div>
                                 <input type="date" name="starts_on" required=true
                                        value=starts_on
@@ -890,7 +901,7 @@ pub fn SprintEditPage(
                             </label>
                             <label class="form-control w-full">
                                 <div class="label py-1">
-                                    <span class="label-text text-sm">"End date"</span>
+                                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EndDate })}</span>
                                 </div>
                                 <input type="date" name="ends_on" required=true
                                        value=ends_on
@@ -899,8 +910,8 @@ pub fn SprintEditPage(
                         </div>
                         <label class="form-control w-full">
                             <div class="label py-1">
-                                <span class="label-text text-sm">"Goal"</span>
-                                <span class="label-text-alt text-xs opacity-60">"optional"</span>
+                                <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Goal })}</span>
+                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="goal" rows="3" maxlength="500"
                                       class="textarea textarea-bordered textarea-sm w-full">
@@ -908,8 +919,8 @@ pub fn SprintEditPage(
                             </textarea>
                         </label>
                         <div class="card-actions justify-end mt-2">
-                            <a href=detail_href class="btn btn-ghost btn-sm">"Cancel"</a>
-                            <button type="submit" class="btn btn-primary btn-sm">"Save"</button>
+                            <a href=detail_href class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
+                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::SaveButton)}</button>
                         </div>
                     </form>
                 </div>

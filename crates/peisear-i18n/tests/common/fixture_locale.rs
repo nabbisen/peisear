@@ -27,6 +27,7 @@
 
 use peisear_i18n::{
     EntityKind, Field, IndicatorLabel, IssueStatusLabel, MessageKey, NavSection, PriorityLabel,
+    SprintStatusLabel, TeamRoleLabel,
 };
 
 pub fn render(key: MessageKey) -> String {
@@ -244,6 +245,150 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::DeleteProjectWarning => "[fx-delete-project-warning]".to_string(),
         MessageKey::IssueDeletedFlash => "[fx-issue-deleted]".to_string(),
         MessageKey::ProjectDeletedFlash => "[fx-project-deleted]".to_string(),
+
+        // ---- I18N-005c: components/{sprints,teams} ----
+        MessageKey::SprintStatusName { label } => {
+            format!("[fx-sprint-status] {}", sprint_status_label(label))
+        }
+        MessageKey::TeamRoleName { label } => format!("[fx-team-role] {}", team_role_label(label)),
+        MessageKey::NewSprintLink => "[fx-new-sprint-link]".to_string(),
+        MessageKey::SprintsPageTitle { team_name } => format!("[fx-sprints-title] {team_name}"),
+        MessageKey::SprintsSectionName => "[fx-sprints-section]".to_string(),
+        MessageKey::SprintsListAriaLabel => "[fx-sprint-list]".to_string(),
+        MessageKey::SprintCardSummaryCompleted {
+            completed_points,
+            committed_points,
+            carried_over_points,
+        } => format!(
+            "[fx-summary-completed] {completed_points} {committed_points} {carried_over_points}"
+        ),
+        MessageKey::SprintCardSummaryActive {
+            completed_points,
+            committed_points,
+            in_flight_points,
+        } => {
+            format!("[fx-summary-active] {completed_points} {committed_points} {in_flight_points}")
+        }
+        MessageKey::SprintCardSummaryPlanned {
+            committed_points,
+            committed_count,
+        } => format!("[fx-summary-planned] {committed_points} {committed_count}"),
+        MessageKey::SprintCardAriaLabel {
+            name,
+            status,
+            dates,
+            summary,
+        } => format!("[fx-sprint-card-aria] {name} {status} {dates} {summary}"),
+        MessageKey::VelocityBarAriaLabel {
+            name,
+            completed_points,
+            carried_over_points,
+        } => format!("[fx-bars-bar] {name} {completed_points} {carried_over_points}"),
+        MessageKey::SprintsEmptyMessageAdmin => "[fx-sprints-empty-admin]".to_string(),
+        MessageKey::SprintsEmptyMessageNonAdmin => "[fx-sprints-empty-non-admin]".to_string(),
+        MessageKey::SprintsOptionalNote => "[fx-sprints-optional]".to_string(),
+        MessageKey::CompletedWorkHeading => "[fx-completed-work]".to_string(),
+        MessageKey::RecentCompletedSprintsAriaLabel => "[fx-recent-completed]".to_string(),
+        MessageKey::VelocityCaptionLead => "[fx-bars-lead]".to_string(),
+        MessageKey::CaptionWordCompleted => "[fx-word-completed]".to_string(),
+        MessageKey::VelocityCaptionMiddle => "[fx-bars-middle]".to_string(),
+        MessageKey::CaptionWordCarriedOver => "[fx-word-carried-over]".to_string(),
+        MessageKey::VelocityCaptionTail => "[fx-bars-tail]".to_string(),
+        MessageKey::BarChartAriaLabel => "[fx-bar-chart]".to_string(),
+        MessageKey::MedianLabel { median } => format!("[fx-median-{median}]"),
+        MessageKey::NewSprintLabel => "[fx-new-sprint]".to_string(),
+        MessageKey::SprintNamePlaceholder => "[fx-sprint-name-ph]".to_string(),
+        MessageKey::GoalFieldPlaceholder => "[fx-goal-ph]".to_string(),
+        MessageKey::SprintPlannedNoticeLead => "[fx-planned-lead]".to_string(),
+        MessageKey::CaptionWordPlanned => "[fx-word-planned]".to_string(),
+        MessageKey::SprintPlannedNoticeTail => "[fx-planned-tail]".to_string(),
+        MessageKey::CreateSprintButton => "[fx-create-sprint]".to_string(),
+        MessageKey::StartSprintLabel => "[fx-start-sprint]".to_string(),
+        MessageKey::CompleteSprintLabel => "[fx-complete-sprint]".to_string(),
+        MessageKey::GoalFieldPrefixLabel => "[fx-goal-prefix]".to_string(),
+        MessageKey::SummaryHeading => "[fx-summary]".to_string(),
+        MessageKey::CommittedStatLabel => "[fx-committed-stat]".to_string(),
+        MessageKey::CompletedStatLabel => "[fx-completed-stat]".to_string(),
+        MessageKey::InFlightStatLabel => "[fx-in-flight]".to_string(),
+        MessageKey::CarriedOverHeading => "[fx-carried-over-heading]".to_string(),
+        MessageKey::PointsUnitSuffix => "[fx-pt]".to_string(),
+        MessageKey::IssuesCountText { count } => format!("[fx-issues-count-{count}]"),
+        MessageKey::BurndownHeading => "[fx-burndown]".to_string(),
+        MessageKey::BurndownSectionAriaLabel => "[fx-burndown-section]".to_string(),
+        MessageKey::BurndownCaptionLead => "[fx-burndown-lead]".to_string(),
+        MessageKey::CaptionWordCommitted => "[fx-word-committed]".to_string(),
+        MessageKey::BurndownCaptionMiddle => "[fx-burndown-middle]".to_string(),
+        MessageKey::BurndownCaptionTail => "[fx-burndown-tail]".to_string(),
+        MessageKey::BurndownChartAriaLabel {
+            first_label,
+            last_label,
+            max_val,
+        } => format!("[fx-burndown-chart] {first_label} {last_label} {max_val}"),
+        MessageKey::IssuesInSprintAriaLabel => "[fx-issues-in-sprint]".to_string(),
+        MessageKey::IssuesHeading => "[fx-issues-heading]".to_string(),
+        MessageKey::NoIssuesInSprintMessage => "[fx-no-issues-in-sprint]".to_string(),
+        MessageKey::SprintIssuesAriaLabel => "[fx-sprint-issues]".to_string(),
+        MessageKey::EditSprintPageTitle { sprint_name } => {
+            format!("[fx-edit-sprint-title] {sprint_name}")
+        }
+        MessageKey::EditSprintHeading => "[fx-edit-sprint]".to_string(),
+        MessageKey::NewTeamLink => "[fx-new-team-link]".to_string(),
+        MessageKey::TeamsEmptyIntro => "[fx-teams-empty-intro]".to_string(),
+        MessageKey::TeamsEmptyCta => "[fx-teams-empty-cta]".to_string(),
+        MessageKey::YourTeamsAriaLabel => "[fx-your-teams]".to_string(),
+        MessageKey::TeamRoleAriaLabel { team_name, role } => {
+            format!("[fx-team-role-aria] {team_name} {}", team_role_label(role))
+        }
+        MessageKey::NewTeamLabel => "[fx-new-team]".to_string(),
+        MessageKey::TeamNamePlaceholder => "[fx-team-name-ph]".to_string(),
+        MessageKey::SlugFieldLabel => "[fx-slug-field]".to_string(),
+        MessageKey::OptionalAutoDerivedHint => "[fx-optional-auto]".to_string(),
+        MessageKey::SlugPlaceholder => "[fx-slug-ph]".to_string(),
+        MessageKey::SlugHelperText => "[fx-slug-helper]".to_string(),
+        MessageKey::TeamDescriptionPlaceholder => "[fx-team-desc-ph]".to_string(),
+        MessageKey::NewTeamIntro => "[fx-new-team-intro]".to_string(),
+        MessageKey::CreateTeamButton => "[fx-create-team]".to_string(),
+        MessageKey::EditTeamSettingsAriaLabel => "[fx-edit-team-settings]".to_string(),
+        MessageKey::InviteMemberSummary => "[fx-invite-member]".to_string(),
+        MessageKey::ByEmailHint => "[fx-by-email]".to_string(),
+        MessageKey::EmailPlaceholderExample => "[fx-email-ph]".to_string(),
+        MessageKey::AddButton => "[fx-add]".to_string(),
+        MessageKey::InviteHelperText => "[fx-invite-helper]".to_string(),
+        MessageKey::MembersHeading => "[fx-members]".to_string(),
+        MessageKey::TeamMembersAriaLabel => "[fx-team-members]".to_string(),
+        MessageKey::JoinedColumnHeading => "[fx-joined]".to_string(),
+        MessageKey::TeamPrivacyFootnote => "[fx-privacy-footnote]".to_string(),
+        MessageKey::DetachFromTeamAriaLabel => "[fx-detach-from-team]".to_string(),
+        MessageKey::DetachButton => "[fx-detach]".to_string(),
+        MessageKey::TeamProjectsAriaLabel => "[fx-team-projects]".to_string(),
+        MessageKey::NoProjectsInTeamMessage => "[fx-no-projects-in-team]".to_string(),
+        MessageKey::ChangeRoleAriaLabel => "[fx-change-role]".to_string(),
+        MessageKey::LeaveTeamAriaLabel => "[fx-leave-team]".to_string(),
+        MessageKey::LeaveButton => "[fx-leave]".to_string(),
+        MessageKey::RemoveMemberAriaLabel => "[fx-remove-member]".to_string(),
+        MessageKey::RemoveButton => "[fx-remove]".to_string(),
+        MessageKey::YouSuffix => "[fx-you]".to_string(),
+        MessageKey::EditTeamPageTitle { team_name } => {
+            format!("[fx-edit-team-title] {team_name}")
+        }
+        MessageKey::TeamSettingsHeading => "[fx-team-settings]".to_string(),
+        MessageKey::SlugFixedNotice => "[fx-slug-fixed]".to_string(),
+        MessageKey::SprintCreatedFlash => "[fx-sprint-created]".to_string(),
+        MessageKey::SprintUpdatedFlash => "[fx-sprint-updated]".to_string(),
+        MessageKey::SprintStartedFlash => "[fx-sprint-started]".to_string(),
+        MessageKey::SprintCompletedFlash => "[fx-sprint-completed]".to_string(),
+        MessageKey::SprintDeletedFlash => "[fx-sprint-deleted]".to_string(),
+        MessageKey::SprintAssignmentSavedFlash => "[fx-sprint-assignment-saved]".to_string(),
+        MessageKey::TeamCreatedFlash => "[fx-team-created]".to_string(),
+        MessageKey::MemberAddedFlash => "[fx-member-added]".to_string(),
+        MessageKey::RoleUpdatedFlash => "[fx-role-updated]".to_string(),
+        MessageKey::LastAdminDemotionError => "[fx-last-admin-demotion]".to_string(),
+        MessageKey::LastAdminRemovalError => "[fx-last-admin-removal]".to_string(),
+        MessageKey::YouLeftTeamFlash => "[fx-you-left-team]".to_string(),
+        MessageKey::MemberRemovedFlash => "[fx-member-removed]".to_string(),
+        MessageKey::TeamUpdatedFlash => "[fx-team-updated]".to_string(),
+        MessageKey::ProjectDetachedFlash => "[fx-project-detached]".to_string(),
+        MessageKey::NoUserWithEmailFound { email } => format!("[fx-no-user-email] {email}"),
     }
 }
 
@@ -269,6 +414,11 @@ fn field_label(field: Field) -> &'static str {
         Field::Priority => "[fx-priority-field]",
         Field::Assignee => "[fx-assignee]",
         Field::Name => "[fx-name]",
+        Field::StartDate => "[fx-start-date]",
+        Field::EndDate => "[fx-end-date]",
+        Field::Goal => "[fx-goal]",
+        Field::Role => "[fx-role]",
+        Field::Email => "[fx-email]",
     }
 }
 
@@ -277,6 +427,22 @@ fn issue_status_label(label: IssueStatusLabel) -> &'static str {
         IssueStatusLabel::Open => "[fx-open]",
         IssueStatusLabel::InProgress => "[fx-in-progress]",
         IssueStatusLabel::Done => "[fx-done]",
+    }
+}
+
+fn sprint_status_label(label: SprintStatusLabel) -> &'static str {
+    match label {
+        SprintStatusLabel::Planned => "[fx-planned]",
+        SprintStatusLabel::Active => "[fx-active]",
+        SprintStatusLabel::Completed => "[fx-completed]",
+    }
+}
+
+fn team_role_label(label: TeamRoleLabel) -> &'static str {
+    match label {
+        TeamRoleLabel::Admin => "[fx-admin]",
+        TeamRoleLabel::Member => "[fx-member]",
+        TeamRoleLabel::Viewer => "[fx-viewer]",
     }
 }
 
