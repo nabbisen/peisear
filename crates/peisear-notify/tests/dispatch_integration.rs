@@ -40,23 +40,29 @@ use peisear_notify::config::{SmtpConfig, TlsMode};
 use peisear_notify::dispatch::DispatchContext;
 use peisear_notify::{DispatchEvent, DispatchTx, dispatch_loop};
 use peisear_storage::{Pool, notifications as notif_store, pool, users};
+use tempfile::TempDir;
 use tokio::sync::mpsc;
 
 /// Per-test fresh DB. Uses peisear-storage's connect+migrate
 /// helpers rather than reaching into sqlx directly — avoids
 /// the dev-dep feature-resolution recompile that would
 /// otherwise hit when this test is built.
-async fn fresh_pool() -> Pool {
-    let suffix = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let path = format!("/tmp/peisear-notify-it-{}", suffix);
-    std::fs::create_dir_all(&path).unwrap();
-    let url = format!("sqlite://{}/test.db", path);
+///
+/// Returns the backing `TempDir` alongside the pool
+/// (`QA-001-review.md` §3.2 — this used to name its directory
+/// from `SystemTime::now()` alone, the identical defect
+/// `peisear-web`'s `TestApp::spawn` had, and never cleaned up
+/// either). The caller must hold the `TempDir` for as long as the
+/// pool is used; it removes the directory on drop.
+async fn fresh_pool() -> (Pool, TempDir) {
+    let temp_dir = tempfile::Builder::new()
+        .prefix("peisear-notify-it-")
+        .tempdir()
+        .unwrap();
+    let url = format!("sqlite://{}/test.db", temp_dir.path().display());
     let p = pool::connect(&url).await.unwrap();
     pool::migrate(&p).await.unwrap();
-    p
+    (p, temp_dir)
 }
 
 /// Set up a user with an active email-channel preference for
@@ -132,7 +138,7 @@ async fn wait_for_notification(
 
 #[tokio::test]
 async fn smtp_unconfigured_records_in_app_only_in_dispatched_via() {
-    let pool = fresh_pool().await;
+    let (pool, _temp_dir) = fresh_pool().await;
     let user_id = create_user_subscribed_to_email(&pool).await;
 
     let ctx = DispatchContext {
@@ -158,7 +164,7 @@ async fn smtp_unconfigured_records_in_app_only_in_dispatched_via() {
 
 #[tokio::test]
 async fn smtp_configured_but_unreachable_records_in_app_only() {
-    let pool = fresh_pool().await;
+    let (pool, _temp_dir) = fresh_pool().await;
     let user_id = create_user_subscribed_to_email(&pool).await;
 
     // Synthetic SMTP config pointing at a host that won't
@@ -199,7 +205,7 @@ async fn smtp_configured_but_unreachable_records_in_app_only() {
 async fn cooldown_suppresses_second_dispatch_within_window() {
     // Sanity: existing cooldown filter still works after the
     // dispatch pipeline moved to its own crate.
-    let pool = fresh_pool().await;
+    let (pool, _temp_dir) = fresh_pool().await;
     let user_id = create_user_subscribed_to_email(&pool).await;
 
     let ctx = DispatchContext {
@@ -225,3 +231,4 @@ async fn cooldown_suppresses_second_dispatch_within_window() {
         rows.len()
     );
 }
+

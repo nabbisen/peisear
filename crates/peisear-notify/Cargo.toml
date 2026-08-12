@@ -44,3 +44,9 @@ tracing                     = { workspace = true }
 # (peisear-storage, tokio) are already enough to write
 # integration tests against the dispatch pipeline.
 tokio                       = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+# QA-001-review.md §3.2: fresh_pool had the identical clock-only
+# temp-directory naming defect peisear-web's TestApp::spawn did.
+# Small and dependency-light -- doesn't reintroduce the
+# feature-resolution recompile problem the comment above guards
+# against.
+tempfile                    = { workspace = true }

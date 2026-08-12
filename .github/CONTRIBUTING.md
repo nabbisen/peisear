@@ -82,27 +82,41 @@ for t in auth_boundary board_keyboard breadcrumb health_explainability \
 done
 ```
 
-This isolates each test binary's link step (keeps peak linker memory
-bounded — the combined `--workspace` build links several large
-crates: sqlx, leptos, axum, the wasm-smtp family) and gives clean
-per-target failure attribution. It is also required, not just
-convenient: `QA-001` found that `cargo test --workspace` fails
-intermittently — roughly one run in two, on a different test each
-time — for a reason with nothing to do with any test's own
-correctness (a `TestApp::spawn` temp-directory collision, fixed in
-`peisear-web/tests/common/server.rs`). The procedure above never
-triggers it.
+This isolates each test binary's link step. That is the live,
+present-tense reason it exists: peak linker memory stays bounded
+this way, because the combined `--workspace` build links several
+large crates at once (sqlx, leptos, axum, the wasm-smtp family). It
+also gives clean per-target failure attribution.
 
-**Before opening a PR that touches `crates/peisear-web/tests/`, or
-before cutting a release candidate, also run `cargo test --workspace`
-three times in a row and confirm every run passes.** This is
-deliberately the *other* condition — the one a contributor reaches
-for without thinking, by typing the obvious command — because an
-isolation procedure that only ever gets run in isolation can hide a
-defect in the harness producing every other gate result, which is
-exactly what happened here. Three, not one, because a single pass at
-a roughly 50% per-run failure rate proves nothing; re-measure and
-adjust the count if the observed rate changes materially.
+**History, for a specific defect that is now guarded a different
+way**: `cargo test --workspace` used to also fail intermittently for
+an unrelated reason — a `TestApp::spawn`/`fresh_pool` temp-directory
+collision named from the clock alone (`QA-001`, baseline `§10.13`).
+That defect is fixed (`peisear-web/tests/common/server.rs`,
+`peisear-notify/tests/dispatch_integration.rs`) and is now caught
+**deterministically**, every time, at no runtime cost, by a test
+that scans both files for the pattern returning
+(`peisear-web`'s `test_harness_scan` module) — not by running
+`--workspace` repeatedly and hoping to land on a bad roll.
+`QA-001`'s review measured that hope directly: on a loaded machine
+the same command failed 3 of 6 runs; on a quiet machine, 0 of 6,
+*with the defect fully present both times*. A repeated run is not a
+reliable detector for a deterministic property, so `test_harness_scan`
+is the guard for this specific class now, not the recommendation
+below.
+
+**Still run `cargo test --workspace` three times in a row before
+opening a PR that touches `crates/peisear-web/tests/` or
+`crates/peisear-notify/tests/`, or before cutting a release
+candidate** — for flakes of *other* kinds, the ones a structural scan
+cannot see because they're not "a file contains a bad pattern" but
+"two things interact badly at runtime." This is deliberately the
+condition a contributor reaches for without thinking, by typing the
+obvious command, because the per-crate procedure's isolation is
+exactly what would hide a class of defect like that from every other
+gate result — which is what happened here, once, before it had a
+better guard. Re-measure and adjust the count if a new defect's
+observed rate suggests three isn't enough.
 
 ### Documentation
 

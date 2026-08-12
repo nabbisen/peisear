@@ -2177,6 +2177,7 @@ dependencies = [
  "peisear-i18n",
  "peisear-storage",
  "serde_json",
+ "tempfile",
  "thiserror 2.0.18",
  "tokio",
  "tracing",

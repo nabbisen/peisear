@@ -26,6 +26,8 @@ pub mod jobs;
 #[cfg(test)]
 mod prose_scan;
 pub mod state;
+#[cfg(test)]
+mod test_harness_scan;
 
 pub use app::build_router;
 pub use config::Config;
