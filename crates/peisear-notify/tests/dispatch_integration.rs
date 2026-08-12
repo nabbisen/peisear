@@ -231,4 +231,3 @@ async fn cooldown_suppresses_second_dispatch_within_window() {
         rows.len()
     );
 }
-

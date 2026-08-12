@@ -95,9 +95,9 @@ collision named from the clock alone (`QA-001`, baseline `§10.13`).
 That defect is fixed (`peisear-web/tests/common/server.rs`,
 `peisear-notify/tests/dispatch_integration.rs`) and is now caught
 **deterministically**, every time, at no runtime cost, by a test
-that scans both files for the pattern returning
-(`peisear-web`'s `test_harness_scan` module) — not by running
-`--workspace` repeatedly and hoping to land on a bad roll.
+that scans every `crates/*/tests/**.rs` file for the pattern
+reappearing (`peisear-web`'s `test_harness_scan` module) — not by
+running `--workspace` repeatedly and hoping to land on a bad roll.
 `QA-001`'s review measured that hope directly: on a loaded machine
 the same command failed 3 of 6 runs; on a quiet machine, 0 of 6,
 *with the defect fully present both times*. A repeated run is not a
