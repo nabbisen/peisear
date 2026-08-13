@@ -421,6 +421,31 @@ Each substep adds (in its own RFC and its own test crate):
   a transport story (websocket / SSE) that's not on the
   table.
 
+## Optimistic locking for the reschedule endpoint — added 2026-08-13
+
+*From CAL-001's review, recorded here because this is where the risk first
+becomes real.*
+
+Phase D-3's drag-to-reschedule writes `planned_start_at` / `planned_end_at`
+directly. **That endpoint must read `updated_at` before the write and compare
+it, or route through `issues::update`.**
+
+`issues` has no `updated_at` trigger — `DEC-013`'s machinery covers `sprints`,
+`teams`, `team_memberships` and `user_capacities`. `issues::update` moves
+`updated_at` only because its own `SET` clause does, and the whole-row edit form
+touches it on every submission. A dedicated plan-date write path has neither
+property.
+
+CAL-001's implementer built exactly such a path as a throwaway, wrote a
+planned date out of band, then submitted a normal edit still holding the
+pre-write timestamp: **303 See Other.** Silent success, no error, no symptom —
+`NFR-CONC-004` violated. The throwaway was deleted rather than shipped.
+
+Today there is no legitimate call site that writes these columns outside the
+lock-checked statement. This RFC creates the first one. A test asserting a stale
+timestamp on a drag-reschedule returns 409 belongs in its handoff, and it is
+demonstrable failing, unlike CAL-001's equivalent.
+
 ## Open questions
 
 1. ~~**Vanilla JS vs. Leptos hydration for the toast module**~~
