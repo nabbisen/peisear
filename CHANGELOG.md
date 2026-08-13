@@ -7,6 +7,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.22.0] — 2026-08-13
+
+### Fixed
+
+- **In a team-owned project, only the project owner could be assigned an
+  issue** (`TEAM-001`, RFC 009). Every other team member was rejected as an
+  invalid assignee, so per-person workload — the product's central
+  per-person sustainability signal — was empty for everyone except project
+  owners. It failed by showing nothing rather than by erroring, which is
+  why it survived two releases, an external design document, a
+  requirements baseline, and a compliance pass. `list_assignee_candidates`
+  and `project_workload` now derive from one shared definition: a
+  project's owner plus its team's `admin`/`member` roles (`viewer`
+  excluded — read-only by the team schema's own design). A user removed
+  from a team keeps issues already assigned to them; the workload report
+  reflects that even though they are no longer a valid new assignee.
+- **`SwitchingAriaLabel` doubled "per active day"** (`COPY-001`). The
+  chip's median text already appended the suffix; the aria sentence
+  appended it again, producing "median 2.4 / active day pickups per
+  active day". Fixed at the source — the median value and its suffix no
+  longer travel together into a caller that adds its own.
+- **The two sub-issue nesting rejection messages disagreed on wording**
+  (`COPY-001`). Unified on the clearer of the two at both the form and
+  the submit path.
+- **A capacity-period validation message named internal field
+  identifiers instead of the form's own labels** (`COPY-001`). Now names
+  "From"/"To", matching what the form shows.
+- **`TestApp::spawn` could collide with itself under concurrent test
+  runs** (`QA-001`, RFC 005 §9). Its temporary SQLite file's name was
+  derived from the system clock, so two tests starting in the same
+  instant could open the same file — an intermittent test failure
+  unrelated to what either test was actually checking. The name is now
+  derived from a per-process counter instead. A new structural test
+  (`test_harness_scan`) checks every test harness in the workspace for
+  the pattern's reappearance, rather than trusting a fixed list of two
+  known files.
+
+### Added
+
+- **The sprint planning page** (`PLAN-001`, RFC 001):
+  `/teams/{slug}/sprints/{sprint_id}/plan`. A two-column surface — a
+  filterable, team-wide backlog of open issues on the left, the sprint's
+  committed items on the right — with button-driven moves between them,
+  replacing the one-issue-at-a-time round trip through each issue's own
+  sprint dropdown. Filters (project, priority, assignee) persist across a
+  move via the redirect's query string. Any team member, including a
+  `viewer`, may read the page; moving issues requires `admin`/`member`.
+  An active sprint's plan renders without move controls; a completed
+  sprint additionally stops showing the backlog, since re-opening a
+  finished sprint to add issues is not a supported flow.
+  - **The remove route's authorisation boundary was hardened before it
+    shipped, not after.** The route takes an issue id, and the
+    underlying storage removal carries no sprint scoping of its own —
+    without an added check, any authenticated member of any team could
+    have removed an issue from a different team's sprint by naming its
+    id directly in the request. The check was written and tested inside
+    the same piece of work that created the route; the route never
+    shipped without it.
+  - **The capacity hint RFC 001 originally specified is not in this
+    release, and that is deliberate.** It sums each participating
+    member's capacity, and the page that would show it also names who
+    those members are — with one participant the sum is that person's
+    capacity outright; with two, a member can subtract their own and
+    have the other's. Capacity is self-only data. A design that survives
+    a two-person team is being worked out separately; the committed-
+    points total (a sum of effort on issues already visible on the same
+    page, not a capacity aggregate) ships in its place.
+
+### Changed
+
+- `CONTRIBUTING.md` now documents `DEC-007`'s three-consecutive-run
+  `cargo test --workspace` procedure for changes touching
+  `crates/peisear-web/tests/` or `crates/peisear-notify/tests/`, or
+  before cutting a release. Followed since 0.20.0; this is the first time
+  it has been written down outside an internal file.
+
 ## [0.21.0] — 2026-08-11
 
 This is not "internationalisation" — `NFR-LANG-005` keeps a second locale
