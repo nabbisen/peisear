@@ -299,6 +299,60 @@ async fn removed_member_with_in_flight_issue_is_in_workload_not_candidates() {
     assert_eq!(bob_row.in_flight_points, 3);
 }
 
+/// Test 8 -- handoff §4 / review correction: a `viewer` team member
+/// is not a candidate and is rejected as an assignee (400), same as
+/// an unrelated stranger. Demonstrated failing with the role filter
+/// removed from `CANDIDATE_SET_CTE` (both `assignee_candidates` and
+/// `workload_privacy` stayed green with the filter gone -- see the
+/// review correction transcript) before landing with it restored.
+#[tokio::test]
+async fn viewer_is_not_a_candidate_and_is_rejected_as_assignee() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = common::fixture::create_team_with_admin(&app.db, &admin_id, "Team").await;
+
+    let viewer = TestUser::new("vic");
+    let viewer_id = uuid::Uuid::new_v4().to_string();
+    peisear_storage::users::insert(
+        &app.db,
+        &viewer_id,
+        &viewer.email,
+        "x",
+        &viewer.display_name,
+    )
+    .await
+    .expect("insert viewer user");
+    teams::add_member(&app.db, &team_id, &viewer_id, TeamRole::Viewer)
+        .await
+        .expect("add viewer");
+
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+
+    let candidates = issues::list_assignee_candidates(&app.db, &project_id)
+        .await
+        .expect("list candidates");
+    assert!(
+        !candidates.iter().any(|c| c.id == viewer_id),
+        "a viewer must not be an assignee candidate: {candidates:?}"
+    );
+
+    let resp = app
+        .server
+        .post(&format!("/projects/{project_id}/issues/new"))
+        .form(&[
+            ("title", "Should be rejected"),
+            ("description", ""),
+            ("status", "open"),
+            ("priority", "medium"),
+            ("effort", ""),
+            ("assignee_id", viewer_id.as_str()),
+        ])
+        .await;
+
+    assert_eq!(resp.status_code(), axum::http::StatusCode::BAD_REQUEST);
+}
+
 /// Test 7 -- requirement 4: assignment is not authorisation. A user
 /// who is a valid assignee candidate for one project has no read
 /// access to an unrelated project just because they're a candidate
