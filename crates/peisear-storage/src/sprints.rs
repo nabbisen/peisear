@@ -30,6 +30,7 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use peisear_core::sprints::{BurndownPoint, Sprint, SprintStatus, SprintSummary};
+use peisear_core::{Issue, IssueStatus, Priority};
 use sqlx::FromRow;
 use uuid::Uuid;
 
@@ -602,4 +603,158 @@ pub async fn recent_completed_for_team(
         out.push((s, sum));
     }
     Ok(out)
+}
+
+// ──────────────────────────────────────────────────────────────
+// Sprint planning page (RFC 001 / `PLAN-001`)
+// ──────────────────────────────────────────────────────────────
+
+/// Optional facets for [`backlog_for_team`]. `None` on `project_id`/
+/// `priority` means "no constraint on that facet" — matches the
+/// project detail list view's existing `Option<String>` filter
+/// convention (`ProjectViewQuery`).
+///
+/// `assignee_id` carries one extra sentinel beyond that convention:
+/// `None` is "no constraint", `Some("unassigned")` is "assignee is
+/// nobody", and `Some(other)` is "assignee is exactly this user id"
+/// — the same three-way shape the project detail list's assignee
+/// filter already exposes in its UI (`UnassignedOption`), so the
+/// backlog filter matches it rather than inventing a fourth
+/// filtering convention. Safe as a string sentinel because assignee
+/// ids are UUIDs and can never literally equal `"unassigned"`.
+#[derive(Default)]
+pub struct BacklogFilter {
+    pub project_id: Option<String>,
+    pub priority: Option<Priority>,
+    pub assignee_id: Option<String>,
+}
+
+/// One backlog candidate: the issue plus the name of the project
+/// it belongs to (the backlog spans every project on the team, so
+/// the planner needs that context per row — a single-project
+/// listing wouldn't).
+pub struct BacklogRow {
+    pub issue: Issue,
+    pub project_name: String,
+}
+
+/// Row shape as returned by the `backlog_for_team` query. Kept
+/// private and separate from [`IssueRow`] (this module has no
+/// `IssueRow`; that type lives in `peisear-storage::issues`) —
+/// this crate doesn't share a row type across the two tables'
+/// query modules, and duplicating the eleven `issues` columns
+/// here is the existing convention (`issues.rs` does the same
+/// for `IssueRow` / `BurndownIssueRow`) rather than reaching for
+/// `#[sqlx(flatten)]`, which nothing else in this crate uses.
+#[derive(FromRow)]
+struct BacklogIssueRow {
+    id: String,
+    project_id: String,
+    author_id: String,
+    title: String,
+    description: String,
+    status: String,
+    priority: String,
+    position: i64,
+    effort: Option<i64>,
+    assignee_id: Option<String>,
+    parent_issue_id: Option<String>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    project_name: String,
+}
+
+impl BacklogIssueRow {
+    fn into_backlog_row(self) -> StorageResult<BacklogRow> {
+        let status = IssueStatus::parse(&self.status)
+            .ok_or_else(|| StorageError::InvalidData(format!("status={}", self.status)))?;
+        let priority = Priority::parse(&self.priority)
+            .ok_or_else(|| StorageError::InvalidData(format!("priority={}", self.priority)))?;
+        Ok(BacklogRow {
+            issue: Issue {
+                id: self.id,
+                project_id: self.project_id,
+                author_id: self.author_id,
+                title: self.title,
+                description: self.description,
+                status,
+                priority,
+                position: self.position,
+                effort: self.effort,
+                assignee_id: self.assignee_id,
+                parent_issue_id: self.parent_issue_id,
+                created_at: self.created_at,
+                updated_at: self.updated_at,
+            },
+            project_name: self.project_name,
+        })
+    }
+}
+
+/// Top-level open issues across the team's team-scoped projects
+/// (RFC 001 open question 1's default: personal projects are out
+/// of scope for team sprint planning) that are not in any
+/// **active** sprint — a planned sprint's committed items stay
+/// visible as backlog candidates elsewhere until that sprint goes
+/// active, matching the RFC's own wording ("not in any active
+/// sprint", not "not in any sprint"). This does **not** exclude
+/// the sprint currently being planned on its own page — a planned
+/// sprint's own items would otherwise still show as backlog
+/// candidates for itself. The caller (the plan-page handler)
+/// subtracts the current sprint's own `issues_in_sprint` set
+/// before rendering, since that's a page-composition concern
+/// (which sprint is "this one") that this team-wide query has no
+/// way to know from its own parameters — `backlog_for_team` takes
+/// a `team_id`, not a `sprint_id`.
+///
+/// "Open" means `status = 'open'` literally, not "not done" —
+/// the narrower reading of RFC 001's "top-level open issues"; an
+/// `in_progress` issue is already committed to work in a way a
+/// backlog candidate isn't.
+///
+/// Filters are applied in SQL via the `(?n IS NULL OR col = ?n)`
+/// idiom already used by `user_capacities`'s period-overlap
+/// queries, rather than fetched-then-filtered in Rust — the
+/// dataset is team-scoped either way, so this is a style choice,
+/// not a performance one.
+pub async fn backlog_for_team(
+    pool: &Pool,
+    team_id: &str,
+    filter: BacklogFilter,
+) -> StorageResult<Vec<BacklogRow>> {
+    let rows = sqlx::query_as::<_, BacklogIssueRow>(
+        r#"
+        SELECT i.id, i.project_id, i.author_id, i.title, i.description,
+               i.status, i.priority, i.position, i.effort, i.assignee_id,
+               i.parent_issue_id, i.created_at, i.updated_at,
+               p.name AS project_name
+        FROM issues i
+        JOIN projects p ON p.id = i.project_id
+        WHERE p.team_id = ?1
+          AND i.parent_issue_id IS NULL
+          AND i.status = 'open'
+          AND NOT EXISTS (
+              SELECT 1 FROM sprint_issues si
+              JOIN sprints s ON s.id = si.sprint_id
+              WHERE si.issue_id = i.id AND s.status = 'active'
+          )
+          AND (?2 IS NULL OR i.project_id = ?2)
+          AND (?3 IS NULL OR i.priority = ?3)
+          AND (
+              ?4 IS NULL
+              OR (?4 = 'unassigned' AND i.assignee_id IS NULL)
+              OR i.assignee_id = ?4
+          )
+        ORDER BY p.name ASC, i.priority DESC, i.created_at DESC
+        "#,
+    )
+    .bind(team_id)
+    .bind(filter.project_id.as_deref())
+    .bind(filter.priority.map(|p| p.as_str()))
+    .bind(filter.assignee_id.as_deref())
+    .fetch_all(pool)
+    .await?;
+    rows.into_iter()
+        .map(BacklogIssueRow::into_backlog_row)
+        .collect()
 }

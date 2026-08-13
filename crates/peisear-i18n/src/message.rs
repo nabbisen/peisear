@@ -72,10 +72,16 @@ pub enum Field {
     /// Reused between the invite-member form and the member table's
     /// column heading.
     Email,
+    /// `PLAN-001`: the sprint plan page's backlog filter has no
+    /// existing `Project` field to reuse — every prior project-scoped
+    /// surface is nested under one project's own URL and never needed
+    /// to name "project" as a filter facet the way a team-wide
+    /// backlog does.
+    Project,
 }
 
 impl Field {
-    pub fn all() -> [Field; 14] {
+    pub fn all() -> [Field; 15] {
         [
             Field::EffortPoints,
             Field::CapacityPoints,
@@ -91,6 +97,7 @@ impl Field {
             Field::Goal,
             Field::Role,
             Field::Email,
+            Field::Project,
         ]
     }
 }
@@ -1058,6 +1065,59 @@ pub enum MessageKey {
         sprint_name: String,
     },
     EditSprintHeading,
+
+    // ---- PLAN-001: the sprint planning page (RFC 001) ----
+    SprintPlanPageTitle {
+        sprint_name: String,
+    },
+    /// The breadcrumb's terminal word on the plan page, following
+    /// [`MessageKey::EditWord`]'s pattern of one bare word per
+    /// action-page breadcrumb.
+    SprintPlanBreadcrumbWord,
+    BacklogHeading,
+    SprintItemsHeading,
+    BacklogFilterAriaLabel,
+    AllPrioritiesOption,
+    AllProjectsOption,
+    /// The `"→ Sprint"` move button. Literal per RFC 001's own HTML
+    /// sketch — a directional glyph plus a short word, not a sentence,
+    /// so it doesn't need `Field`-style parameterisation.
+    MoveToSprintButton,
+    MoveToBacklogButton,
+    /// Per-row `aria-label`, RFC 001 §17.4's (title, points, column)
+    /// triple for a backlog row. `points` stays a bare `i64` rather
+    /// than a boxed [`MessageKey::PointsValue`] — the triple reads as
+    /// one sentence a screen reader speaks whole, and `PointsValue`'s
+    /// "{n} pt" would nest awkwardly inside it.
+    BacklogRowAriaLabel {
+        title: String,
+        points: i64,
+    },
+    SprintItemRowAriaLabel {
+        title: String,
+        points: i64,
+    },
+    /// The plan page's header stat. Deliberately not built from
+    /// [`MessageKey::CommittedStatLabel`] + [`MessageKey::PointsUnitSuffix`]
+    /// (the detail page's stat-card composition) — `PLAN-001` §4 test 7
+    /// requires the literal substring `"13 pts"` (plural) for two
+    /// issues at 5 and 8 points, which the detail page's singular
+    /// `"pt"` convention doesn't produce; RFC 001's own sketch already
+    /// used the plural for this exact line.
+    CommittedTotalLabel {
+        committed_points: i64,
+    },
+    NoBacklogIssuesMessage,
+    NoSprintItemsInPlanMessage,
+    /// Server-side guard on `plan_add`/`plan_remove`: requirement 8
+    /// says an active or completed sprint's plan page renders with no
+    /// move buttons, and this is the backend half of that — a forged
+    /// POST bypassing the missing button must still fail, the same
+    /// defense-in-depth posture this crate already applies elsewhere
+    /// (`CannotAssignToCompletedSprintMessage`'s sibling, but this one
+    /// also covers active — see `PLAN-001`'s handler doc comment for
+    /// why active is included too).
+    SprintPlanNotEditableMessage,
     NewTeamLink,
     TeamsEmptyIntro,
     TeamsEmptyCta,
@@ -2093,6 +2153,31 @@ impl MessageKey {
                 sprint_name: "Sprint 4".to_string(),
             },
             MessageKey::EditSprintHeading,
+            MessageKey::SprintPlanPageTitle {
+                sprint_name: "Sprint 4".to_string(),
+            },
+            MessageKey::SprintPlanBreadcrumbWord,
+            MessageKey::BacklogHeading,
+            MessageKey::SprintItemsHeading,
+            MessageKey::BacklogFilterAriaLabel,
+            MessageKey::AllPrioritiesOption,
+            MessageKey::AllProjectsOption,
+            MessageKey::MoveToSprintButton,
+            MessageKey::MoveToBacklogButton,
+            MessageKey::BacklogRowAriaLabel {
+                title: "Fix the login redirect".to_string(),
+                points: 5,
+            },
+            MessageKey::SprintItemRowAriaLabel {
+                title: "Fix the login redirect".to_string(),
+                points: 5,
+            },
+            MessageKey::CommittedTotalLabel {
+                committed_points: 13,
+            },
+            MessageKey::NoBacklogIssuesMessage,
+            MessageKey::NoSprintItemsInPlanMessage,
+            MessageKey::SprintPlanNotEditableMessage,
             MessageKey::NewTeamLink,
             MessageKey::TeamsEmptyIntro,
             MessageKey::TeamsEmptyCta,

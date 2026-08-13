@@ -440,6 +440,7 @@ pub fn SprintDetailPage(
     let team_href = format!("/teams/{}", team_slug);
     let sprints_href = format!("/teams/{}/sprints", team_slug);
     let edit_href = format!("/teams/{}/sprints/{}/edit", team_slug, sprint.id);
+    let plan_href = format!("/teams/{}/sprints/{}/plan", team_slug, sprint.id);
     let start_action = format!("/teams/{}/sprints/{}/start", team_slug, sprint.id);
     let complete_action = format!("/teams/{}/sprints/{}/complete", team_slug, sprint.id);
     let delete_action = format!("/teams/{}/sprints/{}/delete", team_slug, sprint.id);
@@ -563,7 +564,12 @@ pub fn SprintDetailPage(
                             </p>
                         })}
                     </div>
-                    {lifecycle}
+                    <div class="flex items-center gap-2">
+                        <a href=plan_href class="btn btn-outline btn-sm">
+                            {t(MessageKey::SprintPlanBreadcrumbWord)}
+                        </a>
+                        {lifecycle}
+                    </div>
                 </div>
 
                 {error_block}

@@ -14,9 +14,10 @@ use axum::{
     response::{IntoResponse, Redirect},
 };
 use chrono::NaiveDate;
+use peisear_core::Priority;
 use peisear_core::sprints::SprintStatus;
 use peisear_i18n::{Field, Locale, MessageKey};
-use peisear_storage::{notifications as notif_store, sprints, teams};
+use peisear_storage::{issues, notifications as notif_store, projects, sprints, teams};
 use serde::Deserialize;
 
 use crate::{AppError, AppResult, AppState, components, components::t, extractors::AuthUser};
@@ -490,6 +491,256 @@ pub async fn assign_issue(
         .replace(' ', "+");
     Ok(Redirect::to(&format!(
         "/projects/{project_id}/issues/{issue_id}?flash={flash}"
+    )))
+}
+
+// ──────────────────────────────────────────────────────────────
+// Sprint planning page (`PLAN-001` / RFC 001)
+// ──────────────────────────────────────────────────────────────
+
+/// Backlog filter, mirrored from the URL query string. `Some("")`
+/// (a dropdown's "no constraint" option submitting an empty value)
+/// is treated as `None` at the point this is turned into a
+/// [`sprints::BacklogFilter`] — same convention `ProjectViewQuery`
+/// uses elsewhere in this crate.
+#[derive(Debug, Deserialize, Default, Clone)]
+pub struct PlanQuery {
+    pub project: Option<String>,
+    pub priority: Option<String>,
+    pub assignee: Option<String>,
+}
+
+/// Builds the `?project=&priority=&assignee=` suffix the two POST
+/// handlers redirect back to (RFC 001: "Both POSTs redirect (303)
+/// back to the GET with the same filter query so the planner stays
+/// in context after each move"). Values here are always UUIDs, the
+/// literal `"unassigned"`, or a `Priority::as_str()` word — all
+/// URL-safe without percent-encoding.
+fn plan_query_string(
+    project: &Option<String>,
+    priority: &Option<String>,
+    assignee: &Option<String>,
+) -> String {
+    let mut parts = Vec::new();
+    if let Some(v) = project.as_deref().filter(|s| !s.is_empty()) {
+        parts.push(format!("project={v}"));
+    }
+    if let Some(v) = priority.as_deref().filter(|s| !s.is_empty()) {
+        parts.push(format!("priority={v}"));
+    }
+    if let Some(v) = assignee.as_deref().filter(|s| !s.is_empty()) {
+        parts.push(format!("assignee={v}"));
+    }
+    if parts.is_empty() {
+        String::new()
+    } else {
+        format!("?{}", parts.join("&"))
+    }
+}
+
+pub async fn plan_page(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((slug, sprint_id)): Path<(String, String)>,
+    Query(q): Query<PlanQuery>,
+) -> AppResult<impl IntoResponse> {
+    // GET is open to any team member, including `viewer` (handoff
+    // §2.2) — no `can_write()` gate here, unlike every mutating
+    // route below.
+    let (team, role) = resolve_team_membership(&state, &user.id, &slug).await?;
+    let sprint = sprints::find_by_id(&state.db, &sprint_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    if sprint.team_id != team.id {
+        return Err(AppError::NotFound);
+    }
+
+    // Requirement 8: active and completed sprints render read-only
+    // (no move buttons in either column). `is_read_only` is the one
+    // flag RFC 001's design section names; `can_write()` narrows it
+    // further for `viewer`.
+    let is_read_only = !matches!(sprint.status, SprintStatus::Planned);
+    let can_move = role.can_write() && !is_read_only;
+
+    let summary = sprints::summary(&state.db, &sprint.id).await?;
+    let sprint_items = sprints::issues_in_sprint(&state.db, &sprint.id).await?;
+    let sprint_item_ids: std::collections::HashSet<&str> =
+        sprint_items.iter().map(|(id, ..)| id.as_str()).collect();
+
+    // Backlog scope: RFC 001 open question 1's default is
+    // team-scoped projects only (`backlog_for_team` already applies
+    // that). This page additionally subtracts the current sprint's
+    // own items — they're already shown on the right, and
+    // `backlog_for_team`'s own "not in any active sprint" rule (see
+    // its doc comment) doesn't know about *this* sprint specifically
+    // when it isn't active yet.
+    let filter = sprints::BacklogFilter {
+        project_id: q.project.clone().filter(|s| !s.is_empty()),
+        priority: q.priority.as_deref().and_then(Priority::parse),
+        assignee_id: q.assignee.clone().filter(|s| !s.is_empty()),
+    };
+    let backlog: Vec<_> = sprints::backlog_for_team(&state.db, &team.id, filter)
+        .await?
+        .into_iter()
+        .filter(|row| !sprint_item_ids.contains(row.issue.id.as_str()))
+        .collect();
+
+    // Filter dropdown data. The assignee list comes from the same
+    // place the issue form's does (handoff §2.5) — `CANDIDATE_SET_CTE`
+    // is project-scoped (RFC 009 §D1), so a team-wide list is the
+    // union across the team's projects, deduplicated by id, rather
+    // than a new team-scoped query.
+    let team_projects = projects::list_for_team(&state.db, &team.id).await?;
+    let mut assignees: Vec<peisear_core::AssigneeOption> = Vec::new();
+    let mut seen_assignee_ids = std::collections::HashSet::new();
+    for p in &team_projects {
+        for a in issues::list_assignee_candidates(&state.db, &p.id).await? {
+            if seen_assignee_ids.insert(a.id.clone()) {
+                assignees.push(a);
+            }
+        }
+    }
+    assignees.sort_by(|a, b| a.display_name.cmp(&b.display_name));
+
+    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+
+    Ok(components::sprint_plan::render_plan(
+        user,
+        team,
+        sprint,
+        summary,
+        backlog,
+        sprint_items,
+        team_projects,
+        assignees,
+        q.project.unwrap_or_default(),
+        q.priority.unwrap_or_default(),
+        q.assignee.unwrap_or_default(),
+        can_move,
+        is_read_only,
+        unread_count,
+    ))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PlanAddForm {
+    pub issue_id: String,
+    /// The issue's project id. Carried explicitly (rather than
+    /// re-derived) so the handler can verify it names one of *this*
+    /// team's own projects before trusting `issue_id` at all — a
+    /// forged `project_id` from another team fails that check and
+    /// never reaches [`issues::find`].
+    pub project_id: String,
+    #[serde(default)]
+    pub project: Option<String>,
+    #[serde(default)]
+    pub priority: Option<String>,
+    #[serde(default)]
+    pub assignee: Option<String>,
+}
+
+/// Move one issue from the backlog into the sprint being planned.
+/// `can_write()` only (handoff §2.2); `viewer` gets 403.
+pub async fn plan_add(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((slug, sprint_id)): Path<(String, String)>,
+    Form(form): Form<PlanAddForm>,
+) -> AppResult<Redirect> {
+    let (team, role) = resolve_team_membership(&state, &user.id, &slug).await?;
+    if !role.can_write() {
+        return Err(AppError::Forbidden);
+    }
+    let sprint = sprints::find_by_id(&state.db, &sprint_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    if sprint.team_id != team.id {
+        return Err(AppError::NotFound);
+    }
+    if !matches!(sprint.status, SprintStatus::Planned) {
+        return Err(AppError::Validation(t(
+            MessageKey::SprintPlanNotEditableMessage,
+        )));
+    }
+
+    // Defense in depth (this crate's established convention, see
+    // this file's module doc and TEAM-001): confirm `project_id`
+    // genuinely names one of this team's own projects before
+    // trusting the issue lookup at all.
+    let team_projects = projects::list_for_team(&state.db, &team.id).await?;
+    if !team_projects.iter().any(|p| p.id == form.project_id) {
+        return Err(AppError::NotFound);
+    }
+    let issue = issues::find(&state.db, &form.issue_id, &form.project_id).await?;
+
+    // Phase C PR1 (peisear-feature-spec-v2.1 §8.5): sub-issues
+    // follow the parent's sprint and never get their own
+    // `sprint_issues` row. `backlog_for_team` already excludes them
+    // (`parent_issue_id IS NULL`); this rejects a forged POST that
+    // names one directly, same guard `assign_issue` above applies.
+    if issue.is_sub_issue() {
+        return Err(AppError::Validation(t(
+            MessageKey::SubIssueFollowsParentSprintMessage,
+        )));
+    }
+
+    sprints::add_issue(&state.db, &sprint.id, &issue.id).await?;
+    let qs = plan_query_string(&form.project, &form.priority, &form.assignee);
+    Ok(Redirect::to(&format!(
+        "/teams/{slug}/sprints/{sprint_id}/plan{qs}"
+    )))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PlanRemoveForm {
+    pub issue_id: String,
+    #[serde(default)]
+    pub project: Option<String>,
+    #[serde(default)]
+    pub priority: Option<String>,
+    #[serde(default)]
+    pub assignee: Option<String>,
+}
+
+/// Move one issue from the sprint being planned back to the
+/// backlog. `can_write()` only, same as [`plan_add`].
+pub async fn plan_remove(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((slug, sprint_id)): Path<(String, String)>,
+    Form(form): Form<PlanRemoveForm>,
+) -> AppResult<Redirect> {
+    let (team, role) = resolve_team_membership(&state, &user.id, &slug).await?;
+    if !role.can_write() {
+        return Err(AppError::Forbidden);
+    }
+    let sprint = sprints::find_by_id(&state.db, &sprint_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    if sprint.team_id != team.id {
+        return Err(AppError::NotFound);
+    }
+    if !matches!(sprint.status, SprintStatus::Planned) {
+        return Err(AppError::Validation(t(
+            MessageKey::SprintPlanNotEditableMessage,
+        )));
+    }
+
+    // Defense in depth: `sprints::remove_issue` deletes by
+    // `issue_id` alone with no sprint scoping, so without this check
+    // a forged `issue_id` belonging to a *different* sprint (this
+    // team's or another team's entirely) would be removed from
+    // wherever it actually lives. Only remove if the issue is
+    // currently in *this* sprint.
+    let current = sprints::sprint_for_issue(&state.db, &form.issue_id).await?;
+    if current.as_deref() != Some(sprint.id.as_str()) {
+        return Err(AppError::NotFound);
+    }
+
+    sprints::remove_issue(&state.db, &form.issue_id).await?;
+    let qs = plan_query_string(&form.project, &form.priority, &form.assignee);
+    Ok(Redirect::to(&format!(
+        "/teams/{slug}/sprints/{sprint_id}/plan{qs}"
     )))
 }
 

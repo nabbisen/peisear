@@ -115,6 +115,19 @@ pub fn build_router(state: AppState) -> Router {
             "/teams/{slug}/sprints/{sprint_id}/delete",
             post(sprints::delete_sprint),
         )
+        // Sprint planning page (PLAN-001 / RFC 001).
+        .route(
+            "/teams/{slug}/sprints/{sprint_id}/plan",
+            get(sprints::plan_page),
+        )
+        .route(
+            "/teams/{slug}/sprints/{sprint_id}/plan/add",
+            post(sprints::plan_add),
+        )
+        .route(
+            "/teams/{slug}/sprints/{sprint_id}/plan/remove",
+            post(sprints::plan_remove),
+        )
         .route(
             "/projects/{project_id}/issues/{issue_id}/sprint",
             post(sprints::assign_issue),

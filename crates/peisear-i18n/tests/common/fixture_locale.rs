@@ -343,6 +343,29 @@ pub fn render(key: MessageKey) -> String {
             format!("[fx-edit-sprint-title] {sprint_name}")
         }
         MessageKey::EditSprintHeading => "[fx-edit-sprint]".to_string(),
+        MessageKey::SprintPlanPageTitle { sprint_name } => {
+            format!("[fx-sprint-plan-title] {sprint_name}")
+        }
+        MessageKey::SprintPlanBreadcrumbWord => "[fx-sprint-plan-breadcrumb]".to_string(),
+        MessageKey::BacklogHeading => "[fx-backlog-heading]".to_string(),
+        MessageKey::SprintItemsHeading => "[fx-sprint-items-heading]".to_string(),
+        MessageKey::BacklogFilterAriaLabel => "[fx-backlog-filter]".to_string(),
+        MessageKey::AllPrioritiesOption => "[fx-all-priorities]".to_string(),
+        MessageKey::AllProjectsOption => "[fx-all-projects]".to_string(),
+        MessageKey::MoveToSprintButton => "[fx-move-to-sprint]".to_string(),
+        MessageKey::MoveToBacklogButton => "[fx-move-to-backlog]".to_string(),
+        MessageKey::BacklogRowAriaLabel { title, points } => {
+            format!("[fx-backlog-row] {title} {points}")
+        }
+        MessageKey::SprintItemRowAriaLabel { title, points } => {
+            format!("[fx-sprint-item-row] {title} {points}")
+        }
+        MessageKey::CommittedTotalLabel { committed_points } => {
+            format!("[fx-committed-total] {committed_points}")
+        }
+        MessageKey::NoBacklogIssuesMessage => "[fx-no-backlog-issues]".to_string(),
+        MessageKey::NoSprintItemsInPlanMessage => "[fx-no-sprint-items-in-plan]".to_string(),
+        MessageKey::SprintPlanNotEditableMessage => "[fx-sprint-plan-not-editable]".to_string(),
         MessageKey::NewTeamLink => "[fx-new-team-link]".to_string(),
         MessageKey::TeamsEmptyIntro => "[fx-teams-empty-intro]".to_string(),
         MessageKey::TeamsEmptyCta => "[fx-teams-empty-cta]".to_string(),
@@ -872,6 +895,7 @@ fn field_label(field: Field) -> &'static str {
         Field::Goal => "[fx-goal]",
         Field::Role => "[fx-role]",
         Field::Email => "[fx-email]",
+        Field::Project => "[fx-project]",
     }
 }
 

@@ -25,6 +25,7 @@ pub mod notifications;
 pub mod projects;
 pub mod search;
 pub mod settings;
+pub mod sprint_plan;
 pub mod sprints;
 pub mod teams;
 

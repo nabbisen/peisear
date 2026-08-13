@@ -418,6 +418,33 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::SprintIssuesAriaLabel => "Sprint issues".to_string(),
         MessageKey::EditSprintPageTitle { sprint_name } => format!("Edit {sprint_name}"),
         MessageKey::EditSprintHeading => "Edit sprint".to_string(),
+        MessageKey::SprintPlanPageTitle { sprint_name } => format!("Sprint Plan — {sprint_name}"),
+        MessageKey::SprintPlanBreadcrumbWord => "Plan".to_string(),
+        MessageKey::BacklogHeading => "Backlog".to_string(),
+        MessageKey::SprintItemsHeading => "Sprint Items".to_string(),
+        MessageKey::BacklogFilterAriaLabel => "Filter backlog".to_string(),
+        MessageKey::AllPrioritiesOption => "All priorities".to_string(),
+        MessageKey::AllProjectsOption => "All projects".to_string(),
+        MessageKey::MoveToSprintButton => "→ Sprint".to_string(),
+        MessageKey::MoveToBacklogButton => "← Backlog".to_string(),
+        MessageKey::BacklogRowAriaLabel { title, points } => {
+            format!("{title}, {points} pt, in Backlog")
+        }
+        MessageKey::SprintItemRowAriaLabel { title, points } => {
+            format!("{title}, {points} pt, in Sprint Items")
+        }
+        MessageKey::CommittedTotalLabel { committed_points } => {
+            format!("committed: {committed_points} pts")
+        }
+        MessageKey::NoBacklogIssuesMessage => {
+            "No backlog issues match the current filters.".to_string()
+        }
+        MessageKey::NoSprintItemsInPlanMessage => {
+            "No issues in this sprint yet. Move some from the backlog.".to_string()
+        }
+        MessageKey::SprintPlanNotEditableMessage => {
+            "This sprint's plan can no longer be edited.".to_string()
+        }
         MessageKey::NewTeamLink => "+ New team".to_string(),
         MessageKey::TeamsEmptyIntro => {
             "Teams group people who collaborate on projects. You can keep working \
@@ -1205,6 +1232,7 @@ fn field_label(field: Field) -> &'static str {
         Field::Goal => "Goal",
         Field::Role => "Role",
         Field::Email => "Email",
+        Field::Project => "Project",
     }
 }
 
