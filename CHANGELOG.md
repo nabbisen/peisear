@@ -39,10 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   derived from the system clock, so two tests starting in the same
   instant could open the same file — an intermittent test failure
   unrelated to what either test was actually checking. The name is now
-  derived from a per-process counter instead. A new structural test
-  (`test_harness_scan`) checks every test harness in the workspace for
-  the pattern's reappearance, rather than trusting a fixed list of two
-  known files.
+  derived from `tempfile::TempDir` instead, unique by construction (pid,
+  a process-local atomic counter, and randomness) rather than by a
+  hand-rolled scheme. A new structural test (`test_harness_scan`) checks
+  every test harness in the workspace for the pattern's reappearance,
+  rather than trusting a fixed list of two known files.
 
 ### Added
 
@@ -77,11 +78,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- `CONTRIBUTING.md` now documents `DEC-007`'s three-consecutive-run
-  `cargo test --workspace` procedure for changes touching
-  `crates/peisear-web/tests/` or `crates/peisear-notify/tests/`, or
-  before cutting a release. Followed since 0.20.0; this is the first time
-  it has been written down outside an internal file.
+- `CONTRIBUTING.md` now documents `DEC-007`'s per-crate/per-target test
+  procedure — followed since 0.20.0, written down outside an internal
+  file for the first time — **and** adds a new, separate requirement:
+  three consecutive passes of `cargo test --workspace` for changes
+  touching `crates/peisear-web/tests/` or `crates/peisear-notify/tests/`,
+  or before cutting a release. The three-run check did not exist before
+  this release; `QA-001` introduced it alongside the harness fix above,
+  and this is the first release candidate to run it.
 
 ## [0.21.0] — 2026-08-11
 
