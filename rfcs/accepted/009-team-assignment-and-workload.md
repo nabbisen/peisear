@@ -5,7 +5,7 @@
 **Related spec sections**: §9 (Team / Sprint), §11.5 (individual vs aggregate boundary), §17 (Sprint Plan)
 **Related requirements**: `FR-TEAM-*`, `FR-ISS-004`, `FR-HLT-*`, `NFR-PRIV-007`
 **Governing gap**: baseline `§10.11`
-**Last updated**: 2026-08-13
+**Last updated**: 2026-08-13 (privacy section and §D1 sample corrected)
 
 ## Summary
 
@@ -95,13 +95,22 @@ Both queries derive from a single `SELECT` over
 by construction rather than by two authors remembering:
 
 ```sql
-SELECT u.id, u.display_name FROM users u
+SELECT DISTINCT u.id, u.display_name FROM users u
 JOIN projects p ON p.id = ?1
-LEFT JOIN team_memberships tm ON tm.team_id = p.team_id
+LEFT JOIN team_memberships tm
+       ON tm.team_id = p.team_id AND tm.role IN ('admin', 'member')
 WHERE u.id = p.owner_id OR u.id = tm.user_id
-GROUP BY u.id, u.display_name
 ORDER BY u.display_name ASC
 ```
+
+*Corrected 2026-08-13, found by TEAM-001.* The first version of this sample had
+no role filter, and `team_memberships.role` allows `viewer` — "read-only on
+team projects", per `0011_teams.sql`. It would have made every viewer an
+assignee. The implementer followed the handoff's §4 rather than this sample and
+reported the discrepancy; the sample is now fixed so nobody copies it.
+
+The filter belongs in the `ON` clause, not in `WHERE`: in `WHERE` it eliminates
+the owner-without-membership row and silently breaks requirement 3.
 
 Written this way a personal project (`team_id IS NULL`) yields exactly the
 owner, so the two cases are one query rather than a branch. `project_workload`
@@ -164,21 +173,38 @@ a second person.
 **This is the part to review hardest.** The change widens who appears in a
 per-user workload report from one person to a whole team.
 
-- `project_workload` returns `capacity_points` and `in_flight_points` per user.
-  §11.5 puts individual-level data at `/today`, and `NFR-PRIV-007` governs
-  aggregates. A per-user chip strip visible to every team member is a new
-  disclosure that today is vacuous only because the set has one row — the
-  owner, to themselves.
-- **Open question 2** is whether the chip strip should show per-user rows to
-  all team members, only to team admins, or be replaced by an aggregate. That
-  is a product decision with a privacy consequence and it is the owner's.
-- Until it is answered, **do not widen `project_workload`'s consumers**. The
-  assignment fix (requirements 1–4) can land independently and is the urgent
-  half; it discloses only display names, which team membership already
-  discloses.
+**Corrected 2026-08-13, after TEAM-001.** This section originally treated a
+multi-row workload strip as a new disclosure requiring an owner decision, and
+told the implementer not to widen `project_workload`'s consumers. That was
+wrong on the requirement and incoherent as an instruction.
 
-That split is deliberate: the write-path defect is blocking and privacy-inert,
-and the report change is neither.
+**Wrong on the requirement**: `NFR-PRIV-002` explicitly permits sharing
+"workload distribution" within a project or team, and defines it as *each
+member's volume of in-flight work* — excluding capacity, WIP limit, and
+anything derived from them, all of which `DEV-003` stripped from these two
+components at 0.20.0. Nothing new is disclosed. `ISSUE-003` had already ruled
+that this holds "regardless of how many members the strip lists", and that
+ruling is quoted in `WorkloadStrip`'s own doc comment. I re-opened a question I
+had already answered.
+
+**Incoherent as an instruction**: `WorkloadStrip` and `WorkloadHint` iterate
+whatever the query returns, so requirement 2 and "do not widen the consumers"
+cannot both hold. The only way to have both is per-consumer filtering, which is
+new UI logic and decides the question it was meant to defer.
+
+What actually applies:
+
+- `project_workload` returns display name, in-flight issue count, and in-flight
+  points. It must not return `capacity_points` to a non-subject, and does not
+  reach any surface that renders one (`NFR-PRIV-001`, `DEC-019`).
+- `NFR-PRIV-002`'s caveat in the baseline — *"this requirement describes
+  something that has never fully existed"* — is discharged by this RFC. The
+  shipped `FR-TEAM-005` footnote already promises team members that "workload
+  distribution is visible to all team members"; before this change that
+  sentence was false in the user's favour.
+- **Open question 2 is not a privacy gate.** What remains of it is whether the
+  strip should show per-user rows or an aggregate — presentation, not
+  disclosure. It blocks nothing.
 
 ## Out of scope
 
@@ -196,10 +222,11 @@ and the report change is neither.
    handoff does not re-open it. The relationship in requirement 2 is restated
    accordingly: *the candidate set is a subset of the workload set*, not equal
    to it.
-2. **Who sees per-user workload rows** — the privacy question above. **Still
-   open; still the owner's.** Accepting this RFC does not answer it, and the
-   implementation handoff is scoped to requirements 1–4 only for that reason.
-   `project_workload` gains no new consumers until it is answered.
+2. **Who sees per-user workload rows** — **withdrawn as a privacy question,
+   2026-08-13.** `NFR-PRIV-002` permits it and `ISSUE-003` already ruled on the
+   member-count case; see the corrected privacy section. What survives is a
+   presentation question — per-user rows versus an aggregate — which is design,
+   not disclosure, and gates nothing. TEAM-001 ships as implemented.
 3. **Does RFC 001 wait?** RFC 001 filters backlog by assignee and shows a
    per-assignee rollup. Both are single-valued today. It can be built on the
    current queries and will be correct once these are fixed, so the ordering
