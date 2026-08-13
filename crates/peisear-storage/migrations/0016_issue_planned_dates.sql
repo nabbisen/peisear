@@ -41,6 +41,15 @@
 -- start date" and "Planned end date"
 -- (`peisear_i18n::Field::PlannedStartDate`/`PlannedEndDate`).
 --
+-- Capitalised, terminal period -- CAL-001-review.md §4: register
+-- should follow surface, not mechanism. The sub-issue trigger
+-- messages elsewhere in this crate (lowercase, no period) are
+-- grandfathered under no-rewording, not a house style to extend;
+-- the semantic sibling a user is most likely to see this message
+-- next to is `SprintEndDateMustBeOnOrAfterStartMessage`
+-- ("Sprint end date must be on or after start date."), and this
+-- text now matches that register.
+--
 -- ## Both triggers, insert and update
 --
 -- A constraint enforced on only one path is a constraint that
@@ -70,7 +79,7 @@ WHEN NEW.planned_start_at IS NOT NULL
  AND NEW.planned_end_at IS NOT NULL
  AND NEW.planned_end_at < NEW.planned_start_at
 BEGIN
-    SELECT RAISE(ABORT, 'planned end date must be on or after planned start date');
+    SELECT RAISE(ABORT, 'Planned end date must be on or after planned start date.');
 END;
 
 CREATE TRIGGER issues_planned_range_check_update
@@ -80,7 +89,7 @@ WHEN NEW.planned_start_at IS NOT NULL
  AND NEW.planned_end_at IS NOT NULL
  AND NEW.planned_end_at < NEW.planned_start_at
 BEGIN
-    SELECT RAISE(ABORT, 'planned end date must be on or after planned start date');
+    SELECT RAISE(ABORT, 'Planned end date must be on or after planned start date.');
 END;
 
 CREATE INDEX idx_issues_planned_window

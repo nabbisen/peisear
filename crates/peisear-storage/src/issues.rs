@@ -406,7 +406,7 @@ fn translate_trigger_error(e: sqlx::Error) -> StorageError {
             peisear_i18n::MessageKey::CannotDemoteIssueWithSubIssuesMessage,
         ),
         (
-            "planned end date must be on or after planned start date",
+            "Planned end date must be on or after planned start date.",
             peisear_i18n::MessageKey::IssuePlannedEndBeforeStartMessage,
         ),
     ];

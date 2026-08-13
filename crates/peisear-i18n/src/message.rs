@@ -1812,8 +1812,16 @@ pub enum MessageKey {
     IssueCannotBeOwnParentMessage,
     CannotDemoteIssueWithSubIssuesMessage,
     /// Migration `0016`'s RAISE text (`CAL-001` §2.3), same
-    /// verbatim-needle relationship as the four above. Chosen to
-    /// name no database column — matches the issue edit form's
+    /// verbatim-needle relationship as the four above — but not
+    /// their register. `CAL-001-review.md` §4: the sub-issue
+    /// fragments above (lowercase, no period) are grandfathered
+    /// under no-rewording, not a house style to extend; register
+    /// should follow the surface the user reads, not the mechanism
+    /// (trigger vs. Rust check) that produced the message. The
+    /// semantic sibling is `SprintEndDateMustBeOnOrAfterStartMessage`
+    /// ("Sprint end date must be on or after start date.") — this
+    /// key matches its capitalised, terminal-period register. Names
+    /// no database column — matches the issue edit form's
     /// `Field::PlannedStartDate`/`Field::PlannedEndDate` labels
     /// word-for-word rather than `planned_start_at`/`planned_end_at`.
     IssuePlannedEndBeforeStartMessage,

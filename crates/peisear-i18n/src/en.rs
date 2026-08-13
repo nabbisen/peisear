@@ -1075,7 +1075,7 @@ pub(crate) fn render(key: MessageKey) -> String {
             "cannot demote an issue that has its own sub-issues".to_string()
         }
         MessageKey::IssuePlannedEndBeforeStartMessage => {
-            "planned end date must be on or after planned start date".to_string()
+            "Planned end date must be on or after planned start date.".to_string()
         }
 
         // ---- I18N-006: handlers/api_users.rs (BurnoutSignal.label) ----

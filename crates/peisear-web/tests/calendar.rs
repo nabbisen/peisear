@@ -212,7 +212,7 @@ async fn trigger_error_maps_to_message_key_with_identical_text() {
     };
     let rendered = peisear_i18n::Locale::English.render(key);
     assert_eq!(
-        rendered, "planned end date must be on or after planned start date",
+        rendered, "Planned end date must be on or after planned start date.",
         "the rendered MessageKey text must be the same string translate_trigger_error \
          matched as a needle against the trigger's raw RAISE text"
     );
