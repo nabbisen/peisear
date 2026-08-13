@@ -1,10 +1,30 @@
 # RFC 0002: Calendar surfaces
 
 **Status**: Accepted
-**Target**: 0.21.0 (Phase C PR3)
+**Target**: **0.23.0** (was 0.21.0 — the release slipped while the compliance
+pass and RFC 006 took precedence)
 **Related spec sections**: §16 (Calendar), §10.2-10.4 (calendar
 concept), §11 (privacy boundary), §38.1 task 2
-**Last updated**: 2026-05-04
+**Last updated**: 2026-08-13 — five corrections, see the amendment note
+
+> **Amendment note (2026-08-13).** Written 2026-05-04 and dispatched fifteen
+> weeks later, after the i18n architecture, the compliance pass, RFC 009 and
+> COPY-001. Five things were wrong or under-specified by dispatch time and are
+> corrected in place below, each marked *Corrected 2026-08-13*:
+>
+> 1. The privacy footnote has a **different normative text** in external design
+> §10.3, which wins (must-have 9).
+> 2. All copy goes through `peisear-i18n` (must-have 9, §UI).
+> 3. The migration's `RAISE` text is **user-facing copy** and names database
+> columns (§Migration).
+> 4. The optimistic-lock claim holds only if the columns join the existing
+> `UPDATE` (§Security & privacy).
+> 5. Project-axis blocks must not name the assignee, or must-have 9's own
+> claim stops being true (must-have 6).
+>
+> Points 1, 3 and 5 are defects rather than staleness. This is the second
+> accepted RFC to need substantial correction between acceptance and delivery;
+> see RFC 001's status note. **RFC 003 is the same vintage.**
 
 ## Summary
 
@@ -74,6 +94,15 @@ This RFC narrows that to two. See open question 1.
    `assignee_id = current_user.id`. Project-axis: every
    top-level issue in the project (sub-issues follow parent;
    they don't appear separately on the calendar).
+
+   *Corrected 2026-08-13*: **project-axis blocks must not name
+   the assignee.** A time-axis view of a project's planned work,
+   with each block labelled by person, is a per-person schedule
+   view — which is what must-have 9's footer tells the user this
+   page is not, and what §10.2 rules out by refusing a team
+   axis. A block carries its title, its span, and (personal
+   axis) a project colour. The assignee is one click away on the
+   issue itself, where it has always been.
 7. Sprint band overlay on **project axis only**. Renders at
    the top of the calendar grid for any active sprint whose
    span overlaps the visible window. Personal axis does not
@@ -81,13 +110,21 @@ This RFC narrows that to two. See open question 1.
    teams' sprints; surfacing them all turns the page into a
    sprint dashboard).
 8. Click an issue block → navigate to the issue detail page.
-9. Project-axis privacy footer (literal text, on the page):
+9. Project-axis privacy footer (literal text, on the page).
+   *Corrected 2026-08-13*: external design §10.3 carries a
+   different "do not paraphrase" version of this same string,
+   and **it wins** — it is the complete one, and its third
+   sentence is the only place the guarantee is stated to the
+   user:
 
-   > Calendar note: this view shows planned issue work.
-   > Personal schedules are not aggregated here.
+   > Calendar note: this view shows planned issue work for this
+   > project. Personal schedules are not aggregated here. Each
+   > member's individual calendar is private to that person.
 
    Personal-axis footer is just "Private to you". Both per
-   §16.4.
+   §16.4. Both are `MessageKey`s (RFC 006, which this RFC
+   predates); the project one gets a byte-identity test, as
+   `FR-TEAM-005`'s footnote has.
 10. **No efficiency metrics** (§16.6). The page does not
     display fill rate, comparison-to-last-week, or "free
     hours". This is non-negotiable; it is the difference
@@ -152,6 +189,18 @@ WHEN NEW.planned_start_at IS NOT NULL
 BEGIN
     SELECT RAISE(ABORT, 'planned_end_at must be on or after planned_start_at');
 END;
+
+-- *Corrected 2026-08-13*: the RAISE text above is USER-FACING
+-- COPY and must not ship as written. Per DEC-011,
+-- translate_trigger_error matches the trigger's string as a
+-- needle and returns the MessageKey carrying identical text --
+-- so this sentence IS what the user reads, and a migration
+-- cannot be edited afterwards. It also names database columns,
+-- the exact defect COPY-001 corrected on the capacity form
+-- ("period_start must be on or before period_end" -> "The From
+-- date must be on or before the To date."). Choose the wording
+-- against the form's own labels before writing the migration.
+-- See CAL-001 §2.3.
 
 CREATE TRIGGER issues_planned_range_check_update
 BEFORE UPDATE OF planned_start_at, planned_end_at ON issues
@@ -362,7 +411,15 @@ assert!(matches!(err, StorageError::Validation(_)));
 - §21.4 optimistic lock: editing
   `planned_start_at`/`planned_end_at` happens via the
   existing issue update form, so the existing lock check
-  covers it. No new path.
+  covers it. No new path. *Corrected 2026-08-13*:
+  **conditionally.** `issues` has no `updated_at` trigger —
+  `DEC-013`'s machinery covers `sprints`, `teams`,
+  `team_memberships` and `user_capacities`, while
+  `issues::update` sets `updated_at` in its own `SET` clause.
+  The two columns must join that statement. Given their own
+  `UPDATE`, the row's `updated_at` never moves and concurrent
+  plan-date edits silently overwrite each other —
+  `NFR-CONC-004` violated with no error and no symptom.
 - The privacy footer text (must-have #9) is verbatim from
   the spec; do not paraphrase. The wording is part of the
   contract with the user.
