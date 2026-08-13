@@ -3,7 +3,24 @@
 **Status**: Accepted
 **Target**: 0.20.0 (Phase C PR2)
 **Related spec sections**: §17 (Sprint Plan), §9 (Team / Sprint), §38.1 task 3
-**Last updated**: 2026-05-04
+**Last updated**: 2026-08-13 — five corrections, see the amendment note
+
+> **Amendment note (2026-08-13).** This RFC was written fifteen weeks before
+> the release that implements it, and predates the i18n architecture, the
+> compliance pass, RFC 009, and `viewer`-role enforcement. Five things in it
+> were wrong by the time `PLAN-001` was written and are corrected in place
+> below, each marked *Corrected 2026-08-13*:
+>
+> 1. Non-members get **404**, not 403 (test plan, §Authorization).
+> 2. `viewer` may read the page and may not move issues (§Must-have 1).
+> 3. **The capacity hint is deferred** — it is reversible to an individual's
+> capacity, which `NFR-PRIV-001` makes self-only (§Capacity hint formula,
+> §Security).
+> 4. All copy goes through `peisear-i18n` (§UI).
+> 5. The assignee filter only became meaningful with RFC 009 (§Must-have 3).
+>
+> Points 1 and 3 are defects rather than staleness. Point 3 in particular was
+> a positive claim — that the hint cannot be inverted — which was never true.
 
 ## Summary
 
@@ -48,9 +65,11 @@ our prior decisions in Phase C PR1.
    PR): one button per row "→ Sprint" / "← Backlog". Each
    POST handles one issue.
 5. Sprint-side header shows `committed: N pts` with the sum
-   of effort across in-sprint items. `capacity hint: ~M` is
-   computed from team capacity rows (see Design §3 below);
-   it is a hint, not a hard limit.
+   of effort across in-sprint items. ~~`capacity hint: ~M` is
+   computed from team capacity rows~~ — *corrected 2026-08-13:
+   **the capacity hint is deferred**, see §Capacity hint formula.
+   The committed total ships; it sums effort on issues already
+   visible on the same page.*
 6. Sub-issues do not appear in either column. Backlog and
    sprint items are top-level only. This matches Phase C PR1
    §8.5 ("sub-issue は parent に追従").
@@ -107,7 +126,16 @@ table state).
 ### Authorization
 
 - Team membership check on entry, same as `/teams/{slug}/...`
-  routes.
+  routes — via the existing `resolve_team_membership`, which
+  returns **404** for non-members (*corrected 2026-08-13*: the
+  test plan below said 403. External design §9 uses 404 for team
+  membership so a non-member cannot confirm a team exists; 403 is
+  for personal data, where the URL already implies existence).
+- *Corrected 2026-08-13*: **`viewer` may read and may not move.**
+  `TeamRole::can_write()` (`Admin | Member`) gates both POSTs; a
+  viewer gets 403 there — they are a member, so existence is not
+  what is concealed. A viewer's page renders in the same
+  read-only shape completed sprints already use.
 - The page is **not** admin-only. Per V2.1 §11 the team
   members can collectively plan; admin role is for adding /
   removing team members, not for owning planning decisions.
@@ -142,7 +170,24 @@ pub struct BacklogRow {
 `issues_in_sprint` already exists from Phase C PR1 and already
 filters to top-level only. No change needed.
 
-### Capacity hint formula
+### Capacity hint formula — **deferred, 2026-08-13**
+
+**Do not implement this.** The formula below is reversible to an individual's
+capacity, and `NFR-PRIV-001` makes capacity self-only (P0).
+
+The hint sums `effective_for_user(today)` across members **who have at least
+one open issue in the team's projects** — and a viewer of this page can see
+exactly who those members are, because assignees are on the rows. One
+participating member: the hint *is* their capacity. Two: subtract your own.
+
+This is the first genuine `NFR-PRIV-007` case in the product — an aggregate
+reversible to an individual — in a product built for teams of about five. It
+needs an owner decision and a design that survives a two-person team. Deferred
+to its own RFC rather than settled inside a feature handoff.
+
+The original formula is retained below as the record of what was proposed.
+
+
 
 The hint is the sum of `effective_for_user(today)` across
 team members who have at least one open issue assigned to
@@ -229,7 +274,8 @@ with at least:
 5. `completed_sprint_plan_is_read_only` — GET on a completed
    sprint returns 200 but the response contains no `<form>`
    tags inside either column section.
-6. `non_team_member_gets_403` — auth boundary check.
+6. `non_team_member_gets_404` — auth boundary check
+   (*corrected 2026-08-13*; was `_403`).
 7. `committed_total_matches_sum_of_effort` — render with
    2 issues of effort 5 and 8, confirm "13 pts" appears.
 
@@ -241,9 +287,20 @@ existing per-test-crate jobs.
 - §11.5 boundary: the page exposes effort and assignee
   *aggregates* (committed pts, member rollups). The
   individual-level data (capacity, burnout) stays at
-  `/today`. The capacity *hint* is a sum-only number — no
-  per-person breakdown — so a member can't infer another's
-  capacity from the hint.
+  `/today`.
+- ~~The capacity *hint* is a sum-only number — no per-person
+  breakdown — so a member can't infer another's capacity from
+  the hint.~~ **False, corrected 2026-08-13.** Sum-only does not
+  mean irreversible: the hint's own formula names its
+  contributors, and the page shows who they are. At one
+  contributor the hint is that person's capacity; at two, a
+  member subtracts their own. The hint is deferred; see
+  §Capacity hint formula.
+- The per-assignee rollup **is** permitted: it shows each
+  member's volume of committed work, which `NFR-PRIV-002`
+  names as "workload distribution", and `ISSUE-003` ruled
+  that holds regardless of how many members a surface lists.
+  It carries no capacity value.
 - §21.4 optimistic lock: the join-table mutations are not
   lock-checked, consistent with Phase B PR1 PR1's
   `assign_issue` decision. Document this explicitly in the
