@@ -31,6 +31,7 @@ Design settled. Implementation may begin.
 
 | ID | Title | Target |
 |----|-------|--------|
+| 009 | [Team assignment and workload scope](./accepted/009-team-assignment-and-workload.md) — *has handoffs* | 0.22.0 — **before 001** |
 | 001 | [Sprint planning page](./accepted/001-sprint-planning-page.md) | 0.22.0 |
 | 002 | [Calendar surfaces](./accepted/002-calendar-surfaces.md) | 0.23.0 |
 | 003 | [Inbox refinements](./accepted/003-inbox-refinements.md) | 0.24.0 |
@@ -41,7 +42,6 @@ Open for review. Design may still change.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 009 | [Team assignment and workload scope](./proposed/009-team-assignment-and-workload.md) | 0.22.0 — **before 001** |
 | 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) | 0.25.0 |
 | 005 | [Quality consolidation](./proposed/005-quality-consolidation.md) — §9 pulled forward, *has handoffs* | 0.24.0 |
 
@@ -69,7 +69,8 @@ the RFC number they are keyed to.
 
 | Directory | Governing RFC |
 |---|---|
-| [`handoffs/005-quality-consolidation/`](./handoffs/005-quality-consolidation/README.md) | 005 — active, §9 only |
+| [`handoffs/005-quality-consolidation/`](./handoffs/005-quality-consolidation/README.md) | 005 — §9 delivered at 0.22.0; the rest at 0.24.0 |
+| [`handoffs/009-team-assignment-and-workload/`](./handoffs/009-team-assignment-and-workload/README.md) | 009 — active |
 | [`handoffs/006-i18n-architecture/`](./handoffs/006-i18n-architecture/README.md) | 006 — historical, RFC implemented; `COPY-001` outstanding |
 | [`handoffs/007-compliance-pass/`](./handoffs/007-compliance-pass/README.md) | 007 — historical, RFC implemented |
 

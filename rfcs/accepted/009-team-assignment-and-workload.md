@@ -1,11 +1,11 @@
 # RFC 0009: Team assignment and workload scope
 
-**Status**: Proposed
+**Status**: Accepted 2026-08-13
 **Target**: 0.22.0 — **before** RFC 001
 **Related spec sections**: §9 (Team / Sprint), §11.5 (individual vs aggregate boundary), §17 (Sprint Plan)
 **Related requirements**: `FR-TEAM-*`, `FR-ISS-004`, `FR-HLT-*`, `NFR-PRIV-007`
 **Governing gap**: baseline `§10.11`
-**Last updated**: 2026-08-11
+**Last updated**: 2026-08-13
 
 ## Summary
 
@@ -190,10 +190,16 @@ and the report change is neither.
 
 ## Open questions
 
-1. **Removed members holding assignments** — D3. Recommended: keep, and let
-   the workload set be the superset.
-2. **Who sees per-user workload rows** — the privacy question above. Needs the
-   owner.
+1. **Removed members holding assignments** — D3. **Settled 2026-08-13**: keep
+   the assignment, and let the workload set be the superset of the candidate
+   set. This is a design call and therefore mine; recording it here so the
+   handoff does not re-open it. The relationship in requirement 2 is restated
+   accordingly: *the candidate set is a subset of the workload set*, not equal
+   to it.
+2. **Who sees per-user workload rows** — the privacy question above. **Still
+   open; still the owner's.** Accepting this RFC does not answer it, and the
+   implementation handoff is scoped to requirements 1–4 only for that reason.
+   `project_workload` gains no new consumers until it is answered.
 3. **Does RFC 001 wait?** RFC 001 filters backlog by assignee and shows a
    per-assignee rollup. Both are single-valued today. It can be built on the
    current queries and will be correct once these are fixed, so the ordering
