@@ -18,6 +18,19 @@ pub async fn create_personal_project(db: &Pool, owner_id: &str, name: &str) -> S
     id
 }
 
+/// Create a project owned by `owner_id`, belonging to `team_id`.
+/// Unlike [`create_personal_project`], does not require `owner_id`
+/// to be a member of `team_id` — `TEAM-001` needs to construct that
+/// exact state (an owner who isn't a team member) as a fixture, not
+/// just as an incidental side effect.
+pub async fn create_team_project(db: &Pool, owner_id: &str, team_id: &str, name: &str) -> String {
+    let id = uuid::Uuid::new_v4().to_string();
+    projects::insert(db, &id, owner_id, name, "Test project", Some(team_id))
+        .await
+        .expect("insert team project");
+    id
+}
+
 /// Create a team with the given user as the initial admin.
 /// Returns the team id. The team's slug is derived from the
 /// name; tests that need a specific slug should call

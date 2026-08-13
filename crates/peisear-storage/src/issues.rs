@@ -600,28 +600,79 @@ pub async fn delete(pool: &Pool, id: &str, project_id: &str, actor_id: &str) -> 
     Ok(())
 }
 
-/// List the users who are valid assignee candidates for issues in a
-/// given project.
+/// The assignee-candidate set for a project, as a `WITH` CTE
+/// fragment: the project's owner, plus any `admin`/`member` (never
+/// `viewer`) of the project's team, if it has one.
 ///
-/// Today's single-tenant model returns only the project owner, but
-/// callers should not assume that — when team / organisation support
-/// lands (Medium-term roadmap), this function will return all members
-/// of the project's team. Keeping the surface as a query function
-/// rather than inlining `vec![owner]` at call sites means UI code does
-/// not change when that happens.
+/// `TEAM-001` / RFC 009 §D1: `list_assignee_candidates` and
+/// `project_workload` used to be two independently-written queries
+/// that both joined `projects p ON p.owner_id = u.id` — a join that
+/// can only ever produce the owner, regardless of team membership.
+/// They diverged from the same wrong text because they were written
+/// twice; the fix is one definition both derive from, not two
+/// corrected copies.
+///
+/// **Mechanism chosen**: a `WITH` CTE, embedded as a shared Rust
+/// `&str` constant in each query, rather than a SQL view or the
+/// `query_as!` compile-time macro. A view is a migration and a
+/// bigger commitment than this fix needs; `peisear-storage` has no
+/// `query_as!`/`query!` call anywhere (confirmed by grep) and no
+/// `DATABASE_URL`/offline-cache machinery to support one, so
+/// introducing the macro here would be a first for the crate, not a
+/// fit with this fix's scope. The runtime-checked `query_as::<_,
+/// T>()` form every other query in this file uses is preserved.
+///
+/// `?1` is the project id, bound once and reused — this project's
+/// existing convention for repeated positional SQLite params (see
+/// `projects::list_for_user`'s `?1` reused three times with one
+/// `.bind()`).
+///
+/// `viewer` is excluded in the `LEFT JOIN`'s `ON` clause, not a
+/// `WHERE` filter: a `WHERE tm.role IN (...)` would still be
+/// correct here, since it only ever narrows which `tm` rows can
+/// satisfy `u.id = tm.user_id`, but filtering in the join condition
+/// makes the exclusion visible at the point the membership rows are
+/// selected, alongside the team-id join, rather than downstream of
+/// it — `0011_teams.sql`'s own comment: a viewer is read-only, no
+/// assignment. RFC 009 §D1's own sample SQL has no role filter at
+/// all (it would incorrectly admit viewers); this fixes that gap
+/// too, per handoff §4's explicit requirement that only `admin`/
+/// `member` are candidates.
+///
+/// The `LEFT JOIN` cross-matches every user against every
+/// membership row for the project's team (it is not correlated to
+/// `u` in the join condition), so a user who is both the owner and
+/// a team member can produce more than one matching row before
+/// `GROUP BY`/`DISTINCT` collapses it — same shape RFC 009 §D1's own
+/// sample query has, and why it (and this one) end in `GROUP BY`/
+/// `SELECT DISTINCT`.
+const CANDIDATE_SET_CTE: &str = r#"
+    candidates AS (
+        SELECT DISTINCT u.id, u.display_name
+        FROM users u
+        JOIN projects p ON p.id = ?1
+        LEFT JOIN team_memberships tm
+               ON tm.team_id = p.team_id AND tm.role IN ('admin', 'member')
+        WHERE u.id = p.owner_id OR u.id = tm.user_id
+    )
+"#;
+
+/// List the users who are valid assignee candidates for issues in a
+/// given project: the project's owner, plus any `admin`/`member` of
+/// the project's team. A personal project (`team_id IS NULL`) yields
+/// exactly the owner, since the `LEFT JOIN` in [`CANDIDATE_SET_CTE`]
+/// then contributes nothing.
 pub async fn list_assignee_candidates(
     pool: &Pool,
     project_id: &str,
 ) -> StorageResult<Vec<peisear_core::AssigneeOption>> {
-    sqlx::query_as::<_, (String, String)>(
+    sqlx::query_as::<_, (String, String)>(&format!(
         r#"
-        SELECT u.id, u.display_name
-        FROM users u
-        JOIN projects p ON p.owner_id = u.id
-        WHERE p.id = ?1
-        ORDER BY u.display_name ASC
+        WITH {CANDIDATE_SET_CTE}
+        SELECT id, display_name FROM candidates
+        ORDER BY display_name ASC
         "#,
-    )
+    ))
     .bind(project_id)
     .fetch_all(pool)
     .await?
@@ -632,9 +683,13 @@ pub async fn list_assignee_candidates(
 
 /// Per-user workload report for a project.
 ///
-/// Returns one [`UserLoad`] per assignee candidate, aggregating the
-/// effort and issue count across the user's currently in-flight
-/// assignments. Users with no in-flight issues still appear in the
+/// Returns one [`UserLoad`] per assignee candidate ([`CANDIDATE_SET_CTE`]),
+/// **plus** any user holding an in-flight issue in the project even if
+/// they are no longer a candidate (RFC 009 §D3, settled: a user
+/// removed from a team keeps issues already assigned to them, so the
+/// candidate set is a subset of the workload set, not equal to it —
+/// the form describes policy going forward, the report describes
+/// reality). Users with no in-flight issues still appear in the
 /// result with zero counts so the UI can show their (empty) chip.
 ///
 /// Today this is a project-level report. The query intentionally
@@ -654,8 +709,9 @@ pub async fn project_workload(
     // "the row whose period covers today, most recently created".
     // The correlated sub-select keeps the per-user join tractable
     // even with the period filter.
-    sqlx::query_as::<_, (String, String, Option<i64>, Option<i64>, i64)>(
+    sqlx::query_as::<_, (String, String, Option<i64>, Option<i64>, i64)>(&format!(
         r#"
+        WITH {CANDIDATE_SET_CTE}
         SELECT
             u.id,
             u.display_name,
@@ -676,13 +732,18 @@ pub async fn project_workload(
                 ELSE 0
             END), 0) AS in_flight_issues
         FROM users u
-        JOIN projects p ON p.owner_id = u.id
-        LEFT JOIN issues i ON i.assignee_id = u.id AND i.project_id = p.id
-        WHERE p.id = ?1
+        LEFT JOIN issues i ON i.assignee_id = u.id AND i.project_id = ?1
+        WHERE u.id IN (SELECT id FROM candidates)
+           OR EXISTS (
+                SELECT 1 FROM issues i2
+                WHERE i2.assignee_id = u.id
+                  AND i2.project_id = ?1
+                  AND i2.status IN ('open', 'in_progress')
+              )
         GROUP BY u.id, u.display_name
         ORDER BY u.display_name ASC
         "#,
-    )
+    ))
     .bind(project_id)
     .fetch_all(pool)
     .await?

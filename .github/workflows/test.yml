@@ -161,6 +161,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test sub_issues -- --test-threads=1
 
+  test-peisear-web-assignee-candidates:
+    name: peisear-web / assignee_candidates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test assignee_candidates -- --test-threads=1
+
   # The §1.7 vocabulary guard (I18N-001, RFC 006 open question 3's
   # default). Blocking from 0.21.0 -- an advisory guard on a P0
   # requirement is a guard nobody fixes.

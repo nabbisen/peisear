@@ -10,15 +10,21 @@
 //! ## Fixture shape (per the `ISSUE-003` ruling)
 //!
 //! `project_workload` (the sole data source for these three
-//! surfaces) only ever returns the **project owner's** row — it
-//! joins on `p.owner_id = u.id`, so a team member who isn't the
-//! owner never appears at all. That's a separate, pre-existing
-//! functional defect (tracked for its own RFC), not something this
-//! suite works around. The real, reachable disclosure this suite
-//! guards is: a team member who is *not* the project's owner, but
-//! who has access to the project via team membership, must not see
-//! the owner's capacity when viewing that project — while the
-//! owner's in-flight load (a permitted signal) remains visible.
+//! surfaces) **used to** return only the **project owner's** row —
+//! it joined on `p.owner_id = u.id`, so a team member who wasn't the
+//! owner never appeared at all. `TEAM-001` (RFC 009) fixed that: the
+//! result now includes every assignee candidate (owner plus the
+//! team's `admin`/`member`s), which is a separate, independently
+//! reviewed change — this suite's own assertions do not depend on
+//! the row count, so they hold before and after. The disclosure this
+//! suite guards is: a team member who is *not* the project's owner,
+//! but who has access to the project via team membership, must not
+//! see the owner's capacity when viewing that project — while the
+//! owner's in-flight load (a permitted signal, `DEV-003`/`ISSUE-003`
+//! — ruled to apply "regardless of how many members a surface
+//! lists") remains visible. Fixture below still asserts against
+//! Bob's row specifically; it does not assert Alice's own (now also
+//! visible, zero-valued) row absent or present either way.
 //!
 //! Fixture: Alice (team member, viewer) and Bob (team member,
 //! project owner). Bob sets a 5pt capacity and is assigned a 10pt
@@ -137,9 +143,9 @@ async fn project_detail_does_not_disclose_owners_capacity() {
     assert_no_capacity_leak(&body, "project detail");
 
     // The permitted signal — Bob's in-flight load — remains
-    // visible. project_workload returns only the owner's row
-    // (ISSUE-003), so Bob is the one row the strip can show; his
-    // 10pt in-flight load must still appear.
+    // visible regardless of how many other rows TEAM-001 added
+    // to the strip (`DEV-003`/`ISSUE-003` ruling); his 10pt
+    // in-flight load must still appear.
     assert!(
         body.contains("Workload"),
         "the workload strip must still render — it has a real signal to show \
