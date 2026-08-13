@@ -434,7 +434,7 @@ pub(crate) fn render(key: MessageKey) -> String {
             format!("{title}, {points} pt, in Sprint Items")
         }
         MessageKey::CommittedTotalLabel { committed_points } => {
-            format!("committed: {committed_points} pts")
+            format!("committed: {committed_points} pt")
         }
         MessageKey::NoBacklogIssuesMessage => {
             "No backlog issues match the current filters.".to_string()

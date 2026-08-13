@@ -6,16 +6,23 @@
 //! the right, with button-driven moves between the two (no drag and
 //! drop; that's Phase D-4, RFC 004).
 //!
-//! Both columns always render, in every sprint status — completed
-//! and active sprints just render without the move `<form>`s
-//! (`can_move = false`). RFC 001's own design-section prose says a
-//! completed sprint's backlog column "hides itself entirely", but
-//! its own test plan (§Test plan item 5, carried into `PLAN-001` §4
-//! test 5 unchanged) asserts "no `<form>` tags inside either column
-//! section" — which only makes sense if both sections still render.
-//! Taken as the sixth disagreement `PLAN-001` §1 invites reporting
-//! rather than silently picking one: the test plan is the
-//! enforceable contract, so this component follows it.
+//! ## Three shapes, not two (`PLAN-001-review.md` §3.2)
+//!
+//! | Sprint status | Role | Backlog column | Move buttons |
+//! |---|---|---|---|
+//! | Planned | admin / member | shown | shown |
+//! | Planned | viewer | shown | hidden |
+//! | Active | any | shown | hidden |
+//! | Completed | any | hidden | hidden |
+//!
+//! `can_move` and `show_backlog` are independent flags for exactly
+//! this reason: a viewer or an active sprint suppress move forms
+//! without hiding the backlog (a member reading a live plan still
+//! needs to see what isn't committed yet), while a completed sprint
+//! hides the backlog outright — RFC 001's own reasoning, "re-opening
+//! a completed sprint to add issues is not a flow we support." The
+//! sprint items column is unconditional; only the backlog and the
+//! move forms vary.
 
 use axum::response::Html;
 use leptos::prelude::*;
@@ -45,7 +52,7 @@ pub fn SprintPlanPage(
     active_priority: String,
     active_assignee: String,
     can_move: bool,
-    is_read_only: bool,
+    show_backlog: bool,
     unread_count: i64,
 ) -> impl IntoView {
     let team_slug = team.slug.clone();
@@ -112,17 +119,12 @@ pub fn SprintPlanPage(
                 </div>
                 <p class="text-sm text-base-content/70 mb-4">{committed_total}</p>
 
-                // Filtering exists to help decide what to move; with
-                // no move capability (`is_read_only`) there's nothing
-                // the filter would help do, so it's omitted rather
-                // than left inert. This form sits outside both
-                // `<section>`s either way, so hiding or keeping it
-                // doesn't affect test 5's "no `<form>` inside either
-                // column section" assertion.
-                {(!is_read_only).then_some(filter_form)}
+                // The filter only ever narrows the backlog, so it
+                // shares `show_backlog`'s gate rather than its own.
+                {show_backlog.then_some(filter_form)}
 
                 <main class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {backlog_section}
+                    {show_backlog.then_some(backlog_section)}
                     {sprint_items_section}
                 </main>
             </div>
@@ -352,7 +354,7 @@ pub fn render_plan(
     active_priority: String,
     active_assignee: String,
     can_move: bool,
-    is_read_only: bool,
+    show_backlog: bool,
     unread_count: i64,
 ) -> Html<String> {
     super::render_to_html(move || {
@@ -370,7 +372,7 @@ pub fn render_plan(
                 active_priority=active_priority
                 active_assignee=active_assignee
                 can_move=can_move
-                is_read_only=is_read_only
+                show_backlog=show_backlog
                 unread_count=unread_count
             />
         }

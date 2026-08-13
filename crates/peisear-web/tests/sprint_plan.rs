@@ -5,11 +5,18 @@
 //! (404 not 403, handoff §2.1) and two added (§2.2's `viewer` case,
 //! and the filter round-trip test 9 names as the surface's own
 //! "works when written, silently breaks later" risk).
+//!
+//! Two more added per `PLAN-001-review.md` §3.1: the two
+//! defense-in-depth guards reported in the original review request
+//! (§5) had no test holding them in place — the same shape as
+//! `TEAM-001`'s role-filter correction one round earlier. Both new
+//! tests were demonstrated failing with their guard removed before
+//! landing with it restored, same discipline.
 
 mod common;
 
 use axum::http::StatusCode;
-use common::auth::{TestUser, register_and_login};
+use common::auth::{TestUser, login, register_and_login};
 use common::fixture::{create_planned_sprint, create_team_project, create_team_with_admin};
 use common::server::TestApp;
 use peisear_core::teams::TeamRole;
@@ -250,8 +257,10 @@ async fn sub_issues_do_not_appear_in_either_column() {
     );
 }
 
-/// Test 5 -- a completed sprint's plan renders both columns' content
-/// but no move `<form>`s anywhere on the page.
+/// Test 5 -- a completed sprint's plan hides the backlog column
+/// entirely (review correction PLAN-001-review.md §3.2 -- "re-opening
+/// a completed sprint to add issues is not a flow we support") and
+/// has no move `<form>`s anywhere on the page.
 #[tokio::test]
 async fn completed_sprint_plan_is_read_only() {
     let app = TestApp::spawn().await;
@@ -288,6 +297,14 @@ async fn completed_sprint_plan_is_read_only() {
         "a completed sprint's plan must have no move forms: {body}"
     );
     assert!(
+        !body.contains("id=\"backlog-heading\""),
+        "a completed sprint's plan must hide the backlog column entirely: {body}"
+    );
+    assert!(
+        body.contains("id=\"sprint-items-heading\""),
+        "the sprint items column must still render: {body}"
+    );
+    assert!(
         body.contains("Historical item"),
         "the sprint's own items must still render, just without a move form"
     );
@@ -311,7 +328,9 @@ async fn non_team_member_gets_404() {
 }
 
 /// Test 7 -- the committed total sums effort across the sprint's
-/// items: two issues at 5 and 8 points render "13 pts".
+/// items: two issues at 5 and 8 points render "13 pt" (invariant
+/// singular unit, matching `PointsUnitSuffix`/`PointsValue`
+/// elsewhere -- review correction PLAN-001-review.md §3.3).
 #[tokio::test]
 async fn committed_total_matches_sum_of_effort() {
     let app = TestApp::spawn().await;
@@ -350,13 +369,16 @@ async fn committed_total_matches_sum_of_effort() {
     let resp = app.server.get(&plan_url(&slug, &sprint_id)).await;
     let body = resp.text();
     assert!(
-        body.contains("13 pts"),
-        "expected the committed total to read 13 pts: {body}"
+        body.contains("13 pt"),
+        "expected the committed total to read 13 pt: {body}"
     );
 }
 
-/// Test 8 -- handoff §2.2: `viewer` may read the plan (200, no move
-/// forms) and gets 403 attempting to POST `/plan/add`.
+/// Test 8 -- handoff §2.2: `viewer` may read the plan (200, backlog
+/// still shown per PLAN-001-review.md §3.2's corrected table -- a
+/// viewer is reading a live plan and needs to see what isn't
+/// committed yet -- but no move forms) and gets 403 attempting to
+/// POST `/plan/add`.
 #[tokio::test]
 async fn viewer_gets_read_only_plan_and_403_on_post() {
     let app = TestApp::spawn().await;
@@ -390,6 +412,10 @@ async fn viewer_gets_read_only_plan_and_403_on_post() {
     assert!(
         !body.contains("/plan/add") && !body.contains("/plan/remove"),
         "a viewer must see no move forms: {body}"
+    );
+    assert!(
+        body.contains("id=\"backlog-heading\"") && body.contains("Backlog item"),
+        "a viewer on a planned sprint must still see the backlog: {body}"
     );
 
     let resp = app
@@ -467,5 +493,127 @@ async fn filter_round_trip_narrows_backlog_and_survives_move() {
     assert!(
         location.contains("priority=high"),
         "the redirect must preserve the active filter, got {location}"
+    );
+}
+
+/// Correction (`PLAN-001-review.md` §3.1 / §5.2): `plan_remove`
+/// deletes by `issue_id` alone with no sprint scoping at the storage
+/// layer, so the handler's own check -- the issue must currently be
+/// in *this* sprint -- is the only thing standing between a member
+/// of team A and removing an issue from a completely different
+/// team's sprint. A member of team A, with no relationship to team B
+/// at all, forges a POST naming an issue that actually lives in team
+/// B's active sprint.
+#[tokio::test]
+async fn plan_remove_rejects_an_issue_belonging_to_another_teams_sprint() {
+    let app = TestApp::spawn().await;
+
+    let admin_a = TestUser::new("alice");
+    let admin_a_id = register_and_login(&app, &admin_a).await;
+    let team_a_id = create_team_with_admin(&app.db, &admin_a_id, "Team A").await;
+    let slug_a = slug_for(&app, &team_a_id).await;
+    let sprint_a_id = create_planned_sprint(&app.db, &team_a_id, "Sprint A").await;
+
+    // A wholly unrelated team, with its own active sprint holding an
+    // issue -- the forged removal's target.
+    let admin_b = TestUser::new("bob");
+    let admin_b_id = register_and_login(&app, &admin_b).await;
+    let team_b_id = create_team_with_admin(&app.db, &admin_b_id, "Team B").await;
+    let project_b_id = create_team_project(&app.db, &admin_b_id, &team_b_id, "Proj B").await;
+    let sprint_b_id = create_planned_sprint(&app.db, &team_b_id, "Sprint B").await;
+    let issue_b_id = insert_open_issue(
+        &app,
+        &project_b_id,
+        &admin_b_id,
+        "Team B's committed item",
+        Priority::Medium,
+        Some(5),
+    )
+    .await;
+    sprints::add_issue(&app.db, &sprint_b_id, &issue_b_id)
+        .await
+        .expect("add to sprint B");
+    sprints::start(&app.db, &sprint_b_id)
+        .await
+        .expect("start sprint B");
+
+    // `register_and_login` for bob switched the shared cookie jar;
+    // switch back to alice's session before forging the request.
+    login(&app, &admin_a).await;
+
+    let resp = app
+        .server
+        .post(&format!("{}/remove", plan_url(&slug_a, &sprint_a_id)))
+        .form(&[("issue_id", issue_b_id.as_str())])
+        .await;
+    resp.assert_status(StatusCode::NOT_FOUND);
+
+    let still_in_b = sprints::sprint_for_issue(&app.db, &issue_b_id)
+        .await
+        .expect("query sprint_for_issue");
+    assert_eq!(
+        still_in_b.as_deref(),
+        Some(sprint_b_id.as_str()),
+        "the issue must still be in team B's sprint after the rejected removal"
+    );
+}
+
+/// Correction (`PLAN-001-review.md` §3.1 / §5.1): `plan_add` rejects
+/// a non-planned sprint at the handler, not just by omitting the
+/// button. A completed sprint is targeted directly with an issue
+/// that was never in it.
+#[tokio::test]
+async fn plan_add_rejects_a_completed_sprint() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+
+    let seed_issue = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Seed",
+        Priority::Medium,
+        Some(1),
+    )
+    .await;
+    sprints::add_issue(&app.db, &sprint_id, &seed_issue)
+        .await
+        .expect("seed the sprint so it has something to complete with");
+    sprints::start(&app.db, &sprint_id).await.expect("start");
+    sprints::complete(&app.db, &sprint_id)
+        .await
+        .expect("complete");
+
+    let target_id = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Late arrival",
+        Priority::Medium,
+        Some(2),
+    )
+    .await;
+
+    let resp = app
+        .server
+        .post(&format!("{}/add", plan_url(&slug, &sprint_id)))
+        .form(&[
+            ("issue_id", target_id.as_str()),
+            ("project_id", project_id.as_str()),
+        ])
+        .await;
+    resp.assert_status(StatusCode::BAD_REQUEST);
+
+    let sprint_for_target = sprints::sprint_for_issue(&app.db, &target_id)
+        .await
+        .expect("query sprint_for_issue");
+    assert_eq!(
+        sprint_for_target, None,
+        "the issue must not have been added to the completed sprint"
     );
 }

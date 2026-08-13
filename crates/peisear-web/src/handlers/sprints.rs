@@ -555,12 +555,19 @@ pub async fn plan_page(
         return Err(AppError::NotFound);
     }
 
-    // Requirement 8: active and completed sprints render read-only
-    // (no move buttons in either column). `is_read_only` is the one
-    // flag RFC 001's design section names; `can_write()` narrows it
-    // further for `viewer`.
-    let is_read_only = !matches!(sprint.status, SprintStatus::Planned);
-    let can_move = role.can_write() && !is_read_only;
+    // Review correction (PLAN-001-review §3.2): three shapes, not
+    // two. `can_move` (move forms in either column) requires both
+    // `can_write()` and a planned sprint — a viewer or an active
+    // sprint both suppress it, for different reasons. `show_backlog`
+    // is a separate axis: the backlog stays visible on an active
+    // sprint (a member is still reading a live plan and needs to see
+    // what isn't committed yet) and only disappears once the sprint
+    // is completed ("re-opening a completed sprint to add issues is
+    // not a flow we support" — RFC 001's own reasoning, which the
+    // first cut of this handler wrongly folded into the same flag as
+    // `can_move`).
+    let can_move = role.can_write() && matches!(sprint.status, SprintStatus::Planned);
+    let show_backlog = !matches!(sprint.status, SprintStatus::Completed);
 
     let summary = sprints::summary(&state.db, &sprint.id).await?;
     let sprint_items = sprints::issues_in_sprint(&state.db, &sprint.id).await?;
@@ -617,7 +624,7 @@ pub async fn plan_page(
         q.priority.unwrap_or_default(),
         q.assignee.unwrap_or_default(),
         can_move,
-        is_read_only,
+        show_backlog,
         unread_count,
     ))
 }

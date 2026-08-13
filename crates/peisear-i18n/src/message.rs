@@ -1097,13 +1097,13 @@ pub enum MessageKey {
         title: String,
         points: i64,
     },
-    /// The plan page's header stat. Deliberately not built from
-    /// [`MessageKey::CommittedStatLabel`] + [`MessageKey::PointsUnitSuffix`]
-    /// (the detail page's stat-card composition) — `PLAN-001` §4 test 7
-    /// requires the literal substring `"13 pts"` (plural) for two
-    /// issues at 5 and 8 points, which the detail page's singular
-    /// `"pt"` convention doesn't produce; RFC 001's own sketch already
-    /// used the plural for this exact line.
+    /// The plan page's header stat: `"committed: {n} pt"`, same
+    /// invariant-singular unit word as [`MessageKey::PointsUnitSuffix`]
+    /// and [`MessageKey::PointsValue`] everywhere else in the product.
+    /// A single key rather than composed from those two — this line
+    /// reads as "committed: " prefixed onto a value, not a stat-card
+    /// label paired with a value, so it doesn't fit the detail page's
+    /// composition shape.
     CommittedTotalLabel {
         committed_points: i64,
     },
