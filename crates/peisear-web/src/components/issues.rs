@@ -1304,6 +1304,16 @@ fn IssueEditForm(
     let current_assignee_id = issue.assignee_id.clone();
     let title_value = issue.title.clone();
     let description = issue.description.clone();
+    // CAL-001 (RFC 002): `datetime-local` wants `YYYY-MM-DDTHH:MM`.
+    // Empty string when unset renders an empty input, not "0000-...".
+    let planned_start_value = issue
+        .planned_start_at
+        .map(|d| d.format("%Y-%m-%dT%H:%M").to_string())
+        .unwrap_or_default();
+    let planned_end_value = issue
+        .planned_end_at
+        .map(|d| d.format("%Y-%m-%dT%H:%M").to_string())
+        .unwrap_or_default();
     // RFC3339 captured at render time. The handler verifies
     // this against the issue's current `updated_at` per
     // peisear-feature-spec-v2.1 §21.4 and rejects with 409 if
@@ -1403,6 +1413,23 @@ fn IssueEditForm(
                                 }
                             }).collect_view()}
                         </select>
+                    </label>
+                    <label class="form-control w-full">
+                        <div class="label py-1">
+                            <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::PlannedStartDate })}</span>
+                        </div>
+                        <input type="datetime-local" name="planned_start_at"
+                               value=planned_start_value
+                               class="input input-bordered input-sm w-full"/>
+                    </label>
+
+                    <label class="form-control w-full">
+                        <div class="label py-1">
+                            <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::PlannedEndDate })}</span>
+                        </div>
+                        <input type="datetime-local" name="planned_end_at"
+                               value=planned_end_value
+                               class="input input-bordered input-sm w-full"/>
                     </label>
                 </div>
 

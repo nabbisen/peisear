@@ -339,6 +339,37 @@ pub struct IssueForm {
     /// rather than silently bypassing the check.
     #[serde(default)]
     pub client_updated_at: String,
+    /// `CAL-001` (RFC 002). `datetime-local` input value
+    /// (`YYYY-MM-DDTHH:MM`) or empty for "no plan date set". Present
+    /// on this shared struct but only read by [`update`] — the
+    /// create form (handoff §1) does not render these two inputs, so
+    /// `create`/`create_sub_issue` always pass `None` for both
+    /// regardless of what (if anything) arrives here.
+    #[serde(default)]
+    pub planned_start_at: String,
+    #[serde(default)]
+    pub planned_end_at: String,
+}
+
+/// Parse a `datetime-local` input value as it arrives from a browser
+/// form: `""` means "not set" (`None`); `YYYY-MM-DDTHH:MM` parses to
+/// a UTC instant. RFC 002 §Out of scope / CAL-001 §2.5: this is a
+/// naive stamp, not a time-zone conversion — the wall-clock digits
+/// the user typed become the same digits in UTC, deliberately, until
+/// the Phase E locale work adds real time-zone awareness. A value
+/// typed by a user outside UTC will not display back as the same
+/// wall-clock time they entered.
+fn parse_planned_datetime(
+    raw: &str,
+    field: peisear_i18n::Field,
+) -> Result<Option<chrono::DateTime<chrono::Utc>>, AppError> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    let naive = chrono::NaiveDateTime::parse_from_str(trimmed, "%Y-%m-%dT%H:%M")
+        .map_err(|_| AppError::Validation(t(MessageKey::FieldMustBeDatetimeFormat { field })))?;
+    Ok(Some(naive.and_utc()))
 }
 
 /// Parse an effort string as it arrives from a browser form.
@@ -423,6 +454,10 @@ pub async fn create(
             priority,
             effort,
             assignee_id: assignee_id.as_deref(),
+            // The create form doesn't render plan-date inputs
+            // (handoff §1) — always None here regardless of form.
+            planned_start_at: None,
+            planned_end_at: None,
         },
     )
     .await?;
@@ -682,6 +717,12 @@ pub async fn update(
         .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidPriority)))?;
     let effort = parse_effort(&form.effort)?;
     let assignee_id = validate_assignee(&state.db, &project_id, &form.assignee_id).await?;
+    let planned_start_at = parse_planned_datetime(
+        &form.planned_start_at,
+        peisear_i18n::Field::PlannedStartDate,
+    )?;
+    let planned_end_at =
+        parse_planned_datetime(&form.planned_end_at, peisear_i18n::Field::PlannedEndDate)?;
 
     issues::update(
         &state.db,
@@ -695,6 +736,8 @@ pub async fn update(
             priority,
             effort,
             assignee_id: assignee_id.as_deref(),
+            planned_start_at,
+            planned_end_at,
         },
     )
     .await?;

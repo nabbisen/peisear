@@ -204,6 +204,8 @@ async fn candidate_set_is_a_subset_of_the_workload_set() {
             priority: peisear_core::Priority::Medium,
             effort: None,
             assignee_id: Some(&member_id),
+            planned_start_at: None,
+            planned_end_at: None,
         },
     )
     .await
@@ -271,6 +273,8 @@ async fn removed_member_with_in_flight_issue_is_in_workload_not_candidates() {
             priority: peisear_core::Priority::Medium,
             effort: Some(3),
             assignee_id: Some(&member_id),
+            planned_start_at: None,
+            planned_end_at: None,
         },
     )
     .await

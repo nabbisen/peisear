@@ -217,6 +217,25 @@ pub struct Issue {
     /// row in the planning surface) rather than a schema
     /// constraint.
     pub parent_issue_id: Option<String>,
+    /// When the assignee (or whoever triaged the issue) plans to
+    /// start work, UTC (migration `0016`, RFC 002 §Design). `None`
+    /// means no plan date has been set — the common case; most
+    /// issues in a real project never get one. Rendered in UTC only
+    /// for now — a `datetime-local` input's value is taken as-is and
+    /// stamped UTC, with no per-user time-zone conversion; RFC 002
+    /// §Out of scope defers that to the Phase E locale work, so a
+    /// value a user typed in their own local time will not display
+    /// back as that same wall-clock time until time-zone awareness
+    /// lands.
+    pub planned_start_at: Option<DateTime<Utc>>,
+    /// When the work is planned to finish, UTC. `None` with
+    /// `planned_start_at` set is a deliberate state, not a missing
+    /// value — RFC 002 must-have 5 treats it as a half-hour anchor
+    /// at `planned_start_at` rather than dropping the issue from a
+    /// calendar. The migration's trigger enforces
+    /// `planned_end_at >= planned_start_at` only when **both** are
+    /// set; either alone, or neither, is always valid.
+    pub planned_end_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

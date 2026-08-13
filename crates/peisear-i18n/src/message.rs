@@ -78,10 +78,20 @@ pub enum Field {
     /// to name "project" as a filter facet the way a team-wide
     /// backlog does.
     Project,
+    /// `CAL-001` (RFC 002): the issue edit form's two new
+    /// `datetime-local` inputs. Distinct from `StartDate`/`EndDate`
+    /// (which render bare "Start date"/"End date" for sprints)
+    /// because the migration's trigger `RAISE` text and its
+    /// `MessageKey` must agree word-for-word with these labels
+    /// (handoff §2.3) — `"planned start date"`/`"planned end date"`
+    /// are substrings of the labels below, not just conceptually
+    /// related to them.
+    PlannedStartDate,
+    PlannedEndDate,
 }
 
 impl Field {
-    pub fn all() -> [Field; 15] {
+    pub fn all() -> [Field; 17] {
         [
             Field::EffortPoints,
             Field::CapacityPoints,
@@ -98,6 +108,8 @@ impl Field {
             Field::Role,
             Field::Email,
             Field::Project,
+            Field::PlannedStartDate,
+            Field::PlannedEndDate,
         ]
     }
 }
@@ -419,6 +431,16 @@ pub enum MessageKey {
     /// between `sprints.rs`'s start/end date validation (`Field::StartDate`/
     /// `Field::EndDate`, matching `I18N-005c`'s field-label wording exactly).
     FieldMustBeDateFormat {
+        field: Field,
+    },
+    /// A named field must be a `YYYY-MM-DDTHH:MM` datetime —
+    /// `CAL-001`, the issue edit form's two `datetime-local` plan-date
+    /// inputs. A sibling of `FieldMustBeDateFormat`, not a reuse of
+    /// it: the format token differs (the input type is
+    /// `datetime-local`, not `date`), and conflating them would
+    /// render the wrong format string for whichever field didn't
+    /// match.
+    FieldMustBeDatetimeFormat {
         field: Field,
     },
     /// The `status` form field didn't parse to a known `IssueStatus`.
@@ -1789,6 +1811,12 @@ pub enum MessageKey {
     SubIssueMustShareProjectMessage,
     IssueCannotBeOwnParentMessage,
     CannotDemoteIssueWithSubIssuesMessage,
+    /// Migration `0016`'s RAISE text (`CAL-001` §2.3), same
+    /// verbatim-needle relationship as the four above. Chosen to
+    /// name no database column — matches the issue edit form's
+    /// `Field::PlannedStartDate`/`Field::PlannedEndDate` labels
+    /// word-for-word rather than `planned_start_at`/`planned_end_at`.
+    IssuePlannedEndBeforeStartMessage,
 
     // ---- I18N-006: handlers/api_users.rs (BurnoutSignal.label) ----
     /// `code: "overload_streak"`.
@@ -1862,6 +1890,21 @@ pub enum MessageKey {
         recent_done_count: i64,
         window_days: i64,
     },
+
+    // ---- CAL-001 (RFC 002): calendar privacy footers ----
+    // Nothing renders these yet — CAL-002 wires them into a page.
+    // They exist here, with a byte-identity test, because `CAL-001`
+    // §2.1/§2.2 settles the wording (and the two-normative-texts
+    // discrepancy) before anything is built, not after.
+    /// Project-axis footer. External design §10.3's text, which
+    /// handoff §2.1 rules normative over RFC 002 must-have 9's own
+    /// (shorter, truncated) quoted version of the same string — the
+    /// third sentence here is the only place the per-member privacy
+    /// guarantee is actually stated to the user.
+    ProjectCalendarPrivacyFootnote,
+    /// Personal-axis footer. Spec §16.4; both documents agree on
+    /// this one.
+    PersonalCalendarPrivacyFootnote,
 }
 
 impl MessageKey {
@@ -2520,6 +2563,7 @@ impl MessageKey {
             MessageKey::SubIssueMustShareProjectMessage,
             MessageKey::IssueCannotBeOwnParentMessage,
             MessageKey::CannotDemoteIssueWithSubIssuesMessage,
+            MessageKey::IssuePlannedEndBeforeStartMessage,
             // -- I18N-006: handlers/api_users.rs (BurnoutSignal.label) --
             MessageKey::OverloadStreakSignalMessage {
                 overload_streak_days: 3,
@@ -2554,6 +2598,8 @@ impl MessageKey {
                 recent_done_count: 2,
                 window_days: 14,
             },
+            MessageKey::ProjectCalendarPrivacyFootnote,
+            MessageKey::PersonalCalendarPrivacyFootnote,
         ];
         keys.extend(TrendDirectionLabel::all().into_iter().map(|direction| {
             MessageKey::TrendLabel {
@@ -2586,6 +2632,11 @@ impl MessageKey {
             Field::all()
                 .into_iter()
                 .map(|field| MessageKey::FieldMustBeDateFormat { field }),
+        );
+        keys.extend(
+            Field::all()
+                .into_iter()
+                .map(|field| MessageKey::FieldMustBeDatetimeFormat { field }),
         );
         keys.extend(
             Field::all()

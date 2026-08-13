@@ -73,6 +73,8 @@ pub async fn create_issue(db: &Pool, project_id: &str, author_id: &str, title: &
             priority: Priority::Medium,
             effort: None,
             assignee_id: None,
+            planned_start_at: None,
+            planned_end_at: None,
         },
     )
     .await

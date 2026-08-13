@@ -101,6 +101,8 @@ async fn over_capacity_owner_fixture(app: &TestApp) -> (String, String, String, 
             priority: peisear_core::Priority::Medium,
             effort: Some(10),
             assignee_id: Some(&bob_id),
+            planned_start_at: None,
+            planned_end_at: None,
         },
     )
     .await

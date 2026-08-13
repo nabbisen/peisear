@@ -105,3 +105,20 @@ fn team_privacy_footnote_renders_byte_identically() {
          management role, not an oversight role."
     );
 }
+
+/// `CAL-001` §2.1: RFC 002 must-have 9 and external design §10.3 carry two
+/// different "do not paraphrase" versions of the project-axis calendar
+/// footer. External design's is normative (handoff §2.1 rules it so — it is
+/// the complete one; its third sentence is the only place the per-member
+/// privacy guarantee is actually stated to the user). This pins the exact
+/// bytes so "normative" means something the way `team_privacy_footnote_
+/// renders_byte_identically` above already does for `FR-TEAM-005`.
+#[test]
+fn project_calendar_privacy_footnote_renders_byte_identically() {
+    assert_eq!(
+        Locale::English.render(MessageKey::ProjectCalendarPrivacyFootnote),
+        "Calendar note: this view shows planned issue work for this project. \
+         Personal schedules are not aggregated here. Each member's individual \
+         calendar is private to that person."
+    );
+}

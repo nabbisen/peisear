@@ -29,6 +29,8 @@ struct IssueRow {
     /// for sub-issues. The 1-level constraint is enforced by
     /// trigger.
     parent_issue_id: Option<String>,
+    planned_start_at: Option<DateTime<Utc>>,
+    planned_end_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
@@ -51,6 +53,8 @@ impl IssueRow {
             effort: self.effort,
             assignee_id: self.assignee_id,
             parent_issue_id: self.parent_issue_id,
+            planned_start_at: self.planned_start_at,
+            planned_end_at: self.planned_end_at,
             created_at: self.created_at,
             updated_at: self.updated_at,
         })
@@ -69,6 +73,7 @@ pub async fn list_in_project(pool: &Pool, project_id: &str) -> StorageResult<Vec
         r#"
         SELECT id, project_id, author_id, title, description,
                status, priority, position, effort, assignee_id, parent_issue_id,
+               planned_start_at, planned_end_at,
                created_at, updated_at
         FROM issues
         WHERE project_id = ?1
@@ -92,6 +97,7 @@ pub async fn list_all_in_project(pool: &Pool, project_id: &str) -> StorageResult
         r#"
         SELECT id, project_id, author_id, title, description,
                status, priority, position, effort, assignee_id, parent_issue_id,
+               planned_start_at, planned_end_at,
                created_at, updated_at
         FROM issues
         WHERE project_id = ?1
@@ -116,6 +122,7 @@ pub async fn list_sub_issues_of(pool: &Pool, parent_issue_id: &str) -> StorageRe
         r#"
         SELECT id, project_id, author_id, title, description,
                status, priority, position, effort, assignee_id, parent_issue_id,
+               planned_start_at, planned_end_at,
                created_at, updated_at
         FROM issues
         WHERE parent_issue_id = ?1
@@ -133,6 +140,7 @@ pub async fn find(pool: &Pool, issue_id: &str, project_id: &str) -> StorageResul
         r#"
         SELECT id, project_id, author_id, title, description,
                status, priority, position, effort, assignee_id, parent_issue_id,
+               planned_start_at, planned_end_at,
                created_at, updated_at
         FROM issues
         WHERE id = ?1 AND project_id = ?2
@@ -157,6 +165,13 @@ pub struct IssueFields<'a> {
     pub priority: Priority,
     pub effort: Option<i64>,
     pub assignee_id: Option<&'a str>,
+    /// `CAL-001` / RFC 002. Only the issue edit form's inputs set
+    /// these to `Some` — the create form does not carry them
+    /// (handoff §1: "the issue edit form's date inputs", not the
+    /// create form's), so every `create`/`create_sub_issue` call
+    /// site passes `None` for both.
+    pub planned_start_at: Option<DateTime<Utc>>,
+    pub planned_end_at: Option<DateTime<Utc>>,
 }
 
 pub async fn insert(
@@ -183,12 +198,12 @@ pub async fn insert(
     .fetch_one(&mut *tx)
     .await?;
 
-    sqlx::query(
+    let res = sqlx::query(
         r#"
         INSERT INTO issues
             (id, project_id, author_id, title, description, status, priority,
-             position, effort, assignee_id)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+             position, effort, assignee_id, planned_start_at, planned_end_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
         "#,
     )
     .bind(id)
@@ -201,8 +216,18 @@ pub async fn insert(
     .bind(next_pos)
     .bind(fields.effort)
     .bind(fields.assignee_id)
+    .bind(fields.planned_start_at)
+    .bind(fields.planned_end_at)
     .execute(&mut *tx)
-    .await?;
+    .await;
+
+    // Migration 0016's insert trigger can now fire here (it could
+    // not before — nothing on this path set planned dates until
+    // CAL-001). Translate the same way insert_sub_issue already
+    // does, per DEC-011.
+    if let Err(e) = res {
+        return Err(translate_trigger_error(e));
+    }
 
     // The 'created' event records the initial state. Storing
     // status as `new_value` lets later analysis answer "what
@@ -359,9 +384,10 @@ pub async fn demote_to_sub_issue(
 /// if the migration ever changes the strings.
 fn translate_trigger_error(e: sqlx::Error) -> StorageError {
     let msg = e.to_string();
-    // Known trigger messages from migration 0015, paired with the
-    // MessageKey that carries the same text (I18N-006 §5 — the
-    // needle text itself is unchanged, only the returned type is).
+    // Known trigger messages from migrations 0015 and 0016, paired
+    // with the MessageKey that carries the same text (I18N-006 §5 —
+    // the needle text itself is unchanged, only the returned type
+    // is).
     let known = [
         (
             "sub-issue cannot have a sub-issue",
@@ -378,6 +404,10 @@ fn translate_trigger_error(e: sqlx::Error) -> StorageError {
         (
             "cannot demote an issue that has its own sub-issues",
             peisear_i18n::MessageKey::CannotDemoteIssueWithSubIssuesMessage,
+        ),
+        (
+            "planned end date must be on or after planned start date",
+            peisear_i18n::MessageKey::IssuePlannedEndBeforeStartMessage,
         ),
     ];
     for (needle, key) in known.into_iter() {
@@ -417,12 +447,23 @@ pub async fn update(
         return Err(StorageError::NotFound);
     };
 
+    // CAL-001 §2.4: planned_start_at/planned_end_at join this
+    // existing UPDATE's SET clause rather than getting a statement
+    // of their own. `issues` has no `updated_at` trigger (DEC-013's
+    // machinery covers sprints/teams/team_memberships/
+    // user_capacities, not this table) — updated_at only moves
+    // because this statement's own SET clause sets it. A separate
+    // UPDATE for the two date columns would leave updated_at
+    // unmoved, and a concurrent plan-date edit would silently win
+    // with no error and no symptom (NFR-CONC-004).
     let res = sqlx::query(
         r#"
         UPDATE issues
         SET title = ?3, description = ?4, status = ?5, priority = ?6,
             effort = ?7,
             assignee_id = ?8,
+            planned_start_at = ?9,
+            planned_end_at = ?10,
             updated_at = CURRENT_TIMESTAMP
         WHERE id = ?1 AND project_id = ?2
         "#,
@@ -435,8 +476,15 @@ pub async fn update(
     .bind(fields.priority.as_str())
     .bind(fields.effort)
     .bind(fields.assignee_id)
+    .bind(fields.planned_start_at)
+    .bind(fields.planned_end_at)
     .execute(&mut *tx)
-    .await?;
+    .await;
+
+    let res = match res {
+        Ok(r) => r,
+        Err(e) => return Err(translate_trigger_error(e)),
+    };
     if res.rows_affected() == 0 {
         return Err(StorageError::NotFound);
     }
@@ -760,4 +808,94 @@ pub async fn project_workload(
         },
     )
     .collect()
+}
+
+// ──────────────────────────────────────────────────────────────
+// Calendar window queries (`CAL-001` / RFC 002)
+// ──────────────────────────────────────────────────────────────
+
+/// The overlap predicate RFC 002 §Design specifies, as a `WHERE`
+/// fragment shared by [`planned_for_user`] and [`planned_for_project`]
+/// — one definition, not two independently-written copies of the
+/// same three-way NULL-handling logic. `?2`/`?3` (`from`/`to`) are
+/// hardcoded because both callers bind their scope value first (`?1`
+/// — assignee or project) and `from`/`to` second and third, in that
+/// order, so the positions are identical in both queries; this is
+/// the same `?N`-reuse-via-shared-const-`&str`-embedded-with-`format!`
+/// mechanism `TEAM-001`'s `CANDIDATE_SET_CTE` established.
+///
+/// A `NULL` `planned_end_at` is treated as a half-hour anchor at
+/// `planned_start_at` (must-have 5) — the second arm of the `OR`
+/// keeps such a row in the overlap set using `planned_start_at`
+/// itself as the stand-in end bound, so it appears whenever the
+/// window covers its start instant.
+const PLANNED_WINDOW_OVERLAP_PREDICATE: &str = r#"
+    planned_start_at IS NOT NULL
+    AND (
+        (planned_end_at IS NOT NULL AND planned_end_at >= ?2)
+        OR (planned_end_at IS NULL AND planned_start_at >= ?2)
+    )
+    AND planned_start_at <= ?3
+"#;
+
+/// Issues planned to overlap `[from, to]` for the given assignee.
+/// Personal axis (`/today/calendar`, CAL-002) — self-only by
+/// construction (`§11.5`): the caller supplies `user_id`, there is no
+/// path to another user's planned issues through this function.
+pub async fn planned_for_user(
+    pool: &Pool,
+    user_id: &str,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+) -> StorageResult<Vec<Issue>> {
+    let rows = sqlx::query_as::<_, IssueRow>(&format!(
+        r#"
+        SELECT id, project_id, author_id, title, description,
+               status, priority, position, effort, assignee_id, parent_issue_id,
+               planned_start_at, planned_end_at,
+               created_at, updated_at
+        FROM issues
+        WHERE assignee_id = ?1
+          AND {PLANNED_WINDOW_OVERLAP_PREDICATE}
+        ORDER BY planned_start_at ASC
+        "#,
+    ))
+    .bind(user_id)
+    .bind(from)
+    .bind(to)
+    .fetch_all(pool)
+    .await?;
+    rows.into_iter().map(IssueRow::into_issue).collect()
+}
+
+/// Issues planned to overlap `[from, to]` in the given project.
+/// Top-level only — sub-issues inherit their parent's position on
+/// the calendar by way of the parent appearing in the result (RFC
+/// 002 §Design), matching [`list_in_project`]'s existing
+/// top-level-only filter.
+pub async fn planned_for_project(
+    pool: &Pool,
+    project_id: &str,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+) -> StorageResult<Vec<Issue>> {
+    let rows = sqlx::query_as::<_, IssueRow>(&format!(
+        r#"
+        SELECT id, project_id, author_id, title, description,
+               status, priority, position, effort, assignee_id, parent_issue_id,
+               planned_start_at, planned_end_at,
+               created_at, updated_at
+        FROM issues
+        WHERE project_id = ?1
+          AND parent_issue_id IS NULL
+          AND {PLANNED_WINDOW_OVERLAP_PREDICATE}
+        ORDER BY planned_start_at ASC
+        "#,
+    ))
+    .bind(project_id)
+    .bind(from)
+    .bind(to)
+    .fetch_all(pool)
+    .await?;
+    rows.into_iter().map(IssueRow::into_issue).collect()
 }

@@ -659,6 +659,8 @@ struct BacklogIssueRow {
     effort: Option<i64>,
     assignee_id: Option<String>,
     parent_issue_id: Option<String>,
+    planned_start_at: Option<DateTime<Utc>>,
+    planned_end_at: Option<DateTime<Utc>>,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
     project_name: String,
@@ -683,6 +685,8 @@ impl BacklogIssueRow {
                 effort: self.effort,
                 assignee_id: self.assignee_id,
                 parent_issue_id: self.parent_issue_id,
+                planned_start_at: self.planned_start_at,
+                planned_end_at: self.planned_end_at,
                 created_at: self.created_at,
                 updated_at: self.updated_at,
             },
@@ -726,7 +730,8 @@ pub async fn backlog_for_team(
         r#"
         SELECT i.id, i.project_id, i.author_id, i.title, i.description,
                i.status, i.priority, i.position, i.effort, i.assignee_id,
-               i.parent_issue_id, i.created_at, i.updated_at,
+               i.parent_issue_id, i.planned_start_at, i.planned_end_at,
+               i.created_at, i.updated_at,
                p.name AS project_name
         FROM issues i
         JOIN projects p ON p.id = i.project_id

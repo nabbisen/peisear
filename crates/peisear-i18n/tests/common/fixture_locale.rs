@@ -48,6 +48,9 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::FieldMustBeDateFormat { field } => {
             format!("[fx-date-format] {}", field_label(field))
         }
+        MessageKey::FieldMustBeDatetimeFormat { field } => {
+            format!("[fx-datetime-format] {}", field_label(field))
+        }
         MessageKey::InvalidStatus => "[fx] bad status".to_string(),
         MessageKey::InvalidPriority => "[fx] bad priority".to_string(),
 
@@ -818,6 +821,9 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::CannotDemoteIssueWithSubIssuesMessage => {
             "[fx-cannot-demote-with-subs]".to_string()
         }
+        MessageKey::IssuePlannedEndBeforeStartMessage => {
+            "[fx-planned-end-before-start]".to_string()
+        }
 
         // ---- I18N-006: handlers/api_users.rs (BurnoutSignal.label) ----
         MessageKey::OverloadStreakSignalMessage {
@@ -865,6 +871,8 @@ pub fn render(key: MessageKey) -> String {
             recent_done_count,
             window_days,
         } => format!("[fx-recent-throughput] {recent_done_count}/{window_days}"),
+        MessageKey::ProjectCalendarPrivacyFootnote => "[fx-project-calendar-privacy]".to_string(),
+        MessageKey::PersonalCalendarPrivacyFootnote => "[fx-personal-calendar-privacy]".to_string(),
     }
 }
 
@@ -896,6 +904,8 @@ fn field_label(field: Field) -> &'static str {
         Field::Role => "[fx-role]",
         Field::Email => "[fx-email]",
         Field::Project => "[fx-project]",
+        Field::PlannedStartDate => "[fx-planned-start-date]",
+        Field::PlannedEndDate => "[fx-planned-end-date]",
     }
 }
 

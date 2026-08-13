@@ -56,6 +56,8 @@ async fn insert_open_issue(
             priority,
             effort,
             assignee_id: None,
+            planned_start_at: None,
+            planned_end_at: None,
         },
     )
     .await

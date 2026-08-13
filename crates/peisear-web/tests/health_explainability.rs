@@ -247,6 +247,8 @@ async fn wip_compliance_explanation_uses_corrected_wording() {
                 priority: peisear_core::Priority::Medium,
                 effort: None,
                 assignee_id: Some(&user_id),
+                planned_start_at: None,
+                planned_end_at: None,
             },
         )
         .await

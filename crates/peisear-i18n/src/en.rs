@@ -53,6 +53,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::FieldMustBeDateFormat { field } => {
             format!("{} must be in YYYY-MM-DD format.", field_label(field))
         }
+        MessageKey::FieldMustBeDatetimeFormat { field } => {
+            format!("{} must be in YYYY-MM-DDTHH:MM format.", field_label(field))
+        }
         MessageKey::InvalidStatus => "Invalid status".to_string(),
         MessageKey::InvalidPriority => "Invalid priority".to_string(),
 
@@ -1071,6 +1074,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::CannotDemoteIssueWithSubIssuesMessage => {
             "cannot demote an issue that has its own sub-issues".to_string()
         }
+        MessageKey::IssuePlannedEndBeforeStartMessage => {
+            "planned end date must be on or after planned start date".to_string()
+        }
 
         // ---- I18N-006: handlers/api_users.rs (BurnoutSignal.label) ----
         MessageKey::OverloadStreakSignalMessage {
@@ -1128,6 +1134,13 @@ pub(crate) fn render(key: MessageKey) -> String {
             recent_done_count,
             window_days,
         } => format!("{recent_done_count} done in last {window_days}d"),
+        MessageKey::ProjectCalendarPrivacyFootnote => {
+            "Calendar note: this view shows planned issue work for this project. Personal \
+             schedules are not aggregated here. Each member's individual calendar is private \
+             to that person."
+                .to_string()
+        }
+        MessageKey::PersonalCalendarPrivacyFootnote => "Private to you".to_string(),
     }
 }
 
@@ -1233,6 +1246,8 @@ fn field_label(field: Field) -> &'static str {
         Field::Role => "Role",
         Field::Email => "Email",
         Field::Project => "Project",
+        Field::PlannedStartDate => "Planned start date",
+        Field::PlannedEndDate => "Planned end date",
     }
 }
 

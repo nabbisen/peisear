@@ -67,6 +67,74 @@ async fn issue_update_with_stale_timestamp_returns_409() {
     );
 }
 
+/// `CAL-001` §2.4 (RFC 002): `planned_start_at`/`planned_end_at` join
+/// the existing issue `UPDATE`'s `SET` clause rather than getting a
+/// statement of their own. This test exists specifically because
+/// `issue_update_with_stale_timestamp_returns_409` above never
+/// touches the two new columns at all — it cannot catch a regression
+/// where *only* a planned-dates edit escapes the lock.
+///
+/// **Not demonstrated failing first, unlike this project's usual
+/// discipline for a guard correction — reported rather than forced.**
+/// Splitting the two columns into a second `UPDATE` *inside this same
+/// function* does not fail this test: `check_optimistic_lock` compares
+/// the submitted timestamp against the row's live `updated_at`
+/// *before any write runs*, and every request through this endpoint
+/// resubmits title/status/etc. unconditionally, so the co-located
+/// write's own `updated_at` touch still advances the clock on every
+/// save regardless of whether the date columns share its statement.
+/// Verified this empirically (a naive split still passes) before
+/// writing this doc comment, rather than assuming it from the code.
+///
+/// The failure `§2.4` actually describes needs a genuinely decoupled
+/// write path — one that does not go through this endpoint's lock
+/// check at all (e.g. a future direct-write function CAL-002's
+/// eventual drag-and-drop reschedule might add). Built a throwaway
+/// function shaped exactly like that, called it directly to simulate
+/// an out-of-band planned-date write, then submitted a normal edit
+/// holding the pre-write timestamp: it returned 303 (silent success),
+/// confirming the risk is real for *that* shape of mistake — evidence
+/// captured, then the throwaway function deleted (see the review
+/// request). Joining the columns into this statement is what makes
+/// that shape of mistake structurally unreachable through the shipped
+/// app today: there is no legitimate call site that writes planned
+/// dates without going through this lock-checked statement. This test
+/// still guards a real, narrower property — planned-date submissions
+/// go through the same locked endpoint as everything else — even
+/// though it has no naive-but-broken state reachable via this form to
+/// demonstrate against.
+#[tokio::test]
+async fn issue_planned_dates_only_edit_with_stale_timestamp_returns_409() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Test").await;
+    let issue_id = create_issue(&app.db, &project_id, &user_id, "Plan me").await;
+
+    let t0 = read_issue_updated_at(&app, &issue_id).await;
+
+    ensure_distinct_timestamp().await;
+    let resp =
+        post_issue_planned_dates_update(&app, &project_id, &issue_id, &t0, "2026-09-01T09:00")
+            .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::SEE_OTHER,
+        "first planned-dates-only edit should redirect on success, got {}",
+        resp.status_code()
+    );
+
+    let resp =
+        post_issue_planned_dates_update(&app, &project_id, &issue_id, &t0, "2026-09-02T09:00")
+            .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "second planned-dates-only edit with stale client_updated_at must 409, got {}",
+        resp.status_code()
+    );
+}
+
 #[tokio::test]
 async fn issue_update_with_missing_client_updated_at_is_rejected() {
     // Submitting without any client_updated_at must not silently
@@ -386,6 +454,34 @@ async fn post_issue_update(
             ("priority", "medium"),
             ("effort", ""),
             ("assignee_id", ""),
+            ("client_updated_at", client_updated_at),
+        ])
+        .await
+}
+
+/// POST `/projects/{project_id}/issues/{issue_id}` changing only
+/// `planned_start_at`, holding every other field constant. Title
+/// matches `create_issue`'s fixture value so this is genuinely a
+/// planned-dates-only edit, not a disguised title change.
+async fn post_issue_planned_dates_update(
+    app: &TestApp,
+    project_id: &str,
+    issue_id: &str,
+    client_updated_at: &str,
+    planned_start_at: &str,
+) -> axum_test::TestResponse {
+    let url = format!("/projects/{project_id}/issues/{issue_id}");
+    app.server
+        .post(&url)
+        .form(&[
+            ("title", "Plan me"),
+            ("description", "test body"),
+            ("status", "open"),
+            ("priority", "medium"),
+            ("effort", ""),
+            ("assignee_id", ""),
+            ("planned_start_at", planned_start_at),
+            ("planned_end_at", ""),
             ("client_updated_at", client_updated_at),
         ])
         .await
