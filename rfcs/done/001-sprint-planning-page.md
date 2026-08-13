@@ -1,6 +1,21 @@
 # RFC 0001: Sprint planning page
 
-**Status**: Accepted
+**Status**: Implemented (0.22.0) — minus the capacity hint, withdrawn on
+privacy grounds
+
+> **Implemented, with one component deliberately not built.** The page, both
+> move routes, the filters and the three read-only shapes shipped in 0.22.0
+> via `PLAN-001`. RFC 001's capacity hint did not: it sums each participating
+> member's capacity on a page that names the participants, so at one
+> participant the sum is that person's capacity. Withdrawn rather than shipped
+> and regretted; the design that replaces it is not yet written.
+>
+> **This RFC needed eight corrections between acceptance and delivery**, five
+> at handoff time and three after review, and two of those were defects rather
+> than staleness — a §D1-adjacent test-plan status code that contradicted the
+> shipped convention, and a positive privacy claim that was never true. It was
+> written 2026-05-04 and delivered 2026-08-13. An accepted RFC is a design
+> decision with a shelf life, and fifteen weeks exceeded this one's.
 **Target**: 0.20.0 (Phase C PR2)
 **Related spec sections**: §17 (Sprint Plan), §9 (Team / Sprint), §38.1 task 3
 **Last updated**: 2026-08-13 — five corrections, plus three more from PLAN-001's review

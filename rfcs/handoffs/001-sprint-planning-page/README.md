@@ -1,7 +1,7 @@
 # Handoffs — RFC 001, sprint planning page
 
 Implementation companion for
-[RFC 001](../../accepted/001-sprint-planning-page.md), target **0.22.0**.
+[RFC 001](../../done/001-sprint-planning-page.md), target **0.22.0**.
 
 **This file is an index, not a status board.** It lists what each handoff
 covers and what it depends on. It changes when a handoff is added — not when

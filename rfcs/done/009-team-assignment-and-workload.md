@@ -1,6 +1,15 @@
 # RFC 0009: Team assignment and workload scope
 
-**Status**: Accepted 2026-08-13
+**Status**: Implemented (0.22.0)
+
+> **Implemented in full by `TEAM-001`.** The split this RFC proposed — ship
+> assignment now, hold the workload report on an owner decision — turned out
+> to be unnecessary and, as written, impossible: `WorkloadStrip` iterates
+> whatever the query returns, so requirement 2 and "do not widen the
+> consumers" could not both hold. `NFR-PRIV-002` permits workload
+> distribution outright and `ISSUE-003` had already ruled on the member-count
+> case, so there was no privacy gate to defer behind. Both corrected here
+> before delivery.
 **Target**: 0.22.0 — **before** RFC 001
 **Related spec sections**: §9 (Team / Sprint), §11.5 (individual vs aggregate boundary), §17 (Sprint Plan)
 **Related requirements**: `FR-TEAM-*`, `FR-ISS-004`, `FR-HLT-*`, `NFR-PRIV-007`

@@ -1,7 +1,7 @@
 # Handoffs — RFC 009, team assignment and workload scope
 
 Implementation companions for
-[RFC 009](../../accepted/009-team-assignment-and-workload.md), target
+[RFC 009](../../done/009-team-assignment-and-workload.md), target
 **0.22.0**, ahead of RFC 001.
 
 **This file is an index, not a status board.** It lists what each handoff

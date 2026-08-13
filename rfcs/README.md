@@ -31,8 +31,6 @@ Design settled. Implementation may begin.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 009 | [Team assignment and workload scope](./accepted/009-team-assignment-and-workload.md) — *has handoffs* | 0.22.0 — **before 001** |
-| 001 | [Sprint planning page](./accepted/001-sprint-planning-page.md) — *has handoffs*, amended 2026-08-13 | 0.22.0 |
 | 002 | [Calendar surfaces](./accepted/002-calendar-surfaces.md) | 0.23.0 |
 | 003 | [Inbox refinements](./accepted/003-inbox-refinements.md) | 0.24.0 |
 
@@ -49,6 +47,8 @@ Open for review. Design may still change.
 
 | ID | Title | Shipped in |
 |----|-------|------------|
+| 001 | [Sprint planning page](./done/001-sprint-planning-page.md) — *has handoffs* | 0.22.0 — minus the capacity hint |
+| 009 | [Team assignment and workload scope](./done/009-team-assignment-and-workload.md) — *has handoffs* | 0.22.0 |
 | 006 | [i18n architecture and vocabulary guard](./done/006-i18n-architecture.md) — *has handoffs* | 0.21.0 |
 | 007 | [0.20.0 compliance pass](./done/007-compliance-pass.md) | 0.20.0 |
 | 000 | [RFC lifecycle policy](./done/000-rfc-lifecycle-policy.md) | policy in effect |
@@ -69,9 +69,9 @@ the RFC number they are keyed to.
 
 | Directory | Governing RFC |
 |---|---|
-| [`handoffs/001-sprint-planning-page/`](./handoffs/001-sprint-planning-page/README.md) | 001 — active |
+| [`handoffs/001-sprint-planning-page/`](./handoffs/001-sprint-planning-page/README.md) | 001 — historical, RFC implemented |
 | [`handoffs/005-quality-consolidation/`](./handoffs/005-quality-consolidation/README.md) | 005 — §9 delivered at 0.22.0; the rest at 0.24.0 |
-| [`handoffs/009-team-assignment-and-workload/`](./handoffs/009-team-assignment-and-workload/README.md) | 009 — active |
+| [`handoffs/009-team-assignment-and-workload/`](./handoffs/009-team-assignment-and-workload/README.md) | 009 — historical, RFC implemented |
 | [`handoffs/006-i18n-architecture/`](./handoffs/006-i18n-architecture/README.md) | 006 — historical, RFC implemented; `COPY-001` outstanding |
 | [`handoffs/007-compliance-pass/`](./handoffs/007-compliance-pass/README.md) | 007 — historical, RFC implemented |
 

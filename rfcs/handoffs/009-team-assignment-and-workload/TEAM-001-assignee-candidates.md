@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-13
 **Priority**: P1 — first feature work of 0.22.0
-**Governing RFC**: [009](../../accepted/009-team-assignment-and-workload.md),
+**Governing RFC**: [009](../../done/009-team-assignment-and-workload.md),
 requirements 1–4 and D1–D3
 **Depends on**: nothing
 

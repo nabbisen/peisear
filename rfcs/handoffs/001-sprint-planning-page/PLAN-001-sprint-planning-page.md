@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-13
 **Priority**: P1 — the feature work of 0.22.0
-**Governing RFC**: [001](../../accepted/001-sprint-planning-page.md)
+**Governing RFC**: [001](../../done/001-sprint-planning-page.md)
 **Depends on**: TEAM-001 (landed). RFC 001's assignee filter was meaningless
 before it.
 
