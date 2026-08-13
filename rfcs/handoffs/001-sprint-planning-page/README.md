@@ -15,6 +15,11 @@ one is reviewed.
 | # | Handoff | Covers | Depends on |
 |---|---|---|---|
 | PLAN-001 | [PLAN-001](./PLAN-001-sprint-planning-page.md) | The page, both move routes, filters, read-only modes — RFC 001 minus the capacity hint | TEAM-001 |
+| REL-0.22.0 | [REL-0.22.0](./REL-0.22.0-release-candidate.md) | Release candidate for **all** of 0.22.0 — PLAN-001, TEAM-001, QA-001, COPY-001 | PLAN-001 |
+
+**The release candidate lives here** because RFC 001 is 0.22.0's headline
+work, not because it covers only RFC 001. It carries the whole release,
+including QA-001 (RFC 005 §9), TEAM-001 (RFC 009) and COPY-001 (RFC 006).
 
 ## The capacity hint is not here
 
