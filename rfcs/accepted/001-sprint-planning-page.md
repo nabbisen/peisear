@@ -3,7 +3,7 @@
 **Status**: Accepted
 **Target**: 0.20.0 (Phase C PR2)
 **Related spec sections**: §17 (Sprint Plan), §9 (Team / Sprint), §38.1 task 3
-**Last updated**: 2026-08-13 — five corrections, see the amendment note
+**Last updated**: 2026-08-13 — five corrections, plus three more from PLAN-001's review
 
 > **Amendment note (2026-08-13).** This RFC was written fifteen weeks before
 > the release that implements it, and predates the i18n architecture, the
@@ -250,11 +250,26 @@ team plans.
 
 ### Read-only mode for completed sprints
 
-`SprintPlanPage` accepts `is_read_only: bool`. When true,
-the move forms are not rendered; the sprint section instead
-displays the historical view. The backlog column also hides
-itself entirely — re-opening a completed sprint to add
-issues is not a flow we support.
+*Corrected 2026-08-13, from PLAN-001's review.* There are **three** shapes,
+not two. An earlier version of this section described only "read-only", and
+`PLAN-001`'s handoff §2.2 compounded it by calling a viewer's page "the same
+read-only shape completed sprints already use" — which would take the backlog
+away from a viewer who is reading a live plan.
+
+| Sprint status | Role | Backlog column | Move buttons |
+|---|---|---|---|
+| Planned | `admin` / `member` | shown | shown |
+| Planned | `viewer` | shown | hidden |
+| Active | any | shown | hidden |
+| Completed | any | **hidden** | hidden |
+
+A viewer is reading a plan in progress and needs to see what is not yet in it.
+Nobody is planning a completed sprint — re-opening one to add issues is not a
+flow we support, which is why the backlog goes away there and only there.
+
+Two flags, not one: `can_move` (`role.can_write() && status == Planned`)
+governs the forms; the backlog section is conditional on
+`status != Completed`.
 
 ## Test plan
 
@@ -272,12 +287,24 @@ with at least:
    top-level + a sub-issue, GET the page, assert sub-issue
    title is absent from both columns.
 5. `completed_sprint_plan_is_read_only` — GET on a completed
-   sprint returns 200 but the response contains no `<form>`
-   tags inside either column section.
+   sprint returns 200, the **backlog section is absent**, and the
+   sprint section contains no `/plan/add` or `/plan/remove` form
+   action. *Corrected 2026-08-13*: the original wording ("no
+   `<form>` tags inside either column section") was wrong twice — it
+   reads as though both sections render on a completed sprint, and is
+   vacuously satisfied when one is absent, so it never contradicted
+   the prose it appeared to contradict. A blanket `<form>` assertion
+   would also fail on any page, since the shell's logout form is a
+   POST form. Assert the action targets, not the tag.
 6. `non_team_member_gets_404` — auth boundary check
    (*corrected 2026-08-13*; was `_403`).
 7. `committed_total_matches_sum_of_effort` — render with
-   2 issues of effort 5 and 8, confirm "13 pts" appears.
+   2 issues of effort 5 and 8, confirm **"13 pt"** appears.
+   *Corrected 2026-08-13*: this said "13 pts". The product's unit is
+   invariant singular (`PointsValue`, `PointsUnitSuffix`, `/me`'s
+   load chip). A literal taken from this RFC's May HTML sketch became
+   a test that then dictated shipped copy against the product's own
+   convention — the test was the defect, not the copy.
 
 Add a CI job `test-peisear-web-sprint-plan` mirroring the
 existing per-test-crate jobs.
