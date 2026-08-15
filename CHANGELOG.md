@@ -7,6 +7,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.23.0] — 2026-08-16
+
+### Added
+
+- **Two calendar surfaces** (`CAL-001`, `CAL-002`, RFC 002):
+  `/today/calendar`, the viewer's own assigned issues across every project,
+  and `/projects/{id}/calendar`, every issue in a project with an overlay
+  band for its active sprint. Three view modes — day, week, month — with
+  period navigation, and a plan date range (`planned_start_at`,
+  `planned_end_at`) now settable from the issue edit form. Month view
+  degrades to a chronological list below 640px. A crowding chip marks a day
+  holding more than four overlapping blocks — a state, never a count or a
+  percentage.
+  - **Times are shown in UTC.** They are not converted to the reader's time
+    zone: a plan date typed as 09:00 reads as 09:00 only for a reader on
+    UTC. The page says so; this is the single most likely surprise in the
+    release, deferred deliberately to the locale work rather than
+    overlooked.
+  - **There is no team axis, permanently.** Laying members' time out
+    against each other is the line this product does not cross — a tool
+    that did that would push toward oversight rather than planning. For the
+    same reason, the calendar shows no fill rate, no free hours, and no
+    comparison to a previous period; none of that is coming later, it is
+    ruled out.
+  - This is the first release to carry a schema migration
+    (`0016_issue_planned_dates.sql`): two nullable columns on `issues`, two
+    triggers enforcing that a set end date is not before its start date,
+    and a partial index. Existing rows are unaffected and read back `NULL`
+    for both new columns. **Downgrading to 0.22.0 against a database that
+    has run this migration is not supported**: the older binary's migrator
+    does not recognise the applied migration and refuses to start, rather
+    than running against a schema it does not fully know. Recovery from
+    that state is a restore from a pre-migration backup, not a live
+    downgrade.
+
 ## [0.22.0] — 2026-08-13
 
 ### Fixed
