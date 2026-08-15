@@ -15,7 +15,8 @@ one is reviewed.
 | # | Handoff | Covers | Depends on |
 |---|---|---|---|
 | CAL-001 | [CAL-001](./CAL-001-planned-dates-schema.md) | Migration `0016`, the two `Issue` fields, the storage queries, and the issue form's date inputs | — |
-| CAL-002 | [CAL-002](./CAL-002-calendar-surfaces.md) | The two calendar surfaces, view modes, period navigation, sprint band, crowding chip; **completes 0.23.0** | CAL-001 |
+| CAL-002 | [CAL-002](./CAL-002-calendar-surfaces.md) | The two calendar surfaces, view modes, period navigation, sprint band, crowding chip | CAL-001 |
+| REL-0.23.0 | [REL-0.23.0](./REL-0.23.0-release-candidate.md) | Release candidate for 0.23.0 — and the first with a schema migration to account for | CAL-002 |
 
 ## Why two handoffs
 
