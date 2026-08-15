@@ -15,7 +15,7 @@ one is reviewed.
 | # | Handoff | Covers | Depends on |
 |---|---|---|---|
 | CAL-001 | [CAL-001](./CAL-001-planned-dates-schema.md) | Migration `0016`, the two `Issue` fields, the storage queries, and the issue form's date inputs | — |
-| CAL-002 | *not yet written* | The two calendar surfaces, view modes, period navigation, sprint band, crowding chip | CAL-001 |
+| CAL-002 | [CAL-002](./CAL-002-calendar-surfaces.md) | The two calendar surfaces, view modes, period navigation, sprint band, crowding chip; **completes 0.23.0** | CAL-001 |
 
 ## Why two handoffs
 
@@ -30,8 +30,11 @@ wrong on their own, before any of it is load-bearing for a page — and a
 migration is the one thing in this project that cannot be corrected by editing
 a file.
 
-**CAL-002 is written after CAL-001 is reviewed**, not before. What CAL-001
-finds about the schema should shape it.
+CAL-002 was written after CAL-001 was reviewed, not before — and what CAL-001
+found did shape it. Three of CAL-002's five reconciliations exist because of
+CAL-001: the test target it created, the trigger-message register question it
+settled, and the UTC limitation it documented, which CAL-002 is the first
+surface to make visible to a user.
 
 ## RFC 002 was amended before dispatch
 
