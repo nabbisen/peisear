@@ -27,9 +27,9 @@
 #![deny(clippy::match_wildcard_for_single_variants)]
 
 use crate::message::{
-    DriftDirectionLabel, EntityKind, Field, HealthStateLabel, IndicatorLabel, IssueStatusLabel,
-    MessageKey, NavSection, NotificationChannelLabel, NotificationKindLabel, PriorityLabel,
-    SprintStatusLabel, TeamRoleLabel, TrendDirectionLabel,
+    CalendarViewLabel, DriftDirectionLabel, EntityKind, Field, HealthStateLabel, IndicatorLabel,
+    IssueStatusLabel, MessageKey, NavSection, NotificationChannelLabel, NotificationKindLabel,
+    PriorityLabel, SprintStatusLabel, TeamRoleLabel, TrendDirectionLabel,
 };
 
 pub(crate) fn render(key: MessageKey) -> String {
@@ -1141,6 +1141,27 @@ pub(crate) fn render(key: MessageKey) -> String {
                 .to_string()
         }
         MessageKey::PersonalCalendarPrivacyFootnote => "Private to you".to_string(),
+        MessageKey::PersonalCalendarPageTitle => "Calendar".to_string(),
+        MessageKey::ProjectCalendarPageTitle { project_name } => {
+            format!("Calendar — {project_name}")
+        }
+        MessageKey::CalendarBreadcrumbWord => "Calendar".to_string(),
+        MessageKey::CalendarViewName { view } => calendar_view_label(view).to_string(),
+        MessageKey::CalendarCellAriaLabel { month, day, count } => {
+            format!("{} {day}, {count} issues scheduled", month_name(month))
+        }
+        MessageKey::CrowdingChipAriaLabel { state } => {
+            format!("Crowded day: {}.", health_state_label(state))
+        }
+        MessageKey::CalendarUtcNote => "Times are shown in UTC.".to_string(),
+        MessageKey::SprintBandAriaLabel { sprint_name } => {
+            format!("Active sprint: {sprint_name}")
+        }
+        MessageKey::NoPlannedIssuesMessage => {
+            "No issues with a planned date in this range.".to_string()
+        }
+        MessageKey::CalendarViewSwitcherAriaLabel => "Change calendar view and date".to_string(),
+        MessageKey::CalendarMoreIssuesLabel { count } => format!("+{count} more"),
     }
 }
 
@@ -1204,6 +1225,38 @@ fn health_state_label(state: HealthStateLabel) -> &'static str {
         HealthStateLabel::Insufficient => "no data",
         HealthStateLabel::Good => "good",
         HealthStateLabel::Watch => "watch",
+    }
+}
+
+fn calendar_view_label(view: CalendarViewLabel) -> &'static str {
+    match view {
+        CalendarViewLabel::Day => "Day",
+        CalendarViewLabel::Week => "Week",
+        CalendarViewLabel::Month => "Month",
+    }
+}
+
+/// `CAL-002` §2.2: the calendar cell aria-label's date is rendered
+/// here, not interpolated as a pre-formatted string built by the
+/// caller — `peisear-i18n` has no `chrono` dependency (`I18N-001`
+/// §4.1), so `month`/`day` arrive as plain integers and the
+/// month-name mapping (an English-prose decision a future locale
+/// would want to own) lives in this crate, not `components/calendar.rs`.
+fn month_name(month: u32) -> &'static str {
+    match month {
+        1 => "January",
+        2 => "February",
+        3 => "March",
+        4 => "April",
+        5 => "May",
+        6 => "June",
+        7 => "July",
+        8 => "August",
+        9 => "September",
+        10 => "October",
+        11 => "November",
+        12 => "December",
+        _ => "?",
     }
 }
 

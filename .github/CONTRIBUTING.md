@@ -76,9 +76,9 @@ cargo test -p peisear-storage --lib
 cargo test -p peisear-i18n
 cargo test -p peisear-notify  -- --test-threads=1
 for t in assignee_candidates auth_boundary board_keyboard breadcrumb \
-         calendar health_explainability issue_edit_url optimistic_lock search \
-         smoke sprint_plan status_segment sub_issues today_panel view_state \
-         workload_privacy; do
+         calendar calendar_surfaces health_explainability issue_edit_url \
+         optimistic_lock search smoke sprint_plan status_segment sub_issues \
+         today_panel view_state workload_privacy; do
   cargo test -p peisear-web --test "$t" -- --test-threads=1
 done
 ```

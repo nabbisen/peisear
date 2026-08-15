@@ -11,8 +11,8 @@ use tower_http::{compression::CompressionLayer, services::ServeDir, trace::Trace
 use crate::{
     AppState,
     handlers::{
-        api_users, auth, issues, me, notification_preferences, notifications, projects, redirects,
-        root, search, settings, sprints, teams,
+        api_users, auth, calendar, issues, me, notification_preferences, notifications, projects,
+        redirects, root, search, settings, sprints, teams,
     },
 };
 
@@ -137,6 +137,8 @@ pub fn build_router(state: AppState) -> Router {
         // 308 Permanent Redirect.
         .route("/today", get(me::page))
         .route("/me", get(redirects::me_to_today))
+        // Calendar, personal axis (CAL-002 / RFC 002).
+        .route("/today/calendar", get(calendar::personal_page))
         // Global search (Phase A Step 4, peisear-feature-spec-v2.1 §4.5).
         // /search is the HTML results page (form submission, direct URL).
         // /api/search is the JSON typeahead used by the navbar input.
@@ -161,6 +163,8 @@ pub fn build_router(state: AppState) -> Router {
             get(projects::edit_page).post(projects::update),
         )
         .route("/projects/{id}/delete", post(projects::delete))
+        // Calendar, project axis (CAL-002 / RFC 002).
+        .route("/projects/{id}/calendar", get(calendar::project_page))
         // Issues
         .route(
             "/projects/{id}/issues/new",

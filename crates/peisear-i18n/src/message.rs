@@ -356,6 +356,26 @@ impl HealthStateLabel {
     }
 }
 
+/// `CAL-002`'s three calendar view modes. Closed system vocabulary
+/// (the URL's `?view=` parameter, not user data), same shape as
+/// `HealthStateLabel` above.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CalendarViewLabel {
+    Day,
+    Week,
+    Month,
+}
+
+impl CalendarViewLabel {
+    pub fn all() -> [CalendarViewLabel; 3] {
+        [
+            CalendarViewLabel::Day,
+            CalendarViewLabel::Week,
+            CalendarViewLabel::Month,
+        ]
+    }
+}
+
 /// Which word `components/issues.rs::render_trend_chip` renders for
 /// a non-flat `peisear_core::project_health::Trend`. `Trend::Flat`
 /// has no delta and a different sentence shape ("roughly flat" vs.
@@ -1913,6 +1933,71 @@ pub enum MessageKey {
     /// Personal-axis footer. Spec §16.4; both documents agree on
     /// this one.
     PersonalCalendarPrivacyFootnote,
+
+    // ---- CAL-002 (RFC 002): the two calendar surfaces ----
+    PersonalCalendarPageTitle,
+    ProjectCalendarPageTitle {
+        project_name: String,
+    },
+    /// Breadcrumb terminal word, same one-word-per-action-page
+    /// pattern as `SprintPlanBreadcrumbWord`.
+    CalendarBreadcrumbWord,
+    CalendarViewName {
+        view: CalendarViewLabel,
+    },
+    /// A calendar day cell's `aria-label` — RFC 002 §Accessibility's
+    /// *"May 3, 2 issues scheduled"* shape, composed as one key
+    /// (§D6 rule 7) rather than assembled from a pre-formatted date
+    /// string. `month`/`day` are plain integers, not a `chrono` type
+    /// or a pre-rendered "May 3" — `peisear-i18n` has no workspace
+    /// dependencies (`I18N-001` §4.1), so the month-name lookup and
+    /// the sentence shape both live in `en.rs`, where a future locale
+    /// could render the date differently. `count` is never inflected
+    /// — `CAL-002` §2.2: this project renders every count uninflected
+    /// (`WorkloadTitle`, `PointsValue`); a `count == 1` branch here
+    /// would be the first inflection logic in the codebase, and
+    /// inflection is a locale problem RFC 006 deliberately leaves
+    /// unsolved.
+    CalendarCellAriaLabel {
+        month: u32,
+        day: u32,
+        count: i64,
+    },
+    /// The crowding chip's `aria-label`. Carries the state word only
+    /// — never a count, a ratio, or the threshold itself (`§16.6`,
+    /// `CAL-002` §2.3): the chip signals *that* a day is crowded, not
+    /// *how* crowded, and a number here would be exactly the fill
+    /// rate that requirement prohibits.
+    CrowdingChipAriaLabel {
+        state: HealthStateLabel,
+    },
+    /// Both axes, `CAL-002` §2.5: CAL-001 recorded the UTC-only
+    /// limitation in `Issue::planned_start_at`'s doc comment, where a
+    /// future maintainer reads it; this is where a *user* first sees
+    /// it, since it's the first surface that renders a planned time
+    /// rather than just storing one.
+    CalendarUtcNote,
+    /// The project-axis sprint band's `aria-label`. `sprint_name` is
+    /// user data (already visible on the sprint's own detail page);
+    /// naming it here discloses nothing new.
+    SprintBandAriaLabel {
+        sprint_name: String,
+    },
+    /// Shared by both axes' empty state — no issues with a planned
+    /// date overlap the visible window.
+    NoPlannedIssuesMessage,
+    /// The `<form method="get">` wrapping the view-mode switcher,
+    /// same role `BacklogFilterAriaLabel` plays on the sprint plan
+    /// page.
+    CalendarViewSwitcherAriaLabel,
+    /// Month view's per-cell overflow indicator when more than three
+    /// blocks land on one day. One key rather than a `format!` at the
+    /// call site (§D6 rule 7) — `count` is the number *not* shown,
+    /// not a quantity §16.6 constrains (it's a UI overflow indicator,
+    /// unrelated to the crowding chip's own no-quantity rule).
+    CalendarMoreIssuesLabel {
+        count: i64,
+    },
 }
 
 impl MessageKey {
@@ -2608,7 +2693,34 @@ impl MessageKey {
             },
             MessageKey::ProjectCalendarPrivacyFootnote,
             MessageKey::PersonalCalendarPrivacyFootnote,
+            MessageKey::PersonalCalendarPageTitle,
+            MessageKey::ProjectCalendarPageTitle {
+                project_name: "Website".to_string(),
+            },
+            MessageKey::CalendarBreadcrumbWord,
+            MessageKey::CalendarCellAriaLabel {
+                month: 5,
+                day: 3,
+                count: 2,
+            },
+            MessageKey::CalendarUtcNote,
+            MessageKey::SprintBandAriaLabel {
+                sprint_name: "Sprint 4".to_string(),
+            },
+            MessageKey::NoPlannedIssuesMessage,
+            MessageKey::CalendarViewSwitcherAriaLabel,
+            MessageKey::CalendarMoreIssuesLabel { count: 3 },
         ];
+        keys.extend(
+            CalendarViewLabel::all()
+                .into_iter()
+                .map(|view| MessageKey::CalendarViewName { view }),
+        );
+        keys.extend(
+            HealthStateLabel::all()
+                .into_iter()
+                .map(|state| MessageKey::CrowdingChipAriaLabel { state }),
+        );
         keys.extend(TrendDirectionLabel::all().into_iter().map(|direction| {
             MessageKey::TrendLabel {
                 direction,

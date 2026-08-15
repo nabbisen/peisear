@@ -2243,3 +2243,18 @@ pub mod sprints {
     /// still means recent.
     pub const VELOCITY_MEDIAN_WINDOW: usize = 5;
 }
+
+/// The two calendar surfaces (`CAL-002` / RFC 002 §16).
+pub mod calendar {
+    /// Above this many overlapping planned-issue blocks on one day,
+    /// the calendar shows a `Watch` crowding chip near that date
+    /// (RFC 002 open question 2's default). Named as a const so it's
+    /// easy to tune — the number itself was "pulled from a guess" per
+    /// the RFC's own words, not derived from data.
+    ///
+    /// The chip this threshold drives carries a state word only,
+    /// never a count or a ratio against this number (`§16.6`) — it
+    /// exists to decide *whether* to show `Watch`, not to be shown
+    /// itself.
+    pub const CROWDING_WATCH_THRESHOLD: usize = 4;
+}

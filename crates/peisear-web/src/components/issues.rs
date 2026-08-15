@@ -44,6 +44,7 @@ pub fn ProjectDetailPage(
     let list_link = format!("/projects/{}?view=list", project.id);
     let edit_link = format!("/projects/{}/edit", project.id);
     let new_issue_link = format!("/projects/{}/issues/new", project.id);
+    let calendar_link = format!("/projects/{}/calendar", project.id);
     let project_id = project.id.clone();
     let project_id_for_board = project.id.clone();
     let project_id_for_list = project.id.clone();
@@ -92,6 +93,9 @@ pub fn ProjectDetailPage(
                         <a href=board_link class=board_classes>{t(MessageKey::ViewToggleBoard)}</a>
                         <a href=list_link class=list_classes>{t(MessageKey::ViewToggleList)}</a>
                     </div>
+                    <a href=calendar_link class="btn btn-ghost btn-sm">
+                        {t(MessageKey::CalendarBreadcrumbWord)}
+                    </a>
                     <a href=edit_link class="btn btn-ghost btn-sm">{t(MessageKey::EditWord)}</a>
                     <a href=new_issue_link class="btn btn-primary btn-sm">{t(MessageKey::NewIssueLabel)}</a>
                 </div>

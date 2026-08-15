@@ -16,6 +16,7 @@
 
 pub mod auth;
 pub mod breadcrumb;
+pub mod calendar;
 pub mod error_page;
 pub mod issues;
 pub mod layout;
@@ -66,6 +67,44 @@ pub(crate) fn t(key: peisear_i18n::MessageKey) -> String {
 pub struct Column {
     pub status: peisear_core::IssueStatus,
     pub issues: Vec<peisear_core::Issue>,
+}
+
+/// `CAL-002`'s three calendar view modes. Shared between
+/// `handlers::calendar` (parses `?view=`, computes the window) and
+/// `components::calendar` (renders it) — same reason [`Column`]
+/// lives here rather than in either side alone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CalendarView {
+    Day,
+    Week,
+    Month,
+}
+
+impl CalendarView {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Day => "day",
+            Self::Week => "week",
+            Self::Month => "month",
+        }
+    }
+
+    pub fn to_i18n_label(self) -> peisear_i18n::CalendarViewLabel {
+        match self {
+            Self::Day => peisear_i18n::CalendarViewLabel::Day,
+            Self::Week => peisear_i18n::CalendarViewLabel::Week,
+            Self::Month => peisear_i18n::CalendarViewLabel::Month,
+        }
+    }
+}
+
+/// One day's worth of calendar blocks, for the week/month grids. An
+/// issue spanning multiple days appears once per [`CalendarDay`] it
+/// overlaps, clipped to the visible window.
+#[derive(Debug, Clone)]
+pub struct CalendarDay {
+    pub date: chrono::NaiveDate,
+    pub blocks: Vec<peisear_core::Issue>,
 }
 
 /// The closed set of notification kinds `notification_preferences`'s

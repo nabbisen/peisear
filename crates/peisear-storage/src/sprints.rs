@@ -763,3 +763,63 @@ pub async fn backlog_for_team(
         .map(BacklogIssueRow::into_backlog_row)
         .collect()
 }
+
+// ──────────────────────────────────────────────────────────────
+// Calendar sprint band (`CAL-002` / RFC 002)
+// ──────────────────────────────────────────────────────────────
+
+/// Active sprints overlapping `[from, to]` in the given project's
+/// team. Project axis only (`CAL-002` §4) — the personal axis
+/// intentionally never renders a sprint band, since it can span
+/// multiple teams' sprints and surfacing them all would turn the
+/// page into a sprint dashboard (RFC 002 must-have 7).
+///
+/// Only `active` sprints — a planned or completed sprint's band on a
+/// calendar would assert something about time that is not true (a
+/// planned sprint hasn't started; a completed one is over).
+///
+/// Reuses [`active_for_team`] rather than a new query: this
+/// project's business rule is at most one active sprint per team
+/// (enforced at `start`'s call site), so "active sprints overlapping
+/// a window" is "the team's one active sprint, if it overlaps" —
+/// `Vec` in the return type matches RFC 002's own signature, not a
+/// claim that more than one is possible.
+pub async fn active_sprints_overlapping(
+    pool: &Pool,
+    project_id: &str,
+    from: DateTime<Utc>,
+    to: DateTime<Utc>,
+) -> StorageResult<Vec<Sprint>> {
+    let team_id: Option<Option<String>> =
+        sqlx::query_scalar(r#"SELECT team_id FROM projects WHERE id = ?1"#)
+            .bind(project_id)
+            .fetch_optional(pool)
+            .await?;
+    // Outer `Option`: does the project row exist. Inner `Option`:
+    // is `team_id` NULL (a personal project). `.flatten()` collapses
+    // "no row" and "row, but no team" into the same outcome — no
+    // team, no sprint, nothing to overlap.
+    let Some(team_id) = team_id.flatten() else {
+        return Ok(Vec::new());
+    };
+    let Some(sprint) = active_for_team(pool, &team_id).await? else {
+        return Ok(Vec::new());
+    };
+    // sprints.starts_on/ends_on are DATE; widen to start-of-day and
+    // end-of-day UTC for the overlap check, per RFC 002 §Design.
+    let sprint_start = sprint
+        .starts_on
+        .and_hms_opt(0, 0, 0)
+        .expect("00:00:00 is always valid")
+        .and_utc();
+    let sprint_end = sprint
+        .ends_on
+        .and_hms_opt(23, 59, 59)
+        .expect("23:59:59 is always valid")
+        .and_utc();
+    if sprint_start <= to && sprint_end >= from {
+        Ok(vec![sprint])
+    } else {
+        Ok(Vec::new())
+    }
+}

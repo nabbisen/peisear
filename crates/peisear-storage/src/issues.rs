@@ -842,6 +842,16 @@ const PLANNED_WINDOW_OVERLAP_PREDICATE: &str = r#"
 /// Personal axis (`/today/calendar`, CAL-002) — self-only by
 /// construction (`§11.5`): the caller supplies `user_id`, there is no
 /// path to another user's planned issues through this function.
+///
+/// Top-level only — `CAL-002` §5 test 10 ("sub-issues appear on
+/// neither axis"). This filter was missing when `CAL-001` shipped
+/// this function: RFC 002 must-have 6 states "top-level" explicitly
+/// for the project axis but only implies it for the personal one
+/// ("sub-issues follow parent; they don't appear separately on the
+/// calendar" reads as a general rule, not a project-axis-only one),
+/// and `planned_for_project` already had the filter while this one
+/// didn't. Found while implementing CAL-002's test 10, fixed here
+/// rather than worked around at the render layer.
 pub async fn planned_for_user(
     pool: &Pool,
     user_id: &str,
@@ -856,6 +866,7 @@ pub async fn planned_for_user(
                created_at, updated_at
         FROM issues
         WHERE assignee_id = ?1
+          AND parent_issue_id IS NULL
           AND {PLANNED_WINDOW_OVERLAP_PREDICATE}
         ORDER BY planned_start_at ASC
         "#,

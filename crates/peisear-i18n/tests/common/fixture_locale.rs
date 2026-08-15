@@ -873,6 +873,25 @@ pub fn render(key: MessageKey) -> String {
         } => format!("[fx-recent-throughput] {recent_done_count}/{window_days}"),
         MessageKey::ProjectCalendarPrivacyFootnote => "[fx-project-calendar-privacy]".to_string(),
         MessageKey::PersonalCalendarPrivacyFootnote => "[fx-personal-calendar-privacy]".to_string(),
+        MessageKey::PersonalCalendarPageTitle => "[fx-personal-calendar-title]".to_string(),
+        MessageKey::ProjectCalendarPageTitle { project_name } => {
+            format!("[fx-project-calendar-title] {project_name}")
+        }
+        MessageKey::CalendarBreadcrumbWord => "[fx-calendar-breadcrumb]".to_string(),
+        MessageKey::CalendarViewName { view } => format!("[fx-calendar-view] {view:?}"),
+        MessageKey::CalendarCellAriaLabel { month, day, count } => {
+            format!("[fx-calendar-cell] {month}-{day} {count}")
+        }
+        MessageKey::CrowdingChipAriaLabel { state } => {
+            format!("[fx-crowding-chip] {}", health_state_label(state))
+        }
+        MessageKey::CalendarUtcNote => "[fx-calendar-utc-note]".to_string(),
+        MessageKey::SprintBandAriaLabel { sprint_name } => {
+            format!("[fx-sprint-band] {sprint_name}")
+        }
+        MessageKey::NoPlannedIssuesMessage => "[fx-no-planned-issues]".to_string(),
+        MessageKey::CalendarViewSwitcherAriaLabel => "[fx-calendar-view-switcher]".to_string(),
+        MessageKey::CalendarMoreIssuesLabel { count } => format!("[fx-calendar-more] {count}"),
     }
 }
 

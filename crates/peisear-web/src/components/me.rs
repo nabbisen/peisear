@@ -245,7 +245,12 @@ pub fn PersonalDashboard(
     view! {
         <AppShell title=t(MessageKey::PersonalDashboardTitle) user=user flash=flash>
             <div class="max-w-3xl mx-auto">
-                <h1 class="text-xl font-semibold mb-1">{t(MessageKey::PersonalDashboardTitle)}</h1>
+                <div class="flex items-center justify-between gap-3 mb-1">
+                    <h1 class="text-xl font-semibold">{t(MessageKey::PersonalDashboardTitle)}</h1>
+                    <a href="/today/calendar" class="btn btn-outline btn-sm">
+                        {t(MessageKey::CalendarBreadcrumbWord)}
+                    </a>
+                </div>
                 <p class="text-sm text-base-content/60 mb-4">
                     {t(MessageKey::PersonalDashboardSubtitle { display_name })}
                 </p>

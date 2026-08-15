@@ -2,6 +2,7 @@
 
 pub mod api_users;
 pub mod auth;
+pub mod calendar;
 pub mod issues;
 pub mod me;
 pub mod notification_preferences;
