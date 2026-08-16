@@ -1,6 +1,23 @@
 # RFC 0002: Calendar surfaces
 
-**Status**: Accepted
+**Status**: Implemented (0.23.0)
+
+> **Implemented in full**, across `CAL-001` (schema, core, storage, form) and
+> `CAL-002` (the two surfaces). Split at the data boundary because a migration
+> cannot be corrected by editing a file, and the split earned itself: three of
+> CAL-002's five reconciliations existed only because CAL-001 had already
+> landed.
+>
+> **Five corrections were needed between acceptance and dispatch**, three of
+> them defects rather than staleness — a footnote with two conflicting
+> normative texts, a `RAISE` string that was user-facing copy naming database
+> columns, and a privacy claim the implementation could have falsified. A sixth
+> defect was found during implementation: `planned_for_user` shipped without
+> the top-level filter its sibling had, because CAL-001's test table asked for
+> it on one side only.
+>
+> This is the second accepted RFC in a row to need substantial correction after
+> a long wait between acceptance and delivery. See RFC 001's status note.
 **Target**: **0.23.0** (was 0.21.0 — the release slipped while the compliance
 pass and RFC 006 took precedence)
 **Related spec sections**: §16 (Calendar), §10.2-10.4 (calendar

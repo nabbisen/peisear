@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-14
 **Priority**: P1 — completes 0.23.0
-**Governing RFC**: [002](../../accepted/002-calendar-surfaces.md)
+**Governing RFC**: [002](../../done/002-calendar-surfaces.md)
 **Depends on**: CAL-001 (landed, both rounds)
 
 ---

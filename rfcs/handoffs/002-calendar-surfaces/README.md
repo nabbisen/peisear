@@ -1,7 +1,7 @@
 # Handoffs — RFC 002, calendar surfaces
 
 Implementation companions for
-[RFC 002](../../accepted/002-calendar-surfaces.md), target **0.23.0**.
+[RFC 002](../../done/002-calendar-surfaces.md), target **0.23.0**.
 
 **This file is an index, not a status board.** It lists what each handoff
 covers and what it depends on. It changes when a handoff is added — not when
