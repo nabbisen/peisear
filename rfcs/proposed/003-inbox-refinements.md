@@ -1,10 +1,34 @@
 # RFC 0003: Inbox refinements
 
-**Status**: Accepted
-**Target**: 0.22.0 (Phase C PR4)
+**Status**: **Returned to Proposed 2026-08-16** — to be rewritten against the
+current code, not amended
+**Target**: 0.24.0 (was 0.22.0, then 0.21.0's slip carried it)
+
+> **Never dispatched.** No handoff was written and no part of this RFC was
+> implemented from it. Returned rather than amended because a reconciliation
+> against the shipped code found its shape no longer holds, not merely its
+> details: see `.git-exclude/tasks/architect/008-rfc-003-reconciliation.md`.
+>
+> - **Mark-all-read** is already built, hide-when-zero included — and was built
+> at 0.9.0–0.16.0, **before this RFC was accepted**. This item was wrong on the
+> day it was written, not merely stale now.
+> - **The silence-resume banner** triggers on `global_acknowledged`, which
+> means "has been prompted for the email opt-in", not "has silenced
+> notifications". Built as written, the banner would appear for the wrong users
+> and never for the right ones — and a test written from this RFC would pass,
+> because it would call the same function.
+> - **Migration `0017`** would add `users.email_opt_in` /
+> `email_opt_in_prompted_at`, a second home for facts the
+> `notification_preferences` global row already holds.
+> - **"Remove the prompt from registration"** has nothing to act on; there is
+> no such prompt.
+>
+> Genuinely unbuilt and unaffected: the inbox-triggered opt-in prompt, the
+> banner as a feature (its storage exists), and the sub-issue parent breadcrumb
+> in search, which is clean and small enough to dispatch on its own.
 **Related spec sections**: §19 (Inbox), §6 (notifications),
 §38.1 task 4
-**Last updated**: 2026-05-04
+**Last updated**: 2026-08-16 — returned to Proposed
 
 ## Summary
 
