@@ -15,6 +15,7 @@ one is reviewed.
 | # | Handoff | Covers | Depends on |
 |---|---|---|---|
 | INBOX-001 | [INBOX-001](./INBOX-001-inbox-refinements.md) | All three items: silence-resume banner, inbox email opt-in prompt, sub-issue parent in search | — |
+| REL-0.24.0 | [REL-0.24.0](./REL-0.24.0-release-candidate.md) | Release candidate for 0.24.0 | INBOX-001 |
 
 ## One handoff, not two
 
