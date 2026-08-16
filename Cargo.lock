@@ -2128,7 +2128,7 @@ dependencies = [
 
 [[package]]
 name = "peisear"
-version = "0.23.0"
+version = "0.24.0"
 dependencies = [
  "axum",
  "peisear-auth",
@@ -2143,7 +2143,7 @@ dependencies = [
 
 [[package]]
 name = "peisear-auth"
-version = "0.23.0"
+version = "0.24.0"
 dependencies = [
  "argon2",
  "chrono",
@@ -2155,7 +2155,7 @@ dependencies = [
 
 [[package]]
 name = "peisear-core"
-version = "0.23.0"
+version = "0.24.0"
 dependencies = [
  "chrono",
  "peisear-i18n",
@@ -2165,11 +2165,11 @@ dependencies = [
 
 [[package]]
 name = "peisear-i18n"
-version = "0.23.0"
+version = "0.24.0"
 
 [[package]]
 name = "peisear-notify"
-version = "0.23.0"
+version = "0.24.0"
 dependencies = [
  "chrono",
  "mail-builder",
@@ -2188,7 +2188,7 @@ dependencies = [
 
 [[package]]
 name = "peisear-storage"
-version = "0.23.0"
+version = "0.24.0"
 dependencies = [
  "chrono",
  "peisear-core",
@@ -2202,7 +2202,7 @@ dependencies = [
 
 [[package]]
 name = "peisear-web"
-version = "0.23.0"
+version = "0.24.0"
 dependencies = [
  "axum",
  "axum-extra",

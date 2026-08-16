@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.24.0] — 2026-08-16
+
+No schema migration — the smallest release since 0.20.1.
+
+### Added
+
+- **A silence-resume banner on `/inbox`** (`INBOX-001`, RFC 003). Silencing
+  all notifications was previously a one-way trip through the settings
+  page, with nothing on the inbox itself to say it had happened. The
+  inbox now shows a banner while every kind is silenced, with a single
+  button to resume.
+- **Sub-issue search results name their parent** (`INBOX-001`, RFC 003).
+  A sub-issue's result now reads `Open issue · Project / Parent title`
+  instead of `Open issue · Project`, so it reads in context rather than
+  looking like an unrelated top-level issue.
+
+### Changed
+
+- **The email opt-in prompt moved from `/settings/notifications` to
+  `/inbox`, and now appears only after the first notification**
+  (`INBOX-001`, RFC 003). It previously showed on the settings page at
+  any time, including before a user had received anything to react to —
+  the exact case the requirement it implements exists to prevent.
+
+### Removed
+
+- **`POST /settings/notifications/ack-global`.** The email opt-in form it
+  served no longer renders anywhere — the prompt lives at `/inbox` now.
+  The route was POST-only and reachable only from that form, so nothing
+  external held a link to it.
+
 ## [0.23.0] — 2026-08-16
 
 ### Added
