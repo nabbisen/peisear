@@ -888,6 +888,14 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::MarkAsReadAriaLabel => "Mark as read".to_string(),
         MessageKey::MarkReadButton => "Mark read".to_string(),
 
+        // ---- INBOX-001: silence-resume banner ----
+        MessageKey::SilenceResumeBannerAriaLabel => "Notifications silenced".to_string(),
+        MessageKey::SilenceResumeBannerMessage => {
+            "You've silenced all notification kinds. Resume to receive them again.".to_string()
+        }
+        MessageKey::ResumeNotificationsAriaLabel => "Resume all notification kinds".to_string(),
+        MessageKey::ResumeNotificationsButton => "Resume notifications".to_string(),
+
         // ---- I18N-005d: components/search ----
         MessageKey::SearchWord => "Search".to_string(),
         MessageKey::SearchPageTitleWithQuery { q } => format!("Search: {q}"),
@@ -905,6 +913,10 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::OpenIssueHitTypePrefix { project_name } => {
             format!("Open issue · {project_name}")
         }
+        MessageKey::SubIssueHitTypePrefix {
+            project_name,
+            parent_title,
+        } => format!("Open issue · {project_name} / {parent_title}"),
 
         // ---- I18N-005d: handlers/{settings,notification_preferences,notifications} ----
         MessageKey::WipLimitSavedFlash => "WIP limit saved".to_string(),

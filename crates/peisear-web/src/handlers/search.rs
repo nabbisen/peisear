@@ -159,6 +159,10 @@ pub async fn typeahead(
                 project_id,
                 project_name,
                 title,
+                // Typeahead is a compact popover with no room for
+                // breadcrumb context; the parent title is a
+                // results-page-only addition (`INBOX-001`).
+                parent_title: _,
             } => {
                 let url = format!("/projects/{project_id}/issues/{id}");
                 Some(TypeaheadIssue {

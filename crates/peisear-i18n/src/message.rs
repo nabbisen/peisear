@@ -1591,6 +1591,13 @@ pub enum MessageKey {
     MarkAsReadAriaLabel,
     MarkReadButton,
 
+    // ---- INBOX-001: the silence-resume banner and the email
+    // ---- opt-in prompt's move to /inbox (RFC 003 D1, D2) ----
+    SilenceResumeBannerAriaLabel,
+    SilenceResumeBannerMessage,
+    ResumeNotificationsAriaLabel,
+    ResumeNotificationsButton,
+
     // ---- I18N-005d: components/search ----
     /// Reused as the page `<title>` (empty-query case), the submit
     /// button, and the search form's own `aria-label` — identical
@@ -1614,6 +1621,18 @@ pub enum MessageKey {
     /// `project_name` is genuine user data.
     OpenIssueHitTypePrefix {
         project_name: String,
+    },
+    /// `INBOX-001`, RFC 003 D3: the sub-issue result's caption.
+    /// Keeps [`MessageKey::OpenIssueHitTypePrefix`]'s "Open issue
+    /// · " family intact (review correction, round 1 — the two
+    /// captions must announce the same hit type) and appends the
+    /// parent as a path segment, `project / parent`; the row's own
+    /// title (bold, rendered separately) supplies the RFC's third
+    /// element, "Project / Parent title / Sub-issue title"'s last
+    /// segment. Both fields are genuine user data.
+    SubIssueHitTypePrefix {
+        project_name: String,
+        parent_title: String,
     },
 
     // ---- I18N-005d: handlers/{settings,notification_preferences,notifications} ----
@@ -2552,6 +2571,10 @@ impl MessageKey {
             MessageKey::ViewContextLinkLabel,
             MessageKey::MarkAsReadAriaLabel,
             MessageKey::MarkReadButton,
+            MessageKey::SilenceResumeBannerAriaLabel,
+            MessageKey::SilenceResumeBannerMessage,
+            MessageKey::ResumeNotificationsAriaLabel,
+            MessageKey::ResumeNotificationsButton,
             MessageKey::SearchWord,
             MessageKey::SearchPageTitleWithQuery {
                 q: "kanban".to_string(),
@@ -2567,6 +2590,10 @@ impl MessageKey {
             MessageKey::ProjectHitTypeLabel,
             MessageKey::OpenIssueHitTypePrefix {
                 project_name: "Frontend Engineering".to_string(),
+            },
+            MessageKey::SubIssueHitTypePrefix {
+                project_name: "Frontend Engineering".to_string(),
+                parent_title: "Fix auth flow".to_string(),
             },
             MessageKey::WipLimitSavedFlash,
             MessageKey::CapacityRowAddedFlash,

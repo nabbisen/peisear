@@ -17,6 +17,17 @@
 //! - Empty state explicitly says "you'll see notifications
 //!   when something needs a glance" — frames the inbox as a
 //!   reflective surface, not a queue.
+//!
+//! Two banners can render above the list (`INBOX-001`, RFC 003),
+//! independently of each other, both inside `<main>` — not the
+//! app shell, since a banner on every page reads as an alarm and
+//! the user came here to look at notifications:
+//! - The silence-resume banner, when `all_kinds_silenced` is
+//!   true. One click deletes the rows `silence_all` created.
+//! - The email opt-in prompt, moved here from
+//!   `/settings/notifications` — it now appears only after the
+//!   user has received at least one notification, which the
+//!   settings page had no way to gate on.
 
 use axum::response::Html;
 use leptos::prelude::*;
@@ -34,9 +45,56 @@ pub fn InboxPage(
     items: Vec<Notification>,
     unread_count: i64,
     flash: Option<String>,
+    is_silenced: bool,
+    show_email_prompt: bool,
 ) -> impl IntoView {
     let has_items = !items.is_empty();
     let has_unread = unread_count > 0;
+
+    let silence_resume_banner = is_silenced.then(|| {
+        view! {
+            <section class="alert alert-warning mb-4" role="status"
+                     aria-label=t(MessageKey::SilenceResumeBannerAriaLabel)>
+                <div class="flex-1">
+                    <p class="text-sm">{t(MessageKey::SilenceResumeBannerMessage)}</p>
+                </div>
+                <form method="post" action="/inbox/resume">
+                    <button type="submit" class="btn btn-sm btn-primary"
+                            aria-label=t(MessageKey::ResumeNotificationsAriaLabel)>
+                        {t(MessageKey::ResumeNotificationsButton)}
+                    </button>
+                </form>
+            </section>
+        }
+    });
+
+    let email_opt_in_prompt = show_email_prompt.then(|| {
+        view! {
+            <section class="alert alert-info mb-4" role="status"
+                     aria-label=t(MessageKey::FirstTimeEmailPromptAriaLabel)>
+                <div class="flex-1">
+                    <h2 class="font-medium">{t(MessageKey::EmailNotificationsHeading)}</h2>
+                    <p class="text-sm opacity-90 mt-1">
+                        {t(MessageKey::EmailOptInPromptBody)}
+                    </p>
+                </div>
+                <form method="post" action="/inbox/email-opt-in"
+                      class="flex gap-2 flex-wrap items-center">
+                    <input type="hidden" name="email_opt_in" value="yes"/>
+                    <button type="submit" class="btn btn-sm btn-primary">
+                        {t(MessageKey::EmailOptInYesButton)}
+                    </button>
+                </form>
+                <form method="post" action="/inbox/email-opt-in"
+                      class="flex gap-2">
+                    <input type="hidden" name="email_opt_in" value="no"/>
+                    <button type="submit" class="btn btn-sm btn-ghost">
+                        {t(MessageKey::EmailOptInNoButton)}
+                    </button>
+                </form>
+            </section>
+        }
+    });
 
     let header_status_text = if items.is_empty() {
         t(MessageKey::NoNotificationsYetStatus)
@@ -74,6 +132,9 @@ pub fn InboxPage(
                         </form>
                     })}
                 </div>
+
+                {silence_resume_banner}
+                {email_opt_in_prompt}
 
                 {(!has_items).then(|| view! {
                     <div class="card bg-base-100 border border-base-300 shadow-sm">
@@ -209,11 +270,14 @@ fn link_target_for_kind(kind_str: &str) -> Option<String> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_inbox(
     user: CurrentUser,
     items: Vec<Notification>,
     unread_count: i64,
     flash: Option<String>,
+    is_silenced: bool,
+    show_email_prompt: bool,
 ) -> Html<String> {
     super::render_to_html(move || {
         view! {
@@ -222,6 +286,8 @@ pub fn render_inbox(
                 items=items
                 unread_count=unread_count
                 flash=flash
+                is_silenced=is_silenced
+                show_email_prompt=show_email_prompt
             />
         }
     })

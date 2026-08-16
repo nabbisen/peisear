@@ -284,6 +284,60 @@ pub async fn preference_for_user_kind(
     }))
 }
 
+/// True when every kind in `kind::all_user_facing()` has an
+/// empty channel set — the state `silence_all` produces, and
+/// the only state that means "silenced".
+///
+/// Not `global_acknowledged`, which records whether the
+/// first-login email opt-in has been answered. RFC 003's first
+/// version conflated the two.
+///
+/// If a kind is ever added to `all_user_facing()`, a user who
+/// silenced everything before that day has no row for the new
+/// kind, so this returns `false` for them until they silence
+/// again — their banner disappears without them resuming
+/// anything. That is correct (they are, in fact, no longer
+/// silenced for everything) but surprising, and worth knowing
+/// before it's found in production rather than after.
+pub async fn all_kinds_silenced(pool: &Pool, user_id: &str) -> StorageResult<bool> {
+    let prefs = preferences_for_user(pool, user_id).await?;
+    Ok(peisear_core::notifications::kind::all_user_facing()
+        .iter()
+        .all(|k| {
+            prefs
+                .iter()
+                .find(|p| p.kind == *k)
+                .is_some_and(|p| p.channels.is_empty())
+        }))
+}
+
+/// Delete every user-facing kind's preference row for `user_id`
+/// — the exact inverse of what `silence_all` writes. Scoped to
+/// `kind::all_user_facing()`, not every row for the user: the
+/// `_global` row (the email opt-in record) is a different fact
+/// and must survive.
+///
+/// An absent row already means the default
+/// ([`peisear_core::notifications::DEFAULT_CHANNELS`], applied
+/// at dispatch time) — deleting rather than writing the default
+/// back keeps that default in one place. A resumed user is
+/// indistinguishable from one who never silenced.
+pub async fn delete_user_facing_preferences(pool: &Pool, user_id: &str) -> StorageResult<()> {
+    for k in peisear_core::notifications::kind::all_user_facing() {
+        sqlx::query(
+            r#"
+            DELETE FROM notification_preferences
+            WHERE user_id = ?1 AND kind = ?2
+            "#,
+        )
+        .bind(user_id)
+        .bind(*k)
+        .execute(pool)
+        .await?;
+    }
+    Ok(())
+}
+
 /// Insert or update a preference row. Channels are normalised
 /// before persistence (sorted, lowercased, de-duplicated).
 pub async fn upsert_preference(

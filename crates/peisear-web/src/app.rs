@@ -47,10 +47,6 @@ pub fn build_router(state: AppState) -> Router {
             get(notification_preferences::page).post(notification_preferences::save_preferences),
         )
         .route(
-            "/settings/notifications/ack-global",
-            post(notification_preferences::ack_global),
-        )
-        .route(
             "/settings/notifications/silence-all",
             post(notification_preferences::silence_all),
         )
@@ -60,6 +56,11 @@ pub fn build_router(state: AppState) -> Router {
         .route("/inbox", get(notifications::page))
         .route("/inbox/mark-all-read", post(notifications::mark_all_read))
         .route("/inbox/{id}/read", post(notifications::mark_read))
+        // INBOX-001 (RFC 003): the silence-resume banner's action,
+        // and the email opt-in prompt moved here from
+        // /settings/notifications/ack-global.
+        .route("/inbox/resume", post(notifications::resume))
+        .route("/inbox/email-opt-in", post(notifications::email_opt_in))
         // Legacy /notifications redirects → /inbox (308, preserves
         // POST method for the two POST endpoints).
         .route("/notifications", get(redirects::notifications_to_inbox))

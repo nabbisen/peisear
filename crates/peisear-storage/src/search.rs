@@ -62,6 +62,13 @@ pub enum SearchHit {
         project_id: String,
         project_name: String,
         title: String,
+        /// The parent issue's title, when this hit is a
+        /// sub-issue (`INBOX-001`, RFC 003 D3). `None` for a
+        /// top-level issue. Carried in the same query via a
+        /// `LEFT JOIN` — a second query per page is exactly
+        /// what RFC 003's original test plan proposed and the
+        /// handoff overrode.
+        parent_title: Option<String>,
     },
 }
 
@@ -121,6 +128,13 @@ pub async fn projects_by_name(
 /// 2. carry the project name into the hit, so the search-results
 ///    UI can show "Login error · Customer Portal" without a
 ///    second round trip per result.
+///
+/// A second `LEFT JOIN` (`INBOX-001`, RFC 003 D3) carries the
+/// parent issue's title into the same result set when this hit
+/// is a sub-issue — one query, not a second batched fetch of
+/// parent ids. A `LEFT JOIN` cannot drop a row: a top-level issue
+/// (`parent_issue_id IS NULL`) still matches, with `parent_title`
+/// simply `NULL`.
 pub async fn open_issues_by_title(
     pool: &Pool,
     user_id: &str,
@@ -130,11 +144,13 @@ pub async fn open_issues_by_title(
     let pattern = format!("%{}%", escape_like_meta(q));
     let limit = limit.min(MAX_LIMIT);
 
-    let rows: Vec<(String, String, String, String)> = sqlx::query_as(
+    let rows: Vec<(String, String, String, String, Option<String>)> = sqlx::query_as(
         r#"
-        SELECT i.id, i.project_id, p.name AS project_name, i.title
+        SELECT i.id, i.project_id, p.name AS project_name, i.title,
+               parent.title AS parent_title
         FROM issues i
         JOIN projects p ON p.id = i.project_id
+        LEFT JOIN issues parent ON parent.id = i.parent_issue_id
         WHERE i.title LIKE ?1 ESCAPE '\'
           AND i.status != 'done'
           AND (
@@ -156,12 +172,15 @@ pub async fn open_issues_by_title(
 
     Ok(rows
         .into_iter()
-        .map(|(id, project_id, project_name, title)| SearchHit::Issue {
-            id,
-            project_id,
-            project_name,
-            title,
-        })
+        .map(
+            |(id, project_id, project_name, title, parent_title)| SearchHit::Issue {
+                id,
+                project_id,
+                project_name,
+                title,
+                parent_title,
+            },
+        )
         .collect())
 }
 

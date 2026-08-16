@@ -2,15 +2,18 @@
 //!
 //! Smart-defaults posture (Q3=A in design discussion):
 //!
-//! - First-time visitors who haven't been "globally
-//!   acknowledged" see a small banner suggesting they choose
-//!   email opt-in. They can dismiss it with one click; we
-//!   record the answer in the global pref row.
+//! - The first-notification email opt-in prompt lives at
+//!   `/inbox`, not here — moved there by `INBOX-001` (RFC 003
+//!   D2) so it only appears once the user has something to react
+//!   to. This page still shows the resulting on/off status
+//!   (`email_globally_on`) below the header.
 //! - Per-kind preferences live in a folded `<details>` — most
 //!   users never need to open it.
 //! - The "Silence all" button is in the per-kind section,
 //!   discoverable but not prominent. No friction for users who
-//!   want it.
+//!   want it. Resuming from a full silence is a separate
+//!   affordance, on the `/inbox` banner that appears while
+//!   silenced (`INBOX-001`, RFC 003 D1) — not here.
 
 use axum::{
     Form,
@@ -34,7 +37,6 @@ pub async fn page(
     State(state): State<AppState>,
 ) -> AppResult<impl IntoResponse> {
     let prefs = notif_store::preferences_for_user(&state.db, &user.id).await?;
-    let global_acknowledged = notif_store::global_acknowledged(&state.db, &user.id).await?;
     let global = notif_store::global_preference(&state.db, &user.id).await?;
     let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
 
@@ -46,28 +48,9 @@ pub async fn page(
     Ok(components::notification_preferences::render_preferences(
         user,
         prefs,
-        global_acknowledged,
         email_globally_on,
         unread_count,
     ))
-}
-
-#[derive(Debug, Deserialize)]
-pub struct GlobalAckForm {
-    /// "yes" to opt in, "no" to acknowledge without opting in.
-    /// We always record acknowledgement either way so the
-    /// banner stops showing.
-    pub email_opt_in: String,
-}
-
-pub async fn ack_global(
-    AuthUser(user): AuthUser,
-    State(state): State<AppState>,
-    Form(form): Form<GlobalAckForm>,
-) -> AppResult<Redirect> {
-    let opt_in = form.email_opt_in.eq_ignore_ascii_case("yes");
-    notif_store::set_global_acknowledged(&state.db, &user.id, opt_in).await?;
-    Ok(Redirect::to("/settings/notifications"))
 }
 
 #[derive(Debug, Deserialize)]

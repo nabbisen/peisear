@@ -216,15 +216,24 @@ fn SearchHitRow(hit: SearchHit) -> impl IntoView {
             project_id,
             project_name,
             title,
+            parent_title,
         } => {
             let url = format!("/projects/{project_id}/issues/{id}");
+            let caption = match parent_title {
+                // A sub-issue reads in context: project, then the
+                // parent it belongs to (`INBOX-001`, RFC 003 D3).
+                // The row's own title stays the bold heading.
+                Some(parent_title) => t(MessageKey::SubIssueHitTypePrefix {
+                    project_name,
+                    parent_title,
+                }),
+                None => t(MessageKey::OpenIssueHitTypePrefix { project_name }),
+            };
             view! {
                 <li>
                     <a href=url class="block px-3 py-2 hover:bg-base-200">
                         <div class="font-medium">{title}</div>
-                        <div class="text-xs text-base-content/60">
-                            {t(MessageKey::OpenIssueHitTypePrefix { project_name })}
-                        </div>
+                        <div class="text-xs text-base-content/60">{caption}</div>
                     </a>
                 </li>
             }

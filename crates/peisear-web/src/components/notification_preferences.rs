@@ -5,10 +5,10 @@
 //! 1. Header: title + "Silence all" link to its right (subtle,
 //!    not prominent — the user can always find it but it isn't
 //!    bait).
-//! 2. **First-login email banner** — only when
-//!    `global_acknowledged == false`. Two buttons: "Yes, send
-//!    me email" and "Just in-app, thanks". Clicking either
-//!    records acknowledgement and the banner stops appearing.
+//! 2. A line stating the current email opt-in status
+//!    (`email_globally_on`). The prompt that sets it lives at
+//!    `/inbox` now, not here (`INBOX-001`, RFC 003 D2) — this
+//!    page only reports the resulting state.
 //! 3. **Per-kind preferences table** wrapped in a folded
 //!    `<details>`. Default closed; users who want defaults
 //!    don't need to open it.
@@ -44,7 +44,6 @@ use super::{kind_label_for, t};
 pub fn PreferencesPage(
     user: CurrentUser,
     prefs: Vec<Preference>,
-    global_acknowledged: bool,
     email_globally_on: bool,
     unread_count: i64,
 ) -> impl IntoView {
@@ -62,34 +61,6 @@ pub fn PreferencesPage(
             render_kind_row(k, pref_clone)
         })
         .collect_view();
-
-    let banner = (!global_acknowledged).then(|| {
-        view! {
-            <section class="alert alert-info mb-4" role="status"
-                     aria-label=t(MessageKey::FirstTimeEmailPromptAriaLabel)>
-                <div class="flex-1">
-                    <h2 class="font-medium">{t(MessageKey::EmailNotificationsHeading)}</h2>
-                    <p class="text-sm opacity-90 mt-1">
-                        {t(MessageKey::EmailOptInPromptBody)}
-                    </p>
-                </div>
-                <form method="post" action="/settings/notifications/ack-global"
-                      class="flex gap-2 flex-wrap items-center">
-                    <input type="hidden" name="email_opt_in" value="yes"/>
-                    <button type="submit" class="btn btn-sm btn-primary">
-                        {t(MessageKey::EmailOptInYesButton)}
-                    </button>
-                </form>
-                <form method="post" action="/settings/notifications/ack-global"
-                      class="flex gap-2">
-                    <input type="hidden" name="email_opt_in" value="no"/>
-                    <button type="submit" class="btn btn-sm btn-ghost">
-                        {t(MessageKey::EmailOptInNoButton)}
-                    </button>
-                </form>
-            </section>
-        }
-    });
 
     let email_status = if email_globally_on {
         view! {
@@ -129,8 +100,6 @@ pub fn PreferencesPage(
                         </button>
                     </form>
                 </div>
-
-                {banner}
 
                 <p class="text-sm text-base-content/70 mb-3">
                     {t(MessageKey::DefaultsInAppLead)} {email_status}
@@ -241,7 +210,6 @@ fn render_kind_row(kind_id: &'static str, pref: Option<Preference>) -> impl Into
 pub fn render_preferences(
     user: CurrentUser,
     prefs: Vec<Preference>,
-    global_acknowledged: bool,
     email_globally_on: bool,
     unread_count: i64,
 ) -> Html<String> {
@@ -250,7 +218,6 @@ pub fn render_preferences(
             <PreferencesPage
                 user=user
                 prefs=prefs
-                global_acknowledged=global_acknowledged
                 email_globally_on=email_globally_on
                 unread_count=unread_count
             />

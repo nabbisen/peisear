@@ -668,6 +668,12 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::MarkAsReadAriaLabel => "[fx-mark-as-read-aria]".to_string(),
         MessageKey::MarkReadButton => "[fx-mark-read-button]".to_string(),
 
+        // ---- INBOX-001: silence-resume banner ----
+        MessageKey::SilenceResumeBannerAriaLabel => "[fx-silence-resume-banner-aria]".to_string(),
+        MessageKey::SilenceResumeBannerMessage => "[fx-silence-resume-banner-message]".to_string(),
+        MessageKey::ResumeNotificationsAriaLabel => "[fx-resume-notifications-aria]".to_string(),
+        MessageKey::ResumeNotificationsButton => "[fx-resume-notifications-button]".to_string(),
+
         // ---- I18N-005d: components/search ----
         MessageKey::SearchWord => "[fx-search-word]".to_string(),
         MessageKey::SearchPageTitleWithQuery { q } => format!("[fx-search-title-query] {q}"),
@@ -683,6 +689,10 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::OpenIssueHitTypePrefix { project_name } => {
             format!("[fx-open-issue-hit-type] {project_name}")
         }
+        MessageKey::SubIssueHitTypePrefix {
+            project_name,
+            parent_title,
+        } => format!("[fx-sub-issue-hit-type] {project_name} {parent_title}"),
 
         // ---- I18N-005d: handlers/{settings,notification_preferences,notifications} ----
         MessageKey::WipLimitSavedFlash => "[fx-wip-limit-saved]".to_string(),
