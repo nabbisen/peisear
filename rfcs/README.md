@@ -29,11 +29,9 @@ the owner approves, the dev team implements.
 
 Design settled. Implementation may begin.
 
-*Empty at 0.23.0.* RFC 003 was returned to Proposed; RFC 005's §9 shipped and
-its remainder is still Proposed.
-
 | ID | Title | Target |
 |----|-------|--------|
+| 003 | [Inbox refinements](./accepted/003-inbox-refinements.md) — rewritten against the shipped code, then accepted | 0.24.0 |
 
 ## Proposed
 
@@ -41,7 +39,6 @@ Open for review. Design may still change.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 003 | [Inbox refinements](./proposed/003-inbox-refinements.md) — **rewritten 2026-08-16** against the shipped code; awaiting acceptance | 0.24.0 |
 | 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) | 0.25.0 |
 | 005 | [Quality consolidation](./proposed/005-quality-consolidation.md) — §9 pulled forward, *has handoffs* | 0.24.0 |
 

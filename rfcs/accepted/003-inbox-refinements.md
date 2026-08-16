@@ -1,7 +1,7 @@
 # RFC 0003: Inbox refinements
 
-**Status**: Proposed — **rewritten 2026-08-16**, superseding the 2026-05-04
-text, which was returned from Accepted
+**Status**: **Accepted 2026-08-16**, on the rewrite. The 2026-05-04 text was
+returned from Accepted the same day and is superseded in full
 **Target**: 0.24.0
 **Related spec sections**: §19 (Inbox), §6 (notifications), §38.1 task 4
 **Supersedes**: the accepted-2026-05-04 version of this RFC, in full
