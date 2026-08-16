@@ -31,16 +31,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     same reason, the calendar shows no fill rate, no free hours, and no
     comparison to a previous period; none of that is coming later, it is
     ruled out.
-  - This is the first release to carry a schema migration
-    (`0016_issue_planned_dates.sql`): two nullable columns on `issues`, two
-    triggers enforcing that a set end date is not before its start date,
-    and a partial index. Existing rows are unaffected and read back `NULL`
-    for both new columns. **Downgrading to 0.22.0 against a database that
-    has run this migration is not supported**: the older binary's migrator
-    does not recognise the applied migration and refuses to start, rather
-    than running against a schema it does not fully know. Recovery from
-    that state is a restore from a pre-migration backup, not a live
-    downgrade.
+
+### Migration and rollback
+
+This is the first release to carry a schema migration
+(`0016_issue_planned_dates.sql`): two nullable columns on `issues`, two
+triggers enforcing that a set end date is not before its start date, and a
+partial index. Existing rows are unaffected and read back `NULL` for both
+new columns. **Downgrading to 0.22.0 against a database that has run this
+migration is not supported**: the older binary's migrator does not
+recognise the applied migration and refuses to start, rather than running
+against a schema it does not fully know. Recovery from that state is a
+restore from a pre-migration backup, not a live downgrade.
 
 ## [0.22.0] — 2026-08-13
 
