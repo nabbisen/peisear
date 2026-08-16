@@ -31,7 +31,7 @@ Design settled. Implementation may begin.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 003 | [Inbox refinements](./accepted/003-inbox-refinements.md) — rewritten against the shipped code, then accepted | 0.24.0 |
+| 003 | [Inbox refinements](./accepted/003-inbox-refinements.md) — rewritten against the shipped code, then accepted; *has handoffs* | 0.24.0 |
 
 ## Proposed
 
@@ -69,6 +69,7 @@ the RFC number they are keyed to.
 
 | Directory | Governing RFC |
 |---|---|
+| [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — active |
 | [`handoffs/002-calendar-surfaces/`](./handoffs/002-calendar-surfaces/README.md) | 002 — historical, RFC implemented |
 | [`handoffs/001-sprint-planning-page/`](./handoffs/001-sprint-planning-page/README.md) | 001 — historical, RFC implemented |
 | [`handoffs/005-quality-consolidation/`](./handoffs/005-quality-consolidation/README.md) | 005 — §9 delivered at 0.22.0; the rest at 0.24.0 |
