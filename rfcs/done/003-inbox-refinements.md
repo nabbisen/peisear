@@ -1,7 +1,24 @@
 # RFC 0003: Inbox refinements
 
-**Status**: **Accepted 2026-08-16**, on the rewrite. The 2026-05-04 text was
-returned from Accepted the same day and is superseded in full
+**Status**: Implemented (0.24.0), on the rewrite. The 2026-05-04 text was
+returned from Accepted on 2026-08-16 and is superseded in full
+
+> **Implemented by `INBOX-001`**, one handoff, two review rounds, no schema
+> migration.
+>
+> **This is the only RFC in the project so far to have been rewritten rather
+> than amended**, and the record of what that bought belongs here rather than
+> only in the reconciliation note. Against the May text, the rewrite removed a
+> schema migration, dropped an item that was already built *before* the RFC was
+> accepted, avoided giving two facts a second home, and corrected a banner
+> trigger that read `global_acknowledged` — "has been prompted for the email
+> opt-in" — as though it meant "has silenced notifications".
+>
+> That last one is why the round trip was worth a release's delay. An
+> implementer following the May text would have used that function, and a test
+> written from the same text would have used it too. They would have agreed
+> with each other and both been wrong, and no amount of care downstream catches
+> that. `inbox_refinements`'s test 2 now fails if anyone reaches for it again.
 **Target**: 0.24.0
 **Related spec sections**: §19 (Inbox), §6 (notifications), §38.1 task 4
 **Supersedes**: the accepted-2026-05-04 version of this RFC, in full

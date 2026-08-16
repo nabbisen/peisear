@@ -1,7 +1,7 @@
 # Handoffs — RFC 003, inbox refinements
 
 Implementation companion for
-[RFC 003](../../accepted/003-inbox-refinements.md), target **0.24.0**.
+[RFC 003](../../done/003-inbox-refinements.md), target **0.24.0**.
 
 **This file is an index, not a status board.** It lists what each handoff
 covers and what it depends on. It changes when a handoff is added — not when

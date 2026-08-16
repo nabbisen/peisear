@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-16
 **Priority**: P1 — 0.24.0's feature work
-**Governing RFC**: [003](../../accepted/003-inbox-refinements.md), rewritten
+**Governing RFC**: [003](../../done/003-inbox-refinements.md), rewritten
 2026-08-16 and accepted the same day
 **Depends on**: nothing
 

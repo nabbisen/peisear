@@ -29,9 +29,12 @@ the owner approves, the dev team implements.
 
 Design settled. Implementation may begin.
 
+*Empty at 0.24.0.* RFC 004 and RFC 005 are both May-vintage and still Proposed;
+RFC 003 showed what dispatching a design of that age costs without reconciling
+it first.
+
 | ID | Title | Target |
 |----|-------|--------|
-| 003 | [Inbox refinements](./accepted/003-inbox-refinements.md) — rewritten against the shipped code, then accepted; *has handoffs* | 0.24.0 |
 
 ## Proposed
 
@@ -46,6 +49,7 @@ Open for review. Design may still change.
 
 | ID | Title | Shipped in |
 |----|-------|------------|
+| 003 | [Inbox refinements](./done/003-inbox-refinements.md) — *has handoffs*; **rewritten** before dispatch | 0.24.0 |
 | 002 | [Calendar surfaces](./done/002-calendar-surfaces.md) — *has handoffs* | 0.23.0 |
 | 001 | [Sprint planning page](./done/001-sprint-planning-page.md) — *has handoffs* | 0.22.0 — minus the capacity hint |
 | 009 | [Team assignment and workload scope](./done/009-team-assignment-and-workload.md) — *has handoffs* | 0.22.0 |
@@ -69,7 +73,7 @@ the RFC number they are keyed to.
 
 | Directory | Governing RFC |
 |---|---|
-| [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — active |
+| [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
 | [`handoffs/002-calendar-surfaces/`](./handoffs/002-calendar-surfaces/README.md) | 002 — historical, RFC implemented |
 | [`handoffs/001-sprint-planning-page/`](./handoffs/001-sprint-planning-page/README.md) | 001 — historical, RFC implemented |
 | [`handoffs/005-quality-consolidation/`](./handoffs/005-quality-consolidation/README.md) | 005 — §9 delivered at 0.22.0; the rest at 0.24.0 |
