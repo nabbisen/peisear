@@ -1,255 +1,168 @@
 # RFC 0003: Inbox refinements
 
-**Status**: **Returned to Proposed 2026-08-16** — to be rewritten against the
-current code, not amended
-**Target**: 0.24.0 (was 0.22.0, then 0.21.0's slip carried it)
+**Status**: Proposed — **rewritten 2026-08-16**, superseding the 2026-05-04
+text, which was returned from Accepted
+**Target**: 0.24.0
+**Related spec sections**: §19 (Inbox), §6 (notifications), §38.1 task 4
+**Supersedes**: the accepted-2026-05-04 version of this RFC, in full
+**Last updated**: 2026-08-16
 
-> **Never dispatched.** No handoff was written and no part of this RFC was
-> implemented from it. Returned rather than amended because a reconciliation
-> against the shipped code found its shape no longer holds, not merely its
-> details: see `.git-exclude/tasks/architect/008-rfc-003-reconciliation.md`.
+> **Why this was rewritten rather than amended.** The previous text was
+> accepted 2026-05-04 and never dispatched. Reconciled against the shipped code
+> before any handoff was written
+> (`.git-exclude/tasks/architect/008-rfc-003-reconciliation.md`), three of its
+> four design items did not survive:
 >
-> - **Mark-all-read** is already built, hide-when-zero included — and was built
-> at 0.9.0–0.16.0, **before this RFC was accepted**. This item was wrong on the
-> day it was written, not merely stale now.
-> - **The silence-resume banner** triggers on `global_acknowledged`, which
-> means "has been prompted for the email opt-in", not "has silenced
-> notifications". Built as written, the banner would appear for the wrong users
-> and never for the right ones — and a test written from this RFC would pass,
-> because it would call the same function.
-> - **Migration `0017`** would add `users.email_opt_in` /
-> `email_opt_in_prompted_at`, a second home for facts the
-> `notification_preferences` global row already holds.
-> - **"Remove the prompt from registration"** has nothing to act on; there is
-> no such prompt.
+> - **Mark-all-read** was already built — hide-when-zero included — at
+>   0.9.0–0.16.0, *before* the RFC was accepted. It was wrong on the day it was
+>   written, not stale now.
+> - **The silence-resume banner** triggered on `global_acknowledged`, which
+>   means "has been prompted for the email opt-in". The `silence_all` handler
+>   carries a comment saying exactly that: *"Don't touch the global pref row —
+>   that's only the first-login email opt-in record, conceptually different
+>   from per-kind silencing."* The RFC contradicted a comment in the code it
+>   was describing.
+> - **Migration `0017`** would have added `users.email_opt_in` and
+>   `email_opt_in_prompted_at`, a second home for facts the
+>   `notification_preferences` global row already holds.
 >
-> Genuinely unbuilt and unaffected: the inbox-triggered opt-in prompt, the
-> banner as a feature (its storage exists), and the sub-issue parent breadcrumb
-> in search, which is clean and small enough to dispatch on its own.
-**Related spec sections**: §19 (Inbox), §6 (notifications),
-§38.1 task 4
-**Last updated**: 2026-08-16 — returned to Proposed
+> Amending those in place would have produced a document whose reasoning no
+> reader could follow. This version is written from the code.
 
 ## Summary
 
-Tidy-up of the existing `/inbox` page: a fixed silence-resume
-banner when notifications are globally silenced, a prominent
-"mark all read" button, a deferred email-opt-in prompt that
-appears after the user's first in-app notification rather
-than at registration, and a small UX fix in search to make
-sub-issue results legible (their parent's title in a
-breadcrumb hint).
+Three refinements to `/inbox`, all small, and **no schema migration**:
 
-This is a small PR — the heavy lifting on notifications
-already shipped through migrations and `peisear-notify`.
+1. A silence-resume banner, triggered on the condition that actually
+   represents silence.
+2. The email opt-in prompt moved to the inbox, after a first notification —
+   using the record that already exists for it.
+3. Sub-issue search results showing their parent, so they read in context.
 
 ## Design
 
-### Silence-resume banner
+### D1 — Silence-resume banner
 
-When `notifications::global_acknowledged(user_id)` returns
-true (the user has hit "silence all"), render a fixed banner
-at the top of the inbox view:
+**The trigger.** A user is silenced when every kind in
+`kind::all_user_facing()` has an empty channel set. That is precisely what
+`silence_all` writes (`handlers/notification_preferences.rs:136`), and it is
+the only state that means "silenced".
 
-```
-[!] Notifications are silenced.       [Resume notifications]
-```
+Add one storage predicate rather than deriving it at two call sites:
 
-The Resume button POSTs to `/inbox/silence/resume` (new
-endpoint) which clears the silence flag and 303-redirects
-back to `/inbox`. The page hides the banner when silence is
-not active — symmetric, no leftover banner.
-
-Keep the banner inside the `<main>` of `/inbox` only. It is
-not a global banner; pushing it to the app shell would visit
-every page and read like an alarm. The user already came to
-the inbox to look at notifications.
-
-### Mark-all-read button
-
-The storage helper `notifications::mark_all_read` already
-exists. Surface it as a button at the top of the
-notifications list:
-
-```html
-<form method="post" action="/inbox/mark-all-read">
-  <button type="submit"
-          class="btn btn-ghost btn-sm"
-          aria-label="Mark all unread notifications as read">
-    Mark all read
-  </button>
-</form>
+```rust
+/// True when every user-facing kind has an empty channel set —
+/// the state `silence_all` produces, and the only state that
+/// means "silenced". Not `global_acknowledged`, which records
+/// whether the email opt-in has been answered.
+pub async fn all_kinds_silenced(pool: &Pool, user_id: &str) -> StorageResult<bool>;
 ```
 
-Hide the button when `unread_count == 0`. Clicking POSTs to
-`/inbox/mark-all-read` (already exists or added here, see
-"Routes"), redirects back.
+The doc comment carries the distinction because the previous version of this
+RFC got it wrong, and the next reader will be looking at two similarly-named
+functions.
 
-### Email opt-in deferral
+**Resume deletes rows; it does not write defaults.** `dispatch.rs:242` reads
+`None => DEFAULT_CHANNELS.to_vec()` — an absent per-kind row already means "the
+default". So resume is the exact inverse of silence: remove the rows
+`silence_all` created and let absence mean what it already means.
 
-Today, the email-opt-in prompt fires at registration. The
-spec §19.4 wants it deferred until after the user has seen
-the value of one notification:
+Writing `DEFAULT_CHANNELS` into the rows instead would give the default a
+second home, and a later change to `DEFAULT_CHANNELS` would reach users who
+never silenced anything while missing every user who had resumed. This project
+has recorded that defect shape four times; it is avoidable here by deleting.
 
-> 「あなたに 1 つ通知が届きました。 これを email でも受け取りますか?」
+**Placement.** Inside `<main>` on `/inbox` only. Not the app shell — a banner
+on every page reads as an alarm, and the user came to the inbox to look at
+notifications.
 
-Implementation:
+### D2 — Email opt-in at the inbox, with no new columns
 
-1. Two boolean columns on `users`:
-   - `email_opt_in`: the user's choice (NULL = unset).
-   - `email_opt_in_prompted_at`: timestamp the prompt was
-     last shown. NULL = never shown.
+The facts already exist:
 
-   New migration `0017_users_email_opt_in.sql`.
-2. Remove the prompt from registration. Registered users
-   simply have `email_opt_in IS NULL` until they've seen
-   the prompt.
-3. On `/inbox` GET, if all of:
-   - `email_opt_in IS NULL`
-   - `email_opt_in_prompted_at IS NULL`
-   - the inbox has at least one in-app notification, read or
-     unread
-   are true, render an opt-in banner above the list:
+- `global_acknowledged(user_id)` — "has this user been prompted?"
+- `set_global_acknowledged(user_id, email_opt_in: bool)` — records the answer,
+  writing `channels = "in_app,email"` or `"in_app"` on the global row.
 
-   ```
-   [?] You've received your first notification. Want these
-   by email too?  [Yes, send email]  [No thanks]
-   ```
+So this item is a surface, not a schema change. On `GET /inbox`, when
+`!global_acknowledged(user_id)` **and** the user has at least one notification,
+render a prompt above the list. Both answers POST to `/inbox/email-opt-in` and
+call `set_global_acknowledged`; the prompt does not reappear.
 
-   Both choices POST to `/inbox/email-opt-in` with `choice=yes`
-   or `choice=no`, set `email_opt_in` accordingly, set
-   `email_opt_in_prompted_at = now()`, and 303 back. After
-   that, the banner does not reappear.
-4. The user can still change their choice in `/settings`
-   (existing notification preferences).
+**Nothing is removed from registration** — there is no prompt there. The
+previous version's step 2 had nothing to act on.
 
-### Sub-issue parent breadcrumb in search
+**Existing users see the prompt** at their next inbox visit with a
+notification, which is the same affordance new users get. Not grandfathered
+out — the previous version's default-if-no-decision, and still right.
 
-Phase C PR1 deferred this: when a search result is a
-sub-issue, the result row should hint at its parent. Today
-all results render as "Project / Issue Title". For sub-issues
-we want "Project / Parent Title / Sub-issue Title".
+### D3 — Sub-issue parent in search results
 
-Implementation in the search-result row component
-(`components/search.rs`): when the result is an issue and
-its `parent_issue_id` is non-NULL, fetch the parent's title
-and prepend it. The fetch is one extra `IN (...)` query for
-the page, batched: gather all sub-issue parent ids and fetch
-them in one round-trip rather than one per row.
+Unchanged from the previous version, and the one item that reconciled cleanly:
+`components/search.rs` has no parent handling at all today.
 
-This keeps search-result rendering coherent with Phase C
-PR1's principle that sub-issues "make sense in the context
-of their parent" (§8.5).
+When a result is an issue with a non-NULL `parent_issue_id`, render
+`Project / Parent title / Sub-issue title`. Gather the parent ids for the page
+and fetch them in **one** query, not one per row.
 
-### Routes
+## Requirements
 
-```
-POST /inbox/mark-all-read       (already exists; verify)
-POST /inbox/silence/resume      (new)
-POST /inbox/email-opt-in        (new)
-```
-
-All three return 303 to `/inbox`.
-
-### Migration `0017_users_email_opt_in.sql`
-
-```sql
-ALTER TABLE users
-    ADD COLUMN email_opt_in INTEGER;  -- 0/1/NULL
-
-ALTER TABLE users
-    ADD COLUMN email_opt_in_prompted_at TIMESTAMP;
-```
-
-Existing users have NULL for both, so they will see the
-prompt at their next inbox visit (assuming they have at
-least one notification). This is the desired migration
-behaviour: existing users get the deferred prompt the spec
-calls for, instead of being grandfathered into "never
-prompted."
-
-If we want grandfathered users to be implicitly opted out
-(no email, no prompt), the migration should set
-`email_opt_in = 0` and `email_opt_in_prompted_at = now()`
-for all existing rows. **Default-if-no-decision: do not
-grandfather. Show the prompt to existing users.** The
-prompt is not noisy — a single banner — and giving existing
-users the same affordance the spec gives new users is the
-fairer choice.
+1. The banner appears exactly when every user-facing kind is silenced, and not
+   otherwise.
+2. Resume restores the default by deleting the rows, and a resumed user is
+   indistinguishable from a user who never silenced.
+3. The opt-in prompt appears once, for a user who has never been prompted and
+   has at least one notification; either answer stops it permanently.
+4. No schema migration.
+5. Sub-issue search results name their parent; the parent lookup is one query
+   per page.
+6. All copy through `peisear-i18n` (RFC 006 §D6, including rule 7).
 
 ## Test plan
 
-Extend the existing `tests/smoke.rs` and add a small new
-test crate `tests/inbox_refinements.rs`:
+| # | Check |
+|---|---|
+| 1 | Banner absent by default; present after `silence_all`; absent again after resume |
+| 2 | **The trigger is not `global_acknowledged`** — a user who has answered the email prompt and silenced nothing sees no banner |
+| 3 | Resume deletes the rows: after resume, `preference_for_user_kind` returns `None` for every user-facing kind |
+| 4 | A resumed user receives a dispatch that a silenced user does not |
+| 5 | Prompt shown for a never-prompted user with ≥1 notification; absent with 0 |
+| 6 | Either answer sets the global row and the prompt does not return |
+| 7 | Sub-issue result renders its parent's title; a top-level result does not |
+| 8 | The parent lookup issues one query for a page with several sub-issue results |
 
-1. `silence_resume_banner_renders_when_silenced` — flip
-   `global_acknowledged`, GET `/inbox`, expect the banner.
-2. `silence_resume_banner_hidden_when_not_silenced` —
-   negative.
-3. `mark_all_read_button_hidden_when_unread_zero`.
-4. `mark_all_read_button_marks_and_redirects` —
-   create 3 unread notifications, POST mark-all-read, GET
-   `/inbox`, expect 0 unread.
-5. `email_opt_in_banner_appears_after_first_notification`
-   — fresh user, no notifications: no banner. Insert one
-   notification, GET `/inbox`: banner present.
-6. `email_opt_in_yes_persists_choice_and_hides_banner` —
-   POST `choice=yes`, second GET has no banner, settings
-   page reflects opt-in.
-7. `email_opt_in_no_persists_choice_and_hides_banner`.
-8. `search_result_shows_parent_breadcrumb_for_sub_issue`
-   — extend `tests/search.rs` (don't make a new crate) to
-   create a sub-issue and confirm its result row shows the
-   parent title.
+Test 2 is the regression guard for this RFC's own history. Write it so it fails
+if someone reaches for `global_acknowledged` again.
 
-CI: extend `tests/search.rs` job (already present) and add a
-new job `test-peisear-web-inbox-refinements` mirroring the
-others.
+## Security and privacy considerations
 
-## Security & privacy considerations
-
-- §11.5: nothing changes. Inbox content was already
-  self-only; the new endpoints all act on the authenticated
-  user's own data.
-- §21.4: notifications are not subject to the optimistic-
-  lock contract (high-frequency aggregate; last-write-wins
-  is the user's mental model — they hit "mark all read" and
-  expect everything to go to read regardless of races). No
-  changes here.
-- The deferred opt-in itself is a privacy improvement —
-  asking after value has been demonstrated, instead of at
-  registration, lets the user say no with information.
+- The banner and prompt disclose nothing about anyone else.
+- `/inbox` is already self-only; no new authorisation path.
+- The search breadcrumb shows a parent title from a project the viewer can
+  already read — `find_accessible` governs the result set and is unchanged.
+- No new personal data is stored. D2 records a yes/no the user just gave.
 
 ## Out of scope
 
-- Snooze. The spec doesn't list it for PR4 and the storage
-  shape isn't there yet (no per-notification snooze-until).
-  Possible later PR.
-- Notification grouping ("3 notifications about issue #45").
-  Phase E candidate; a careful implementation needs more
-  thought about how grouping interacts with mark-as-read.
-- Push / web-push notifications. Out of scope.
+Mark-all-read (built). Any schema change. Per-kind resume — resume is
+all-or-nothing, matching silence. Email delivery behaviour itself. A global
+banner outside `/inbox`.
 
 ## Open questions
 
-1. **Existing users and the email opt-in prompt** — see
-   migration discussion. *Default: show the prompt to
-   existing users.*
-2. **Banner placement when both banners apply** (silenced
-   *and* first-notification-just-arrived): show the silence
-   banner only — silencing implies the user doesn't want
-   email either, so the email prompt is misplaced. *Default:
-   silence wins.*
-3. **What counts as "first notification"** — only in-app, or
-   also dispatched emails (if email opt-in defaults change)?
-   *Default: in-app only. The opt-in is *for* email, so we
-   shouldn't gate on email events.*
+1. **Does a read notification count for D2's "at least one"?** The spec's
+   wording is "you have received one notification", which reads as *received*,
+   not *unread*. *Default-if-no-decision: any notification, read or unread.*
+2. **Should resume be confirmable?** It is not destructive, so probably not —
+   but it is a mutation with no undo beyond re-silencing. *Default-if-no-
+   decision: no confirmation.* Note this interacts with external design §17.4's
+   open question on the confirmation pattern; if that lands first, revisit.
 
 ## References
 
-- Spec §19 — Inbox
-- Spec §6 — notification subsystem
-- Spec §38.1 task 4 — Phase C tasks
-- CHANGELOG entry for 0.18.0 — `/me` → `/today`,
-  `/notifications` → `/inbox` 308 redirect (this RFC builds
-  on the renamed surface)
+- `.git-exclude/tasks/architect/008-rfc-003-reconciliation.md` — the findings
+  that produced this rewrite
+- `handlers/notification_preferences.rs:136` — `silence_all`
+- `storage/notifications.rs:326, 348` — `global_acknowledged`,
+  `set_global_acknowledged`
+- `peisear-notify/src/dispatch.rs:242` — absent row means `DEFAULT_CHANNELS`

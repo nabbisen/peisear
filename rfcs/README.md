@@ -41,7 +41,7 @@ Open for review. Design may still change.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 003 | [Inbox refinements](./proposed/003-inbox-refinements.md) — **returned from Accepted 2026-08-16**, to be rewritten | 0.24.0 |
+| 003 | [Inbox refinements](./proposed/003-inbox-refinements.md) — **rewritten 2026-08-16** against the shipped code; awaiting acceptance | 0.24.0 |
 | 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) | 0.25.0 |
 | 005 | [Quality consolidation](./proposed/005-quality-consolidation.md) — §9 pulled forward, *has handoffs* | 0.24.0 |
 
