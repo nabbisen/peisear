@@ -16,7 +16,8 @@ one is reviewed.
 | # | Handoff | Covers | Depends on |
 |---|---|---|---|
 | STATUS-001 | [STATUS-001](./STATUS-001-no-js-status-control.md) | Step 1 — a status control on issue detail and issue list that works without JavaScript | CONF-001 |
-| STATUS-002 | *not yet written* | Step 2 — the click affordance, the in-place update, the undo toast, and `change_status` returning the new lock value | STATUS-001 |
+| REL-0.25.0 | [REL-0.25.0](./REL-0.25.0-release-candidate.md) | Release candidate for **all** of 0.25.0 — CONF-001, QA-002, STATUS-001 | STATUS-001 |
+| STATUS-002 | *not yet written* | Step 2 — the click affordance, the in-place update, the undo toast, and `change_status` returning the new lock value | STATUS-001; **not in 0.25.0** |
 
 ## Two handoffs because it is two steps
 
