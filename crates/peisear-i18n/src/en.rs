@@ -1197,6 +1197,18 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::StatusChangeUndoUnavailableMessage => {
             "This change could not be completed. Reload to see the current state.".to_string()
         }
+        MessageKey::BoardReloadMessage => {
+            "This page is showing an earlier version of the board. Reload to see the current state."
+                .to_string()
+        }
+        MessageKey::BoardConflictMessage => {
+            "Another member changed this issue first. The board now shows the current state."
+                .to_string()
+        }
+        MessageKey::BoardUnavailableMessage => {
+            "This status change could not be completed. The card has been returned to its previous column."
+                .to_string()
+        }
         MessageKey::ConfirmDeleteSprintPlannedNote => {
             "Issues currently linked to it will be unlinked.".to_string()
         }

@@ -133,9 +133,12 @@ pub fn ProjectDetailPage(
 
             // DnD script is loaded only in board mode. `data-project-id`
             // on the board div is how the JS picks up which project it
-            // belongs to, avoiding string-interpolated inline JS.
+            // belongs to, avoiding string-interpolated inline JS. The
+            // copy island (`BOARD-001`) is read by `board.js` at load,
+            // same as `dm.js` reads its own.
             {is_board.then(|| view! {
                 <div id="board-root" data-project-id=project_id.clone() class="hidden"></div>
+                {render_board_copy_assets()}
                 <script src="/static/board.js" defer=true></script>
             })}
 
@@ -559,6 +562,33 @@ fn render_status_enhancement_assets() -> impl IntoView {
     view! {
         <script type="application/json" id="status-enhancement-copy" inner_html=copy></script>
         <script src="/static/dm.js" defer=true></script>
+    }
+}
+
+/// `BOARD-001` (RFC 004b / D-2): `board.js`'s copy island, same
+/// pattern as [`render_status_enhancement_assets`] above — three
+/// strings that used to be authored inside `board.js` itself
+/// (`RELOAD_MESSAGE`/`CONFLICT_MESSAGE`/`UNAVAILABLE_MESSAGE`, moved
+/// byte-exact into `peisear-i18n`), plus the "moved to" announcement
+/// and the Undo label the board's new undo toast needs — the same
+/// two keys `dm.js` already uses, not new ones, since the copy is
+/// identical in meaning.
+fn render_board_copy_assets() -> impl IntoView {
+    let copy = serde_json::json!({
+        "reloadMessage": t(MessageKey::BoardReloadMessage),
+        "conflictMessage": t(MessageKey::BoardConflictMessage),
+        "unavailableMessage": t(MessageKey::BoardUnavailableMessage),
+        "movedTo": {
+            "open": t(MessageKey::StatusChangedAnnouncement { status: IssueStatusLabel::Open }),
+            "in_progress": t(MessageKey::StatusChangedAnnouncement { status: IssueStatusLabel::InProgress }),
+            "done": t(MessageKey::StatusChangedAnnouncement { status: IssueStatusLabel::Done }),
+        },
+        "undoLabel": t(MessageKey::UndoButtonLabel),
+    })
+    .to_string();
+
+    view! {
+        <script type="application/json" id="board-copy" inner_html=copy></script>
     }
 }
 

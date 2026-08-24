@@ -2083,6 +2083,22 @@ pub enum MessageKey {
     /// distinction (`CONFLICT_MESSAGE` vs. `UNAVAILABLE_MESSAGE`);
     /// this is that same split for undo.
     StatusChangeUndoUnavailableMessage,
+
+    // ---- BOARD-001: the three sentences that lived in board.js
+    // ---- (RFC 004b / D-2), moved here byte-exact per the handoff's
+    // ---- explicit instruction -- this is a location change, not a
+    // ---- copy pass. ----
+    /// No lock value on the dragged card — the page is stale
+    /// relative to the current build. `board.js` announces this and
+    /// does not send a request that would be rejected anyway.
+    BoardReloadMessage,
+    /// A drag's `409`: another member changed the issue first.
+    /// `board.js` reverts the card and reloads after announcing this.
+    BoardConflictMessage,
+    /// A drag's non-`409` failure — network rejection or any other
+    /// non-2xx response. `board.js` reverts the card without
+    /// reloading.
+    BoardUnavailableMessage,
 }
 
 impl MessageKey {
@@ -2820,6 +2836,9 @@ impl MessageKey {
             MessageKey::UndoButtonLabel,
             MessageKey::StatusChangeUndoConflictMessage,
             MessageKey::StatusChangeUndoUnavailableMessage,
+            MessageKey::BoardReloadMessage,
+            MessageKey::BoardConflictMessage,
+            MessageKey::BoardUnavailableMessage,
         ];
         keys.extend(
             CalendarViewLabel::all()

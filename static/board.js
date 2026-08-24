@@ -2,6 +2,14 @@
 // The project id is injected into #board-root[data-project-id] by the
 // server-rendered template, so this script has no string interpolation
 // in its source (nothing the server writes into JS literal positions).
+//
+// `BOARD-001` (RFC 004b / D-2): the three announcement strings used to
+// be authored here as literal `var` assignments -- outside every
+// vocabulary guard this project has (`prose_scan` covers Rust;
+// `static/*.js` was unexamined, not excluded). They now live in
+// `peisear-i18n` and arrive as `#board-copy`, the same JSON-island
+// pattern `dm.js` uses. `static_js_scan` guards against a literal
+// reappearing here.
 (function () {
   "use strict";
   var root = document.getElementById("board-root");
@@ -9,27 +17,122 @@
   var projectId = root.dataset.projectId;
   if (!projectId) return;
 
+  var copyEl = document.getElementById("board-copy");
+  if (!copyEl) return;
+  var copy;
+  try {
+    copy = JSON.parse(copyEl.textContent);
+  } catch (e) {
+    return;
+  }
+  if (
+    !copy ||
+    typeof copy.reloadMessage !== "string" ||
+    typeof copy.conflictMessage !== "string" ||
+    typeof copy.unavailableMessage !== "string" ||
+    !copy.movedTo ||
+    typeof copy.undoLabel !== "string"
+  ) {
+    return;
+  }
+
   var dragging = null;
 
-  // §21.4 / §1.7: messages go into this status region rather than
-  // alert(); no failure vocabulary ("Failed", "Error").
-  var RELOAD_MESSAGE =
-    "This page is showing an earlier version of the board. Reload to see the current state.";
-  var CONFLICT_MESSAGE =
-    "Another member changed this issue first. The board now shows the current state.";
-  var UNAVAILABLE_MESSAGE =
-    "This status change could not be completed. The card has been returned to its previous column.";
-
   function announce(message) {
-    // `STATUS-002-review.md` §5 Q3: renamed from "board-status" to
-    // "status-announcements" -- the region is now shared with the
-    // issue list and issue detail pages too, so it is named for what
-    // it is rather than where it used to live only. Permitted as a
-    // one-line exception to "no change to board.js" (§10): that
-    // prohibition keeps the board's behaviour out of STATUS-002, and
-    // renaming an id it reads is not a behaviour change.
+    // Shared with `dm.js`, which reads this same id
+    // (`STATUS-002-review.md` §5 Q3).
     var region = document.getElementById("status-announcements");
     if (region) region.textContent = message;
+  }
+
+  function postStatus(statusValue, updatedAt, issueId) {
+    return fetch(
+      "/projects/" +
+        encodeURIComponent(projectId) +
+        "/issues/" +
+        encodeURIComponent(issueId) +
+        "/status",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: statusValue, client_updated_at: updatedAt }),
+      },
+    );
+  }
+
+  function removeToast(card) {
+    var toast = card._boardToast;
+    if (!toast) return;
+    clearTimeout(toast.timer);
+    if (toast.el.parentNode) toast.el.parentNode.removeChild(toast.el);
+    card._boardToast = null;
+  }
+
+  function showUndoToast(card, message, onUndo) {
+    removeToast(card);
+
+    var toast = document.createElement("div");
+    toast.className = "toast toast-end toast-bottom z-50";
+
+    var alertBox = document.createElement("div");
+    alertBox.className = "alert alert-info text-sm";
+
+    var text = document.createElement("span");
+    text.textContent = message;
+
+    var undoButton = document.createElement("button");
+    undoButton.type = "button";
+    undoButton.className = "btn btn-xs";
+    undoButton.textContent = copy.undoLabel;
+    undoButton.addEventListener("click", function () {
+      removeToast(card);
+      onUndo();
+    });
+
+    alertBox.appendChild(text);
+    alertBox.appendChild(undoButton);
+    toast.appendChild(alertBox);
+    document.body.appendChild(toast);
+
+    var timer = setTimeout(function () {
+      removeToast(card);
+    }, 5000);
+
+    card._boardToast = { el: toast, timer: timer };
+  }
+
+  // Undo has no form to fall back to mid-gesture, so on failure this
+  // takes the same revert-announce(-reload) posture the drag itself
+  // uses (umbrella requirement 2a), never a resubmit. `moveBack`
+  // undoes the drag visually right away (optimistic, same as the
+  // drag's own move); `moveForward` re-applies it if the undo
+  // request itself fails -- the drag did land, only the undo didn't.
+  function performUndo(card, issueId, targetStatus, moveBack, moveForward) {
+    moveBack();
+    postStatus(targetStatus, card.dataset.updatedAt, issueId)
+      .then(function (res) {
+        if (res.status === 409) {
+          moveForward();
+          announce(copy.conflictMessage);
+          window.location.reload();
+          return;
+        }
+        if (!res.ok) {
+          moveForward();
+          announce(copy.unavailableMessage);
+          return;
+        }
+        return res.json();
+      })
+      .then(function (body) {
+        if (!body || typeof body.updated_at !== "string" || !body.updated_at) return;
+        card.dataset.updatedAt = body.updated_at;
+        announce(copy.movedTo[targetStatus]);
+      })
+      .catch(function () {
+        moveForward();
+        announce(copy.unavailableMessage);
+      });
   }
 
   document.querySelectorAll(".issue-card").forEach(function (card) {
@@ -61,6 +164,7 @@
       var issueId = card.dataset.issueId;
       var clientUpdatedAt = card.dataset.updatedAt;
       var newStatus = col.dataset.status;
+      var previousStatus = card.parentElement.dataset.status;
       var originalColumn = card.parentElement;
       var originalNextSibling = card.nextSibling;
 
@@ -71,37 +175,28 @@
           originalColumn.appendChild(card);
         }
       }
+      function reapplyDrag() {
+        col.appendChild(card);
+      }
 
-      col.appendChild(card); // optimistic move
+      removeToast(card); // a still-open undo from an earlier drag is now stale
+
+      reapplyDrag(); // optimistic move
 
       if (!clientUpdatedAt) {
         // No lock value rendered on this card — the page is stale
         // relative to this build. Do not send a request that would
         // be rejected anyway; a silent no-op would be worse.
         revert();
-        announce(RELOAD_MESSAGE);
+        announce(copy.reloadMessage);
         return;
       }
 
-      fetch(
-        "/projects/" +
-          encodeURIComponent(projectId) +
-          "/issues/" +
-          encodeURIComponent(issueId) +
-          "/status",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            status: newStatus,
-            client_updated_at: clientUpdatedAt,
-          }),
-        },
-      )
+      postStatus(newStatus, clientUpdatedAt, issueId)
         .then(function (res) {
           if (res.status === 409) {
             revert();
-            announce(CONFLICT_MESSAGE);
+            announce(copy.conflictMessage);
             // No automatic retry. Reload to pick up authoritative
             // state (fresh updated_at values on every card).
             window.location.reload();
@@ -109,14 +204,25 @@
           }
           if (!res.ok) {
             revert();
-            announce(UNAVAILABLE_MESSAGE);
+            announce(copy.unavailableMessage);
             return;
           }
-          window.location.reload();
+          return res.json();
+        })
+        .then(function (body) {
+          if (!body || typeof body.updated_at !== "string" || !body.updated_at) return;
+          // Confirmed applied past this point -- update in place, no
+          // reload, matching `dm.js`'s posture (STATUS-002).
+          card.dataset.updatedAt = body.updated_at;
+          var message = copy.movedTo[newStatus];
+          announce(message);
+          showUndoToast(card, message, function () {
+            performUndo(card, issueId, previousStatus, revert, reapplyDrag);
+          });
         })
         .catch(function () {
           revert();
-          announce(UNAVAILABLE_MESSAGE);
+          announce(copy.unavailableMessage);
         });
     });
   });
