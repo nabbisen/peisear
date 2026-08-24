@@ -42,8 +42,9 @@ Open for review. Design may still change.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) | 0.25.0 |
-| 005 | [Quality consolidation](./proposed/005-quality-consolidation.md) — §9 pulled forward, *has handoffs* | 0.24.0 |
+| 010 | [Destructive-action confirmation](./proposed/010-destructive-action-confirmation.md) — closes external design §17.4; **before RFC 004's first substep** | 0.25.0 |
+| 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) — umbrella; substeps get their own RFCs (`004a`–`004e`) | 0.25.0 |
+| 005 | [Quality consolidation](./proposed/005-quality-consolidation.md) — §9 shipped at 0.22.0; the rest audits Phase D and so follows RFC 004 | 0.26.0 |
 
 ## Implemented
 
