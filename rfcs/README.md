@@ -29,12 +29,9 @@ the owner approves, the dev team implements.
 
 Design settled. Implementation may begin.
 
-*Empty at 0.24.0.* RFC 004 and RFC 005 are both May-vintage and still Proposed;
-RFC 003 showed what dispatching a design of that age costs without reconciling
-it first.
-
 | ID | Title | Target |
 |----|-------|--------|
+| 010 | [Destructive-action confirmation](./accepted/010-destructive-action-confirmation.md) — closes external design §17.4; *has handoffs*; **before RFC 004's first substep** | 0.25.0 |
 
 ## Proposed
 
@@ -42,7 +39,6 @@ Open for review. Design may still change.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 010 | [Destructive-action confirmation](./proposed/010-destructive-action-confirmation.md) — closes external design §17.4; **before RFC 004's first substep** | 0.25.0 |
 | 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) — umbrella; substeps get their own RFCs (`004a`–`004e`) | 0.25.0 |
 | 005 | [Quality consolidation](./proposed/005-quality-consolidation.md) — §9 shipped at 0.22.0; the rest audits Phase D and so follows RFC 004 | 0.26.0 |
 
@@ -74,6 +70,7 @@ the RFC number they are keyed to.
 
 | Directory | Governing RFC |
 |---|---|
+| [`handoffs/010-destructive-action-confirmation/`](./handoffs/010-destructive-action-confirmation/README.md) | 010 — active |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
 | [`handoffs/002-calendar-surfaces/`](./handoffs/002-calendar-surfaces/README.md) | 002 — historical, RFC implemented |
 | [`handoffs/001-sprint-planning-page/`](./handoffs/001-sprint-planning-page/README.md) | 001 — historical, RFC implemented |

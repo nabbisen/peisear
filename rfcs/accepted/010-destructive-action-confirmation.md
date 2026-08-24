@@ -1,6 +1,6 @@
 # RFC 0010: Destructive-action confirmation
 
-**Status**: Proposed
+**Status**: **Accepted 2026-08-16**
 **Target**: 0.25.0 — **before RFC 004's first substep**
 **Related spec sections**: §7 rule 4 (destructive actions are confirmed), §5.8
 (behaviour without JavaScript)
@@ -146,22 +146,31 @@ Undo. A confirmation is not a substitute for reversibility, but building undo is
 a different and much larger design. Bulk delete. Any change to what the four
 `POST` handlers do.
 
-## Open questions
+## Open questions — all settled at acceptance
 
-1. **Do the five reversible actions keep `confirm()` at all?** Requirement 3
+**All three settled 2026-08-16 by their stated defaults**, the owner having
+accepted this RFC without varying them. Recorded so the handoff does not
+re-open them, and so a later reader can see they were decided rather than
+skipped.
+
+1. ~~**Do the five reversible actions keep `confirm()` at all?**~~ —
+   **Settled: keep them, unchanged.** Requirement 3
    says they need no interstitial. Keeping a JS-only dialog on them is
    defensible — it is a speed bump, and its absence without JavaScript costs
    nothing that cannot be undone. Removing it is also defensible: a dialog that
    appears for some users and not others, guarding an action that is
    recoverable either way, is inconsistency without protection.
-   *Default-if-no-decision: keep them, unchanged.* **Owner's call** — it is a
-   product feel question, not a correctness one.
-2. **Silence-all specifically.** It is now recoverable from the inbox banner, so
-   its dialog is the weakest of the five. Fold into question 1 or decide
-   separately.
-3. **Does the enhancement in D2 get written in 0.25.0, or later?** The feature
-   is complete without it. *Default: later — ship the correct path first, and
-   let RFC 004's substeps carry the enhancement if they want it.*
+   The reasoning for the alternative stands on the record: a dialog that
+   appears for some users and not others, guarding a recoverable action, is
+   inconsistency without protection. It is simply not worth changing shipped
+   behaviour over while the four that matter are being fixed.
+2. ~~**Silence-all specifically.**~~ — **Settled with question 1: its dialog
+   stays.** It is the weakest of the five now that the resume banner exists,
+   and it is still not worth a behaviour change in this RFC.
+3. ~~**Does the enhancement in D2 get written in 0.25.0, or later?**~~ —
+   **Settled: later.** The correct path ships first. If an RFC 004 substep
+   wants the round-trip saving, it inherits `DEC-021`'s bar and states the
+   enhancement by name, as every substep must.
 
 ## References
 
