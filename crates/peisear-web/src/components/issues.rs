@@ -9,7 +9,7 @@ use peisear_core::{
     UserLoad,
     project_health::{HealthScore, Indicator, ProjectHealthReport},
 };
-use peisear_i18n::{Field, Locale, MessageKey, NavSection, TrendDirectionLabel};
+use peisear_i18n::{Field, IssueStatusLabel, Locale, MessageKey, NavSection, TrendDirectionLabel};
 
 use super::t;
 
@@ -105,11 +105,13 @@ pub fn ProjectDetailPage(
 
             <WorkloadStrip workload=workload/>
 
-            // Populated by board.js when a status-change request is
-            // rejected or conflicts; empty (and hidden) otherwise.
-            {is_board.then(|| view! {
-                <div id="board-status" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
-            })}
+            // Populated by board.js on a rejected/conflicting drag
+            // (board mode), and by dm.js on a rejected/conflicting
+            // in-place status change (list mode, `STATUS-002`) — one
+            // region, one id, shared by whichever of the two scripts
+            // is actually loaded on this page. Empty (and hidden)
+            // otherwise.
+            <div id="board-status" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
 
             {if is_board {
                 view! { <BoardView project_id=project_id_for_board columns=columns assignees=assignees.clone()/> }.into_any()
@@ -133,6 +135,12 @@ pub fn ProjectDetailPage(
                 <div id="board-root" data-project-id=project_id.clone() class="hidden"></div>
                 <script src="/static/board.js" defer=true></script>
             })}
+
+            // `dm.js` enhances the list's per-row status forms
+            // (`STATUS-002`); it has nothing to enhance in board
+            // mode, where status changes go through the drag path
+            // above instead.
+            {(!is_board).then(render_status_enhancement_assets)}
         </AppShell>
     }
 }
@@ -521,6 +529,35 @@ fn assignee_label<'a>(id: &'a str, assignees: &'a [AssigneeOption]) -> &'a str {
         .unwrap_or(id)
 }
 
+/// `STATUS-002` (RFC 004a step 2): the JSON island `dm.js` reads at
+/// load time, plus its own `<script>` tag. `dm.js` authors no prose
+/// of its own — `prose_scan` covers `components/` and `handlers/`
+/// only, so a string baked into a `.js` file is outside its reach
+/// (§6) — so every string the enhancement can show is rendered here,
+/// through `peisear-i18n`, and read back by this element's id.
+/// `inner_html` (the pattern `layout.rs`'s `tailwind.config` script
+/// already uses) rather than a text-node child: the content is JSON,
+/// not markup, and every value in it is server-authored copy, never
+/// user data, so there is nothing here for `inner_html` to need
+/// escaping from.
+fn render_status_enhancement_assets() -> impl IntoView {
+    let copy = serde_json::json!({
+        "movedTo": {
+            "open": t(MessageKey::StatusChangedAnnouncement { status: IssueStatusLabel::Open }),
+            "in_progress": t(MessageKey::StatusChangedAnnouncement { status: IssueStatusLabel::InProgress }),
+            "done": t(MessageKey::StatusChangedAnnouncement { status: IssueStatusLabel::Done }),
+        },
+        "undoLabel": t(MessageKey::UndoButtonLabel),
+        "conflictMessage": t(MessageKey::StatusChangeUndoConflictMessage),
+    })
+    .to_string();
+
+    view! {
+        <script type="application/json" id="status-enhancement-copy" inner_html=copy></script>
+        <script src="/static/dm.js" defer=true></script>
+    }
+}
+
 #[component]
 fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -> impl IntoView {
     let href = format!("/projects/{}/issues/{}", project_id, issue.id);
@@ -817,7 +854,15 @@ fn ListView(
                                         </a>
                                     </td>
                                     <td>
-                                        <form method="post" action=status_form_action>
+                                        // `class="js-status-form"` and the two `data-*`
+                                        // attributes are `dm.js`'s hook (`STATUS-002`):
+                                        // it needs the project/issue ids to build the
+                                        // JSON endpoint's URL without parsing `action`,
+                                        // which points at `/status/list`, not `/status`.
+                                        <form method="post" action=status_form_action
+                                              class="js-status-form"
+                                              data-project-id=project_id.clone()
+                                              data-issue-id=issue.id.clone()>
                                             <input type="hidden" name="client_updated_at" value=status_client_updated_at/>
                                             <input type="hidden" name="filter_status" value=active_status.clone()/>
                                             <input type="hidden" name="filter_assignee" value=active_assignee.clone()/>
@@ -1564,7 +1609,13 @@ fn IssueView(
         // carry through. `tabindex="-1"` and `cursor-default` are
         // gone: clicking a segment is no longer a no-op, so nothing
         // should say it is.
-        <form method="post" action=status_form_action>
+        // `class="js-status-form"` and the two `data-*` attributes are
+        // `dm.js`'s hook (`STATUS-002`) — see the identical note on the
+        // list view's per-row form.
+        <form method="post" action=status_form_action
+              class="js-status-form"
+              data-project-id=issue.project_id.clone()
+              data-issue-id=issue.id.clone()>
             <input type="hidden" name="client_updated_at" value=status_client_updated_at/>
             <div class="join mb-3" role="group" aria-label=t(MessageKey::IssueStatusAriaLabel)>
                 {IssueStatus::all().into_iter().map(|s| {
@@ -1588,6 +1639,12 @@ fn IssueView(
                 }).collect_view()}
             </div>
         </form>
+
+        // Same id, same pattern as the board/list surfaces' region
+        // (see `ProjectDetailPage`) — `dm.js` announces into it on a
+        // rejected/conflicting in-place status change (`STATUS-002`).
+        <div id="board-status" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
+        {render_status_enhancement_assets()}
 
         <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/70 mb-4">
             <span class=pri_class>{t(MessageKey::PriorityName { label: issue.priority.to_i18n_label() })}</span>

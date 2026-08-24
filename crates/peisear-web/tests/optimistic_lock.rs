@@ -173,7 +173,11 @@ async fn issue_status_change_with_stale_timestamp_returns_409() {
     let resp = post_status_change(&app, &project_id, &issue_id, &t0, "in_progress").await;
     assert_eq!(
         resp.status_code(),
-        StatusCode::NO_CONTENT,
+        // `STATUS-002` §3: the endpoint now returns 200 + the new
+        // `updated_at`, not a bare 204 -- `board.js` only ever
+        // checked `res.status === 409`/`!res.ok`, so this was
+        // confirmed not to be a behaviour change for that surface.
+        StatusCode::OK,
         "first status change should succeed (got {})",
         resp.status_code()
     );

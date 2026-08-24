@@ -2054,6 +2054,27 @@ pub enum MessageKey {
     ConfirmDeleteProjectCascadeNote,
     ConfirmDeleteSprintPlannedNote,
     ConfirmDeleteSprintCompletedNote,
+
+    // ---- STATUS-002: the fetch-based enhancement over STATUS-001's
+    // ---- forms (RFC 004a step 2) ----
+    /// The in-place update's and undo's shared announcement.
+    /// `dm.js` fires this into the aria-live region on every
+    /// successful AJAX status change, in either direction — undo
+    /// is just a change to the previous status, so it reuses this
+    /// same key rather than a separate "reverted" phrasing.
+    /// Rendered into a JSON island rather than written inside
+    /// `dm.js` itself: `prose_scan` covers `components/` and
+    /// `handlers/` only, so a string baked into a `.js` file is
+    /// outside its reach (§6).
+    StatusChangedAnnouncement {
+        status: IssueStatusLabel,
+    },
+    /// The undo toast's button label.
+    UndoButtonLabel,
+    /// Undo's 409 case (§5): someone else changed the issue inside
+    /// the 5-second window. No retry, no force — announce this and
+    /// reload, the same posture `board.js` takes on conflict.
+    StatusChangeUndoConflictMessage,
 }
 
 impl MessageKey {
@@ -2785,6 +2806,11 @@ impl MessageKey {
             MessageKey::ConfirmDeleteProjectCascadeNote,
             MessageKey::ConfirmDeleteSprintPlannedNote,
             MessageKey::ConfirmDeleteSprintCompletedNote,
+            MessageKey::StatusChangedAnnouncement {
+                status: IssueStatusLabel::Done,
+            },
+            MessageKey::UndoButtonLabel,
+            MessageKey::StatusChangeUndoConflictMessage,
         ];
         keys.extend(
             CalendarViewLabel::all()

@@ -545,7 +545,7 @@ pub async fn update_status(
     project_id: &str,
     actor_id: &str,
     status: IssueStatus,
-) -> StorageResult<()> {
+) -> StorageResult<DateTime<Utc>> {
     let mut tx = pool.begin().await?;
 
     let prev_status: Option<String> = sqlx::query_scalar(
@@ -563,21 +563,23 @@ pub async fn update_status(
         return Err(StorageError::NotFound);
     };
 
-    let res = sqlx::query(
+    // `RETURNING` avoids a second round-trip to read back the
+    // `CURRENT_TIMESTAMP` this UPDATE just wrote — STATUS-002 needs
+    // that value handed back to the caller as the new lock.
+    let new_updated_at: DateTime<Utc> = sqlx::query_scalar(
         r#"
         UPDATE issues
         SET status = ?3, updated_at = CURRENT_TIMESTAMP
         WHERE id = ?1 AND project_id = ?2
+        RETURNING updated_at
         "#,
     )
     .bind(id)
     .bind(project_id)
     .bind(status.as_str())
-    .execute(&mut *tx)
-    .await?;
-    if res.rows_affected() == 0 {
-        return Err(StorageError::NotFound);
-    }
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(StorageError::NotFound)?;
 
     if prev_status != status.as_str() {
         issue_events::insert_event(
@@ -593,7 +595,7 @@ pub async fn update_status(
     }
 
     tx.commit().await?;
-    Ok(())
+    Ok(new_updated_at)
 }
 
 pub async fn delete(pool: &Pool, id: &str, project_id: &str, actor_id: &str) -> StorageResult<()> {

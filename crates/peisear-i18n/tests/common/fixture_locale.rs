@@ -915,6 +915,11 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::ConfirmDeleteProjectCascadeNote => "[fx-confirm-project-cascade]".to_string(),
         MessageKey::ConfirmDeleteSprintPlannedNote => "[fx-confirm-sprint-planned]".to_string(),
         MessageKey::ConfirmDeleteSprintCompletedNote => "[fx-confirm-sprint-completed]".to_string(),
+        MessageKey::StatusChangedAnnouncement { status } => {
+            format!("[fx-status-changed] {}", issue_status_label(status))
+        }
+        MessageKey::UndoButtonLabel => "[fx-undo]".to_string(),
+        MessageKey::StatusChangeUndoConflictMessage => "[fx-undo-conflict]".to_string(),
     }
 }
 

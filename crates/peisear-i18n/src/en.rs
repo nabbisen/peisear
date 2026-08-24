@@ -1187,6 +1187,13 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::ConfirmDeleteProjectCascadeNote => {
             "All its issues will be deleted too. This cannot be undone.".to_string()
         }
+        MessageKey::StatusChangedAnnouncement { status } => {
+            format!("Moved to {}.", issue_status_label(status))
+        }
+        MessageKey::UndoButtonLabel => "Undo".to_string(),
+        MessageKey::StatusChangeUndoConflictMessage => {
+            "Another member changed this issue first. The current status is now shown.".to_string()
+        }
         MessageKey::ConfirmDeleteSprintPlannedNote => {
             "Issues currently linked to it will be unlinked.".to_string()
         }

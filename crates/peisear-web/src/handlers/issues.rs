@@ -4,7 +4,6 @@
 use axum::{
     Form, Json,
     extract::{Path, Query, State},
-    http::StatusCode,
     response::{IntoResponse, Redirect},
 };
 use peisear_core::{IssueStatus, Priority};
@@ -800,7 +799,7 @@ async fn apply_status_change(
     issue_id: &str,
     status_str: &str,
     client_updated_at: &str,
-) -> AppResult<()> {
+) -> AppResult<chrono::DateTime<chrono::Utc>> {
     // Authorisation precedes concurrency.
     let _project = projects::find_accessible(&state.db, project_id, user_id).await?;
 
@@ -814,8 +813,9 @@ async fn apply_status_change(
 
     let status = IssueStatus::parse(status_str)
         .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidStatus)))?;
-    issues::update_status(&state.db, issue_id, project_id, user_id, status).await?;
-    Ok(())
+    let updated_at =
+        issues::update_status(&state.db, issue_id, project_id, user_id, status).await?;
+    Ok(updated_at)
 }
 
 #[derive(Debug, Deserialize)]
@@ -834,16 +834,28 @@ pub struct StatusChange {
     pub client_updated_at: String,
 }
 
-/// Drag-and-drop entry point (`board.js`). JSON body, `204` on
-/// success — the client re-renders itself rather than following a
-/// redirect.
+/// The new lock value, returned on a successful status change so a
+/// caller that does not reload the page — `board.js`'s drag path,
+/// and `dm.js` (STATUS-002) — can make a second change without
+/// its `client_updated_at` going stale. `board.js` predates this
+/// field and never reads the body (only `res.status`/`res.ok`), so
+/// adding it does not change that surface's behaviour.
+#[derive(Debug, Serialize)]
+pub struct StatusChangeResponse {
+    pub updated_at: String,
+}
+
+/// Drag-and-drop entry point (`board.js`), and the fetch-based
+/// enhancement (`dm.js`, STATUS-002). JSON body in, JSON body out
+/// — `200` with the new lock value on success, so the caller can
+/// update in place rather than reloading.
 pub async fn change_status(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
     Path((project_id, issue_id)): Path<(String, String)>,
     Json(body): Json<StatusChange>,
-) -> AppResult<StatusCode> {
-    apply_status_change(
+) -> AppResult<Json<StatusChangeResponse>> {
+    let updated_at = apply_status_change(
         &state,
         &user.id,
         &project_id,
@@ -852,7 +864,9 @@ pub async fn change_status(
         &body.client_updated_at,
     )
     .await?;
-    Ok(StatusCode::NO_CONTENT)
+    Ok(Json(StatusChangeResponse {
+        updated_at: updated_at.to_rfc3339(),
+    }))
 }
 
 #[derive(Debug, Deserialize)]
