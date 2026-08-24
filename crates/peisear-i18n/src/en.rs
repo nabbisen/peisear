@@ -1063,6 +1063,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         ),
         MessageKey::SprintNotStartedYetMessage => "Sprint hasn't been started yet.".to_string(),
         MessageKey::SprintAlreadyCompletedMessage => "Sprint is already completed.".to_string(),
+        MessageKey::SprintActiveCannotBeDeletedMessage => {
+            "An active sprint cannot be deleted. Complete it first, then delete it.".to_string()
+        }
 
         // ---- I18N-006: peisear-storage/src/teams.rs ----
         MessageKey::TeamSlugCannotBeEmptyMessage => "Team URL slug cannot be empty.".to_string(),

@@ -1825,6 +1825,12 @@ pub enum MessageKey {
     },
     SprintNotStartedYetMessage,
     SprintAlreadyCompletedMessage,
+    /// `QA-002` item 1: `handlers::sprints::{delete_confirm,
+    /// delete_sprint}`'s refusal for an `Active` sprint — a state
+    /// constraint (`400`), not an authorisation failure. Names the
+    /// way out (complete it first) rather than only refusing, same
+    /// register as `SprintAlreadyCompletedMessage` above.
+    SprintActiveCannotBeDeletedMessage,
 
     // ---- I18N-006: peisear-storage/src/teams.rs ----
     TeamSlugCannotBeEmptyMessage,
@@ -2690,6 +2696,7 @@ impl MessageKey {
             },
             MessageKey::SprintNotStartedYetMessage,
             MessageKey::SprintAlreadyCompletedMessage,
+            MessageKey::SprintActiveCannotBeDeletedMessage,
             // -- I18N-006: peisear-storage/src/teams.rs --
             MessageKey::TeamSlugCannotBeEmptyMessage,
             MessageKey::TeamSlugAlreadyExistsMessage {

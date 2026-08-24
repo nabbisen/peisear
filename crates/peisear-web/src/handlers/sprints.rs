@@ -375,12 +375,15 @@ pub async fn complete(
 /// `role.can_manage_team()` plus the sprint belonging to this team.
 ///
 /// One route serves both `Planned` and `Completed` sprints; the
-/// difference is the consequence copy, not the check above. `Active`
-/// falls back to the generic note — the UI never offers a delete
-/// control for an active sprint (`components::sprints`'s `lifecycle`
-/// match has no delete arm for it), so this branch is reachable only
-/// by navigating to the URL directly, and the `POST` itself has no
-/// status guard either (`§9`: no `POST` handler changed).
+/// difference is the consequence copy, not the check above.
+///
+/// `QA-002` item 1: an `Active` sprint refuses here too, before
+/// rendering anything. `CONF-001`'s review found this route (and
+/// `delete_sprint`'s `POST`) live for an active sprint despite the UI
+/// offering no delete control for one — rendering "you are about to
+/// delete *X*" for a team's running sprint and then letting the
+/// `POST` do it. At most one sprint per team is active; deleting it
+/// is not equivalent to deleting a planned one.
 pub async fn delete_confirm(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
@@ -396,11 +399,16 @@ pub async fn delete_confirm(
     if sprint.team_id != team.id {
         return Err(AppError::NotFound);
     }
+    if matches!(sprint.status, SprintStatus::Active) {
+        return Err(AppError::Validation(
+            Locale::English.render(MessageKey::SprintActiveCannotBeDeletedMessage),
+        ));
+    }
 
     let consequence_key = match sprint.status {
         SprintStatus::Planned => MessageKey::ConfirmDeleteSprintPlannedNote,
         SprintStatus::Completed => MessageKey::ConfirmDeleteSprintCompletedNote,
-        SprintStatus::Active => MessageKey::ConfirmDeleteCannotBeUndoneNote,
+        SprintStatus::Active => unreachable!("refused above"),
     };
     let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
 
@@ -433,6 +441,14 @@ pub async fn delete_sprint(
         .ok_or(AppError::NotFound)?;
     if sprint.team_id != team.id {
         return Err(AppError::NotFound);
+    }
+    // `QA-002` item 1: a state constraint, not an authorisation
+    // failure — 400, not 403. The caller may well be a team admin
+    // perfectly entitled to delete a *different* sprint.
+    if matches!(sprint.status, SprintStatus::Active) {
+        return Err(AppError::Validation(
+            Locale::English.render(MessageKey::SprintActiveCannotBeDeletedMessage),
+        ));
     }
     crate::error::check_optimistic_lock(
         &form.client_updated_at,

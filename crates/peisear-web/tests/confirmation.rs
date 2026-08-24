@@ -395,6 +395,109 @@ async fn authorisation_matches_the_corresponding_post_per_route() {
     );
 }
 
+/// `QA-002` item 1, test 2: the confirmation `GET` refuses an
+/// `Active` sprint too, rather than rendering "you are about to
+/// delete *X*" for a team's running sprint.
+#[tokio::test]
+async fn get_confirmation_refuses_an_active_sprint() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let team_id = create_team_with_admin(&app.db, &user_id, "Engineering").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint Alpha").await;
+    sprints::start(&app.db, &sprint_id).await.expect("start");
+
+    let resp = app
+        .server
+        .get(&format!("/teams/engineering/sprints/{sprint_id}/delete"))
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::BAD_REQUEST,
+        "GET should refuse an active sprint, not render a confirmation for it"
+    );
+    assert!(
+        !resp.text().contains("Delete Sprint Alpha?"),
+        "no interstitial should render for an active sprint"
+    );
+}
+
+/// `QA-002` item 1, test 3: planned and completed sprints still
+/// delete via both halves (`GET` then `POST`) after the `Active`
+/// refusal landed. `following_the_link_and_posting_the_form_deletes_the_entity_no_js`
+/// already covers the planned case; this covers completed, the other
+/// status the shared route serves.
+#[tokio::test]
+async fn completed_sprint_still_deletes_via_both_halves() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let team_id = create_team_with_admin(&app.db, &user_id, "Engineering").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint Alpha").await;
+    sprints::start(&app.db, &sprint_id).await.expect("start");
+    sprints::complete(&app.db, &sprint_id)
+        .await
+        .expect("complete");
+
+    let resp = app
+        .server
+        .get(&format!("/teams/engineering/sprints/{sprint_id}/delete"))
+        .await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+    let client_updated_at = extract_hidden_field(&body, "client_updated_at")
+        .expect("interstitial carries the hidden field");
+
+    let resp = app
+        .server
+        .post(&format!("/teams/engineering/sprints/{sprint_id}/delete"))
+        .form(&[("client_updated_at", client_updated_at.as_str())])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let remaining = sprints::find_by_id(&app.db, &sprint_id)
+        .await
+        .expect("query sprint");
+    assert!(remaining.is_none(), "completed sprint should be deleted");
+}
+
+/// `QA-002` item 2, test 4: a non-owner's `POST` to the project
+/// delete route must not report success. Reproduced against
+/// unmodified code before the fix landed (see the review package);
+/// this is that same scenario, held in place going forward.
+#[tokio::test]
+async fn non_owner_post_project_delete_returns_404_and_project_survives() {
+    let app = TestApp::spawn().await;
+    let owner = TestUser::new("alice");
+    let owner_id = register_and_login(&app, &owner).await;
+    let team_id = create_team_with_admin(&app.db, &owner_id, "Engineering").await;
+    let project_id = create_team_project(&app.db, &owner_id, &team_id, "Shared Project").await;
+
+    common::auth::logout(&app).await;
+    let bob = TestUser::new("bob");
+    let bob_id = register_and_login(&app, &bob).await;
+    teams::add_member(&app.db, &team_id, &bob_id, TeamRole::Admin)
+        .await
+        .expect("add bob to team as admin");
+
+    let resp = app
+        .server
+        .post(&format!("/projects/{project_id}/delete"))
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::NOT_FOUND,
+        "a non-owner's delete must not report success"
+    );
+
+    let still_there =
+        peisear_storage::projects::find_accessible(&app.db, &project_id, &owner_id).await;
+    assert!(
+        still_there.is_ok(),
+        "the project must survive a non-owner's delete attempt"
+    );
+}
+
 /// Pull `value="..."` from `<input type="hidden" name="{field}"
 /// value="...">` in rendered HTML. Minimal, not a general HTML
 /// parser -- fine for this test's one known shape.

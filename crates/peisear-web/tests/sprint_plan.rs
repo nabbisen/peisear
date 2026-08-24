@@ -619,3 +619,37 @@ async fn plan_add_rejects_a_completed_sprint() {
         "the issue must not have been added to the completed sprint"
     );
 }
+
+/// `QA-002` item 1, test 1: `delete_sprint`'s `POST` had no status
+/// check and would delete a team's running sprint. 400, not the
+/// generic 403/404 shape, since this is a state constraint on an
+/// otherwise-authorised admin, not an authorisation failure.
+#[tokio::test]
+async fn delete_refuses_an_active_sprint() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Engineering").await;
+    let slug = slug_for(&app, &team_id).await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint Alpha").await;
+    sprints::start(&app.db, &sprint_id).await.expect("start");
+
+    let sprint = sprints::find_by_id(&app.db, &sprint_id)
+        .await
+        .expect("query sprint")
+        .expect("sprint exists");
+    let resp = app
+        .server
+        .post(&format!("/teams/{slug}/sprints/{sprint_id}/delete"))
+        .form(&[("client_updated_at", sprint.updated_at.to_rfc3339().as_str())])
+        .await;
+    resp.assert_status(StatusCode::BAD_REQUEST);
+
+    let still_there = sprints::find_by_id(&app.db, &sprint_id)
+        .await
+        .expect("query sprint");
+    assert!(
+        still_there.is_some(),
+        "an active sprint must survive a delete attempt"
+    );
+}

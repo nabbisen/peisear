@@ -814,6 +814,9 @@ pub fn render(key: MessageKey) -> String {
         }
         MessageKey::SprintNotStartedYetMessage => "[fx-sprint-not-started]".to_string(),
         MessageKey::SprintAlreadyCompletedMessage => "[fx-sprint-already-completed]".to_string(),
+        MessageKey::SprintActiveCannotBeDeletedMessage => {
+            "[fx-sprint-active-cannot-be-deleted]".to_string()
+        }
 
         // ---- I18N-006: peisear-storage/src/teams.rs ----
         MessageKey::TeamSlugCannotBeEmptyMessage => "[fx-team-slug-empty]".to_string(),

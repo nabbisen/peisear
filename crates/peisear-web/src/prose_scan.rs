@@ -114,6 +114,31 @@ fn is_allowlisted(v: &Violation) -> bool {
 /// above an already-caught literal; the scan passed, silently. Fixed
 /// by checking whether `;` or `{` comes first after the marker: `;`
 /// first means a brace-less item, and the item ends there.
+/// `QA-002` item 3. Strips `//`-style line comments (plain, `///` doc
+/// comments, and `//!` inner doc comments alike — all start with
+/// `//`) so a comment that *mentions* an attribute-shaped or
+/// text-node-shaped string this scan looks for — the way this
+/// module's own doc comment on `confirmation.rs` once did — is not
+/// mistaken for real markup. `test_harness_scan.rs` had the identical
+/// need and solved it first (`QA-001`'s round-1 correction); this is
+/// that same function, deliberately duplicated rather than shared —
+/// small enough that a shared module would add more indirection than
+/// it saves, and duplication keeps this port from being able to
+/// change `test_harness_scan`'s behaviour as a side effect.
+///
+/// Line-based and does not account for `//` appearing inside a string
+/// literal — a real attribute value containing `//` (a URL, say)
+/// would have its tail truncated rather than being missed outright.
+/// No attribute in [`SCOPED_ATTRS`] carries one in this tree today;
+/// `test_harness_scan.rs` carries the identical documented limitation.
+fn strip_line_comments(source: &str) -> String {
+    source
+        .lines()
+        .map(|line| line.split("//").next().unwrap_or(""))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
 fn strip_cfg_test_blocks(src: &str) -> String {
     const MARKER: &str = "#[cfg(test)]";
     let mut result = String::with_capacity(src.len());
@@ -328,7 +353,8 @@ fn scan_standalone_text_nodes(stripped: &str, rel_path: &str, out: &mut Vec<Viol
 
 fn scan_file(path: &Path, rel_path: &str) -> Vec<Violation> {
     let content = fs::read_to_string(path).unwrap_or_default();
-    let stripped = strip_cfg_test_blocks(&content);
+    let without_comments = strip_line_comments(&content);
+    let stripped = strip_cfg_test_blocks(&without_comments);
     let mut out = Vec::new();
     scan_attrs(&stripped, rel_path, &mut out);
     scan_inline_text_nodes(&stripped, rel_path, &mut out);
@@ -406,4 +432,39 @@ fn every_allowlist_entry_still_matches_something() {
             entry.file, entry.snippet
         );
     }
+}
+
+/// `QA-002` item 3, test 6. Reproduces the exact false positive found
+/// in `CONF-001`'s review: a doc comment that quotes attribute-shaped
+/// text (the old `onsubmit="return confirm(...)"` defect,
+/// documented in prose) must not be scanned as if it were real
+/// markup, now that `strip_line_comments` removes it before the attr
+/// scan sees it.
+#[test]
+fn a_doc_comment_quoting_attribute_markup_does_not_fail_the_scan() {
+    let source = "//! An old defect quoted for context: onsubmit=\"return confirm('Delete?')\"\nfn example() {}\n";
+    let without_comments = strip_line_comments(source);
+    let mut out = Vec::new();
+    scan_attrs(&without_comments, "fake/path.rs", &mut out);
+    assert!(
+        out.is_empty(),
+        "a doc comment quoting attribute-shaped text must not be scanned as real markup: {out:?}"
+    );
+}
+
+/// `QA-002` item 3, test 7 — the half that matters more (`§4`'s own
+/// framing): a guard made quieter about comments is only an
+/// improvement if it stayed loud where it should. A real
+/// `aria-label` literal in real markup, on the same line shape the
+/// scan expects, must still be caught after the port.
+#[test]
+fn a_real_literal_in_real_markup_still_fails_the_scan() {
+    let source = "fn example() -> impl IntoView {\n    view! {\n        <button aria-label=\"Delete this thing\">{\"Delete\"}</button>\n    }\n}\n";
+    let without_comments = strip_line_comments(source);
+    let mut out = Vec::new();
+    scan_attrs(&without_comments, "fake/path.rs", &mut out);
+    assert!(
+        !out.is_empty(),
+        "a real aria-label literal in real markup must still be caught after the port"
+    );
 }

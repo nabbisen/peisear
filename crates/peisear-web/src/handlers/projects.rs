@@ -180,11 +180,34 @@ pub async fn delete_confirm(
     ))
 }
 
+/// `QA-002` item 2, as issued, describes `projects::delete`'s storage
+/// call returning `Ok` on a zero-row `DELETE` (a non-owner's), with
+/// this handler then reporting success anyway. That was checked
+/// empirically before applying this fix, not assumed: the storage
+/// function already has its own `rows_affected() == 0 →
+/// StorageError::NotFound`, which `?` already propagated as a 404
+/// here — reverting this handler to its pre-fix state and driving a
+/// non-owner `POST` at it returns 404 with the project intact, not
+/// the described redirect-with-success-flash. See the review package
+/// for the full transcript; this comment states what was found, not
+/// what the handoff assumed.
+///
+/// The check below is added anyway, as a smaller, still-worthwhile
+/// change: it makes the authorisation explicit at the handler (the
+/// same two-step `find_accessible` then `owner_id != user.id` that
+/// [`delete_confirm`] already does) rather than leaving it implicit
+/// in a side effect of the storage layer's row count. `projects::delete`'s
+/// own `WHERE owner_id = ?2` is unchanged and stays as defence in
+/// depth underneath it.
 pub async fn delete(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
     Path(project_id): Path<String>,
 ) -> AppResult<Redirect> {
+    let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    if project.owner_id != user.id {
+        return Err(AppError::NotFound);
+    }
     projects::delete(&state.db, &project_id, &user.id).await?;
     let flash = Locale::English
         .render(MessageKey::ProjectDeletedFlash)
