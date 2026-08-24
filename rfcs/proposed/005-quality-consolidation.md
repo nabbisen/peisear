@@ -1,11 +1,11 @@
 # RFC 0005: Quality consolidation
 
 **Status**: Proposed
-**Target**: 0.24.0 (Phase E)
+**Target**: 0.26.0 (Phase E) — §9 shipped at 0.22.0, §10 pulled forward to 0.25.0
 **Related spec sections**: §40 (Phase E plan), §11.5.5 (API
 authorization QA), §21.4 (optimistic-lock conflict),
 §30-34 (ABDD axes)
-**Last updated**: 2026-05-04
+**Last updated**: 2026-08-16
 
 ## Summary
 
@@ -281,6 +281,65 @@ adopted to make results trustworthy hid a defect in the thing
 producing them.** A gate set needs at least one run under the
 conditions a contributor will actually use, or it measures
 only the conditions it chose.
+
+### 10. Three defects from CONF-001's review — pulled forward to 0.25.0
+
+*Added 2026-08-16, from `.git-exclude/reviewed/CONF-001-review.md` §4–§6.*
+
+Three independent defects surfaced while reviewing `CONF-001`. None is a
+feature, none needs its own RFC, and all three are the kind of thing Phase E
+exists to sweep up — so they arrive here rather than inventing a home, the same
+way §9 did.
+
+**They are pulled forward to 0.25.0** because two of them are reachable today
+and the third makes a guard harder to use than it should be.
+
+#### 10.1 An active sprint can be deleted
+
+`handlers::sprints::delete_sprint` resolves membership, checks
+`can_manage_team()` and the team match, verifies the optimistic lock, and
+deletes — **for any status, `Active` included**.
+
+The UI does not link delete for an active sprint, so this was read as a dead
+path during `CONF-001`'s review. It is not: the route is live and destructive,
+and `CONF-001`'s new confirmation `GET` will happily render "you are about to
+delete *X*" for a team's running sprint.
+
+**Owner decision, 2026-08-16: an active sprint may not be deleted.** At most one
+sprint per team is active — `OtherSprintActiveInTeamMessage` exists because of
+that — so the live one is not equivalent to a planned one, and deleting it
+silently discards the state a team is currently working in.
+
+The path out already exists: complete it, then delete it.
+
+#### 10.2 Project delete reports success to a non-owner
+
+`handlers::projects::delete` calls
+`projects::delete(&state.db, &project_id, &user.id)` with no ownership check of
+its own, relying on the storage layer's `WHERE owner_id = ?2`. For a team member
+who is not the owner that deletes zero rows, returns `Ok`, and redirects with
+the *"project deleted"* flash.
+
+**The project survives and the user is told it did not.** Not an access defect —
+nothing is deleted — but a false report about a destructive action, which this
+project's own standards on honest reporting do not permit.
+
+`CONF-001` made it visible: its new `GET` is stricter than the `POST` it fronts,
+which is the right direction and an odd state to leave.
+
+#### 10.3 `prose_scan` scans comments as if they were code
+
+A doc comment quoting attribute markup — `onsubmit="return confirm(...)"` in
+prose — fails `prose_scan`. Reproduced in review.
+
+**The sibling guard already fixed this.** `test_harness_scan`'s first iteration
+false-positived against its own doc comment for exactly this reason, and
+QA-001's round-1 correction was `strip_line_comments`. `prose_scan` strips only
+`#[cfg(test)]` blocks and never received it.
+
+Two guards, one false-positive class, one fixed and one not — the lesson stayed
+local to the file that learned it, which is the more interesting half of this
+entry.
 
 ## Test plan
 
