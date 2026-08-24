@@ -6,17 +6,32 @@
 //! `handlers/` only, so `static/*.js` was never scanned. Not excluded
 //! on purpose; simply unexamined.
 //!
-//! **Signature**: a quoted string literal that contains both a space
-//! and a `.`. Calibrated against every string literal actually
-//! present in `board.js` and `dm.js` after `BOARD-001`'s conversion —
-//! CSS class lists (`"toast toast-end toast-bottom z-50"`), the
-//! `"use strict"` pragma, `querySelectorAll` selector strings, and
-//! JSON/data-attribute keys all lack one or the other. Every one of
-//! the three sentences this handoff moved out had both — each is a
-//! real sentence, with spaces between words, ending in a full stop.
-//! If a future string needs more than `search.js`'s file-level
-//! exclusion to clear this guard, the heuristic is wrong, not the
-//! codebase (§3's own calibration standard, same as `prose_scan`'s).
+//! **Signature**: a quoted string literal with two or more
+//! space-separated "word" tokens — a token that, after trimming
+//! leading/trailing non-alphabetic characters, is at least two
+//! characters and entirely ASCII-alphabetic. `BOARD-001-review.md`
+//! §3: an earlier version of this guard required a `.` too, on the
+//! theory that this codebase's copy is complete sentences — which
+//! held for the three sentences it was built to catch, but not for
+//! copy in general (`UndoButtonLabel` is `"Undo"`; a great deal of
+//! this project's copy is a short label, not a sentence). Planting
+//! `"Move to Done"` and `"Another member changed this issue first"`
+//! (both period-less) proved the `.` requirement was hiding exactly
+//! the more likely kind of violation — a button label typed straight
+//! into a `.js` file — so it was dropped from the signature.
+//!
+//! The per-token trim is what survives contact with CSS class lists
+//! and directives without a period requirement: `"toast toast-end
+//! toast-bottom z-50"` has one qualifying token (`toast`; the
+//! hyphenated ones keep their hyphen through the trim and so are not
+//! "entirely alphabetic", and `z-50` trims down to the single
+//! character `z`) — one word is below the two-word threshold, so it
+//! passes. `"use strict"` is two genuine words and needed its own
+//! exact-text exception (below) — the one JS pragma this codebase
+//! reuses verbatim, not a general pattern. If a future string needs
+//! more than that exception plus `search.js`'s file-level exclusion
+//! to clear this guard, the heuristic is wrong, not the codebase
+//! (§3's own calibration standard, same as `prose_scan`'s).
 //!
 //! **`search.js` is the one named exclusion** — RFC 006's standing
 //! position since 0.21.0: it needs a JS-side rendering mechanism that
@@ -83,12 +98,33 @@ fn find_unescaped_quote_end(s: &str, quote: u8) -> Option<usize> {
     None
 }
 
-/// This codebase's copy is complete sentences (§1.7) -- a space (more
-/// than one word) and a `.` (a full stop) together. CSS class lists,
-/// selector strings, and directives have neither in combination; see
-/// the module doc for what this was checked against.
+/// A whitespace-split token counts as a word if, after trimming
+/// leading/trailing non-alphabetic characters (so `"state."`'s
+/// trailing full stop, or a leading/trailing comma, doesn't disqualify
+/// it), what remains is at least two characters and entirely
+/// ASCII-alphabetic. A hyphen or digit *inside* the token (`toast-
+/// end`, `z-50`) survives the trim and fails the all-alphabetic check,
+/// which is what keeps CSS class lists and `data-*`/kebab-case tokens
+/// from counting.
+fn is_word_token(token: &str) -> bool {
+    let core = token.trim_matches(|c: char| !c.is_ascii_alphabetic());
+    core.len() >= 2 && core.chars().all(|c| c.is_ascii_alphabetic())
+}
+
+/// See the module doc for the calibration history and the survival
+/// check against real content.
 fn looks_like_prose(literal: &str) -> bool {
-    literal.contains(' ') && literal.contains('.')
+    if literal == "use strict" {
+        // The ECMAScript strict-mode pragma: two genuine words, but
+        // the one fixed phrase every file in scope repeats verbatim
+        // in the same bare-statement position, never as copy.
+        return false;
+    }
+    literal
+        .split_whitespace()
+        .filter(|t| is_word_token(t))
+        .count()
+        >= 2
 }
 
 #[derive(Debug)]
