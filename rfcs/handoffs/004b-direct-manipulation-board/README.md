@@ -15,6 +15,7 @@ one is reviewed.
 | # | Handoff | Covers | Depends on |
 |---|---|---|---|
 | BOARD-001 | [BOARD-001](./BOARD-001-board-copy-and-parity.md) | The three strings in `board.js`; a guard over `static/*.js`; the board's undo | STATUS-002 |
+| REL-0.26.0 | [REL-0.26.0](./REL-0.26.0-release-candidate.md) | Release candidate for 0.26.0 — STATUS-002 and BOARD-001 | BOARD-001 |
 
 ## The drag is not in scope, because it already ships
 
