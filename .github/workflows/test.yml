@@ -179,6 +179,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test sprint_plan -- --test-threads=1
 
+  test-peisear-web-status-control:
+    name: peisear-web / status_control
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test status_control -- --test-threads=1
+
   test-peisear-web-calendar:
     name: peisear-web / calendar
     runs-on: ubuntu-latest

@@ -226,6 +226,9 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::NoSprintOption => "[fx-no-sprint]".to_string(),
         MessageKey::SprintAssignmentHelperText => "[fx-sprint-helper]".to_string(),
         MessageKey::IssueStatusAriaLabel => "[fx-issue-status-aria]".to_string(),
+        MessageKey::IssueStatusGroupAriaLabel { issue_title } => {
+            format!("[fx-issue-status-group-aria] {issue_title}")
+        }
         MessageKey::NoDescriptionProvided => "[fx-no-description-provided]".to_string(),
         MessageKey::CreatedAt { formatted } => format!("[fx-created] {formatted}"),
         MessageKey::UpdatedAt { formatted } => format!("[fx-updated] {formatted}"),

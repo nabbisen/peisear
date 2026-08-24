@@ -218,6 +218,17 @@ pub fn build_router(state: AppState) -> Router {
             "/projects/{id}/issues/{issue_id}/status/board",
             post(issues::change_status_form),
         )
+        // `STATUS-001` (RFC 004a step 1): the same shape as
+        // `/status/board` above, one route per surface (handoff §5's
+        // route shape (b)). No script anywhere in either path.
+        .route(
+            "/projects/{id}/issues/{issue_id}/status/detail",
+            post(issues::change_status_form_detail),
+        )
+        .route(
+            "/projects/{id}/issues/{issue_id}/status/list",
+            post(issues::change_status_form_list),
+        )
         // Static assets served from the directory named "static" in the
         // working directory of the running binary. For typical
         // `cargo run`‑from‑workspace‑root usage this resolves to

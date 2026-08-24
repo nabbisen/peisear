@@ -270,6 +270,9 @@ pub(crate) fn render(key: MessageKey) -> String {
                 .to_string()
         }
         MessageKey::IssueStatusAriaLabel => "Issue status".to_string(),
+        MessageKey::IssueStatusGroupAriaLabel { issue_title } => {
+            format!("Status for \"{issue_title}\"")
+        }
         MessageKey::NoDescriptionProvided => "No description provided.".to_string(),
         MessageKey::CreatedAt { formatted } => format!("Created {formatted}"),
         MessageKey::UpdatedAt { formatted } => format!("Updated {formatted}"),

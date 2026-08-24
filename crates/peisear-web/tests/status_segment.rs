@@ -2,10 +2,15 @@
 //!
 //! The detail page replaces the single status badge with a
 //! three-segment control (Open / In Progress / Done) showing
-//! all three statuses at once, with the current status
-//! visually highlighted. Display-only — clicking does nothing;
-//! the user clicks the dedicated Edit button to change status.
-//! Direct-manipulation status changes are deferred to Phase D.
+//! all three statuses at once, with the current status visually
+//! highlighted. Originally display-only; `STATUS-001` (RFC 004a
+//! step 1) made it a real `<form>` that posts the clicked
+//! segment's status, with no script involved
+//! (`crates/peisear-web/tests/status_control.rs` covers that
+//! behaviour directly). The structural assertions below —
+//! group wrapper, all three labels, `aria-pressed` marking the
+//! current status — hold regardless of whether the segments
+//! are inert or submit; nothing here needed to change.
 //!
 //! What we assert here:
 //!
@@ -15,9 +20,6 @@
 //!    and the others `aria-pressed="false"` — the active state
 //!    is conveyed semantically to assistive tech, not just
 //!    visually.
-//! 3. The segments are typed `button` (not links, not form
-//!    submits) so keyboard navigation lands on them but
-//!    activation is inert.
 
 mod common;
 
@@ -71,12 +73,11 @@ async fn detail_renders_three_segment_status_control() {
 
 #[tokio::test]
 async fn edit_form_keeps_existing_select_widget() {
-    // The segment is read-only. The actual mutation path —
-    // the edit form — still uses a `<select name="status">`.
-    // This guards against an accidental future change that
-    // replaces the select with the segment in edit mode (which
-    // would mean the segment becomes interactive ahead of
-    // Phase D).
+    // The segment is now also a mutation path (`STATUS-001`), but
+    // the edit form is a separate, older one and still uses a
+    // `<select name="status">`. This guards against an accidental
+    // future change that collapses the two paths by replacing the
+    // select with the segment in edit mode.
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;

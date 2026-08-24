@@ -743,7 +743,10 @@ fn ListView(
                     <thead>
                         <tr>
                             <th>{t(MessageKey::FieldLabel { field: Field::Title })}</th>
-                            <th class="w-32">{t(MessageKey::FieldLabel { field: Field::Status })}</th>
+                            // `STATUS-001`: widened from `w-32` to fit
+                            // the three-segment status control (was
+                            // static text before).
+                            <th class="w-52">{t(MessageKey::FieldLabel { field: Field::Status })}</th>
                             <th class="w-28">{t(MessageKey::FieldLabel { field: Field::Priority })}</th>
                             <th class="w-20">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</th>
                             <th class="w-32">{t(MessageKey::FieldLabel { field: Field::Assignee })}</th>
@@ -755,7 +758,6 @@ fn ListView(
                             let href = format!("/projects/{}/issues/{}", project_id, issue.id);
                             let pri_class = format!("badge badge-sm {}", issue.priority.badge_class());
                             let updated = issue.updated_at.format("%Y-%m-%d %H:%M").to_string();
-                            let status_text = t(MessageKey::IssueStatusName { label: issue.status.to_i18n_label() });
                             let priority_text = t(MessageKey::PriorityName { label: issue.priority.to_i18n_label() });
                             let effort_text = match issue.effort {
                                 Some(e) => t(MessageKey::PointsValue { points: e }),
@@ -765,6 +767,48 @@ fn ListView(
                                 Some(aid) => assignee_label(aid, &assignees).to_string(),
                                 None => t(MessageKey::NoValuePlaceholder),
                             };
+
+                            // `STATUS-001`: per-row status control,
+                            // route shape (b) — `/status/list`,
+                            // mirroring `/status/board`. Hidden
+                            // `filter_status`/`filter_assignee`/`sort`
+                            // round-trip this row's own current view
+                            // state back into the redirect, the same
+                            // three dimensions the toolbar form above
+                            // already sends as plain query
+                            // parameters — not a caller-supplied
+                            // redirect *target* (that stays
+                            // `/projects/{project_id}`, derived from
+                            // the route), just the same filter values
+                            // a user could type into the URL bar
+                            // regardless.
+                            let status_form_action =
+                                format!("/projects/{}/issues/{}/status/list", project_id, issue.id);
+                            let status_client_updated_at = issue.updated_at.to_rfc3339();
+                            let status_group_label = t(MessageKey::IssueStatusGroupAriaLabel {
+                                issue_title: issue.title.clone(),
+                            });
+                            let current_status = issue.status;
+                            let status_segments = IssueStatus::all().into_iter().map(|s| {
+                                let is_current = s == current_status;
+                                let pressed = if is_current { "true" } else { "false" };
+                                let cls = if is_current {
+                                    "join-item btn btn-xs btn-primary"
+                                } else {
+                                    "join-item btn btn-xs btn-ghost"
+                                };
+                                let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
+                                view! {
+                                    <button type="submit"
+                                            name="status"
+                                            value=s.as_str()
+                                            class=cls
+                                            aria-pressed=pressed>
+                                        {label}
+                                    </button>
+                                }
+                            }).collect_view();
+
                             view! {
                                 <tr class="hover">
                                     <td>
@@ -772,7 +816,17 @@ fn ListView(
                                             {issue.title}
                                         </a>
                                     </td>
-                                    <td><span class="badge badge-sm badge-ghost">{status_text}</span></td>
+                                    <td>
+                                        <form method="post" action=status_form_action>
+                                            <input type="hidden" name="client_updated_at" value=status_client_updated_at/>
+                                            <input type="hidden" name="filter_status" value=active_status.clone()/>
+                                            <input type="hidden" name="filter_assignee" value=active_assignee.clone()/>
+                                            <input type="hidden" name="sort" value=active_sort.clone()/>
+                                            <div class="join" role="group" aria-label=status_group_label>
+                                                {status_segments}
+                                            </div>
+                                        </form>
+                                    </td>
                                     <td><span class=pri_class>{priority_text}</span></td>
                                     <td class="text-xs text-base-content/70">{effort_text}</td>
                                     <td class="text-xs text-base-content/70">{assignee_text}</td>
@@ -1102,6 +1156,9 @@ pub fn IssueDetailPage(
     // `POST` performs the delete — same path, so this href also
     // serves as the originating control's link target.
     let delete_href = format!("/projects/{}/issues/{}/delete", project.id, issue.id);
+    // `STATUS-001`: the detail segment's own form action, route
+    // shape (b) — one route per surface, mirroring `/status/board`.
+    let status_form_action = format!("/projects/{}/issues/{}/status/detail", project.id, issue.id);
     let submit_action = issue_href.clone();
     let project_name_for_breadcrumb = project.name.clone();
     let project_href_for_breadcrumb = project_href.clone();
@@ -1127,6 +1184,7 @@ pub fn IssueDetailPage(
                 assignees=assignees.clone()
                 edit_href=edit_href
                 delete_href=delete_href
+                status_form_action=status_form_action
             />
         }
         .into_any()
@@ -1457,10 +1515,13 @@ fn IssueView(
     assignees: Vec<AssigneeOption>,
     edit_href: String,
     delete_href: String,
+    status_form_action: String,
 ) -> impl IntoView {
     let pri_class = format!("badge badge-sm {}", issue.priority.badge_class());
     let created = issue.created_at.format("%Y-%m-%d %H:%M").to_string();
     let updated = issue.updated_at.format("%Y-%m-%d %H:%M").to_string();
+    let status_client_updated_at = issue.updated_at.to_rfc3339();
+    let current_status = issue.status;
     let has_desc = !issue.description.is_empty();
     let description = issue.description.clone();
     let assignee_node = issue.assignee_id.as_ref().map(|aid| {
@@ -1483,55 +1544,50 @@ fn IssueView(
             </div>
         </div>
 
-        // Phase B PR3 (B-4): status segment control. Three
-        // mutually-exclusive segments (Open / In Progress /
-        // Done), with the current status highlighted. Display
-        // only — clicking does NOT mutate; the user clicks
-        // Edit to change. Direct-manipulation status changes
-        // come in Phase D.
+        // `STATUS-001` (RFC 004a step 1): status segment control.
+        // Three mutually-exclusive segments (Open / In Progress /
+        // Done), with the current status highlighted. A real
+        // `<form>` posting the clicked segment's status — no click
+        // handler, no script, works with scripting disabled
+        // (`DEC-021`, umbrella requirement 0). Step 2 (in-place
+        // update, undo toast) is its own handoff.
         //
-        // Visually: the active segment uses `btn-primary` so
-        // it stands out against the inactive `btn-ghost`
-        // siblings. The shared `btn-disabled` cursor keeps it
-        // clear that this is a read-only display, not an
-        // interactive switch.
+        // Visually: the active segment uses `btn-primary` so it
+        // stands out against the inactive `btn-ghost` siblings.
         //
-        // Accessibility: the wrapping div carries
-        // `role="group"` + `aria-label`, and each segment is
-        // a button with `aria-pressed` reflecting whether it
-        // matches the current status. Screen readers
-        // announce "Open, pressed; In Progress, not pressed;
-        // Done, not pressed" so the segmented semantics carry
-        // through.
-        <div class="join mb-3" role="group" aria-label=t(MessageKey::IssueStatusAriaLabel)>
-            {IssueStatus::all().into_iter().map(|s| {
-                let is_current = s == issue.status;
-                let pressed = if is_current { "true" } else { "false" };
-                // `btn-primary` highlights the active segment;
-                // others are `btn-ghost` so they recede.
-                // `cursor-default` signals "click does nothing
-                // here." All segments stay enabled for screen
-                // reader navigation; their `aria-pressed`
-                // attribute carries the active/inactive
-                // semantics. The buttons have `type="button"`
-                // (not submit) and no click handler, so they
-                // are inert by design.
-                let cls = if is_current {
-                    "join-item btn btn-sm btn-primary cursor-default"
-                } else {
-                    "join-item btn btn-sm btn-ghost cursor-default"
-                };
-                let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
-                view! {
-                    <button type="button"
-                            class=cls
-                            aria-pressed=pressed
-                            tabindex="-1">
-                        {label}
-                    </button>
-                }
-            }).collect_view()}
-        </div>
+        // Accessibility: the wrapping div carries `role="group"` +
+        // `aria-label`, and each segment is a button with
+        // `aria-pressed` reflecting whether it matches the current
+        // status — unchanged from the display-only version. Screen
+        // readers announce "Open, pressed; In Progress, not
+        // pressed; Done, not pressed" so the segmented semantics
+        // carry through. `tabindex="-1"` and `cursor-default` are
+        // gone: clicking a segment is no longer a no-op, so nothing
+        // should say it is.
+        <form method="post" action=status_form_action>
+            <input type="hidden" name="client_updated_at" value=status_client_updated_at/>
+            <div class="join mb-3" role="group" aria-label=t(MessageKey::IssueStatusAriaLabel)>
+                {IssueStatus::all().into_iter().map(|s| {
+                    let is_current = s == current_status;
+                    let pressed = if is_current { "true" } else { "false" };
+                    let cls = if is_current {
+                        "join-item btn btn-sm btn-primary"
+                    } else {
+                        "join-item btn btn-sm btn-ghost"
+                    };
+                    let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
+                    view! {
+                        <button type="submit"
+                                name="status"
+                                value=s.as_str()
+                                class=cls
+                                aria-pressed=pressed>
+                            {label}
+                        </button>
+                    }
+                }).collect_view()}
+            </div>
+        </form>
 
         <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/70 mb-4">
             <span class=pri_class>{t(MessageKey::PriorityName { label: issue.priority.to_i18n_label() })}</span>

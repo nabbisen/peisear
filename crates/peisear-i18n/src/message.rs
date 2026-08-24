@@ -860,9 +860,20 @@ pub enum MessageKey {
     SprintSelectAriaLabel,
     NoSprintOption,
     SprintAssignmentHelperText,
-    /// The read-only status segmented control's `aria-label`
-    /// (`FR-ISS-005`).
+    /// The issue detail page's status segmented control's
+    /// `aria-label` (`FR-ISS-005`). `STATUS-001`: the control is a
+    /// real form now, not read-only; the group label didn't need to
+    /// change with it.
     IssueStatusAriaLabel,
+    /// `STATUS-001`: the issue list's per-row status control needs
+    /// its own group label, since every row would otherwise share
+    /// [`MessageKey::IssueStatusAriaLabel`]'s generic text — a
+    /// screen reader stepping through the list couldn't tell one
+    /// row's group from another's. `issue_title` is genuine user
+    /// data, same pattern as [`MessageKey::MoveIssueAriaLabel`].
+    IssueStatusGroupAriaLabel {
+        issue_title: String,
+    },
     NoDescriptionProvided,
     /// "Created {formatted}". `formatted` is an already-formatted
     /// timestamp string (data, not copy) — replaces a source that
@@ -2221,6 +2232,9 @@ impl MessageKey {
             MessageKey::NoSprintOption,
             MessageKey::SprintAssignmentHelperText,
             MessageKey::IssueStatusAriaLabel,
+            MessageKey::IssueStatusGroupAriaLabel {
+                issue_title: "Fix login bug".to_string(),
+            },
             MessageKey::NoDescriptionProvided,
             MessageKey::CreatedAt {
                 formatted: "2026-08-10 09:00".to_string(),

@@ -38,12 +38,16 @@ async fn detail_url_renders_read_only() {
     let body = resp.text();
 
     // Edit affordance must be a link to /edit, not the form
-    // itself. Looking for the IssueEditForm's distinctive
-    // `client_updated_at` hidden input is the cleanest probe —
-    // it's only present in edit mode.
+    // itself. `client_updated_at` stopped being a distinctive probe
+    // for "edit form is rendered" once `STATUS-001` gave the
+    // detail page's own status segment a hidden field of the same
+    // name (a different form, same field name, different purpose)
+    // — `name="title"` is still unique to `IssueEditForm`, since
+    // the read-only view renders the title as an `<h1>`, never as
+    // an input.
     assert!(
-        !body.contains(r#"name="client_updated_at""#),
-        "detail URL must not render the edit form (client_updated_at hidden input present)"
+        !body.contains(r#"name="title""#),
+        "detail URL must not render the edit form (title input present)"
     );
     // The "Edit" link should point to the new explicit URL.
     let expected_edit_link = format!("/projects/{project_id}/issues/{issue_id}/edit");

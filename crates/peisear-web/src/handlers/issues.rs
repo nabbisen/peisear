@@ -895,3 +895,96 @@ pub async fn change_status_form(
     // it to the default view.
     Ok(Redirect::to(&format!("/projects/{project_id}?view=board")))
 }
+
+/// `STATUS-001` (RFC 004a step 1): the issue detail page's status
+/// segment, no longer inert. Route shape (b) per the handoff's §5 —
+/// one form-POST route per surface, mirroring [`change_status_form`]'s
+/// board pattern, rather than (a)'s single generalised route: the
+/// three surfaces' redirect targets aren't uniformly derivable from
+/// `project_id`/`issue_id` alone (the list's needs to carry its
+/// filter/sort state forward too, §4/(a) below), so one route per
+/// surface is the smaller change here, exactly as (b) is described.
+///
+/// Reuses [`StatusChangeForm`] as-is: the detail page's redirect
+/// target has no filter/sort state to preserve, so it needs nothing
+/// [`change_status_form`]'s own form body doesn't already have.
+pub async fn change_status_form_detail(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((project_id, issue_id)): Path<(String, String)>,
+    Form(body): Form<StatusChangeForm>,
+) -> AppResult<Redirect> {
+    apply_status_change(
+        &state,
+        &user.id,
+        &project_id,
+        &issue_id,
+        &body.status,
+        &body.client_updated_at,
+    )
+    .await?;
+    Ok(Redirect::to(&format!(
+        "/projects/{project_id}/issues/{issue_id}"
+    )))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StatusChangeListForm {
+    pub status: String,
+    #[serde(default)]
+    pub client_updated_at: String,
+    /// The three view/filter/sort dimensions the list toolbar form
+    /// already sends as plain `GET` query parameters
+    /// (`ProjectViewQuery`'s `status`/`assignee`/`sort`) — round-
+    /// tripped here as hidden fields so a status change doesn't lose
+    /// the row's current filtered view. Named `filter_*` rather than
+    /// reusing `status`/`assignee`/`sort` directly: this form already
+    /// has a `status` field naming the *target* issue status, and
+    /// reusing the name for the filter would collide.
+    ///
+    /// Not a caller-supplied redirect target (`CONF-001` §3.3's
+    /// concern, restated in this handoff's §5): the destination path
+    /// is always `/projects/{project_id}`, derived from the route's
+    /// own parameter. These three values only ever become query
+    /// parameters on that fixed path — the same values a user could
+    /// type into the URL bar directly and already can, via the
+    /// toolbar form above them on the same page.
+    #[serde(default)]
+    pub filter_status: Option<String>,
+    #[serde(default)]
+    pub filter_assignee: Option<String>,
+    #[serde(default)]
+    pub sort: Option<String>,
+}
+
+/// `STATUS-001`: the issue list's per-row status control. See
+/// [`change_status_form_detail`] for why this is a second route
+/// rather than one generalised route.
+pub async fn change_status_form_list(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((project_id, issue_id)): Path<(String, String)>,
+    Form(body): Form<StatusChangeListForm>,
+) -> AppResult<Redirect> {
+    apply_status_change(
+        &state,
+        &user.id,
+        &project_id,
+        &issue_id,
+        &body.status,
+        &body.client_updated_at,
+    )
+    .await?;
+
+    let mut query = format!("/projects/{project_id}?view=list");
+    if let Some(s) = body.filter_status.as_deref().filter(|s| !s.is_empty()) {
+        query.push_str(&format!("&status={s}"));
+    }
+    if let Some(a) = body.filter_assignee.as_deref().filter(|a| !a.is_empty()) {
+        query.push_str(&format!("&assignee={a}"));
+    }
+    if let Some(s) = body.sort.as_deref().filter(|s| !s.is_empty()) {
+        query.push_str(&format!("&sort={s}"));
+    }
+    Ok(Redirect::to(&query))
+}
