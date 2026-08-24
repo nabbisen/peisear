@@ -354,6 +354,36 @@ Two guards, one false-positive class, one fixed and one not — the lesson staye
 local to the file that learned it, which is the more interesting half of this
 entry.
 
+### 11. Redirect construction — added 2026-08-16, from STATUS-001's review
+
+Three handlers build a redirect by interpolating caller-supplied values straight
+into a query string, unencoded:
+
+- `handlers::sprints::plan_query_string` (`:594`) — PLAN-001, 0.22.0
+- `handlers::issues::change_status_form_list` — STATUS-001, 0.25.0
+- and the pattern is available to be repeated wherever a filtered view needs
+  preserving across a POST
+
+Meanwhile `percent_encode_query` exists in **two copies**
+(`handlers/teams.rs:391`, `handlers/sprints.rs:829`), used for flash text and
+not for these.
+
+**Severity: low, and established rather than assumed.** axum 0.8.9's
+`Redirect::into_response` does `HeaderValue::try_from` and returns a 500 with
+the error string on failure — it does not panic and does not emit a split
+header. A value containing `&` appends parameters to the redirect; the receiving
+handlers read only known ones. There is no injection and no crash.
+
+**What makes it audit material is the shape, not the risk.** Three construction
+sites and two copies of the encoder they should be using is the
+two-homes-for-one-fact pattern this project has now recorded five times, and a
+redirect is a sink with different rules from the query parameter the value
+arrived as — which is the reasoning STATUS-001's review request got slightly
+wrong and is worth settling once.
+
+§1's authorisation table has a natural sibling here: every place the application
+constructs a redirect, and what encodes it.
+
 ## Test plan
 
 The Phase E test plan is largely the audit work itself; the
