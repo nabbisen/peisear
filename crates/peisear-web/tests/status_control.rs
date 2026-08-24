@@ -255,6 +255,20 @@ async fn neither_surface_depends_on_script() {
         !detail_body.contains("onclick=") && !detail_body.contains("onsubmit="),
         "detail status control must not depend on script: {detail_body}"
     );
+    // `STATUS-001-review.md` §2: a form being present proves
+    // nothing on its own — a `type="button"` segment inside a
+    // perfectly good form is still completely inert without
+    // JavaScript, which is exactly §17.4's shape and exactly what
+    // this handoff exists to remove. The segments must actually be
+    // submit controls.
+    assert!(
+        !detail_body.contains(r#"type="button""#),
+        "no detail segment may be type=\"button\" -- that submits nothing: {detail_body}"
+    );
+    assert!(
+        detail_body.contains(r#"type="submit""#) && detail_body.contains(r#"name="status""#),
+        "detail segments must be real type=\"submit\" status controls: {detail_body}"
+    );
 
     let list_resp = app
         .server
@@ -270,6 +284,14 @@ async fn neither_surface_depends_on_script() {
     assert!(
         !list_body.contains("onclick=") && !list_body.contains("onsubmit="),
         "list row status control must not depend on script: {list_body}"
+    );
+    assert!(
+        !list_body.contains(r#"type="button""#),
+        "no list-row segment may be type=\"button\" -- that submits nothing: {list_body}"
+    );
+    assert!(
+        list_body.contains(r#"type="submit""#) && list_body.contains(r#"name="status""#),
+        "list-row segments must be real type=\"submit\" status controls: {list_body}"
     );
 }
 
