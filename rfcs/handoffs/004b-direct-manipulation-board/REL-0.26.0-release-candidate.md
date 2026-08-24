@@ -111,7 +111,7 @@ the last five releases have.
 | `today_panel` | 3 |
 | `view_state` | 5 |
 | `workload_privacy` | 4 |
-| **integration total** | **157** |
+| **integration total** | **147** |
 | `peisear-web` lib | 11 |
 | `peisear-i18n` | 11 |
 | `peisear-notify` | 6 |
