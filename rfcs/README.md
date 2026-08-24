@@ -40,7 +40,8 @@ Open for review. Design may still change.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) — umbrella, reconciled 2026-08-16; substeps get their own RFCs | 0.25.0 |
+| 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) — umbrella; substeps get their own RFCs | — |
+| 004b | [Direct manipulation — the board (D-2)](./proposed/004b-direct-manipulation-board.md) — **the drag already ships**; this is the contract the board predates | 0.26.0 |
 | 005 | [Quality consolidation](./proposed/005-quality-consolidation.md) — §9 shipped at 0.22.0; the rest audits Phase D and so follows RFC 004 | 0.26.0 |
 
 ## Implemented
