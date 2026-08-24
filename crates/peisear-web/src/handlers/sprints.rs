@@ -408,7 +408,18 @@ pub async fn delete_confirm(
     let consequence_key = match sprint.status {
         SprintStatus::Planned => MessageKey::ConfirmDeleteSprintPlannedNote,
         SprintStatus::Completed => MessageKey::ConfirmDeleteSprintCompletedNote,
-        SprintStatus::Active => unreachable!("refused above"),
+        // Unreachable today — the guard above already returned for
+        // `Active` — but `QA-002-review.md` §4.3: the failure mode
+        // matters more than today's reachability. Returning the same
+        // refusal here (rather than `unreachable!`) means a future
+        // reorder of this function degrades to "still refuses", not
+        // "panics into a 500". Defence in depth: removing either this
+        // arm or the guard above leaves the route correct.
+        SprintStatus::Active => {
+            return Err(AppError::Validation(
+                Locale::English.render(MessageKey::SprintActiveCannotBeDeletedMessage),
+            ));
+        }
     };
     let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
 

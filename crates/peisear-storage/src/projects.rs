@@ -151,6 +151,17 @@ pub async fn update(
     Ok(())
 }
 
+/// `WHERE owner_id = ?2` is the authorisation, not a defensive extra:
+/// a caller who names a project id they don't own affects zero rows,
+/// and `rows_affected() == 0 → NotFound` turns that into "no such
+/// project for you" — the concealment behaviour external design §9
+/// asks for — rather than a distinguishable "found it, but you can't
+/// touch it" response. `QA-002-review.md` §4.1: a handler-level
+/// ownership check was added on top of this, on a misdiagnosis that
+/// this function reported success on a zero-row delete; it does not,
+/// and the handler check was reverted. This comment exists so the
+/// next reader sees why the row count is deliberate before mistaking
+/// it for a gap the way that review did.
 pub async fn delete(pool: &Pool, id: &str, owner_id: &str) -> StorageResult<()> {
     let res = sqlx::query(
         r#"

@@ -498,6 +498,30 @@ async fn non_owner_post_project_delete_returns_404_and_project_survives() {
     );
 }
 
+/// `QA-002-review.md` §4.2: a genuine gap the review found — nothing
+/// previously exercised a *successful* owner-initiated project
+/// delete via `POST` anywhere in the suite.
+#[tokio::test]
+async fn owner_post_project_delete_still_works() {
+    let app = TestApp::spawn().await;
+    let owner = TestUser::new("alice");
+    let owner_id = register_and_login(&app, &owner).await;
+    let project_id = create_personal_project(&app.db, &owner_id, "Customer Portal").await;
+
+    let resp = app
+        .server
+        .post(&format!("/projects/{project_id}/delete"))
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let still_there =
+        peisear_storage::projects::find_accessible(&app.db, &project_id, &owner_id).await;
+    assert!(
+        still_there.is_err(),
+        "the project should be gone after the owner's own delete"
+    );
+}
+
 /// Pull `value="..."` from `<input type="hidden" name="{field}"
 /// value="...">` in rendered HTML. Minimal, not a general HTML
 /// parser -- fine for this test's one known shape.
