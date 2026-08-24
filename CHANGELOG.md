@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.26.0] — 2026-08-25
+
+No schema migration.
+
+### Added
+
+- **Issue detail, the issue list, and the board now update a status
+  change in place, with a 5-second undo, instead of reloading the
+  page.** Any failure before the change reaches the server falls back
+  to the plain form submit 0.25.0 introduced, so a user with
+  JavaScript disabled or broken keeps the same working path — the
+  enhancement can never be the only way to change a status. This is
+  the first release where new behaviour lives in JavaScript the test
+  suite does not execute: the in-place update, the undo toast, and the
+  fallback are verified by reading and by hand, not by the automated
+  suite.
+- **The board's three status-change messages moved into the message
+  table, unchanged.** They had been literal English sentences inside
+  `static/board.js` since before this project had a vocabulary guard
+  for anything — not excluded from the check that covers the rest of
+  the app's copy, simply never reached by it, since that check only
+  ever looked at Rust. They passed the check without a reword.
+  `static/*.js` is now scanned on every test run for the same kind of
+  unchecked copy, with `search.js` — which needs a rendering mechanism
+  that does not exist yet — the one named exception. The scan does
+  not catch a single word standing alone; it looks for two or more.
+
 ## [0.25.0] — 2026-08-16
 
 No schema migration.
