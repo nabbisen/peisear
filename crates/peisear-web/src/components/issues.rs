@@ -110,8 +110,11 @@ pub fn ProjectDetailPage(
             // in-place status change (list mode, `STATUS-002`) — one
             // region, one id, shared by whichever of the two scripts
             // is actually loaded on this page. Empty (and hidden)
-            // otherwise.
-            <div id="board-status" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
+            // otherwise. Named for what it is, not for where it used
+            // to live only (`STATUS-002-review.md` §5 Q3) — `board.js`
+            // reads this same id, and changed by exactly this one
+            // line to match.
+            <div id="status-announcements" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
 
             {if is_board {
                 view! { <BoardView project_id=project_id_for_board columns=columns assignees=assignees.clone()/> }.into_any()
@@ -549,6 +552,7 @@ fn render_status_enhancement_assets() -> impl IntoView {
         },
         "undoLabel": t(MessageKey::UndoButtonLabel),
         "conflictMessage": t(MessageKey::StatusChangeUndoConflictMessage),
+        "unavailableMessage": t(MessageKey::StatusChangeUndoUnavailableMessage),
     })
     .to_string();
 
@@ -1643,7 +1647,7 @@ fn IssueView(
         // Same id, same pattern as the board/list surfaces' region
         // (see `ProjectDetailPage`) — `dm.js` announces into it on a
         // rejected/conflicting in-place status change (`STATUS-002`).
-        <div id="board-status" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
+        <div id="status-announcements" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
         {render_status_enhancement_assets()}
 
         <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/70 mb-4">

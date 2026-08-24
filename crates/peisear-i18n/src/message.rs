@@ -2075,6 +2075,14 @@ pub enum MessageKey {
     /// the 5-second window. No retry, no force — announce this and
     /// reload, the same posture `board.js` takes on conflict.
     StatusChangeUndoConflictMessage,
+    /// Undo's non-409 failure case — a network rejection, a non-2xx
+    /// response, or a malformed body. `STATUS-002-review.md` §4:
+    /// conflated with [`MessageKey::StatusChangeUndoConflictMessage`]
+    /// in the first round, telling the user someone else changed the
+    /// issue when nobody did. `board.js` already draws this
+    /// distinction (`CONFLICT_MESSAGE` vs. `UNAVAILABLE_MESSAGE`);
+    /// this is that same split for undo.
+    StatusChangeUndoUnavailableMessage,
 }
 
 impl MessageKey {
@@ -2811,6 +2819,7 @@ impl MessageKey {
             },
             MessageKey::UndoButtonLabel,
             MessageKey::StatusChangeUndoConflictMessage,
+            MessageKey::StatusChangeUndoUnavailableMessage,
         ];
         keys.extend(
             CalendarViewLabel::all()

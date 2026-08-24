@@ -1194,6 +1194,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::StatusChangeUndoConflictMessage => {
             "Another member changed this issue first. The current status is now shown.".to_string()
         }
+        MessageKey::StatusChangeUndoUnavailableMessage => {
+            "This change could not be completed. Reload to see the current state.".to_string()
+        }
         MessageKey::ConfirmDeleteSprintPlannedNote => {
             "Issues currently linked to it will be unlinked.".to_string()
         }

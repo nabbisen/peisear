@@ -21,7 +21,14 @@
     "This status change could not be completed. The card has been returned to its previous column.";
 
   function announce(message) {
-    var region = document.getElementById("board-status");
+    // `STATUS-002-review.md` §5 Q3: renamed from "board-status" to
+    // "status-announcements" -- the region is now shared with the
+    // issue list and issue detail pages too, so it is named for what
+    // it is rather than where it used to live only. Permitted as a
+    // one-line exception to "no change to board.js" (§10): that
+    // prohibition keeps the board's behaviour out of STATUS-002, and
+    // renaming an id it reads is not a behaviour change.
+    var region = document.getElementById("status-announcements");
     if (region) region.textContent = message;
   }
 

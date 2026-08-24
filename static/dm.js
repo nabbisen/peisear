@@ -1,34 +1,35 @@
 // Direct-manipulation status enhancement — RFC 004a step 2
 // (STATUS-002), over STATUS-001's real `<form>`-based status
-// controls on the issue detail page and the issue list.
+// controls on the issue detail page and the issue list. Intercepts
+// `.js-status-form` submits, POSTs the same JSON endpoint `board.js`
+// uses (`/projects/{id}/issues/{id}/status`), updates in place
+// instead of reloading, with a 5-second Undo toast.
 //
-// Every `.js-status-form` gets its submit intercepted and sent as a
-// background POST to the same JSON endpoint `board.js` uses
-// (`/projects/{id}/issues/{id}/status`), updating in place instead
-// of reloading, with a 5-second Undo toast.
+// The rule everything else here serves: any failure *before the
+// mutation lands* falls back to submitting the form natively — the
+// page-load path STATUS-001 already proved works without scripting.
+// Every such failure funnels into the single `fallback()` call
+// inside `attachStatusForm`'s fetch chain, checkable top to bottom.
+// Once the server has applied the change there is nothing to fall
+// back to — `applyChange` never resubmits, only announces and, if
+// it can't update the page in place, reloads instead (falling open
+// after success would re-send an already-applied change with a
+// stale lock value, handing the user a conflict error for a change
+// that worked). The test harness drives HTTP, not JavaScript, so
+// this file has no coverage of its own (STATUS-002 §7).
 //
-// The one rule everything else here serves: any failure falls back
-// to submitting the form natively — not an error message, not a
-// console log, the page-load path STATUS-001 already proved works
-// without scripting. Every failure funnels into the single
-// `fallback()` call at the bottom of the fetch chain, checkable by
-// reading top to bottom — the test harness drives HTTP, not
-// JavaScript, so this file has no coverage of its own (STATUS-002
-// §7).
-//
-// No copy is authored here. `prose_scan` covers `components/` and
-// `handlers/` only, so a string literal here is invisible to it;
-// every string this script can show comes from `components/
-// issues.rs` (`render_status_enhancement_assets`) as a JSON island
-// at `#status-enhancement-copy`, read once at load.
+// No copy is authored here — `prose_scan` covers `components/` and
+// `handlers/` only, so a literal here is invisible to it. Every
+// string this script can show comes from `components/issues.rs`
+// (`render_status_enhancement_assets`) as a JSON island at
+// `#status-enhancement-copy`, read once at load.
 (function () {
   "use strict";
 
   // Feature-detect rather than branch inside the handler. If either
-  // is missing, every `.js-status-form` on the page is left exactly
-  // as STATUS-001 built it — a plain form, no listener attached, so
-  // there is no enhancement code path that could later fail open
-  // because there is no enhancement at all.
+  // is missing, every `.js-status-form` is left exactly as
+  // STATUS-001 built it — no listener attached, so there is no
+  // enhancement path that could later need to fail open.
   if (
     typeof window.fetch !== "function" ||
     typeof HTMLFormElement.prototype.requestSubmit !== "function"
@@ -49,7 +50,8 @@
     !copy ||
     !copy.movedTo ||
     typeof copy.undoLabel !== "string" ||
-    typeof copy.conflictMessage !== "string"
+    typeof copy.conflictMessage !== "string" ||
+    typeof copy.unavailableMessage !== "string"
   ) {
     return;
   }
@@ -58,7 +60,8 @@
   if (!forms.length) return;
 
   function announce(message) {
-    var region = document.getElementById("board-status");
+    // Shared with board.js, which reads this same id.
+    var region = document.getElementById("status-announcements");
     if (region) region.textContent = message;
   }
 
@@ -72,11 +75,12 @@
     );
   }
 
-  // The one funnel every failure path reaches. `requestSubmit`, not
-  // `submit` — it includes the clicked segment's `name=status
-  // value=…` pair, which a bare `form.submit()` would drop. `dmBypass`
-  // tells this form's own listener to step aside for the native
-  // submission this triggers.
+  // The one funnel every *pre-mutation* failure reaches.
+  // `requestSubmit`, not `submit`, includes the clicked segment's
+  // `name=status value=…` pair, which `form.submit()` would drop.
+  // `dmBypass` tells this form's own listener to step aside for the
+  // native submission this triggers. Never called once a response
+  // confirms the mutation landed — see `applyChange`.
   function fallback(form, submitter) {
     form.dataset.dmBypass = "1";
     form.requestSubmit(submitter);
@@ -139,8 +143,8 @@
     form._dmToast = { el: toast, timer: timer };
   }
 
-  // Shared by the original change and by undo — undo is a second
-  // call to this same endpoint, target status = the value restored.
+  // Shared by the original change and undo (a second call to this
+  // same endpoint, target status = the value restored).
   function postStatus(projectId, issueId, statusValue, clientUpdatedAt) {
     return fetch(statusUrl(projectId, issueId), {
       method: "POST",
@@ -152,13 +156,31 @@
     });
   }
 
+  // The mutation already succeeded server-side here — `clientInput`
+  // updates first so the lock stays correct even if the rest
+  // throws. Nothing past that point may resubmit: a UI failure just
+  // announces the same "moved to" copy (still accurate) and reloads.
+  function applyChange(form, projectId, issueId, newStatus, previousStatus, clientInput, updatedAt) {
+    clientInput.value = updatedAt;
+    try {
+      setPressed(form, newStatus);
+      var message = copy.movedTo[newStatus];
+      announce(message);
+      showUndoToast(form, message, function () {
+        performUndo(form, projectId, issueId, previousStatus, clientInput);
+      });
+    } catch (e) {
+      announce(copy.movedTo[newStatus]);
+      window.location.reload();
+    }
+  }
+
   function attachStatusForm(form) {
     var projectId = form.dataset.projectId;
     var issueId = form.dataset.issueId;
     var clientInput = form.elements["client_updated_at"];
     // No lock value, or no id to build the endpoint from — leave
-    // this form unenhanced rather than intercept it into a request
-    // that cannot succeed.
+    // this form unenhanced.
     if (!projectId || !issueId || !clientInput) return;
 
     form.addEventListener("submit", function (e) {
@@ -189,14 +211,9 @@
           if (!body || typeof body.updated_at !== "string" || !body.updated_at) {
             throw new Error("status-change-bad-shape");
           }
-          clientInput.value = body.updated_at;
-          setPressed(form, newStatus);
-          var message = copy.movedTo[newStatus];
-          announce(message);
-
-          showUndoToast(form, message, function () {
-            performUndo(form, projectId, issueId, previousStatus, clientInput);
-          });
+          // Confirmed applied past this point -- `applyChange` never
+          // reaches `fallback()`.
+          applyChange(form, projectId, issueId, newStatus, previousStatus, clientInput, body.updated_at);
         })
         .catch(function () {
           fallback(form, submitter);
@@ -204,14 +221,19 @@
     });
   }
 
-  // Undo has no form to fall back to — it exists only because this
-  // script exists. Any failure here (conflict or otherwise) takes the
-  // posture `board.js` takes when it has no form either: announce,
-  // then reload for authoritative state. No retry, no force
-  // (umbrella requirement 5).
+  // Undo has no form to fall back to, so every outcome here ends in
+  // announce + reload, never a resubmit. A 409 means someone else
+  // changed the issue; anything else (network rejection, other
+  // non-2xx, a malformed body) is merely unavailable, not a
+  // conflict, and must not be announced as one. No retry, no force.
   function performUndo(form, projectId, issueId, previousStatus, clientInput) {
+    var wasConflict = false;
     postStatus(projectId, issueId, previousStatus, clientInput.value)
       .then(function (res) {
+        if (res.status === 409) {
+          wasConflict = true;
+          throw new Error("undo-conflict");
+        }
         if (!res.ok) throw new Error("undo-not-ok");
         return res.json();
       })
@@ -224,7 +246,7 @@
         announce(copy.movedTo[previousStatus]);
       })
       .catch(function () {
-        announce(copy.conflictMessage);
+        announce(wasConflict ? copy.conflictMessage : copy.unavailableMessage);
         window.location.reload();
       });
   }
