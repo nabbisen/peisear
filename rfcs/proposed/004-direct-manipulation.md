@@ -6,7 +6,26 @@
 scenarios), §32 (keyboard alternatives), §39 (Phase D plan)
 **Governing decisions**: `DEC-021` (JavaScript posture),
 `DEC-018` (board keyboard control)
-**Last updated**: 2026-08-01
+**Last updated**: 2026-08-16 — reconciled against the shipped code
+
+> **Reconciliation note (2026-08-16).** Checked against the code before any
+> substep RFC was written, per the practice RFC 003 established. **The shape
+> survives; two substep sketches drifted.** D-2's view shipped without its
+> drag, and its "List / Calendar / Kanban selector" contradicts RFC 0002,
+> which made the calendar its own screen. D-4's endpoints now exist and carry
+> three constraints from `PLAN-001` that this document predates. Both
+> corrected in place, each marked.
+>
+> D-1's preconditions were verified intact — it still describes the exact
+> inert-segment markup that ships. D-3's optimistic-lock claim was already
+> annotated from CAL-001's review. D-5 is unaffected.
+>
+> **This document is not May-vintage**, unlike RFC 003: it was revised
+> 2026-08-01 for `DEC-021`. That is the likeliest reason its shape held while
+> RFC 003's did not, and it is an argument for the revision itself rather than
+> for the reconciliation gate.
+>
+> Full findings: `.git-exclude/tasks/architect/009-rfc-004-reconciliation.md`.
 
 > **Revision note (2026-08-01).** Revised to carry `DEC-021`, and
 > to correct three defects found on review: normative text that
@@ -282,10 +301,19 @@ sketches below are enough to plan the umbrella shape.
 - Keyboard: focus the segment, press Space to advance. Enter
   opens the dropdown.
 
-#### D-2: Kanban view + drag
+#### D-2: Kanban drag
 
-- New view on project detail: List / Calendar / Kanban
-  selector at the top of `/projects/{id}`.
+*Corrected 2026-08-16, from the reconciliation
+(`.git-exclude/tasks/architect/009-rfc-004-reconciliation.md` §2.2). This
+substep was "Kanban view + drag"; the view shipped without it.*
+
+- **The board already exists.** `?view=board` on project detail, with a
+  **List / Board** selector (`components/issues.rs:41–60`). This substep is
+  the drag, not the view.
+- **The calendar is not a third view mode.** RFC 0002 shipped it as its own
+  screen — `/projects/{id}/calendar`, SCR-28 — reached by a link. The earlier
+  text here described a "List / Calendar / Kanban selector"; implementing that
+  would change two shipped URLs and undo RFC 0002's shape. Do not.
 - Drag from one status column to another → POST
   status change.
 - Keyboard: Tab to issue, Space to "pick up" (visual lift),
@@ -318,10 +346,26 @@ sketches below are enough to plan the umbrella shape.
 
 - Drag backlog issue to sprint column → POST add.
 - Drag sprint issue to backlog → POST remove.
-- Endpoints: from RFC 0001's `/plan/add` and `/plan/remove`.
+- Endpoints: from RFC 0001's `/plan/add` and `/plan/remove` — **shipped at
+  0.22.0**, not pending.
 - Keyboard: Tab to issue, Space to move (cycles through
   destination columns; Enter confirms).
-- No optimistic-lock — `sprint_issues` is a join table.
+- No optimistic-lock — `sprint_issues` is a join table. Verified: the table
+  carries `issue_id`, `sprint_id`, `assigned_at` and no `updated_at`, so
+  `DEC-013`'s triggers do not reach it and there is nothing to compare.
+
+*Added 2026-08-16, from the reconciliation §2.5.* `PLAN-001` shipped three
+constraints this sketch predates, and the drag must honour all three:
+
+- **`can_write()` gates both POSTs** — `admin`/`member` only.
+- **A `viewer` sees the plan read-only**, with no move controls at all. The
+  drag must not be attachable for them.
+- **Move controls exist only on a `Planned` sprint.** Active is read-only;
+  completed is read-only *and* hides the backlog column entirely.
+
+A drag handle that appears where a button does not is a second, divergent
+answer to "may this user move this issue" — the shape RFC 009 §D1 exists to
+prevent. Derive from the same flag the buttons use.
 
 #### D-5: Issue list reorder
 
