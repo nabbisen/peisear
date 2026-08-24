@@ -1,6 +1,6 @@
 # RFC 0004a: Direct manipulation — status change (D-1)
 
-**Status**: Proposed
+**Status**: **Accepted 2026-08-16**
 **Target**: 0.25.0, **after CONF-001**
 **Umbrella**: [RFC 0004](./004-direct-manipulation.md) — substep D-1
 **Governing decisions**: `DEC-021` (JavaScript posture), `DEC-018`
@@ -166,7 +166,21 @@ Drag (D-2). The cycle interaction and the dropdown (§D2). Any change to the
 board. Any general revision of the JSON API's response shapes beyond §D3's one
 field. Undo beyond the umbrella's 5-second toast.
 
-## Open questions
+## Open questions — all settled at acceptance
+
+**Settled 2026-08-16 by their stated defaults**, the owner having accepted
+without varying them. Recorded as decided rather than left looking skipped.
+
+1. **§D4's form-route shape** — **(b), one route per surface**, as the smaller
+   change, with **(a)** recorded as the intended shape for whenever something
+   else touches these routes. The implementer may still take (a) if it turns out
+   cheaper in the writing; say which.
+2. **Does step 2 ship in 0.25.0?** — **Yes, both steps.** But the escape stands:
+   if step 1 lands late, step 2 slips rather than compressing its review.
+3. **The list control on every row?** — **Every row.** Simpler, and it does not
+   depend on pointer hover, which matters for touch.
+
+### Original wording, for the record
 
 1. **§D4's (a) or (b)** — one generalised form route or one per surface. *Default
    if the implementer has no preference: (b), as the smaller change, with (a)

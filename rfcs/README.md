@@ -31,6 +31,7 @@ Design settled. Implementation may begin.
 
 | ID | Title | Target |
 |----|-------|--------|
+| 004a | [Direct manipulation — status change (D-1)](./accepted/004a-direct-manipulation-status.md) — two steps; the no-JS path first; *has handoffs* | 0.25.0 |
 | 010 | [Destructive-action confirmation](./accepted/010-destructive-action-confirmation.md) — closes external design §17.4; *has handoffs*; **before RFC 004's first substep** | 0.25.0 |
 
 ## Proposed
@@ -40,7 +41,6 @@ Open for review. Design may still change.
 | ID | Title | Target |
 |----|-------|--------|
 | 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) — umbrella, reconciled 2026-08-16; substeps get their own RFCs | 0.25.0 |
-| 004a | [Direct manipulation — status change (D-1)](./proposed/004a-direct-manipulation-status.md) — two steps; the no-JS path first | 0.25.0 |
 | 005 | [Quality consolidation](./proposed/005-quality-consolidation.md) — §9 shipped at 0.22.0; the rest audits Phase D and so follows RFC 004 | 0.26.0 |
 
 ## Implemented
@@ -71,6 +71,7 @@ the RFC number they are keyed to.
 
 | Directory | Governing RFC |
 |---|---|
+| [`handoffs/004a-direct-manipulation-status/`](./handoffs/004a-direct-manipulation-status/README.md) | 004a — active |
 | [`handoffs/010-destructive-action-confirmation/`](./handoffs/010-destructive-action-confirmation/README.md) | 010 — active |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
 | [`handoffs/002-calendar-surfaces/`](./handoffs/002-calendar-surfaces/README.md) | 002 — historical, RFC implemented |
