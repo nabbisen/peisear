@@ -17,7 +17,7 @@ one is reviewed.
 |---|---|---|---|
 | STATUS-001 | [STATUS-001](./STATUS-001-no-js-status-control.md) | Step 1 — a status control on issue detail and issue list that works without JavaScript | CONF-001 |
 | REL-0.25.0 | [REL-0.25.0](./REL-0.25.0-release-candidate.md) | Release candidate for **all** of 0.25.0 — CONF-001, QA-002, STATUS-001 | STATUS-001 |
-| STATUS-002 | *not yet written* | Step 2 — the click affordance, the in-place update, the undo toast, and `change_status` returning the new lock value | STATUS-001; **not in 0.25.0** |
+| STATUS-002 | [STATUS-002](./STATUS-002-status-enhancement.md) | Step 2 — the enhancement, in-place update, undo toast, and `change_status` returning the new lock value | STATUS-001; **0.26.0** |
 
 ## Two handoffs because it is two steps
 
@@ -36,4 +36,9 @@ Attaching a click handler to three buttons that currently do nothing would give
 some users a working control and others a silent no-op — external design §17.4,
 which `CONF-001` is fixing for nine controls in this same release.
 
-STATUS-002 is written after STATUS-001 is reviewed.
+STATUS-002 was written after STATUS-001 was reviewed, and what step 1 found
+shaped it: the segments are now real submit buttons, so step 2 inherits keyboard
+operation rather than rebuilding it — and the enhancement's central obligation
+is to **fail open**, falling back to a native submit rather than leaving a
+control that does nothing. That is §17.4's shape, on the two surfaces
+`CONF-001` and `STATUS-001` just cleared it from.
