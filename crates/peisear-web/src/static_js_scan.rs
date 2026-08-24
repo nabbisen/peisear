@@ -33,6 +33,17 @@
 //! to clear this guard, the heuristic is wrong, not the codebase
 //! (§3's own calibration standard, same as `prose_scan`'s).
 //!
+//! **Named blind spot** (`BOARD-001-round2-review.md` §3): the
+//! threshold is two-or-more words, so a single-word literal —
+//! `UndoButtonLabel`'s own `"Undo"`, the case that motivated dropping
+//! the period requirement in the first place — is still invisible to
+//! this guard. Inherent, not fixable: one alphabetic word can't be
+//! told apart from an identifier, a CSS class, or a `data-` key
+//! without semantics this scan doesn't have. Recorded here rather
+//! than left implied, the way `prose_scan` names its `format!`-into-
+//! a-binding gap and `test_harness_scan` names its brace-counting
+//! caveat.
+//!
 //! **`search.js` is the one named exclusion** — RFC 006's standing
 //! position since 0.21.0: it needs a JS-side rendering mechanism that
 //! does not exist, and inventing one for a type-ahead dropdown is
