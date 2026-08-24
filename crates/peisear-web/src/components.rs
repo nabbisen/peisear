@@ -17,6 +17,7 @@
 pub mod auth;
 pub mod breadcrumb;
 pub mod calendar;
+pub mod confirmation;
 pub mod error_page;
 pub mod issues;
 pub mod layout;

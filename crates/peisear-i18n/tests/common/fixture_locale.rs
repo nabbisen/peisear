@@ -902,6 +902,13 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::NoPlannedIssuesMessage => "[fx-no-planned-issues]".to_string(),
         MessageKey::CalendarViewSwitcherAriaLabel => "[fx-calendar-view-switcher]".to_string(),
         MessageKey::CalendarMoreIssuesLabel { count } => format!("[fx-calendar-more] {count}"),
+        MessageKey::ConfirmDeleteHeading { entity_name } => {
+            format!("[fx-confirm-delete-heading] {entity_name}")
+        }
+        MessageKey::ConfirmDeleteCannotBeUndoneNote => "[fx-confirm-cannot-be-undone]".to_string(),
+        MessageKey::ConfirmDeleteProjectCascadeNote => "[fx-confirm-project-cascade]".to_string(),
+        MessageKey::ConfirmDeleteSprintPlannedNote => "[fx-confirm-sprint-planned]".to_string(),
+        MessageKey::ConfirmDeleteSprintCompletedNote => "[fx-confirm-sprint-completed]".to_string(),
     }
 }
 

@@ -112,9 +112,12 @@ pub fn build_router(state: AppState) -> Router {
             "/teams/{slug}/sprints/{sprint_id}/complete",
             post(sprints::complete),
         )
+        // CONF-001 (RFC 010): GET renders the confirmation
+        // interstitial (serves both planned and completed sprints);
+        // POST performs the delete, unchanged.
         .route(
             "/teams/{slug}/sprints/{sprint_id}/delete",
-            post(sprints::delete_sprint),
+            get(sprints::delete_confirm).post(sprints::delete_sprint),
         )
         // Sprint planning page (PLAN-001 / RFC 001).
         .route(
@@ -163,7 +166,12 @@ pub fn build_router(state: AppState) -> Router {
             "/projects/{id}/edit",
             get(projects::edit_page).post(projects::update),
         )
-        .route("/projects/{id}/delete", post(projects::delete))
+        // CONF-001 (RFC 010): GET renders the confirmation
+        // interstitial; POST performs the delete, unchanged.
+        .route(
+            "/projects/{id}/delete",
+            get(projects::delete_confirm).post(projects::delete),
+        )
         // Calendar, project axis (CAL-002 / RFC 002).
         .route("/projects/{id}/calendar", get(calendar::project_page))
         // Issues
@@ -192,9 +200,11 @@ pub fn build_router(state: AppState) -> Router {
             "/projects/{id}/issues/{issue_id}/sub-issues/new",
             get(issues::new_sub_issue_form).post(issues::create_sub_issue),
         )
+        // CONF-001 (RFC 010): GET renders the confirmation
+        // interstitial; POST performs the delete, unchanged.
         .route(
             "/projects/{id}/issues/{issue_id}/delete",
-            post(issues::delete),
+            get(issues::delete_confirm).post(issues::delete),
         )
         .route(
             "/projects/{id}/issues/{issue_id}/status",

@@ -746,6 +746,28 @@ pub async fn update(
     )))
 }
 
+/// `CONF-001`: the confirmation interstitial, `GET`. Same
+/// authorisation as [`delete`]'s `POST` — project access via
+/// `find_accessible`, nothing narrower (the `POST` doesn't check
+/// the actor beyond that either).
+pub async fn delete_confirm(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((project_id, issue_id)): Path<(String, String)>,
+) -> AppResult<impl IntoResponse> {
+    let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    let issue = issues::find(&state.db, &issue_id, &project_id).await?;
+    Ok(components::confirmation::render_delete_confirmation(
+        user,
+        issue.title,
+        Locale::English.render(MessageKey::ConfirmDeleteCannotBeUndoneNote),
+        format!("/projects/{project_id}/issues/{issue_id}/delete"),
+        format!("/projects/{project_id}"),
+        Vec::new(),
+        0,
+    ))
+}
+
 pub async fn delete(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,

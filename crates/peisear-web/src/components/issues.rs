@@ -1098,7 +1098,10 @@ pub fn IssueDetailPage(
     // parameter. Refresh, browser-back, and "Open in new tab"
     // now consistently land on the right mode.
     let edit_href = format!("/projects/{}/issues/{}/edit", project.id, issue.id);
-    let delete_action = format!("/projects/{}/issues/{}/delete", project.id, issue.id);
+    // `CONF-001`: `GET` here renders the confirmation interstitial,
+    // `POST` performs the delete — same path, so this href also
+    // serves as the originating control's link target.
+    let delete_href = format!("/projects/{}/issues/{}/delete", project.id, issue.id);
     let submit_action = issue_href.clone();
     let project_name_for_breadcrumb = project.name.clone();
     let project_href_for_breadcrumb = project_href.clone();
@@ -1123,7 +1126,7 @@ pub fn IssueDetailPage(
                 issue=issue.clone()
                 assignees=assignees.clone()
                 edit_href=edit_href
-                delete_action=delete_action
+                delete_href=delete_href
             />
         }
         .into_any()
@@ -1453,7 +1456,7 @@ fn IssueView(
     issue: Issue,
     assignees: Vec<AssigneeOption>,
     edit_href: String,
-    delete_action: String,
+    delete_href: String,
 ) -> impl IntoView {
     let pri_class = format!("badge badge-sm {}", issue.priority.badge_class());
     let created = issue.created_at.format("%Y-%m-%d %H:%M").to_string();
@@ -1474,10 +1477,9 @@ fn IssueView(
             <h1 class="text-xl font-semibold tracking-tight">{issue.title}</h1>
             <div class="flex gap-2 shrink-0">
                 <a href=edit_href.clone() class="btn btn-ghost btn-sm">{t(MessageKey::EditWord)}</a>
-                <form method="post" action=delete_action
-                      onsubmit="return confirm('Delete this issue? This cannot be undone.');">
-                    <button type="submit" class="btn btn-ghost btn-sm text-error">{t(MessageKey::DeleteButton)}</button>
-                </form>
+                <a href=delete_href class="btn btn-ghost btn-sm text-error">
+                    {t(MessageKey::DeleteButton)}
+                </a>
             </div>
         </div>
 

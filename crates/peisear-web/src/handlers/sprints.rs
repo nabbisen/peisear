@@ -370,6 +370,54 @@ pub async fn complete(
     }
 }
 
+/// `CONF-001`: the confirmation interstitial, `GET`. Same
+/// authorisation as [`delete_sprint`]'s `POST` —
+/// `role.can_manage_team()` plus the sprint belonging to this team.
+///
+/// One route serves both `Planned` and `Completed` sprints; the
+/// difference is the consequence copy, not the check above. `Active`
+/// falls back to the generic note — the UI never offers a delete
+/// control for an active sprint (`components::sprints`'s `lifecycle`
+/// match has no delete arm for it), so this branch is reachable only
+/// by navigating to the URL directly, and the `POST` itself has no
+/// status guard either (`§9`: no `POST` handler changed).
+pub async fn delete_confirm(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((slug, sprint_id)): Path<(String, String)>,
+) -> AppResult<impl IntoResponse> {
+    let (team, role) = resolve_team_membership(&state, &user.id, &slug).await?;
+    if !role.can_manage_team() {
+        return Err(AppError::Forbidden);
+    }
+    let sprint = sprints::find_by_id(&state.db, &sprint_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    if sprint.team_id != team.id {
+        return Err(AppError::NotFound);
+    }
+
+    let consequence_key = match sprint.status {
+        SprintStatus::Planned => MessageKey::ConfirmDeleteSprintPlannedNote,
+        SprintStatus::Completed => MessageKey::ConfirmDeleteSprintCompletedNote,
+        SprintStatus::Active => MessageKey::ConfirmDeleteCannotBeUndoneNote,
+    };
+    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+
+    Ok(components::confirmation::render_delete_confirmation(
+        user,
+        sprint.name,
+        Locale::English.render(consequence_key),
+        format!("/teams/{slug}/sprints/{sprint_id}/delete"),
+        format!("/teams/{slug}/sprints"),
+        vec![(
+            "client_updated_at".to_string(),
+            sprint.updated_at.to_rfc3339(),
+        )],
+        unread_count,
+    ))
+}
+
 pub async fn delete_sprint(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,

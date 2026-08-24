@@ -443,17 +443,21 @@ pub fn SprintDetailPage(
     let plan_href = format!("/teams/{}/sprints/{}/plan", team_slug, sprint.id);
     let start_action = format!("/teams/{}/sprints/{}/start", team_slug, sprint.id);
     let complete_action = format!("/teams/{}/sprints/{}/complete", team_slug, sprint.id);
-    let delete_action = format!("/teams/{}/sprints/{}/delete", team_slug, sprint.id);
-    // Optimistic-lock value for the start/complete/delete
-    // forms. Cloned per form because each form moves its own
-    // copy into the hidden input. Per peisear-feature-spec-v2.1
-    // §21.4 the handler verifies this against the sprint's
-    // current `updated_at`.
+    // `CONF-001`: `GET` here renders the confirmation interstitial
+    // (which carries its own `client_updated_at` hidden field,
+    // fetched fresh at that request); `POST` performs the delete.
+    // Same path, so this href also serves as the originating
+    // control's link target — no hidden field needed on this page
+    // for it any more.
+    let delete_href = format!("/teams/{}/sprints/{}/delete", team_slug, sprint.id);
+    // Optimistic-lock value for the start/complete forms. Cloned
+    // per form because each form moves its own copy into the
+    // hidden input. Per peisear-feature-spec-v2.1 §21.4 the
+    // handler verifies this against the sprint's current
+    // `updated_at`.
     let client_updated_at = sprint.updated_at.to_rfc3339();
     let cua_start = client_updated_at.clone();
-    let cua_complete = client_updated_at.clone();
-    let cua_delete_planned = client_updated_at.clone();
-    let cua_delete_completed = client_updated_at;
+    let cua_complete = client_updated_at;
 
     let is_admin = role.can_manage_team();
     let sprint_name = sprint.name.clone();
@@ -492,12 +496,9 @@ pub fn SprintDetailPage(
                     </button>
                 </form>
                 <a href=edit_href class="btn btn-ghost btn-sm">{t(MessageKey::EditWord)}</a>
-                <form method="post" action=delete_action.clone()
-                      onsubmit="return confirm('Delete this planned sprint? \
-                                                Issues currently linked to it will be unlinked.')">
-                    <input type="hidden" name="client_updated_at" value=cua_delete_planned/>
-                    <button type="submit" class="btn btn-ghost btn-sm text-error">{t(MessageKey::DeleteButton)}</button>
-                </form>
+                <a href=delete_href.clone() class="btn btn-ghost btn-sm text-error">
+                    {t(MessageKey::DeleteButton)}
+                </a>
             </div>
         }
         .into_any(),
@@ -516,12 +517,9 @@ pub fn SprintDetailPage(
         .into_any(),
         SprintStatus::Completed => view! {
             <div class="flex gap-2 flex-wrap">
-                <form method="post" action=delete_action
-                      onsubmit="return confirm('Delete this completed sprint? \
-                                                Historical numbers will be lost.')">
-                    <input type="hidden" name="client_updated_at" value=cua_delete_completed/>
-                    <button type="submit" class="btn btn-ghost btn-sm text-error">{t(MessageKey::DeleteButton)}</button>
-                </form>
+                <a href=delete_href class="btn btn-ghost btn-sm text-error">
+                    {t(MessageKey::DeleteButton)}
+                </a>
             </div>
         }
         .into_any(),

@@ -2017,6 +2017,26 @@ pub enum MessageKey {
     CalendarMoreIssuesLabel {
         count: i64,
     },
+
+    // ---- CONF-001: the confirmation interstitial (RFC 010) ----
+    /// The interstitial's heading, shared across all four in-scope
+    /// deletes. `entity_name` is the specific project/issue/sprint
+    /// name — requirement 5: name the entity, not "this item".
+    ConfirmDeleteHeading {
+        entity_name: String,
+    },
+    /// Generic irreversibility note. Used for the issue delete
+    /// interstitial, and as the fallback consequence text for a
+    /// sprint in a status the delete control never actually reaches
+    /// (`Active` — the UI offers no delete affordance for it; see
+    /// `handlers::sprints::delete_confirm`).
+    ConfirmDeleteCannotBeUndoneNote,
+    /// The project delete interstitial's consequence line —
+    /// requirement 5's cascade note: the project's issues go with
+    /// it, and there is no undo.
+    ConfirmDeleteProjectCascadeNote,
+    ConfirmDeleteSprintPlannedNote,
+    ConfirmDeleteSprintCompletedNote,
 }
 
 impl MessageKey {
@@ -2737,6 +2757,13 @@ impl MessageKey {
             MessageKey::NoPlannedIssuesMessage,
             MessageKey::CalendarViewSwitcherAriaLabel,
             MessageKey::CalendarMoreIssuesLabel { count: 3 },
+            MessageKey::ConfirmDeleteHeading {
+                entity_name: "Customer Portal".to_string(),
+            },
+            MessageKey::ConfirmDeleteCannotBeUndoneNote,
+            MessageKey::ConfirmDeleteProjectCascadeNote,
+            MessageKey::ConfirmDeleteSprintPlannedNote,
+            MessageKey::ConfirmDeleteSprintCompletedNote,
         ];
         keys.extend(
             CalendarViewLabel::all()

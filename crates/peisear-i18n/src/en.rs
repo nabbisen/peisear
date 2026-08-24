@@ -1174,6 +1174,19 @@ pub(crate) fn render(key: MessageKey) -> String {
         }
         MessageKey::CalendarViewSwitcherAriaLabel => "Change calendar view and date".to_string(),
         MessageKey::CalendarMoreIssuesLabel { count } => format!("+{count} more"),
+
+        // ---- CONF-001: the confirmation interstitial ----
+        MessageKey::ConfirmDeleteHeading { entity_name } => format!("Delete {entity_name}?"),
+        MessageKey::ConfirmDeleteCannotBeUndoneNote => "This cannot be undone.".to_string(),
+        MessageKey::ConfirmDeleteProjectCascadeNote => {
+            "All its issues will be deleted too. This cannot be undone.".to_string()
+        }
+        MessageKey::ConfirmDeleteSprintPlannedNote => {
+            "Issues currently linked to it will be unlinked.".to_string()
+        }
+        MessageKey::ConfirmDeleteSprintCompletedNote => {
+            "Historical numbers will be lost.".to_string()
+        }
     }
 }
 

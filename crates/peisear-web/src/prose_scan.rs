@@ -65,49 +65,29 @@ struct AllowEntry {
 /// yet" (`I18N-007` §3).
 const ALLOWLIST: &[AllowEntry] = &[
     AllowEntry {
-        file: "components/projects.rs",
-        snippet: "Delete this project and all its issues?",
-        reason: "onsubmit confirm() dialog -- awaiting the owner's decision on the confirmation pattern (I18N-005b review §2); a real defect, but an architectural one, not an i18n gap",
-    },
-    AllowEntry {
         file: "components/teams.rs",
         snippet: "Detach this project from the team?",
-        reason: "onsubmit confirm() dialog -- same disposition as the projects.rs entry above",
+        reason: "onsubmit confirm() dialog -- reversible action, RFC 010 open question 1 settled: keeps its confirm() dialog unchanged (CONF-001 §1's out-of-scope five)",
     },
     AllowEntry {
         file: "components/teams.rs",
         snippet: "Leave this team?",
-        reason: "onsubmit confirm() dialog -- same disposition as the projects.rs entry above",
+        reason: "onsubmit confirm() dialog -- same disposition as the teams.rs entry above",
     },
     AllowEntry {
         file: "components/teams.rs",
         snippet: "Remove this member from the team?",
-        reason: "onsubmit confirm() dialog -- same disposition as the projects.rs entry above",
+        reason: "onsubmit confirm() dialog -- same disposition as the teams.rs entry above",
     },
     AllowEntry {
         file: "components/settings.rs",
         snippet: "Remove this capacity row?",
-        reason: "onsubmit confirm() dialog -- same disposition as the projects.rs entry above",
+        reason: "onsubmit confirm() dialog -- same disposition as the teams.rs entry above",
     },
     AllowEntry {
         file: "components/notification_preferences.rs",
         snippet: "Silence all notification kinds?",
-        reason: "onsubmit confirm() dialog -- same disposition as the projects.rs entry above",
-    },
-    AllowEntry {
-        file: "components/sprints.rs",
-        snippet: "Delete this planned sprint?",
-        reason: "onsubmit confirm() dialog -- same disposition as the projects.rs entry above",
-    },
-    AllowEntry {
-        file: "components/sprints.rs",
-        snippet: "Delete this completed sprint?",
-        reason: "onsubmit confirm() dialog -- same disposition as the projects.rs entry above",
-    },
-    AllowEntry {
-        file: "components/issues.rs",
-        snippet: "Delete this issue?",
-        reason: "onsubmit confirm() dialog -- same disposition as the projects.rs entry above",
+        reason: "onsubmit confirm() dialog -- reversible since INBOX-001's resume banner (0.24.0); CONF-001 §1 leaves it unchanged, same disposition as the teams.rs entry above",
     },
 ];
 

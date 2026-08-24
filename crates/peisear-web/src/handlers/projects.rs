@@ -153,6 +153,33 @@ pub async fn update(
     Ok(Redirect::to(&format!("/projects/{project_id}")))
 }
 
+/// `CONF-001`: the confirmation interstitial, `GET`. Same
+/// authorisation as [`delete`]'s `POST` — that handler's storage
+/// call scopes its `DELETE` to `owner_id = user_id`, not general
+/// team access, so a team member who isn't the project's owner must
+/// get the same `NotFound` here that a `POST` from them would.
+/// `find_accessible` alone is broader than that (any team member);
+/// checking `owner_id` afterwards narrows it to match exactly.
+pub async fn delete_confirm(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path(project_id): Path<String>,
+) -> AppResult<impl IntoResponse> {
+    let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    if project.owner_id != user.id {
+        return Err(AppError::NotFound);
+    }
+    Ok(components::confirmation::render_delete_confirmation(
+        user,
+        project.name,
+        Locale::English.render(MessageKey::ConfirmDeleteProjectCascadeNote),
+        format!("/projects/{project_id}/delete"),
+        "/projects".to_string(),
+        Vec::new(),
+        0,
+    ))
+}
+
 pub async fn delete(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,

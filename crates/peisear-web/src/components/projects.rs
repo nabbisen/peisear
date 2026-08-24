@@ -170,7 +170,10 @@ pub fn ProjectEditPage(
 ) -> impl IntoView {
     let project_href = format!("/projects/{}", project.id);
     let edit_action = format!("/projects/{}/edit", project.id);
-    let delete_action = format!("/projects/{}/delete", project.id);
+    // `CONF-001`: the same path is `GET` for the confirmation
+    // interstitial and `POST` for the delete itself, so this one
+    // href serves as the originating control's link target.
+    let delete_href = format!("/projects/{}/delete", project.id);
     let name = project.name.clone();
     let name_for_breadcrumb = name.clone();
     let name_for_input = name.clone();
@@ -228,10 +231,9 @@ pub fn ProjectEditPage(
                                     {t(MessageKey::DeleteProjectWarning)}
                                 </div>
                             </div>
-                            <form method="post" action=delete_action
-                                  onsubmit="return confirm('Delete this project and all its issues? This cannot be undone.');">
-                                <button type="submit" class="btn btn-error btn-outline btn-sm">{t(MessageKey::DeleteButton)}</button>
-                            </form>
+                            <a href=delete_href class="btn btn-error btn-outline btn-sm">
+                                {t(MessageKey::DeleteButton)}
+                            </a>
                         </div>
                     </div>
                 </div>
