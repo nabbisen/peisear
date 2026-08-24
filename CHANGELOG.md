@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.25.0] — 2026-08-16
+
+No schema migration.
+
+### Added
+
+- **Four destructive deletes — project, issue, planned sprint,
+  completed sprint — now confirm on a server-rendered page, naming
+  the specific project, issue, or sprint.** They previously confirmed
+  through a JavaScript dialog attached to the delete button's submit
+  event. With JavaScript unavailable that handler never ran, and the
+  delete proceeded with no confirmation at all — the plain path was
+  more dangerous than the enhanced one. The five reversible
+  confirmations — leave team, remove member, detach project, remove
+  capacity row, silence all — are deliberately unchanged: each is
+  undoable through the interface, so a dialog that can vanish without
+  JavaScript costs nothing that cannot be undone.
+- **The issue detail page and the issue list both gained a working
+  status control.** Neither surface had ever had one before this
+  release — the detail page rendered three status-shaped buttons that
+  did nothing, and the list rendered status as plain text. The board
+  already had a working control; these two did not, until now. Both
+  work without JavaScript. A second status change without a page
+  reload is not part of this release.
+
+### Changed
+
+- **An active sprint can no longer be deleted.** The delete route
+  previously accepted a sprint in any status, so a team's currently
+  running sprint could be deleted. It now refuses, and says to
+  complete the sprint first.
+
 ## [0.24.0] — 2026-08-16
 
 No schema migration — the smallest release since 0.20.1.
