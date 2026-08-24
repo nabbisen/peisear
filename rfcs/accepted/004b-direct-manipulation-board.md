@@ -1,6 +1,6 @@
 # RFC 0004b: Direct manipulation — the board (D-2)
 
-**Status**: Proposed
+**Status**: **Accepted 2026-08-25**
 **Target**: 0.26.0
 **Umbrella**: [RFC 0004](./004-direct-manipulation.md) — substep D-2
 **Governing decisions**: `DEC-021`, `DEC-018`
@@ -130,7 +130,22 @@ Any endpoint change. The `ServeDir` working-directory issue STATUS-002 reported,
 which blocks an HTTP-level test that `static/*.js` is served — a real gap and a
 separate one.
 
-## Open questions
+## Open questions — all settled at acceptance
+
+**Settled 2026-08-25 by their stated defaults**, the owner having accepted
+without varying them.
+
+1. ~~**Is the keyboard pick-up/move/drop interaction built?**~~ — **No.**
+   Requirement 1's parity is already met by the per-card form; Space-to-pick-up
+   is a richer interaction, not a parity fix. Revisit if a user asks.
+2. ~~**Should a guard cover `static/*.js` for authored copy?**~~ — **Yes, in
+   this substep.** It is the only thing that stops this finding recurring in
+   the next `.js` file, and it makes RFC 006's `search.js` exclusion true
+   rather than assumed.
+3. ~~**Is undo on the board worth building?**~~ — **Yes.** The inconsistency is
+   visible to any user who uses both surfaces.
+
+### Original wording, for the record
 
 1. **Is the keyboard pick-up/move/drop interaction built at all?** The umbrella's
    requirement 1 — every action achievable by drag is achievable by keyboard —
