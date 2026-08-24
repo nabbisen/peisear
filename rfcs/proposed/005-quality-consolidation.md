@@ -312,20 +312,33 @@ silently discards the state a team is currently working in.
 
 The path out already exists: complete it, then delete it.
 
-#### 10.2 Project delete reports success to a non-owner
+#### 10.2 ~~Project delete reports success to a non-owner~~ — **withdrawn, the defect does not exist**
 
-`handlers::projects::delete` calls
-`projects::delete(&state.db, &project_id, &user.id)` with no ownership check of
-its own, relying on the storage layer's `WHERE owner_id = ?2`. For a team member
-who is not the owner that deletes zero rows, returns `Ok`, and redirects with
-the *"project deleted"* flash.
+*Withdrawn 2026-08-16, before implementation.* This entry claimed
+`handlers::projects::delete` relied entirely on the storage layer's
+`WHERE owner_id = ?2`, so that a non-owner deleted zero rows and was told the
+project was deleted.
 
-**The project survives and the user is told it did not.** Not an access defect —
-nothing is deleted — but a false report about a destructive action, which this
-project's own standards on honest reporting do not permit.
+**False.** `peisear_storage::projects::delete` ends with
+`if res.rows_affected() == 0 { return Err(StorageError::NotFound); }`, present
+since v0.2. A non-owner's `POST` has always returned 404 with the project
+intact.
 
-`CONF-001` made it visible: its new `GET` is stricter than the `POST` it fronts,
-which is the right direction and an odd state to leave.
+The error was mine: I read that function through its `DELETE`, its `WHERE` and
+its binds, and stopped three lines before the check that makes it correct. The
+claim then travelled — a review, this section, and a dispatched handoff, each
+citing the last. `QA-002`'s implementer checked empirically before implementing
+and reported it.
+
+**Kept rather than deleted**, because the register's own rule is that closed and
+withdrawn items stay with their resolution. A section that quietly vanishes
+teaches nothing; this one records that a defect can be manufactured by reading
+most of a function.
+
+Nothing to fix. The handler-level check `QA-002` added on this entry's
+instruction is reverted — RFC 005's own "explicitly out" forbids refactoring
+where the audit found no defect, and `rows_affected() == 0 → NotFound` **is**
+the authorisation outcome, deliberately, not an implicit signal being abused.
 
 #### 10.3 `prose_scan` scans comments as if they were code
 
