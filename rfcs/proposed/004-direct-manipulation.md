@@ -117,6 +117,21 @@ excludes. See open question 1, now resolved.
    is achievable by keyboard. No mouse-only action exists.
 2. **Optimistic update**: the UI moves immediately on the
    client; the request goes out behind it.
+2a. **Failing open means *before the mutation lands*.** *Added 2026-08-24, from
+   STATUS-002's review.* Where a substep enhances a control that already works
+   without JavaScript, any failure **before or during** the request falls back
+   to the plain path — for a form, a native submit. **After the server has
+   applied the change, there is nothing to fall back to**: a fallback then
+   re-issues a mutation that already succeeded, with a stale
+   `client_updated_at`, and the user is shown a conflict for something that
+   worked.
+
+   STATUS-002 wrapped the whole promise chain in one fallback `catch` because
+   my handoff said "any failure inside the enhancement falls back to submitting
+   the form natively". That wording was wrong and the implementation followed
+   it faithfully. Substeps D-2 through D-5 inherit the corrected form: the
+   fallback catch ends where the mutation is confirmed.
+
 3. **Rollback on failure**: if the server returns 4xx/5xx,
    the UI reverts and shows an inline message. The message is
    text + icon, not just colour (§5.3 / §31).
