@@ -494,3 +494,48 @@ async fn mark_read_does_not_affect_another_users_notification() {
         "bob's POST to /inbox/{{id}}/read must not mark alice's notification read"
     );
 }
+
+/// `QA-007-review.md` §2: `/inbox/mark-all-read` has no `{user_id}`
+/// in its path, but "no `user_id` in the path" only rules out
+/// *impersonation* — it says nothing about a **bulk** write, where
+/// the cross-user exposure lives in the `WHERE` clause rather than
+/// the URL. `mark_all_read`'s query is `WHERE user_id = ?1 AND
+/// read_at IS NULL`; that predicate is the only thing standing
+/// between "my unread notifications" and "everyone's."
+#[tokio::test]
+async fn mark_all_read_does_not_affect_another_users_notifications() {
+    let app = TestApp::spawn().await;
+    let owner = TestUser::new("alice");
+    let owner_id = register_and_login(&app, &owner).await;
+
+    peisear_storage::notifications::insert(
+        &app.db,
+        &owner_id,
+        peisear_storage::notifications::NewNotification {
+            kind: peisear_core::notifications::kind::BURNOUT_OVERLOAD,
+            severity: peisear_core::notifications::Severity::Watch,
+            title: "Sustained over-capacity streak",
+            body: "Test body.",
+            payload_json: None,
+            dispatched_via: &["in_app"],
+        },
+    )
+    .await
+    .expect("insert notification");
+
+    logout(&app).await;
+    let bob = TestUser::new("bob");
+    register_and_login(&app, &bob).await;
+
+    let resp = app.server.post("/inbox/mark-all-read").await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let alice_notifications =
+        peisear_storage::notifications::recent_for_user(&app.db, &owner_id, 10)
+            .await
+            .expect("query alice's notifications");
+    assert!(
+        alice_notifications.iter().all(|n| n.read_at.is_none()),
+        "bob's POST to /inbox/mark-all-read must not mark alice's notifications read: {alice_notifications:?}"
+    );
+}
