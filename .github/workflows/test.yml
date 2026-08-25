@@ -224,6 +224,20 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test confirmation -- --test-threads=1
 
+  # `QA-005`: every structural guard this project has built --
+  # prose_scan, static_js_scan, test_harness_scan, dec_007_scan --
+  # lives in this one target, and nothing above runs it. Named for
+  # what breaks a reader would need to know, not just what command
+  # ran: the four guards are the reason this job exists.
+  test-peisear-web-lib:
+    name: peisear-web / lib (structural guards)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --lib
+
   # The §1.7 vocabulary guard (I18N-001, RFC 006 open question 3's
   # default). Blocking from 0.21.0 -- an advisory guard on a P0
   # requirement is a guard nobody fixes.
@@ -247,8 +261,11 @@ jobs:
 
   # Library-only test runs for crates without integration tests
   # currently. Cheap; catches doctests and unit tests as those land.
+  # `QA-005`: the facade's own run is bare, no `--lib` -- its one test
+  # is a doctest on `crates/peisear/src/lib.rs`, and `--lib` reports
+  # zero for it (`QA-004`).
   test-libs:
-    name: peisear-core / peisear-auth / peisear-storage (lib tests)
+    name: peisear-core / peisear-auth / peisear-storage / peisear (lib tests)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -257,6 +274,7 @@ jobs:
       - run: cargo test -p peisear-core --lib
       - run: cargo test -p peisear-auth --lib
       - run: cargo test -p peisear-storage --lib
+      - run: cargo test -p peisear
 
   build:
     name: cargo build (release-lite)

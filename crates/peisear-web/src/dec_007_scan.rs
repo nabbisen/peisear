@@ -35,6 +35,36 @@
 //! though it runs the crate. That is a false alarm with a clear
 //! message pointing at this file, not a false pass — the direction
 //! worth erring toward.
+//!
+//! **A qualifying line must not be a `--test <target>` line**
+//! (`QA-005` §3). `peisear-web`'s own case is the reason: it appeared
+//! twenty times in the block, once per `--test <target>` line, and
+//! the guard passed — but none of those twenty run `peisear-web`'s
+//! *own* library target, which is where every structural guard this
+//! project has built lives. `-p <name>` appearing at all is not the
+//! same claim as "this crate's own tests run somewhere in this
+//! block"; the guard now checks the second, stronger claim.
+//!
+//! Two ways to close that gap were considered and rejected: asking
+//! `cargo` or parsing sources to know which crates currently have
+//! library tests (a parser for one line of a contributing guide, for
+//! a fact this scan does not otherwise need); and hard-coding the
+//! literal `-p peisear-web --lib` (special-cases one crate and would
+//! not catch the identical shape for `peisear-core` had the omission
+//! landed there instead). Neither generalises past the one crate that
+//! happened to surface this.
+//!
+//! What ships instead: a qualifying line is one where `-p <name>`
+//! appears and the *same line* does not also contain a `--test `
+//! flag (a real `--test <target>` selector; `--test-threads=N` does
+//! not match, since nothing follows `--test` there but a hyphen, not
+//! a space). A bare `cargo test -p <name>` or a `cargo test -p <name>
+//! --lib` line both qualify — both actually exercise the crate's own
+//! library/binary/doctest scope, whether or not it has any tests
+//! there *today*. This needs nothing external: it is a fact about the
+//! block's own text, generalises to any future member reached only
+//! through `--test` lines, and does not claim to know what any
+//! crate's tests currently contain.
 
 use std::fs;
 use std::path::Path;
@@ -86,6 +116,17 @@ fn appears_at_word_boundary(haystack: &str, needle: &str) -> bool {
     false
 }
 
+/// True if some line in `block` both names `name` via `-p <name>` (at
+/// a word boundary) and is not itself a `--test <target>` line — see
+/// the module doc's `QA-005` §3 note for why a `--test` line does not
+/// count as covering a crate's own library target.
+fn covers_own_lib_tests(block: &str, name: &str) -> bool {
+    let flag = format!("-p {name}");
+    block
+        .lines()
+        .any(|line| appears_at_word_boundary(line, &flag) && !line.contains("--test "))
+}
+
 /// The `DEC-007` code block's contents — everything between the first
 /// fenced ` ```bash ` after "DEC-007" and its closing fence.
 fn dec_007_block() -> String {
@@ -125,13 +166,16 @@ fn every_workspace_member_appears_in_the_dec_007_block() {
     let block = dec_007_block();
     let missing: Vec<&String> = members
         .iter()
-        .filter(|name| !appears_at_word_boundary(&block, &format!("-p {name}")))
+        .filter(|name| !covers_own_lib_tests(&block, name))
         .collect();
 
     assert!(
         missing.is_empty(),
-        "these workspace members are missing from DEC-007's command block in \
-         .github/CONTRIBUTING.md -- add a `cargo test -p <crate>` line for each:\n{}",
+        "these workspace members have no line in DEC-007's command block in \
+         .github/CONTRIBUTING.md that covers their own library target -- a \
+         `--test <target>` line for a crate does not run that crate's own lib \
+         tests. Add a bare `cargo test -p <crate>` or `cargo test -p <crate> \
+         --lib` line for each:\n{}",
         missing
             .iter()
             .map(|n| format!("  {n}"))

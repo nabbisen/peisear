@@ -82,6 +82,7 @@ for t in assignee_candidates auth_boundary board_keyboard breadcrumb \
          view_state workload_privacy; do
   cargo test -p peisear-web --test "$t" -- --test-threads=1
 done
+cargo test -p peisear-web --lib
 cargo test -p peisear
 ```
 
