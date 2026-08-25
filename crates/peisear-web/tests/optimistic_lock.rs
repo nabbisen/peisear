@@ -67,6 +67,39 @@ async fn issue_update_with_stale_timestamp_returns_409() {
     );
 }
 
+/// `QA-006` finding 1: the issue delete route now locks too.
+#[tokio::test]
+async fn issue_delete_with_stale_timestamp_returns_409() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Test").await;
+    let issue_id = create_issue(&app.db, &project_id, &user_id, "Original title").await;
+
+    let t0 = read_issue_updated_at(&app, &issue_id).await;
+
+    ensure_distinct_timestamp().await;
+    post_issue_update(&app, &project_id, &issue_id, &t0, "Renamed").await;
+
+    let resp = app
+        .server
+        .post(&format!("/projects/{project_id}/issues/{issue_id}/delete"))
+        .form(&[("client_updated_at", t0.as_str())])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "delete with a stale client_updated_at must 409, got {}",
+        resp.status_code()
+    );
+
+    let still_there = peisear_storage::issues::find(&app.db, &issue_id, &project_id).await;
+    assert!(
+        still_there.is_ok(),
+        "a rejected delete must not remove the issue"
+    );
+}
+
 /// `CAL-001` §2.4 (RFC 002): `planned_start_at`/`planned_end_at` join
 /// the existing issue `UPDATE`'s `SET` clause rather than getting a
 /// statement of their own. This test exists specifically because
@@ -294,6 +327,39 @@ async fn project_update_with_stale_timestamp_returns_409() {
     );
 }
 
+/// `QA-006` finding 1: the project delete route now locks too.
+#[tokio::test]
+async fn project_delete_with_stale_timestamp_returns_409() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Original").await;
+
+    let t0 = read_project_updated_at(&app, &project_id).await;
+
+    ensure_distinct_timestamp().await;
+    post_project_update(&app, &project_id, &t0, "Renamed", "desc").await;
+
+    let resp = app
+        .server
+        .post(&format!("/projects/{project_id}/delete"))
+        .form(&[("client_updated_at", t0.as_str())])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "delete with a stale client_updated_at must 409, got {}",
+        resp.status_code()
+    );
+
+    let still_there =
+        peisear_storage::projects::find_accessible(&app.db, &project_id, &user_id).await;
+    assert!(
+        still_there.is_ok(),
+        "a rejected delete must not remove the project"
+    );
+}
+
 // -------------------------------------------------------------------
 // Sprint lifecycle
 // -------------------------------------------------------------------
@@ -340,6 +406,131 @@ async fn sprint_start_with_stale_timestamp_returns_409() {
     );
 }
 
+/// `QA-006` §4: `/edit` and `/complete` share `/start`'s lock check
+/// (all three call `check_optimistic_lock` against the same sprint
+/// row) but neither had a test naming its own route — RFC 005 §2's
+/// table recorded `/start`'s test as covering `/edit` "analogously",
+/// which is coverage of the requirement, not of the entry point
+/// (`NFR-CONC-005`'s own gap, restated: a shared code path is not the
+/// same claim as a tested route).
+#[tokio::test]
+async fn sprint_edit_with_stale_timestamp_returns_409() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let team_id = create_team_with_admin(&app.db, &user_id, "Engineering").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let team_slug = read_team_slug(&app, &team_id).await;
+
+    let t0 = read_sprint_updated_at(&app, &sprint_id).await;
+
+    ensure_distinct_timestamp().await;
+    let today = chrono::Utc::now().date_naive();
+    let ends = today + chrono::Duration::days(14);
+    peisear_storage::sprints::update(&app.db, &sprint_id, "Sprint 1 (renamed)", None, today, ends)
+        .await
+        .expect("rename sprint");
+
+    let url = format!("/teams/{team_slug}/sprints/{sprint_id}/edit");
+    let resp = app
+        .server
+        .post(&url)
+        .form(&[
+            ("name", "Sprint 1 (edited again)"),
+            ("starts_on", &today.to_string()),
+            ("ends_on", &ends.to_string()),
+            ("client_updated_at", t0.as_str()),
+        ])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "stale client_updated_at on /edit must 409 (got {})",
+        resp.status_code()
+    );
+}
+
+/// See `sprint_edit_with_stale_timestamp_returns_409` — same gap,
+/// `/complete` half.
+#[tokio::test]
+async fn sprint_complete_with_stale_timestamp_returns_409() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let team_id = create_team_with_admin(&app.db, &user_id, "Engineering").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let team_slug = read_team_slug(&app, &team_id).await;
+    peisear_storage::sprints::start(&app.db, &sprint_id)
+        .await
+        .expect("start sprint");
+
+    let t0 = read_sprint_updated_at(&app, &sprint_id).await;
+
+    ensure_distinct_timestamp().await;
+    let today = chrono::Utc::now().date_naive();
+    let ends = today + chrono::Duration::days(14);
+    peisear_storage::sprints::update(&app.db, &sprint_id, "Sprint 1 (renamed)", None, today, ends)
+        .await
+        .expect("rename sprint");
+
+    let url = format!("/teams/{team_slug}/sprints/{sprint_id}/complete");
+    let resp = app
+        .server
+        .post(&url)
+        .form(&[("client_updated_at", t0.as_str())])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "stale client_updated_at on /complete must 409 (got {})",
+        resp.status_code()
+    );
+}
+
+/// See `sprint_edit_with_stale_timestamp_returns_409` — same gap,
+/// `/delete` half. `sprint_plan.rs::delete_refuses_an_active_sprint`
+/// posts to this same route but asserts the `Active`-status 400, not
+/// a stale-lock 409 — a different requirement, not this one.
+#[tokio::test]
+async fn sprint_delete_with_stale_timestamp_returns_409() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let team_id = create_team_with_admin(&app.db, &user_id, "Engineering").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let team_slug = read_team_slug(&app, &team_id).await;
+
+    let t0 = read_sprint_updated_at(&app, &sprint_id).await;
+
+    ensure_distinct_timestamp().await;
+    let today = chrono::Utc::now().date_naive();
+    let ends = today + chrono::Duration::days(14);
+    peisear_storage::sprints::update(&app.db, &sprint_id, "Sprint 1 (renamed)", None, today, ends)
+        .await
+        .expect("rename sprint");
+
+    let url = format!("/teams/{team_slug}/sprints/{sprint_id}/delete");
+    let resp = app
+        .server
+        .post(&url)
+        .form(&[("client_updated_at", t0.as_str())])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "stale client_updated_at on /delete must 409 (got {})",
+        resp.status_code()
+    );
+
+    let still_there = peisear_storage::sprints::find_by_id(&app.db, &sprint_id)
+        .await
+        .expect("query sprint");
+    assert!(
+        still_there.is_some(),
+        "a rejected delete must not remove the sprint"
+    );
+}
+
 // -------------------------------------------------------------------
 // Capacity period edits
 // -------------------------------------------------------------------
@@ -370,6 +561,78 @@ async fn capacity_period_edit_with_stale_timestamp_returns_409() {
         resp.status_code(),
         StatusCode::CONFLICT,
         "second capacity update with stale client_updated_at must return 409, got {}",
+        resp.status_code()
+    );
+}
+
+/// See `sprint_edit_with_stale_timestamp_returns_409` — same gap,
+/// `settings::delete_capacity`: locks, has an existing 409 sibling
+/// (`capacity_period_edit_with_stale_timestamp_returns_409`) on the
+/// update route, but its own `/delete` route had no test naming it.
+#[tokio::test]
+async fn capacity_delete_with_stale_timestamp_returns_409() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let row_id = create_capacity_row(&app, &user_id, 8).await;
+
+    let t0 = read_capacity_updated_at(&app, &row_id).await;
+
+    ensure_distinct_timestamp().await;
+    let resp = post_capacity_update(&app, &row_id, &t0, 10).await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let resp = app
+        .server
+        .post(&format!("/settings/capacity/{row_id}/delete"))
+        .form(&[("client_updated_at", t0.as_str())])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "stale client_updated_at on /delete must 409, got {}",
+        resp.status_code()
+    );
+
+    let still_there = peisear_storage::user_capacities::find(&app.db, &user_id, &row_id)
+        .await
+        .expect("query capacity row");
+    assert!(
+        still_there.is_some(),
+        "a rejected delete must not remove the capacity row"
+    );
+}
+
+/// `QA-006` §4: `POST /settings/capacity/{id}/close` locks
+/// (`settings::close_capacity`) but was in neither RFC 005 §2's
+/// table nor the test suite — a genuinely missing row and a missing
+/// test, not the `/edit`/`/complete` shape (which had a lock and a
+/// sibling-route test, just not one naming their own route).
+#[tokio::test]
+async fn capacity_close_with_stale_timestamp_returns_409() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let row_id = create_capacity_row(&app, &user_id, 8).await;
+
+    let t0 = read_capacity_updated_at(&app, &row_id).await;
+
+    ensure_distinct_timestamp().await;
+    let resp = post_capacity_update(&app, &row_id, &t0, 10).await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let resp = app
+        .server
+        .post(&format!("/settings/capacity/{row_id}/close"))
+        .form(&[
+            ("period_end", "2026-12-31"),
+            ("client_updated_at", t0.as_str()),
+        ])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "stale client_updated_at on /close must 409, got {}",
         resp.status_code()
     );
 }

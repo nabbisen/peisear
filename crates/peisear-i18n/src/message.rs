@@ -2042,8 +2042,10 @@ pub enum MessageKey {
     ConfirmDeleteHeading {
         entity_name: String,
     },
-    /// Generic irreversibility note. Used for the issue delete
-    /// interstitial, and as the fallback consequence text for a
+    /// Generic irreversibility note. Used for the childless-issue
+    /// delete interstitial (`QA-006`: an issue with sub-issues gets
+    /// [`MessageKey::ConfirmDeleteIssueCascadeNote`] instead, naming
+    /// the cascade), and as the fallback consequence text for a
     /// sprint in a status the delete control never actually reaches
     /// (`Active` — the UI offers no delete affordance for it; see
     /// `handlers::sprints::delete_confirm`).
@@ -2099,6 +2101,22 @@ pub enum MessageKey {
     /// non-2xx response. `board.js` reverts the card without
     /// reloading.
     BoardUnavailableMessage,
+
+    // ---- QA-006: the optimistic-lock audit (RFC 005 §2) ----
+    /// The issue delete interstitial's consequence line when the
+    /// issue has sub-issues — `issues.parent_issue_id` is declared
+    /// `ON DELETE CASCADE`, confirmed firing by
+    /// `sub_issues::deleting_a_parent_issue_cascades_to_its_sub_issues`
+    /// before this copy was written, per the handoff's explicit
+    /// instruction. `sub_issue_count` is always `>= 1` — the
+    /// childless case renders [`MessageKey::ConfirmDeleteCannotBeUndoneNote`]
+    /// instead. No existing "N sub-issues" phrasing was found to
+    /// match (the handoff's `FR-SUB-006` reference does not appear
+    /// anywhere else in this tree — reported, not silently worked
+    /// around); this wording is original.
+    ConfirmDeleteIssueCascadeNote {
+        sub_issue_count: i64,
+    },
 }
 
 impl MessageKey {
@@ -2839,6 +2857,13 @@ impl MessageKey {
             MessageKey::BoardReloadMessage,
             MessageKey::BoardConflictMessage,
             MessageKey::BoardUnavailableMessage,
+            // Both the singular and plural templates render different
+            // text (`en.rs` branches on `sub_issue_count == 1`), so
+            // both need a sample -- one representative value would
+            // leave whichever branch it didn't pick unexercised by
+            // this guard.
+            MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count: 1 },
+            MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count: 2 },
         ];
         keys.extend(
             CalendarViewLabel::all()

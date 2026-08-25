@@ -924,6 +924,9 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::BoardReloadMessage => "[fx-board-reload]".to_string(),
         MessageKey::BoardConflictMessage => "[fx-board-conflict]".to_string(),
         MessageKey::BoardUnavailableMessage => "[fx-board-unavailable]".to_string(),
+        MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count } => {
+            format!("[fx-confirm-issue-cascade] {sub_issue_count}")
+        }
     }
 }
 

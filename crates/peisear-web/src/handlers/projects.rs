@@ -175,16 +175,51 @@ pub async fn delete_confirm(
         Locale::English.render(MessageKey::ConfirmDeleteProjectCascadeNote),
         format!("/projects/{project_id}/delete"),
         "/projects".to_string(),
-        Vec::new(),
+        vec![(
+            "client_updated_at".to_string(),
+            project.updated_at.to_rfc3339(),
+        )],
         0,
     ))
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct ProjectDeleteForm {
+    /// `QA-006` finding 1: two of the four destructive deletes took
+    /// no lock at all — decided here to lock all four, both because
+    /// the interstitial mechanism (`hidden_fields`) already exists
+    /// and was used once, and because the cascade note this
+    /// interstitial renders (`ConfirmDeleteProjectCascadeNote`) is
+    /// only trustworthy if the project can't change between the
+    /// `GET` that named the consequence and the `POST` that acts on
+    /// it. `#[serde(default)]` lets an absent field deserialize to
+    /// `""` rather than rejecting the request at the extractor
+    /// (422); the empty string is then rejected by the lock check
+    /// itself (400), consistent with every other mutation path.
+    #[serde(default)]
+    pub client_updated_at: String,
 }
 
 pub async fn delete(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
     Path(project_id): Path<String>,
+    Form(form): Form<ProjectDeleteForm>,
 ) -> AppResult<Redirect> {
+    // Same authorisation as `delete_confirm`, checked in the same
+    // order and before the lock check: a non-owner's `POST` must
+    // still be `NotFound`, not a lock-validation error surfaced by a
+    // form they were never shown a valid `client_updated_at` for.
+    let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    if project.owner_id != user.id {
+        return Err(AppError::NotFound);
+    }
+    crate::error::check_optimistic_lock(
+        &form.client_updated_at,
+        project.updated_at,
+        peisear_i18n::EntityKind::Project,
+        &project_id,
+    )?;
     projects::delete(&state.db, &project_id, &user.id).await?;
     let flash = Locale::English
         .render(MessageKey::ProjectDeletedFlash)

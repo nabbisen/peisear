@@ -311,3 +311,52 @@ async fn cannot_assign_sprint_directly_to_sub_issue() {
         resp.status_code()
     );
 }
+
+/// `QA-006` §3: `0015_sub_issues.sql` declares `parent_issue_id
+/// REFERENCES issues(id) ON DELETE CASCADE`, and `pool.rs` sets
+/// `foreign_keys(true)` — but a schema declaration is not proof the
+/// pragma is actually in effect on every pooled connection. Confirmed
+/// by deleting a parent through the real HTTP route before writing
+/// any copy about it, per the handoff's explicit instruction: a
+/// cascade that doesn't fire is a worse defect (orphaned rows) than
+/// a confirmation screen that doesn't name it.
+#[tokio::test]
+async fn deleting_a_parent_issue_cascades_to_its_sub_issues() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Proj").await;
+
+    let parent_id = create_issue(&app.db, &project_id, &user_id, "Parent").await;
+    let sub1 = insert_sub_issue_via_storage(&app, &project_id, &parent_id, &user_id, "Sub 1").await;
+    let sub2 = insert_sub_issue_via_storage(&app, &project_id, &parent_id, &user_id, "Sub 2").await;
+
+    let parent = peisear_storage::issues::find(&app.db, &parent_id, &project_id)
+        .await
+        .expect("query parent issue");
+    let resp = app
+        .server
+        .post(&format!("/projects/{project_id}/issues/{parent_id}/delete"))
+        .form(&[("client_updated_at", parent.updated_at.to_rfc3339().as_str())])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    assert!(
+        peisear_storage::issues::find(&app.db, &sub1, &project_id)
+            .await
+            .is_err(),
+        "sub-issue 1 must be gone once its parent is deleted"
+    );
+    assert!(
+        peisear_storage::issues::find(&app.db, &sub2, &project_id)
+            .await
+            .is_err(),
+        "sub-issue 2 must be gone once its parent is deleted"
+    );
+    assert!(
+        peisear_storage::issues::find(&app.db, &parent_id, &project_id)
+            .await
+            .is_err(),
+        "the parent itself must be gone"
+    );
+}

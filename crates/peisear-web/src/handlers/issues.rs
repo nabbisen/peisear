@@ -756,24 +756,60 @@ pub async fn delete_confirm(
 ) -> AppResult<impl IntoResponse> {
     let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
     let issue = issues::find(&state.db, &issue_id, &project_id).await?;
+    // `QA-006` §3: the delete cascades to sub-issues
+    // (`0015_sub_issues.sql`'s `ON DELETE CASCADE`), and the
+    // childless-case note doesn't say so. One query, same one the
+    // detail page's own Sub-issues section already runs.
+    let sub_issue_count = issues::list_sub_issues_of(&state.db, &issue_id)
+        .await?
+        .len() as i64;
+    let consequence = if sub_issue_count > 0 {
+        Locale::English.render(MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count })
+    } else {
+        Locale::English.render(MessageKey::ConfirmDeleteCannotBeUndoneNote)
+    };
     Ok(components::confirmation::render_delete_confirmation(
         user,
         issue.title,
-        Locale::English.render(MessageKey::ConfirmDeleteCannotBeUndoneNote),
+        consequence,
         format!("/projects/{project_id}/issues/{issue_id}/delete"),
         format!("/projects/{project_id}"),
-        Vec::new(),
+        vec![(
+            "client_updated_at".to_string(),
+            issue.updated_at.to_rfc3339(),
+        )],
         0,
     ))
+}
+
+#[derive(Debug, Deserialize, Default)]
+pub struct IssueDeleteForm {
+    /// `QA-006` finding 1 — see the identical field on
+    /// `handlers::projects::ProjectDeleteForm` for the decision and
+    /// its reasoning; it applies here unchanged. For the issue route
+    /// specifically, this is what keeps the sub-issue count named in
+    /// [`MessageKey::ConfirmDeleteIssueCascadeNote`] trustworthy: a
+    /// stale confirmation could delete more (or fewer) sub-issues
+    /// than the count the user actually confirmed.
+    #[serde(default)]
+    pub client_updated_at: String,
 }
 
 pub async fn delete(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
     Path((project_id, issue_id)): Path<(String, String)>,
+    Form(form): Form<IssueDeleteForm>,
 ) -> AppResult<Redirect> {
     // Access check.
     let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    let issue = issues::find(&state.db, &issue_id, &project_id).await?;
+    crate::error::check_optimistic_lock(
+        &form.client_updated_at,
+        issue.updated_at,
+        peisear_i18n::EntityKind::Issue,
+        &issue_id,
+    )?;
     issues::delete(&state.db, &issue_id, &project_id, &user.id).await?;
     let flash = Locale::English
         .render(MessageKey::IssueDeletedFlash)

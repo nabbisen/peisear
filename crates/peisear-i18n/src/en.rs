@@ -1209,6 +1209,18 @@ pub(crate) fn render(key: MessageKey) -> String {
             "This status change could not be completed. The card has been returned to its previous column."
                 .to_string()
         }
+        MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count } => {
+            if sub_issue_count == 1 {
+                "This issue has 1 sub-issue. Deleting it deletes that sub-issue too. \
+                 This cannot be undone."
+                    .to_string()
+            } else {
+                format!(
+                    "This issue has {sub_issue_count} sub-issues. Deleting it deletes all \
+                     of them too. This cannot be undone."
+                )
+            }
+        }
         MessageKey::ConfirmDeleteSprintPlannedNote => {
             "Issues currently linked to it will be unlinked.".to_string()
         }

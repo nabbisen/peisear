@@ -90,10 +90,91 @@ async fn project_interstitial_states_the_cascade_to_its_issues() {
     );
 }
 
+/// `QA-006` §3: the issue interstitial names the cascade to its own
+/// sub-issues too, once it has any — `issues.parent_issue_id` is
+/// `ON DELETE CASCADE`, confirmed firing by `sub_issues::deleting_a_
+/// parent_issue_cascades_to_its_sub_issues` before this copy was
+/// written.
+#[tokio::test]
+async fn issue_interstitial_states_the_cascade_to_its_sub_issues() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Customer Portal").await;
+    let parent_id = create_issue(&app.db, &project_id, &user_id, "Parent issue").await;
+
+    peisear_storage::issues::insert_sub_issue(
+        &app.db,
+        &uuid::Uuid::new_v4().to_string(),
+        &project_id,
+        &parent_id,
+        &user_id,
+        "Sub 1",
+        "",
+        peisear_core::IssueStatus::Open,
+        peisear_core::Priority::Medium,
+        None,
+        None,
+    )
+    .await
+    .expect("insert sub-issue");
+    peisear_storage::issues::insert_sub_issue(
+        &app.db,
+        &uuid::Uuid::new_v4().to_string(),
+        &project_id,
+        &parent_id,
+        &user_id,
+        "Sub 2",
+        "",
+        peisear_core::IssueStatus::Open,
+        peisear_core::Priority::Medium,
+        None,
+        None,
+    )
+    .await
+    .expect("insert sub-issue");
+
+    let resp = app
+        .server
+        .get(&format!("/projects/{project_id}/issues/{parent_id}/delete"))
+        .await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+    assert!(
+        body.contains("This issue has 2 sub-issues. Deleting it deletes all of them too."),
+        "issue interstitial should state the cascade to its sub-issues, naming the count: {body}"
+    );
+}
+
+/// The unchanged case: an issue with no sub-issues still gets the
+/// plain irreversibility note, not the cascade wording.
+#[tokio::test]
+async fn childless_issue_interstitial_is_unchanged() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Customer Portal").await;
+    let issue_id = create_issue(&app.db, &project_id, &user_id, "Childless issue").await;
+
+    let resp = app
+        .server
+        .get(&format!("/projects/{project_id}/issues/{issue_id}/delete"))
+        .await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+    assert!(
+        body.contains("This cannot be undone.") && !body.contains("sub-issue"),
+        "a childless issue must keep the plain note, not the cascade wording: {body}"
+    );
+}
+
 /// No-JS path, exercised via the sprint case: the interstitial's own
 /// hidden `client_updated_at` field must round-trip correctly for
-/// the `POST` to succeed (the project/issue cases carry no hidden
-/// fields at all, so they exercise less of the wiring).
+/// the `POST` to succeed. `QA-006` finding 1: the project and issue
+/// interstitials now carry the same hidden field —
+/// `owner_post_project_delete_still_works` and the cascade tests
+/// above exercise those two; this one is kept as the sprint case,
+/// the interstitial that had it first.
 #[tokio::test]
 async fn following_the_link_and_posting_the_form_deletes_the_entity_no_js() {
     let app = TestApp::spawn().await;
@@ -333,6 +414,7 @@ async fn authorisation_matches_the_corresponding_post_per_route() {
     let post_resp = app
         .server
         .post(&format!("/projects/{project_id}/delete"))
+        .form(&[("client_updated_at", "irrelevant")])
         .await;
     assert_eq!(
         post_resp.status_code(),
@@ -358,6 +440,7 @@ async fn authorisation_matches_the_corresponding_post_per_route() {
     let post_resp = app
         .server
         .post(&format!("/projects/{project_id}/issues/{issue_id}/delete"))
+        .form(&[("client_updated_at", "irrelevant")])
         .await;
     assert_eq!(
         post_resp.status_code(),
@@ -483,6 +566,7 @@ async fn non_owner_post_project_delete_returns_404_and_project_survives() {
     let resp = app
         .server
         .post(&format!("/projects/{project_id}/delete"))
+        .form(&[("client_updated_at", "irrelevant")])
         .await;
     assert_eq!(
         resp.status_code(),
@@ -508,9 +592,18 @@ async fn owner_post_project_delete_still_works() {
     let owner_id = register_and_login(&app, &owner).await;
     let project_id = create_personal_project(&app.db, &owner_id, "Customer Portal").await;
 
+    let get_resp = app
+        .server
+        .get(&format!("/projects/{project_id}/delete"))
+        .await;
+    get_resp.assert_status(StatusCode::OK);
+    let client_updated_at = extract_hidden_field(&get_resp.text(), "client_updated_at")
+        .expect("interstitial carries the hidden field");
+
     let resp = app
         .server
         .post(&format!("/projects/{project_id}/delete"))
+        .form(&[("client_updated_at", client_updated_at.as_str())])
         .await;
     resp.assert_status(StatusCode::SEE_OTHER);
 
