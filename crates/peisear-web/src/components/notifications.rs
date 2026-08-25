@@ -121,7 +121,7 @@ pub fn InboxPage(
                 <div class="flex items-center justify-between mb-4">
                     <div>
                         <h1 class="text-xl font-semibold">{notifications_heading}</h1>
-                        <p class="text-sm text-base-content/60">{header_status_text}</p>
+                        <p class="text-sm text-base-content/70">{header_status_text}</p>
                     </div>
                     {has_unread.then(|| view! {
                         <form method="post" action="/inbox/mark-all-read">
@@ -139,7 +139,7 @@ pub fn InboxPage(
                 {(!has_items).then(|| view! {
                     <div class="card bg-base-100 border border-base-300 shadow-sm">
                         <div class="card-body items-center text-center py-12">
-                            <div class="text-base-content/30 mb-2">
+                            <div class="text-base-content/70 mb-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"
                                      viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="1.5" aria-hidden="true">
@@ -147,10 +147,10 @@ pub fn InboxPage(
                                     <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
                                 </svg>
                             </div>
-                            <p class="text-sm text-base-content/60">
+                            <p class="text-sm text-base-content/70">
                                 {t(MessageKey::InboxEmptyMessage)}
                             </p>
-                            <p class="text-xs text-base-content/50 mt-1">
+                            <p class="text-xs text-base-content/70 mt-1">
                                 {t(MessageKey::InboxEmptyFooterLead)}
                                 <a href="/settings/notifications" class="link link-primary">{t(MessageKey::SettingsLinkWord)}</a>
                                 {t(MessageKey::InboxEmptyFooterTail)}
@@ -224,12 +224,12 @@ fn render_row(n: Notification) -> impl IntoView {
                                 </span>
                             })}
                             <h3 class="font-medium">{n.title}</h3>
-                            <span class="text-xs text-base-content/50">
+                            <span class="text-xs text-base-content/70">
                                 {kind_label.clone()}
                             </span>
                         </div>
                         <p class="text-sm text-base-content/70 mt-1">{n.body}</p>
-                        <div class="text-xs text-base-content/50 mt-2 flex items-center gap-3 flex-wrap">
+                        <div class="text-xs text-base-content/70 mt-2 flex items-center gap-3 flex-wrap">
                             <span>{timestamp}</span>
                             {dispatched_text.map(|dispatched| view! {
                                 <span class="opacity-70">

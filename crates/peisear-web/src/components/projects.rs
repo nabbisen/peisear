@@ -22,7 +22,7 @@ pub fn ProjectsListPage(
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h1 class="text-2xl font-semibold tracking-tight">{t(MessageKey::ProjectsSectionName)}</h1>
-                    <p class="text-sm text-base-content/60">{t(MessageKey::ProjectsSubheading)}</p>
+                    <p class="text-sm text-base-content/70">{t(MessageKey::ProjectsSubheading)}</p>
                 </div>
                 <a href="/projects/new" class="btn btn-primary btn-sm">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
@@ -37,7 +37,7 @@ pub fn ProjectsListPage(
                 view! {
                     <div class="card bg-base-100 border border-base-300 border-dashed">
                         <div class="card-body items-center text-center py-12">
-                            <div class="text-base-content/40 text-5xl">"◎"</div>
+                            <div class="text-base-content/70 text-5xl">"◎"</div>
                             <p class="text-base-content/70 mt-2">{t(MessageKey::ProjectsEmptyMessage)}</p>
                             <a href="/projects/new" class="btn btn-primary btn-sm mt-2">
                                 {t(MessageKey::CreateFirstProjectButton)}
@@ -66,14 +66,14 @@ fn ProjectCard(project: Project) -> impl IntoView {
         <a href=href class="card bg-base-100 border border-base-300 hover:border-primary hover:shadow-md transition">
             <div class="card-body p-4">
                 <div class="font-medium truncate">{name}</div>
-                <div class="text-xs text-base-content/60 line-clamp-2 min-h-[2rem]">
+                <div class="text-xs text-base-content/70 line-clamp-2 min-h-[2rem]">
                     {if desc.is_empty() {
                         view! { <span class="italic opacity-60">{t(MessageKey::NoDescriptionShort)}</span> }.into_any()
                     } else {
                         view! { <span>{desc}</span> }.into_any()
                     }}
                 </div>
-                <div class="text-[11px] text-base-content/50 mt-2">
+                <div class="text-[11px] text-base-content/70 mt-2">
                     {t(MessageKey::UpdatedAt { formatted: updated })}
                 </div>
             </div>
@@ -135,7 +135,7 @@ pub fn ProjectNewPage(
                             <label class="form-control w-full">
                                 <div class="label py-1">
                                     <span class="label-text text-sm">{t(MessageKey::TeamFieldLabel)}</span>
-                                    <span class="label-text-alt text-xs opacity-60">
+                                    <span class="label-text-alt text-xs opacity-70">
                                         {t(MessageKey::OptionalHint)}
                                     </span>
                                 </div>
@@ -144,7 +144,7 @@ pub fn ProjectNewPage(
                                     {team_options}
                                 </select>
                                 <div class="label py-1">
-                                    <span class="label-text-alt text-xs text-base-content/60">
+                                    <span class="label-text-alt text-xs text-base-content/70">
                                         {t(MessageKey::TeamHelperText)}
                                     </span>
                                 </div>
@@ -227,7 +227,7 @@ pub fn ProjectEditPage(
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="font-medium text-error">{t(MessageKey::DeleteProjectHeading)}</div>
-                                <div class="text-xs text-base-content/60">
+                                <div class="text-xs text-base-content/70">
                                     {t(MessageKey::DeleteProjectWarning)}
                                 </div>
                             </div>

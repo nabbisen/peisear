@@ -258,7 +258,7 @@ fn render_backlog(
                 <li class="py-2 flex items-center justify-between gap-3" aria-label=aria>
                     <div class="min-w-0 flex-1">
                         <a href=href class="link link-hover font-medium truncate block">{issue.title}</a>
-                        <div class="flex items-center gap-2 text-xs text-base-content/60 mt-0.5">
+                        <div class="flex items-center gap-2 text-xs text-base-content/70 mt-0.5">
                             <span>{row.project_name}</span>
                             <span class="badge badge-xs badge-ghost">{priority_label}</span>
                             <span class="tabular-nums">{points_text}</span>
@@ -275,7 +275,7 @@ fn render_backlog(
             <div class="card-body">
                 <h2 id="backlog-heading" class="text-base font-medium">{t(MessageKey::BacklogHeading)}</h2>
                 {(!has).then(|| view! {
-                    <p class="text-sm text-base-content/60 italic">{t(MessageKey::NoBacklogIssuesMessage)}</p>
+                    <p class="text-sm text-base-content/70 italic">{t(MessageKey::NoBacklogIssuesMessage)}</p>
                 })}
                 {has.then(|| view! {
                     <ul class="divide-y">{rows.clone()}</ul>
@@ -315,7 +315,7 @@ fn render_sprint_items(
                 <li class="py-2 flex items-center justify-between gap-3" aria-label=aria>
                     <div class="min-w-0 flex-1">
                         <a href=href class="link link-hover font-medium truncate block">{title}</a>
-                        <div class="text-xs text-base-content/60 mt-0.5 tabular-nums">{points_text}</div>
+                        <div class="text-xs text-base-content/70 mt-0.5 tabular-nums">{points_text}</div>
                     </div>
                     {move_form}
                 </li>
@@ -328,7 +328,7 @@ fn render_sprint_items(
             <div class="card-body">
                 <h2 id="sprint-items-heading" class="text-base font-medium">{t(MessageKey::SprintItemsHeading)}</h2>
                 {(!has).then(|| view! {
-                    <p class="text-sm text-base-content/60 italic">{t(MessageKey::NoSprintItemsInPlanMessage)}</p>
+                    <p class="text-sm text-base-content/70 italic">{t(MessageKey::NoSprintItemsInPlanMessage)}</p>
                 })}
                 {has.then(|| view! {
                     <ul class="divide-y">{rows.clone()}</ul>

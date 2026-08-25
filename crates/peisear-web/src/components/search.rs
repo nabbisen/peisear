@@ -96,7 +96,7 @@ fn SearchResultsPage(
                 }.into_any()
             } else {
                 view! {
-                    <p class="text-sm text-base-content/60">
+                    <p class="text-sm text-base-content/70">
                         {t(MessageKey::NoQueryGuidanceMessage)}
                     </p>
                 }.into_any()
@@ -151,14 +151,14 @@ fn SearchSection(
         <section class="mb-8">
             <h2 class="text-base font-semibold mb-2">
                 {section_title}
-                <span class="text-sm font-normal text-base-content/60 ml-2">
+                <span class="text-sm font-normal text-base-content/70 ml-2">
                     {format!("({count})")}
                 </span>
             </h2>
 
             {if is_empty {
                 view! {
-                    <p class="text-sm text-base-content/60 italic mb-2">
+                    <p class="text-sm text-base-content/70 italic mb-2">
                         {t(MessageKey::NoMatchesInCategoryMessage)}
                     </p>
                 }.into_any()
@@ -205,7 +205,7 @@ fn SearchHitRow(hit: SearchHit) -> impl IntoView {
                 <li>
                     <a href=url class="block px-3 py-2 hover:bg-base-200">
                         <div class="font-medium">{name}</div>
-                        <div class="text-xs text-base-content/60">{t(MessageKey::ProjectHitTypeLabel)}</div>
+                        <div class="text-xs text-base-content/70">{t(MessageKey::ProjectHitTypeLabel)}</div>
                     </a>
                 </li>
             }
@@ -233,7 +233,7 @@ fn SearchHitRow(hit: SearchHit) -> impl IntoView {
                 <li>
                     <a href=url class="block px-3 py-2 hover:bg-base-200">
                         <div class="font-medium">{title}</div>
-                        <div class="text-xs text-base-content/60">{caption}</div>
+                        <div class="text-xs text-base-content/70">{caption}</div>
                     </a>
                 </li>
             }

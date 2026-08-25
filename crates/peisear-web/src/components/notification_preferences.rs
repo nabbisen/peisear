@@ -69,7 +69,7 @@ pub fn PreferencesPage(
         .into_any()
     } else {
         view! {
-            <span class="text-xs text-base-content/60">
+            <span class="text-xs text-base-content/70">
                 {t(MessageKey::EmailOptInOffStatus)}
             </span>
         }
@@ -94,7 +94,7 @@ pub fn PreferencesPage(
                     <form method="post" action="/settings/notifications/silence-all"
                           onsubmit="return confirm('Silence all notification kinds? \
                                                     You can re-enable them any time.')">
-                        <button type="submit" class="btn btn-sm btn-ghost text-base-content/60"
+                        <button type="submit" class="btn btn-sm btn-ghost text-base-content/70"
                                 aria-label=t(MessageKey::SilenceAllAriaLabel)>
                             {t(MessageKey::SilenceAllButton)}
                         </button>
@@ -108,7 +108,7 @@ pub fn PreferencesPage(
                 <details class="card bg-base-100 border border-base-300 shadow-sm">
                     <summary class="card-body cursor-pointer py-3 flex flex-row items-center justify-between gap-2">
                         <span class="font-medium">{t(MessageKey::PerKindDeliverySummary)}</span>
-                        <span class="text-xs text-base-content/50">
+                        <span class="text-xs text-base-content/70">
                             {t(MessageKey::ClickToExpandHint)}
                         </span>
                     </summary>
@@ -130,7 +130,7 @@ pub fn PreferencesPage(
                                     </tbody>
                                 </table>
                             </div>
-                            <p class="text-xs text-base-content/50 italic">
+                            <p class="text-xs text-base-content/70 italic">
                                 {t(MessageKey::ChannelStubDisclaimer)}
                             </p>
                             <div class="text-right">

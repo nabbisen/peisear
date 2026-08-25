@@ -121,10 +121,10 @@ pub fn SprintsListPage(
                 {(!has_sprints).then(|| view! {
                     <div class="card bg-base-100 border border-base-300 shadow-sm">
                         <div class="card-body items-center text-center py-12">
-                            <p class="text-sm text-base-content/60">
+                            <p class="text-sm text-base-content/70">
                                 {empty_message.clone()}
                             </p>
-                            <p class="text-xs text-base-content/50 mt-1">
+                            <p class="text-xs text-base-content/70 mt-1">
                                 {t(MessageKey::SprintsOptionalNote)}
                             </p>
                         </div>
@@ -191,7 +191,7 @@ fn render_sprint_card(team_slug: String, s: Sprint, sum: SprintSummary) -> impl 
                     <div class="flex items-center justify-between gap-3">
                         <div class="flex-1 min-w-0">
                             <h3 class="font-medium">{s.name.clone()}</h3>
-                            <p class="text-xs text-base-content/60 mt-1">
+                            <p class="text-xs text-base-content/70 mt-1">
                                 {dates}
                             </p>
                             <p class="text-sm text-base-content/70 mt-1">
@@ -292,7 +292,7 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>) -> impl IntoView {
                  aria-label=t(MessageKey::RecentCompletedSprintsAriaLabel)>
             <div class="card-body">
                 <h2 class="text-base font-medium">{t(MessageKey::CompletedWorkHeading)}</h2>
-                <p class="text-xs text-base-content/60">
+                <p class="text-xs text-base-content/70">
                     {t(MessageKey::VelocityCaptionLead)} <strong>{t(MessageKey::CaptionWordCompleted)}</strong>
                     {t(MessageKey::VelocityCaptionMiddle)} <strong>{t(MessageKey::CaptionWordCarriedOver)}</strong>
                     {t(MessageKey::VelocityCaptionTail)}
@@ -397,13 +397,13 @@ pub fn SprintNewPage(
                         <label class="form-control w-full">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Goal })}</span>
-                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::OptionalHint)}</span>
+                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="goal" rows="3" maxlength="500"
                                       placeholder=t(MessageKey::GoalFieldPlaceholder)
                                       class="textarea textarea-bordered textarea-sm w-full"></textarea>
                         </label>
-                        <p class="text-xs text-base-content/60">
+                        <p class="text-xs text-base-content/70">
                             {t(MessageKey::SprintPlannedNoticeLead)} <strong>{t(MessageKey::CaptionWordPlanned)}</strong>
                             {t(MessageKey::SprintPlannedNoticeTail)}
                         </p>
@@ -595,39 +595,39 @@ fn render_summary_card(status: SprintStatus, sum: SprintSummary) -> impl IntoVie
                 <h2 class="text-base font-medium">{label}</h2>
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
                     <div>
-                        <div class="text-xs text-base-content/60">{t(MessageKey::CommittedStatLabel)}</div>
+                        <div class="text-xs text-base-content/70">{t(MessageKey::CommittedStatLabel)}</div>
                         <div class="text-lg font-semibold tabular-nums">
-                            {sum.committed_points} <span class="text-sm font-normal opacity-60">{t(MessageKey::PointsUnitSuffix)}</span>
+                            {sum.committed_points} <span class="text-sm font-normal opacity-70">{t(MessageKey::PointsUnitSuffix)}</span>
                         </div>
-                        <div class="text-xs text-base-content/50">
+                        <div class="text-xs text-base-content/70">
                             {t(MessageKey::IssuesCountText { count: sum.committed_count })}
                         </div>
                     </div>
                     <div>
-                        <div class="text-xs text-base-content/60">{t(MessageKey::CompletedStatLabel)}</div>
+                        <div class="text-xs text-base-content/70">{t(MessageKey::CompletedStatLabel)}</div>
                         <div class="text-lg font-semibold tabular-nums">
-                            {sum.completed_points} <span class="text-sm font-normal opacity-60">{t(MessageKey::PointsUnitSuffix)}</span>
+                            {sum.completed_points} <span class="text-sm font-normal opacity-70">{t(MessageKey::PointsUnitSuffix)}</span>
                         </div>
-                        <div class="text-xs text-base-content/50">
+                        <div class="text-xs text-base-content/70">
                             {t(MessageKey::IssuesCountText { count: sum.completed_count })}
                         </div>
                     </div>
                     <div>
-                        <div class="text-xs text-base-content/60">{t(MessageKey::InFlightStatLabel)}</div>
+                        <div class="text-xs text-base-content/70">{t(MessageKey::InFlightStatLabel)}</div>
                         <div class="text-lg font-semibold tabular-nums">
-                            {in_flight_pt} <span class="text-sm font-normal opacity-60">{t(MessageKey::PointsUnitSuffix)}</span>
+                            {in_flight_pt} <span class="text-sm font-normal opacity-70">{t(MessageKey::PointsUnitSuffix)}</span>
                         </div>
-                        <div class="text-xs text-base-content/50">
+                        <div class="text-xs text-base-content/70">
                             {t(MessageKey::IssuesCountText { count: in_flight_count })}
                         </div>
                     </div>
                     {(matches!(status, SprintStatus::Completed)).then(|| view! {
                         <div>
-                            <div class="text-xs text-base-content/60">{t(MessageKey::CarriedOverHeading)}</div>
+                            <div class="text-xs text-base-content/70">{t(MessageKey::CarriedOverHeading)}</div>
                             <div class="text-lg font-semibold tabular-nums">
-                                {sum.carried_over_points} <span class="text-sm font-normal opacity-60">{t(MessageKey::PointsUnitSuffix)}</span>
+                                {sum.carried_over_points} <span class="text-sm font-normal opacity-70">{t(MessageKey::PointsUnitSuffix)}</span>
                             </div>
-                            <div class="text-xs text-base-content/50">
+                            <div class="text-xs text-base-content/70">
                                 {t(MessageKey::IssuesCountText { count: sum.carried_over_count })}
                             </div>
                         </div>
@@ -710,7 +710,7 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
                  aria-label=t(MessageKey::BurndownSectionAriaLabel)>
             <div class="card-body">
                 <h2 class="text-base font-medium">{t(MessageKey::BurndownHeading)}</h2>
-                <p class="text-xs text-base-content/60">
+                <p class="text-xs text-base-content/70">
                     {t(MessageKey::BurndownCaptionLead)} <strong>{t(MessageKey::CaptionWordCommitted)}</strong>
                     {t(MessageKey::BurndownCaptionMiddle)} <strong>{t(MessageKey::CaptionWordCompleted)}</strong>
                     {t(MessageKey::BurndownCaptionTail)}
@@ -749,7 +749,7 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
                               stroke-width="2"/>
                     </svg>
                 </div>
-                <div class="text-xs text-base-content/60 flex gap-4 mt-2">
+                <div class="text-xs text-base-content/70 flex gap-4 mt-2">
                     <span>
                         <span class="inline-block w-3 h-0.5 mr-1"
                               style="background: oklch(70% 0.04 240)"></span>
@@ -809,7 +809,7 @@ fn render_issues_table(
             <div class="card-body">
                 <h2 class="text-base font-medium">{t(MessageKey::IssuesHeading)}</h2>
                 {(!has).then(|| view! {
-                    <p class="text-sm text-base-content/60 italic">
+                    <p class="text-sm text-base-content/70 italic">
                         {t(MessageKey::NoIssuesInSprintMessage)}
                     </p>
                 })}
@@ -918,7 +918,7 @@ pub fn SprintEditPage(
                         <label class="form-control w-full">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Goal })}</span>
-                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::OptionalHint)}</span>
+                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="goal" rows="3" maxlength="500"
                                       class="textarea textarea-bordered textarea-sm w-full">

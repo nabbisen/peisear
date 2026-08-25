@@ -52,7 +52,7 @@ pub fn TeamsListPage(
                 {(!has_teams).then(|| view! {
                     <div class="card bg-base-100 border border-base-300 shadow-sm">
                         <div class="card-body items-center text-center py-12">
-                            <div class="text-base-content/30 mb-2">
+                            <div class="text-base-content/70 mb-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36"
                                      viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                      stroke-width="1.5" aria-hidden="true">
@@ -62,10 +62,10 @@ pub fn TeamsListPage(
                                     <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                                 </svg>
                             </div>
-                            <p class="text-sm text-base-content/60">
+                            <p class="text-sm text-base-content/70">
                                 {t(MessageKey::TeamsEmptyIntro)}
                             </p>
-                            <p class="text-xs text-base-content/50 mt-1">
+                            <p class="text-xs text-base-content/70 mt-1">
                                 {t(MessageKey::TeamsEmptyCta)}
                             </p>
                         </div>
@@ -158,14 +158,14 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                         <label class="form-control w-full">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::SlugFieldLabel)}</span>
-                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::OptionalAutoDerivedHint)}</span>
+                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::OptionalAutoDerivedHint)}</span>
                             </div>
                             <input type="text" name="slug" maxlength="64"
                                    pattern="[a-z0-9\\-]+"
                                    placeholder=t(MessageKey::SlugPlaceholder)
                                    class="input input-bordered input-sm w-full"/>
                             <div class="label py-1">
-                                <span class="label-text-alt text-xs text-base-content/60">
+                                <span class="label-text-alt text-xs text-base-content/70">
                                     {t(MessageKey::SlugHelperText)}
                                 </span>
                             </div>
@@ -173,13 +173,13 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                         <label class="form-control w-full">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span>
-                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::OptionalHint)}</span>
+                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="description" rows="3" maxlength="500"
                                       placeholder=t(MessageKey::TeamDescriptionPlaceholder)
                                       class="textarea textarea-bordered textarea-sm w-full"></textarea>
                         </label>
-                        <p class="text-xs text-base-content/60">
+                        <p class="text-xs text-base-content/70">
                             {t(MessageKey::NewTeamIntro)}
                         </p>
                         <div class="card-actions justify-end mt-2">
@@ -255,7 +255,7 @@ pub fn TeamDetailPage(
             <details class="card bg-base-100 border border-base-300 shadow-sm mt-4">
                 <summary class="card-body cursor-pointer py-3 flex flex-row items-center gap-2">
                     <span class="font-medium">{t(MessageKey::InviteMemberSummary)}</span>
-                    <span class="text-xs text-base-content/50">{t(MessageKey::ByEmailHint)}</span>
+                    <span class="text-xs text-base-content/70">{t(MessageKey::ByEmailHint)}</span>
                 </summary>
                 <div class="px-4 pb-4">
                     <form method="post"
@@ -281,7 +281,7 @@ pub fn TeamDetailPage(
                         </label>
                         <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::AddButton)}</button>
                     </form>
-                    <p class="text-xs text-base-content/60 mt-2">
+                    <p class="text-xs text-base-content/70 mt-2">
                         {t(MessageKey::InviteHelperText)}
                     </p>
                 </div>
@@ -346,7 +346,7 @@ pub fn TeamDetailPage(
 
                 {add_member_form}
 
-                <p class="text-xs text-base-content/50 italic mt-4">
+                <p class="text-xs text-base-content/70 italic mt-4">
                     {t(MessageKey::TeamPrivacyFootnote)}
                 </p>
             </div>
@@ -409,7 +409,7 @@ fn render_projects_section(
                     </div>
                 })}
                 {(!has_projects).then(|| view! {
-                    <p class="text-sm text-base-content/60 italic">
+                    <p class="text-sm text-base-content/70 italic">
                         {t(MessageKey::NoProjectsInTeamMessage)}
                     </p>
                 })}
@@ -468,7 +468,7 @@ fn render_member_row(
             <td class="text-right">
                 <form method="post" action=remove_action
                       onsubmit="return confirm('Leave this team?')">
-                    <button type="submit" class="btn btn-ghost btn-xs text-base-content/60"
+                    <button type="submit" class="btn btn-ghost btn-xs text-base-content/70"
                             aria-label=t(MessageKey::LeaveTeamAriaLabel)>
                         {t(MessageKey::LeaveButton)}
                     </button>
@@ -496,7 +496,7 @@ fn render_member_row(
     view! {
         <tr>
             <td>{display_name}{is_self.then(|| view! {
-                <span class="text-xs opacity-60 ml-1">{t(MessageKey::YouSuffix)}</span>
+                <span class="text-xs opacity-70 ml-1">{t(MessageKey::YouSuffix)}</span>
             })}</td>
             <td class="text-sm text-base-content/70">{email}</td>
             {role_cell}
@@ -560,7 +560,7 @@ pub fn TeamEditPage(
                                 {team_description}
                             </textarea>
                         </label>
-                        <p class="text-xs text-base-content/60">
+                        <p class="text-xs text-base-content/70">
                             {t(MessageKey::SlugFixedNotice)}
                         </p>
                         <div class="card-actions justify-end mt-2">

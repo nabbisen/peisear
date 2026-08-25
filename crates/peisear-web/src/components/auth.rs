@@ -14,7 +14,7 @@ fn Brand(subtitle: String) -> impl IntoView {
             <div class="text-2xl font-semibold tracking-tight">
                 <span class="text-primary">"●"</span>" "{t(MessageKey::AppBrandName)}
             </div>
-            <div class="text-sm text-base-content/60 mt-1">{subtitle}</div>
+            <div class="text-sm text-base-content/70 mt-1">{subtitle}</div>
         </div>
     }
 }
@@ -50,7 +50,7 @@ pub fn LoginPage(flash: Option<String>, email: String) -> impl IntoView {
                         </label>
 
                         <button type="submit" class="btn btn-primary btn-sm mt-2">{t(MessageKey::SignInWord)}</button>
-                        <div class="text-center text-xs mt-1 text-base-content/60">
+                        <div class="text-center text-xs mt-1 text-base-content/70">
                             {t(MessageKey::NoAccountPrompt)}
                             <a href="/register" class="link link-primary">{t(MessageKey::CreateOneLinkWord)}</a>
                         </div>
@@ -89,7 +89,7 @@ pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) 
                         <label class="form-control w-full">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::PasswordFieldLabel)}</span>
-                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::PasswordMinLengthHint)}</span>
+                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::PasswordMinLengthHint)}</span>
                             </div>
                             <input type="password" name="password" autocomplete="new-password"
                                    required=true minlength="8"
@@ -97,7 +97,7 @@ pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) 
                         </label>
 
                         <button type="submit" class="btn btn-primary btn-sm mt-2">{t(MessageKey::CreateAccountButton)}</button>
-                        <div class="text-center text-xs mt-1 text-base-content/60">
+                        <div class="text-center text-xs mt-1 text-base-content/70">
                             {t(MessageKey::AlreadyHaveAccountPrompt)}
                             <a href="/login" class="link link-primary">{t(MessageKey::SignInWord)}</a>
                         </div>

@@ -146,7 +146,7 @@ fn render_day_view(
         .map(|h| {
             let top = h as f64 / 24.0 * 100.0;
             view! {
-                <div class="absolute left-0 text-[10px] opacity-50 tabular-nums"
+                <div class="absolute left-0 text-[10px] opacity-70 tabular-nums"
                      style=format!("top:{top}%;")>
                     {format!("{h:02}:00")}
                 </div>
@@ -234,7 +234,7 @@ fn render_month_view(
             let label = t(MessageKey::CalendarMoreIssuesLabel {
                 count: (day.blocks.len() - 3) as i64,
             });
-            view! { <div class="text-[10px] opacity-60">{label}</div> }
+            view! { <div class="text-[10px] opacity-70">{label}</div> }
         });
         cells.push(
             view! {
@@ -348,7 +348,7 @@ fn render_grid(
     };
     view! {
         {is_empty.then(|| view! {
-            <p class="text-sm text-base-content/60 italic mb-2">{t(MessageKey::NoPlannedIssuesMessage)}</p>
+            <p class="text-sm text-base-content/70 italic mb-2">{t(MessageKey::NoPlannedIssuesMessage)}</p>
         })}
         {grid}
     }
@@ -409,10 +409,10 @@ pub fn PersonalCalendarPage(
                     super::breadcrumb::BreadcrumbItem::current(t(MessageKey::CalendarBreadcrumbWord)),
                 ])}
                 <h1 class="text-xl font-semibold mb-1">{t(MessageKey::PersonalCalendarPageTitle)}</h1>
-                <p class="text-xs text-base-content/60 mb-3">{t(MessageKey::CalendarUtcNote)}</p>
+                <p class="text-xs text-base-content/70 mb-3">{t(MessageKey::CalendarUtcNote)}</p>
                 {nav}
                 {grid}
-                <p class="text-xs text-base-content/60 mt-4">{t(MessageKey::PersonalCalendarPrivacyFootnote)}</p>
+                <p class="text-xs text-base-content/70 mt-4">{t(MessageKey::PersonalCalendarPrivacyFootnote)}</p>
             </div>
         </AppShell>
     }
@@ -451,11 +451,11 @@ pub fn ProjectCalendarPage(
                 <h1 class="text-xl font-semibold mb-1">
                     {t(MessageKey::ProjectCalendarPageTitle { project_name })}
                 </h1>
-                <p class="text-xs text-base-content/60 mb-3">{t(MessageKey::CalendarUtcNote)}</p>
+                <p class="text-xs text-base-content/70 mb-3">{t(MessageKey::CalendarUtcNote)}</p>
                 {nav}
                 {band}
                 {grid}
-                <p class="text-xs text-base-content/60 mt-4">{t(MessageKey::ProjectCalendarPrivacyFootnote)}</p>
+                <p class="text-xs text-base-content/70 mt-4">{t(MessageKey::ProjectCalendarPrivacyFootnote)}</p>
             </div>
         </AppShell>
     }

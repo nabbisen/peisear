@@ -152,7 +152,7 @@ pub fn PersonalDashboard(
             <AppShell title=t(MessageKey::PersonalDashboardTitle) user=user flash=flash>
                 <div class="max-w-2xl mx-auto">
                     <h1 class="text-xl font-semibold mb-4">{t(MessageKey::PersonalDashboardTitle)}</h1>
-                    <p class="text-sm text-base-content/60 italic">
+                    <p class="text-sm text-base-content/70 italic">
                         {t(MessageKey::NothingToShowMessage)}
                     </p>
                 </div>
@@ -251,7 +251,7 @@ pub fn PersonalDashboard(
                         {t(MessageKey::CalendarBreadcrumbWord)}
                     </a>
                 </div>
-                <p class="text-sm text-base-content/60 mb-4">
+                <p class="text-sm text-base-content/70 mb-4">
                     {t(MessageKey::PersonalDashboardSubtitle { display_name })}
                 </p>
 
@@ -279,7 +279,7 @@ pub fn PersonalDashboard(
                 })}
 
                 <section class="mb-6" aria-label=t(MessageKey::CurrentLoadSectionLabel)>
-                    <h2 class="text-xs uppercase tracking-wide text-base-content/60 mb-2">
+                    <h2 class="text-xs uppercase tracking-wide text-base-content/70 mb-2">
                         {t(MessageKey::RightNowHeading)}
                     </h2>
                     <div class="flex flex-wrap items-center gap-3">
@@ -299,7 +299,7 @@ pub fn PersonalDashboard(
                             <span class="text-xs text-base-content/70">{t(MessageKey::LoadChipLabel)}</span>
                             <span class="badge badge-sm badge-ghost">{load_text}</span>
                             {load_period_hint.then(|| view! {
-                                <span class="text-xs text-base-content/50 italic"
+                                <span class="text-xs text-base-content/70 italic"
                                       title=t(MessageKey::PeriodHintTooltip)>
                                     {t(MessageKey::ThisPeriodHint)}
                                 </span>
@@ -316,7 +316,7 @@ pub fn PersonalDashboard(
                 // scannable.
                 <details class="mb-6">
                     <summary class="cursor-pointer text-xs uppercase tracking-wide \
-                                    text-base-content/60 mb-2 inline-block"
+                                    text-base-content/70 mb-2 inline-block"
                              aria-label=t(MessageKey::RhythmAriaLabel)>
                         {t(MessageKey::RhythmSummaryLabel)}
                     </summary>
@@ -350,7 +350,7 @@ pub fn PersonalDashboard(
 
                 {render_burnout_panel(burnout, user_is_active)}
 
-                <section class="text-xs text-base-content/60">
+                <section class="text-xs text-base-content/70">
                     <details>
                         <summary class="cursor-pointer">{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
                         <div class="mt-2 space-y-2">
@@ -497,7 +497,7 @@ fn render_burnout_panel(
 
     view! {
         <section class="mb-6" aria-label=sustainability_heading_aria>
-            <h2 class="text-xs uppercase tracking-wide text-base-content/60 mb-2">
+            <h2 class="text-xs uppercase tracking-wide text-base-content/70 mb-2">
                 {sustainability_heading}
             </h2>
             <details open=any_watch>
@@ -529,18 +529,18 @@ fn render_burnout_panel(
                     </div>
                 })}
                 <div class="mt-3">
-                    <h3 class="text-xs uppercase tracking-wide text-base-content/50 mb-1">
+                    <h3 class="text-xs uppercase tracking-wide text-base-content/70 mb-1">
                         {patterns_subheading}
                     </h3>
                     <div class="flex flex-wrap items-center gap-3">
                         {drift_chip}
                         {switching_chip}
                     </div>
-                    <p class="mt-1 text-xs text-base-content/50 italic">
+                    <p class="mt-1 text-xs text-base-content/70 italic">
                         {t(MessageKey::PatternsDisclaimer)}
                     </p>
                 </div>
-                <p class="mt-2 text-xs text-base-content/60 italic">
+                <p class="mt-2 text-xs text-base-content/70 italic">
                     {t(MessageKey::SustainabilityPrivacyNote)}
                 </p>
             </details>
@@ -617,7 +617,7 @@ fn render_drift_chip(
                 <span class="mr-1" aria-hidden="true">{glyph}</span>
                 {direction_label}
             </span>
-            <span class="text-xs text-base-content/60">{value_line}</span>
+            <span class="text-xs text-base-content/70">{value_line}</span>
         </div>
     }
     .into_any()
@@ -677,7 +677,7 @@ fn render_switching_chip(
             <span class="badge badge-sm badge-ghost">
                 {median_value}
             </span>
-            <span class="text-xs text-base-content/60">{sample_line}</span>
+            <span class="text-xs text-base-content/70">{sample_line}</span>
         </div>
     }
     .into_any()

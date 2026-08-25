@@ -64,7 +64,7 @@ pub fn ProjectDetailPage(
         ().into_any()
     } else {
         view! {
-            <p class="text-sm text-base-content/60 max-w-3xl">{project.description.clone()}</p>
+            <p class="text-sm text-base-content/70 max-w-3xl">{project.description.clone()}</p>
         }
         .into_any()
     };
@@ -184,7 +184,7 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
     if health.raw.total_issues == 0 {
         return view! {
             <section class="mb-3">
-                <div class="text-xs text-base-content/60 italic">
+                <div class="text-xs text-base-content/70 italic">
                     {t(MessageKey::HealthEmptyMessage)}
                 </div>
             </section>
@@ -223,7 +223,7 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
     view! {
         <section class="mb-4" aria-label=t(MessageKey::ProjectHealthSectionLabel)>
             <div class="flex items-center gap-2 mb-1">
-                <h3 class="text-xs uppercase tracking-wide text-base-content/60">
+                <h3 class="text-xs uppercase tracking-wide text-base-content/70">
                     {t(MessageKey::HealthHeading)}
                 </h3>
             </div>
@@ -231,7 +231,7 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
             <p class="text-sm text-base-content/70 mb-2">{summary}</p>
 
             <details class="text-xs">
-                <summary class="cursor-pointer text-base-content/60 hover:text-base-content">
+                <summary class="cursor-pointer text-base-content/70 hover:text-base-content">
                     {t(MessageKey::IndicatorsSummaryLabel)}
                 </summary>
                 // Phase B PR3 (B-2): human-language
@@ -311,7 +311,7 @@ fn render_trend_chip(trend: peisear_core::project_health::Trend) -> impl IntoVie
         ),
     };
     view! {
-        <span class="text-xs text-base-content/60 ml-1"
+        <span class="text-xs text-base-content/70 ml-1"
               role="group"
               aria-label=aria.clone()
               title=aria>
@@ -426,10 +426,10 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
     view! {
         <section class="mb-4">
             <div class="flex items-center gap-2 mb-1">
-                <h3 class="text-xs uppercase tracking-wide text-base-content/60">
+                <h3 class="text-xs uppercase tracking-wide text-base-content/70">
                     {t(MessageKey::WorkloadHeading)}
                 </h3>
-                <a href="/settings" class="text-xs link link-hover opacity-60">
+                <a href="/settings" class="text-xs link link-hover opacity-70">
                     {t(MessageKey::WorkloadSetCapacityLink)}
                 </a>
             </div>
@@ -474,7 +474,7 @@ fn WorkloadHint(workload: Vec<UserLoad>) -> impl IntoView {
         .collect_view();
 
     view! {
-        <div class="text-xs text-base-content/60 -mt-1">
+        <div class="text-xs text-base-content/70 -mt-1">
             <span class="font-medium mr-2">{t(MessageKey::WorkloadHintLabel)}</span>
             <span class="inline-flex items-center gap-3 flex-wrap">{chips}</span>
         </div>
@@ -519,7 +519,7 @@ fn BoardView(
                                 view! { <IssueCard project_id=project_id.clone() issue=issue assignees=assignees_for_col.clone()/> }
                             }).collect_view()}
                             {is_empty.then(|| view! {
-                                <div class="text-xs text-base-content/40 text-center py-4 italic">
+                                <div class="text-xs text-base-content/70 text-center py-4 italic">
                                     {t(MessageKey::EmptyBoardHint)}
                                 </div>
                             })}
@@ -690,7 +690,7 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
             // outer div the sole drag source.
             <a href=href class="block" draggable="false">
                 <div class="text-sm font-medium line-clamp-2">{issue.title}</div>
-                <div class="flex items-center justify-between gap-2 mt-2 text-[11px] text-base-content/60">
+                <div class="flex items-center justify-between gap-2 mt-2 text-[11px] text-base-content/70">
                     <div class="flex items-center gap-1 flex-wrap">
                         <span class=badge>{t(MessageKey::PriorityName { label: issue.priority.to_i18n_label() })}</span>
                         {effort_node}
@@ -919,13 +919,13 @@ fn ListView(
                                     <td><span class=pri_class>{priority_text}</span></td>
                                     <td class="text-xs text-base-content/70">{effort_text}</td>
                                     <td class="text-xs text-base-content/70">{assignee_text}</td>
-                                    <td class="text-xs text-base-content/60">{updated}</td>
+                                    <td class="text-xs text-base-content/70">{updated}</td>
                                 </tr>
                             }
                         }).collect_view()}
                         {is_empty.then(|| view! {
                             <tr>
-                                <td colspan="6" class="text-center py-8 text-base-content/60 italic">
+                                <td colspan="6" class="text-center py-8 text-base-content/70 italic">
                                     {t(MessageKey::EmptyIssueListMessage)}
                                 </td>
                             </tr>
@@ -1014,7 +1014,7 @@ pub fn IssueNewPage(
                             <label class="form-control w-full">
                                 <div class="label py-1">
                                     <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</span>
-                                    <span class="label-text-alt text-xs opacity-60">{t(MessageKey::StoryPointsHint)}</span>
+                                    <span class="label-text-alt text-xs opacity-70">{t(MessageKey::StoryPointsHint)}</span>
                                 </div>
                                 <select name="effort" class="select select-bordered select-sm w-full">
                                     <option value="" selected=true>{t(MessageKey::NoValuePlaceholder)}</option>
@@ -1106,7 +1106,7 @@ pub fn SubIssueNewPage(
                 </ul></div>
 
                 <h1 class="text-xl font-semibold mb-1">{t(MessageKey::NewSubIssueLabel)}</h1>
-                <p class="text-sm text-base-content/60 mb-4">
+                <p class="text-sm text-base-content/70 mb-4">
                     {t(MessageKey::SubIssueNewPageIntro)}
                 </p>
 
@@ -1166,7 +1166,7 @@ pub fn SubIssueNewPage(
                             <label class="form-control w-full">
                                 <div class="label py-1">
                                     <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</span>
-                                    <span class="label-text-alt text-xs opacity-60">{t(MessageKey::StoryPointsHint)}</span>
+                                    <span class="label-text-alt text-xs opacity-70">{t(MessageKey::StoryPointsHint)}</span>
                                 </div>
                                 <select name="effort"
                                         class="select select-bordered select-sm w-full">
@@ -1324,7 +1324,7 @@ pub fn IssueDetailPage(
                     </div>
                     {if sub_issues.is_empty() {
                         view! {
-                            <p class="text-xs italic text-base-content/50">
+                            <p class="text-xs italic text-base-content/70">
                                 {t(MessageKey::SubIssuesEmptyMessage)}
                             </p>
                         }.into_any()
@@ -1389,7 +1389,7 @@ pub fn IssueDetailPage(
                     </select>
                     <button type="submit" class="btn btn-ghost btn-sm">{t(MessageKey::SaveButton)}</button>
                 </form>
-                <p class="text-xs text-base-content/60 mt-1">
+                <p class="text-xs text-base-content/70 mt-1">
                     {t(MessageKey::SprintAssignmentHelperText)}
                 </p>
             </div>
@@ -1528,7 +1528,7 @@ fn IssueEditForm(
                     <label class="form-control w-full">
                         <div class="label py-1">
                             <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</span>
-                            <span class="label-text-alt text-xs opacity-60">{t(MessageKey::StoryPointsHint)}</span>
+                            <span class="label-text-alt text-xs opacity-70">{t(MessageKey::StoryPointsHint)}</span>
                         </div>
                         <select name="effort" class="select select-bordered select-sm w-full">
                             <option value="" selected=current_effort.is_none()>{t(MessageKey::NoValuePlaceholder)}</option>
@@ -1720,7 +1720,7 @@ fn IssueView(
                     }.into_any()
                 } else {
                     view! {
-                        <p class="text-sm italic text-base-content/50">{t(MessageKey::NoDescriptionProvided)}</p>
+                        <p class="text-sm italic text-base-content/70">{t(MessageKey::NoDescriptionProvided)}</p>
                     }.into_any()
                 }}
             </div>

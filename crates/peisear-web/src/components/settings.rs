@@ -95,7 +95,7 @@ pub fn SettingsPage(
                     <li>{settings_breadcrumb}</li>
                 </ul></div>
                 <h1 class="text-xl font-semibold mb-1">{settings_heading}</h1>
-                <p class="text-sm text-base-content/60 mb-6">
+                <p class="text-sm text-base-content/70 mb-6">
                     {t(MessageKey::SettingsSubtitle { display_name })}
                 </p>
 
@@ -112,7 +112,7 @@ pub fn SettingsPage(
                         <div class="text-sm py-2 px-3 rounded bg-base-200/60"
                              role="status"
                              aria-label=effective_label_aria>
-                            <span class="text-base-content/60">{t(MessageKey::EffectiveTodayLabel)}</span>
+                            <span class="text-base-content/70">{t(MessageKey::EffectiveTodayLabel)}</span>
                             <span class="font-medium">{effective_label}</span>
                         </div>
 
@@ -175,7 +175,7 @@ pub fn SettingsPage(
                                     {t(MessageKey::AddRowButton)}
                                 </button>
                             </form>
-                            <p class="mt-2 text-xs text-base-content/60">
+                            <p class="mt-2 text-xs text-base-content/70">
                                 {t(MessageKey::CapacityOverlapHelperText)}
                             </p>
                         </details>
@@ -193,7 +193,7 @@ pub fn SettingsPage(
                         <label class="form-control w-full max-w-xs">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::WipLimitLabel)}</span>
-                                <span class="label-text-alt text-xs opacity-60">{t(MessageKey::InProgressIssuesHint)}</span>
+                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::InProgressIssuesHint)}</span>
                             </div>
                             <input type="number" name="wip_limit" min="1" max="99"
                                    value=wip_value
