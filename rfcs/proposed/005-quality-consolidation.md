@@ -1,11 +1,12 @@
 # RFC 0005: Quality consolidation
 
 **Status**: Proposed
-**Target**: 0.26.0 (Phase E) — §9 shipped at 0.22.0, §10 pulled forward to 0.25.0
+**Target**: 0.27.0 (Phase E) — §9 shipped at 0.22.0, §10 pulled forward to 0.25.0,
+§12-13 added from `REL-0.26.0`'s review
 **Related spec sections**: §40 (Phase E plan), §11.5.5 (API
 authorization QA), §21.4 (optimistic-lock conflict),
 §30-34 (ABDD axes)
-**Last updated**: 2026-08-16
+**Last updated**: 2026-08-25
 
 ## Summary
 
@@ -383,6 +384,77 @@ wrong and is worth settling once.
 
 §1's authorisation table has a natural sibling here: every place the application
 constructs a redirect, and what encodes it.
+
+### 12. Script tags nothing asserts
+
+*Added 2026-08-25 from `REL-0.26.0`'s review, found by planting.*
+
+`components/issues.rs:142` emits `<script src="/static/board.js" defer>`.
+Delete that line and change nothing else, and **`cargo test --workspace`
+still reports 178 passing**. The board ships with no drag-and-drop and no
+undo, and every gate is green. Verified, not reasoned about.
+
+`status_control.rs:485` states the opposite in a comment — that the board
+"loads `board.js` instead — `boards_per_card_control_renders_unchanged`
+above already pins that." That test asserts the board posts to
+`/status/board` and does not pick up the two new routes. It never looks
+for `board.js`.
+
+Three files live in `static/` and exactly one of them is asserted
+anywhere:
+
+| File | Tag emitted at | Asserted by |
+|---|---|---|
+| `dm.js` | `components/issues.rs:564` | `status_control::dm_js_is_served_with_defer_on_both_surfaces` |
+| `board.js` | `components/issues.rs:142` | **nothing** |
+| `search.js` | `components/layout.rs:72` | **nothing** |
+
+`search.js` is the worse of the two on reach — it sits in the app shell,
+so it is on every page, and its tag disappearing takes search enhancement
+with it everywhere at once.
+
+**Why it belongs to this RFC rather than to a bug fix.** §8 is the Phase
+A–D follow-up sweep, and this is precisely what that sweep is for: a
+surface that grew across PRs and ended up with a dependency nothing
+checks. It is also the second instance this project has found of *a
+comment asserting what a test does* — the first was `RFC 003`'s
+`global_acknowledged`, where a document and a test agreed with each other
+and were both wrong. A comment is the one place with no guard.
+
+**Not proposed: a scan.** A test that walks `static/` and asserts each
+filename appears somewhere under `crates/peisear-web/src/` would extend
+itself to a fourth file for free, but it would pass on a tag emitted in a
+branch that never renders — which is most of what could go wrong here.
+Three HTTP-level assertions for three files is complete today. The
+residual gap is that a fourth file added later gets no assertion
+automatically; that is named here rather than built for.
+
+### 13. The `DEC-007` block omits a crate
+
+*Added 2026-08-25 from `REL-0.26.0`'s review, found by the dev team in
+their own gate table.*
+
+`.github/CONTRIBUTING.md`'s `DEC-007` command block runs six of the seven
+workspace members. `peisear`, the facade, is absent — not present with the
+wrong flags, absent. Its single test is a doctest at
+`crates/peisear/src/lib.rs:28`, so `cargo test -p peisear --lib` reports
+`0` and only the bare `cargo test -p peisear` finds it.
+
+**No coverage was ever missing.** `cargo test --workspace` runs doctests
+and runs three times per release. What was wrong is provenance:
+`REL-0.25.0`'s per-target table carried a `1` for that crate, and its own
+`cold-gate-tests.log` contains zero `Doc-tests peisear` blocks. The number
+was right; no command in the log produced it.
+
+**The `--lib` shape is a trap, not a hole.** Three crates are invoked with
+`--lib`, which would skip a doctest in any of them. There are none today —
+the workspace contains exactly one doctest, the facade's — so nothing is
+uncovered. It becomes a hole the day someone writes a documented example
+in `peisear-core`.
+
+**Why a guard and not just a line.** The block is a list of crate names
+maintained by hand against a workspace that has grown to seven. That is
+the shape that produced this, and it will produce it again at eight.
 
 ## Test plan
 

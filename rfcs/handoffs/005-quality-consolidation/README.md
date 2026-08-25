@@ -1,7 +1,7 @@
 # Handoffs — RFC 005, quality consolidation
 
 Implementation companions for
-[RFC 005](../../proposed/005-quality-consolidation.md), target **0.24.0**
+[RFC 005](../../proposed/005-quality-consolidation.md), target **0.27.0**
 except where a item is pulled forward.
 
 **This file is an index, not a status board.** It lists what each handoff
@@ -22,10 +22,12 @@ second RFC lifecycle".
 |---|---|---|---|---|
 | QA-001 | [QA-001](./QA-001-test-harness-collision.md) | `TestApp::spawn` name collisions; a repeated full-workspace run in the gate set (RFC 005 §9, baseline `§10.13`) | **0.22.0** — pulled forward | — |
 | QA-002 | [QA-002](./QA-002-three-defects.md) | An active sprint may not be deleted; project delete must not report a false success; `prose_scan` stops reading comments (RFC 005 §10) | **0.25.0** — pulled forward | CONF-001 |
+| QA-003 | [QA-003](./QA-003-untested-script-tags.md) | `board.js` and `search.js` are referenced by no test — the board's tag can be deleted with the suite green; a comment claims otherwise (RFC 005 §12) | 0.27.0 | — |
+| QA-004 | [QA-004](./QA-004-dec-007-block-omits-a-crate.md) | `DEC-007`'s command block omits the `peisear` facade; a guard so the list cannot drift from the workspace again (RFC 005 §13) | 0.27.0 | — |
 
-## Why one item is out of phase
+## Why two items are out of phase
 
-RFC 005 is Phase E's QA pass and targets 0.24.0. §9 is pulled forward because
+RFC 005 is Phase E's QA pass and targets **0.27.0**. §9 is pulled forward because
 every release between here and there runs the gates it corrects, and a suite
 that fails half the time on `cargo test --workspace` trains people to re-run
 rather than read.
@@ -33,5 +35,10 @@ rather than read.
 §10 is pulled forward for the same reason: two of its three defects are
 reachable today, and one of them lets a team's running sprint be deleted.
 
-The rest of RFC 005 stays at 0.26.0 — its remaining scope audits Phase D, which
-RFC 004's substeps create, so it cannot precede them.
+The rest of RFC 005 stays at **0.27.0** — its remaining scope audits Phase D,
+which RFC 004's substeps create, so it cannot precede them. D-1 and D-2 shipped
+in 0.26.0, so that audit is now live rather than pending.
+
+§12 and §13 were added on 2026-08-25 from `REL-0.26.0`'s review and are in
+phase: both are Phase E test debt, and §8's follow-up sweep is exactly where a
+dependency nothing checks belongs.
