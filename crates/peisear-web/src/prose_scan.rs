@@ -2,13 +2,37 @@
 //!
 //! Four handoffs each declared their surface complete and each was
 //! followed by another find (`I18N-006-review.md` §4). This walks
-//! `src/components/**.rs` and `src/handlers/**.rs` at test time and
-//! fails on hardcoded user-visible prose, so "every string is in the
-//! table" stops depending on anyone's thoroughness.
+//! every `.rs` file under `src/` at test time and fails on hardcoded
+//! user-visible prose, so "every string is in the table" stops
+//! depending on anyone's thoroughness.
 //!
-//! Scope, deliberately narrow (`I18N-007` §3's own calibration
-//! standard — "if the test needs more than a handful of allowlist
-//! entries, the heuristic is wrong, not the codebase"):
+//! **`QA-010` §4 — widened from `src/components/**` and
+//! `src/handlers/**` to all of `src/`.** Those two were the directories
+//! actually found to carry copy, but the list itself was never
+//! checked against anything: `components.rs`, `handlers.rs`,
+//! `error.rs`, `app.rs`, `extractors.rs`, `jobs.rs`, `state.rs` and
+//! `config.rs` sat unscanned, and planting
+//! `r#"<span aria-label="This sprint has no planned work">"#` into
+//! `components.rs` — one level up from the directory this scan used to
+//! walk — passed clean (`evidence/section4-plant-components-rs-level-up.log`
+//! in the `QA-010` review request). **Measured before choosing**:
+//! widened to all of `src/` first and re-ran against the real tree —
+//! **zero new hits**, even across the fourteen additional files
+//! (`evidence/section4-widen-to-all-src-hit-count.log`). Chosen over
+//! the alternative — keep the two-directory scope and add a second,
+//! smaller guard asserting nothing outside it contains a
+//! [`SCOPED_ATTRS`] literal — because a scan that simply covers every
+//! file is easier to explain and maintain than a scan plus a
+//! meta-scan of the scan's own scope, and at zero hit cost there is
+//! nothing the narrower version was buying. Also closes the gap for
+//! good: any future top-level module under `src/` is covered
+//! automatically, with no one needing to remember to widen an
+//! allowlist again.
+//!
+//! Scope, deliberately narrow on *what counts as prose* even though it
+//! is no longer narrow on *which files it reads* (`I18N-007` §3's own
+//! calibration standard — "if the test needs more than a handful of
+//! allowlist entries, the heuristic is wrong, not the codebase"):
 //!
 //! - A literal `="…"` value on one of [`SCOPED_ATTRS`] — the
 //!   attributes actually found to carry copy in this crate.
@@ -386,8 +410,7 @@ fn all_violations() -> Vec<Violation> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let src_dir = manifest_dir.join("src");
     let mut files = Vec::new();
-    collect_rs_files(&src_dir.join("components"), &src_dir, &mut files);
-    collect_rs_files(&src_dir.join("handlers"), &src_dir, &mut files);
+    collect_rs_files(&src_dir, &src_dir, &mut files);
 
     let mut violations = Vec::new();
     for (path, rel) in &files {

@@ -54,6 +54,29 @@
 //! add MessageKey::Foo`) reads as coverage and is not. `all()` has no
 //! block comments in this codebase's style, so line-comment stripping
 //! is sufficient.
+//!
+//! `QA-010` §2 — **the same defect exists one level down.** 125 of
+//! `MessageKey`'s 520 variants are parameterised by one of fourteen
+//! label enums (`IssueStatusLabel`, `PriorityLabel`, ...), each with
+//! its own hand-maintained `pub fn all() -> [Self; N]`. The array
+//! length is part of the type and moves with the literal, so the
+//! compiler has no opinion about whether the enum still has that many
+//! variants — reproduced by shrinking `IssueStatusLabel::all()` from
+//! `[_; 3]` to `[_; 2]` (dropping `Done`) and watching `cargo test
+//! --workspace` stay green before writing anything here (`evidence/
+//! section2-reproduce-plant.log`). `label_enum_all_blocks`
+//! auto-discovers every enum with this signature shape rather than
+//! naming the fourteen — a fifteenth one added later is covered
+//! without touching this file, and the fourteen are not hardcoded
+//! anywhere for a sixteenth to eventually drift past. Two checks per
+//! enum: membership (every declared variant named in its own `all()`,
+//! word-boundary matched, comments stripped — identical technique to
+//! `MessageKey`'s own check above) and the declared array length
+//! against the actual declared variant count, since membership alone
+//! passes a list that names one variant twice and omits another.
+//! `QA-010` §1: **nothing here was broken before this handoff** — all
+//! fourteen enums pass both checks as the tree stands; this is a
+//! tripwire, not a repair.
 
 use std::fs;
 use std::path::Path;
@@ -90,21 +113,22 @@ fn appears_at_word_boundary(haystack: &str, needle: &str) -> bool {
     false
 }
 
-/// Every variant name declared in `pub enum MessageKey { ... }`. Reads
+/// Every variant name declared in `pub enum <enum_name> { ... }`. Reads
 /// the enum's own formatting, enforced continuously by `cargo fmt
 /// --check`: a variant name is a line indented by exactly four spaces,
 /// starting with an uppercase letter — a struct variant's fields are
 /// always indented one level deeper, and the enum's own closing brace
-/// is unindented.
-fn declared_variant_names(source: &str) -> Vec<String> {
-    let start_marker = "pub enum MessageKey {";
+/// is unindented. Shared between `MessageKey` and every label enum
+/// below it in this file — same shape, same convention.
+fn declared_variant_names(source: &str, enum_name: &str) -> Vec<String> {
+    let start_marker = format!("pub enum {enum_name} {{");
     let start = source
-        .find(start_marker)
-        .expect("message.rs declares `pub enum MessageKey {`");
+        .find(&start_marker)
+        .unwrap_or_else(|| panic!("message.rs declares `pub enum {enum_name} {{`"));
     let after_start = &source[start + start_marker.len()..];
     let end = after_start
         .find("\n}\n")
-        .expect("`MessageKey` is closed with an unindented `}`");
+        .unwrap_or_else(|| panic!("`{enum_name}` is closed with an unindented `}}`"));
     let body = &after_start[..end];
 
     body.lines()
@@ -148,7 +172,7 @@ fn all_fn_body_without_comments(source: &str) -> String {
 #[test]
 fn every_message_key_variant_appears_at_least_once_in_all() {
     let source = message_rs_source();
-    let declared = declared_variant_names(&source);
+    let declared = declared_variant_names(&source, "MessageKey");
     assert!(
         declared.len() >= 100,
         "found suspiciously few MessageKey variants ({}) -- the enum-body parsing \
@@ -172,5 +196,147 @@ fn every_message_key_variant_appears_at_least_once_in_all() {
             .map(|n| format!("  {n}"))
             .collect::<Vec<_>>()
             .join("\n")
+    );
+}
+
+/// One label enum's `all()` — auto-discovered from a `pub fn all() ->
+/// [<name>; <declared_len>]` signature, rather than a hardcoded list of
+/// the fourteen enums that happen to have one today. A fifteenth such
+/// enum, added in this same style, is picked up automatically; naming
+/// them would just move `QA-009`'s own defect one level sideways, into
+/// this guard's own hardcoded list.
+struct LabelEnumAll {
+    name: String,
+    declared_len: usize,
+    all_body_without_comments: String,
+}
+
+/// Finds every `pub fn all() -> [<Name>; <N>] { ... [ ... ] ... }`
+/// signature in `source` and returns each one's type name, the array
+/// length in the signature, and the array literal's own contents with
+/// `//` comments stripped. `MessageKey::all()` returns `Vec<MessageKey>`,
+/// not `[X; N]`, so it never matches this pattern — this only ever
+/// finds the fixed-size label enums.
+fn label_enum_all_blocks(source: &str) -> Vec<LabelEnumAll> {
+    const MARKER: &str = "pub fn all() -> [";
+    let mut out = Vec::new();
+    let mut search_from = 0;
+    while let Some(rel_idx) = source[search_from..].find(MARKER) {
+        let idx = search_from + rel_idx;
+        let after_marker = &source[idx + MARKER.len()..];
+        search_from = idx + MARKER.len();
+
+        let name: String = after_marker
+            .chars()
+            .take_while(|c| c.is_alphanumeric() || *c == '_')
+            .collect();
+        let Some(after_semi) = after_marker[name.len()..].strip_prefix("; ") else {
+            continue;
+        };
+        let digits: String = after_semi
+            .chars()
+            .take_while(|c| c.is_ascii_digit())
+            .collect();
+        let Ok(declared_len) = digits.parse::<usize>() else {
+            continue;
+        };
+        let after_digits = &after_semi[digits.len()..];
+        let Some(fn_brace) = after_digits.find('{') else {
+            continue;
+        };
+        let after_fn_brace = &after_digits[fn_brace + 1..];
+        let Some(array_open) = after_fn_brace.find('[') else {
+            continue;
+        };
+        let after_array_open = &after_fn_brace[array_open + 1..];
+        let Some(array_close) = after_array_open.find(']') else {
+            continue;
+        };
+        let array_body = &after_array_open[..array_close];
+        let without_comments = array_body
+            .lines()
+            .map(|line| line.split("//").next().unwrap_or(""))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        out.push(LabelEnumAll {
+            name,
+            declared_len,
+            all_body_without_comments: without_comments,
+        });
+    }
+    out
+}
+
+/// `QA-010` §2: `MessageKey::all()` is now provably complete, but 125
+/// of its variants are parameterised by one of fourteen label enums
+/// (`IssueStatusLabel`, `PriorityLabel`, ...), and those enums'
+/// coverage of *themselves* is exactly their own hand-maintained
+/// `all()` — the same shape `MessageKey::all()` had, one level down.
+/// Reproduced first: `IssueStatusLabel::all()` shrunk from `[X; 3]`
+/// (`Open`, `InProgress`, `Done`) to `[X; 2]` (`Done` dropped),
+/// `cargo test --workspace` stayed at 202 passed, 0 failed — see
+/// `evidence/section2-reproduce-plant.log` in the review request.
+/// Nothing was broken before this handoff (`QA-010` §1): all fourteen
+/// enums pass both checks below as the tree stands.
+#[test]
+fn every_label_enum_variant_appears_at_least_once_in_its_all() {
+    let source = message_rs_source();
+    let label_enums = label_enum_all_blocks(&source);
+    assert!(
+        label_enums.len() >= 14,
+        "found only {} label enums with a `pub fn all() -> [X; N]` signature -- \
+         expected at least the fourteen QA-010 named; the discovery pattern in \
+         label_enum_all_blocks may no longer match this file's formatting",
+        label_enums.len()
+    );
+
+    let mut offenders = Vec::new();
+    for label_enum in &label_enums {
+        let declared = declared_variant_names(&source, &label_enum.name);
+        for variant in &declared {
+            let needle = format!("{}::{variant}", label_enum.name);
+            if !appears_at_word_boundary(&label_enum.all_body_without_comments, &needle) {
+                offenders.push(format!("  {}::{variant}", label_enum.name));
+            }
+        }
+    }
+
+    assert!(
+        offenders.is_empty(),
+        "these label enum variants never appear in their own all() -- every \
+         MessageKey variant parameterised by one of them is unchecked for that \
+         value:\n{}",
+        offenders.join("\n")
+    );
+}
+
+/// `QA-010` §2's second half: membership alone passes a list that
+/// names one variant twice and omits another, as long as a third
+/// variant happens to still be named somewhere — the declared array
+/// length is right there in the signature and catches that for free.
+#[test]
+fn every_label_enum_all_length_matches_its_declared_variant_count() {
+    let source = message_rs_source();
+    let label_enums = label_enum_all_blocks(&source);
+
+    let mut offenders = Vec::new();
+    for label_enum in &label_enums {
+        let declared = declared_variant_names(&source, &label_enum.name);
+        if declared.len() != label_enum.declared_len {
+            offenders.push(format!(
+                "  {}: `all()` declares [_; {}], but {} variants are declared on the enum",
+                label_enum.name,
+                label_enum.declared_len,
+                declared.len()
+            ));
+        }
+    }
+
+    assert!(
+        offenders.is_empty(),
+        "these label enums' all() array length disagrees with their own declared \
+         variant count:\n{}",
+        offenders.join("\n")
     );
 }
