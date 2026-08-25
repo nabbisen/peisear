@@ -29,7 +29,8 @@
 mod common;
 
 use axum::http::StatusCode;
-use common::auth::{TestUser, new_authed_app, register_and_login};
+use common::auth::{TestUser, logout, new_authed_app, register_and_login};
+use common::fixture::{create_issue, create_personal_project};
 use common::server::TestApp;
 
 // -------------------------------------------------------------------
@@ -363,5 +364,133 @@ async fn unauthed_api_users_returns_401_not_redirect() {
     assert!(
         body.contains("\"unauthorized\""),
         "/api/* unauth body should carry the 'unauthorized' code; got: {body}"
+    );
+}
+
+// -------------------------------------------------------------------
+// `QA-007` (RFC 005 §1) — the two `STATUS-001` form routes, added in
+// 0.25.0 and never independently audited. Same `find_accessible`
+// check `apply_status_change` gives every status-change entry point;
+// posted straight to the route with no prior `GET`, matching
+// `confirmation::authorisation_matches_the_corresponding_post_per_
+// route`'s shape for the three delete routes.
+// -------------------------------------------------------------------
+
+#[tokio::test]
+async fn status_detail_post_walls_off_a_user_with_no_project_access() {
+    let app = TestApp::spawn().await;
+    let owner = TestUser::new("alice");
+    let owner_id = register_and_login(&app, &owner).await;
+    let project_id = create_personal_project(&app.db, &owner_id, "Private Project").await;
+    let issue_id = create_issue(&app.db, &project_id, &owner_id, "Fix login bug").await;
+
+    logout(&app).await;
+    let bob = TestUser::new("bob");
+    register_and_login(&app, &bob).await;
+
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{issue_id}/status/detail"
+        ))
+        .form(&[
+            ("status", "in_progress"),
+            ("client_updated_at", "irrelevant"),
+        ])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::NOT_FOUND,
+        "a user with no access to the project must not be able to change status via /status/detail; got {}",
+        resp.status_code()
+    );
+}
+
+#[tokio::test]
+async fn status_list_post_walls_off_a_user_with_no_project_access() {
+    let app = TestApp::spawn().await;
+    let owner = TestUser::new("alice");
+    let owner_id = register_and_login(&app, &owner).await;
+    let project_id = create_personal_project(&app.db, &owner_id, "Private Project").await;
+    let issue_id = create_issue(&app.db, &project_id, &owner_id, "Fix login bug").await;
+
+    logout(&app).await;
+    let bob = TestUser::new("bob");
+    register_and_login(&app, &bob).await;
+
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{issue_id}/status/list"
+        ))
+        .form(&[
+            ("status", "in_progress"),
+            ("client_updated_at", "irrelevant"),
+            ("filter_status", ""),
+            ("filter_assignee", ""),
+            ("sort", ""),
+        ])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::NOT_FOUND,
+        "a user with no access to the project must not be able to change status via /status/list; got {}",
+        resp.status_code()
+    );
+}
+
+// -------------------------------------------------------------------
+// `QA-007` §4 — `/inbox/{id}/read` was in neither RFC 005 §1's table
+// nor this file, despite mutating a single row that (unlike the
+// session-scoped routes above) genuinely has a resource id in the
+// path. `notif_store::mark_read`'s own query is `WHERE id = ?1 AND
+// user_id = ?2` — storage-layer scoping, not merely "no user_id in
+// the URL" — but that claim had never been exercised against a real
+// cross-user attempt before this test.
+// -------------------------------------------------------------------
+
+#[tokio::test]
+async fn mark_read_does_not_affect_another_users_notification() {
+    let app = TestApp::spawn().await;
+    let owner = TestUser::new("alice");
+    let owner_id = register_and_login(&app, &owner).await;
+
+    let notif_id = peisear_storage::notifications::insert(
+        &app.db,
+        &owner_id,
+        peisear_storage::notifications::NewNotification {
+            kind: peisear_core::notifications::kind::BURNOUT_OVERLOAD,
+            severity: peisear_core::notifications::Severity::Watch,
+            title: "Sustained over-capacity streak",
+            body: "Test body.",
+            payload_json: None,
+            dispatched_via: &["in_app"],
+        },
+    )
+    .await
+    .expect("insert notification");
+
+    logout(&app).await;
+    let bob = TestUser::new("bob");
+    register_and_login(&app, &bob).await;
+
+    // `notif_store::mark_read`'s own "exists at all" fallback check
+    // is *also* scoped to `user_id`, so bob's attempt on alice's
+    // notification finds nothing under his id and 404s -- an
+    // explicit rejection, not the silent same-user "already read"
+    // no-op the handler's doc comment describes. Better than what
+    // this test set out to prove was even true.
+    let resp = app.server.post(&format!("/inbox/{notif_id}/read")).await;
+    resp.assert_status(StatusCode::NOT_FOUND);
+
+    let still_unread = peisear_storage::notifications::recent_for_user(&app.db, &owner_id, 10)
+        .await
+        .expect("query alice's notifications")
+        .into_iter()
+        .find(|n| n.id == notif_id)
+        .expect("alice's notification still exists");
+    assert!(
+        still_unread.read_at.is_none(),
+        "bob's POST to /inbox/{{id}}/read must not mark alice's notification read"
     );
 }
