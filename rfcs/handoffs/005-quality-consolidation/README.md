@@ -33,6 +33,7 @@ second RFC lifecycle".
 | REL-0.27.0 | [REL-0.27.0](./REL-0.27.0-release-candidate.md) | The release candidate — two user-visible changes from `QA-006`, and the guard work told truthfully | 0.27.0 | QA-003..010 |
 | QA-011 | [QA-011](./QA-011-keyboard-completeness-and-live-regions.md) | `NFR-A11Y-001`'s **P0** keyboard audit — §5 had specified the P3 shortcuts instead — and conflicts announced through a polite live region (RFC 005 §5) | 0.28.0 | — |
 | QA-012 | [QA-012](./QA-012-contrast-audit.md) | `NFR-A11Y-005`'s contrast audit, aimed at the 130 opacity modifiers rather than the theme's own tokens (RFC 005 §4) | 0.28.0 | — |
+| QA-013 | [QA-013](./QA-013-the-seventy-floor.md) | Raise the muted tier to a `/70` floor — 111 sites — and guard the banned range; owner-approved from `QA-012`'s table (RFC 005 §4) | 0.28.0 | QA-012 |
 
 ## Why two items are out of phase
 
