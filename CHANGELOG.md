@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.27.0] — 2026-08-25
+
+No schema migration.
+
+### Changed
+
+- **Project delete and issue delete now take an optimistic lock.** A
+  confirmation screen that has gone stale answers `409` instead of
+  deleting something that changed while it was on screen — the
+  confirmation step introduced a gap between reading and acting that a
+  single `POST` never had. Sprint delete and capacity delete already
+  worked this way; two of the four destructive deletes did not.
+  - **Compatibility: `POST /projects/{id}/delete` and `POST
+    /projects/{id}/issues/{iid}/delete` now expect a `client_updated_at`
+    form field.** A request with a form body but no such field gets
+    `400` with a readable message; a request with no body at all gets
+    `415`, from the extractor, before the handler runs. The value is
+    rendered as a hidden field on the confirmation page, which is where
+    a scripted caller should read it from. This is a deliberate
+    narrowing of the request contract, not a bug fix — anyone who
+    scripted a delete against either route directly will find it stops
+    working.
+- **The issue delete confirmation now names its cascade.** *"This issue
+  has 2 sub-issues. Deleting it deletes all of them too. This cannot be
+  undone."* `issues.parent_issue_id` has been `ON DELETE CASCADE` since
+  migration `0015`; the screen whose purpose is to name what will be
+  deleted did not name them. The count is the consequence — a
+  confirmation that names the issue but not its children names the
+  smaller half.
+
+### Changed (quality gates)
+
+- **A P0 vocabulary guard had never seen five live strings.**
+  `MessageKey::all()` — the enumeration `find_violations` and every
+  other `peisear-i18n` guard walks — is a hand-maintained list, and five
+  `aria-label` variants on the notification preferences page
+  (`notification_preferences.rs`) were absent from it since they were
+  added. The check that exists to hold all copy to §1.7 had therefore
+  never actually read them. **They turned out to be fine** — copy that
+  had never been checked turning out to be correct is the true,
+  anticlimactic outcome, and this project has now reported it twice.
+  `MessageKey::all()`'s own completeness is now asserted directly, for
+  every variant, rather than trusted.
+- **Four structural guards — `prose_scan`, `static_js_scan`,
+  `test_harness_scan`, `dec_007_scan` — had never run in continuous
+  integration.** They lived in a test target no CI job invoked. They did
+  run in the release gate, so no release shipped without them, but a
+  pull request that reintroduced any of the defect classes they check
+  for would have passed. All four now run on every push.
+- **The enumerations those guards, and others, walk are now checked
+  rather than trusted**: `MessageKey::all()` itself; the fourteen label
+  enums (`IssueStatusLabel`, `PriorityLabel`, and twelve more) that
+  parameterise 125 of its variants, each with its own hand-maintained
+  list; `peisear-core`'s notification kind and channel constants; the
+  `DEC-007` contributor-guide command block against the CI jobs that
+  are supposed to run it, target by target rather than crate by crate;
+  and `prose_scan`'s own file coverage, widened from two directories to
+  all of `src/` after measuring zero hits at the wider scope. Nothing
+  these found was broken — each is a tripwire proving a class of drift
+  is now caught, not a repair.
+- **Do not read this as the guards finding bugs in the product.** They
+  found gaps in the guards themselves. The distinction is the whole
+  point of this section.
+
+This release does not include RFC 005's accessibility work — colour
+contrast, keyboard navigation, or mobile completion. If the sections
+above read as a quality pass, they were not that pass; those three axes
+remain outstanding.
+
 ## [0.26.0] — 2026-08-25
 
 No schema migration.
