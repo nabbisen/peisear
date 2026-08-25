@@ -65,6 +65,26 @@
 //! block's own text, generalises to any future member reached only
 //! through `--test` lines, and does not claim to know what any
 //! crate's tests currently contain.
+//!
+//! **A qualifying line must not be commented out** (`QA-005-review.md`
+//! §2). `-p <name>` matching stops a *prose mention* of a crate
+//! (`QA-004`'s hole); it does not stop a *disabled command* — `#
+//! cargo test -p peisear-web --lib` still names `peisear-web` at a
+//! word boundary, on a non-`--test` line, and commenting a line out is
+//! how a command actually gets disabled far more often than deleting
+//! it. A qualifying line's trimmed form must not start with `#`.
+//!
+//! **This guard has been strengthened three times, each by planting
+//! the next-most-realistic way the block could lie**: a substring
+//! match on the bare crate name (`QA-004` round 1 → matched on
+//! `-p <name>` instead), a comment merely mentioning the crate
+//! (`QA-004-review.md` §2 → same fix), a `--test <target>` line
+//! standing in for the crate's own library scope (`QA-005` §3 → the
+//! not-a-`--test`-line requirement), and a commented-out command
+//! (`QA-005-review.md` §2 → the not-commented-out requirement above).
+//! A future reader extending this file again should expect the next
+//! hole to be a plausible-looking line that still isn't a command —
+//! that is the shape every correction so far has taken.
 
 use std::fs;
 use std::path::Path;
@@ -117,14 +137,17 @@ fn appears_at_word_boundary(haystack: &str, needle: &str) -> bool {
 }
 
 /// True if some line in `block` both names `name` via `-p <name>` (at
-/// a word boundary) and is not itself a `--test <target>` line — see
-/// the module doc's `QA-005` §3 note for why a `--test` line does not
-/// count as covering a crate's own library target.
+/// a word boundary), is not itself a `--test <target>` line, and is
+/// not commented out — see the module doc's `QA-005` §3 and
+/// `QA-005-review.md` §2 notes for why a `--test` line and a `#`
+/// line don't count as covering a crate's own library target.
 fn covers_own_lib_tests(block: &str, name: &str) -> bool {
     let flag = format!("-p {name}");
-    block
-        .lines()
-        .any(|line| appears_at_word_boundary(line, &flag) && !line.contains("--test "))
+    block.lines().any(|line| {
+        !line.trim_start().starts_with('#')
+            && appears_at_word_boundary(line, &flag)
+            && !line.contains("--test ")
+    })
 }
 
 /// The `DEC-007` code block's contents — everything between the first
