@@ -20,6 +20,8 @@ pub mod app;
 pub mod components;
 pub mod config;
 #[cfg(test)]
+mod dec_007_ci_scan;
+#[cfg(test)]
 mod dec_007_scan;
 pub mod error;
 pub mod extractors;

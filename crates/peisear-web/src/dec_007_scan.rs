@@ -14,6 +14,18 @@
 //! already read their targets as source text rather than through a
 //! parser for the format.
 //!
+//! **This module covers one link only**: workspace members → `DEC-007`
+//! block. The chain has a second link — block → CI — and that half
+//! lives in the sibling module `dec_007_ci_scan`, not here (`QA-008`
+//! §4). Splitting them keeps failure attribution clear: a broken link
+//! in `Cargo.toml`'s relationship to the block fails a different test
+//! than a broken link in the block's relationship to `test.yml`, the
+//! same reason `test.yml` itself splits `peisear-web`'s tests into one
+//! job per target rather than one job for all of them. `dec_007_block`
+//! and `appears_at_word_boundary` are `pub(crate)` so the sibling can
+//! reuse them instead of re-parsing the block a second, subtly
+//! different way.
+//!
 //! **Matches on a word boundary, not a substring.** `peisear` is a
 //! substring of every other member's name (`peisear-core`,
 //! `peisear-auth`, ...), so a naive `contains("peisear")` check would
@@ -124,7 +136,7 @@ fn workspace_member_crate_names() -> Vec<String> {
 /// merely as a substring of a longer crate name (`peisear` inside
 /// `peisear-core`). A boundary character is anything that is not
 /// alphanumeric, `_`, or `-`.
-fn appears_at_word_boundary(haystack: &str, needle: &str) -> bool {
+pub(crate) fn appears_at_word_boundary(haystack: &str, needle: &str) -> bool {
     let bytes = haystack.as_bytes();
     let is_ident_char = |b: u8| b.is_ascii_alphanumeric() || b == b'_' || b == b'-';
     let mut start = 0;
@@ -157,7 +169,7 @@ fn covers_own_lib_tests(block: &str, name: &str) -> bool {
 
 /// The `DEC-007` code block's contents — everything between the first
 /// fenced ` ```bash ` after "DEC-007" and its closing fence.
-fn dec_007_block() -> String {
+pub(crate) fn dec_007_block() -> String {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let contributing = manifest_dir
         .join("..")

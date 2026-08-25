@@ -539,3 +539,52 @@ async fn mark_all_read_does_not_affect_another_users_notifications() {
         "bob's POST to /inbox/mark-all-read must not mark alice's notifications read: {alice_notifications:?}"
     );
 }
+
+/// The other half of the pair above (`QA-008` §3, RFC 005 §1 "a bulk route
+/// needs both assertions"). The cross-user test only asserts what
+/// `mark_all_read` must **not** do, and that alone is satisfied by a route
+/// that does nothing at all: replacing its predicate with `WHERE user_id =
+/// 'nobody'` left the button inert for every user and `cargo test
+/// --workspace` at 195 passed, 0 failed. This asserts what it **must** do —
+/// alice's own unread notifications actually become read when she posts to
+/// her own `/inbox/mark-all-read`.
+#[tokio::test]
+async fn mark_all_read_marks_the_callers_own_unread_notifications_read() {
+    let app = TestApp::spawn().await;
+    let owner = TestUser::new("alice");
+    let owner_id = register_and_login(&app, &owner).await;
+
+    for _ in 0..2 {
+        peisear_storage::notifications::insert(
+            &app.db,
+            &owner_id,
+            peisear_storage::notifications::NewNotification {
+                kind: peisear_core::notifications::kind::BURNOUT_OVERLOAD,
+                severity: peisear_core::notifications::Severity::Watch,
+                title: "Sustained over-capacity streak",
+                body: "Test body.",
+                payload_json: None,
+                dispatched_via: &["in_app"],
+            },
+        )
+        .await
+        .expect("insert notification");
+    }
+
+    let resp = app.server.post("/inbox/mark-all-read").await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let alice_notifications =
+        peisear_storage::notifications::recent_for_user(&app.db, &owner_id, 10)
+            .await
+            .expect("query alice's notifications");
+    assert_eq!(
+        alice_notifications.len(),
+        2,
+        "setup should have inserted exactly two notifications: {alice_notifications:?}"
+    );
+    assert!(
+        alice_notifications.iter().all(|n| n.read_at.is_some()),
+        "alice's own POST to /inbox/mark-all-read must mark her own unread notifications read: {alice_notifications:?}"
+    );
+}
