@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-16
 **Priority**: P1 — 0.25.0, **after CONF-001**
-**Governing RFC**: [004a](../../accepted/004a-direct-manipulation-status.md),
+**Governing RFC**: [004a](../../done/004a-direct-manipulation-status.md),
 step 1 only
 **Depends on**: CONF-001 landed
 

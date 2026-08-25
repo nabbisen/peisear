@@ -1,7 +1,7 @@
 # Handoffs — RFC 004b, the board (D-2)
 
 Implementation companion for
-[RFC 004b](../../accepted/004b-direct-manipulation-board.md), target **0.26.0**.
+[RFC 004b](../../done/004b-direct-manipulation-board.md), target **0.26.0**.
 
 **This file is an index, not a status board.** It lists what each handoff
 covers and what it depends on. It changes when a handoff is added — not when

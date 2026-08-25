@@ -1,7 +1,7 @@
 # Handoffs — RFC 010, destructive-action confirmation
 
 Implementation companion for
-[RFC 010](../../accepted/010-destructive-action-confirmation.md), target
+[RFC 010](../../done/010-destructive-action-confirmation.md), target
 **0.25.0**, ahead of any RFC 004 substep.
 
 **This file is an index, not a status board.** It lists what each handoff

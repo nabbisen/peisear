@@ -1,7 +1,7 @@
 # Handoffs — RFC 004a, status change (D-1)
 
 Implementation companions for
-[RFC 004a](../../accepted/004a-direct-manipulation-status.md), target
+[RFC 004a](../../done/004a-direct-manipulation-status.md), target
 **0.25.0**, after `CONF-001`.
 
 **This file is an index, not a status board.** It lists what each handoff

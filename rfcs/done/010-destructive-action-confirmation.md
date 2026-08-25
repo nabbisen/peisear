@@ -1,12 +1,12 @@
 # RFC 0010: Destructive-action confirmation
 
-**Status**: **Accepted 2026-08-16**
+**Status**: **Implemented (0.25.0)** — `CONF-001`
 **Target**: 0.25.0 — **before RFC 004's first substep**
 **Related spec sections**: §7 rule 4 (destructive actions are confirmed), §5.8
 (behaviour without JavaScript)
 **Related requirements**: `DEC-021`
 **Governing gap**: external design `§17.4`
-**Last updated**: 2026-08-16
+**Last updated**: 2026-08-25
 
 ## Summary
 

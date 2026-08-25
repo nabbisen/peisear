@@ -1,12 +1,13 @@
 # RFC 0004: Direct manipulation
 
 **Status**: Proposed
-**Target**: 0.25.0 (Phase D, full)
+**Target**: Phase D, across releases — D-1 at 0.25.0/0.26.0, D-2 at 0.26.0,
+D-3 to D-5 unscheduled
 **Related spec sections**: §22-27 (direct manipulation
 scenarios), §32 (keyboard alternatives), §39 (Phase D plan)
 **Governing decisions**: `DEC-021` (JavaScript posture),
 `DEC-018` (board keyboard control)
-**Last updated**: 2026-08-16 — reconciled against the shipped code
+**Last updated**: 2026-08-25 — D-1 and D-2 recorded as shipped
 
 > **Reconciliation note (2026-08-16).** Checked against the code before any
 > substep RFC was written, per the practice RFC 003 established. **The shape
@@ -41,13 +42,28 @@ scenarios), §32 (keyboard alternatives), §39 (Phase D plan)
 Five surfaces gain drag-and-drop affordances that today
 require form submissions or page navigation:
 
-| Substep | Surface | Action |
-|---|---|---|
-| D-1 | Issue list, issue detail | Click status badge / segment to advance status |
-| D-2 | Kanban (new view on project detail) | Drag issue between status columns |
-| D-3 | Calendar | Drag issue blocks to reschedule |
-| D-4 | Sprint plan | Drag between backlog and sprint |
-| D-5 | Issue list | Drag rows to reorder |
+| Substep | Surface | Action | State |
+|---|---|---|---|
+| D-1 | Issue list, issue detail | Click status badge / segment to advance status | **Shipped** — [RFC 004a](../done/004a-direct-manipulation-status.md), 0.25.0 and 0.26.0 |
+| D-2 | Kanban (new view on project detail) | Drag issue between status columns | **Shipped** — [RFC 004b](../done/004b-direct-manipulation-board.md), 0.26.0 |
+| D-3 | Calendar | Drag issue blocks to reschedule | Not written |
+| D-4 | Sprint plan | Drag between backlog and sprint | Not written |
+| D-5 | Issue list | Drag rows to reorder | Not written |
+
+**Substep status, 2026-08-25.** D-1 and D-2 are done and their RFCs are in
+`done/`. Two things they settled that D-3 through D-5 inherit rather than
+re-decide:
+
+- **The status endpoint returns `200` with the new `updated_at`**, not `204`
+  (D-1 step 2). Any substep posting a change and continuing without a reload
+  needs that value to keep its `client_updated_at` fresh.
+- **The fail-open rule has a boundary.** Falling back to a native form submit
+  is correct *before* the server has applied the change and wrong after —
+  cross-cutting requirement 2a, added from `STATUS-002`'s review.
+
+D-2 also showed that a substep's real work may not be what its sketch
+predicted: the drag had already shipped, and what remained was its copy, which
+no check had ever reached. **Reconcile against the code before writing D-3.**
 
 Each substep ships with a keyboard equivalent that produces
 the same effect; "discoverability through the mouse, parity
@@ -528,9 +544,11 @@ demonstrable failing, unlike CAL-001's equivalent.
 
 ## Per-substep RFCs
 
-When each substep starts, open its RFC under
-`rfcs/proposed/004a-direct-manipulation-status.md` etc. Use the
-detailed template (this scope warrants it).
+When each substep starts, open its RFC under `rfcs/proposed/` —
+`004c-…`, `004d-…`, `004e-…` for D-3, D-4 and D-5. Use the detailed
+template (this scope warrants it). The two written so far, now in
+`done/`, are [004a](../done/004a-direct-manipulation-status.md) and
+[004b](../done/004b-direct-manipulation-board.md).
 
 The substep RFC inherits this umbrella's contract; it
 specifies only what's new.

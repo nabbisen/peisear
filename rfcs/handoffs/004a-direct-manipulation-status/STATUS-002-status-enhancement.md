@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-16
 **Priority**: P1 — 0.26.0
-**Governing RFC**: [004a](../../accepted/004a-direct-manipulation-status.md),
+**Governing RFC**: [004a](../../done/004a-direct-manipulation-status.md),
 step 2, under [RFC 004](../../proposed/004-direct-manipulation.md)'s
 cross-cutting contract
 **Depends on**: STATUS-001 (landed, both rounds)

@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-16
 **Priority**: P1 — first work of 0.25.0, **before any RFC 004 substep**
-**Governing RFC**: [010](../../accepted/010-destructive-action-confirmation.md)
+**Governing RFC**: [010](../../done/010-destructive-action-confirmation.md)
 **Depends on**: nothing
 
 ---

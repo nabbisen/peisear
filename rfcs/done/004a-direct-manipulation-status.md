@@ -1,11 +1,12 @@
 # RFC 0004a: Direct manipulation — status change (D-1)
 
-**Status**: **Accepted 2026-08-16**
+**Status**: **Implemented (0.26.0)** — step 1 shipped in 0.25.0 (`STATUS-001`),
+step 2 in 0.26.0 (`STATUS-002`)
 **Target**: 0.25.0, **after CONF-001**
 **Umbrella**: [RFC 0004](./004-direct-manipulation.md) — substep D-1
 **Governing decisions**: `DEC-021` (JavaScript posture), `DEC-018`
 **Related requirements**: `FR-ISS-005/006`, `FR-DM-001/005`, `NFR-CONC-001/004`
-**Last updated**: 2026-08-16
+**Last updated**: 2026-08-25
 
 ## Summary
 
