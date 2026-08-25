@@ -184,16 +184,24 @@ fn scan_string_literals(stripped: &str, rel_path: &str, out: &mut Vec<Violation>
     }
 }
 
-fn all_static_js_files() -> Vec<(PathBuf, String)> {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let static_dir = manifest_dir.join("..").join("..").join("static");
-    let mut out = Vec::new();
-    let Ok(entries) = fs::read_dir(&static_dir) else {
-        panic!("read static dir {}", static_dir.display());
+/// Every `.js` file under `dir`, recursively — `QA-009` §2.3: the
+/// previous version listed `static/`'s immediate entries only, the same
+/// "the guard is only as wide as the set it walks" shape §2 found five
+/// real instances of. No live gap today (`static/` has no
+/// subdirectories), but a future `static/vendor/*.js` or similar would
+/// have escaped this scan silently. Recursing costs nothing and closes
+/// it before it can happen, mirroring `prose_scan.rs`'s and
+/// `test_harness_scan.rs`'s own `collect_rs_files` — duplicated rather
+/// than shared, same reasoning as this file's `strip_line_comments`.
+fn collect_js_files(dir: &Path, out: &mut Vec<(PathBuf, String)>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
     };
     for entry in entries {
         let path = entry.expect("dir entry").path();
-        if path.extension().is_some_and(|e| e == "js") {
+        if path.is_dir() {
+            collect_js_files(&path, out);
+        } else if path.extension().is_some_and(|e| e == "js") {
             let filename = path
                 .file_name()
                 .expect("file name")
@@ -202,6 +210,16 @@ fn all_static_js_files() -> Vec<(PathBuf, String)> {
             out.push((path, filename));
         }
     }
+}
+
+fn all_static_js_files() -> Vec<(PathBuf, String)> {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let static_dir = manifest_dir.join("..").join("..").join("static");
+    if !static_dir.is_dir() {
+        panic!("read static dir {}", static_dir.display());
+    }
+    let mut out = Vec::new();
+    collect_js_files(&static_dir, &mut out);
     out
 }
 

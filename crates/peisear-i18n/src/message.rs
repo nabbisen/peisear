@@ -3004,6 +3004,34 @@ impl MessageKey {
                 .into_iter()
                 .map(|channel| MessageKey::NotificationChannelName { channel }),
         );
+        // `QA-009` §2: the preferences table's five per-kind aria-label
+        // keys, missing from this enumeration since they were added —
+        // never rendered through `find_violations` until this handoff.
+        keys.extend(
+            NotificationKindLabel::all()
+                .into_iter()
+                .map(|kind| MessageKey::NotificationKindPreferencesAriaLabel { kind }),
+        );
+        keys.extend(
+            NotificationKindLabel::all()
+                .into_iter()
+                .map(|kind| MessageKey::InAppForKindAriaLabel { kind }),
+        );
+        keys.extend(
+            NotificationKindLabel::all()
+                .into_iter()
+                .map(|kind| MessageKey::EmailForKindAriaLabel { kind }),
+        );
+        keys.extend(
+            NotificationKindLabel::all()
+                .into_iter()
+                .map(|kind| MessageKey::WebhookForKindAriaLabel { kind }),
+        );
+        keys.extend(
+            NotificationKindLabel::all()
+                .into_iter()
+                .map(|kind| MessageKey::MinSeverityForKindAriaLabel { kind }),
+        );
         keys
     }
 }

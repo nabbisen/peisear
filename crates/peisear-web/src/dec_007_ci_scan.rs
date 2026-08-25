@@ -47,17 +47,54 @@
 //! step that never runs, same as a `#`-prefixed line in the
 //! `CONTRIBUTING.md` block.
 //!
-//! **Documented limit, per `QA-008` §4's own instruction not to add a
-//! YAML-parsing dependency**: this does not interpret job-level YAML
-//! semantics. A job with `if: false` or `continue-on-error: true`
-//! still has an uncommented `run:` line and will satisfy this guard
-//! even though the job may not meaningfully run or may not fail the
-//! workflow when its command fails. Catching that would need an actual
-//! YAML parser plus job-level semantic interpretation ("is this job
-//! reachable, does its failure propagate") — a materially bigger and
-//! more fragile guard than a fact about two files' text. This guard
-//! catches the deletion case it was built for (`QA-008` §4's own plant)
-//! and stops there by design, not by oversight.
+//! **`QA-009` §4 — `if: false` is now closed, `continue-on-error` is
+//! deliberately left open, for two different reasons.** `QA-008`
+//! stopped at "this does not interpret job-level YAML semantics" for
+//! both. Revisited:
+//!
+//! - **`if: false`** is closable and now closed, indentation-based, no
+//!   YAML parser: `job_blocks` reads `test.yml`'s own consistent shape
+//!   (a job name at exactly two spaces, everything inside it indented
+//!   four or more) to find each job's body, and `job_is_disabled`
+//!   checks whether that body contains a literal `if: false` line. A
+//!   disabled job's `run:` lines are dropped before either test above
+//!   sees them, so a target whose only coverage lives in a
+//!   `if: false` job reads as missing, correctly. Deliberately narrow:
+//!   only the exact text `if: false` is recognised — `if: 'false'`,
+//!   `if: ${{ false }}` and other YAML-truthy spellings are not, since
+//!   closing all of them needs real expression evaluation. That is a
+//!   named limit, not a silent gap: `job_is_disabled`'s own doc comment
+//!   says so.
+//! - **`continue-on-error: true`** is a different property from
+//!   `if: false`, not merely a harder-to-parse version of the same
+//!   one. `if: false` means the job never runs, so its `run:` line
+//!   never executes anything — this guard's whole question ("does a
+//!   `run:` line exist that will exercise this target") is answered
+//!   "no", correctly. `continue-on-error: true` means the job *does*
+//!   run — the target is genuinely exercised — but a failure there
+//!   does not turn the workflow red. That is a fact about whether
+//!   failure blocks merging, not about whether coverage exists, and
+//!   this guard was never asked the first question. Folding it in
+//!   would silently redefine what "covered" means here, from "the
+//!   command runs" to "the command runs and is enforced" — a real,
+//!   different property, and not one this scan reports.
+//!
+//! **`QA-009` §3 — the `Test` shape above is too coarse for the `for`
+//! loop specifically.** It only asked "is *some* `--test <target>`
+//! job present for `peisear-web`", so deleting nineteen of the loop's
+//! twenty per-target CI jobs and keeping one still satisfies it — a
+//! whole integration suite stops running in CI and neither `dec_007`
+//! guard says so. Closable without a YAML or shell parser: the block
+//! names all twenty targets **literally**, in the `for t in …` list,
+//! across `\`-continued lines. `for_loop_targets` reads from `for t in
+//! ` to `; do`, and `split_whitespace` already treats a line
+//! continuation's newline the same as the spaces around it — the lone
+//! `\` tokens are filtered out explicitly, everything else is a real
+//! target name. `every_dec_007_for_loop_target_has_a_matching_ci_run_line`
+//! then requires each of the twenty to have its own `run:` line, not
+//! merely "some `--test` job for `peisear-web` exists somewhere" —
+//! narrowing the `Test` shape's claim for this one crate without
+//! touching what it means for any other.
 
 use crate::dec_007_scan::{appears_at_word_boundary, dec_007_block};
 use std::fs;
@@ -98,10 +135,7 @@ fn p_flag_targets(text: &str) -> Vec<(String, Shape)> {
         .collect()
 }
 
-/// `test.yml`'s own `run:` step lines, one entry per non-commented
-/// step — `- run: <command>` (a leading `#`, before or after the `- `
-/// is stripped, counts as commented out).
-fn test_yml_run_lines() -> Vec<String> {
+fn test_yml_source() -> String {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let workflow = manifest_dir
         .join("..")
@@ -109,18 +143,79 @@ fn test_yml_run_lines() -> Vec<String> {
         .join(".github")
         .join("workflows")
         .join("test.yml");
-    let source = fs::read_to_string(&workflow)
-        .unwrap_or_else(|e| panic!("read {}: {e}", workflow.display()));
+    fs::read_to_string(&workflow).unwrap_or_else(|e| panic!("read {}: {e}", workflow.display()))
+}
 
-    source
-        .lines()
-        .filter_map(|line| {
-            let trimmed = line.trim();
-            if trimmed.starts_with('#') {
-                return None;
+/// `(job name, job body)` pairs from `source`'s `jobs:` section — a
+/// job is a line indented by exactly two spaces, ending in `:`,
+/// directly under top-level `jobs:`; its body is every line up to the
+/// next such line or EOF. Indentation-based, not a YAML parser: this
+/// is `test.yml`'s own consistent shape (every job name at exactly
+/// two spaces, every step and key inside a job indented four or
+/// more), the same reliance on `rustfmt`-enforced structure
+/// `enumeration_guard.rs` places on `message.rs`'s own formatting.
+fn job_blocks(source: &str) -> Vec<(String, String)> {
+    let lines: Vec<&str> = source.lines().collect();
+    let jobs_at = lines
+        .iter()
+        .position(|l| l.trim_end() == "jobs:")
+        .expect("test.yml declares a top-level `jobs:` key");
+
+    let mut blocks = Vec::new();
+    let mut current: Option<(String, Vec<&str>)> = None;
+    for line in &lines[jobs_at + 1..] {
+        let is_job_header =
+            line.starts_with("  ") && !line.starts_with("   ") && line.trim_end().ends_with(':');
+        if is_job_header {
+            if let Some((name, body)) = current.take() {
+                blocks.push((name, body.join("\n")));
             }
-            let after_dash = trimmed.strip_prefix("- ").unwrap_or(trimmed);
-            after_dash.strip_prefix("run:").map(str::to_string)
+            current = Some((line.trim().trim_end_matches(':').to_string(), Vec::new()));
+        } else if let Some((_, body)) = current.as_mut() {
+            body.push(line);
+        }
+    }
+    if let Some((name, body)) = current {
+        blocks.push((name, body.join("\n")));
+    }
+    blocks
+}
+
+/// True if `job_body` disables its job outright via a literal `if:
+/// false` line — `QA-009` §4. Deliberately narrow: only the exact
+/// trimmed text `if: false` counts. `if: 'false'`, `if: "false"`,
+/// `if: ${{ false }}` and other YAML-truthy spellings that mean the
+/// same thing are not recognised — closing all of them needs a real
+/// YAML/expression parser, which §4 says to report rather than add a
+/// dependency for. This catches the literal shape the handoff names
+/// and stops there, the same trade `dec_007_scan` already made for
+/// `--test`-line detection.
+fn job_is_disabled(job_body: &str) -> bool {
+    job_body.lines().any(|line| line.trim() == "if: false")
+}
+
+/// `test.yml`'s own `run:` step lines that will actually execute:
+/// non-commented (`- run: <command>`, a leading `#` before or after
+/// the `- ` counts as commented out), and not inside a job whose body
+/// contains a literal `if: false`. `continue-on-error: true` is
+/// deliberately **not** treated the same way — see this module's doc
+/// comment for why that is a different property this guard does not
+/// need to interpret.
+fn test_yml_run_lines() -> Vec<String> {
+    job_blocks(&test_yml_source())
+        .into_iter()
+        .filter(|(_, body)| !job_is_disabled(body))
+        .flat_map(|(_, body)| {
+            body.lines()
+                .filter_map(|line| {
+                    let trimmed = line.trim();
+                    if trimmed.starts_with('#') {
+                        return None;
+                    }
+                    let after_dash = trimmed.strip_prefix("- ").unwrap_or(trimmed);
+                    after_dash.strip_prefix("run:").map(str::to_string)
+                })
+                .collect::<Vec<String>>()
         })
         .collect()
 }
@@ -169,5 +264,63 @@ fn every_dec_007_block_target_has_a_matching_ci_run_line() {
          .github/workflows/test.yml -- a `--test <target>` job does not cover a \
          crate's `--lib` obligation or vice versa:\n{}",
         missing.join("\n")
+    );
+}
+
+/// The literal target list from the block's `for t in … ; do` loop —
+/// `QA-009` §3. Reads the text from `for t in ` to `; do`;
+/// `str::split_whitespace` already splits on the newlines inside the
+/// `\`-continued list the same way it splits on the spaces between
+/// names, so the only cleanup needed is dropping the lone `\`
+/// continuation tokens themselves.
+fn for_loop_targets(block: &str) -> Vec<String> {
+    let start_marker = "for t in ";
+    let Some(start) = block.find(start_marker) else {
+        return Vec::new();
+    };
+    let after_start = &block[start + start_marker.len()..];
+    let Some(end) = after_start.find("; do") else {
+        return Vec::new();
+    };
+    after_start[..end]
+        .split_whitespace()
+        .filter(|tok| *tok != "\\")
+        .map(str::to_string)
+        .collect()
+}
+
+#[test]
+fn every_dec_007_for_loop_target_has_a_matching_ci_run_line() {
+    let block = dec_007_block();
+    let targets = for_loop_targets(&block);
+    assert!(
+        targets.len() >= 10,
+        "found suspiciously few DEC-007 for-loop targets ({}) -- the block's own \
+         `for t in ... ; do` shape may have changed underneath this scan",
+        targets.len()
+    );
+
+    let run_lines: Vec<String> = test_yml_run_lines();
+    let missing: Vec<&String> = targets
+        .iter()
+        .filter(|target| {
+            !run_lines.iter().any(|line| {
+                appears_at_word_boundary(line, "-p peisear-web")
+                    && appears_at_word_boundary(line, &format!("--test {target}"))
+            })
+        })
+        .collect();
+
+    assert!(
+        missing.is_empty(),
+        "these DEC-007 for-loop targets (peisear-web --test <target>) have no \
+         matching `run:` line in .github/workflows/test.yml -- another `--test` job \
+         existing for peisear-web is not the same as this specific target's own job \
+         existing:\n{}",
+        missing
+            .iter()
+            .map(|n| format!("  {n}"))
+            .collect::<Vec<_>>()
+            .join("\n")
     );
 }
