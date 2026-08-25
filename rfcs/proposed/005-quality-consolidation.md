@@ -123,7 +123,7 @@ data (§11.5.1) or per-user mutation:
 | `GET /api/users/{id}/capacity` | same | `..._capacity_..._other_users` | ✓ |
 | `GET /api/users/{id}/notifications` | same | `..._notifications_..._other_users` | ✓ |
 | `GET /settings` | AuthUser | implicit | ✓ |
-| `POST /settings/wip-limit` | AuthUser | **(needs test once user_id surface lands — see ignored test)** | partial |
+| `POST /settings/wip-limit` | AuthUser | implicit — session-scoped, single row | ✓ |
 | `POST /settings/capacity*` | AuthUser, lock-checked | implicit (no user_id in URL) | ✓ |
 | `POST /inbox/resume` | AuthUser | implicit (no user_id) | ✓ 0.24.0 |
 | `POST /inbox/email-opt-in` | AuthUser | implicit | ✓ 0.24.0 |
@@ -147,11 +147,34 @@ same narrowing — a `GET` that refuses and a `POST` that does not is a boundary
 that exists only in the user interface.
 
 The audit fills in the right-hand column for every row. New
-test entries land in `tests/auth_boundary.rs`. The ignored
-test gets either a fresh body (if a user-scoped POST has
-landed by then) or a `// removed: no user-scoped POST surface
-exists; revisit if added` comment in the test file with the
-test removed.
+test entries land in `tests/auth_boundary.rs`.
+
+*Corrected 2026-08-25 from `QA-007`.* The `wip-limit` row said `partial`,
+"needs test once user_id surface lands — see ignored test", and this paragraph
+described what to do with that test. **There is no ignored test.** It was
+**withdrawn** at 0.20.0 with cause — settings mutations are self-scoped by
+session rather than addressed by `user_id` in the path, so the boundary it
+asserted cannot exist — and the requirements baseline §9.3 has said so since.
+This RFC was written after that and cited it anyway. Two of my own documents
+disagreed for five releases; the dev team settled it by reading
+`auth_boundary.rs` rather than by choosing a document.
+
+**"Implicit" covers two different guarantees, and only one of them is
+untestable.** This distinction is normative for the audit:
+
+| Shape | Example | Cross-user test |
+|---|---|---|
+| Session-scoped, **single row** addressed by `&user.id` | `POST /settings/wip-limit` | **Not constructible** — there is no other user's row to aim at |
+| Session-scoped, **bulk** — an unbounded set selected by a predicate | `POST /inbox/mark-all-read` | **Required** |
+
+The second was closed as "not constructible, same as `wip-limit`" during
+`QA-007`, and a plant proved otherwise: deleting `user_id = ?1` from
+`mark_all_read`'s `WHERE` marks **every** user's notifications read, and all
+194 tests pass. A missing `user_id` in the path means impersonation is not
+constructible. It says nothing about a predicate that can lose a term.
+
+That is `§10.3`'s point from the other side: a session extractor plus an
+unscoped query is one layer, not two.
 
 ### 2. Optimistic-lock audit
 
