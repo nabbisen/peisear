@@ -127,6 +127,9 @@ data (§11.5.1) or per-user mutation:
 | `POST /settings/capacity*` | AuthUser, lock-checked | implicit (no user_id in URL) | ✓ |
 | `POST /inbox/resume` | AuthUser | implicit (no user_id) | ✓ 0.24.0 |
 | `POST /inbox/email-opt-in` | AuthUser | implicit | ✓ 0.24.0 |
+| `POST /inbox/mark-all-read` | AuthUser | **bulk** — negative ✓ (`QA-007`), positive ✓ (`QA-008`) | ✓ |
+| `POST /inbox/resume` (bulk half) | AuthUser | **bulk** — positive ✓ (`inbox_refinements`), **negative missing** | open |
+| `POST /settings/notifications/silence-all` | AuthUser | **bulk** — positive ✓ (`inbox_refinements`), **negative missing** | open |
 | `GET /projects/{id}/delete` | AuthUser + `find_accessible` + **owner check** | **unaudited** | 0.25.0 |
 | `GET …/issues/{iid}/delete` | AuthUser + `find_accessible` | **unaudited** | 0.25.0 |
 | `GET …/sprints/{sid}/delete` | AuthUser + `can_manage_team` | **unaudited** | 0.25.0 |
@@ -177,12 +180,28 @@ That is `§10.3`'s point from the other side: a session extractor plus an
 unscoped query is one layer, not two.
 
 **A bulk route needs both assertions.** Added 2026-08-25 from `QA-007` round
-2's review. The cross-user test above asserts what the route must **not** do.
-On its own it is satisfied by a route that does nothing at all: replacing
-`mark_all_read`'s predicate with one that matches no rows leaves the button
-inert and **all 195 tests green**. Every bulk row in this table therefore needs
-a positive assertion as well — that the operation affects the caller's own
-rows — or the negative one certifies an empty feature.
+2's review, extended the same day from `QA-008`'s sweep.
+
+The cross-user test asserts what the route must **not** do. On its own it is
+satisfied by a route that does nothing at all: replacing `mark_all_read`'s
+predicate with one that matches no rows leaves the button inert and **all 195
+tests green**. So every bulk row needs a positive assertion — that the
+operation affects the caller's own rows — or the negative one certifies an
+empty feature.
+
+**And the converse, which `QA-008`'s sweep found.** `silence-all` and
+`resume` are in the opposite state: both have a genuine multi-row positive
+assertion in `inbox_refinements`, and **neither has a cross-user test**. A
+positive assertion alone cannot see a predicate that has lost its `user_id`
+term — which is the exact defect `QA-007` planted on `mark-all-read`.
+
+**A bulk row is not closed until both halves exist.** One half in either
+direction reads as coverage and is not.
+
+**Both rows were absent from this table entirely** until 2026-08-25. They were
+found by reading `app.rs`, not by working these rows — the second time this
+series has turned up a route the table never listed. A table that is itself
+the audit's work-list cannot reveal what it omits.
 
 ### 2. Optimistic-lock audit
 
