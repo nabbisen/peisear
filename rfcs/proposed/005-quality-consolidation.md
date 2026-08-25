@@ -242,15 +242,48 @@ audit confirms each entry has a row.
 
 ### 3. Language audit
 
-Run a script that scans templates and Rust string literals
-for known Japanese characters (Hiragana, Katakana, common
-Kanji). Output a list of every non-comment string that
-contains them. Each gets converted to English; comments stay
-in the language they were written in (most are already
-English).
+*Reconciled against the code 2026-08-25, before `QA-008` was written. **The
+conversion this section describes is already done.** What is missing is the
+guard that keeps it done.*
 
-The CHANGELOG keeps both languages where needed. Spec stays
-Japanese (it's a separate document, not user-visible).
+The original text: run a script scanning templates and Rust string literals for
+Hiragana, Katakana and common Kanji; convert each to English; leave comments in
+the language they were written in.
+
+**Scanned.** Every occurrence of Japanese in the tracked tree is one of:
+
+- **A comment citing a Japanese source document** — `peisear-core/src/lib.rs`,
+  `components/me.rs`, `tests/auth_boundary.rs`, and others quote the V2.1 brief
+  by section and phrase. §3 already exempts these, and they are load-bearing:
+  a citation translated into English is no longer a citation.
+- **`CHANGELOG.md` and `ROADMAP.md`**, same shape — quoted requirements.
+- **One test input**: `escape_like_meta("ログイン")` in `storage/search.rs:216`,
+  asserting that CJK survives `LIKE` escaping. That is a test fixture, and a
+  good one.
+
+**No user-visible Japanese string exists in the product.** RFC 006 did this
+work at 0.21.0 as a side effect of moving all copy into the message table —
+which is why nobody ever ran §3's script.
+
+**What is live is the reverse direction, and it is not guarded.** Planted a
+Japanese string into `en.rs`, the *English* renderer:
+
+```rust
+MessageKey::NewSubIssueLabel => "新しいサブ課題".to_string(),
+```
+
+`cargo test --workspace`: **195 passed, 0 failed.** `prose_scan` tests
+`is_ascii_alphabetic`, so it does not see a non-Latin literal at all;
+`find_violations` looks for prohibited English phrases and finds none in a
+string with no English in it. The English locale can be given non-English copy
+and every gate stays green.
+
+**So §3 becomes a guard, not a conversion.** The rule: nothing the English
+renderer produces may contain characters from a non-Latin script. Not "ASCII
+only" — the shipped copy legitimately uses `—`, `←`, `✓`, `⚠`, and curly
+quotes. Comments are out of scope, as they always were.
+
+The spec stays Japanese; it is a separate document and not user-visible.
 
 ### 4. Colour contrast audit
 

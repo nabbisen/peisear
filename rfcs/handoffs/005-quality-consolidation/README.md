@@ -27,6 +27,7 @@ second RFC lifecycle".
 | QA-005 | [QA-005](./QA-005-guards-have-no-ci-job.md) | `prose_scan`, `static_js_scan`, `test_harness_scan` and `dec_007_scan` all live in `peisear-web --lib`, which CI never runs and `DEC-007`'s block omits (RFC 005 §14) | 0.27.0 | — |
 | QA-006 | [QA-006](./QA-006-optimistic-lock-audit.md) | The optimistic-lock audit; two of four destructive deletes lock and two do not, and the issue confirmation does not name its cascade (RFC 005 §2) | 0.27.0 | QA-005 first |
 | QA-007 | [QA-007](./QA-007-authorization-audit.md) | The authorization audit; seven unaudited rows, three of them `GET` halves that authorise a mutation (RFC 005 §1) | 0.27.0 | QA-005 first |
+| QA-008 | [QA-008](./QA-008-language-guard-and-two-closures.md) | The English renderer accepts non-English copy; `mark-all-read` can be made inert; the CI job can be deleted — three things that read as covered (RFC 005 §3, §1) | 0.27.0 | — |
 
 ## Why two items are out of phase
 
