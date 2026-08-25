@@ -347,6 +347,47 @@ async fn boards_per_card_control_renders_unchanged() {
     );
 }
 
+/// `QA-011` §2 (`NFR-A11Y-008`): a single `role="status"` (polite)
+/// region used to carry both success and conflict/unavailable
+/// announcements — those two want opposite politeness. Both the
+/// board/list surface (`ProjectDetailPage`) and the detail surface
+/// (`IssueView`) must now render two regions: the existing polite one,
+/// and a new assertive one (`role="alert"`) for `board.js`/`dm.js` to
+/// route conflict and unavailable outcomes into.
+#[tokio::test]
+async fn both_surfaces_render_a_polite_and_an_assertive_status_region() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Customer Portal").await;
+    let issue_id = create_issue(&app.db, &project_id, &user_id, "Fix login bug").await;
+
+    let board_resp = app.server.get(&format!("/projects/{project_id}")).await;
+    let board_body = board_resp.text();
+    assert!(
+        board_body.contains(r#"id="status-announcements" role="status""#),
+        "the board/list surface must keep the polite region: {board_body}"
+    );
+    assert!(
+        board_body.contains(r#"id="status-announcements-assertive" role="alert""#),
+        "the board/list surface must gain an assertive region: {board_body}"
+    );
+
+    let detail_resp = app
+        .server
+        .get(&format!("/projects/{project_id}/issues/{issue_id}"))
+        .await;
+    let detail_body = detail_resp.text();
+    assert!(
+        detail_body.contains(r#"id="status-announcements" role="status""#),
+        "the detail surface must keep the polite region: {detail_body}"
+    );
+    assert!(
+        detail_body.contains(r#"id="status-announcements-assertive" role="alert""#),
+        "the detail surface must gain an assertive region: {detail_body}"
+    );
+}
+
 /// `STATUS-002` §7, check 1: a successful `POST /status` returns the
 /// new `updated_at`, and it is the value now stored on the row —
 /// not just present, but correct.

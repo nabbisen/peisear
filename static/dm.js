@@ -59,9 +59,16 @@
   var forms = document.querySelectorAll(".js-status-form");
   if (!forms.length) return;
 
-  function announce(message) {
-    // Shared with board.js, which reads this same id.
+  // `QA-011` §2 (`NFR-A11Y-008`): a success announcement is polite; a
+  // conflict or unavailable one is assertive, so each gets its own
+  // region -- both ids shared with board.js.
+  function announcePolite(message) {
     var region = document.getElementById("status-announcements");
+    if (region) region.textContent = message;
+  }
+
+  function announceAssertive(message) {
+    var region = document.getElementById("status-announcements-assertive");
     if (region) region.textContent = message;
   }
 
@@ -165,12 +172,12 @@
     try {
       setPressed(form, newStatus);
       var message = copy.movedTo[newStatus];
-      announce(message);
+      announcePolite(message);
       showUndoToast(form, message, function () {
         performUndo(form, projectId, issueId, previousStatus, clientInput);
       });
     } catch (e) {
-      announce(copy.movedTo[newStatus]);
+      announcePolite(copy.movedTo[newStatus]);
       window.location.reload();
     }
   }
@@ -243,10 +250,10 @@
         }
         clientInput.value = body.updated_at;
         setPressed(form, previousStatus);
-        announce(copy.movedTo[previousStatus]);
+        announcePolite(copy.movedTo[previousStatus]);
       })
       .catch(function () {
-        announce(wasConflict ? copy.conflictMessage : copy.unavailableMessage);
+        announceAssertive(wasConflict ? copy.conflictMessage : copy.unavailableMessage);
         window.location.reload();
       });
   }

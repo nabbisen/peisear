@@ -55,6 +55,20 @@ pub fn SettingsPage(
         .map(render_capacity_row)
         .collect_view();
 
+    // `QA-011` §2: not the same class as `issues.rs`'s status-change
+    // region. `error` arrives via a query parameter on a fresh `GET`
+    // after `handlers::settings`'s `Redirect::to("/settings?error=...")`
+    // — this block is present (or absent) in the HTML a screen reader
+    // first encounters on page load; no script (this page has none)
+    // ever mutates it afterward. `aria-live` only matters for a DOM
+    // change *after* load, so `polite` here is inert either way, not a
+    // live wrong-politeness bug — `board.js`/`dm.js` write into an
+    // already-loaded page's region, which is the case `aria-live`
+    // actually governs. Left as `polite`, explicit override of
+    // `role="alert"`'s implicit assertive politeness kept rather than
+    // removed: harmless given the above, and removing it would be
+    // changing something to match §2's rule without §2's rule
+    // actually applying here.
     let error_block = error.as_ref().map(|msg| {
         view! {
             <div role="alert"

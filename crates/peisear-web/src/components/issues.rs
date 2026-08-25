@@ -105,16 +105,26 @@ pub fn ProjectDetailPage(
 
             <WorkloadStrip workload=workload/>
 
-            // Populated by board.js on a rejected/conflicting drag
-            // (board mode), and by dm.js on a rejected/conflicting
-            // in-place status change (list mode, `STATUS-002`) — one
-            // region, one id, shared by whichever of the two scripts
-            // is actually loaded on this page. Empty (and hidden)
-            // otherwise. Named for what it is, not for where it used
-            // to live only (`STATUS-002-review.md` §5 Q3) — `board.js`
-            // reads this same id, and changed by exactly this one
-            // line to match.
+            // `QA-011` §2 (`NFR-A11Y-008`, RFC 005 §5): two regions, not
+            // one — a single `role="status"` region previously carried
+            // both a success announcement ("Moved to Done.") and a
+            // conflict/unavailable one ("Another member changed this
+            // issue first."), and those two want opposite politeness.
+            // `board.js` (board mode) and `dm.js` (list mode,
+            // `STATUS-002`) both read both ids, whichever script is
+            // actually loaded on this page; each already distinguishes
+            // success from conflict/unavailable at every call site, so
+            // this only changes which element a given `announce*` call
+            // targets. Both empty (and hidden) until a script writes to
+            // them.
+            //
+            // Polite — a successful status change; does not interrupt.
             <div id="status-announcements" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
+            // Assertive — conflict (409) or unavailable (any other
+            // failure, including no lock value to submit at all): the
+            // user's action did not take effect and the page state may
+            // have changed under them, so this interrupts.
+            <div id="status-announcements-assertive" role="alert" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
 
             {if is_board {
                 view! { <BoardView project_id=project_id_for_board columns=columns assignees=assignees.clone()/> }.into_any()
@@ -1674,10 +1684,13 @@ fn IssueView(
             </div>
         </form>
 
-        // Same id, same pattern as the board/list surfaces' region
-        // (see `ProjectDetailPage`) — `dm.js` announces into it on a
-        // rejected/conflicting in-place status change (`STATUS-002`).
+        // Same ids, same pattern as the board/list surfaces' regions
+        // (see `ProjectDetailPage`) — `dm.js` announces into them on an
+        // in-place status change (`STATUS-002`), polite on success,
+        // assertive on conflict/unavailable (`QA-011` §2,
+        // `NFR-A11Y-008`).
         <div id="status-announcements" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
+        <div id="status-announcements-assertive" role="alert" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
         {render_status_enhancement_assets()}
 
         <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/70 mb-4">

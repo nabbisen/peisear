@@ -38,10 +38,17 @@
 
   var dragging = null;
 
-  function announce(message) {
-    // Shared with `dm.js`, which reads this same id
-    // (`STATUS-002-review.md` §5 Q3).
+  // `QA-011` §2 (`NFR-A11Y-008`): a success announcement is polite; a
+  // conflict or unavailable one is assertive, so each gets its own
+  // region -- both ids shared with `dm.js`
+  // (`STATUS-002-review.md` §5 Q3).
+  function announcePolite(message) {
     var region = document.getElementById("status-announcements");
+    if (region) region.textContent = message;
+  }
+
+  function announceAssertive(message) {
+    var region = document.getElementById("status-announcements-assertive");
     if (region) region.textContent = message;
   }
 
@@ -113,13 +120,13 @@
       .then(function (res) {
         if (res.status === 409) {
           moveForward();
-          announce(copy.conflictMessage);
+          announceAssertive(copy.conflictMessage);
           window.location.reload();
           return;
         }
         if (!res.ok) {
           moveForward();
-          announce(copy.unavailableMessage);
+          announceAssertive(copy.unavailableMessage);
           return;
         }
         return res.json();
@@ -127,11 +134,11 @@
       .then(function (body) {
         if (!body || typeof body.updated_at !== "string" || !body.updated_at) return;
         card.dataset.updatedAt = body.updated_at;
-        announce(copy.movedTo[targetStatus]);
+        announcePolite(copy.movedTo[targetStatus]);
       })
       .catch(function () {
         moveForward();
-        announce(copy.unavailableMessage);
+        announceAssertive(copy.unavailableMessage);
       });
   }
 
@@ -188,7 +195,7 @@
         // relative to this build. Do not send a request that would
         // be rejected anyway; a silent no-op would be worse.
         revert();
-        announce(copy.reloadMessage);
+        announceAssertive(copy.reloadMessage);
         return;
       }
 
@@ -196,7 +203,7 @@
         .then(function (res) {
           if (res.status === 409) {
             revert();
-            announce(copy.conflictMessage);
+            announceAssertive(copy.conflictMessage);
             // No automatic retry. Reload to pick up authoritative
             // state (fresh updated_at values on every card).
             window.location.reload();
@@ -204,7 +211,7 @@
           }
           if (!res.ok) {
             revert();
-            announce(copy.unavailableMessage);
+            announceAssertive(copy.unavailableMessage);
             return;
           }
           return res.json();
@@ -215,14 +222,14 @@
           // reload, matching `dm.js`'s posture (STATUS-002).
           card.dataset.updatedAt = body.updated_at;
           var message = copy.movedTo[newStatus];
-          announce(message);
+          announcePolite(message);
           showUndoToast(card, message, function () {
             performUndo(card, issueId, previousStatus, revert, reapplyDrag);
           });
         })
         .catch(function () {
           revert();
-          announce(copy.unavailableMessage);
+          announceAssertive(copy.unavailableMessage);
         });
     });
   });
