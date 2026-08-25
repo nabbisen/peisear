@@ -306,31 +306,81 @@ The spec stays Japanese; it is a separate document and not user-visible.
 
 ### 4. Colour contrast audit
 
-Use an off-the-shelf checker (e.g. `tailwindcss-contrast`,
-or a manual pass with the WebAIM checker against the
-documented colour pairs). Document the audit results in
-`docs/src/accessibility.md` (new), with a table of
-foreground/background pairs and their measured ratios.
+*Reconciled against the code 2026-08-25. **The failures this section expects
+to find are not where it is looking.***
 
-If a Tailwind class fails AA, replace it with the next
-darker/lighter variant. Do not add custom colours; the
-DaisyUI theme tokens cover the cases we have.
+The original text: run a checker over the documented colour pairs, and where a
+Tailwind class fails AA, replace it with the next darker or lighter variant.
+
+**We barely use named colour classes for body text.** The theme is DaisyUI's
+`corporate` (`layout.rs:29`) and its tokens are not ours to audit — if
+`base-content` on `base-100` failed AA, that is a theme choice, and swapping to
+"the next darker variant" is not available for a semantic token.
+
+**What is ours is the opacity modifier**, and it is applied 130 times:
+
+| Class | Uses |
+|---|---|
+| `text-base-content/60` | 67 |
+| `text-base-content/70` | 39 |
+| `text-base-content/50` | 19 |
+| `text-base-content/80` | 3 |
+| `text-base-content/40` | 2 |
+| `text-base-content/30` | 2 |
+| `opacity-30` … `opacity-90` | 32 |
+
+Every one of those **reduces** the contrast the theme provides, and the
+reduction is a decision this project made, not one it inherited. A token that
+passes AA at full strength can fail at 60% and will almost certainly fail at
+30%. **That is the audit.**
+
+`NFR-A11Y-005` is the requirement (AA, 4.5:1, P1) and it has read *Not
+verified* since 0.19.1.
+
+**Where the results go is an open question, not a decision.** The original text
+named `docs/src/accessibility.md`. `docs/src/` contains only `assets/`, there
+is no `book.toml`, and `DEC-020` — where this project's documents live — is
+still unresolved. Do not create a file that presumes an answer to it.
 
 ### 5. Keyboard navigation
 
-`j` moves selection down, `k` moves selection up. Apply
-on:
+*Reconciled against the code 2026-08-25. **This section specified the wrong
+requirement.***
 
-- Issue list (selection is the row; Enter opens detail).
-- Kanban (selection follows the card; Enter opens detail;
-  with the D-2 work, Space picks up).
-- Sprint plan (selection follows the row; Space moves it
-  to the other column, mirroring D-4).
+The original text described `j`/`k` selection movement, a `?` shortcuts modal,
+and a new `static/keynav.js`. That is **`NFR-A11Y-009`** — *"SHOULD provide
+list navigation shortcuts"*, **P3**.
 
-Hint footer: a small "Press `?` for keyboard shortcuts" link
-at the bottom of pages with shortcuts. Pressing `?` opens
-a modal with the binding list. Implementation: a small JS
-file `static/keynav.js` (vanilla, no Leptos hydration).
+**`NFR-A11Y-001` is the requirement Phase E owes**: *"Every primary flow — list
+to detail to back, edit and cancel, marking a notification read — MUST be
+completable with the keyboard alone."* **P0**, and *Partial* since 0.19.1 with
+"systematic audit is Phase E" written next to it.
+
+A section titled "Keyboard navigation" that builds the P3 convenience and never
+audits the P0 completeness is inverted. **The audit is the deliverable; the
+shortcuts are not in Phase E at all.**
+
+Three further reasons the original plan is now wrong:
+
+1. **`DEC-021`.** `keynav.js` is JavaScript-only, so it can never *be* the
+   keyboard path for anything — only a shortcut layer over one that already
+   works. The original text did not say this, and a reader could have built it
+   believing the requirement was being met.
+2. **`§10.15`.** The shipped JavaScript is executed by no test. A fourth file
+   with real behaviour widens that, and `QA-003` named exactly this residual:
+   *"a fourth JavaScript file added later gets no reference test
+   automatically."*
+3. **`NFR-A11Y-008` is now in force.** It read "Deferred with Phase D"; D-1 and
+   D-2 shipped at 0.25.0-0.26.0. It requires conflict notifications to use an
+   **assertive** live region — and `board.js` and `dm.js` announce conflicts
+   into `#status-announcements`, which is `role="status"`, a **polite** region
+   (`components/issues.rs:117`). One region carries both *"Moved to Done."* and
+   *"Another member changed this issue first."*, and those two want opposite
+   politeness. Verified 2026-08-25.
+
+So §5 becomes: **audit `NFR-A11Y-001` per primary flow, and fix `NFR-A11Y-008`.**
+`NFR-A11Y-009` is deferred out of Phase E — a P3 SHOULD does not outrank the
+accessibility axes that have been unverified for eight releases.
 
 ### 6. Mobile completion
 
