@@ -29,6 +29,7 @@ second RFC lifecycle".
 | QA-007 | [QA-007](./QA-007-authorization-audit.md) | The authorization audit; seven unaudited rows, three of them `GET` halves that authorise a mutation (RFC 005 §1) | 0.27.0 | QA-005 first |
 | QA-008 | [QA-008](./QA-008-language-guard-and-two-closures.md) | The English renderer accepts non-English copy; `mark-all-read` can be made inert; the CI job can be deleted — three things that read as covered (RFC 005 §3, §1) | 0.27.0 | — |
 | QA-009 | [QA-009](./QA-009-enumeration-and-ci-target-parity.md) | **`MessageKey::all()` is missing five live variants today** — the P0 vocabulary guard has never seen them; plus the twenty CI targets nothing pins (RFC 005 §3, §14) | 0.27.0 | — |
+| QA-010 | [QA-010](./QA-010-the-sets-the-guards-walk.md) | The fourteen label enums, `peisear-core`'s kind/channel lists, and `prose_scan`'s two directories — three enumerations nothing checks. **Nothing broken today**; tripwires, not repairs (RFC 005 §3, §14) | 0.27.0 | — |
 
 ## Why two items are out of phase
 
