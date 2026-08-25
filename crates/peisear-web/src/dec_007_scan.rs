@@ -23,6 +23,18 @@
 //! member's line removed too — see `evidence/` in the review request
 //! for both transcripts; a real `.github/CONTRIBUTING.md` edit is not
 //! something to leave embedded in this file's own test code.
+//!
+//! **Matches on `-p <name>`, not on `<name>` alone**
+//! (`QA-004-review.md` §2). Every line in the block runs `-p
+//! <crate>`, so that pair is the actual invariant — matching the bare
+//! name would let a comment that merely *mentions* a crate (`# note:
+//! peisear itself is the facade crate`) satisfy the scan with no
+//! command present at all, which is a silent pass on the exact defect
+//! this guard exists for. The one thing this gives up: `cargo test
+//! --package peisear` (the long flag) would fail the guard even
+//! though it runs the crate. That is a false alarm with a clear
+//! message pointing at this file, not a false pass — the direction
+//! worth erring toward.
 
 use std::fs;
 use std::path::Path;
@@ -113,7 +125,7 @@ fn every_workspace_member_appears_in_the_dec_007_block() {
     let block = dec_007_block();
     let missing: Vec<&String> = members
         .iter()
-        .filter(|name| !appears_at_word_boundary(&block, name))
+        .filter(|name| !appears_at_word_boundary(&block, &format!("-p {name}")))
         .collect();
 
     assert!(
