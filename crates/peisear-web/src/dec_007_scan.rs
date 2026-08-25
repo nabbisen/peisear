@@ -75,16 +75,21 @@
 //! it. A qualifying line's trimmed form must not start with `#`.
 //!
 //! **This guard has been strengthened three times, each by planting
-//! the next-most-realistic way the block could lie**: a substring
-//! match on the bare crate name (`QA-004` round 1 → matched on
-//! `-p <name>` instead), a comment merely mentioning the crate
-//! (`QA-004-review.md` §2 → same fix), a `--test <target>` line
-//! standing in for the crate's own library scope (`QA-005` §3 → the
-//! not-a-`--test`-line requirement), and a commented-out command
-//! (`QA-005-review.md` §2 → the not-commented-out requirement above).
-//! A future reader extending this file again should expect the next
-//! hole to be a plausible-looking line that still isn't a command —
-//! that is the shape every correction so far has taken.
+//! the next-most-realistic way the block could lie** — after the bare
+//! substring match on the crate name, which was never shipped as a
+//! hole: `appears_at_word_boundary` existed from `QA-004`'s first
+//! version specifically to defeat it, proved at the time by planting
+//! the facade's line missing while its `peisear-*` siblings stayed
+//! present. The three real corrections, in order: a comment merely
+//! mentioning the crate with no command behind it (`QA-004-review.md`
+//! §2 → matched on `-p <name>`, not the bare name), a `--test
+//! <target>` line standing in for the crate's own library scope
+//! (`QA-005` §3 → the not-a-`--test`-line requirement), and a
+//! commented-out command (`QA-005-review.md` §2 → the
+//! not-commented-out requirement above). All three share a shape: a
+//! line that *looks* like coverage but is not a command that runs. A
+//! future reader extending this file again should expect the next
+//! hole to take that same shape.
 
 use std::fs;
 use std::path::Path;
