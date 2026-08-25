@@ -456,6 +456,23 @@ in `peisear-core`.
 maintained by hand against a workspace that has grown to seven. That is
 the shape that produced this, and it will produce it again at eight.
 
+**What the guard does not catch, decided 2026-08-25 in `QA-004`'s round-2
+review.** It asserts every member appears as `-p <name>` in the block. It
+does **not** check that the flags on that line are right for the crate:
+
+```bash
+cargo test -p peisear --lib   # runs zero tests; the guard passes
+```
+
+That is this defect in a second shape — a facade line covering nothing.
+Left open deliberately. Closing it means knowing which crates have
+doctests, which means parsing fenced code blocks out of every crate's
+source: a parser for one line of a contributing guide. And the block is
+not the coverage boundary — `cargo test --workspace` runs three times
+before every release and includes doctests, so flag drift here costs
+developer feedback, not release coverage. The mitigation is prose under
+the block saying why that line carries no `--lib`.
+
 ## Test plan
 
 The Phase E test plan is largely the audit work itself; the
