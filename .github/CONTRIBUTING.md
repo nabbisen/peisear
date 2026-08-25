@@ -82,6 +82,7 @@ for t in assignee_candidates auth_boundary board_keyboard breadcrumb \
          view_state workload_privacy; do
   cargo test -p peisear-web --test "$t" -- --test-threads=1
 done
+cargo test -p peisear
 ```
 
 This isolates each test binary's link step. That is the live,
@@ -89,6 +90,20 @@ present-tense reason it exists: peak linker memory stays bounded
 this way, because the combined `--workspace` build links several
 large crates at once (sqlx, leptos, axum, the wasm-smtp family). It
 also gives clean per-target failure attribution.
+
+**The `--lib` shape on `peisear-core`, `peisear-auth`, and
+`peisear-storage` skips doctests.** There are none in those three
+crates today — the workspace contains exactly one doctest, on the
+`peisear` facade's `src/lib.rs` — so nothing is uncovered right now.
+It becomes a hole the day someone writes a documented example in one
+of them; `cargo test -p peisear` (bare, no `--lib`) is what picks up
+the facade's own doctest, which is why that line has no `--lib` where
+the other single-crate lines do. `QA-004`: this block used to omit the
+`peisear` line entirely, discovered when a release candidate's own
+gate table carried a count no command in this block actually produced.
+`dec_007_scan` (`peisear-web`'s test suite) now asserts every workspace
+member's crate name appears somewhere in this block, so the list
+cannot drift from the workspace silently again.
 
 **History, for a specific defect that is now guarded a different
 way**: `cargo test --workspace` used to also fail intermittently for

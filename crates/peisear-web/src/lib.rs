@@ -19,6 +19,8 @@
 pub mod app;
 pub mod components;
 pub mod config;
+#[cfg(test)]
+mod dec_007_scan;
 pub mod error;
 pub mod extractors;
 pub mod handlers;
