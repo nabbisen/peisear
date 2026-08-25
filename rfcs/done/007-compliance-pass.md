@@ -162,9 +162,9 @@ Required — this RFC touches both §11.5 and §21.4.
 
 ## References
 
-- [RFC 004 — direct manipulation](./004-direct-manipulation.md) (DEV-002 is its
+- [RFC 004 — direct manipulation](../proposed/004-direct-manipulation.md) (DEV-002 is its
   no-JS baseline for D-2)
-- [RFC 006 — i18n architecture](../proposed/006-i18n-architecture.md) (the
+- [RFC 006 — i18n architecture](./006-i18n-architecture.md) (the
   vocabulary guard that would have caught DEV-004's defects mechanically)
 - [RFC 000 — RFC lifecycle policy](../done/000-rfc-lifecycle-policy.md)
 - Requirements baseline §1.7, §5.1, §5.2, §10.2; external design §7.3, §15,

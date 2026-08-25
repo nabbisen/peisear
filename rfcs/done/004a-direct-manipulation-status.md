@@ -3,7 +3,7 @@
 **Status**: **Implemented (0.26.0)** — step 1 shipped in 0.25.0 (`STATUS-001`),
 step 2 in 0.26.0 (`STATUS-002`)
 **Target**: 0.25.0, **after CONF-001**
-**Umbrella**: [RFC 0004](./004-direct-manipulation.md) — substep D-1
+**Umbrella**: [RFC 0004](../proposed/004-direct-manipulation.md) — substep D-1
 **Governing decisions**: `DEC-021` (JavaScript posture), `DEC-018`
 **Related requirements**: `FR-ISS-005/006`, `FR-DM-001/005`, `NFR-CONC-001/004`
 **Last updated**: 2026-08-25

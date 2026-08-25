@@ -1,7 +1,7 @@
 # Handoffs — RFC 007, 0.20.0 compliance pass
 
 Implementation companions for
-[RFC 007](../../accepted/007-compliance-pass.md). These record **how to
+[RFC 007](../../done/007-compliance-pass.md). These record **how to
 implement and verify**; the RFC records **what was decided and why**.
 
 A handoff does not override its RFC. If implementation uncovers a design
