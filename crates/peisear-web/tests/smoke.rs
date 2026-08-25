@@ -172,3 +172,28 @@ async fn logout_clears_session_and_redirects() {
     let resp = app.server.get("/projects").await;
     assert_eq!(resp.status_code(), StatusCode::SEE_OTHER);
 }
+
+/// `QA-003`: `search.js`'s tag (`components/layout.rs:72`, inside
+/// `AppShell`) had no test at all -- unlike `dm.js`/`board.js`, its
+/// blast radius is every authenticated page, not one surface, since
+/// every such page renders through `AppShell`. `smoke` is the right
+/// home for this claim: it's about the shell, not about search.
+///
+/// Does not `GET /static/search.js` itself, same reason as
+/// `status_control::dm_js_is_served_with_defer_on_both_surfaces`:
+/// `ServeDir::new("static")` resolves against the process's working
+/// directory, which is the crate root under `cargo test`, not the
+/// workspace root `static/` lives under.
+#[tokio::test]
+async fn search_js_is_referenced_in_the_app_shell() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("dana");
+    register_and_login(&app, &user).await;
+
+    let resp = app.server.get("/today").await;
+    let body = resp.text();
+    assert!(
+        body.contains(r#"<script src="/static/search.js" defer"#),
+        "an authenticated page must reference search.js with defer: {body}"
+    );
+}

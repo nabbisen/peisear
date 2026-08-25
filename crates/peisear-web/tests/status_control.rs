@@ -482,16 +482,23 @@ async fn json_endpoint_still_reports_ok_for_success_and_409_for_conflict() {
 
 /// `STATUS-002` §7, check 7: `dm.js` is referenced with `defer` on
 /// both surfaces — the issue detail page and the issue list (not the
-/// board, which loads `board.js` instead — `boards_per_card_control_
-/// renders_unchanged` above already pins that).
+/// board, which loads `board.js` instead — see
+/// `board_js_is_referenced_on_the_board_view` below for that
+/// assertion. `QA-003`: this doc comment previously claimed
+/// `boards_per_card_control_renders_unchanged` "already pins that"; it
+/// does not — that test asserts the board's per-card form still posts
+/// to `/status/board` and does not pick up the two new surfaces'
+/// routes, and never looks for `board.js` at all. Corrected here
+/// rather than left for a reader to trust and find otherwise.
 ///
 /// Does not `GET /static/dm.js` itself: `ServeDir::new("static")` in
 /// `app.rs` resolves relative to the process's working directory,
 /// which is the crate root under `cargo test`, not the workspace
-/// root `static/` lives under — `board.js` has never had an HTTP-
-/// level "is it actually served" test for the same reason, and
-/// fixing that path resolution is a separate concern from this
-/// handoff. The file's presence on disk is what the build depends on.
+/// root `static/` lives under — `board.js` and `search.js` have never
+/// had an HTTP-level "is it actually served" test for the same
+/// reason, and fixing that path resolution is a separate concern from
+/// this handoff. The file's presence on disk is what the build
+/// depends on.
 #[tokio::test]
 async fn dm_js_is_served_with_defer_on_both_surfaces() {
     let app = TestApp::spawn().await;
@@ -528,5 +535,39 @@ async fn dm_js_is_served_with_defer_on_both_surfaces() {
     assert!(
         !board_body.contains("/static/dm.js"),
         "the board must not load dm.js -- it has nothing there to enhance: {board_body}"
+    );
+}
+
+/// `QA-003`: the board's own script tag had no test at all —
+/// `crates/peisear-web/src/components/issues.rs:142` could be deleted
+/// and every gate, including the doc comment above that used to point
+/// here, stayed green. Same shape as
+/// `dm_js_is_served_with_defer_on_both_surfaces`, including why it
+/// does not `GET /static/board.js` itself (see that test's doc
+/// comment).
+///
+/// **Residual gap, not closed here**: a fourth JavaScript file added
+/// under `static/` later gets no reference test automatically — this
+/// asserts `board.js`, `search.js` (`smoke::search_js_is_referenced_
+/// in_the_app_shell`), and `dm.js` by name, not by scanning
+/// `static/` and matching each entry against what's rendered (`QA-003`
+/// §4: that shape would also pass on a tag emitted inside a branch
+/// that never renders, which is most of what can actually go wrong).
+#[tokio::test]
+async fn board_js_is_referenced_on_the_board_view() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Customer Portal").await;
+    let _issue_id = create_issue(&app.db, &project_id, &user_id, "Fix login bug").await;
+
+    let resp = app
+        .server
+        .get(&format!("/projects/{project_id}?view=board"))
+        .await;
+    let body = resp.text();
+    assert!(
+        body.contains(r#"<script src="/static/board.js" defer"#),
+        "the board view must reference board.js with defer: {body}"
     );
 }
