@@ -473,6 +473,43 @@ before every release and includes doctests, so flag drift here costs
 developer feedback, not release coverage. The mitigation is prose under
 the block saying why that line carries no `--lib`.
 
+### 14. The four structural guards have no CI job
+
+*Added 2026-08-25, found updating the requirements baseline to 0.26.0.*
+
+The baseline's §9.1 has stated since 0.20.0: **a test crate without a CI job
+does not exist.** `.github/workflows/test.yml` has a job for each of the twenty
+`peisear-web` integration targets and for five of the seven crates. It has no
+job running `cargo test -p peisear-web --lib`.
+
+That is where every structural guard this project has built actually lives:
+
+| Guard | Makes unconstructible | In CI |
+|---|---|---|
+| `prose_scan` | user-visible English authored in Rust (RFC 006) | **No** |
+| `static_js_scan` | the same in `static/*.js` (`BOARD-001`) | **No** |
+| `test_harness_scan` | §10.13's clock-derived temp paths (`QA-001`) | **No** |
+| `dec_007_scan` | the `DEC-007` block drifting from the workspace (`QA-004`) | **No** |
+
+`DEC-007`'s block in `.github/CONTRIBUTING.md` omits the same line, so a
+contributor following the documented procedure does not run them either. They
+execute only under `cargo test --workspace` — which **is** in the release gate,
+three times, so no release has shipped without them. **The exposure is
+per-pull-request, not per-release**: a change reintroducing any of those four
+defect classes passes CI and is caught at the next release candidate, or by a
+reviewer, or not at all.
+
+**§13's limit, first live instance.** `dec_007_scan` asserts each member
+appears as `-p <name>` but not that the flags are right for the crate.
+`peisear-web` appears twenty times via `--test` lines, so the guard is
+satisfied while the crate's library tests go unrun by the block. That was
+recorded as a tolerable limit the same day; this is what it costs.
+
+**Why this belongs to RFC 005 and not to a bug fix.** Phase E pays test debt,
+and debt in the apparatus that enforces every other rule compounds faster than
+debt in any single test. It is also the third entry in this RFC — after §12 and
+§13 — where the project's verification reads as more complete than it is.
+
 ## Test plan
 
 The Phase E test plan is largely the audit work itself; the

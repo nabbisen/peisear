@@ -24,6 +24,7 @@ second RFC lifecycle".
 | QA-002 | [QA-002](./QA-002-three-defects.md) | An active sprint may not be deleted; project delete must not report a false success; `prose_scan` stops reading comments (RFC 005 §10) | **0.25.0** — pulled forward | CONF-001 |
 | QA-003 | [QA-003](./QA-003-untested-script-tags.md) | `board.js` and `search.js` are referenced by no test — the board's tag can be deleted with the suite green; a comment claims otherwise (RFC 005 §12) | 0.27.0 | — |
 | QA-004 | [QA-004](./QA-004-dec-007-block-omits-a-crate.md) | `DEC-007`'s command block omits the `peisear` facade; a guard so the list cannot drift from the workspace again (RFC 005 §13) | 0.27.0 | — |
+| QA-005 | [QA-005](./QA-005-guards-have-no-ci-job.md) | `prose_scan`, `static_js_scan`, `test_harness_scan` and `dec_007_scan` all live in `peisear-web --lib`, which CI never runs and `DEC-007`'s block omits (RFC 005 §14) | 0.27.0 | — |
 
 ## Why two items are out of phase
 
@@ -39,6 +40,7 @@ The rest of RFC 005 stays at **0.27.0** — its remaining scope audits Phase D,
 which RFC 004's substeps create, so it cannot precede them. D-1 and D-2 shipped
 in 0.26.0, so that audit is now live rather than pending.
 
-§12 and §13 were added on 2026-08-25 from `REL-0.26.0`'s review and are in
+§12, §13 and §14 were added on 2026-08-25 from `REL-0.26.0`'s review and the
+0.26.0 baseline update and are in
 phase: both are Phase E test debt, and §8's follow-up sweep is exactly where a
 dependency nothing checks belongs.
