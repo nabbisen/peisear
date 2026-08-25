@@ -125,7 +125,26 @@ data (§11.5.1) or per-user mutation:
 | `GET /settings` | AuthUser | implicit | ✓ |
 | `POST /settings/wip-limit` | AuthUser | **(needs test once user_id surface lands — see ignored test)** | partial |
 | `POST /settings/capacity*` | AuthUser, lock-checked | implicit (no user_id in URL) | ✓ |
-| (Phase D mutations — fill in as they ship) | | | |
+| `POST /inbox/resume` | AuthUser | implicit (no user_id) | ✓ 0.24.0 |
+| `POST /inbox/email-opt-in` | AuthUser | implicit | ✓ 0.24.0 |
+| `GET /projects/{id}/delete` | AuthUser + `find_accessible` + **owner check** | **unaudited** | 0.25.0 |
+| `GET …/issues/{iid}/delete` | AuthUser + `find_accessible` | **unaudited** | 0.25.0 |
+| `GET …/sprints/{sid}/delete` | AuthUser + `can_manage_team` | **unaudited** | 0.25.0 |
+| `POST …/status/detail` | AuthUser + `find_accessible` | **unaudited** | 0.25.0 |
+| `POST …/status/list` | AuthUser + `find_accessible` | **unaudited** | 0.25.0 |
+
+*Reconciled 2026-08-25.* The "fill in as they ship" row was a promise to a
+future that has now arrived twice — 0.24.0's two inbox routes and 0.25.0's
+five. Filling it in was nobody's step, which is the same shape as a status
+nothing checks.
+
+**The three `GET` delete rows are new in kind, not only in number.** Before
+0.25.0 no `GET` in this application rendered a page whose only purpose was to
+authorise a mutation. `GET /projects/{id}/delete` carries an owner check that
+`GET /projects/{id}` does not, so the interstitial is a **narrower** boundary
+than the screen that links to it. Audit whether the `POST` half enforces the
+same narrowing — a `GET` that refuses and a `POST` that does not is a boundary
+that exists only in the user interface.
 
 The audit fills in the right-hand column for every row. New
 test entries land in `tests/auth_boundary.rs`. The ignored
@@ -147,7 +166,45 @@ Symmetric table:
 | `POST /teams/{slug}/sprints/{sid}/start|complete|delete` | yes | covered above | n/a |
 | `POST /settings/capacity/{id}` | yes | `..._capacity_period_edit_..._returns_409` | n/a |
 | `POST /teams/{slug}/sprints/{sid}/plan/add|remove` | **no** (join-table, intentional) | n/a | n/a |
-| (Phase D rows added as they ship) | | | |
+| `POST …/status/detail` \| `/status/list` | yes — shared `apply_status_change` | `status_control`, `optimistic_lock` | D-1 (0.26.0) |
+| `POST /teams/{slug}/sprints/{sid}/delete` | **yes** | — | n/a |
+| `POST /settings/capacity/{id}/delete` | **yes** | — | n/a |
+| `POST /projects/{id}/delete` | **no** | — | n/a |
+| `POST /projects/{id}/issues/{iid}/delete` | **no** | — | n/a |
+
+*Reconciled 2026-08-25, and the last four rows are the finding.*
+
+**Two of the four destructive deletes take a lock and two do not.** Verified by
+reading the handlers: `sprints::delete_sprint` and `settings::delete_capacity`
+call `check_optimistic_lock`; `projects::delete` and `issues::delete` take no
+form at all — no `client_updated_at` reaches them.
+
+**The mechanism for it exists and is used once.**
+`render_delete_confirmation` takes a `hidden_fields: Vec<(String, String)>`
+parameter. The sprint interstitial passes `client_updated_at` through it. The
+project and issue interstitials pass `Vec::new()`.
+
+**RFC 010 widened the window this protects.** A delete used to be one `POST`
+from a page the user was looking at. It is now `GET` (render "Delete issue:
+Fix login bug"), a pause while the user reads, then `POST`. Nothing binds the
+`POST` to the state the `GET` displayed, so a user can confirm a deletion of an
+entity that has changed underneath the sentence naming it — and for issues that
+matters more than for most entities, because the delete **cascades**.
+
+Whether a delete *should* lock is a real design question and this RFC does not
+prejudge it: the row is gone either way, so a stale timestamp corrupts nothing.
+What is not defensible is deciding it differently in four places without
+recording a reason. The audit settles it once, in both directions.
+
+**A copy finding from the same read, recorded here because it is the same
+window.** `issues::delete_confirm` renders `ConfirmDeleteCannotBeUndoneNote` —
+*"This cannot be undone."* — while `projects::delete_confirm` renders
+*"All its issues will be deleted too. This cannot be undone."*
+`issues.parent_issue_id` is declared `ON DELETE CASCADE` (`0015_sub_issues.sql`)
+and the pool sets `foreign_keys(true)`, so **deleting a parent issue deletes its
+sub-issues** and the screen naming what will be deleted does not say so. RFC 010
+exists so a confirmation states its consequence; on the one route where the
+consequence exceeds the entity named, it does not.
 
 For mutations newly added in C-PR2/PR3/PR4 and Phase D, the
 audit confirms each entry has a row.
