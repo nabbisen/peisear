@@ -176,6 +176,14 @@ constructible. It says nothing about a predicate that can lose a term.
 That is `§10.3`'s point from the other side: a session extractor plus an
 unscoped query is one layer, not two.
 
+**A bulk route needs both assertions.** Added 2026-08-25 from `QA-007` round
+2's review. The cross-user test above asserts what the route must **not** do.
+On its own it is satisfied by a route that does nothing at all: replacing
+`mark_all_read`'s predicate with one that matches no rows leaves the button
+inert and **all 195 tests green**. Every bulk row in this table therefore needs
+a positive assertion as well — that the operation affects the caller's own
+rows — or the negative one certifies an empty feature.
+
 ### 2. Optimistic-lock audit
 
 Symmetric table:
