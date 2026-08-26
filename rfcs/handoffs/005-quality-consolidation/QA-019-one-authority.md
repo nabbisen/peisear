@@ -4,7 +4,7 @@
 **Date**: 2026-08-26
 **Priority**: **P0** — the owner's words: *"Should be fixed. Security is
 strongly prioritized."*
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §8
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §8
 **Depends on**: `QA-018`, closed. Its finding is the input.
 
 ---

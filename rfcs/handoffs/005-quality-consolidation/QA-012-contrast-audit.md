@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-25
 **Priority**: P1 — `NFR-A11Y-005`, *Not verified* since 0.19.1
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §4
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §4
 **Depends on**: nothing. Independent of `QA-011` — that one is keyboard and
 live regions, this one is colour. Either order.
 

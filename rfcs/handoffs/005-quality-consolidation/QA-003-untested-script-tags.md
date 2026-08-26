@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-25
 **Priority**: P1 — 0.27.0
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §12
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §12
 **Depends on**: nothing. `BOARD-001` and `STATUS-002` are both shipped in
 0.26.0; this corrects a gap that predates them.
 

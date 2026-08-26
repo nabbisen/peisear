@@ -1,8 +1,9 @@
 # Handoffs — RFC 005, quality consolidation
 
 Implementation companions for
-[RFC 005](../../proposed/005-quality-consolidation.md), target **0.27.0**
-except where a item is pulled forward.
+[RFC 005](../../done/005-quality-consolidation.md), **implemented at 0.28.0**.
+This directory is historical; the RFC's own closing note carries the three
+commitments that outlive it.
 
 **This file is an index, not a status board.** It lists what each handoff
 covers and what it depends on. It changes when a handoff is added — not when

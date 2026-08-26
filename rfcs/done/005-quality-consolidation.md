@@ -1,12 +1,43 @@
 # RFC 0005: Quality consolidation
 
-**Status**: Proposed
-**Target**: 0.27.0 (Phase E) — §9 shipped at 0.22.0, §10 pulled forward to 0.25.0,
+**Status**: **Implemented (0.28.0)** — all fourteen sections, `QA-001`–`QA-021`
+**Target**: shipped across 0.22.0-0.28.0 (Phase E) — §9 shipped at 0.22.0, §10 pulled forward to 0.25.0,
 §12-13 added from `REL-0.26.0`'s review
 **Related spec sections**: §40 (Phase E plan), §11.5.5 (API
 authorization QA), §21.4 (optimistic-lock conflict),
 §30-34 (ABDD axes)
-**Last updated**: 2026-08-25
+**Last updated**: 2026-08-27 — moved to `done/`
+
+> **Closing note, 2026-08-27.**
+>
+> **Nine of fourteen sections described work that was already done, already
+> reverted, or aimed at the wrong requirement.** §4 looked at theme tokens when
+> the failures were in modifiers this project applied. §5 specified a P3
+> shortcut layer and never audited the P0 completeness it was named for. §6's
+> manual QA needed a browser that does not exist here, and omitted the one part
+> measurable from source. §7 proposed re-adding a suppression this project had
+> deliberately removed at 0.20.0. §8's three greps came back empty. §11 named
+> two copies of an encoder and missed the twenty-three-site idiom beside them.
+>
+> **Reconciling each section against the code before dispatching it was the
+> practice that produced the most value in this phase**, and it produced it by
+> preventing work rather than by completing it.
+>
+> **Three commitments outlive this RFC**, named here so moving it to `done/`
+> does not bury them:
+>
+> 1. **The touch-target design pass, 0.30.0.** 139 controls below 44 px.
+>    `SPEC §33.2` may itself be what changes; raising them alters the density of
+>    a tool whose screens are dense on purpose (§6, `QA-014`).
+> 2. **`§10.3`'s type-level remedy.** The guard added in `QA-021` watches a
+>    name because nothing in this codebase distinguishes an identity parameter
+>    from a resource one. A newtype closes that; it touches every handler
+>    signature and is not scheduled.
+> 3. **The citation-drift diagnosis.** 15 of 40 acceptance citations overstate
+>    what their test checks; a sample of the 85 uncited found 8 of 15 with no
+>    test at all. Not corrected, deliberately — a document made consistent
+>    before it is understood loses the evidence of how it drifted (§8,
+>    `QA-018`).
 
 ## Summary
 

@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-25
 **Priority**: P0 — 0.27.0
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §2
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §2
 **Depends on**: `QA-005` should land first. They do not conflict — different
 files — but `QA-005` puts the four structural guards into CI, and this
 handoff's fixes are the first work that should ship behind them.

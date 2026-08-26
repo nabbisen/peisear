@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-26
 **Priority**: P1 — `NFR-A11Y-005`, measured and failing
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §4
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §4
 **Depends on**: `QA-012`, closed. Its table is the input; do not re-measure.
 
 **Owner-approved**: the `/70` floor was put to the owner with a figure of

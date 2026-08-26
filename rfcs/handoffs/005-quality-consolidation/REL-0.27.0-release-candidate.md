@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-25
 **Priority**: P0 — the release
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §1-§3,
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §1-§3,
 §12-§14
 **Depends on**: `QA-003` through `QA-010`, all closed and reviewed.
 

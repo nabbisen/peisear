@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-26
 **Priority**: P2 — `NFR-PRIV-007` is a **SHOULD**, and this is an audit
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §7
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §7
 **Depends on**: nothing.
 
 **Audit and report. Change nothing.** Same shape as `QA-012`: the measurement

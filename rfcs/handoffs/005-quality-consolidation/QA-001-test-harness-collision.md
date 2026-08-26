@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-11
 **Priority**: P1 — first item of 0.22.0
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §9
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §9
 **Governing gap**: baseline `§10.13`
 **Depends on**: nothing
 

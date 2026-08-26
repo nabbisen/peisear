@@ -39,7 +39,6 @@ Open for review. Design may still change.
 | ID | Title | Target |
 |----|-------|--------|
 | 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) — umbrella; substeps get their own RFCs | — |
-| 005 | [Quality consolidation](./proposed/005-quality-consolidation.md) — §9 shipped at 0.22.0, §10 at 0.25.0; the rest audits Phase D, which D-1/D-2 have now delivered | 0.27.0 |
 
 ## Implemented
 
@@ -48,6 +47,7 @@ Open for review. Design may still change.
 | 004b | [Direct manipulation — the board (D-2)](./done/004b-direct-manipulation-board.md) — *has handoffs*; the drag already shipped, this brought its copy under the vocabulary check | 0.26.0 |
 | 004a | [Direct manipulation — status change (D-1)](./done/004a-direct-manipulation-status.md) — *has handoffs*; two steps, the no-JS path first | 0.25.0 (step 1), 0.26.0 (step 2) |
 | 010 | [Destructive-action confirmation](./done/010-destructive-action-confirmation.md) — *has handoffs*; closed external design §17.4 | 0.25.0 |
+| 005 | [Quality consolidation](./done/005-quality-consolidation.md) — *has handoffs*; Phase E, fourteen sections, `QA-001`–`QA-021`. **Three commitments outlive it** — see its closing note | 0.22.0–0.28.0 |
 | 003 | [Inbox refinements](./done/003-inbox-refinements.md) — *has handoffs*; **rewritten** before dispatch | 0.24.0 |
 | 002 | [Calendar surfaces](./done/002-calendar-surfaces.md) — *has handoffs* | 0.23.0 |
 | 001 | [Sprint planning page](./done/001-sprint-planning-page.md) — *has handoffs* | 0.22.0 — minus the capacity hint |
@@ -78,7 +78,7 @@ the RFC number they are keyed to.
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
 | [`handoffs/002-calendar-surfaces/`](./handoffs/002-calendar-surfaces/README.md) | 002 — historical, RFC implemented |
 | [`handoffs/001-sprint-planning-page/`](./handoffs/001-sprint-planning-page/README.md) | 001 — historical, RFC implemented |
-| [`handoffs/005-quality-consolidation/`](./handoffs/005-quality-consolidation/README.md) | 005 — active; §9 delivered at 0.22.0, §10 at 0.25.0, §12-13 at 0.27.0 |
+| [`handoffs/005-quality-consolidation/`](./handoffs/005-quality-consolidation/README.md) | 005 — historical, RFC implemented |
 | [`handoffs/009-team-assignment-and-workload/`](./handoffs/009-team-assignment-and-workload/README.md) | 009 — historical, RFC implemented |
 | [`handoffs/006-i18n-architecture/`](./handoffs/006-i18n-architecture/README.md) | 006 — historical, RFC implemented; `COPY-001` outstanding |
 | [`handoffs/007-compliance-pass/`](./handoffs/007-compliance-pass/README.md) | 007 — historical, RFC implemented |

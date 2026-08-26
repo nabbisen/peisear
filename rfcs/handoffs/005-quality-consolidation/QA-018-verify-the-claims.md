@@ -4,7 +4,7 @@
 **Date**: 2026-08-26
 **Priority**: P1 — the defect class this baseline exists to correct, at the
 scale of 124 claims
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §8
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §8
 **Depends on**: nothing.
 
 **Audit and report. Change no requirement text.** The baseline is the

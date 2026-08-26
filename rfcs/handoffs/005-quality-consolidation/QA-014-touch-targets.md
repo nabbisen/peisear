@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-26
 **Priority**: P1 — `NFR-A11Y-007`, *Not verified* since 0.19.1
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §6
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §6
 **Depends on**: nothing.
 
 **No control changes size in this handoff.** This is a measurement and two

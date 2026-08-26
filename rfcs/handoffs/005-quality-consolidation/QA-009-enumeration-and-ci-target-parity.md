@@ -4,7 +4,7 @@
 **Date**: 2026-08-25
 **Priority**: **P0** for §2 — a P0 requirement's guard has a live hole.
 P1 for §3, P2 for §4.
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §3, §14
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §3, §14
 **Depends on**: nothing. `QA-008` is closed.
 
 ---

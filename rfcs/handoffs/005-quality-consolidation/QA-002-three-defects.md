@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-16
 **Priority**: P1 — 0.25.0, alongside `STATUS-001`
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §10
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §10
 **Depends on**: CONF-001 landed
 
 ---

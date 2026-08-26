@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-25
 **Priority**: P1 — 0.27.0
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §3, plus
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §3, plus
 §1's bulk-route rule
 **Depends on**: nothing. `QA-003` through `QA-007` are all closed.
 

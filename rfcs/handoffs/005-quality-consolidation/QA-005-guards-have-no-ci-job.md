@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-25
 **Priority**: P1 — 0.27.0
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §14
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §14
 **Depends on**: nothing. `QA-003` and `QA-004` are both closed; this needs
 neither.
 

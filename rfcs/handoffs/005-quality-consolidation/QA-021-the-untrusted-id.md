@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-26
 **Priority**: P2 — the gap is real, prospective, and one guard wide
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §1
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §1
 (`§10.3` was scheduled with that audit and excluded from it)
 **Depends on**: nothing.
 

@@ -4,7 +4,7 @@
 **Date**: 2026-08-26
 **Priority**: P2 — nothing is broken today, and the reason it is not is a
 property of the copy that nothing enforces
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §11
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §11
 **Depends on**: nothing. **The last section of Phase E.**
 
 ---

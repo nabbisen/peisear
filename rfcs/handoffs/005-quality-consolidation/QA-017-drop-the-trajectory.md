@@ -4,7 +4,7 @@
 **Date**: 2026-08-26
 **Priority**: P2 — `NFR-PRIV-007` is a **SHOULD**; this is a deliberate design
 change, not a defect fix
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §7
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §7
 **Depends on**: `QA-016`, closed. Its audit is the input; do not re-derive it.
 
 **Owner-approved.** Of three options — suppress the charts, leave them, or keep

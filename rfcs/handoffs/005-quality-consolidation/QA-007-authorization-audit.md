@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-25
 **Priority**: P0 — 0.27.0
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §1
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §1
 **Depends on**: `QA-005` should land first, as for `QA-006`. Independent of
 `QA-006` — that one audits locks, this one audits boundaries. Either order.
 

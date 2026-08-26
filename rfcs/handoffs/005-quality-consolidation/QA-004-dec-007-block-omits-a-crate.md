@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-25
 **Priority**: P2 — 0.27.0
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §13
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §13
 **Depends on**: nothing. Independent of `QA-003`; they touch different
 files and can land in either order.
 

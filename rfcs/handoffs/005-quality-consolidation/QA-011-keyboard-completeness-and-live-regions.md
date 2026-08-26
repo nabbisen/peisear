@@ -4,7 +4,7 @@
 **Date**: 2026-08-25
 **Priority**: **P0** for §3 — `NFR-A11Y-001` is P0 and has read *Partial*
 since 0.19.1. P1 for §2.
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §5
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §5
 **Depends on**: nothing.
 
 ---

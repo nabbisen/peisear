@@ -4,7 +4,7 @@
 **Date**: 2026-08-26
 **Priority**: **P0** for §3 — an irreversible action within a mis-tap of its
 own escape hatch. P1 for §2.
-**Governing RFC**: [005](../../proposed/005-quality-consolidation.md) §6
+**Governing RFC**: [005](../../done/005-quality-consolidation.md) §6
 **Depends on**: `QA-014`, closed. Its measurement is the input.
 
 **This is not the touch-target pass.** That is a design pass, scheduled for
