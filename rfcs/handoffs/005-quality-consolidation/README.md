@@ -39,6 +39,7 @@ second RFC lifecycle".
 | QA-016 | [QA-016](./QA-016-aggregate-inferability.md) | The burndown and velocity charts, not the workload chip — §7's three named surfaces are all settled, one by a revert of what §7 proposes. **Audit only** (RFC 005 §7) | 0.28.0 | — |
 | QA-017 | [QA-017](./QA-017-drop-the-trajectory.md) | Keep the aggregate, drop the trajectory — burndown and median line suppressed below two distinct contributors, **with no copy explaining why** (RFC 005 §7) | 0.28.0 | QA-016 |
 | QA-018 | [QA-018](./QA-018-verify-the-claims.md) | §8's three greps are clean; the sweep it was a proxy for is not — 40 acceptance citations unverified, 84 `Implemented` requirements citing nothing, and §9.2 claiming four. **Audit only** (RFC 005 §8) | 0.28.0 | — |
+| QA-019 | [QA-019](./QA-019-one-authority.md) | **P0** — `updated_at` is written by application code on `issues`, `projects` and `user_view_states`, which have no triggers. `NFR-CONC-003` says one authority; there are two, on the tables the lock most protects (RFC 005 §8) | 0.28.0 | QA-018 |
 
 ## Why two items are out of phase
 
