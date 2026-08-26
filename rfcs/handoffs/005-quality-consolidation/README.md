@@ -42,6 +42,7 @@ second RFC lifecycle".
 | QA-019 | [QA-019](./QA-019-one-authority.md) | **P0** — `updated_at` is written by application code on `issues`, `projects` and `user_view_states`, which have no triggers. `NFR-CONC-003` says one authority; there are two, on the tables the lock most protects (RFC 005 §8) | 0.28.0 | QA-018 |
 | QA-020 | [QA-020](./QA-020-one-encoder.md) | Three encoding strategies across 29 redirect sites — the largest, `.replace(' ', "+")`, is safe only because every flash string happens to be ASCII. **The last section of Phase E** (RFC 005 §11) | 0.28.0 | — |
 | REL-0.28.0 | [REL-0.28.0](./REL-0.28.0-release-candidate.md) | The release candidate — RFC 005 complete, a schema migration, and the sentence the changelog must not contain | 0.28.0 | QA-013..020 |
+| QA-021 | [QA-021](./QA-021-the-untrusted-id.md) | `§10.3`, open since 0.19.1 and scheduled with a phase that closed without it. The entry is wrong: storage is subject-scoped throughout and no handler passes an untrusted id. Guard the invariant that holds (RFC 005 §1) | 0.29.0 | — |
 
 ## Why two items are out of phase
 
