@@ -611,6 +611,85 @@ discloses beyond other surfaces, and report. **Suppression is not decided
 here** — a one-person team losing its burndown entirely is a real cost, and
 `NFR-PRIV-007` is a **SHOULD** at P2, not a MUST.
 
+---
+
+#### The audit, and what shipped (`QA-016`, `QA-017`)
+
+**Audited 2026-08-26. Owner chose: keep the aggregate, drop the trajectory.**
+
+**What each chart discloses, corrected.** My first framing said *"nothing else
+exposes completion timing"*, and that was too strong. The issue list renders
+each issue's `updated_at` as a date, so an approximate completed-by-day series
+is assemblable by hand. But `updated_at` moves on **any** edit, is one point
+per issue rather than a series, and has no guaranteed relation to the
+done-transition.
+
+So the burndown's unique disclosure is not the timing — it is **a reliable
+trajectory where only a crude one was inferable**. Reliability is what makes a
+work-rate profile usable as one, so it remains a finding, and a smaller one
+than first stated.
+
+**The velocity chart turned out to be the stronger case.** Every bar is a
+sprint's `completed_points`, already visible one at a time on its own detail
+page. What exists nowhere else is the **median reference line** — a computed
+statistic which, for a one-contributor window, is a statistic about one named
+person's performance trend. It has no crude proxy and **no degenerate case**:
+it appears at two sprints and is legible immediately, where a burndown of a
+single-day sprint has nothing to read.
+
+**Audience**: `resolve_team_membership` returns a role and neither the sprint
+list nor the sprint detail handler gates on it. **A `viewer` — the read-only
+role — sees both charts**, identically to an admin.
+
+#### The predicate, which is not the one this section originally proposed
+
+Not team size. **Distinct contributors to the sprint (or, for velocity, across
+the whole five-sprint window), counting only completed issues.**
+
+In a genuinely one-person team the only viewer of the burndown **is its
+subject**, and hiding it protects nobody while costing them the one view of
+their own work. The case that engages `NFR-PRIV-007` is a five-person team
+where one person did all of a sprint's work and their daily pattern is shown to
+the other four. Every earlier discussion — including this section's first
+version and the handoff that opened the audit — reached for team size because
+it was the number lying around.
+
+**Unknown counts as fewer than two.** An unassigned completed issue makes the
+true count unknowable, so `distinct_contributors` returns `None` and the
+trajectory is suppressed. Whether that fires on the common case is **not known
+and could not be checked** — this project has no production data, and the dev
+team reported the absence of the check rather than a finding from it. Revisit
+when real usage exists.
+
+**Velocity's predicate spans the union of the window**, not each sprint. Five
+solo sprints by the same person are one contributor and suppress; five by five
+different people are five and render. Per-sprint evaluation is the tempting
+wrong answer and would have rendered the median in both.
+
+#### What shipped, and one thing that did not
+
+Below two distinct contributors: the burndown does not render and the velocity
+median line does not render. **The sprint-end totals stay** —
+`render_summary_card` was already independent of the burndown card, so the
+aggregate survived without anything being built to hold it.
+
+**Nothing explains the absence, deliberately.** Copy saying *"hidden because
+one person contributed"* would disclose precisely what the suppression
+withholds. A sprint without a burndown already looks like one that is Planned
+or has no data. A test asserts no such copy appears.
+
+**The distinction that took two rounds to state properly**: conditionally
+rendered copy is not the trap; **condition-revealing copy is.** The velocity
+caption promised a dotted line that might not be there, and fixing it required
+splitting `VelocityCaptionTail` — a new `MessageKey`, which the handoff had
+forbidden precisely so that this case would be reported rather than assumed. A
+sentence describing a line, appearing exactly when the line appears, discloses
+nothing the line's own presence does not.
+
+**This is `NFR-PRIV-007`'s first implemented instance.** The requirement's two
+prior encounters were a suppression added and reverted (the workload chip,
+0.20.0) and a feature withdrawn before shipping (the capacity hint, 0.22.0).
+
 ### 8. Phase A-D follow-up sweep
 
 Final pass to confirm the original Phase A-D items still
