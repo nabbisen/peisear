@@ -941,6 +941,45 @@ wrong and is worth settling once.
 §1's authorisation table has a natural sibling here: every place the application
 constructs a redirect, and what encodes it.
 
+---
+
+#### Reconciled 2026-08-26 — three strategies, not two copies
+
+The counts above are right and incomplete. Measured today:
+
+| Strategy | Sites |
+|---|---|
+| `percent_encode_query` — **two identical copies** (`teams.rs:391`, `sprints.rs:850`) | 6 call sites |
+| **`.replace(' ', "+")`, hand-rolled** — not mentioned in this section at all | **23 sites**, across 7 files |
+| Raw interpolation (`plan_query_string`, `change_status_form_list`) | 3 |
+
+48 `Redirect::to` sites in total. **The largest group is the one this section
+does not name.**
+
+**`.replace(' ', "+")` is correct today, and correct by luck.** Every flash
+string it encodes is plain ASCII words:
+
+> `"Project deleted"`, `"Sprint started"`, `"Capacity row removed"`, …
+
+Checked all twenty. None contains `&`, `=`, `#`, `%`, `+`, `?`, or any
+non-ASCII byte — the characters that strategy silently fails to encode.
+
+**What makes that luck rather than design.** `find_violations` constrains flash
+copy's *tone*; nothing constrains its *character set*. And this project's copy
+uses `—` freely elsewhere — the em dash appears throughout §1.7-compliant
+strings. The day a flash message gains an `&` (*"Sprint started & backlog
+updated"* is an ordinary sentence) the parameter truncates; the day one gains
+an em dash, a raw multi-byte sequence goes into a `Location` header.
+
+Neither is a crash: axum 0.8.9 returns a 500 rather than panicking, and
+`HeaderValue` accepts `obs-text` bytes. **The failure is a message silently
+arriving wrong**, which is the class this project has spent Phase E finding.
+
+**So §11's own framing was right and its scope was not.** "Two homes for one
+fact" is the shape; there are three homes and twenty-nine sites, and the
+correction is one encoder with every site through it — plus a guard, because
+the reason this is safe today is a property of the copy that nothing enforces.
+
 ### 12. Script tags nothing asserts
 
 *Added 2026-08-25 from `REL-0.26.0`'s review, found by planting.*

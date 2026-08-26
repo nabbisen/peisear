@@ -40,6 +40,7 @@ second RFC lifecycle".
 | QA-017 | [QA-017](./QA-017-drop-the-trajectory.md) | Keep the aggregate, drop the trajectory — burndown and median line suppressed below two distinct contributors, **with no copy explaining why** (RFC 005 §7) | 0.28.0 | QA-016 |
 | QA-018 | [QA-018](./QA-018-verify-the-claims.md) | §8's three greps are clean; the sweep it was a proxy for is not — 40 acceptance citations unverified, 84 `Implemented` requirements citing nothing, and §9.2 claiming four. **Audit only** (RFC 005 §8) | 0.28.0 | — |
 | QA-019 | [QA-019](./QA-019-one-authority.md) | **P0** — `updated_at` is written by application code on `issues`, `projects` and `user_view_states`, which have no triggers. `NFR-CONC-003` says one authority; there are two, on the tables the lock most protects (RFC 005 §8) | 0.28.0 | QA-018 |
+| QA-020 | [QA-020](./QA-020-one-encoder.md) | Three encoding strategies across 29 redirect sites — the largest, `.replace(' ', "+")`, is safe only because every flash string happens to be ASCII. **The last section of Phase E** (RFC 005 §11) | 0.28.0 | — |
 
 ## Why two items are out of phase
 
