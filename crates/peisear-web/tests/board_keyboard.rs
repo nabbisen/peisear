@@ -183,6 +183,37 @@ async fn each_status_control_has_a_distinguishing_accessible_name() {
     );
 }
 
+/// `QA-014` §4.1 (`NFR-A11Y-007`): the board's per-card status buttons
+/// are the one control in the whole `src/components/` tree that meets
+/// the 44px touch-target minimum — `min-h-11 min-w-11` on top of
+/// `btn-xs`'s own 24px box. Nothing asserted that until now; the
+/// baseline's claim that `board_keyboard` verified `NFR-A11Y-007` was
+/// never true, and deleting either class today would be invisible to
+/// every one of this suite's other tests.
+#[tokio::test]
+async fn per_card_status_button_meets_the_touch_target_minimum() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "P").await;
+    let _issue_id = create_issue(&app.db, &project_id, &user_id, "T").await;
+
+    let url = format!("/projects/{project_id}?view=board");
+    let resp = app.server.get(&url).await;
+    let body = resp.text();
+
+    assert!(
+        body.contains("min-h-11"),
+        "the board's per-card status button must carry min-h-11 (44px) \
+         -- NFR-A11Y-007's one compliant control; body: {body}"
+    );
+    assert!(
+        body.contains("min-w-11"),
+        "the board's per-card status button must carry min-w-11 (44px) \
+         -- NFR-A11Y-007's one compliant control; body: {body}"
+    );
+}
+
 #[tokio::test]
 async fn board_contains_no_prohibited_vocabulary() {
     let app = TestApp::spawn().await;
