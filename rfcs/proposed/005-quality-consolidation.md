@@ -499,19 +499,57 @@ accessibility axes that have been unverified for eight releases.
 
 ### 6. Mobile completion
 
-Manual QA against the four flows:
+*Reconciled against the code 2026-08-26. **Half of this section cannot be done
+here, and the half it omits is the measurable one.***
 
-- Today: panels render at narrow width; the
-  what-to-read-first callout doesn't truncate; rhythm
-  details still expandable.
-- Inbox: list scrolls; mark-read tap target ≥ 44 px.
-- Issue detail: edit form uses native pickers; save button
-  doesn't sit under a virtual keyboard.
-- Calendar today-view: day view (the mobile default per
-  RFC 0002) renders without horizontal scroll.
+The original text: manual QA against four flows, with mobile screenshots
+recorded in `docs/src/mobile-checklist.md`.
 
-Document each flow's mobile screenshots in
-`docs/src/mobile-checklist.md` for regression visibility.
+**What cannot be done.** `QA-011` established that no browser is available in
+this environment. Manual QA at narrow width and screenshots both need one, and
+a markup assessment is not the same thing — that distinction was set in
+`QA-011` and holds here. And `docs/src/` still has no `book.toml` and `DEC-020`
+is still unresolved, so the checklist file cannot be created without answering
+a question that is the owner's.
+
+**What the original text omits, and what §6 becomes.** `NFR-A11Y-007` — 44 × 44
+touch targets, P1 — appears in the original only as one clause of one bullet
+("mark-read tap target ≥ 44 px"), as something to eyeball on one screen. **It
+is measurable from source**, because DaisyUI's control heights are fixed values
+in the pinned stylesheet:
+
+| Class | Resolved height | Uses | vs 44 px |
+|---|---|---|---|
+| `btn-sm` | 2rem / 32 px | 64 | ✗ |
+| `btn-xs` | 1.5rem / 24 px | 18 | ✗ |
+| `input-sm` | 2rem / 32 px | 29 | ✗ |
+| `select-sm` | 2rem / 32 px | 21 | ✗ |
+| `input-xs` | 1.5rem / 24 px | 5 | ✗ |
+| `select-xs` | 1.5rem / 24 px | 2 | ✗ |
+| `checkbox` | 1.5rem square / 24 px | 10 | ✗ |
+| `btn-md` (default) | 3rem / 48 px | 0 | ✓ |
+
+Approximately **149 sites**, and **exactly one control in the product
+complies**: `issues.rs:661`, the board card's status buttons, carrying
+`min-h-11 min-w-11` from `DEV-002`.
+
+**Nothing asserts even that one.** The requirements baseline listed
+`board_keyboard` as verifying `NFR-A11Y-007`; it does not, and no test anywhere
+in the suite asserts a touch-target dimension. Corrected in the baseline
+2026-08-26.
+
+**The requirement may be what needs revisiting.** `SPEC §33.2`'s 44 px is
+stricter than WCAG 2.2's AA criterion (2.5.8, 24 × 24 with a spacing
+exception); 44 px is 2.5.5, which is AAA. Raising 149 controls changes this
+product's density fundamentally — a Kanban card whose status buttons are 44 px
+tall is a different card, and this is a tool whose screens are dense on
+purpose.
+
+**So §6 splits.** The touch-target measurement is a source audit and can be
+done now. The four flows' mobile behaviour needs a browser and stays open,
+named as such rather than quietly satisfied by a markup pass. The decision
+between raising 149 controls and amending `SPEC §33.2` is the owner's, and it
+should be made against the table above.
 
 ### 7. Aggregate inferability check
 

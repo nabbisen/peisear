@@ -34,6 +34,7 @@ second RFC lifecycle".
 | QA-011 | [QA-011](./QA-011-keyboard-completeness-and-live-regions.md) | `NFR-A11Y-001`'s **P0** keyboard audit — §5 had specified the P3 shortcuts instead — and conflicts announced through a polite live region (RFC 005 §5) | 0.28.0 | — |
 | QA-012 | [QA-012](./QA-012-contrast-audit.md) | `NFR-A11Y-005`'s contrast audit, aimed at the 130 opacity modifiers rather than the theme's own tokens (RFC 005 §4) | 0.28.0 | — |
 | QA-013 | [QA-013](./QA-013-the-seventy-floor.md) | Raise the muted tier to a `/70` floor — 111 sites — and guard the banned range; owner-approved from `QA-012`'s table (RFC 005 §4) | 0.28.0 | QA-012 |
+| QA-014 | [QA-014](./QA-014-touch-targets.md) | `NFR-A11Y-007` measured: ~149 controls below 44 px, exactly one compliant and nothing asserting it. **Measurement only** — the 44 px requirement may itself be what changes (RFC 005 §6) | 0.28.0 | — |
 
 ## Why two items are out of phase
 
