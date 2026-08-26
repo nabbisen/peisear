@@ -68,7 +68,7 @@ fn ProjectCard(project: Project) -> impl IntoView {
                 <div class="font-medium truncate">{name}</div>
                 <div class="text-xs text-base-content/70 line-clamp-2 min-h-[2rem]">
                     {if desc.is_empty() {
-                        view! { <span class="italic opacity-60">{t(MessageKey::NoDescriptionShort)}</span> }.into_any()
+                        view! { <span class="italic">{t(MessageKey::NoDescriptionShort)}</span> }.into_any()
                     } else {
                         view! { <span>{desc}</span> }.into_any()
                     }}

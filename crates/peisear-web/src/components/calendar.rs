@@ -82,7 +82,7 @@ fn render_block(issue: &Issue, project_badge: Option<String>) -> impl IntoView +
     let title = issue.title.clone();
     let time = time_label(issue);
     let badge = project_badge
-        .map(|name| view! { <span class="text-[10px] opacity-60 truncate">{name}</span> });
+        .map(|name| view! { <span class="text-[10px] opacity-70 truncate">{name}</span> });
     view! {
         <a href=href class="block text-xs px-1.5 py-0.5 rounded bg-primary/10 hover:bg-primary/20 truncate">
             <span class="tabular-nums opacity-70 mr-1">{time}</span>

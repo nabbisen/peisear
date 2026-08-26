@@ -558,7 +558,7 @@ pub fn SprintDetailPage(
                         <p class="text-sm text-base-content/70 mt-1">{dates}</p>
                         {goal_text.map(|g| view! {
                             <p class="text-sm text-base-content/80 mt-2 italic">
-                                <span class="opacity-60">{t(MessageKey::GoalFieldPrefixLabel)}</span>{g}
+                                <span class="opacity-90">{t(MessageKey::GoalFieldPrefixLabel)}</span>{g}
                             </p>
                         })}
                     </div>
