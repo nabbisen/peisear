@@ -78,6 +78,34 @@ hands the job to the trigger with no window where nothing maintains it.
 Do it in that order anyway — triggers first, clauses second, as two commits —
 so a bisect lands on a working tree either way.
 
+### 3.1 Amended 2026-08-26, after round 1's escalation
+
+**The `WHEN` clause reasoning above is correct and incomplete.** It covers the
+write and says nothing about a call site that **reads the value back**.
+
+`issues.rs:574` — the only `RETURNING` in the whole storage crate — hands
+`updated_at` to the client as the next lock value (`STATUS-002`). `RETURNING`
+reflects the row as modified by its own statement, **not** by an `AFTER`
+trigger's nested `UPDATE`, so removing the application's `SET` would return a
+value the row has already moved past. `dm.js`'s next status change would then
+send a stale `client_updated_at` and take a **spurious 409** — the opposite of
+what `STATUS-002` exists for.
+
+Verified in `sqlite3` directly. A same-transaction `SELECT` after the `UPDATE`
+does see the trigger's value.
+
+**So `update_status` changes shape**: drop `, updated_at = CURRENT_TIMESTAMP`
+and `RETURNING updated_at`; add a `SELECT updated_at … WHERE id = ?1 AND
+project_id = ?2` on the same `tx`, carrying the `NotFound` path. Replace the
+comment at `issues.rs:566`, which describes a design that no longer holds.
+
+The other three write sites do not read back and need no equivalent.
+
+**`json_status_change_returns_the_new_updated_at` and
+`two_consecutive_json_status_changes_chain_via_returned_updated_at` must pass
+unmodified.** They are the specification of what this change must preserve; if
+either needs adjusting, stop and report.
+
 ## 4. One question I have not settled: `user_view_states`
 
 `NFR-CONC-003` says the application must not write `updated_at`, full stop.
