@@ -135,7 +135,7 @@ pub async fn update(
     let res = sqlx::query(
         r#"
         UPDATE projects
-        SET name = ?3, description = ?4, updated_at = CURRENT_TIMESTAMP
+        SET name = ?3, description = ?4
         WHERE id = ?1 AND owner_id = ?2
         "#,
     )

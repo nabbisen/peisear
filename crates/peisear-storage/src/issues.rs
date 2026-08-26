@@ -449,13 +449,13 @@ pub async fn update(
 
     // CAL-001 §2.4: planned_start_at/planned_end_at join this
     // existing UPDATE's SET clause rather than getting a statement
-    // of their own. `issues` has no `updated_at` trigger (DEC-013's
-    // machinery covers sprints/teams/team_memberships/
-    // user_capacities, not this table) — updated_at only moves
-    // because this statement's own SET clause sets it. A separate
-    // UPDATE for the two date columns would leave updated_at
-    // unmoved, and a concurrent plan-date edit would silently win
-    // with no error and no symptom (NFR-CONC-004).
+    // of their own. `updated_at` is not written here — `issues_
+    // updated_at` (`0017`, `QA-019`/`NFR-CONC-003`) advances it for
+    // any UPDATE that doesn't touch the column itself, so combining
+    // every field into one statement is no longer load-bearing for
+    // the timestamp the way it once was; it stays combined because
+    // splitting it would still cost an extra event-diff read for no
+    // benefit.
     let res = sqlx::query(
         r#"
         UPDATE issues
@@ -463,8 +463,7 @@ pub async fn update(
             effort = ?7,
             assignee_id = ?8,
             planned_start_at = ?9,
-            planned_end_at = ?10,
-            updated_at = CURRENT_TIMESTAMP
+            planned_end_at = ?10
         WHERE id = ?1 AND project_id = ?2
         "#,
     )
@@ -563,20 +562,39 @@ pub async fn update_status(
         return Err(StorageError::NotFound);
     };
 
-    // `RETURNING` avoids a second round-trip to read back the
-    // `CURRENT_TIMESTAMP` this UPDATE just wrote — STATUS-002 needs
-    // that value handed back to the caller as the new lock.
-    let new_updated_at: DateTime<Utc> = sqlx::query_scalar(
+    sqlx::query(
         r#"
         UPDATE issues
-        SET status = ?3, updated_at = CURRENT_TIMESTAMP
+        SET status = ?3
         WHERE id = ?1 AND project_id = ?2
-        RETURNING updated_at
         "#,
     )
     .bind(id)
     .bind(project_id)
     .bind(status.as_str())
+    .execute(&mut *tx)
+    .await?;
+
+    // `updated_at` is not written above — `issues_updated_at`
+    // (`0017`, `QA-019`/`NFR-CONC-003`) advances it. `RETURNING`
+    // would have handed back the row as modified by this
+    // statement, which is *before* an `AFTER` trigger's own nested
+    // `UPDATE` runs (verified directly in `sqlite3`; not documented
+    // behaviour this codebase used to rely on), so it would return
+    // a value the row has already moved past. A same-transaction
+    // read after the trigger has fired sees the real value —
+    // STATUS-002 needs that value handed back to the caller as the
+    // new lock. The `prev_status` fetch above already establishes
+    // the row exists; this `NotFound` path is defensive, matching
+    // the shape `RETURNING` had.
+    let new_updated_at: DateTime<Utc> = sqlx::query_scalar(
+        r#"
+        SELECT updated_at FROM issues
+        WHERE id = ?1 AND project_id = ?2
+        "#,
+    )
+    .bind(id)
+    .bind(project_id)
     .fetch_optional(&mut *tx)
     .await?
     .ok_or(StorageError::NotFound)?;

@@ -49,9 +49,11 @@ pub async fn get(pool: &Pool, user_id: &str, view_key: &str) -> StorageResult<Op
     Ok(row.map(|(s,)| s))
 }
 
-/// Upsert the state JSON for `(user, view)`. Updates `updated_at`
-/// to the current timestamp so a future "show recently used
-/// view defaults" feature has the data it needs.
+/// Upsert the state JSON for `(user, view)`. `updated_at` is left to
+/// the column's own `DEFAULT` on insert and to `user_view_states_
+/// updated_at` (`0017`) on update — `NFR-CONC-003`: the application
+/// does not write this column, so a future "show recently used view
+/// defaults" feature reading it gets a value with one authority.
 ///
 /// `state_json` is opaque to this layer. The caller is
 /// responsible for serialising a sensible shape; see the per-view
@@ -64,11 +66,10 @@ pub async fn upsert(
 ) -> StorageResult<()> {
     sqlx::query(
         r#"
-        INSERT INTO user_view_states (user_id, view_key, state_json, updated_at)
-        VALUES (?1, ?2, ?3, CURRENT_TIMESTAMP)
+        INSERT INTO user_view_states (user_id, view_key, state_json)
+        VALUES (?1, ?2, ?3)
         ON CONFLICT (user_id, view_key) DO UPDATE
-        SET state_json = excluded.state_json,
-            updated_at = CURRENT_TIMESTAMP
+        SET state_json = excluded.state_json
         "#,
     )
     .bind(user_id)

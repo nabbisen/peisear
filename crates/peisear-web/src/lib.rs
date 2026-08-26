@@ -38,6 +38,8 @@ mod static_js_scan;
 mod test_harness_scan;
 #[cfg(test)]
 mod touch_target_scan;
+#[cfg(test)]
+mod updated_at_authority_scan;
 
 pub use app::build_router;
 pub use config::Config;
