@@ -744,6 +744,60 @@ the document currently says both.
 phase should be, since the twelve statuses corrected at 0.20.0 were all of this
 same kind.
 
+---
+
+#### The audit, and what it found (`QA-018`, `QA-019`)
+
+**The premise I handed the auditors was itself wrong.** I gave them 153
+requirement blocks. It is **162**: my header pattern was
+`[A-Z]{2,}[A-Z-]*-\d`, and `A11Y` contains digits, so it silently dropped the
+nine `NFR-A11Y-*` requirements — **the accessibility family, the one §4, §5 and
+§6 have spent five handoffs on.**
+
+They found it by noticing the arithmetic did not close and tracing it to the
+header match, not by re-deriving a target number. The corrected figures: 162
+blocks, 125 `Implemented`, 40 cited, 85 uncited. The 40 happened to match by
+coincidence — one block dropped out, another entered — and they reported that
+as a coincidence rather than as agreement.
+
+**Part A — of the 40 citations, 25 hold, 8 are partial, 7 do not hold.** In
+every case traced the underlying code is correct; the citation overstates what
+the test checks. `FR-HLT-005`'s cited test **cannot fail**: past its fixture the
+body is `if body.contains("Throughput") { let _ = body; }`, with a comment
+reading *"Either way the test passes."* It was the acceptance evidence for a
+**P1** requirement.
+
+**Part B — a 15-item sample of the 85 found 8 with no test at all**, 4 partial,
+2 holding. I had told them I expected the opposite and asked them not to soften
+a contrary result. They did not: *"§9.2 is badly incomplete, not merely 'the
+true count is small.'"*
+
+**And one live defect, outside the audit's own brief.** `NFR-CONC-003` read
+`Implemented` while application code wrote `updated_at` on `issues`, `projects`
+and `user_view_states`, none of which had a trigger — two authorities on the
+entities the optimistic lock most protects, and a `§10.6`-shaped silent bypass
+waiting on the next mutation path that forgot the clause. Fixed in `QA-019`
+(migration `0017`, plus a scan forbidding the phrase in `peisear-storage/src`).
+
+That fix nearly broke `STATUS-002`: `RETURNING` reflects the row as modified by
+its own statement, **not** by an `AFTER` trigger, so moving the authority would
+have handed clients a timestamp the row had already passed. The dev team hit it
+before writing the migration and stopped.
+
+#### What is not being done yet, and why
+
+**The 15 citations are not corrected and §9.2 is not expanded.** Making the
+document consistent would not establish why it became inconsistent, and the
+owner's direction was to diagnose first.
+
+The shape of the diagnosis, as a starting point rather than a conclusion: every
+one of the 15 was written once, when its requirement was annotated, and nothing
+has ever re-read a citation against the test it names. **This baseline has
+guards for its claims about the code and none for its claims about itself** —
+`§10.16`'s asymmetry, one level up. Whether that is guardable at all, given a
+citation is prose pointing at a test name, is the question worth answering
+before anything is edited.
+
 ### 9. The test harness itself — pulled forward to 0.22.0
 
 *Added 2026-08-11 from baseline `§10.13`, found while reviewing
