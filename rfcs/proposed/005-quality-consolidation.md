@@ -692,15 +692,57 @@ prior encounters were a suppression added and reverted (the workload chip,
 
 ### 8. Phase A-D follow-up sweep
 
-Final pass to confirm the original Phase A-D items still
-satisfy ABDD/security after later PRs landed. Grep for:
+*Reconciled against the code 2026-08-26. **All three greps come back empty.
+What they were a proxy for does not.***
 
-- `// TODO` and `// FIXME` in handlers and components.
-- `#[ignore]` in tests outside `tests/auth_boundary.rs`.
-- `unimplemented!()` and `todo!()` in shipped code.
+The original text: grep for `TODO`/`FIXME`, `#[ignore]` outside
+`auth_boundary.rs`, and `unimplemented!()`/`todo!()`, and resolve each.
 
-Each gets resolved: either fixed, ticketed for a future RFC,
-or annotated with cause.
+**Run today, across `crates/*/src/`:**
+
+| Marker | Found |
+|---|---|
+| `TODO` / `FIXME` | **0** |
+| `#[ignore]` | **0** — three prose mentions in comments, recording the 0.20.0 withdrawal |
+| `unimplemented!()` / `todo!()` | **0** |
+
+So §8 as written is satisfied, and the `prose_scan` allowlist has its own
+`every_allowlist_entry_still_matches_something` guard keeping its six entries
+honest. There is no marker debt.
+
+#### What §8 is actually for
+
+Its stated intent is *"confirm the original Phase A-D items still satisfy
+ABDD/security after later PRs landed"*. The greps were a proxy for unfinished
+work. The thing that actually degrades as later phases land on top of earlier
+ones is **a claim that was true when written and is not checked since**.
+
+This project has one confirmed instance, found by accident during `QA-014`: the
+baseline cited `board_keyboard` as verifying `NFR-A11Y-007`. It does not, and
+nothing in the suite asserts a touch-target dimension. The claim predated that
+edition and was carried forward by the architect without being checked.
+
+**Two measurements, taken 2026-08-26 over the 0.27.0 baseline:**
+
+| | Count |
+|---|---|
+| Requirement blocks | 153 |
+| `Implemented` **with** an `*Acceptance*` citation | **40** |
+| `Implemented` **without** one | **84** |
+
+Every distinct test function named across those 40 citations exists — checked.
+Existence is not the problem; **what the named test asserts** is, and that is
+not greppable.
+
+**And the 84 cannot be reconciled with §9.2**, which lists exactly **four**
+requirements as "implemented but unverified". Either roughly eighty have tests
+that were never cited, or §9.2 is badly incomplete. Both cannot be true, and
+the document currently says both.
+
+**§8 becomes**: verify the 40, and establish which explanation holds for the
+84. It is a sweep over this baseline's own claims — which is what a follow-up
+phase should be, since the twelve statuses corrected at 0.20.0 were all of this
+same kind.
 
 ### 9. The test harness itself — pulled forward to 0.22.0
 

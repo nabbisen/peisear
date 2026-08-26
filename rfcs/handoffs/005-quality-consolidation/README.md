@@ -38,6 +38,7 @@ second RFC lifecycle".
 | QA-015 | [QA-015](./QA-015-mistap-safety.md) | Three checkboxes below the **AA** floor, and the confirmation screen's irreversible Delete within a mis-tap of its own Cancel — pulled ahead of 0.30.0's touch-target pass (RFC 005 §6) | 0.28.0 | QA-014 |
 | QA-016 | [QA-016](./QA-016-aggregate-inferability.md) | The burndown and velocity charts, not the workload chip — §7's three named surfaces are all settled, one by a revert of what §7 proposes. **Audit only** (RFC 005 §7) | 0.28.0 | — |
 | QA-017 | [QA-017](./QA-017-drop-the-trajectory.md) | Keep the aggregate, drop the trajectory — burndown and median line suppressed below two distinct contributors, **with no copy explaining why** (RFC 005 §7) | 0.28.0 | QA-016 |
+| QA-018 | [QA-018](./QA-018-verify-the-claims.md) | §8's three greps are clean; the sweep it was a proxy for is not — 40 acceptance citations unverified, 84 `Implemented` requirements citing nothing, and §9.2 claiming four. **Audit only** (RFC 005 §8) | 0.28.0 | — |
 
 ## Why two items are out of phase
 
