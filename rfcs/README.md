@@ -39,6 +39,7 @@ Open for review. Design may still change.
 | ID | Title | Target |
 |----|-------|--------|
 | 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) — umbrella; substeps get their own RFCs | — |
+| 008 | [Explainability](./proposed/008-explainability.md) — the basis behind an indicator; closes `§10.4` and Definition of Done item 3. **Two parts collide with privacy requirements** | 0.29.0 |
 
 ## Implemented
 
