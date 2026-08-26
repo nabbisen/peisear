@@ -60,6 +60,17 @@ impl From<SnapshotRow> for Snapshot {
                 long_stale_in_flight_issues: r.long_stale_in_flight_issues,
                 wip_violators: r.wip_violators,
                 active_assignees: r.active_assignees,
+                // `HLT-001` (RFC 008 §1): a persisted snapshot is a
+                // point-in-time *count*, not a live query result —
+                // the `metrics_snapshots` table never stored which
+                // issues produced these numbers, and the issues
+                // themselves may since have changed status, been
+                // reassigned, or been deleted. Reconstructing
+                // membership here would assert something this
+                // snapshot never captured, so it's left empty;
+                // `ProjectHealthRaw::basis_for` is only meaningful
+                // on a report from a live `for_project` call.
+                ..Default::default()
             },
             score_value: r.score_value.clamp(0, 100) as u8,
             captured_at: r.captured_at,

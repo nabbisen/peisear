@@ -40,9 +40,16 @@ use crate::{Pool, StorageResult};
 
 /// Compute the raw health snapshot for a project.
 ///
-/// One round-trip with conditional `SUM`s plus a follow-up small
-/// query for the assignee-distribution numbers. SQLite's
-/// `julianday()` lets us subtract dates as fractional days.
+/// `HLT-001` (RFC 008 §1) rewrote this from pure-SQL aggregation
+/// (`SUM`/`MAX` producing counts alone) to a **fetch plus a fold**:
+/// the in-flight and recent-activity queries below select the
+/// *rows* an indicator's count is about, and the counts, the oldest
+/// issue, and the long-stale subset are all derived from those same
+/// fetched rows in Rust. This is what lets [`ProjectHealthRaw`]
+/// carry membership (which issues, not just how many) from the
+/// *same* evaluation as the count — a second query re-running the
+/// same `WHERE` would be two homes for one fact and could disagree
+/// with the count it's supposed to explain.
 ///
 /// ## Phase 2 (0.8.0): event-aware long-stale detection
 ///
@@ -56,80 +63,99 @@ use crate::{Pool, StorageResult};
 /// - For pre-0.8.0 issues with no event log, behaviour is
 ///   identical to 0.7.0 (the documented limitation).
 pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<ProjectHealthRaw> {
-    // Aggregate over the issues table.
-    //
-    // The long_stale_in_flight_issues subquery uses a correlated
-    // SELECT to find the most recent status_changed event for each
-    // in-flight issue. COALESCE picks the event timestamp if one
-    // exists; otherwise it falls back to updated_at (Phase 1
-    // behaviour for legacy issues).
-    let row: (i64, i64, Option<f64>, i64, i64, i64) = sqlx::query_as(
+    // In-flight issues, one row each: id, assignee, age since
+    // creation (staleness's clock), age since last meaningful
+    // touch (long-stale's event-aware clock). Folded below into
+    // every in-flight-derived count *and* its membership, from
+    // this one evaluation.
+    let in_flight_rows: Vec<(String, Option<String>, f64, f64)> = sqlx::query_as(
         r#"
         SELECT
-            COUNT(*) AS total_issues,
-            SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS done_issues,
-            MAX(CASE
-                WHEN status IN ('open', 'in_progress')
-                THEN julianday('now') - julianday(created_at)
-                ELSE NULL
-            END) AS oldest_in_flight_days,
-            SUM(CASE
-                WHEN created_at >= datetime('now', ?2)
-                  OR (status = 'done' AND updated_at >= datetime('now', ?2))
-                THEN 1 ELSE 0
-            END) AS recent_activity_count,
-            SUM(CASE
-                WHEN status IN ('open', 'in_progress') THEN 1 ELSE 0
-            END) AS in_flight_issues,
-            SUM(CASE
-                WHEN status IN ('open', 'in_progress')
-                  AND julianday('now') - julianday(
-                      COALESCE(
-                          (SELECT MAX(e.occurred_at)
-                           FROM issue_events e
-                           WHERE e.issue_id = issues.id
-                             AND e.event_type = 'status_changed'),
-                          updated_at
-                      )
-                  ) >= ?3
-                THEN 1 ELSE 0
-            END) AS long_stale_in_flight_issues
+            id,
+            assignee_id,
+            julianday('now') - julianday(created_at) AS age_days,
+            julianday('now') - julianday(
+                COALESCE(
+                    (SELECT MAX(e.occurred_at)
+                     FROM issue_events e
+                     WHERE e.issue_id = issues.id
+                       AND e.event_type = 'status_changed'),
+                    updated_at
+                )
+            ) AS staleness_days
         FROM issues
         WHERE project_id = ?1
+          AND status IN ('open', 'in_progress')
+        "#,
+    )
+    .bind(project_id)
+    .fetch_all(pool)
+    .await?;
+
+    let in_flight_issues = in_flight_rows.len() as i64;
+    let in_flight_issue_ids: Vec<String> =
+        in_flight_rows.iter().map(|(id, ..)| id.clone()).collect();
+
+    let mut oldest_in_flight_age_days: Option<i64> = None;
+    let mut oldest_in_flight_issue_id: Option<String> = None;
+    let mut long_stale_issue_ids: Vec<String> = Vec::new();
+    let mut per_assignee_counts: std::collections::HashMap<&str, i64> =
+        std::collections::HashMap::new();
+
+    for (id, assignee_id, age_days, staleness_days) in &in_flight_rows {
+        let age_floor = age_days.floor() as i64;
+        if oldest_in_flight_age_days.is_none_or(|max| age_floor > max) {
+            oldest_in_flight_age_days = Some(age_floor);
+            oldest_in_flight_issue_id = Some(id.clone());
+        }
+        if *staleness_days >= LONG_STALE_THRESHOLD_DAYS as f64 {
+            long_stale_issue_ids.push(id.clone());
+        }
+        if let Some(a) = assignee_id.as_deref() {
+            *per_assignee_counts.entry(a).or_insert(0) += 1;
+        }
+    }
+    let long_stale_in_flight_issues = long_stale_issue_ids.len() as i64;
+    let top_assignee_in_flight_issues = per_assignee_counts.values().copied().max().unwrap_or(0);
+
+    // Done issues: the membership behind `done_issues` and
+    // throughput's numerator. `total_issues` is derived below from
+    // this plus `in_flight_issues` rather than a third `COUNT(*)` —
+    // `IssueStatus` is exhaustively open/in_progress/done, so every
+    // issue is in exactly one of the two sets already fetched.
+    let done_issue_ids: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT id FROM issues
+        WHERE project_id = ?1 AND status = 'done'
+        "#,
+    )
+    .bind(project_id)
+    .fetch_all(pool)
+    .await?;
+    let done_issues = done_issue_ids.len() as i64;
+    let total_issues = in_flight_issues + done_issues;
+
+    // Recent activity: created in the window, or moved to done
+    // within it. Not a subset of either set above (a done issue
+    // updated recently is in `done_issue_ids` but may or may not be
+    // "recent"; a freshly-created in-flight issue is in
+    // `in_flight_issue_ids` but only "recent" if young enough) —
+    // its own fetch, matching the original `OR` condition exactly.
+    let recent_activity_issue_ids: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT id FROM issues
+        WHERE project_id = ?1
+          AND (
+              created_at >= datetime('now', ?2)
+              OR (status = 'done' AND updated_at >= datetime('now', ?2))
+          )
         "#,
     )
     .bind(project_id)
     .bind(format!("-{} days", ACTIVITY_WINDOW_DAYS))
-    .bind(LONG_STALE_THRESHOLD_DAYS)
-    .fetch_one(pool)
+    .fetch_all(pool)
     .await?;
-
-    let (
-        total_issues,
-        done_issues,
-        oldest_days,
-        recent_activity_count,
-        in_flight_issues,
-        long_stale_in_flight_issues,
-    ) = row;
-
-    // Top-assignee concentration: how many in-flight issues sit on
-    // the single most-loaded user.
-    let top_assignee_in_flight_issues: i64 = sqlx::query_scalar(
-        r#"
-        SELECT COALESCE(MAX(per_user_count), 0) FROM (
-            SELECT COUNT(*) AS per_user_count
-            FROM issues
-            WHERE project_id = ?1
-              AND status IN ('open', 'in_progress')
-              AND assignee_id IS NOT NULL
-            GROUP BY assignee_id
-        )
-        "#,
-    )
-    .bind(project_id)
-    .fetch_one(pool)
-    .await?;
+    let recent_activity_count = recent_activity_issue_ids.len() as i64;
 
     let active_assignees: i64 = sqlx::query_scalar(
         r#"
@@ -179,12 +205,17 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
     Ok(ProjectHealthRaw {
         total_issues,
         done_issues,
-        oldest_in_flight_age_days: oldest_days.map(|d| d.floor() as i64),
+        oldest_in_flight_age_days,
         recent_activity_count,
         in_flight_issues,
         top_assignee_in_flight_issues,
         long_stale_in_flight_issues,
         wip_violators,
         active_assignees,
+        done_issue_ids,
+        oldest_in_flight_issue_id,
+        in_flight_issue_ids,
+        recent_activity_issue_ids,
+        long_stale_issue_ids,
     })
 }

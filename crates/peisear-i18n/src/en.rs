@@ -1041,6 +1041,73 @@ pub(crate) fn render(key: MessageKey) -> String {
             indicator_description(label)
         ),
 
+        // ---- HLT-001 (RFC 008 §1, §4) ----
+        MessageKey::IndicatorBasisLinkText => "What this is based on".to_string(),
+        MessageKey::IndicatorBasisLinkAriaLabel { label } => {
+            format!("What {} is based on", indicator_label(label))
+        }
+        MessageKey::IndicatorBasisPageTitle { label } => {
+            format!("{} — what this is based on", indicator_label(label))
+        }
+        MessageKey::IndicatorBasisAriaLabel { label } => {
+            format!("Issues behind {}", indicator_label(label))
+        }
+        MessageKey::IndicatorBasisEmptyMessage => {
+            "No issues currently match this indicator's basis.".to_string()
+        }
+        MessageKey::IndicatorCalculationSummaryLabel => "How this is calculated".to_string(),
+        // `NFR-LANG-002`: the Watch ceiling applies to this text too
+        // — none of these six sentences may name a severity beyond
+        // Watch. Each states its lower (numeric) boundary rather
+        // than naming a third tier, continuing the description past
+        // `watch_pct`/`watch_days` without a label for what's past
+        // it — the same clamp `DisplayHealthState` enforces on the
+        // badge applies here to prose.
+        MessageKey::IndicatorCalculationThroughput {
+            good_pct,
+            watch_pct,
+        } => format!(
+            "Good at {good_pct}% or more done. Watch below {good_pct}%, continuing below \
+             {watch_pct}%."
+        ),
+        MessageKey::IndicatorCalculationStaleness {
+            watch_days,
+            concern_days,
+        } => format!(
+            "Good under {watch_days} days. Watch from {watch_days} days, continuing from \
+             {concern_days} days. Measured from the oldest issue still Open or In Progress."
+        ),
+        MessageKey::IndicatorCalculationActivity {
+            good_count,
+            watch_count,
+            window_days,
+        } => format!(
+            "Good at {good_count} or more issues created or finished in the last {window_days} \
+             days. Watch below {good_count}, continuing below {watch_count}."
+        ),
+        MessageKey::IndicatorCalculationBusFactor {
+            watch_pct,
+            concern_pct,
+        } => format!(
+            "Good under {watch_pct}% of in-flight work on one assignee. Watch from {watch_pct}%, \
+             continuing from {concern_pct}%. A single active assignee is always Watch."
+        ),
+        MessageKey::IndicatorCalculationLongStale {
+            watch_pct,
+            concern_pct,
+            window_days,
+        } => format!(
+            "Good under {watch_pct}% of in-flight issues untouched for {window_days} days or \
+             more. Watch from {watch_pct}%, continuing from {concern_pct}%."
+        ),
+        MessageKey::IndicatorCalculationWipCompliance {
+            watch_pct,
+            concern_pct,
+        } => format!(
+            "Good with no active assignee over their WIP limit. Watch from {watch_pct}% of \
+             active assignees over limit, continuing from {concern_pct}%."
+        ),
+
         // ---- I18N-006: peisear-storage/src/user_capacities.rs ----
         MessageKey::PeriodStartMustPrecedeEndMessage => {
             "The From date must be on or before the To date.".to_string()

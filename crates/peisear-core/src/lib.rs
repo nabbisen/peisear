@@ -513,6 +513,47 @@ pub mod project_health {
     /// inverse of.
     pub const LONG_STALE_THRESHOLD_DAYS: i64 = ACTIVITY_WINDOW_DAYS;
 
+    // ------------------------------------------------------------
+    // `HLT-001` (RFC 008 §4): named classification thresholds.
+    // The calculation disclosure reads these directly rather than
+    // stating the numbers again — a threshold written twice is two
+    // homes for one fact, the shape this project has already
+    // closed six times (most recently `QA-020`). Every literal
+    // below was previously inline in its `classify_*` function;
+    // extracting it changes no behaviour, only where the number
+    // lives.
+    // ------------------------------------------------------------
+
+    /// Throughput: `done / total` percentage boundaries.
+    pub const THROUGHPUT_GOOD_PCT: i64 = 60;
+    pub const THROUGHPUT_WATCH_PCT: i64 = 30;
+
+    /// Staleness: age (days) of the oldest in-flight issue.
+    pub const STALENESS_WATCH_DAYS: i64 = 14;
+    pub const STALENESS_CONCERN_DAYS: i64 = 28;
+
+    /// Activity: recent-activity issue count boundaries.
+    pub const ACTIVITY_GOOD_COUNT: i64 = 5;
+    pub const ACTIVITY_WATCH_COUNT: i64 = 1;
+
+    /// Bus factor: percentage of in-flight work on the single most-
+    /// loaded assignee. `BUS_FACTOR_SOLO_ASSIGNEES` is the
+    /// assignee-count at or below which the indicator reports the
+    /// solo case (`Watch`) rather than a percentage.
+    pub const BUS_FACTOR_SOLO_ASSIGNEES: i64 = 1;
+    pub const BUS_FACTOR_WATCH_PCT: i64 = 60;
+    pub const BUS_FACTOR_CONCERN_PCT: i64 = 80;
+
+    /// Long-stale: percentage of in-flight issues untouched for at
+    /// least [`LONG_STALE_THRESHOLD_DAYS`].
+    pub const LONG_STALE_WATCH_PCT: i64 = 20;
+    pub const LONG_STALE_CONCERN_PCT: i64 = 40;
+
+    /// WIP compliance: percentage of active assignees over their
+    /// effective WIP limit.
+    pub const WIP_COMPLIANCE_WATCH_PCT: i64 = 1;
+    pub const WIP_COMPLIANCE_CONCERN_PCT: i64 = 50;
+
     /// Raw numeric inputs collected by storage, before classification
     /// or scoring. Six fields, one per indicator; the first three
     /// are the original 0.6.0 set, the last three are added in 0.7.0
@@ -549,6 +590,85 @@ pub mod project_health {
         /// Number of users with at least one in-flight issue
         /// assigned. Denominator for the WIP-compliance ratio.
         pub active_assignees: i64,
+
+        // --------------------------------------------------------
+        // `HLT-001` (RFC 008 §1): basis membership. Each field
+        // below names the issues behind a count above, fetched by
+        // the *same* storage evaluation that produces the count —
+        // never a second query re-running the same `WHERE` (RFC 008
+        // §1 / `HLT-001` §2.1: "one authority for the membership of
+        // a set", the `QA-019` `updated_at` lesson applied here).
+        //
+        // Not every count gets one. `total_issues` needs none (its
+        // basis is "no filter", already the default project view).
+        // `wip_violators`/`active_assignees` get none structurally —
+        // WIP compliance's basis is *users*, not issues (RFC 008
+        // §2, `NFR-PRIV-002`) — its computation never touches an
+        // issue id, so there is nothing here to carve out.
+        //
+        // Always empty on a [`Snapshot`](../../peisear_storage/metrics_snapshots/struct.Snapshot.html)
+        // reconstructed from `metrics_snapshots` — a historical
+        // snapshot is a point-in-time count, and the issues behind
+        // it may since have changed status, been reassigned, or
+        // been deleted, so reconstructing "membership" for one
+        // would assert something the snapshot never captured. Only
+        // a live [`for_project`](../../peisear_storage/project_health/fn.for_project.html)
+        // call populates these.
+        /// Ids of issues in `done` — [`Self::done_issues`]'s basis,
+        /// and the numerator half of throughput's "two sets" (the
+        /// denominator, every issue regardless of status, is the
+        /// unfiltered project view and has no membership of its
+        /// own).
+        pub done_issue_ids: Vec<String>,
+        /// The single in-flight issue whose age is
+        /// [`Self::oldest_in_flight_age_days`] — staleness's basis
+        /// is one issue, not a list, since the indicator is a `MAX`
+        /// over the in-flight set. `None` exactly when
+        /// `oldest_in_flight_age_days` is `None`.
+        pub oldest_in_flight_issue_id: Option<String>,
+        /// Every in-flight issue — bus factor's basis. Bus factor's
+        /// number is a concentration *percentage*
+        /// (`top_assignee_in_flight_issues` / `in_flight_issues`),
+        /// not a single person's list; the full in-flight set, with
+        /// each issue's assignee visible, is what actually lets a
+        /// reader see the distribution the percentage summarises.
+        /// (Considered and rejected: linking only "the most-loaded
+        /// assignee's issues" — that shows the numerator without
+        /// the denominator, and would need a new query identifying
+        /// *who* the top assignee is, which today's query
+        /// deliberately never selects.) Also
+        /// [`Self::in_flight_issues`]'s own basis.
+        pub in_flight_issue_ids: Vec<String>,
+        /// Ids of issues counted in [`Self::recent_activity_count`]
+        /// — created in the activity window, or moved to `done`
+        /// within it.
+        pub recent_activity_issue_ids: Vec<String>,
+        /// Ids of in-flight issues counted in
+        /// [`Self::long_stale_in_flight_issues`].
+        pub long_stale_issue_ids: Vec<String>,
+    }
+
+    impl ProjectHealthRaw {
+        /// The basis set for `kind`'s indicator, or `None` when that
+        /// indicator has no issue-shaped basis at all —
+        /// `IndicatorKind::WipCompliance`, structurally (RFC 008
+        /// §2.3): its computation never selects an issue id, so
+        /// there is no set to return, not merely an empty one. A
+        /// caller building a basis link renders one only when this
+        /// returns `Some` with a non-empty slice.
+        pub fn basis_for(&self, kind: IndicatorKind) -> Option<&[String]> {
+            match kind {
+                IndicatorKind::Throughput => Some(&self.done_issue_ids),
+                IndicatorKind::Staleness => self
+                    .oldest_in_flight_issue_id
+                    .as_ref()
+                    .map(std::slice::from_ref),
+                IndicatorKind::BusFactor => Some(&self.in_flight_issue_ids),
+                IndicatorKind::Activity => Some(&self.recent_activity_issue_ids),
+                IndicatorKind::LongStale => Some(&self.long_stale_issue_ids),
+                IndicatorKind::WipCompliance => None,
+            }
+        }
     }
 
     /// Backwards-compatible alias kept for the existing 0.6.0
@@ -571,9 +691,9 @@ pub mod project_health {
             return HealthIndicator::Insufficient;
         }
         let pct = (h.done_issues * 100) / h.total_issues;
-        if pct >= 60 {
+        if pct >= THROUGHPUT_GOOD_PCT {
             HealthIndicator::Good
-        } else if pct >= 30 {
+        } else if pct >= THROUGHPUT_WATCH_PCT {
             HealthIndicator::Watch
         } else {
             HealthIndicator::Concern
@@ -585,8 +705,8 @@ pub mod project_health {
     pub fn classify_staleness(h: &ProjectHealthRaw) -> HealthIndicator {
         match h.oldest_in_flight_age_days {
             None => HealthIndicator::Good,
-            Some(d) if d >= 28 => HealthIndicator::Concern,
-            Some(d) if d >= 14 => HealthIndicator::Watch,
+            Some(d) if d >= STALENESS_CONCERN_DAYS => HealthIndicator::Concern,
+            Some(d) if d >= STALENESS_WATCH_DAYS => HealthIndicator::Watch,
             Some(_) => HealthIndicator::Good,
         }
     }
@@ -597,9 +717,9 @@ pub mod project_health {
         if h.total_issues == 0 {
             return HealthIndicator::Insufficient;
         }
-        if h.recent_activity_count >= 5 {
+        if h.recent_activity_count >= ACTIVITY_GOOD_COUNT {
             HealthIndicator::Good
-        } else if h.recent_activity_count >= 1 {
+        } else if h.recent_activity_count >= ACTIVITY_WATCH_COUNT {
             HealthIndicator::Watch
         } else {
             HealthIndicator::Concern
@@ -624,13 +744,13 @@ pub mod project_health {
         if h.in_flight_issues == 0 {
             return HealthIndicator::Insufficient;
         }
-        if h.active_assignees <= 1 {
+        if h.active_assignees <= BUS_FACTOR_SOLO_ASSIGNEES {
             return HealthIndicator::Watch;
         }
         let pct = (h.top_assignee_in_flight_issues * 100) / h.in_flight_issues;
-        if pct >= 80 {
+        if pct >= BUS_FACTOR_CONCERN_PCT {
             HealthIndicator::Concern
-        } else if pct >= 60 {
+        } else if pct >= BUS_FACTOR_WATCH_PCT {
             HealthIndicator::Watch
         } else {
             HealthIndicator::Good
@@ -645,9 +765,9 @@ pub mod project_health {
             return HealthIndicator::Insufficient;
         }
         let pct = (h.long_stale_in_flight_issues * 100) / h.in_flight_issues;
-        if pct >= 40 {
+        if pct >= LONG_STALE_CONCERN_PCT {
             HealthIndicator::Concern
-        } else if pct >= 20 {
+        } else if pct >= LONG_STALE_WATCH_PCT {
             HealthIndicator::Watch
         } else {
             HealthIndicator::Good
@@ -661,9 +781,9 @@ pub mod project_health {
             return HealthIndicator::Insufficient;
         }
         let pct = (h.wip_violators * 100) / h.active_assignees;
-        if pct >= 50 {
+        if pct >= WIP_COMPLIANCE_CONCERN_PCT {
             HealthIndicator::Concern
-        } else if pct >= 1 {
+        } else if pct >= WIP_COMPLIANCE_WATCH_PCT {
             HealthIndicator::Watch
         } else {
             HealthIndicator::Good
@@ -716,6 +836,36 @@ pub mod project_health {
                 Self::BusFactor => IndicatorLabel::BusFactor,
                 Self::LongStale => IndicatorLabel::LongStale,
                 Self::WipCompliance => IndicatorLabel::WipCompliance,
+            }
+        }
+
+        /// `HLT-001` (RFC 008 §1): the URL segment identifying this
+        /// indicator on the basis route
+        /// (`/projects/{id}/health/{slug}/basis`). Stable, ASCII,
+        /// lowercase-hyphenated — independent of
+        /// [`Self::to_i18n_label`]'s display text so a copy change
+        /// never moves a URL.
+        pub fn slug(self) -> &'static str {
+            match self {
+                Self::Throughput => "throughput",
+                Self::Staleness => "staleness",
+                Self::Activity => "activity",
+                Self::BusFactor => "bus-factor",
+                Self::LongStale => "long-stale",
+                Self::WipCompliance => "wip-compliance",
+            }
+        }
+
+        /// Inverse of [`Self::slug`].
+        pub fn from_slug(s: &str) -> Option<Self> {
+            match s {
+                "throughput" => Some(Self::Throughput),
+                "staleness" => Some(Self::Staleness),
+                "activity" => Some(Self::Activity),
+                "bus-factor" => Some(Self::BusFactor),
+                "long-stale" => Some(Self::LongStale),
+                "wip-compliance" => Some(Self::WipCompliance),
+                _ => None,
             }
         }
     }

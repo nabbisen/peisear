@@ -48,6 +48,7 @@ pub fn ProjectDetailPage(
     let project_id = project.id.clone();
     let project_id_for_board = project.id.clone();
     let project_id_for_list = project.id.clone();
+    let project_id_for_health = project.id.clone();
 
     let board_classes = if is_board {
         "join-item btn btn-sm btn-active btn-primary"
@@ -101,7 +102,7 @@ pub fn ProjectDetailPage(
                 </div>
             </div>
 
-            <HealthStrip health=health/>
+            <HealthStrip health=health project_id=project_id_for_health/>
 
             <WorkloadStrip workload=workload/>
 
@@ -180,7 +181,7 @@ pub fn ProjectDetailPage(
 /// Empty projects (no issues yet) skip the section entirely
 /// rather than show "Insufficient" chips that explain nothing.
 #[component]
-fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
+fn HealthStrip(health: ProjectHealthReport, project_id: String) -> impl IntoView {
     if health.raw.total_issues == 0 {
         return view! {
             <section class="mb-3">
@@ -206,12 +207,27 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
     // for the chip row below. `human_explanation` takes `raw`
     // (I18N-002) so its typed parameters come from the same raw
     // numbers `format_value` uses, not a pre-formatted string.
-    let explanations: Vec<String> = health
+    //
+    // `HLT-001` (RFC 008 §1): each explanation row also carries a
+    // basis link when `raw.basis_for(kind)` names a non-empty set —
+    // "the link belongs to the claim", so it only appears where
+    // there's a claim (a Watch/Concern explanation) to substantiate.
+    // `WipCompliance` returns `None` from `basis_for` structurally
+    // (RFC 008 §2.3) and so never reaches this branch with a link —
+    // this is `HLT-001` §3's guarded invariant.
+    let explanation_pairs: Vec<(peisear_core::project_health::IndicatorKind, String)> = health
         .indicators
         .iter()
-        .filter_map(|i| i.human_explanation(&health.raw))
-        .map(|key| Locale::English.render(key))
+        .filter_map(|i| {
+            i.human_explanation(&health.raw)
+                .map(|key| (i.kind, Locale::English.render(key)))
+        })
         .collect();
+    let has_explanations = !explanation_pairs.is_empty();
+    let explanation_rows = explanation_pairs
+        .into_iter()
+        .map(|(kind, text)| render_explanation_row(kind, text, &health.raw, &project_id))
+        .collect_view();
 
     let composite_chip = composite_row(&health.score);
     let indicator_rows = health
@@ -247,11 +263,9 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
                 // user reads the story first, then can
                 // double-check against the numbers if they
                 // want.
-                {(!explanations.is_empty()).then(|| view! {
+                {has_explanations.then(|| view! {
                     <ul class="mt-2 ml-4 list-disc text-base-content/80 leading-relaxed space-y-1">
-                        {explanations.into_iter().map(|line| view! {
-                            <li>{line}</li>
-                        }).collect_view()}
+                        {explanation_rows}
                     </ul>
                 })}
                 // The composite sits first but at the same visual
@@ -265,6 +279,41 @@ fn HealthStrip(health: ProjectHealthReport) -> impl IntoView {
         </section>
     }
     .into_any()
+}
+
+/// One explanation `<li>`, with a basis link when `raw.basis_for`
+/// names a non-empty set (`HLT-001` §2, RFC 008 §1). The link goes
+/// on the explanation row, not the chip — the sentence is the
+/// claim, the link belongs to the claim.
+///
+/// `WipCompliance` reaches this function like every other indicator
+/// (it has an explanation sentence) but `raw.basis_for` returns
+/// `None` for it structurally, so the `.then()` below never
+/// executes for it — no special-casing here, the guard lives in
+/// `ProjectHealthRaw::basis_for` itself (`HLT-001` §2.3).
+fn render_explanation_row(
+    kind: peisear_core::project_health::IndicatorKind,
+    text: String,
+    raw: &peisear_core::project_health::ProjectHealthRaw,
+    project_id: &str,
+) -> impl IntoView {
+    let has_basis = raw.basis_for(kind).is_some_and(|ids| !ids.is_empty());
+    let basis_href = format!("/projects/{project_id}/health/{}/basis", kind.slug());
+    let basis_aria = t(MessageKey::IndicatorBasisLinkAriaLabel {
+        label: kind.to_i18n_label(),
+    });
+    let basis_text = t(MessageKey::IndicatorBasisLinkText);
+    view! {
+        <li>
+            {text}
+            {has_basis.then(|| view! {
+                " "
+                <a href=basis_href class="link link-hover" aria-label=basis_aria>
+                    {basis_text}
+                </a>
+            })}
+        </li>
+    }
 }
 
 /// Render the trend indicator next to the score. `Unavailable`
@@ -349,9 +398,48 @@ fn composite_row(score: &HealthScore) -> impl IntoView {
     }
 }
 
+/// `HLT-001` §4 (RFC 008 §4): each indicator's classification
+/// thresholds, read from `peisear-core`'s named `classify_*`
+/// constants rather than retyped — the same constants
+/// `classify_throughput`/`classify_staleness`/etc. compare against,
+/// so a threshold changed in one place is never stale in the other.
+fn calculation_text(kind: peisear_core::project_health::IndicatorKind) -> MessageKey {
+    use peisear_core::project_health as ph;
+    use peisear_core::project_health::IndicatorKind;
+    match kind {
+        IndicatorKind::Throughput => MessageKey::IndicatorCalculationThroughput {
+            good_pct: ph::THROUGHPUT_GOOD_PCT,
+            watch_pct: ph::THROUGHPUT_WATCH_PCT,
+        },
+        IndicatorKind::Staleness => MessageKey::IndicatorCalculationStaleness {
+            watch_days: ph::STALENESS_WATCH_DAYS,
+            concern_days: ph::STALENESS_CONCERN_DAYS,
+        },
+        IndicatorKind::Activity => MessageKey::IndicatorCalculationActivity {
+            good_count: ph::ACTIVITY_GOOD_COUNT,
+            watch_count: ph::ACTIVITY_WATCH_COUNT,
+            window_days: ph::ACTIVITY_WINDOW_DAYS,
+        },
+        IndicatorKind::BusFactor => MessageKey::IndicatorCalculationBusFactor {
+            watch_pct: ph::BUS_FACTOR_WATCH_PCT,
+            concern_pct: ph::BUS_FACTOR_CONCERN_PCT,
+        },
+        IndicatorKind::LongStale => MessageKey::IndicatorCalculationLongStale {
+            watch_pct: ph::LONG_STALE_WATCH_PCT,
+            concern_pct: ph::LONG_STALE_CONCERN_PCT,
+            window_days: ph::LONG_STALE_THRESHOLD_DAYS,
+        },
+        IndicatorKind::WipCompliance => MessageKey::IndicatorCalculationWipCompliance {
+            watch_pct: ph::WIP_COMPLIANCE_WATCH_PCT,
+            concern_pct: ph::WIP_COMPLIANCE_CONCERN_PCT,
+        },
+    }
+}
+
 /// Render one indicator chip (label + value + state badge with
-/// glyph). The glyph + aria-label combination satisfies the
-/// "color-only" anti-pattern check.
+/// glyph), plus a collapsed calculation disclosure (`HLT-001` §4).
+/// The glyph + aria-label combination satisfies the "color-only"
+/// anti-pattern check.
 fn indicator_row(ind: Indicator) -> impl IntoView {
     let state = DisplayHealthState::from(ind.state);
     let badge_class = format!("badge badge-sm {}", state.badge_class());
@@ -368,6 +456,11 @@ fn indicator_row(ind: Indicator) -> impl IntoView {
         value: Box::new(ind.value_display),
         state: state.to_i18n_label(),
     });
+    // `HLT-001` §4: thresholds only, not current inputs — the
+    // inputs are already on the page as the explanation sentence's
+    // own numbers (RFC 008's acceptance note).
+    let calculation_summary = t(MessageKey::IndicatorCalculationSummaryLabel);
+    let calculation_text_rendered = t(calculation_text(ind.kind));
     view! {
         <div class="flex items-center gap-2 px-2 py-1 rounded border border-base-300 bg-base-100"
              role="group"
@@ -378,6 +471,12 @@ fn indicator_row(ind: Indicator) -> impl IntoView {
                 <span class="mr-1" aria-hidden="true">{glyph}</span>
                 {value_text}
             </span>
+            <details class="text-xs">
+                <summary class="cursor-pointer text-base-content/70 hover:text-base-content">
+                    {calculation_summary}
+                </summary>
+                <p class="mt-1 text-base-content/70 max-w-xs">{calculation_text_rendered}</p>
+            </details>
         </div>
     }
 }
@@ -1766,6 +1865,91 @@ pub fn render_project_detail(
             />
         }
     })
+}
+
+/// `HLT-001` (RFC 008 §1, §2.4): the basis route's page. Renders
+/// exactly the issue set a caller (`handlers::issues::health_
+/// indicator_basis`) already resolved and access-checked — no
+/// further filtering or authorization happens here.
+pub fn render_health_indicator_basis(
+    user: CurrentUser,
+    project: Project,
+    kind: peisear_core::project_health::IndicatorKind,
+    issues: Vec<Issue>,
+) -> Html<String> {
+    super::render_to_html(move || {
+        view! {
+            <HealthIndicatorBasisPage user=user project=project kind=kind issues=issues/>
+        }
+    })
+}
+
+#[component]
+fn HealthIndicatorBasisPage(
+    user: CurrentUser,
+    project: Project,
+    kind: peisear_core::project_health::IndicatorKind,
+    issues: Vec<Issue>,
+) -> impl IntoView {
+    let title = t(MessageKey::IndicatorBasisPageTitle {
+        label: kind.to_i18n_label(),
+    });
+    let back_link = format!("/projects/{}", project.id);
+    let table_aria = t(MessageKey::IndicatorBasisAriaLabel {
+        label: kind.to_i18n_label(),
+    });
+    let has = !issues.is_empty();
+    let rows = issues
+        .into_iter()
+        .map(|issue| {
+            let href = format!("/projects/{}/issues/{}", project.id, issue.id);
+            let status_label = t(MessageKey::IssueStatusName {
+                label: issue.status.to_i18n_label(),
+            });
+            let status_class = match issue.status {
+                IssueStatus::Done => "badge badge-xs badge-outline",
+                IssueStatus::InProgress => "badge badge-xs badge-primary",
+                IssueStatus::Open => "badge badge-xs badge-ghost",
+            };
+            view! {
+                <tr>
+                    <td><a href=href class="link link-hover">{issue.title}</a></td>
+                    <td><span class=status_class>{status_label}</span></td>
+                </tr>
+            }
+        })
+        .collect_view();
+
+    view! {
+        <AppShell title=title.clone() user=user flash=None>
+            <div class="max-w-2xl mx-auto">
+                <div class="breadcrumbs text-sm mb-2"><ul>
+                    <li><a href="/projects">{t(MessageKey::ProjectsSectionName)}</a></li>
+                    <li><a href=back_link>{project.name}</a></li>
+                    <li>{title.clone()}</li>
+                </ul></div>
+
+                <h1 class="text-xl font-semibold mb-4">{title}</h1>
+
+                {(!has).then(|| view! {
+                    <p class="text-sm text-base-content/70 italic">
+                        {t(MessageKey::IndicatorBasisEmptyMessage)}
+                    </p>
+                })}
+                {has.then(|| view! {
+                    <div class="overflow-x-auto">
+                        <table class="table table-sm" aria-label=table_aria>
+                            <thead><tr>
+                                <th>{t(MessageKey::FieldLabel { field: Field::Title })}</th>
+                                <th>{t(MessageKey::FieldLabel { field: Field::Status })}</th>
+                            </tr></thead>
+                            <tbody>{rows}</tbody>
+                        </table>
+                    </div>
+                })}
+            </div>
+        </AppShell>
+    }
 }
 
 pub fn render_issue_new(

@@ -289,6 +289,51 @@ pub async fn project_detail(
     ))
 }
 
+/// `HLT-001` (RFC 008 §1): the basis route. Renders exactly the
+/// issue set behind one indicator's count — not a filter that
+/// reconstructs it, the same set `project_health::for_project`
+/// already computed. Recomputes the health raw fresh on every visit
+/// (`§2.1`: "one authority for the membership of a set") rather than
+/// carrying ids through the URL, so the route always reflects the
+/// live set even if it has moved since the explanation row that
+/// linked here was rendered.
+///
+/// `§2.4`: no separate access check beyond `find_accessible` — this
+/// is a different view of the project's own issues, and every issue
+/// in a project is visible to anyone who can access the project (no
+/// per-issue ACL exists in this codebase beyond project membership).
+///
+/// An unknown slug, or an indicator with no issue-shaped basis
+/// (`WipCompliance`, structurally — `§2.3`), both 404: neither has
+/// anything to render, and a route that rendered an empty page for
+/// `WipCompliance` specifically would itself be a tell.
+pub async fn health_indicator_basis(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((project_id, indicator_slug)): Path<(String, String)>,
+) -> AppResult<impl IntoResponse> {
+    let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    let kind = peisear_core::project_health::IndicatorKind::from_slug(&indicator_slug)
+        .ok_or(AppError::NotFound)?;
+    let raw = project_health::for_project(&state.db, &project_id).await?;
+    let basis_ids = raw.basis_for(kind).ok_or(AppError::NotFound)?.to_vec();
+
+    let id_set: std::collections::HashSet<&str> = basis_ids.iter().map(String::as_str).collect();
+    let basis_issues: Vec<peisear_core::Issue> =
+        issues::list_all_in_project(&state.db, &project_id)
+            .await?
+            .into_iter()
+            .filter(|i| id_set.contains(i.id.as_str()))
+            .collect();
+
+    Ok(components::issues::render_health_indicator_basis(
+        user,
+        project,
+        kind,
+        basis_issues,
+    ))
+}
+
 pub async fn new_page(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,

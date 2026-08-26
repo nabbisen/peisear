@@ -1822,6 +1822,83 @@ pub enum MessageKey {
         state: HealthStateLabel,
     },
 
+    // ---- HLT-001 (RFC 008 §1, §4): the basis route and the
+    // ---- calculation disclosure. ----
+    /// Visible text of the basis link on an indicator's explanation
+    /// row. Plain and identical across all five linked indicators —
+    /// the *accessible name* is what must distinguish them
+    /// ([`MessageKey::IndicatorBasisLinkAriaLabel`]), matching the
+    /// precedent `board_keyboard`'s `each_status_control_has_a_
+    /// distinguishing_accessible_name` set for a control repeated
+    /// per row.
+    IndicatorBasisLinkText,
+    /// Accessible name for the basis link — the indicator's own
+    /// name, so six identical-looking links each announce which
+    /// one they are.
+    IndicatorBasisLinkAriaLabel {
+        label: IndicatorLabel,
+    },
+    /// `<title>`/`<h1>` of the basis route's page.
+    IndicatorBasisPageTitle {
+        label: IndicatorLabel,
+    },
+    /// `aria-label` for the basis route's issue table.
+    IndicatorBasisAriaLabel {
+        label: IndicatorLabel,
+    },
+    /// Shown on the basis route if the set is empty at the moment
+    /// it's visited — the indicator's state can move between the
+    /// explanation row rendering the link and the link being
+    /// followed (an issue closed, reassigned, or deleted in
+    /// between); a live route reflects the live set rather than
+    /// the state at link-render time, so "nothing here right now"
+    /// is a legitimate, honest answer, not a bug.
+    IndicatorBasisEmptyMessage,
+    /// Summary text of the calculation disclosure — generic across
+    /// all six indicators, same reasoning as
+    /// [`MessageKey::IndicatorBasisLinkText`].
+    IndicatorCalculationSummaryLabel,
+    /// Throughput's thresholds, read from `peisear-core`'s
+    /// `THROUGHPUT_GOOD_PCT`/`THROUGHPUT_WATCH_PCT` — not retyped.
+    IndicatorCalculationThroughput {
+        good_pct: i64,
+        watch_pct: i64,
+    },
+    /// Staleness's thresholds, from `STALENESS_WATCH_DAYS`/
+    /// `STALENESS_CONCERN_DAYS`.
+    IndicatorCalculationStaleness {
+        watch_days: i64,
+        concern_days: i64,
+    },
+    /// Activity's thresholds, from `ACTIVITY_GOOD_COUNT`/
+    /// `ACTIVITY_WATCH_COUNT`/`ACTIVITY_WINDOW_DAYS`.
+    IndicatorCalculationActivity {
+        good_count: i64,
+        watch_count: i64,
+        window_days: i64,
+    },
+    /// Bus factor's thresholds, from `BUS_FACTOR_WATCH_PCT`/
+    /// `BUS_FACTOR_CONCERN_PCT`/`BUS_FACTOR_SOLO_ASSIGNEES`.
+    IndicatorCalculationBusFactor {
+        watch_pct: i64,
+        concern_pct: i64,
+    },
+    /// Long-stale's thresholds, from `LONG_STALE_WATCH_PCT`/
+    /// `LONG_STALE_CONCERN_PCT`/`LONG_STALE_THRESHOLD_DAYS`.
+    IndicatorCalculationLongStale {
+        watch_pct: i64,
+        concern_pct: i64,
+        window_days: i64,
+    },
+    /// WIP compliance's thresholds, from `WIP_COMPLIANCE_WATCH_PCT`/
+    /// `WIP_COMPLIANCE_CONCERN_PCT`. States the threshold and the
+    /// current *count* the way the explanation sentence already
+    /// does — never a member's identity (RFC 008 §2).
+    IndicatorCalculationWipCompliance {
+        watch_pct: i64,
+        concern_pct: i64,
+    },
+
     // ---- I18N-006: peisear-storage/src/user_capacities.rs ----
     /// `insert`'s pre-check before the schema `CHECK` constraint.
     /// `COPY-001` §4 fix: used to name the raw field identifiers
@@ -2782,6 +2859,45 @@ impl MessageKey {
                 label: IndicatorLabel::Throughput,
                 value: Box::new(MessageKey::IndicatorValueThroughput { done: 5, total: 7 }),
                 state: HealthStateLabel::Good,
+            },
+            // -- HLT-001: peisear-web basis route / calculation --
+            MessageKey::IndicatorBasisLinkText,
+            MessageKey::IndicatorBasisLinkAriaLabel {
+                label: IndicatorLabel::Throughput,
+            },
+            MessageKey::IndicatorBasisPageTitle {
+                label: IndicatorLabel::Throughput,
+            },
+            MessageKey::IndicatorBasisAriaLabel {
+                label: IndicatorLabel::Throughput,
+            },
+            MessageKey::IndicatorBasisEmptyMessage,
+            MessageKey::IndicatorCalculationSummaryLabel,
+            MessageKey::IndicatorCalculationThroughput {
+                good_pct: 60,
+                watch_pct: 30,
+            },
+            MessageKey::IndicatorCalculationStaleness {
+                watch_days: 14,
+                concern_days: 28,
+            },
+            MessageKey::IndicatorCalculationActivity {
+                good_count: 5,
+                watch_count: 1,
+                window_days: 14,
+            },
+            MessageKey::IndicatorCalculationBusFactor {
+                watch_pct: 60,
+                concern_pct: 80,
+            },
+            MessageKey::IndicatorCalculationLongStale {
+                watch_pct: 20,
+                concern_pct: 40,
+                window_days: 14,
+            },
+            MessageKey::IndicatorCalculationWipCompliance {
+                watch_pct: 1,
+                concern_pct: 50,
             },
             // -- I18N-006: peisear-storage/src/user_capacities.rs --
             MessageKey::PeriodStartMustPrecedeEndMessage,

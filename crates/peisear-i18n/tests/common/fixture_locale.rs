@@ -799,6 +799,46 @@ pub fn render(key: MessageKey) -> String {
             health_state_label(state)
         ),
 
+        // ---- HLT-001 ----
+        MessageKey::IndicatorBasisLinkText => "[fx-basis-link-text]".to_string(),
+        MessageKey::IndicatorBasisLinkAriaLabel { label } => {
+            format!("[fx-basis-link-aria] {}", indicator_label(label))
+        }
+        MessageKey::IndicatorBasisPageTitle { label } => {
+            format!("[fx-basis-page-title] {}", indicator_label(label))
+        }
+        MessageKey::IndicatorBasisAriaLabel { label } => {
+            format!("[fx-basis-aria] {}", indicator_label(label))
+        }
+        MessageKey::IndicatorBasisEmptyMessage => "[fx-basis-empty]".to_string(),
+        MessageKey::IndicatorCalculationSummaryLabel => "[fx-calc-summary]".to_string(),
+        MessageKey::IndicatorCalculationThroughput {
+            good_pct,
+            watch_pct,
+        } => format!("[fx-calc-throughput] {good_pct} {watch_pct}"),
+        MessageKey::IndicatorCalculationStaleness {
+            watch_days,
+            concern_days,
+        } => format!("[fx-calc-staleness] {watch_days} {concern_days}"),
+        MessageKey::IndicatorCalculationActivity {
+            good_count,
+            watch_count,
+            window_days,
+        } => format!("[fx-calc-activity] {good_count} {watch_count} {window_days}"),
+        MessageKey::IndicatorCalculationBusFactor {
+            watch_pct,
+            concern_pct,
+        } => format!("[fx-calc-bus-factor] {watch_pct} {concern_pct}"),
+        MessageKey::IndicatorCalculationLongStale {
+            watch_pct,
+            concern_pct,
+            window_days,
+        } => format!("[fx-calc-long-stale] {watch_pct} {concern_pct} {window_days}"),
+        MessageKey::IndicatorCalculationWipCompliance {
+            watch_pct,
+            concern_pct,
+        } => format!("[fx-calc-wip-compliance] {watch_pct} {concern_pct}"),
+
         // ---- I18N-006: peisear-storage/src/user_capacities.rs ----
         MessageKey::PeriodStartMustPrecedeEndMessage => "[fx-period-start-precede-end]".to_string(),
         MessageKey::CapacityPeriodOverlapMessage {

@@ -174,6 +174,11 @@ pub fn build_router(state: AppState) -> Router {
         )
         // Calendar, project axis (CAL-002 / RFC 002).
         .route("/projects/{id}/calendar", get(calendar::project_page))
+        // `HLT-001` (RFC 008 §1): a health indicator's basis set.
+        .route(
+            "/projects/{id}/health/{indicator}/basis",
+            get(issues::health_indicator_basis),
+        )
         // Issues
         .route(
             "/projects/{id}/issues/new",
