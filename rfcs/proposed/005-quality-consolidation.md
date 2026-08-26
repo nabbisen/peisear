@@ -553,25 +553,63 @@ should be made against the table above.
 
 ### 7. Aggregate inferability check
 
-§40.1.6 last bullet: "the workload chip with N=1 member
-trivially leaks that member's individual data." Audit
-aggregate surfaces:
+*Reconciled against the code 2026-08-26. **All three surfaces this section
+names are settled. The two that need the audit did not exist when it was
+written.***
 
-- Workload chip on project detail. If only one member has
-  open issues, the chip shows only that member's effort.
-  Decision: render the chip at all, or suppress it when
-  N=1?
+The original text proposed suppressing the workload chip at N < 2, and applying
+the same logic to the sprint plan's capacity hint and a per-assignee rollup.
 
-  *Default: suppress when N < 2 with a tooltip "individual
-  workloads are visible on each issue page." This matches
-  §11.5 (aggregate vs individual), and the chip's value
-  scales with team size.*
+**All three are closed, and one of them was closed by doing and reverting
+exactly what this section proposes:**
 
-  Apply same logic to:
-  - Capacity hint on the sprint plan page (RFC 0001) when
-    N < 2 contributors.
-  - Per-assignee mini-rollup if it lands in 0001 (likely
-    the same suppression).
+- **The workload chip.** A N < 2 suppression was added during `DEV-003` on the
+  strength of `NFR-PRIV-007`, then **withdrawn at 0.20.0 as a
+  misapplication**. A chip labelled with a person's name is not an aggregate;
+  it is individual workload, governed by `NFR-PRIV-002`. Implementing §7 as
+  written would re-introduce a defect this project already diagnosed and
+  removed.
+- **The capacity hint** was **withdrawn at 0.22.0** — the product's first
+  genuine `NFR-PRIV-007` case. There is no capacity code in `sprint_plan.rs`.
+- **The per-assignee mini-rollup** never landed in RFC 001.
+
+#### What actually needs auditing
+
+Two aggregates now exist that did not when this section was written, and the
+0.27.0 baseline predicted them by name — *"when one is built, sprint charts and
+health trends are the likely candidates."*
+
+- **The sprint burndown** (`sprints.rs:641`, `render_burndown`) plots
+  `cumulative_committed` and `cumulative_completed` **per day**.
+- **The team velocity chart**, a median across recent completed sprints.
+
+**The decisive fact, verified 2026-08-26**: `issue_events` — where completion
+timestamps live — **is referenced nowhere in `peisear-web`**. No screen exposes
+when an issue was finished. The issue list shows what is done; only the
+burndown shows *when*, day by day.
+
+So the burndown is materially different from the workload chip, and the
+difference is the reason the 0.20.0 revert was right and this is not the same
+question:
+
+| | Workload chip | Burndown |
+|---|---|---|
+| Shows | a current snapshot | a day-by-day series |
+| Reconstructible from other surfaces | **yes** — the issue list carries assignees and statuses | **no** — nothing else exposes completion timing |
+| At one contributor, is | that person's current load, already visible | **that person's work-rate profile over time** |
+
+On a product whose stated commitment is management-not-oversight (`DEC-019`),
+a single-contributor burndown is a productivity graph of one named person,
+assembled from data no other screen shows.
+
+**Neither chart can currently express a suppression.** `BurndownPoint` is
+`{ day, cumulative_committed, cumulative_completed }` — it does not know how
+many people contributed, and nothing plumbs that through.
+
+**§7 becomes**: audit the burndown and the velocity chart, establish what each
+discloses beyond other surfaces, and report. **Suppression is not decided
+here** — a one-person team losing its burndown entirely is a real cost, and
+`NFR-PRIV-007` is a **SHOULD** at P2, not a MUST.
 
 ### 8. Phase A-D follow-up sweep
 
