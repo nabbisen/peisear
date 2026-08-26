@@ -23,6 +23,38 @@
 //! this module rather than crate-wide, since both are restriction
 //! lints that would also fire on unrelated matches over enums this
 //! crate doesn't own.
+//!
+//! # Two vocabulary rules govern what you write here, and they live
+//! # in different crates
+//!
+//! *Added 2026-08-27 after `HLT-001` round 2 drafted six arms using a
+//! forbidden word and learned it only from a failing test in another
+//! crate. The guard caught it; nothing told the author first.*
+//!
+//! **1. The §1.7 table — this crate.** [`crate::guard`] holds sixteen
+//! banned phrases (`"velocity"`, `"completion rate"`, `"top performer"`,
+//! `"you should"`, …) and `peisear-i18n`'s own tests check every
+//! [`MessageKey::all`] rendering against them. Adding a key without
+//! adding it to `all()` is caught separately, by
+//! `tests/enumeration_guard.rs`.
+//!
+//! **2. `NFR-LANG-002`'s Watch ceiling — enforced in `peisear-web`.**
+//! No rendered page may carry a severity word beyond Watch. The test is
+//! `health_explainability::health_presentation_clamps_concern_to_watch_vocabulary`,
+//! and it sweeps the **whole page**, case-insensitively, for
+//! `["concern", "danger", "failing", "critical"]`.
+//!
+//! **The trap is that rule 1 does not imply rule 2.** `guard.rs` bans
+//! `"concerning trend"` and does **not** ban `"concern"`, so a bare
+//! `"Concern below 40%."` passes every test in this crate and fails in
+//! another. `Concern` is a legitimate internal state name
+//! ([`crate::message::HealthStateLabel`]) and a forbidden word in copy —
+//! the two coexist deliberately, and this file is where they meet.
+//!
+//! **Writing a threshold sentence**: describe the Good and Watch
+//! boundaries and stop. *"Good at 60% or more. Watch below 60%,
+//! continuing below 40%."* — "continuing" carries the third tier
+//! without naming it.
 #![deny(clippy::wildcard_enum_match_arm)]
 #![deny(clippy::match_wildcard_for_single_variants)]
 
