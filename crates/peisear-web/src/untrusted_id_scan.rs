@@ -32,6 +32,20 @@
 //! passed to a storage function, written into a response field —
 //! fails the scan.
 //!
+//! **The name is pinned as well as its uses — `QA-021` round 2.** The
+//! first version of this scan searched for the identifier `user_id`
+//! by name, which the architect's own plant showed is not enough: a
+//! handler that renames the extraction (`Path(uid): Path<String>`)
+//! and routes `uid` straight into storage carries none of the
+//! `user_id` needle at all, so the first assertion never sees it. A
+//! second, independent assertion closes that: every `Path(` binding
+//! in this file must destructure to the name `user_id`. Renaming the
+//! binding now trips this assertion instead of silently escaping the
+//! first one — the pair only works together, which is why they are
+//! two separate tests rather than one merged check (same reasoning
+//! `dec_007_scan`/`dec_007_ci_scan` split on: independent failure
+//! attribution for two links in one chain).
+//!
 //! **Narrow by design, not by oversight.** `QA-021` §4 considered a
 //! broader rule — "no `Path`-extracted identity reaches any storage
 //! call", across every handler file — and rejected it as not cheaply
@@ -131,6 +145,68 @@ fn path_extracted_user_id_only_reaches_require_self() {
          reach a `require_self(...)` call -- every storage call and response \
          field must use the session identity (`user.id`) instead \
          (`QA-021`, requirements baseline `§10.3`/`§11.5.4`):\n{}",
+        violations.join("\n")
+    );
+}
+
+/// Every `Path(<name>)` extractor-destructuring binding found in
+/// `line`, as `(name, line_offset_of_the_open_paren)`. Reads the
+/// identifier between `Path(` and its closing `)` verbatim -- this
+/// file's extractions are all single-value (`Path(user_id):
+/// Path<String>`), not tuples, so no comma-splitting is needed here.
+fn path_extraction_bindings(line: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut start = 0;
+    while let Some(rel) = line[start..].find("Path(") {
+        let open = start + rel + "Path(".len();
+        if let Some(close_rel) = line[open..].find(')') {
+            out.push(line[open..open + close_rel].trim().to_string());
+            start = open + close_rel + 1;
+        } else {
+            break;
+        }
+    }
+    out
+}
+
+/// `QA-021` round 2: the companion to the test above. Pins the
+/// *name* every `Path(` extraction in this file must bind, so a
+/// rename can't carry the untrusted id past the first assertion
+/// under a different identifier.
+#[test]
+fn every_path_extraction_binds_the_name_user_id() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let file = manifest_dir.join("src/handlers/api_users.rs");
+    let source =
+        fs::read_to_string(&file).unwrap_or_else(|e| panic!("read {}: {e}", file.display()));
+
+    let mut bindings_found = 0usize;
+    let mut violations = Vec::new();
+
+    for (i, line) in source.lines().enumerate() {
+        if line.trim_start().starts_with("//") {
+            continue;
+        }
+        for name in path_extraction_bindings(line) {
+            bindings_found += 1;
+            if name != "user_id" {
+                violations.push(format!("  line {}: Path({name}) -- {}", i + 1, line.trim()));
+            }
+        }
+    }
+
+    assert!(
+        bindings_found > 0,
+        "found no `Path(...)` extractor binding in handlers/api_users.rs -- \
+         this scan's target shape may have changed"
+    );
+
+    assert!(
+        violations.is_empty(),
+        "handlers/api_users.rs: every `Path(...)` extraction must bind the \
+         name `user_id` -- a renamed binding would carry the untrusted path \
+         id past the sibling test's name-based check undetected \
+         (`QA-021` round 2):\n{}",
         violations.join("\n")
     );
 }
