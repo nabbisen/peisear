@@ -1,109 +1,127 @@
-# HLT-001 — The basis route, and the one indicator that must not have it
+# HLT-001 — The basis route (re-issued)
 
 **Issued by**: Architect
-**Date**: 2026-08-27
-**Priority**: P2 by `FR-HLT-007`, but it closes **Definition of Done item 3**
+**Date**: 2026-08-27 — **re-issued**; the first version's premise was wrong
+**Priority**: P2 by `FR-HLT-007`; closes **Definition of Done item 3**
 **Governing RFC**: [008](../../accepted/008-explainability.md) §1–§3
 **Depends on**: nothing.
 
 ---
 
-## 1. Scope, and what is deliberately not here
+## 0. What changed, and why you are reading this twice
 
-Two of `FR-HLT-007`'s three limbs: **the basis route** and **the
-calculation**. **History is deferred** — it needs `QA-017`'s contributor
-predicate and would put back on the project screen what 0.28.0 removed from
-the sprint screen. If you find yourself building a time series, stop.
+The first version said the issue list's existing `status`/`assignee`/`sort`
+parameters reach most indicators' bases, and two new filters cover the rest.
+**Three of the six rows in that table were wrong.** You found it by reproducing
+the table before building, which is what §2 asked for and why it asked.
 
-**Read RFC 008 §2 before writing any link.** One of the six indicators must not
-get one, and the reason is a requirement collision rather than an oversight.
+Confirmed here: `status` matches exactly one value, every sort is descending,
+bus factor's query never selects the assignee's id, activity is an OR across
+two columns, and staleness uses an event-aware clock rather than a column
+compare.
 
-## 2. The basis link, per indicator
+**The error was mine** — I read the parameter names and inferred capability
+without reading the filter or the indicator's own query.
 
-The project issue list already accepts `view`, `status`, `assignee`, `sort`.
+**The design changed as a result**, and the owner accepted the larger scope
+rather than a version that linked only the reachable third. RFC 008 §1 is
+rewritten; read it before this.
 
-| Indicator | Basis | Today |
-|---|---|---|
-| Throughput | Done vs all | `?status=done` gives the numerator |
-| Staleness | oldest in-flight | status filter plus a sort |
-| Bus factor | distribution across assignees | `?assignee=` per person |
-| Activity | created or finished in 14 days | **needs `activity_since`** |
-| Long-stale | in-flight untouched 14 days | **needs `stale_for`** |
-| WIP compliance | which assignees are over their limit | **no link — §3** |
+## 1. The shape
 
-**Reproduce that table before building.** Especially the four "today" rows: if
-an existing filter does not actually produce the claimed set, the link would
-assert something false, and a link to the wrong issues is worse than no link.
-**Report what each filter really returns.**
+**Do not build filters. Return the set.**
 
-**Two new filters, not six.** `activity_since` and `stale_for` on the existing
-query shape. Do not invent a filter language.
+The query that computes an indicator already knows which rows produced it.
+`ProjectHealthRaw` carries only counts today —
+`long_stale_in_flight_issues`, `top_assignee_in_flight_issues`,
+`recent_activity_count`, and the rest. **Each count that has a membership
+gains it.**
 
-**The link goes on the explanation row, not the chip.** The chip is a status;
-the sentence is the claim; the link belongs to the claim.
+A basis link goes to a route that renders exactly that set.
 
-**Its accessible name must name the indicator**, not read "details" six times
-on one screen — `board_keyboard`'s
-`each_status_control_has_a_distinguishing_accessible_name` is the precedent.
+**One authority for the membership of a set.** If the health query and the
+basis view can ever disagree about which issues are long-stale, the design is
+wrong — that is `QA-019`'s `updated_at` lesson in a different place.
 
-## 3. WIP compliance gets no basis link, and a test says so
+## 2. Where to be careful, in the order you will meet it
 
-Its basis is **which assignees are over their WIP limit**. A WIP limit is in
-`NFR-PRIV-001`'s inventory as *visible only to its subject*. The indicator's
-sentence is already the aggregate — *"{count} active assignees are over their
-WIP limit"* — a count, deliberately not names.
+**2.1 — The membership must come from the same evaluation as the count, not a
+second query with the same `WHERE`.** A second query is two homes again, one
+`SELECT` apart. If the shape makes that hard — the counts are `SUM(CASE …)`
+aggregates over one pass — **stop and report the shape before restructuring
+it.** It may need the aggregate to become a fetch plus a fold, and that is a
+design choice I want to see rather than assume.
 
-**A basis route would have to name them.** `FR-HLT-007` is amended by RFC 008
-§2 to carve this exception; the owner approved that in accepting the RFC.
+**2.2 — Some indicators have no membership, and that is not a gap.**
+Bus factor's basis is a *distribution*; "the most-loaded assignee's issues" is a
+plausible basis but not the same thing as the number the indicator shows.
+**Decide what bus factor's basis is, state it, and say what you rejected.**
+Throughput's basis is two sets, not one.
 
-**Assert the absence.** A test that the WIP indicator renders no basis link,
-and that no assignee name appears in its explanation area. **This is the one
-test in the handoff that guards a privacy boundary rather than a feature**, and
-it should be written first.
+**2.3 — WIP compliance returns no set, structurally.** Its basis is users, not
+issues. **Do not add a users-shaped basis to make it symmetric.** RFC 008 §2
+carved this on `NFR-PRIV-002` grounds and the owner approved it; the design now
+makes it fall out rather than be carved, which is better and easier to undo by
+accident.
 
-## 4. The calculation
+**2.4 — The route renders issues the viewer can already see.** It is a
+different view of the project's own issues, so it inherits the project's access
+check and adds nothing. **Confirm that rather than assume it** — if the basis
+set can contain an issue the viewer cannot otherwise reach, stop.
 
-Each indicator gets its **thresholds and derivation** — what counts as
-Good/Watch/Concern, and over what window.
+## 3. The test written first
 
-**Thresholds only, not current inputs.** The inputs are already on the page as
-the explanation sentence's own numbers (*"Throughput is 0 / 1 (0%)"*);
-repeating them under a disclosure is the same fact twice. That was decided in
-RFC 008's acceptance note.
+**WIP compliance renders no basis link, and no assignee name appears in its
+explanation area.** This is the one test here guarding a privacy boundary
+rather than a feature. Write it before anything else, and plant it against a
+link being added.
 
-**Take the numbers from `peisear-core`'s classify functions — do not retype
-them.** A threshold written twice is two homes for one fact, and this project
-has recorded that shape six times. If a threshold cannot be reached from the
-render site without duplicating it, **stop and report**; that is a structural
-finding, not a detail.
+## 4. The calculation (§4 of the first version, unchanged)
 
-New copy through `peisear-i18n` and §1.7 as usual.
+Each indicator gets its **thresholds and derivation** — Good/Watch/Concern
+boundaries and the window. **Thresholds only, not current inputs**: the inputs
+are already on the page as the explanation sentence's numbers.
 
-## 5. Escalate rather than deciding
+**Take them from `peisear-core`'s classify functions.** If a threshold cannot
+be reached from the render site without retyping it, **stop and report** —
+that is the same two-homes finding as everything above, and I would rather hear
+it than have a constant duplicated quietly.
 
-- **If any existing filter does not return the set its indicator claims**, stop
-  and report before linking to it.
-- **If a threshold cannot be read from `peisear-core` at the render site**,
-  stop — see §4.
-- If wiring the two new filters turns out to need a change to the issue list's
-  own query handling beyond adding two optional parameters, report the shape
-  before building it.
-- If any basis link would expose a per-user value on a shared screen — not just
-  WIP — **stop**. §3 is the known case; a second one is a finding.
+Your own round-1 §5 held this section pending the basis design. It is settled
+now, so this can proceed alongside.
 
-## 6. Acceptance
+## 5. Not in scope
 
-1. §2's table reproduced, with what each existing filter actually returns.
-2. Basis links on five indicators; each target verified to filter to the
-   claimed set.
-3. **WIP compliance renders none, asserted by a test written first.**
-4. Two new filters, tested against the sets their indicators name.
-5. Thresholds rendered from `peisear-core`, not retyped.
-6. No time series anywhere.
+- **No history.** `FR-HLT-007`'s third limb needs `QA-017`'s contributor
+  predicate. If you find yourself building a time series, stop.
+- **No new filters on the issue list.** That was the wrong repair; see §0.
+- **No per-user drill-down**, anywhere. §2.3 is the precedent inside this
+  handoff.
+
+## 6. Escalate rather than deciding
+
+- **If the membership cannot come from the same evaluation as the count**
+  (§2.1), stop and report the shape.
+- **If a threshold cannot be read from `peisear-core`** (§4), stop.
+- **If any basis set can contain an issue the viewer cannot otherwise reach**
+  (§2.4), stop — that is a live privacy finding, not a design question.
+- If bus factor's basis has no defensible definition, say so and leave it
+  without a link rather than inventing one.
+
+## 7. Acceptance
+
+1. `ProjectHealthRaw` carries membership for each count that has one, from the
+   same evaluation as the count.
+2. A basis route rendering exactly that set, inheriting the project's access
+   check.
+3. Links on the indicators that have a membership; **§2.2's decisions stated**.
+4. **WIP compliance renders none — test written first, planted.**
+5. Thresholds from `peisear-core`, not retyped.
+6. No time series, no new issue-list filters.
 7. fmt and clippy exit 0; `DEC-007` gate set green; three consecutive
    `cargo test --workspace` runs.
 
-## 7. Required review-request format
+## 8. Required review-request format
 
-Workflow §9.2. §2's reproduction as a table with the real filter results. State
-plainly whether §5's fourth case was found anywhere.
+Workflow §9.2. §2.1's shape and §2.2's decisions as prose. Say plainly whether
+§6's third case was found.

@@ -51,27 +51,65 @@ sentences, no route from any of them to anything.
 
 ## Design
 
-### 1. The basis route, per indicator
+### 1. The basis route — return the set, do not re-derive it
 
-The project issue list already accepts `view`, `status`, `assignee` and `sort`
-as query parameters, so a basis link is a URL for some indicators and new work
-for others:
+*Rewritten 2026-08-27, after `HLT-001`'s escalation. **The first version of
+this section was wrong on three of six rows**, and the correction changed the
+design rather than the table.*
 
-| Indicator | Basis | Reachable today |
-|---|---|---|
-| Throughput | issues reaching Done vs all | **partly** — `?status=done` gives the numerator |
-| Staleness | oldest in-flight issue | **probably** — status filter plus a sort |
-| Bus factor | distribution across assignees | **partly** — `?assignee=` per person, but the basis is a distribution, not a list |
-| Activity | issues created or finished in 14 days | **no** — needs a date-window filter |
-| Long-stale | in-flight issues untouched 14 days | **no** — needs a staleness filter |
-| WIP compliance | which assignees are over their limit | **must not** — see §2 |
+**What the first version said**: the issue list already accepts `status`,
+`assignee` and `sort`, so most basis links are a URL, and two new filters cover
+the rest.
 
-**Two new filters, not six.** Adding `activity_since` and `stale_for` to the
-existing query shape covers the two unreachable rows and nothing else needs
-inventing.
+**What is actually true**, read from `apply_filter_and_sort` and
+`project_health.rs`:
 
-**A basis link goes on the explanation row, not the chip.** The chip is a
-status; the sentence is the claim; the link belongs to the claim.
+| Claimed | Actual |
+|---|---|
+| `?status=…` can express "in-flight" | `status` matches **exactly one** value; in-flight is `status IN ('open','in_progress')` |
+| a sort surfaces "oldest in-flight" | every sort is `Reverse(…)`; **there is no ascending sort** |
+| `?assignee=` reaches bus factor's basis | the query returns `MAX(per_user_count)` — a number; **the assignee's id is never selected** |
+| `activity_since` is one optional parameter | the condition is `created_at >= cutoff OR (status = 'done' AND updated_at >= cutoff)` — an OR across two columns, status-guarded on one branch |
+| `stale_for` is one optional parameter | staleness uses `COALESCE((SELECT MAX(occurred_at) … 'status_changed'), updated_at)` — an **event-aware clock**, not a column compare |
+
+The error was reading the query **parameter names** and inferring capability
+without reading either the filter or the indicator's own query.
+
+#### Why extending the filter language is the wrong repair
+
+Adding `in_flight`, a sort direction, and two composite date filters
+reproduces the health query's logic **in the web layer**. The staleness clock
+would then exist twice — in SQL and in a filter — and they would drift
+invisibly: the indicator says four, the link shows three.
+
+**Two homes for one fact.** This project has recorded that shape six times and
+closed the most recent instance in `QA-020`.
+
+#### The design
+
+**The query that computes an indicator already knows which rows produced it.
+Return their ids alongside the count.** A basis link goes to a route that
+renders **exactly that set** — not a filter that reconstructs it.
+
+`ProjectHealthRaw` currently carries only counts (`long_stale_in_flight_issues`,
+`top_assignee_in_flight_issues`, …). It gains the membership behind each count
+that has one.
+
+**One authority for the membership of a set** — the same principle as
+`QA-019`'s one authority for `updated_at`, removing the drift by construction
+rather than by discipline.
+
+**And it makes §2's exception structural.** WIP compliance's basis is *users*,
+not issues, so its computation returns no issue set and the route has nothing
+to render. The privacy carve-out stops being a special case a future
+contributor might helpfully close, and becomes a shape the design cannot
+express.
+
+**The cost is honest**: a route and a storage change, where the first version
+promised two optional parameters. The owner accepted that scope on 2026-08-27
+in preference to a trimmed version linking only the two indicators reachable
+today — which would have satisfied `FR-HLT-007` for a third of its cases and
+marked the rest done.
 
 ### 2. `FR-HLT-007` collides with `NFR-PRIV-002`, and privacy wins
 
