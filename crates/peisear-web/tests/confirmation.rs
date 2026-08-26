@@ -72,6 +72,53 @@ async fn get_renders_an_interstitial_naming_the_specific_entity() {
     );
 }
 
+/// `QA-015` §3 (`NFR-A11Y-007`): the confirmation screen's whole
+/// purpose is to prevent an accident, and its own Cancel and Delete sat
+/// at 32px, adjacent — an irreversible action within a mis-tap of its
+/// own escape hatch. Both now carry `min-h-11 min-w-11`
+/// (`DEV-002`'s own pattern, `issues.rs:661`), and nothing asserted it
+/// until now.
+#[tokio::test]
+async fn cancel_and_delete_both_meet_the_touch_target_minimum() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Customer Portal").await;
+
+    let resp = app
+        .server
+        .get(&format!("/projects/{project_id}/delete"))
+        .await;
+    let body = resp.text();
+
+    let actions_start = body
+        .find(r#"class="card-actions justify-end"#)
+        .expect("card-actions block present");
+    let form_start = body[actions_start..]
+        .find("<form")
+        .map(|i| actions_start + i)
+        .expect("delete form present");
+    let cancel_markup = &body[actions_start..form_start];
+    let delete_markup = &body[form_start..];
+
+    assert!(
+        cancel_markup.contains("min-h-11"),
+        "Cancel must carry min-h-11: {cancel_markup}"
+    );
+    assert!(
+        cancel_markup.contains("min-w-11"),
+        "Cancel must carry min-w-11: {cancel_markup}"
+    );
+    assert!(
+        delete_markup.contains("min-h-11"),
+        "Delete must carry min-h-11: {delete_markup}"
+    );
+    assert!(
+        delete_markup.contains("min-w-11"),
+        "Delete must carry min-w-11: {delete_markup}"
+    );
+}
+
 #[tokio::test]
 async fn project_interstitial_states_the_cascade_to_its_issues() {
     let app = TestApp::spawn().await;

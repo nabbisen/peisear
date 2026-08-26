@@ -182,17 +182,17 @@ fn render_kind_row(kind_id: &'static str, pref: Option<Preference>) -> impl Into
         <tr aria-label=t(MessageKey::NotificationKindPreferencesAriaLabel { kind: row_kind })>
             <td class="font-medium">{label_text}</td>
             <td class="text-center">
-                <input type="checkbox" name=in_app_name class="checkbox checkbox-xs"
+                <input type="checkbox" name=in_app_name class="checkbox"
                        checked=in_app_checked
                        aria-label=t(MessageKey::InAppForKindAriaLabel { kind: row_kind })/>
             </td>
             <td class="text-center">
-                <input type="checkbox" name=email_name class="checkbox checkbox-xs"
+                <input type="checkbox" name=email_name class="checkbox"
                        checked=email_checked
                        aria-label=t(MessageKey::EmailForKindAriaLabel { kind: row_kind })/>
             </td>
             <td class="text-center">
-                <input type="checkbox" name=webhook_name class="checkbox checkbox-xs"
+                <input type="checkbox" name=webhook_name class="checkbox"
                        checked=webhook_checked
                        aria-label=t(MessageKey::WebhookForKindAriaLabel { kind: row_kind })/>
             </td>
