@@ -7,6 +7,101 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.28.0] — 2026-08-26
+
+**Schema migration**: `0017_updated_at_single_authority.sql` adds triggers to
+`issues`, `projects`, and `user_view_states`. This is the first migration
+since `0016` at `0.23.0`. **A downgrade to 0.27.0 will fail to start** —
+`sqlx::migrate!` does not tolerate an applied migration absent from its
+embedded list, and this binary migrates the database unconditionally on
+boot. The triggers themselves are harmless to the older binary (they stay
+inert while application code writes the column explicitly, which is what
+0.27.0 does); the obstacle is `sqlx`'s own migration bookkeeping, not the
+schema. Recovery from an unwanted downgrade is a restore from a
+pre-migration backup, not a forward fix.
+
+This release closes RFC 005 in full — see the note at the end of this
+entry before reading the rest as a completion.
+
+### Changed
+
+- **Secondary text got darker, in 111 places.** The muted text tier's floor
+  moved from `/60` to `/70`. The theme's own tokens were never the
+  problem — full-strength text on the base background measures 17.21:1 —
+  the 130 opacity modifiers this project applied on top of them were:
+  111 of them sat below WCAG AA's 4.5:1. `/60` measured 4.54:1 on white,
+  a pass by four hundredths, while failing at 4.23:1 on the page
+  background — three of those failing sites were the login and register
+  page's subtitle, the first text a new user reads. A floor rather than a
+  narrower repair, because a muted tier that passes by 0.04 is one theme
+  adjustment away from failing again with nothing to catch it. Cost,
+  named plainly: the muted tier now has two visible steps of grey where
+  it had four, and text that used the lightest step now reads like it
+  used a middle one. That is a deliberate trade, not a free improvement.
+- **Conflict notifications now interrupt; other status changes still
+  announce politely.** Both used to share one polite live region, so an
+  edit conflict competed with routine confirmations for a screen reader's
+  attention on equal footing. Two regions now, chosen by outcome.
+- **The confirmation screen's Cancel and Delete are bigger, and the
+  notification-preferences checkboxes are bigger.** The confirmation
+  buttons were 32 px, adjacent, with one of the pair irreversible — a
+  mis-tap risk on a page whose entire purpose is asking "are you sure."
+  Both are now 44 px. The three notification-channel checkboxes were
+  16 px, below even the lower accessibility floor for a control's touch
+  target; they are now 24 px, which reaches that floor without yet
+  reaching this project's own 44 px target. These four are not the whole
+  touch-target picture — see the note at the end of this entry.
+- **The sprint burndown chart and the "Completed work this period"
+  chart's median reference line are hidden below two distinct
+  contributors.** An aggregate that resolves to one person is that
+  person's individual data wearing an aggregate's shape. The sprint-end
+  totals and the completed-work bars themselves are unaffected — only
+  the day-by-day trajectory and the computed median go, and nothing on
+  the page explains why: naming the reason would disclose exactly what
+  the suppression withholds.
+
+### Changed (behind the scenes, invisible unless it goes wrong)
+
+- **`updated_at` now has exactly one authority.** Application code was
+  writing this column directly on three tables — `issues`, `projects`,
+  `user_view_states` — that had no database trigger backing them, while
+  four other tables already relied on a trigger alone. Nothing was broken
+  by this: every optimistic-lock test passed throughout, and this was
+  found by auditing this project's own claims about itself, not by a
+  failure anyone hit. But it was a **class** of risk, not an instance —
+  a future mutation added to either table without remembering the
+  explicit write would have left `updated_at` stale, and a stale value
+  makes a conflicting write look like a matching one: the lock would have
+  passed when it should have rejected, silently. That is the same shape
+  a real defect took in an earlier release, on a different table. The
+  column now has one writer everywhere, and a guard keeps a new
+  application-side write from being reintroduced.
+
+### Changed (internal)
+
+- **One redirect encoder, not four ways of doing the same thing.** Every
+  redirect that carries a rendered flash or error message, or a filter
+  value, into a query string now goes through a single percent-encoding
+  function. It replaces two byte-for-byte identical copies of that same
+  function, a third copy under a different name that a search for the
+  first two would not have found, and a narrower hand-rolled idiom used
+  at 23 call sites that only ever encoded the space character. That
+  narrower idiom was safe only because every flash message this project
+  has ever written has happened to be plain ASCII — a property of the
+  copy, not of the code. Say plainly that this was luck, not design: a
+  message containing `&` or a non-ASCII character would have arrived at
+  the browser silently truncated or malformed.
+- **Four new guards.** One for the contrast floor above, one banning the
+  touch-target class this release's mistap fixes removed, one for the
+  `updated_at` single-authority rule, one for the redirect-encoder
+  idiom.
+
+**This release does not make the product accessible, and it is not WCAG
+AA compliant.** Contrast now meets AA. Touch target size does not: 139
+controls remain below this project's own 44 px target — measured
+directly, not estimated — with the design pass that would close that gap
+scheduled for `0.30.0`.
+
 ## [0.27.0] — 2026-08-25
 
 No schema migration.
