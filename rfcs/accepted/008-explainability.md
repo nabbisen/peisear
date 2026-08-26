@@ -1,6 +1,6 @@
 # RFC 0008: Explainability — the basis behind an indicator
 
-**Status**: Proposed
+**Status**: **Accepted 2026-08-27**
 **Target**: 0.29.0
 **Related spec sections**: `SPEC §28.3` (indicator basis), `SPEC §31.1`
 (chart equivalence), `SPEC §41.3` (Definition of Done)
@@ -163,7 +163,29 @@ check in review.**
   chart** — planted against the predicate's removal.
 - The bar chart's label describes data, not chart type.
 
-## Open questions
+## Open questions — how the acceptance was read
+
+*The owner accepted this RFC on 2026-08-27 without answering the three
+questions individually. Recorded here is how the architect is reading that,
+so a wrong reading is visible and correctable rather than silent.*
+
+1. **History: deferred.** The RFC recommended (a) and acceptance is read as
+   taking the recommendation. `FR-HLT-007`'s history limb does not ship in
+   0.29.0; basis and calculation do. **If history was meant to be in scope,
+   say so and it returns as its own handoff with `QA-017`'s predicate.**
+2. **Calculation view: thresholds, not inputs.** No recommendation was given,
+   so the architect decides: the current inputs are already on the page as the
+   explanation sentence's own numbers — *"Throughput is 0 / 1 (0%)"* — and
+   repeating them under a disclosure would be the same fact twice, which is
+   the shape `§9.5` was just adopted to stop. **Thresholds and derivation
+   only.**
+3. **The `FR-HLT-007` amendment: this acceptance is the sign-off.** §2 narrows
+   a MUST in a source requirement, which is the owner's to approve. Accepting
+   the RFC that proposes the narrowing is being read as approving it. **If the
+   amendment was not intended, it is one sentence to withdraw and the WIP
+   indicator's exception goes with it.**
+
+## Original open questions
 
 1. **History: defer (a) or build with suppression (b)?** §4. My recommendation
    is (a).

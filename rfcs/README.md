@@ -29,8 +29,9 @@ the owner approves, the dev team implements.
 
 Design settled. Implementation may begin.
 
-None. 004a, 004b and 010 all shipped in 0.25.0-0.26.0 and moved to
-`done/`; RFC 004's next substep (D-3) has not been written yet.
+| ID | Title | Target |
+|----|-------|--------|
+| 008 | [Explainability](./accepted/008-explainability.md) — the basis behind an indicator; closes `§10.4` and **Definition of Done item 3**. Narrows `FR-HLT-007` for one indicator on `NFR-PRIV-002` grounds | 0.29.0 |
 
 ## Proposed
 
@@ -39,7 +40,6 @@ Open for review. Design may still change.
 | ID | Title | Target |
 |----|-------|--------|
 | 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) — umbrella; substeps get their own RFCs | — |
-| 008 | [Explainability](./proposed/008-explainability.md) — the basis behind an indicator; closes `§10.4` and Definition of Done item 3. **Two parts collide with privacy requirements** | 0.29.0 |
 
 ## Implemented
 
