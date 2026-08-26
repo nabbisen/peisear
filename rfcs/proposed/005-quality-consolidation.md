@@ -342,6 +342,121 @@ named `docs/src/accessibility.md`. `docs/src/` contains only `assets/`, there
 is no `book.toml`, and `DEC-020` — where this project's documents live — is
 still unresolved. Do not create a file that presumes an answer to it.
 
+---
+
+#### The measurement, 2026-08-26 (`QA-012`, `QA-013`)
+
+**This table expires.** It is true of **`daisyui@4.12.14`**'s `corporate`
+theme and of nothing else. A DaisyUI upgrade or a theme change invalidates
+every number below.
+
+Tokens resolved from the pinned CDN build's `[data-theme=corporate]` block:
+
+| Token | OKLCH | sRGB |
+|---|---|---|
+| `base-content` (`--bc`) | `22.3899% 0.031305 278.07229` | `#181A2A` |
+| `base-100` (`--b1`) | `100% 0 0` | `#FFFFFF` |
+| `base-200` (`--b2`) | `93% 0 0` | `#E8E8E8` |
+| `base-300` (`--b3`) | `86% 0 0` | `#D1D1D1` |
+| `primary` (`--p`) | `60.39% 0.228 269.1` | `#4D6EFF` |
+
+Foreground composited against the background, then WCAG relative luminance.
+Computed twice independently — by the implementer and by the reviewer, from
+separate implementations — and agreeing to two decimals in all 24 cells.
+
+| Modifier | `base-100` | `base-200` | `base-300` |
+|---|---|---|---|
+| solid | 17.21 | 14.01 | 11.25 |
+| `/90` | 12.87 | 10.83 | 8.98 |
+| `/80` | 9.08 | 7.95 | 6.85 |
+| **`/70`** | **6.36** | **5.76** | **5.15** |
+| `/60` | 4.54 | **4.23 ✗** | **3.89 ✗** |
+| `/50` | **3.32 ✗** | **3.16 ✗** | **2.98 ✗** |
+| `/40` | **2.50 ✗✗** | **2.42 ✗✗** | **2.32 ✗✗** |
+| `/30` | **1.93 ✗✗** | **1.89 ✗✗** | **1.83 ✗✗** |
+
+`✗` fails AA 4.5:1. `✗✗` fails 3:1 as well — no real background in this theme
+where it could pass at any text size.
+
+**`/70` is the floor**, and the reason is `/60`'s **0.04**. A muted tier that
+passes by four hundredths is one theme adjustment from failing with nothing to
+report it. 111 sites were identified; 108 were mechanical swaps and 3 needed
+the arithmetic below.
+
+#### `opacity` compounds; `text-base-content/N` does not
+
+The handoff's own table assumed a single flat layer. That holds for a colour —
+CSS `color` is one property and a nested value replaces an inherited one. It
+does **not** hold for bare `opacity`, which composites the element's whole
+rendering *including a colour that already carries alpha*. Found by the
+implementer checking all 21 bare-opacity sites individually rather than
+sampling:
+
+| Site | Nesting | Effective | Ratio | Resolution |
+|---|---|---|---|---|
+| `projects.rs:71` | `opacity-60` in `/70` | 0.42 | **2.64** | drop the child modifier → 6.36 |
+| `sprints.rs:561` | `opacity-60` in `/80` | 0.48 | **3.13** | `opacity-90` → 6.82 |
+| `calendar.rs:85` | `opacity-60` over `bg-primary/10` | — | **4.35** | `opacity-70` → 6.00 |
+
+`projects.rs:71` at 2.64 was **worse than the `/30` tier the rule bans
+outright** — the rule as written would have left it standing. Forcing the
+mechanical swap onto it would have given 0.49 → 3.24, still failing, while
+satisfying every acceptance criterion and passing the new guard.
+
+#### Every background in the tree, not only the base tokens
+
+| Background | Composited | Foreground | Ratio |
+|---|---|---|---|
+| `bg-primary/10` on `base-100` | `#EDF1FF` | `opacity-70` | 6.00 |
+| `bg-primary/10` on `base-200` | `#D8DCEA` | `opacity-70` | 5.45 |
+| `bg-primary/15` on `base-100` | `#E4E9FF` | `opacity-70` | 5.82 |
+| `bg-primary/15` on `base-200` | `#D0D5EB` | `opacity-70` | 5.29 |
+| `bg-primary/25` **hover** on `base-100` | `#D3DBFF` | `opacity-70` | 5.44 |
+| `bg-primary/25` **hover** on `base-200` | `#C1C9EE` | `opacity-70` | **4.97** |
+| `bg-info/10` on `base-100` | `#E5F8FF` | solid | 15.72 |
+
+`bg-info`/`bg-warning`/`bg-success` also appear, on `w-2 h-2` status dots that
+carry no text.
+
+**The tightest margin in the whole audit is 4.97:1, and it is a hover state.**
+No screenshot and no static analysis would catch it, because it only exists
+while a pointer is over the element. It is the first thing a theme change
+breaks.
+
+#### What is guarded, and what is merely true
+
+`contrast_scan` bans `text-base-content/{10..60}` under
+`crates/peisear-web/src/`. It says nothing about **which background** a passing
+modifier sits over, and nothing about bare `opacity`.
+
+Both were deliberate. `opacity` is not a text property — `calendar.rs`'s two
+empty `<td>` cells are a legitimate non-text use — and distinguishing text from
+non-text needs rendering, which `§10.15` records this project does not do.
+
+So: **every tinted background is enumerated and passing, and no bare `opacity`
+below the floor remains — but neither fact is guarded.** Both drift the moment
+someone adds a `bg-*` container or an `opacity-*` on text. That is the position
+to state; "contrast is handled" is not.
+
+#### Hierarchy lost to the floor, reported and not fixed
+
+Four steps of grey became two. Where a real distinction collapsed:
+
+- **`sprints.rs`'s summary cards**, four repeated instances: a `/60` label and
+  a `/50` sub-detail are now both `/70` and indistinguishable. The most
+  repeated instance in the sweep, and the one worth fixing — **by size, not by
+  contrast**.
+- **`me.rs`'s burnout panel**: heading `/60` and sub-heading `/50` now render
+  identically, flattening a two-level structure.
+- **`issues.rs`'s issue-list table**: assignee `/70` and updated-date `/60`
+  read as two tiers of metadata; now one.
+- **`teams.rs` and `notification_preferences.rs`**, running the other way: a
+  `/50` hint beside a bold label becomes *more* prominent at `/70`. The change
+  made something louder, which nobody expected to find.
+
+No fix applied. Carrying hierarchy by size, weight or placement is a design
+change and not this RFC's.
+
 ### 5. Keyboard navigation
 
 *Reconciled against the code 2026-08-25. **This section specified the wrong
