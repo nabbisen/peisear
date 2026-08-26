@@ -69,6 +69,19 @@ pub async fn list_page(
         sprints::recent_completed_for_team(&state.db, &team.id, velocity_window).await?;
     velocity_data.reverse();
 
+    // `QA-017` (`NFR-PRIV-007`): the predicate is distinct
+    // contributors *across the whole window*, not per sprint — five
+    // solo sprints by the same person is still one person, so this
+    // counts over the union of every sprint id in `velocity_data`, not
+    // once per sprint. The bars themselves (already-visible per-sprint
+    // totals) are unaffected either way; only the median line is
+    // gated.
+    let velocity_sprint_ids: Vec<String> =
+        velocity_data.iter().map(|(s, _)| s.id.clone()).collect();
+    let velocity_contributors =
+        sprints::distinct_contributors(&state.db, &velocity_sprint_ids).await?;
+    let show_median = matches!(velocity_contributors, Some(n) if n >= 2);
+
     let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
 
     Ok(components::sprints::render_list(
@@ -77,6 +90,7 @@ pub async fn list_page(
         role,
         sprint_summaries,
         velocity_data,
+        show_median,
         unread_count,
         q.flash,
         q.error,
@@ -184,6 +198,12 @@ pub async fn detail(
     let summary = sprints::summary(&state.db, &sprint.id).await?;
     let issues = sprints::issues_in_sprint(&state.db, &sprint.id).await?;
     let burndown = sprints::burndown(&state.db, &sprint.id).await?;
+    // `QA-017` (`NFR-PRIV-007`): the trajectory is a per-person
+    // disclosure below two distinct contributors; the sprint-end
+    // totals (`summary`, above) are unaffected either way.
+    let contributors =
+        sprints::distinct_contributors(&state.db, std::slice::from_ref(&sprint.id)).await?;
+    let show_trajectory = matches!(contributors, Some(n) if n >= 2);
     let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
 
     Ok(components::sprints::render_detail(
@@ -194,6 +214,7 @@ pub async fn detail(
         summary,
         issues,
         burndown,
+        show_trajectory,
         unread_count,
         q.flash,
         q.error,

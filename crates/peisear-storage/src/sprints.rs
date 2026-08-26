@@ -14,6 +14,10 @@
 //! - [`burndown`] — a series of per-day cumulative data points
 //!   for the burndown chart
 //! - [`recent_completed_for_team`] — for the velocity chart
+//! - [`distinct_contributors`] — `QA-017`, `NFR-PRIV-007`: distinct
+//!   people who completed at least one issue across a set of sprints,
+//!   gating the burndown's trajectory and the velocity chart's median
+//!   line
 //!
 //! Writes:
 //! - [`insert`] / [`update`] / [`delete`]
@@ -569,6 +573,69 @@ pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<Burndow
     }
 
     Ok(points)
+}
+
+/// Distinct people who **completed** at least one issue across the
+/// given sprints — `QA-017` (`NFR-PRIV-007`). Contributor is scoped to
+/// completed work, not sprint membership: a sprint where Alice
+/// completed everything and Bob holds one still-open issue is still a
+/// sprint whose completion trajectory is Alice's alone, and counting
+/// Bob would let his uninvolved presence launder a disclosure that is
+/// still entirely about Alice.
+///
+/// Takes a **slice** of sprint ids, not one — the burndown's predicate
+/// is over a single sprint, but the velocity chart's median spans up
+/// to [`peisear_core::sprints::VELOCITY_MEDIAN_WINDOW`] sprints and the
+/// predicate there is distinct contributors *across the whole window*,
+/// not per sprint (five solo sprints by the same person is still one
+/// person; by five different people it is a real aggregate). One
+/// function, one query shape, serves both by taking however many ids
+/// the caller has.
+///
+/// Returns `Ok(None)` when the true count is **unknown** rather than
+/// computing a possibly-wrong number: if any completed issue in scope
+/// has no assignee, that issue's real contributor could be the same
+/// person as every other completed issue, or someone new — there is no
+/// way to tell from this data. The safe direction for a privacy
+/// predicate is to treat "unknown" the same as "fewer than two";
+/// callers do that by treating `None` as not-enough-to-show, same as
+/// `Some(0)` or `Some(1)`.
+pub async fn distinct_contributors(
+    pool: &Pool,
+    sprint_ids: &[String],
+) -> StorageResult<Option<i64>> {
+    if sprint_ids.is_empty() {
+        return Ok(Some(0));
+    }
+
+    let placeholders = sprint_ids
+        .iter()
+        .enumerate()
+        .map(|(i, _)| format!("?{}", i + 1))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let query = format!(
+        r#"
+        SELECT
+            COUNT(DISTINCT i.assignee_id) AS known,
+            COALESCE(SUM(CASE WHEN i.assignee_id IS NULL THEN 1 ELSE 0 END), 0)
+                AS unassigned
+        FROM sprint_issues si
+        JOIN issues i ON i.id = si.issue_id
+        WHERE si.sprint_id IN ({placeholders})
+          AND i.status = 'done'
+        "#
+    );
+    let mut q = sqlx::query_as::<_, (i64, i64)>(&query);
+    for id in sprint_ids {
+        q = q.bind(id);
+    }
+    let (known, unassigned) = q.fetch_one(pool).await?;
+
+    if unassigned > 0 {
+        return Ok(None);
+    }
+    Ok(Some(known))
 }
 
 /// Recently completed sprints' summaries for the velocity

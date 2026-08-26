@@ -57,6 +57,7 @@ pub fn SprintsListPage(
     role: TeamRole,
     sprints: Vec<(Sprint, SprintSummary)>,
     velocity_data: Vec<(Sprint, SprintSummary)>,
+    show_median: bool,
     unread_count: i64,
     flash: Option<String>,
     error: Option<String>,
@@ -81,7 +82,7 @@ pub fn SprintsListPage(
         }
     });
 
-    let velocity_chart = has_velocity.then(|| render_velocity_chart(velocity_data));
+    let velocity_chart = has_velocity.then(|| render_velocity_chart(velocity_data, show_median));
 
     let sprint_rows = {
         let team_slug = team_slug.clone();
@@ -210,7 +211,7 @@ fn render_sprint_card(team_slug: String, s: Sprint, sum: SprintSummary) -> impl 
 /// sprint (completed + carried-over), neutral colours, median
 /// reference line. Wraps in a card with a descriptive
 /// caption.
-fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>) -> impl IntoView {
+fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) -> impl IntoView {
     // Layout constants. Tuned for a card body ~700px wide.
     let chart_w: i32 = 680;
     let chart_h: i32 = 180;
@@ -310,16 +311,26 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>) -> impl IntoView {
                         <line x1=margin_l y1=margin_t + plot_h
                               x2=chart_w - margin_r y2=margin_t + plot_h
                               stroke="currentColor" stroke-opacity="0.3"/>
-                        // Median reference.
-                        <line x1=margin_l y1=median_y
-                              x2=chart_w - margin_r y2=median_y
-                              stroke="currentColor" stroke-opacity="0.5"
-                              stroke-dasharray="3 3"/>
-                        <text x=chart_w - margin_r y=median_label_y
-                              font-size="10" fill="currentColor"
-                              opacity="0.6" text-anchor="end">
-                            {t(MessageKey::MedianLabel { median })}
-                        </text>
+                        // Median reference — `QA-017` (`NFR-PRIV-007`):
+                        // below two distinct contributors across the
+                        // window, this goes entirely, with no legend
+                        // entry or note saying it went. Rendering
+                        // nothing here is the whole point; a sprint
+                        // without one already reads as a sprint with
+                        // too little data, which is unremarkable.
+                        {show_median.then(|| view! {
+                            <g>
+                                <line x1=margin_l y1=median_y
+                                      x2=chart_w - margin_r y2=median_y
+                                      stroke="currentColor" stroke-opacity="0.5"
+                                      stroke-dasharray="3 3"/>
+                                <text x=chart_w - margin_r y=median_label_y
+                                      font-size="10" fill="currentColor"
+                                      opacity="0.6" text-anchor="end">
+                                    {t(MessageKey::MedianLabel { median })}
+                                </text>
+                            </g>
+                        })}
                         {bars}
                     </svg>
                 </div>
@@ -431,6 +442,7 @@ pub fn SprintDetailPage(
     summary: SprintSummary,
     issues: Vec<(String, String, String, Option<i64>, String)>,
     burndown: Vec<BurndownPoint>,
+    show_trajectory: bool,
     unread_count: i64,
     flash: Option<String>,
     error: Option<String>,
@@ -525,7 +537,12 @@ pub fn SprintDetailPage(
         .into_any(),
     });
 
-    let burndown_card = (!matches!(sprint_status, SprintStatus::Planned) && !burndown.is_empty())
+    // `QA-017` (`NFR-PRIV-007`): `show_trajectory` is the third term,
+    // not a new layout — `summary_card` below is already computed
+    // independently and is unaffected either way.
+    let burndown_card = (!matches!(sprint_status, SprintStatus::Planned)
+        && !burndown.is_empty()
+        && show_trajectory)
         .then(|| render_burndown(burndown));
 
     let summary_card = render_summary_card(sprint_status, summary);
@@ -947,6 +964,7 @@ pub fn render_list(
     role: TeamRole,
     sprints: Vec<(Sprint, SprintSummary)>,
     velocity_data: Vec<(Sprint, SprintSummary)>,
+    show_median: bool,
     unread_count: i64,
     flash: Option<String>,
     error: Option<String>,
@@ -959,6 +977,7 @@ pub fn render_list(
                 role=role
                 sprints=sprints
                 velocity_data=velocity_data
+                show_median=show_median
                 unread_count=unread_count
                 flash=flash
                 error=error
@@ -987,6 +1006,7 @@ pub fn render_detail(
     summary: SprintSummary,
     issues: Vec<(String, String, String, Option<i64>, String)>,
     burndown: Vec<BurndownPoint>,
+    show_trajectory: bool,
     unread_count: i64,
     flash: Option<String>,
     error: Option<String>,
@@ -1001,6 +1021,7 @@ pub fn render_detail(
                 summary=summary
                 issues=issues
                 burndown=burndown
+                show_trajectory=show_trajectory
                 unread_count=unread_count
                 flash=flash
                 error=error

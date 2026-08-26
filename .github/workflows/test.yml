@@ -44,6 +44,15 @@ jobs:
   # been observed to peak above the GitHub runner's RAM limit during
   # the linker step. Splitting per test crate keeps each link step
   # under the cap and also produces clearer failure attribution.
+  test-peisear-web-aggregate-privacy:
+    name: peisear-web / aggregate_privacy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test aggregate_privacy -- --test-threads=1
+
   test-peisear-web-smoke:
     name: peisear-web / smoke
     runs-on: ubuntu-latest
