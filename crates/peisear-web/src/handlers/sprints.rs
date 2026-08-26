@@ -169,9 +169,9 @@ pub async fn create(
 
     match sprints::insert(&state.db, &team.id, name, goal, starts_on, ends_on).await {
         Ok(id) => {
-            let flash = Locale::English
-                .render(MessageKey::SprintCreatedFlash)
-                .replace(' ', "+");
+            let flash = super::percent_encode_query(
+                &Locale::English.render(MessageKey::SprintCreatedFlash),
+            );
             Ok(Redirect::to(&format!(
                 "/teams/{slug}/sprints/{id}?flash={flash}"
             )))
@@ -291,9 +291,9 @@ pub async fn update(
 
     match sprints::update(&state.db, &sprint.id, name, goal, starts_on, ends_on).await {
         Ok(()) => {
-            let flash = Locale::English
-                .render(MessageKey::SprintUpdatedFlash)
-                .replace(' ', "+");
+            let flash = super::percent_encode_query(
+                &Locale::English.render(MessageKey::SprintUpdatedFlash),
+            );
             Ok(Redirect::to(&format!(
                 "/teams/{slug}/sprints/{sprint_id}?flash={flash}"
             )))
@@ -337,15 +337,15 @@ pub async fn start(
     )?;
     match sprints::start(&state.db, &sprint.id).await {
         Ok(()) => {
-            let flash = Locale::English
-                .render(MessageKey::SprintStartedFlash)
-                .replace(' ', "+");
+            let flash = super::percent_encode_query(
+                &Locale::English.render(MessageKey::SprintStartedFlash),
+            );
             Ok(Redirect::to(&format!(
                 "/teams/{slug}/sprints/{sprint_id}?flash={flash}"
             )))
         }
         Err(peisear_storage::StorageError::Conflict(msg)) => {
-            let encoded = percent_encode_query(&t(msg));
+            let encoded = super::percent_encode_query(&t(msg));
             Ok(Redirect::to(&format!(
                 "/teams/{slug}/sprints/{sprint_id}?error={encoded}"
             )))
@@ -379,9 +379,9 @@ pub async fn complete(
     )?;
     match sprints::complete(&state.db, &sprint.id).await {
         Ok(()) => {
-            let flash = Locale::English
-                .render(MessageKey::SprintCompletedFlash)
-                .replace(' ', "+");
+            let flash = super::percent_encode_query(
+                &Locale::English.render(MessageKey::SprintCompletedFlash),
+            );
             Ok(Redirect::to(&format!(
                 "/teams/{slug}/sprints/{sprint_id}?flash={flash}"
             )))
@@ -489,9 +489,8 @@ pub async fn delete_sprint(
         &sprint_id,
     )?;
     sprints::delete(&state.db, &sprint.id).await?;
-    let flash = Locale::English
-        .render(MessageKey::SprintDeletedFlash)
-        .replace(' ', "+");
+    let flash =
+        super::percent_encode_query(&Locale::English.render(MessageKey::SprintDeletedFlash));
     Ok(Redirect::to(&format!(
         "/teams/{slug}/sprints?flash={flash}"
     )))
@@ -582,9 +581,9 @@ pub async fn assign_issue(
         }
         sprints::add_issue(&state.db, &sprint.id, &issue_id).await?;
     }
-    let flash = Locale::English
-        .render(MessageKey::SprintAssignmentSavedFlash)
-        .replace(' ', "+");
+    let flash = super::percent_encode_query(
+        &Locale::English.render(MessageKey::SprintAssignmentSavedFlash),
+    );
     Ok(Redirect::to(&format!(
         "/projects/{project_id}/issues/{issue_id}?flash={flash}"
     )))
@@ -610,8 +609,13 @@ pub struct PlanQuery {
 /// handlers redirect back to (RFC 001: "Both POSTs redirect (303)
 /// back to the GET with the same filter query so the planner stays
 /// in context after each move"). Values here are always UUIDs, the
-/// literal `"unassigned"`, or a `Priority::as_str()` word — all
-/// URL-safe without percent-encoding.
+/// literal `"unassigned"`, or a `Priority::as_str()` word, so this
+/// was one of the three raw-interpolation redirect sites `QA-020`
+/// found safe today only because of that — not because anything
+/// enforced it. Routed through `percent_encode_query` anyway, same
+/// as the other 28 sites: the point of one encoder everywhere is
+/// that a site's safety stops depending on what its argument
+/// happens to be shaped like today.
 fn plan_query_string(
     project: &Option<String>,
     priority: &Option<String>,
@@ -619,13 +623,13 @@ fn plan_query_string(
 ) -> String {
     let mut parts = Vec::new();
     if let Some(v) = project.as_deref().filter(|s| !s.is_empty()) {
-        parts.push(format!("project={v}"));
+        parts.push(format!("project={}", super::percent_encode_query(v)));
     }
     if let Some(v) = priority.as_deref().filter(|s| !s.is_empty()) {
-        parts.push(format!("priority={v}"));
+        parts.push(format!("priority={}", super::percent_encode_query(v)));
     }
     if let Some(v) = assignee.as_deref().filter(|s| !s.is_empty()) {
-        parts.push(format!("assignee={v}"));
+        parts.push(format!("assignee={}", super::percent_encode_query(v)));
     }
     if parts.is_empty() {
         String::new()
@@ -845,18 +849,4 @@ pub async fn plan_remove(
     Ok(Redirect::to(&format!(
         "/teams/{slug}/sprints/{sprint_id}/plan{qs}"
     )))
-}
-
-fn percent_encode_query(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for byte in s.as_bytes() {
-        match *byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(*byte as char);
-            }
-            b' ' => out.push('+'),
-            other => out.push_str(&format!("%{:02X}", other)),
-        }
-    }
-    out
 }

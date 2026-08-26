@@ -811,9 +811,7 @@ pub async fn delete(
         &issue_id,
     )?;
     issues::delete(&state.db, &issue_id, &project_id, &user.id).await?;
-    let flash = Locale::English
-        .render(MessageKey::IssueDeletedFlash)
-        .replace(' ', "+");
+    let flash = super::percent_encode_query(&Locale::English.render(MessageKey::IssueDeletedFlash));
     Ok(Redirect::to(&format!(
         "/projects/{project_id}?flash={flash}"
     )))
@@ -1028,13 +1026,13 @@ pub async fn change_status_form_list(
 
     let mut query = format!("/projects/{project_id}?view=list");
     if let Some(s) = body.filter_status.as_deref().filter(|s| !s.is_empty()) {
-        query.push_str(&format!("&status={s}"));
+        query.push_str(&format!("&status={}", super::percent_encode_query(s)));
     }
     if let Some(a) = body.filter_assignee.as_deref().filter(|a| !a.is_empty()) {
-        query.push_str(&format!("&assignee={a}"));
+        query.push_str(&format!("&assignee={}", super::percent_encode_query(a)));
     }
     if let Some(s) = body.sort.as_deref().filter(|s| !s.is_empty()) {
-        query.push_str(&format!("&sort={s}"));
+        query.push_str(&format!("&sort={}", super::percent_encode_query(s)));
     }
     Ok(Redirect::to(&query))
 }

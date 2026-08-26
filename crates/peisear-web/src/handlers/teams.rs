@@ -102,9 +102,8 @@ pub async fn create(
 
     match teams::insert(&state.db, name, &slug_candidate, description, &user.id).await {
         Ok(_) => {
-            let flash = Locale::English
-                .render(MessageKey::TeamCreatedFlash)
-                .replace(' ', "+");
+            let flash =
+                super::percent_encode_query(&Locale::English.render(MessageKey::TeamCreatedFlash));
             Ok(Redirect::to(&format!(
                 "/teams/{slug_candidate}?flash={flash}"
             )))
@@ -113,7 +112,7 @@ pub async fn create(
             // Re-render the form with the conflict in the
             // error query param. The form is on `/teams/new`,
             // so redirect there.
-            let encoded = percent_encode_query(&t(msg));
+            let encoded = super::percent_encode_query(&t(msg));
             Ok(Redirect::to(&format!("/teams/new?error={encoded}")))
         }
         Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(t(msg))),
@@ -212,9 +211,7 @@ pub async fn update(
         Some(form.description.trim())
     };
     teams::update_team(&state.db, &team.id, name, description).await?;
-    let flash = Locale::English
-        .render(MessageKey::TeamUpdatedFlash)
-        .replace(' ', "+");
+    let flash = super::percent_encode_query(&Locale::English.render(MessageKey::TeamUpdatedFlash));
     Ok(Redirect::to(&format!("/teams/{slug}?flash={flash}")))
 }
 
@@ -248,22 +245,22 @@ pub async fn add_member(
 
     let target = users::find_by_email(&state.db, email).await?;
     let Some(target) = target else {
-        let encoded =
-            percent_encode_query(&Locale::English.render(MessageKey::NoUserWithEmailFound {
+        let encoded = super::percent_encode_query(&Locale::English.render(
+            MessageKey::NoUserWithEmailFound {
                 email: email.to_string(),
-            }));
+            },
+        ));
         return Ok(Redirect::to(&format!("/teams/{slug}?error={encoded}")));
     };
 
     match teams::add_member(&state.db, &team.id, &target.id, new_role).await {
         Ok(()) => {
-            let flash = Locale::English
-                .render(MessageKey::MemberAddedFlash)
-                .replace(' ', "+");
+            let flash =
+                super::percent_encode_query(&Locale::English.render(MessageKey::MemberAddedFlash));
             Ok(Redirect::to(&format!("/teams/{slug}?flash={flash}")))
         }
         Err(peisear_storage::StorageError::Conflict(msg)) => {
-            let encoded = percent_encode_query(&t(msg));
+            let encoded = super::percent_encode_query(&t(msg));
             Ok(Redirect::to(&format!("/teams/{slug}?error={encoded}")))
         }
         Err(e) => Err(e.into()),
@@ -301,7 +298,7 @@ pub async fn update_member_role(
         if matches!(current, Some(TeamRole::Admin)) {
             let admins = teams::admin_count(&state.db, &team.id).await?;
             if admins <= 1 {
-                let encoded = percent_encode_query(
+                let encoded = super::percent_encode_query(
                     &Locale::English.render(MessageKey::LastAdminDemotionError),
                 );
                 return Ok(Redirect::to(&format!("/teams/{slug}?error={encoded}")));
@@ -310,9 +307,7 @@ pub async fn update_member_role(
     }
 
     teams::update_role(&state.db, &team.id, &target_user_id, new_role).await?;
-    let flash = Locale::English
-        .render(MessageKey::RoleUpdatedFlash)
-        .replace(' ', "+");
+    let flash = super::percent_encode_query(&Locale::English.render(MessageKey::RoleUpdatedFlash));
     Ok(Redirect::to(&format!("/teams/{slug}?flash={flash}")))
 }
 
@@ -342,8 +337,9 @@ pub async fn remove_member(
     if matches!(target_role, Some(TeamRole::Admin)) {
         let admins = teams::admin_count(&state.db, &team.id).await?;
         if admins <= 1 {
-            let encoded =
-                percent_encode_query(&Locale::English.render(MessageKey::LastAdminRemovalError));
+            let encoded = super::percent_encode_query(
+                &Locale::English.render(MessageKey::LastAdminRemovalError),
+            );
             return Ok(Redirect::to(&format!("/teams/{slug}?error={encoded}")));
         }
     }
@@ -351,14 +347,12 @@ pub async fn remove_member(
     teams::remove_member(&state.db, &team.id, &target_user_id).await?;
 
     if is_self_removal {
-        let flash = Locale::English
-            .render(MessageKey::YouLeftTeamFlash)
-            .replace(' ', "+");
+        let flash =
+            super::percent_encode_query(&Locale::English.render(MessageKey::YouLeftTeamFlash));
         Ok(Redirect::to(&format!("/teams?flash={flash}")))
     } else {
-        let flash = Locale::English
-            .render(MessageKey::MemberRemovedFlash)
-            .replace(' ', "+");
+        let flash =
+            super::percent_encode_query(&Locale::English.render(MessageKey::MemberRemovedFlash));
         Ok(Redirect::to(&format!("/teams/{slug}?flash={flash}")))
     }
 }
@@ -379,25 +373,7 @@ pub async fn unassign_project(
         return Err(AppError::Forbidden);
     }
     teams::unassign_project(&state.db, &project_id).await?;
-    let flash = Locale::English
-        .render(MessageKey::ProjectDetachedFlash)
-        .replace(' ', "+");
+    let flash =
+        super::percent_encode_query(&Locale::English.render(MessageKey::ProjectDetachedFlash));
     Ok(Redirect::to(&format!("/teams/{slug}?flash={flash}")))
-}
-
-/// URL-safe percent-encoding for the error / flash query
-/// strings. Avoids pulling in a urlencoding dep for the
-/// handful of call sites that need it.
-fn percent_encode_query(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for byte in s.as_bytes() {
-        match *byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(*byte as char);
-            }
-            b' ' => out.push('+'),
-            other => out.push_str(&format!("%{:02X}", other)),
-        }
-    }
-    out
 }

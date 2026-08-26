@@ -15,6 +15,41 @@ pub mod settings;
 pub mod sprints;
 pub mod teams;
 
+/// URL-safe percent-encoding for redirect query strings —
+/// `QA-020` (`NFR-*`, RFC 005 §11). One copy, shared by every
+/// handler that puts dynamic text (a rendered flash/error message,
+/// or a filter value) into a `Location` header's query component.
+/// Avoids pulling in a `urlencoding` dependency for what used to be
+/// a handful of call sites and is now the crate's one answer to
+/// this problem.
+///
+/// Was two byte-for-byte identical copies (`handlers/teams.rs`,
+/// `handlers/sprints.rs`), a third differently-named one
+/// (`handlers/settings.rs`'s own `percent_encode_for_query`,
+/// invisible to a search for this function's name), plus 23 sites
+/// doing a narrower hand-rolled `str::replace` of the space
+/// character alone — correct only because, at every site it was
+/// ever applied to, the underlying copy happened to be plain ASCII
+/// with no `&`, `=`, `#`, `%`, `+`, `?`, or non-ASCII byte.
+/// `QA-018`'s audit found the first gap this project shipped by
+/// exactly that kind of luck running out (`NFR-CONC-003`); this is
+/// the same shape, caught before it did. `one_encoder_scan` bans the
+/// narrower idiom's exact spelling by name — see there, not here,
+/// for why it isn't quoted in this comment.
+pub(crate) fn percent_encode_query(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for byte in s.as_bytes() {
+        match *byte {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(*byte as char);
+            }
+            b' ' => out.push('+'),
+            other => out.push_str(&format!("%{:02X}", other)),
+        }
+    }
+    out
+}
+
 pub(crate) fn format_validation(errors: &validator::ValidationErrors) -> String {
     let mut out = Vec::new();
     for (_, errs) in errors.field_errors() {
@@ -90,7 +125,34 @@ const VALIDATOR_DERIVE_MESSAGES: &[(&str, &str, &str)] = &[
 
 #[cfg(test)]
 mod tests {
-    use super::VALIDATOR_DERIVE_MESSAGES;
+    use super::{VALIDATOR_DERIVE_MESSAGES, percent_encode_query};
+
+    /// `QA-020` §6 (RFC 005 §11): a flash message carrying every
+    /// character §2 named as the risk — `&`, `=`, `#`, `%`, `+`,
+    /// `?`, and a non-ASCII byte — must round-trip through the
+    /// query string byte-for-byte. No such message exists in this
+    /// codebase's copy today (§2: that is exactly why the old,
+    /// narrower space-only `str::replace` idiom was safe by luck
+    /// rather than by construction), so this message is synthetic —
+    /// §5 forbids new copy or `MessageKey`s, and this proves the
+    /// mechanism rather than any specific string.
+    #[derive(serde::Deserialize)]
+    struct FlashOnly {
+        flash: String,
+    }
+
+    #[test]
+    fn percent_encode_query_survives_every_character_the_replace_idiom_could_not() {
+        let message = "Sprint started & backlog updated — done? (100% #1, +1 more)";
+        let encoded = percent_encode_query(message);
+        let query = format!("flash={encoded}");
+        let decoded: FlashOnly =
+            serde_urlencoded::from_str(&query).expect("decode the encoded query string");
+        assert_eq!(
+            decoded.flash, message,
+            "the flash message must round-trip through the query string byte-for-byte"
+        );
+    }
 
     #[test]
     fn validator_derive_messages_contain_no_prohibited_vocabulary() {

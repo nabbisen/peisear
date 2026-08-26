@@ -30,6 +30,8 @@ pub mod extractors;
 pub mod handlers;
 pub mod jobs;
 #[cfg(test)]
+mod one_encoder_scan;
+#[cfg(test)]
 mod prose_scan;
 pub mod state;
 #[cfg(test)]

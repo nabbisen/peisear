@@ -113,26 +113,16 @@ fn parse_date(
 /// error in the query string. We don't 4xx the response because
 /// the form is on a settings page that we'd like to re-render
 /// with the conflict explained, not a stark error page.
+///
+/// Used a same-shaped, differently-named local copy of the encoder
+/// below (`percent_encode_for_query`) until `QA-020` — a fourth
+/// hand-rolled implementation the handoff's own name-based search
+/// for `percent_encode_query` didn't find, discovered while routing
+/// this file's other sites through the single copy in
+/// `super::percent_encode_query`.
 fn redirect_with_conflict(message: &str) -> Redirect {
-    let encoded = percent_encode_for_query(message);
+    let encoded = super::percent_encode_query(message);
     Redirect::to(&format!("/settings?error={}", encoded))
-}
-
-/// Minimal percent-encoder for the small subset of characters
-/// that appear in our error strings. Avoids pulling in a full
-/// urlencoding dep for one call site.
-fn percent_encode_for_query(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for byte in s.as_bytes() {
-        match *byte {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
-                out.push(*byte as char);
-            }
-            b' ' => out.push('+'),
-            other => out.push_str(&format!("%{:02X}", other)),
-        }
-    }
-    out
 }
 
 pub async fn update_wip_limit(
@@ -144,9 +134,8 @@ pub async fn update_wip_limit(
         t(MessageKey::WipLimitMustBePositiveIntegerMessage)
     })?;
     users::set_wip_limit(&state.db, &user.id, wip).await?;
-    let flash = Locale::English
-        .render(MessageKey::WipLimitSavedFlash)
-        .replace(' ', "+");
+    let flash =
+        super::percent_encode_query(&Locale::English.render(MessageKey::WipLimitSavedFlash));
     Ok(Redirect::to(&format!("/settings?flash={flash}")))
 }
 
@@ -177,9 +166,9 @@ pub async fn insert_capacity(
     match user_capacities::insert(&state.db, &user.id, points, period_start, period_end, note).await
     {
         Ok(_) => {
-            let flash = Locale::English
-                .render(MessageKey::CapacityRowAddedFlash)
-                .replace(' ', "+");
+            let flash = super::percent_encode_query(
+                &Locale::English.render(MessageKey::CapacityRowAddedFlash),
+            );
             Ok(Redirect::to(&format!("/settings?flash={flash}")))
         }
         Err(peisear_storage::StorageError::Conflict(msg)) => Ok(redirect_with_conflict(&t(msg))),
@@ -258,9 +247,9 @@ pub async fn update_capacity(
     .await
     {
         Ok(()) => {
-            let flash = Locale::English
-                .render(MessageKey::CapacityRowUpdatedFlash)
-                .replace(' ', "+");
+            let flash = super::percent_encode_query(
+                &Locale::English.render(MessageKey::CapacityRowUpdatedFlash),
+            );
             Ok(Redirect::to(&format!("/settings?flash={flash}")))
         }
         Err(peisear_storage::StorageError::Conflict(msg)) => Ok(redirect_with_conflict(&t(msg))),
@@ -293,9 +282,8 @@ pub async fn delete_capacity(
     )?;
 
     user_capacities::delete(&state.db, &user.id, &row_id).await?;
-    let flash = Locale::English
-        .render(MessageKey::CapacityRowRemovedFlash)
-        .replace(' ', "+");
+    let flash =
+        super::percent_encode_query(&Locale::English.render(MessageKey::CapacityRowRemovedFlash));
     Ok(Redirect::to(&format!("/settings?flash={flash}")))
 }
 
@@ -336,8 +324,6 @@ pub async fn close_capacity(
         }))
     })?;
     user_capacities::close_at(&state.db, &user.id, &row_id, period_end).await?;
-    let flash = Locale::English
-        .render(MessageKey::RowClosedFlash)
-        .replace(' ', "+");
+    let flash = super::percent_encode_query(&Locale::English.render(MessageKey::RowClosedFlash));
     Ok(Redirect::to(&format!("/settings?flash={flash}")))
 }

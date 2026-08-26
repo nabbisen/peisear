@@ -115,8 +115,8 @@ pub async fn mark_all_read(
     State(state): State<AppState>,
 ) -> AppResult<Redirect> {
     let n = notif_store::mark_all_read(&state.db, &user.id).await?;
-    let flash = Locale::English
-        .render(MessageKey::MarkedAsReadFlash { count: n })
-        .replace(' ', "+");
+    let flash = super::percent_encode_query(
+        &Locale::English.render(MessageKey::MarkedAsReadFlash { count: n }),
+    );
     Ok(Redirect::to(&format!("/inbox?flash={flash}")))
 }

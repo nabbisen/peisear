@@ -221,8 +221,7 @@ pub async fn delete(
         &project_id,
     )?;
     projects::delete(&state.db, &project_id, &user.id).await?;
-    let flash = Locale::English
-        .render(MessageKey::ProjectDeletedFlash)
-        .replace(' ', "+");
+    let flash =
+        super::percent_encode_query(&Locale::English.render(MessageKey::ProjectDeletedFlash));
     Ok(Redirect::to(&format!("/projects?flash={flash}")))
 }

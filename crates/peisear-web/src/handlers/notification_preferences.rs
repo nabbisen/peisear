@@ -106,9 +106,8 @@ pub async fn save_preferences(
         notif_store::upsert_preference(&state.db, &user.id, k, &chans, sev).await?;
     }
 
-    let flash = Locale::English
-        .render(MessageKey::PreferencesSavedFlash)
-        .replace(' ', "+");
+    let flash =
+        super::percent_encode_query(&Locale::English.render(MessageKey::PreferencesSavedFlash));
     Ok(Redirect::to(&format!(
         "/settings/notifications?flash={flash}"
     )))
@@ -127,9 +126,9 @@ pub async fn silence_all(
     // first-login email opt-in record, conceptually different
     // from per-kind silencing.
     let _ = (IN_APP, WEBHOOK); // silence "unused import" warning shape
-    let flash = Locale::English
-        .render(MessageKey::AllNotificationsSilencedFlash)
-        .replace(' ', "+");
+    let flash = super::percent_encode_query(
+        &Locale::English.render(MessageKey::AllNotificationsSilencedFlash),
+    );
     Ok(Redirect::to(&format!(
         "/settings/notifications?flash={flash}"
     )))
