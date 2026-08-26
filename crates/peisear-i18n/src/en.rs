@@ -373,10 +373,12 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::CaptionWordCompleted => "completed".to_string(),
         MessageKey::VelocityCaptionMiddle => " (filled) and ".to_string(),
         MessageKey::CaptionWordCarriedOver => "carried over".to_string(),
-        MessageKey::VelocityCaptionTail => {
-            " (light). The dotted line is the median completed across these sprints. \
-             Numbers describe what happened — they don't grade it."
-                .to_string()
+        MessageKey::VelocityCaptionCarriedOverClose => " (light).".to_string(),
+        MessageKey::VelocityCaptionMedianSentence => {
+            " The dotted line is the median completed across these sprints.".to_string()
+        }
+        MessageKey::VelocityCaptionClosingNote => {
+            " Numbers describe what happened — they don't grade it.".to_string()
         }
         MessageKey::BarChartAriaLabel => "Bar chart of recent sprint outcomes".to_string(),
         MessageKey::MedianLabel { median } => format!("median {median}"),

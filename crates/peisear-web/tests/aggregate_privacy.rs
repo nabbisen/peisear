@@ -34,6 +34,38 @@ async fn insert_done_issue(
     assignee_id: &str,
     title: &str,
 ) {
+    insert_done_issue_with_assignee(
+        app,
+        project_id,
+        author_id,
+        sprint_id,
+        Some(assignee_id),
+        title,
+    )
+    .await;
+}
+
+/// Insert a `done` issue with no assignee — `QA-017` §3.2, the
+/// unassigned-completed-issue case the safe-direction rule exists
+/// for.
+async fn insert_unassigned_done_issue(
+    app: &TestApp,
+    project_id: &str,
+    author_id: &str,
+    sprint_id: &str,
+    title: &str,
+) {
+    insert_done_issue_with_assignee(app, project_id, author_id, sprint_id, None, title).await;
+}
+
+async fn insert_done_issue_with_assignee(
+    app: &TestApp,
+    project_id: &str,
+    author_id: &str,
+    sprint_id: &str,
+    assignee_id: Option<&str>,
+    title: &str,
+) {
     let id = uuid::Uuid::new_v4().to_string();
     peisear_storage::issues::insert(
         &app.db,
@@ -46,7 +78,7 @@ async fn insert_done_issue(
             status: IssueStatus::Done,
             priority: Priority::Medium,
             effort: Some(3),
-            assignee_id: Some(assignee_id),
+            assignee_id,
             planned_start_at: None,
             planned_end_at: None,
         },
@@ -130,6 +162,43 @@ async fn one_contributor_burndown_absent_totals_present() {
     );
 }
 
+/// Check 6 (`QA-017` round 2, architect review §3): an unassigned
+/// completed issue makes the true contributor count unknown, and
+/// unknown is treated the same as "fewer than two" — even on a
+/// sprint that would otherwise show a trajectory. Two known,
+/// distinct contributors (Alice, Bob) complete one issue each, which
+/// alone would render the burndown (see
+/// `two_contributors_burndown_and_median_render`); a third completed
+/// issue with no assignee is added on top. The true count could be 2
+/// or more, never less — but "could be more" is still "not
+/// verifiably two known people", so this must suppress, the same as
+/// the one-contributor case. A bare `COUNT(DISTINCT assignee_id)`
+/// that dropped the unassigned-makes-it-`None` rule would still see
+/// exactly 2 known assignees here and render, which is why this test
+/// exists separately from check 1: check 1 has no unassigned issue to
+/// distinguish "correctly counted 2" from "incorrectly ignored an
+/// unknown".
+#[tokio::test]
+async fn unassigned_completed_issue_suppresses_even_with_two_known_contributors() {
+    let (app, _team_id, project_id, sprint_id, alice_id, bob_id) = team_with_active_sprint().await;
+    insert_done_issue(&app, &project_id, &alice_id, &sprint_id, &alice_id, "A").await;
+    insert_done_issue(&app, &project_id, &alice_id, &sprint_id, &bob_id, "B").await;
+    insert_unassigned_done_issue(&app, &project_id, &alice_id, &sprint_id, "C").await;
+
+    let resp = app
+        .server
+        .get(&format!("/teams/engineering/sprints/{sprint_id}"))
+        .await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    assert!(
+        !body.contains("cumulative"),
+        "an unassigned completed issue makes the count unknown -- must suppress \
+         even though two known contributors would otherwise qualify: {body}"
+    );
+}
+
 /// Check 3: one contributor — velocity bars present, median line
 /// absent.
 #[tokio::test]
@@ -171,11 +240,32 @@ async fn one_contributor_velocity_bars_present_median_absent() {
         !body.contains("stroke-dasharray"),
         "one contributor across the whole window must not render the median line: {body}"
     );
+    assert!(
+        !body.contains("The dotted line is the median"),
+        "the caption's median sentence (`QA-017` round 2) is gated on the same \
+         predicate as the line it describes -- it must not render on its own \
+         once the line is gone: {body}"
+    );
+    assert!(
+        body.contains("Numbers describe what happened"),
+        "the caption's closing note is not gated on the median predicate -- it \
+         must still render: {body}"
+    );
 }
 
 /// Check 4: one contributor — no text anywhere on the page explains
 /// the absence. The guard against `QA-017` §4's silence being undone
 /// later by a well-meant explanatory note.
+///
+/// This is a copy tripwire, not evidence the suppression itself
+/// fired — it asserts these phrases never appear, which holds
+/// whether or not `show_trajectory`/`show_median` actually suppressed
+/// anything. `two_contributors_burndown_and_median_render`,
+/// `one_contributor_burndown_absent_totals_present`, and
+/// `one_contributor_velocity_bars_present_median_absent` are the
+/// tests that prove the suppression fired (`QA-017` round-2 review,
+/// §3: confirmed by planting `distinct_contributors` to always return
+/// a fixed count and observing only those three fail).
 #[tokio::test]
 async fn one_contributor_page_has_no_text_explaining_the_absence() {
     let (app, _team_id, project_id, sprint_id, alice_id, _bob_id) = team_with_active_sprint().await;

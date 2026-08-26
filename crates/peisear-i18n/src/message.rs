@@ -1011,12 +1011,12 @@ pub enum MessageKey {
     CompletedWorkHeading,
     RecentCompletedSprintsAriaLabel,
     /// Velocity chart caption, split at its existing `<strong>`
-    /// boundaries — three plain-text keys plus two shared
+    /// boundaries — five plain-text keys plus two shared
     /// emphasised-word keys, rendered in the same relative positions
     /// the source's literal text nodes held. Not concatenation of a
     /// template with a value (rule 1's concern): every piece is our
     /// own copy, split only where the view already split it for
-    /// visual emphasis.
+    /// visual emphasis or (`QA-017` round 2) suppression.
     VelocityCaptionLead,
     /// "completed", lowercase and mid-sentence — shared between the
     /// velocity and burndown captions, which both emphasise this
@@ -1031,7 +1031,32 @@ pub enum MessageKey {
     /// [`MessageKey::CarriedOverHeading`]'s standalone, title-case
     /// use.
     CaptionWordCarriedOver,
-    VelocityCaptionTail,
+    /// " (light)." — closes the "completed (filled) and carried over
+    /// (light)" sentence. Always renders regardless of
+    /// [`MessageKey::VelocityCaptionMedianSentence`]'s suppression:
+    /// it describes the bars, which are never gated.
+    VelocityCaptionCarriedOverClose,
+    /// "The dotted line is the median completed across these
+    /// sprints." — `QA-017` round 2 (`NFR-PRIV-007`, RFC 005 §7):
+    /// split out of what was one `VelocityCaptionTail` key so this
+    /// sentence alone can gate on `show_median`, the same predicate
+    /// that gates the `<line>` it describes. The architect's QA-017
+    /// review corrected the original handoff's §4 reading: gating
+    /// *this* key is not the copy trap `NFR-PRIV-007` guards
+    /// against, because a sentence describing a line, appearing
+    /// exactly when the line appears, discloses nothing the line's
+    /// own presence does not — the trap is copy that lets a reader
+    /// infer *why* the line is gone, and this key never speaks to
+    /// that.
+    VelocityCaptionMedianSentence,
+    /// "Numbers describe what happened — they don't grade it." — the
+    /// product's sustainability-not-surveillance line. Always
+    /// renders, independent of `show_median`: unlike
+    /// [`MessageKey::VelocityCaptionMedianSentence`], it describes no
+    /// specific chart element, so gating it on the same predicate
+    /// would silently drop a commitment that has nothing to do with
+    /// contributor count.
+    VelocityCaptionClosingNote,
     BarChartAriaLabel,
     MedianLabel {
         median: i64,
@@ -2372,7 +2397,9 @@ impl MessageKey {
             MessageKey::CaptionWordCompleted,
             MessageKey::VelocityCaptionMiddle,
             MessageKey::CaptionWordCarriedOver,
-            MessageKey::VelocityCaptionTail,
+            MessageKey::VelocityCaptionCarriedOverClose,
+            MessageKey::VelocityCaptionMedianSentence,
+            MessageKey::VelocityCaptionClosingNote,
             MessageKey::BarChartAriaLabel,
             MessageKey::MedianLabel { median: 5 },
             MessageKey::NewSprintLabel,

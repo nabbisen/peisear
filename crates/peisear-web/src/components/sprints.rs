@@ -296,7 +296,14 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) 
                 <p class="text-xs text-base-content/70">
                     {t(MessageKey::VelocityCaptionLead)} <strong>{t(MessageKey::CaptionWordCompleted)}</strong>
                     {t(MessageKey::VelocityCaptionMiddle)} <strong>{t(MessageKey::CaptionWordCarriedOver)}</strong>
-                    {t(MessageKey::VelocityCaptionTail)}
+                    {t(MessageKey::VelocityCaptionCarriedOverClose)}
+                    // `QA-017` round 2: the median sentence is gated
+                    // on the same predicate as the `<line>` it
+                    // describes, so it is never on screen without
+                    // the line it names. The closing note below is
+                    // not gated -- it describes no chart element.
+                    {show_median.then(|| t(MessageKey::VelocityCaptionMedianSentence))}
+                    {t(MessageKey::VelocityCaptionClosingNote)}
                 </p>
                 <div role="img" aria-label=t(MessageKey::BarChartAriaLabel)>
                     <svg viewBox=format!("0 0 {} {}", chart_w, chart_h)
