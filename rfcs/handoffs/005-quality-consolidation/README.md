@@ -41,6 +41,7 @@ second RFC lifecycle".
 | QA-018 | [QA-018](./QA-018-verify-the-claims.md) | §8's three greps are clean; the sweep it was a proxy for is not — 40 acceptance citations unverified, 84 `Implemented` requirements citing nothing, and §9.2 claiming four. **Audit only** (RFC 005 §8) | 0.28.0 | — |
 | QA-019 | [QA-019](./QA-019-one-authority.md) | **P0** — `updated_at` is written by application code on `issues`, `projects` and `user_view_states`, which have no triggers. `NFR-CONC-003` says one authority; there are two, on the tables the lock most protects (RFC 005 §8) | 0.28.0 | QA-018 |
 | QA-020 | [QA-020](./QA-020-one-encoder.md) | Three encoding strategies across 29 redirect sites — the largest, `.replace(' ', "+")`, is safe only because every flash string happens to be ASCII. **The last section of Phase E** (RFC 005 §11) | 0.28.0 | — |
+| REL-0.28.0 | [REL-0.28.0](./REL-0.28.0-release-candidate.md) | The release candidate — RFC 005 complete, a schema migration, and the sentence the changelog must not contain | 0.28.0 | QA-013..020 |
 
 ## Why two items are out of phase
 
