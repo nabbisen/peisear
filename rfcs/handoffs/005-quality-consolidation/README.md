@@ -35,6 +35,7 @@ second RFC lifecycle".
 | QA-012 | [QA-012](./QA-012-contrast-audit.md) | `NFR-A11Y-005`'s contrast audit, aimed at the 130 opacity modifiers rather than the theme's own tokens (RFC 005 §4) | 0.28.0 | — |
 | QA-013 | [QA-013](./QA-013-the-seventy-floor.md) | Raise the muted tier to a `/70` floor — 111 sites — and guard the banned range; owner-approved from `QA-012`'s table (RFC 005 §4) | 0.28.0 | QA-012 |
 | QA-014 | [QA-014](./QA-014-touch-targets.md) | `NFR-A11Y-007` measured: ~149 controls below 44 px, exactly one compliant and nothing asserting it. **Measurement only** — the 44 px requirement may itself be what changes (RFC 005 §6) | 0.28.0 | — |
+| QA-015 | [QA-015](./QA-015-mistap-safety.md) | Three checkboxes below the **AA** floor, and the confirmation screen's irreversible Delete within a mis-tap of its own Cancel — pulled ahead of 0.30.0's touch-target pass (RFC 005 §6) | 0.28.0 | QA-014 |
 
 ## Why two items are out of phase
 
