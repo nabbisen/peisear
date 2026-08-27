@@ -24,6 +24,7 @@
 use axum::response::Html;
 use leptos::prelude::*;
 
+use super::grow;
 use super::layout::AppShell;
 use super::t;
 use peisear_core::{CurrentUser, personal_metrics::DEFAULT_WIP_LIMIT};
@@ -147,21 +148,21 @@ pub fn SettingsPage(
                                     <input type="number" name="points" min="1" max="999"
                                            required
                                            placeholder=t(MessageKey::PointsPlaceholderExample)
-                                           class="input input-bordered input-sm w-24"/>
+                                           class=grow("input input-bordered input-sm w-24")/>
                                 </label>
                                 <label class="form-control">
                                     <div class="label py-1">
                                         <span class="label-text text-sm">{t(MessageKey::FromDateFieldLabel)}</span>
                                     </div>
                                     <input type="date" name="period_start"
-                                           class="input input-bordered input-sm"/>
+                                           class=grow("input input-bordered input-sm")/>
                                 </label>
                                 <label class="form-control">
                                     <div class="label py-1">
                                         <span class="label-text text-sm">{t(MessageKey::ToDateFieldLabel)}</span>
                                     </div>
                                     <input type="date" name="period_end"
-                                           class="input input-bordered input-sm"/>
+                                           class=grow("input input-bordered input-sm")/>
                                 </label>
                                 <label class="form-control flex-1 min-w-[12rem]">
                                     <div class="label py-1">
@@ -169,9 +170,9 @@ pub fn SettingsPage(
                                     </div>
                                     <input type="text" name="note" maxlength="120"
                                            placeholder=t(MessageKey::NoteFieldPlaceholder)
-                                           class="input input-bordered input-sm w-full"/>
+                                           class=grow("input input-bordered input-sm w-full")/>
                                 </label>
-                                <button type="submit" class="btn btn-primary btn-sm">
+                                <button type="submit" class=grow("btn btn-primary btn-sm")>
                                     {t(MessageKey::AddRowButton)}
                                 </button>
                             </form>
@@ -198,10 +199,10 @@ pub fn SettingsPage(
                             <input type="number" name="wip_limit" min="1" max="99"
                                    value=wip_value
                                    placeholder=DEFAULT_WIP_LIMIT.to_string()
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
                         <div class="card-actions justify-end mt-2">
-                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::SaveButton)}</button>
+                            <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::SaveButton)}</button>
                         </div>
                     </form>
                 </section>
@@ -251,7 +252,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
     let close_button = is_open_ended.then(|| {
         view! {
             <details class="dropdown dropdown-end">
-                <summary class="btn btn-ghost btn-xs"
+                <summary class=grow("btn btn-ghost btn-xs")
                          aria-label=t(MessageKey::CloseThisRowAriaLabel)>
                     {t(MessageKey::CloseOnDateSummary)}
                 </summary>
@@ -263,9 +264,9 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                                 <span class="label-text text-xs">{t(MessageKey::CloseOnLabel)}</span>
                             </div>
                             <input type="date" name="period_end" required
-                                   class="input input-bordered input-xs"/>
+                                   class=grow("input input-bordered input-xs")/>
                         </label>
-                        <button type="submit" class="btn btn-primary btn-xs">{t(MessageKey::CloseButton)}</button>
+                        <button type="submit" class=grow("btn btn-primary btn-xs")>{t(MessageKey::CloseButton)}</button>
                     </form>
                 </div>
             </details>
@@ -290,7 +291,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                             </div>
                             <input type="number" name="points" min="1" max="999"
                                    value=row.points.to_string()
-                                   class="input input-bordered input-xs"/>
+                                   class=grow("input input-bordered input-xs")/>
                         </label>
                         <label class="form-control mt-1">
                             <div class="label py-0">
@@ -298,7 +299,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                             </div>
                             <input type="date" name="period_start"
                                    value=from_value
-                                   class="input input-bordered input-xs"/>
+                                   class=grow("input input-bordered input-xs")/>
                         </label>
                         <label class="form-control mt-1">
                             <div class="label py-0">
@@ -306,7 +307,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                             </div>
                             <input type="date" name="period_end"
                                    value=to_value
-                                   class="input input-bordered input-xs"/>
+                                   class=grow("input input-bordered input-xs")/>
                         </label>
                         <label class="form-control mt-1">
                             <div class="label py-0">
@@ -314,9 +315,9 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                             </div>
                             <input type="text" name="note" maxlength="120"
                                    value=note_text
-                                   class="input input-bordered input-xs"/>
+                                   class=grow("input input-bordered input-xs")/>
                         </label>
-                        <button type="submit" class="btn btn-primary btn-xs mt-2">
+                        <button type="submit" class=grow("btn btn-primary btn-xs mt-2")>
                             {t(MessageKey::SaveButton)}
                         </button>
                     </form>
@@ -333,7 +334,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                     <form method="post" action=delete_action
                           onsubmit="return confirm('Remove this capacity row?')">
                         <input type="hidden" name="client_updated_at" value=cua_delete/>
-                        <button type="submit" class="btn btn-ghost btn-xs text-error"
+                        <button type="submit" class=grow("btn btn-ghost btn-xs text-error")
                                 aria-label=t(MessageKey::RemoveThisRowAriaLabel)>
                             {t(MessageKey::RemoveButton)}
                         </button>

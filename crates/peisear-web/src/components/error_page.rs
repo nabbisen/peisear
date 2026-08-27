@@ -6,7 +6,7 @@ use leptos::prelude::*;
 use peisear_i18n::MessageKey;
 
 use super::layout::PublicShell;
-use super::t;
+use super::{grow, t};
 
 #[component]
 pub fn ErrorPage(status: u16, #[prop(into)] message: String) -> impl IntoView {
@@ -18,7 +18,7 @@ pub fn ErrorPage(status: u16, #[prop(into)] message: String) -> impl IntoView {
                         <div class="text-5xl font-bold text-error">{status}</div>
                         <p class="text-base-content/70 mt-2">{message}</p>
                         <div class="card-actions justify-center mt-4">
-                            <a href="/" class="btn btn-primary btn-sm">{t(MessageKey::ErrorPageGoHomeLink)}</a>
+                            <a href="/" class=grow("btn btn-primary btn-sm")>{t(MessageKey::ErrorPageGoHomeLink)}</a>
                         </div>
                     </div>
                 </div>

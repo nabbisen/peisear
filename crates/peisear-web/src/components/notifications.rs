@@ -37,7 +37,7 @@ use peisear_core::notifications::{Notification, Severity, kind};
 use peisear_i18n::{MessageKey, NotificationKindLabel};
 
 use super::layout::AppShell;
-use super::{channel_label_for, kind_label_for, t};
+use super::{channel_label_for, grow, kind_label_for, t};
 
 #[component]
 pub fn InboxPage(
@@ -59,7 +59,7 @@ pub fn InboxPage(
                     <p class="text-sm">{t(MessageKey::SilenceResumeBannerMessage)}</p>
                 </div>
                 <form method="post" action="/inbox/resume">
-                    <button type="submit" class="btn btn-sm btn-primary"
+                    <button type="submit" class=grow("btn btn-sm btn-primary")
                             aria-label=t(MessageKey::ResumeNotificationsAriaLabel)>
                         {t(MessageKey::ResumeNotificationsButton)}
                     </button>
@@ -81,14 +81,14 @@ pub fn InboxPage(
                 <form method="post" action="/inbox/email-opt-in"
                       class="flex gap-2 flex-wrap items-center">
                     <input type="hidden" name="email_opt_in" value="yes"/>
-                    <button type="submit" class="btn btn-sm btn-primary">
+                    <button type="submit" class=grow("btn btn-sm btn-primary")>
                         {t(MessageKey::EmailOptInYesButton)}
                     </button>
                 </form>
                 <form method="post" action="/inbox/email-opt-in"
                       class="flex gap-2">
                     <input type="hidden" name="email_opt_in" value="no"/>
-                    <button type="submit" class="btn btn-sm btn-ghost">
+                    <button type="submit" class=grow("btn btn-sm btn-ghost")>
                         {t(MessageKey::EmailOptInNoButton)}
                     </button>
                 </form>
@@ -125,7 +125,7 @@ pub fn InboxPage(
                     </div>
                     {has_unread.then(|| view! {
                         <form method="post" action="/inbox/mark-all-read">
-                            <button type="submit" class="btn btn-sm btn-ghost"
+                            <button type="submit" class=grow("btn btn-sm btn-ghost")
                                     aria-label=t(MessageKey::MarkAllReadAriaLabel)>
                                 {t(MessageKey::MarkAllReadButton)}
                             </button>
@@ -246,7 +246,7 @@ fn render_row(n: Notification) -> impl IntoView {
                     {is_unread.then(|| view! {
                         <form method="post" action=mark_read_action>
                             <button type="submit"
-                                    class="btn btn-ghost btn-xs"
+                                    class=grow("btn btn-ghost btn-xs")
                                     aria-label=t(MessageKey::MarkAsReadAriaLabel)>
                                 {t(MessageKey::MarkReadButton)}
                             </button>

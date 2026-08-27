@@ -16,7 +16,7 @@ use peisear_i18n::MessageKey;
 use peisear_storage::search::SearchHit;
 
 use super::layout::AppShell;
-use super::t;
+use super::{grow, t};
 
 #[allow(clippy::too_many_arguments)]
 pub fn render_results(
@@ -82,9 +82,9 @@ fn SearchResultsPage(
                            value=q_for_form
                            autofocus=true
                            placeholder=t(MessageKey::SearchPlaceholder)
-                           class="input input-bordered input-sm w-full"/>
+                           class=grow("input input-bordered input-sm w-full")/>
                 </label>
-                <button type="submit" class="btn btn-sm btn-primary">{t(MessageKey::SearchWord)}</button>
+                <button type="submit" class=grow("btn btn-sm btn-primary")>{t(MessageKey::SearchWord)}</button>
             </form>
 
             {if has_query {

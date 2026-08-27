@@ -5,7 +5,7 @@ use leptos::prelude::*;
 use peisear_i18n::{Field, MessageKey};
 
 use super::layout::PublicShell;
-use super::t;
+use super::{grow, t};
 
 #[component]
 fn Brand(subtitle: String) -> impl IntoView {
@@ -39,17 +39,17 @@ pub fn LoginPage(flash: Option<String>, email: String) -> impl IntoView {
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Email })}</span></div>
                             <input type="email" name="email" autocomplete="email" required=true
                                    value=email
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
 
                         <label class="form-control w-full">
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::PasswordFieldLabel)}</span></div>
                             <input type="password" name="password" autocomplete="current-password"
                                    required=true minlength="8"
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
 
-                        <button type="submit" class="btn btn-primary btn-sm mt-2">{t(MessageKey::SignInWord)}</button>
+                        <button type="submit" class=grow("btn btn-primary btn-sm mt-2")>{t(MessageKey::SignInWord)}</button>
                         <div class="text-center text-xs mt-1 text-base-content/70">
                             {t(MessageKey::NoAccountPrompt)}
                             <a href="/register" class="link link-primary">{t(MessageKey::CreateOneLinkWord)}</a>
@@ -76,14 +76,14 @@ pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) 
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::DisplayNameFieldLabel)}</span></div>
                             <input type="text" name="display_name" required=true maxlength="80"
                                    value=display_name
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
 
                         <label class="form-control w-full">
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Email })}</span></div>
                             <input type="email" name="email" autocomplete="email" required=true
                                    value=email
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
 
                         <label class="form-control w-full">
@@ -93,10 +93,10 @@ pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) 
                             </div>
                             <input type="password" name="password" autocomplete="new-password"
                                    required=true minlength="8"
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
 
-                        <button type="submit" class="btn btn-primary btn-sm mt-2">{t(MessageKey::CreateAccountButton)}</button>
+                        <button type="submit" class=grow("btn btn-primary btn-sm mt-2")>{t(MessageKey::CreateAccountButton)}</button>
                         <div class="text-center text-xs mt-1 text-base-content/70">
                             {t(MessageKey::AlreadyHaveAccountPrompt)}
                             <a href="/login" class="link link-primary">{t(MessageKey::SignInWord)}</a>

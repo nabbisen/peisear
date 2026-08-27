@@ -4,7 +4,7 @@ use axum::response::Html;
 use leptos::prelude::*;
 
 use super::layout::AppShell;
-use super::t;
+use super::{grow, t};
 use peisear_core::{CurrentUser, Project};
 use peisear_i18n::{Field, MessageKey};
 
@@ -24,7 +24,7 @@ pub fn ProjectsListPage(
                     <h1 class="text-2xl font-semibold tracking-tight">{t(MessageKey::ProjectsSectionName)}</h1>
                     <p class="text-sm text-base-content/70">{t(MessageKey::ProjectsSubheading)}</p>
                 </div>
-                <a href="/projects/new" class="btn btn-primary btn-sm">
+                <a href="/projects/new" class=grow("btn btn-primary btn-sm")>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
                          viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
@@ -39,7 +39,7 @@ pub fn ProjectsListPage(
                         <div class="card-body items-center text-center py-12">
                             <div class="text-base-content/70 text-5xl">"◎"</div>
                             <p class="text-base-content/70 mt-2">{t(MessageKey::ProjectsEmptyMessage)}</p>
-                            <a href="/projects/new" class="btn btn-primary btn-sm mt-2">
+                            <a href="/projects/new" class=grow("btn btn-primary btn-sm mt-2")>
                                 {t(MessageKey::CreateFirstProjectButton)}
                             </a>
                         </div>
@@ -122,7 +122,7 @@ pub fn ProjectNewPage(
                         <label class="form-control w-full">
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Name })}</span></div>
                             <input type="text" name="name" required=true maxlength="120" autofocus=true
-                                   class="input input-bordered input-sm w-full"
+                                   class=grow("input input-bordered input-sm w-full")
                                    placeholder=t(MessageKey::ProjectNamePlaceholder)/>
                         </label>
                         <label class="form-control w-full">
@@ -139,7 +139,7 @@ pub fn ProjectNewPage(
                                         {t(MessageKey::OptionalHint)}
                                     </span>
                                 </div>
-                                <select name="team_id" class="select select-bordered select-sm w-full">
+                                <select name="team_id" class=grow("select select-bordered select-sm w-full")>
                                     <option value="">{t(MessageKey::PersonalNoTeamOption)}</option>
                                     {team_options}
                                 </select>
@@ -151,8 +151,8 @@ pub fn ProjectNewPage(
                             </label>
                         })}
                         <div class="card-actions justify-end mt-2">
-                            <a href="/projects" class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
-                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::CreateProjectButton)}</button>
+                            <a href="/projects" class=grow("btn btn-ghost btn-sm")>{t(MessageKey::CancelButton)}</a>
+                            <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::CreateProjectButton)}</button>
                         </div>
                     </form>
                 </div>
@@ -204,7 +204,7 @@ pub fn ProjectEditPage(
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Name })}</span></div>
                             <input type="text" name="name" required=true maxlength="120"
                                    value=name_for_input
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
                         <label class="form-control w-full">
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span></div>
@@ -214,10 +214,10 @@ pub fn ProjectEditPage(
                             </textarea>
                         </label>
                         <div class="card-actions justify-end mt-2">
-                            <a href=format!("/projects/{}", project.id) class="btn btn-ghost btn-sm">
+                            <a href=format!("/projects/{}", project.id) class=grow("btn btn-ghost btn-sm")>
                                 {t(MessageKey::CancelButton)}
                             </a>
-                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::SaveButton)}</button>
+                            <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::SaveButton)}</button>
                         </div>
                     </form>
                 </div>
@@ -231,7 +231,7 @@ pub fn ProjectEditPage(
                                     {t(MessageKey::DeleteProjectWarning)}
                                 </div>
                             </div>
-                            <a href=delete_href class="btn btn-error btn-outline btn-sm">
+                            <a href=delete_href class=grow("btn btn-error btn-outline btn-sm")>
                                 {t(MessageKey::DeleteButton)}
                             </a>
                         </div>

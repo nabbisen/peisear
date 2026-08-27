@@ -62,6 +62,31 @@ pub(crate) fn t(key: peisear_i18n::MessageKey) -> String {
     peisear_i18n::Locale::English.render(key)
 }
 
+/// `NFR-A11Y-007`'s 44px touch target (`DEC-049`), resolved:
+/// `min-h-11`/`min-w-11` = `2.75rem` = 44px each, verified against the
+/// pinned `daisyui@4.12.14` bundle `TT-001` located at
+/// `.git-exclude/tmp/daisy.css`. One name, composed at each of
+/// `TT-002`'s 136 call sites, rather than the pair repeated as many
+/// times — the same "move the fact to where it can be checked" shape
+/// as [`t`] itself, `RFC 006`, `QA-019`, `HLT-001`, and `JS-003`.
+///
+/// `pub`, not `pub(crate)`: `TT-002` §7.2 wants a test proving the
+/// *constant* drives the rendered page, not a hardcoded copy of its
+/// current value — which means an integration test (a separate crate
+/// under `tests/`) needs to read this symbol directly.
+pub const TOUCH_TARGET: &str = "min-h-11 min-w-11";
+
+/// Append [`TOUCH_TARGET`] to `base`'s existing classes — `TT-002`'s
+/// one call site for the `Grow` mechanism (`DEC-049` as amended by
+/// `TT-001-review.md` §2.1: `Grow` is the default, and a `Grow`
+/// cluster inside a positive-`gap` container is presumed to satisfy
+/// clause (2) with no further verification). `TT-003`'s guard checks
+/// for [`TOUCH_TARGET`] as one symbol rather than pattern-matching a
+/// class pair at 136 sites.
+pub(crate) fn grow(base: &str) -> String {
+    format!("{base} {TOUCH_TARGET}")
+}
+
 /// Column of issues on the kanban board, grouped by status. Shared
 /// between [`issues::ProjectDetailPage`] and its handler.
 #[derive(Debug, Clone)]

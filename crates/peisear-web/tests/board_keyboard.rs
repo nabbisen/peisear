@@ -184,9 +184,13 @@ async fn each_status_control_has_a_distinguishing_accessible_name() {
 }
 
 /// `QA-014` §4.1 (`NFR-A11Y-007`): the board's per-card status buttons
-/// are the one control in the whole `src/components/` tree that meets
-/// the 44px touch-target minimum — `min-h-11 min-w-11` on top of
-/// `btn-xs`'s own 24px box. Nothing asserted that until now; the
+/// were the first control in `src/components/` to meet the 44px
+/// touch-target minimum — `min-h-11 min-w-11` on top of `btn-xs`'s own
+/// 24px box, since joined by 136 more (`TT-002`, `tests/touch_target.rs`)
+/// composed from the same fact via `components::grow`, this one
+/// remains a hardcoded literal rather than `grow`'s call site (`TT-002`
+/// left it untouched — see that handoff's review package for why).
+/// Nothing asserted this control specifically until now; the
 /// baseline's claim that `board_keyboard` verified `NFR-A11Y-007` was
 /// never true, and deleting either class today would be invisible to
 /// every one of this suite's other tests.

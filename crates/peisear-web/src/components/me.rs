@@ -11,7 +11,7 @@ use axum::response::Html;
 use leptos::prelude::*;
 
 use super::layout::AppShell;
-use super::t;
+use super::{grow, t};
 use peisear_core::{
     CurrentUser, DisplayHealthState,
     personal_metrics::{
@@ -247,7 +247,7 @@ pub fn PersonalDashboard(
             <div class="max-w-3xl mx-auto">
                 <div class="flex items-center justify-between gap-3 mb-1">
                     <h1 class="text-xl font-semibold">{t(MessageKey::PersonalDashboardTitle)}</h1>
-                    <a href="/today/calendar" class="btn btn-outline btn-sm">
+                    <a href="/today/calendar" class=grow("btn btn-outline btn-sm")>
                         {t(MessageKey::CalendarBreadcrumbWord)}
                     </a>
                 </div>

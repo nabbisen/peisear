@@ -38,7 +38,7 @@ use peisear_core::notifications::{
 use peisear_i18n::{MessageKey, NotificationChannelLabel, NotificationKindLabel};
 
 use super::layout::AppShell;
-use super::{kind_label_for, t};
+use super::{grow, kind_label_for, t};
 
 #[component]
 pub fn PreferencesPage(
@@ -94,7 +94,7 @@ pub fn PreferencesPage(
                     <form method="post" action="/settings/notifications/silence-all"
                           onsubmit="return confirm('Silence all notification kinds? \
                                                     You can re-enable them any time.')">
-                        <button type="submit" class="btn btn-sm btn-ghost text-base-content/70"
+                        <button type="submit" class=grow("btn btn-sm btn-ghost text-base-content/70")
                                 aria-label=t(MessageKey::SilenceAllAriaLabel)>
                             {t(MessageKey::SilenceAllButton)}
                         </button>
@@ -134,7 +134,7 @@ pub fn PreferencesPage(
                                 {t(MessageKey::ChannelStubDisclaimer)}
                             </p>
                             <div class="text-right">
-                                <button type="submit" class="btn btn-sm btn-primary">
+                                <button type="submit" class=grow("btn btn-sm btn-primary")>
                                     {t(MessageKey::SavePreferencesButton)}
                                 </button>
                             </div>
@@ -182,22 +182,28 @@ fn render_kind_row(kind_id: &'static str, pref: Option<Preference>) -> impl Into
         <tr aria-label=t(MessageKey::NotificationKindPreferencesAriaLabel { kind: row_kind })>
             <td class="font-medium">{label_text}</td>
             <td class="text-center">
-                <input type="checkbox" name=in_app_name class="checkbox"
-                       checked=in_app_checked
-                       aria-label=t(MessageKey::InAppForKindAriaLabel { kind: row_kind })/>
+                <label class=grow("inline-flex items-center justify-center")>
+                    <input type="checkbox" name=in_app_name class="checkbox"
+                           checked=in_app_checked
+                           aria-label=t(MessageKey::InAppForKindAriaLabel { kind: row_kind })/>
+                </label>
             </td>
             <td class="text-center">
-                <input type="checkbox" name=email_name class="checkbox"
-                       checked=email_checked
-                       aria-label=t(MessageKey::EmailForKindAriaLabel { kind: row_kind })/>
+                <label class=grow("inline-flex items-center justify-center")>
+                    <input type="checkbox" name=email_name class="checkbox"
+                           checked=email_checked
+                           aria-label=t(MessageKey::EmailForKindAriaLabel { kind: row_kind })/>
+                </label>
             </td>
             <td class="text-center">
-                <input type="checkbox" name=webhook_name class="checkbox"
-                       checked=webhook_checked
-                       aria-label=t(MessageKey::WebhookForKindAriaLabel { kind: row_kind })/>
+                <label class=grow("inline-flex items-center justify-center")>
+                    <input type="checkbox" name=webhook_name class="checkbox"
+                           checked=webhook_checked
+                           aria-label=t(MessageKey::WebhookForKindAriaLabel { kind: row_kind })/>
+                </label>
             </td>
             <td>
-                <select name=sev_name class="select select-bordered select-xs"
+                <select name=sev_name class=grow("select select-bordered select-xs")
                         aria-label=t(MessageKey::MinSeverityForKindAriaLabel { kind: row_kind })>
                     <option value="info" selected=info_selected>{t(MessageKey::AllSeverityOption)}</option>
                     <option value="watch" selected={!info_selected}>{t(MessageKey::WatchOnlySeverityOption)}</option>

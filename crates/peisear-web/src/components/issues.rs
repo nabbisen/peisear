@@ -12,7 +12,7 @@ use peisear_core::{
 };
 use peisear_i18n::{Field, IssueStatusLabel, Locale, MessageKey, NavSection, TrendDirectionLabel};
 
-use super::t;
+use super::{grow, t};
 
 /// Project-detail page: header + board/list view toggle.
 #[component]
@@ -52,14 +52,14 @@ pub fn ProjectDetailPage(
     let project_id_for_health = project.id.clone();
 
     let board_classes = if is_board {
-        "join-item btn btn-sm btn-active btn-primary"
+        grow("join-item btn btn-sm btn-active btn-primary")
     } else {
-        "join-item btn btn-sm btn-ghost"
+        grow("join-item btn btn-sm btn-ghost")
     };
     let list_classes = if is_board {
-        "join-item btn btn-sm btn-ghost"
+        grow("join-item btn btn-sm btn-ghost")
     } else {
-        "join-item btn btn-sm btn-active btn-primary"
+        grow("join-item btn btn-sm btn-active btn-primary")
     };
 
     let desc_node = if project.description.is_empty() {
@@ -95,11 +95,11 @@ pub fn ProjectDetailPage(
                         <a href=board_link class=board_classes>{t(MessageKey::ViewToggleBoard)}</a>
                         <a href=list_link class=list_classes>{t(MessageKey::ViewToggleList)}</a>
                     </div>
-                    <a href=calendar_link class="btn btn-ghost btn-sm">
+                    <a href=calendar_link class=grow("btn btn-ghost btn-sm")>
                         {t(MessageKey::CalendarBreadcrumbWord)}
                     </a>
-                    <a href=edit_link class="btn btn-ghost btn-sm">{t(MessageKey::EditWord)}</a>
-                    <a href=new_issue_link class="btn btn-primary btn-sm">{t(MessageKey::NewIssueLabel)}</a>
+                    <a href=edit_link class=grow("btn btn-ghost btn-sm")>{t(MessageKey::EditWord)}</a>
+                    <a href=new_issue_link class=grow("btn btn-primary btn-sm")>{t(MessageKey::NewIssueLabel)}</a>
                 </div>
             </div>
 
@@ -917,7 +917,7 @@ fn ListView(
                 <div class="label py-0">
                     <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Status })}</span>
                 </div>
-                <select name="status" class="select select-sm select-bordered">
+                <select name="status" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_status.is_empty()>{t(MessageKey::AllStatusesOption)}</option>
                     {IssueStatus::all().into_iter().map(|s| {
                         let s_str = s.as_str().to_string();
@@ -934,7 +934,7 @@ fn ListView(
                 <div class="label py-0">
                     <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                 </div>
-                <select name="assignee" class="select select-sm select-bordered">
+                <select name="assignee" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_assignee.is_empty()>{t(MessageKey::AnyoneOption)}</option>
                     <option value="unassigned"
                             selected={active_assignee == "unassigned"}>
@@ -956,7 +956,7 @@ fn ListView(
                 <div class="label py-0">
                     <span class="label-text text-xs">{t(MessageKey::SortByFieldLabel)}</span>
                 </div>
-                <select name="sort" class="select select-sm select-bordered">
+                <select name="sort" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_sort.is_empty()>{t(MessageKey::SortDefaultOption)}</option>
                     <option value="priority"
                             selected={active_sort == "priority"}>{t(MessageKey::FieldLabel { field: Field::Priority })}</option>
@@ -967,7 +967,7 @@ fn ListView(
                 </select>
             </label>
 
-            <button type="submit" class="btn btn-sm btn-primary">{t(MessageKey::ApplyButton)}</button>
+            <button type="submit" class=grow("btn btn-sm btn-primary")>{t(MessageKey::ApplyButton)}</button>
             // "Reset" links back to the bare list URL with no
             // filter/sort params. Per the handler logic, a bare
             // URL does NOT clear the saved server default — the
@@ -978,7 +978,7 @@ fn ListView(
             // would conflict with users navigating via generic
             // links, who would otherwise lose their filter
             // every time.
-            <a href=reset_href class="btn btn-sm btn-ghost"
+            <a href=reset_href class=grow("btn btn-sm btn-ghost")
                aria-label=t(MessageKey::ResetFilterAriaLabel)>
                 {t(MessageKey::ResetLink)}
             </a>
@@ -1040,9 +1040,9 @@ fn ListView(
                                 let is_current = s == current_status;
                                 let pressed = if is_current { "true" } else { "false" };
                                 let cls = if is_current {
-                                    "join-item btn btn-xs btn-primary"
+                                    grow("join-item btn btn-xs btn-primary")
                                 } else {
-                                    "join-item btn btn-xs btn-ghost"
+                                    grow("join-item btn btn-xs btn-ghost")
                                 };
                                 let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
                                 view! {
@@ -1139,7 +1139,7 @@ pub fn IssueNewPage(
                         <label class="form-control w-full">
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Title })}</span></div>
                             <input type="text" name="title" required=true maxlength="200" autofocus=true
-                                   class="input input-bordered input-sm w-full"
+                                   class=grow("input input-bordered input-sm w-full")
                                    placeholder=t(MessageKey::NewIssueTitlePlaceholder)/>
                         </label>
 
@@ -1153,7 +1153,7 @@ pub fn IssueNewPage(
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <label class="form-control w-full">
                                 <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Status })}</span></div>
-                                <select name="status" class="select select-bordered select-sm w-full">
+                                <select name="status" class=grow("select select-bordered select-sm w-full")>
                                     {statuses.into_iter().map(|s| {
                                         let selected = s.as_str() == "open";
                                         let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
@@ -1166,7 +1166,7 @@ pub fn IssueNewPage(
 
                             <label class="form-control w-full">
                                 <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Priority })}</span></div>
-                                <select name="priority" class="select select-bordered select-sm w-full">
+                                <select name="priority" class=grow("select select-bordered select-sm w-full")>
                                     {priorities.into_iter().map(|p| {
                                         let selected = p.as_str() == "medium";
                                         let label = t(MessageKey::PriorityName { label: p.to_i18n_label() });
@@ -1182,7 +1182,7 @@ pub fn IssueNewPage(
                                     <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</span>
                                     <span class="label-text-alt text-xs opacity-70">{t(MessageKey::StoryPointsHint)}</span>
                                 </div>
-                                <select name="effort" class="select select-bordered select-sm w-full">
+                                <select name="effort" class=grow("select select-bordered select-sm w-full")>
                                     <option value="" selected=true>{t(MessageKey::NoValuePlaceholder)}</option>
                                     {peisear_core::EFFORT_PRESETS.iter().map(|n| {
                                         view! {
@@ -1196,7 +1196,7 @@ pub fn IssueNewPage(
                                 <div class="label py-1">
                                     <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                                 </div>
-                                <select name="assignee_id" class="select select-bordered select-sm w-full">
+                                <select name="assignee_id" class=grow("select select-bordered select-sm w-full")>
                                     <option value="" selected=true>{t(MessageKey::NoValuePlaceholder)}</option>
                                     {assignees.into_iter().map(|a| {
                                         view! {
@@ -1210,8 +1210,8 @@ pub fn IssueNewPage(
                         <WorkloadHint workload=workload/>
 
                         <div class="card-actions justify-end mt-2">
-                            <a href=back_link class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
-                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::CreateIssueButton)}</button>
+                            <a href=back_link class=grow("btn btn-ghost btn-sm")>{t(MessageKey::CancelButton)}</a>
+                            <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::CreateIssueButton)}</button>
                         </div>
                     </form>
                 </div>
@@ -1283,7 +1283,7 @@ pub fn SubIssueNewPage(
                                 <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Title })}</span>
                             </div>
                             <input type="text" name="title" required=true maxlength="200" autofocus=true
-                                   class="input input-bordered input-sm w-full"
+                                   class=grow("input input-bordered input-sm w-full")
                                    placeholder=t(MessageKey::NewSubIssueTitlePlaceholder)/>
                         </label>
 
@@ -1302,7 +1302,7 @@ pub fn SubIssueNewPage(
                                     <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Status })}</span>
                                 </div>
                                 <select name="status"
-                                        class="select select-bordered select-sm w-full">
+                                        class=grow("select select-bordered select-sm w-full")>
                                     {statuses.into_iter().map(|s| {
                                         let selected = s.as_str() == "open";
                                         let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
@@ -1318,7 +1318,7 @@ pub fn SubIssueNewPage(
                                     <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Priority })}</span>
                                 </div>
                                 <select name="priority"
-                                        class="select select-bordered select-sm w-full">
+                                        class=grow("select select-bordered select-sm w-full")>
                                     {priorities.into_iter().map(|p| {
                                         let selected = p.as_str() == "medium";
                                         let label = t(MessageKey::PriorityName { label: p.to_i18n_label() });
@@ -1335,7 +1335,7 @@ pub fn SubIssueNewPage(
                                     <span class="label-text-alt text-xs opacity-70">{t(MessageKey::StoryPointsHint)}</span>
                                 </div>
                                 <select name="effort"
-                                        class="select select-bordered select-sm w-full">
+                                        class=grow("select select-bordered select-sm w-full")>
                                     <option value="" selected=true>{t(MessageKey::NoValuePlaceholder)}</option>
                                     {peisear_core::EFFORT_PRESETS.iter().map(|n| {
                                         view! {
@@ -1350,7 +1350,7 @@ pub fn SubIssueNewPage(
                                     <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                                 </div>
                                 <select name="assignee_id"
-                                        class="select select-bordered select-sm w-full">
+                                        class=grow("select select-bordered select-sm w-full")>
                                     <option value="" selected=true>{t(MessageKey::NoValuePlaceholder)}</option>
                                     {assignees.into_iter().map(|a| {
                                         view! {
@@ -1362,8 +1362,8 @@ pub fn SubIssueNewPage(
                         </div>
 
                         <div class="card-actions justify-end mt-2">
-                            <a href=parent_href_for_cancel class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
-                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::CreateSubIssueButton)}</button>
+                            <a href=parent_href_for_cancel class=grow("btn btn-ghost btn-sm")>{t(MessageKey::CancelButton)}</a>
+                            <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::CreateSubIssueButton)}</button>
                         </div>
                     </form>
                 </div>
@@ -1484,7 +1484,7 @@ pub fn IssueDetailPage(
                 <div class="card-body py-3">
                     <div class="flex items-center justify-between mb-2">
                         <h2 class="text-sm font-medium">{t(MessageKey::SubIssuesLabel)}</h2>
-                        <a href=new_sub_issue_href class="btn btn-ghost btn-xs">
+                        <a href=new_sub_issue_href class=grow("btn btn-ghost btn-xs")>
                             {t(MessageKey::AddSubIssueLink)}
                         </a>
                     </div>
@@ -1548,12 +1548,12 @@ pub fn IssueDetailPage(
                       class="flex items-center gap-2 flex-wrap">
                     <label class="text-sm font-medium" for="sprint-select">{t(MessageKey::SprintFieldLabel)}</label>
                     <select id="sprint-select" name="sprint_id"
-                            class="select select-bordered select-sm flex-1 min-w-[14rem]"
+                            class=grow("select select-bordered select-sm flex-1 min-w-[14rem]")
                             aria-label=t(MessageKey::SprintSelectAriaLabel)>
                         <option value="" selected=no_sprint_selected>{t(MessageKey::NoSprintOption)}</option>
                         {sprint_options_view}
                     </select>
-                    <button type="submit" class="btn btn-ghost btn-sm">{t(MessageKey::SaveButton)}</button>
+                    <button type="submit" class=grow("btn btn-ghost btn-sm")>{t(MessageKey::SaveButton)}</button>
                 </form>
                 <p class="text-xs text-base-content/70 mt-1">
                     {t(MessageKey::SprintAssignmentHelperText)}
@@ -1653,7 +1653,7 @@ fn IssueEditForm(
                     <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Title })}</span></div>
                     <input type="text" name="title" required=true maxlength="200"
                            value=title_value
-                           class="input input-bordered input-sm w-full"/>
+                           class=grow("input input-bordered input-sm w-full")/>
                 </label>
 
                 <label class="form-control w-full">
@@ -1667,7 +1667,7 @@ fn IssueEditForm(
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label class="form-control w-full">
                         <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Status })}</span></div>
-                        <select name="status" class="select select-bordered select-sm w-full">
+                        <select name="status" class=grow("select select-bordered select-sm w-full")>
                             {statuses.into_iter().map(|s| {
                                 let selected = s.as_str() == current_status;
                                 let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
@@ -1680,7 +1680,7 @@ fn IssueEditForm(
 
                     <label class="form-control w-full">
                         <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Priority })}</span></div>
-                        <select name="priority" class="select select-bordered select-sm w-full">
+                        <select name="priority" class=grow("select select-bordered select-sm w-full")>
                             {priorities.into_iter().map(|p| {
                                 let selected = p.as_str() == current_priority;
                                 let label = t(MessageKey::PriorityName { label: p.to_i18n_label() });
@@ -1696,7 +1696,7 @@ fn IssueEditForm(
                             <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</span>
                             <span class="label-text-alt text-xs opacity-70">{t(MessageKey::StoryPointsHint)}</span>
                         </div>
-                        <select name="effort" class="select select-bordered select-sm w-full">
+                        <select name="effort" class=grow("select select-bordered select-sm w-full")>
                             <option value="" selected=current_effort.is_none()>{t(MessageKey::NoValuePlaceholder)}</option>
                             {peisear_core::EFFORT_PRESETS.iter().map(|n| {
                                 let selected = current_effort == Some(*n);
@@ -1724,7 +1724,7 @@ fn IssueEditForm(
                         <div class="label py-1">
                             <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                         </div>
-                        <select name="assignee_id" class="select select-bordered select-sm w-full">
+                        <select name="assignee_id" class=grow("select select-bordered select-sm w-full")>
                             <option value="" selected=current_assignee_id.is_none()>{t(MessageKey::NoValuePlaceholder)}</option>
                             {assignees.into_iter().map(|a| {
                                 let selected = current_assignee_id.as_deref() == Some(a.id.as_str());
@@ -1740,7 +1740,7 @@ fn IssueEditForm(
                         </div>
                         <input type="datetime-local" name="planned_start_at"
                                value=planned_start_value
-                               class="input input-bordered input-sm w-full"/>
+                               class=grow("input input-bordered input-sm w-full")/>
                     </label>
 
                     <label class="form-control w-full">
@@ -1749,15 +1749,15 @@ fn IssueEditForm(
                         </div>
                         <input type="datetime-local" name="planned_end_at"
                                value=planned_end_value
-                               class="input input-bordered input-sm w-full"/>
+                               class=grow("input input-bordered input-sm w-full")/>
                     </label>
                 </div>
 
                 <WorkloadHint workload=workload/>
 
                 <div class="card-actions justify-end mt-2">
-                    <a href=issue_href class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
-                    <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::SaveButton)}</button>
+                    <a href=issue_href class=grow("btn btn-ghost btn-sm")>{t(MessageKey::CancelButton)}</a>
+                    <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::SaveButton)}</button>
                 </div>
             </form>
         </div>
@@ -1792,8 +1792,8 @@ fn IssueView(
         <div class="flex items-start justify-between gap-3 mb-3">
             <h1 class="text-xl font-semibold tracking-tight">{issue.title}</h1>
             <div class="flex gap-2 shrink-0">
-                <a href=edit_href.clone() class="btn btn-ghost btn-sm">{t(MessageKey::EditWord)}</a>
-                <a href=delete_href class="btn btn-ghost btn-sm text-error">
+                <a href=edit_href.clone() class=grow("btn btn-ghost btn-sm")>{t(MessageKey::EditWord)}</a>
+                <a href=delete_href class=grow("btn btn-ghost btn-sm text-error")>
                     {t(MessageKey::DeleteButton)}
                 </a>
             </div>
@@ -1832,9 +1832,9 @@ fn IssueView(
                     let is_current = s == current_status;
                     let pressed = if is_current { "true" } else { "false" };
                     let cls = if is_current {
-                        "join-item btn btn-sm btn-primary"
+                        grow("join-item btn btn-sm btn-primary")
                     } else {
-                        "join-item btn btn-sm btn-ghost"
+                        grow("join-item btn btn-sm btn-ghost")
                     };
                     let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
                     view! {

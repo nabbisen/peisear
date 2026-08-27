@@ -269,6 +269,15 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test confirmation -- --test-threads=1
 
+  test-peisear-web-touch-target:
+    name: peisear-web / touch_target
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test touch_target -- --test-threads=1
+
   # `QA-005`: every structural guard this project has built --
   # prose_scan, static_js_scan, test_harness_scan, dec_007_scan --
   # lives in this one target, and nothing above runs it. Named for

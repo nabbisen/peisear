@@ -54,7 +54,7 @@ use peisear_core::{
 };
 
 use super::layout::AppShell;
-use super::t;
+use super::{grow, t};
 
 // ──────────────────────────────────────────────────────────────
 // Listing page
@@ -89,7 +89,7 @@ pub fn SprintsListPage(
 
     let new_button = is_admin.then(|| {
         view! {
-            <a href=new_href class="btn btn-primary btn-sm">{t(MessageKey::NewSprintLink)}</a>
+            <a href=new_href class=grow("btn btn-primary btn-sm")>{t(MessageKey::NewSprintLink)}</a>
         }
     });
 
@@ -488,7 +488,7 @@ pub fn SprintNewPage(
                             </div>
                             <input type="text" name="name" required=true maxlength="120" autofocus=true
                                    placeholder=t(MessageKey::SprintNamePlaceholder)
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="form-control w-full">
@@ -496,14 +496,14 @@ pub fn SprintNewPage(
                                     <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::StartDate })}</span>
                                 </div>
                                 <input type="date" name="starts_on" required=true
-                                       class="input input-bordered input-sm w-full"/>
+                                       class=grow("input input-bordered input-sm w-full")/>
                             </label>
                             <label class="form-control w-full">
                                 <div class="label py-1">
                                     <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EndDate })}</span>
                                 </div>
                                 <input type="date" name="ends_on" required=true
-                                       class="input input-bordered input-sm w-full"/>
+                                       class=grow("input input-bordered input-sm w-full")/>
                             </label>
                         </div>
                         <label class="form-control w-full">
@@ -520,7 +520,7 @@ pub fn SprintNewPage(
                             {t(MessageKey::SprintPlannedNoticeTail)}
                         </p>
                         <div class="card-actions justify-end mt-2">
-                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::CreateSprintButton)}</button>
+                            <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::CreateSprintButton)}</button>
                         </div>
                     </form>
                 </div>
@@ -603,13 +603,13 @@ pub fn SprintDetailPage(
             <div class="flex gap-2 flex-wrap">
                 <form method="post" action=start_action>
                     <input type="hidden" name="client_updated_at" value=cua_start/>
-                    <button type="submit" class="btn btn-primary btn-sm"
+                    <button type="submit" class=grow("btn btn-primary btn-sm")
                             aria-label=t(MessageKey::StartSprintLabel)>
                         {t(MessageKey::StartSprintLabel)}
                     </button>
                 </form>
-                <a href=edit_href class="btn btn-ghost btn-sm">{t(MessageKey::EditWord)}</a>
-                <a href=delete_href.clone() class="btn btn-ghost btn-sm text-error">
+                <a href=edit_href class=grow("btn btn-ghost btn-sm")>{t(MessageKey::EditWord)}</a>
+                <a href=delete_href.clone() class=grow("btn btn-ghost btn-sm text-error")>
                     {t(MessageKey::DeleteButton)}
                 </a>
             </div>
@@ -619,18 +619,18 @@ pub fn SprintDetailPage(
             <div class="flex gap-2 flex-wrap">
                 <form method="post" action=complete_action>
                     <input type="hidden" name="client_updated_at" value=cua_complete/>
-                    <button type="submit" class="btn btn-primary btn-sm"
+                    <button type="submit" class=grow("btn btn-primary btn-sm")
                             aria-label=t(MessageKey::CompleteSprintLabel)>
                         {t(MessageKey::CompleteSprintLabel)}
                     </button>
                 </form>
-                <a href=edit_href class="btn btn-ghost btn-sm">{t(MessageKey::EditWord)}</a>
+                <a href=edit_href class=grow("btn btn-ghost btn-sm")>{t(MessageKey::EditWord)}</a>
             </div>
         }
         .into_any(),
         SprintStatus::Completed => view! {
             <div class="flex gap-2 flex-wrap">
-                <a href=delete_href class="btn btn-ghost btn-sm text-error">
+                <a href=delete_href class=grow("btn btn-ghost btn-sm text-error")>
                     {t(MessageKey::DeleteButton)}
                 </a>
             </div>
@@ -681,7 +681,7 @@ pub fn SprintDetailPage(
                         })}
                     </div>
                     <div class="flex items-center gap-2">
-                        <a href=plan_href class="btn btn-outline btn-sm">
+                        <a href=plan_href class=grow("btn btn-outline btn-sm")>
                             {t(MessageKey::SprintPlanBreadcrumbWord)}
                         </a>
                         {lifecycle}
@@ -1066,7 +1066,7 @@ pub fn SprintEditPage(
                             </div>
                             <input type="text" name="name" required=true maxlength="120"
                                    value=sprint_name
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
                         <div class="grid grid-cols-2 gap-3">
                             <label class="form-control w-full">
@@ -1075,7 +1075,7 @@ pub fn SprintEditPage(
                                 </div>
                                 <input type="date" name="starts_on" required=true
                                        value=starts_on
-                                       class="input input-bordered input-sm w-full"/>
+                                       class=grow("input input-bordered input-sm w-full")/>
                             </label>
                             <label class="form-control w-full">
                                 <div class="label py-1">
@@ -1083,7 +1083,7 @@ pub fn SprintEditPage(
                                 </div>
                                 <input type="date" name="ends_on" required=true
                                        value=ends_on
-                                       class="input input-bordered input-sm w-full"/>
+                                       class=grow("input input-bordered input-sm w-full")/>
                             </label>
                         </div>
                         <label class="form-control w-full">
@@ -1097,8 +1097,8 @@ pub fn SprintEditPage(
                             </textarea>
                         </label>
                         <div class="card-actions justify-end mt-2">
-                            <a href=detail_href class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
-                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::SaveButton)}</button>
+                            <a href=detail_href class=grow("btn btn-ghost btn-sm")>{t(MessageKey::CancelButton)}</a>
+                            <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::SaveButton)}</button>
                         </div>
                     </form>
                 </div>

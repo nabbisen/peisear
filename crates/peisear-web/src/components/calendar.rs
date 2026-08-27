@@ -29,7 +29,7 @@ use peisear_core::{
 use peisear_i18n::MessageKey;
 
 use super::layout::AppShell;
-use super::{CalendarDay, CalendarView, t};
+use super::{CalendarDay, CalendarView, grow, t};
 
 /// A block's rendered time text, e.g. `"09:00"` or `"09:00–10:30"`.
 /// Empty only if `planned_start_at` is somehow `None` — every block
@@ -298,9 +298,9 @@ fn render_nav(
                 view: v.to_i18n_label(),
             });
             let class = if v == view {
-                "btn btn-xs btn-primary"
+                grow("btn btn-xs btn-primary")
             } else {
-                "btn btn-xs btn-ghost"
+                grow("btn btn-xs btn-ghost")
             };
             view! { <a href=href class=class>{label}</a> }
         })
@@ -321,8 +321,8 @@ fn render_nav(
         <div class="flex flex-wrap items-center justify-between gap-2 mb-3"
              role="group" aria-label=t(MessageKey::CalendarViewSwitcherAriaLabel)>
             <div class="flex items-center gap-1">
-                <a href=prev_href class="btn btn-xs btn-ghost">{t(MessageKey::PreviousPageLink)}</a>
-                <a href=next_href class="btn btn-xs btn-ghost">{t(MessageKey::NextPageLink)}</a>
+                <a href=prev_href class=grow("btn btn-xs btn-ghost")>{t(MessageKey::PreviousPageLink)}</a>
+                <a href=next_href class=grow("btn btn-xs btn-ghost")>{t(MessageKey::NextPageLink)}</a>
             </div>
             <div class="flex items-center gap-1">{view_links}</div>
         </div>

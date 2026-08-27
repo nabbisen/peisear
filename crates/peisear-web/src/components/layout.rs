@@ -10,7 +10,7 @@ use leptos::prelude::*;
 use peisear_core::CurrentUser;
 use peisear_i18n::MessageKey;
 
-use super::t;
+use super::{grow, t};
 
 /// Minimum HTML scaffold. Children render inside `<main>`.
 ///
@@ -136,7 +136,7 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                            name="q"
                            placeholder=t(MessageKey::NavSearchPlaceholder)
                            autocomplete="off"
-                           class="input input-bordered input-sm w-64"
+                           class=grow("input input-bordered input-sm w-64")
                            data-typeahead="global"
                            aria-label=t(MessageKey::NavSearchQueryLabel)/>
                     // Container the JS populates with the
@@ -152,7 +152,7 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
 
             <div class="flex-none gap-2">
                 <a href="/inbox"
-                   class="btn btn-ghost btn-sm relative"
+                   class=grow("btn btn-ghost btn-sm relative")
                    aria-label=bell_aria>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
                          viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -164,7 +164,7 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                     {unread_badge}
                 </a>
                 <div class="dropdown dropdown-end">
-                    <label tabindex="0" class="btn btn-ghost btn-sm normal-case">
+                    <label tabindex="0" class=grow("btn btn-ghost btn-sm normal-case")>
                         {user.display_name.clone()}
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                              fill="none" stroke="currentColor" stroke-width="2"

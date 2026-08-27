@@ -16,6 +16,7 @@ use peisear_core::{
     teams::{Team, TeamRole},
 };
 
+use super::grow;
 use super::layout::AppShell;
 use super::t;
 
@@ -44,7 +45,7 @@ pub fn TeamsListPage(
             <div class="max-w-3xl mx-auto">
                 <div class="flex items-center justify-between mb-4">
                     <h1 class="text-xl font-semibold">{t(MessageKey::NavLinkTeams)}</h1>
-                    <a href="/teams/new" class="btn btn-primary btn-sm">{t(MessageKey::NewTeamLink)}</a>
+                    <a href="/teams/new" class=grow("btn btn-primary btn-sm")>{t(MessageKey::NewTeamLink)}</a>
                 </div>
 
                 {error_block}
@@ -153,7 +154,7 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                             </div>
                             <input type="text" name="name" required=true maxlength="120" autofocus=true
                                    placeholder=t(MessageKey::TeamNamePlaceholder)
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
                         <label class="form-control w-full">
                             <div class="label py-1">
@@ -163,7 +164,7 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                             <input type="text" name="slug" maxlength="64"
                                    pattern="[a-z0-9\\-]+"
                                    placeholder=t(MessageKey::SlugPlaceholder)
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                             <div class="label py-1">
                                 <span class="label-text-alt text-xs text-base-content/70">
                                     {t(MessageKey::SlugHelperText)}
@@ -183,8 +184,8 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                             {t(MessageKey::NewTeamIntro)}
                         </p>
                         <div class="card-actions justify-end mt-2">
-                            <a href="/teams" class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
-                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::CreateTeamButton)}</button>
+                            <a href="/teams" class=grow("btn btn-ghost btn-sm")>{t(MessageKey::CancelButton)}</a>
+                            <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::CreateTeamButton)}</button>
                         </div>
                     </form>
                 </div>
@@ -219,7 +220,7 @@ pub fn TeamDetailPage(
     let edit_link = is_admin.then(|| {
         let edit_href = format!("/teams/{}/edit", team_slug);
         view! {
-            <a href=edit_href class="btn btn-sm btn-ghost"
+            <a href=edit_href class=grow("btn btn-sm btn-ghost")
                aria-label=t(MessageKey::EditTeamSettingsAriaLabel)>
                 {t(MessageKey::NavLinkSettings)}
             </a>
@@ -267,19 +268,19 @@ pub fn TeamDetailPage(
                             </div>
                             <input type="email" name="email" required=true
                                    placeholder=t(MessageKey::EmailPlaceholderExample)
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
                         <label class="form-control">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Role })}</span>
                             </div>
-                            <select name="role" class="select select-bordered select-sm">
+                            <select name="role" class=grow("select select-bordered select-sm")>
                                 <option value="member" selected=true>{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Member })}</option>
                                 <option value="admin">{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Admin })}</option>
                                 <option value="viewer">{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Viewer })}</option>
                             </select>
                         </label>
-                        <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::AddButton)}</button>
+                        <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::AddButton)}</button>
                     </form>
                     <p class="text-xs text-base-content/70 mt-2">
                         {t(MessageKey::InviteHelperText)}
@@ -314,7 +315,7 @@ pub fn TeamDetailPage(
 
                 <div class="flex gap-2 flex-wrap mb-4">
                     <a href=format!("/teams/{}/sprints", team_slug.clone())
-                       class="btn btn-sm btn-outline">
+                       class=grow("btn btn-sm btn-outline")>
                         {t(MessageKey::SprintsSectionName)}
                     </a>
                 </div>
@@ -372,7 +373,7 @@ fn render_projects_section(
                     <form method="post" action=unassign_action
                           onsubmit="return confirm('Detach this project from the team? \
                                                     It will become a personal project.')">
-                        <button type="submit" class="btn btn-ghost btn-xs"
+                        <button type="submit" class=grow("btn btn-ghost btn-xs")
                                 aria-label=t(MessageKey::DetachFromTeamAriaLabel)>
                             {t(MessageKey::DetachButton)}
                         </button>
@@ -443,7 +444,7 @@ fn render_member_row(
             <td>
                 <form method="post" action=role_action class="inline-block">
                     <select name="role" onchange="this.form.submit()"
-                            class="select select-bordered select-xs"
+                            class=grow("select select-bordered select-xs")
                             aria-label=t(MessageKey::ChangeRoleAriaLabel)>
                         <option value="admin" selected=admin_selected>{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Admin })}</option>
                         <option value="member" selected=member_selected>{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Member })}</option>
@@ -468,7 +469,7 @@ fn render_member_row(
             <td class="text-right">
                 <form method="post" action=remove_action
                       onsubmit="return confirm('Leave this team?')">
-                    <button type="submit" class="btn btn-ghost btn-xs text-base-content/70"
+                    <button type="submit" class=grow("btn btn-ghost btn-xs text-base-content/70")
                             aria-label=t(MessageKey::LeaveTeamAriaLabel)>
                         {t(MessageKey::LeaveButton)}
                     </button>
@@ -481,7 +482,7 @@ fn render_member_row(
             <td class="text-right">
                 <form method="post" action=remove_action
                       onsubmit="return confirm('Remove this member from the team?')">
-                    <button type="submit" class="btn btn-ghost btn-xs text-error"
+                    <button type="submit" class=grow("btn btn-ghost btn-xs text-error")
                             aria-label=t(MessageKey::RemoveMemberAriaLabel)>
                         {t(MessageKey::RemoveButton)}
                     </button>
@@ -549,7 +550,7 @@ pub fn TeamEditPage(
                             </div>
                             <input type="text" name="name" required=true maxlength="120"
                                    value=team_name
-                                   class="input input-bordered input-sm w-full"/>
+                                   class=grow("input input-bordered input-sm w-full")/>
                         </label>
                         <label class="form-control w-full">
                             <div class="label py-1">
@@ -564,8 +565,8 @@ pub fn TeamEditPage(
                             {t(MessageKey::SlugFixedNotice)}
                         </p>
                         <div class="card-actions justify-end mt-2">
-                            <a href=back_href class="btn btn-ghost btn-sm">{t(MessageKey::CancelButton)}</a>
-                            <button type="submit" class="btn btn-primary btn-sm">{t(MessageKey::SaveButton)}</button>
+                            <a href=back_href class=grow("btn btn-ghost btn-sm")>{t(MessageKey::CancelButton)}</a>
+                            <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::SaveButton)}</button>
                         </div>
                     </form>
                 </div>

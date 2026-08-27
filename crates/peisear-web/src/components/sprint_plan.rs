@@ -35,7 +35,7 @@ use peisear_core::{
 use peisear_i18n::{Field, MessageKey, NavSection};
 use peisear_storage::sprints::BacklogRow;
 
-use super::t;
+use super::{grow, t};
 
 #[component]
 #[allow(clippy::too_many_arguments)]
@@ -149,7 +149,7 @@ fn render_filter_form(
                 <div class="label py-0">
                     <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Project })}</span>
                 </div>
-                <select name="project" class="select select-sm select-bordered">
+                <select name="project" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_project.is_empty()>{t(MessageKey::AllProjectsOption)}</option>
                     {team_projects.into_iter().map(|p| {
                         let selected = active_project == p.id;
@@ -164,7 +164,7 @@ fn render_filter_form(
                 <div class="label py-0">
                     <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Priority })}</span>
                 </div>
-                <select name="priority" class="select select-sm select-bordered">
+                <select name="priority" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_priority.is_empty()>{t(MessageKey::AllPrioritiesOption)}</option>
                     {peisear_core::Priority::all().into_iter().map(|p| {
                         let p_str = p.as_str().to_string();
@@ -181,7 +181,7 @@ fn render_filter_form(
                 <div class="label py-0">
                     <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                 </div>
-                <select name="assignee" class="select select-sm select-bordered">
+                <select name="assignee" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_assignee.is_empty()>{t(MessageKey::AnyoneOption)}</option>
                     <option value="unassigned" selected={active_assignee == "unassigned"}>
                         {t(MessageKey::UnassignedOption)}
@@ -196,7 +196,7 @@ fn render_filter_form(
                 </select>
             </label>
 
-            <button type="submit" class="btn btn-sm btn-primary">{t(MessageKey::ApplyButton)}</button>
+            <button type="submit" class=grow("btn btn-sm btn-primary")>{t(MessageKey::ApplyButton)}</button>
         </form>
     }
 }
@@ -247,7 +247,7 @@ fn render_backlog(
                         <input type="hidden" name="project" value=active_project.clone()/>
                         <input type="hidden" name="priority" value=active_priority.clone()/>
                         <input type="hidden" name="assignee" value=active_assignee.clone()/>
-                        <button type="submit" class="btn btn-ghost btn-xs">
+                        <button type="submit" class=grow("btn btn-ghost btn-xs")>
                             {t(MessageKey::MoveToSprintButton)}
                         </button>
                     </form>
@@ -304,7 +304,7 @@ fn render_sprint_items(
                 view! {
                     <form method="post" action=remove_action.clone()>
                         <input type="hidden" name="issue_id" value=issue_id.clone()/>
-                        <button type="submit" class="btn btn-ghost btn-xs">
+                        <button type="submit" class=grow("btn btn-ghost btn-xs")>
                             {t(MessageKey::MoveToBacklogButton)}
                         </button>
                     </form>
