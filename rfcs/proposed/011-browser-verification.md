@@ -1,7 +1,7 @@
 # RFC 0011: Browser verification — deciding what it buys before buying it
 
 **Status**: Proposed
-**Target**: 0.29.0 for step 1 (an inventory); steps 2-4 across 0.30.0-0.32.0
+**Target**: steps 1 and 1b at 0.29.0; steps 2-4 across 0.30.0-0.32.0
 **Related spec sections**: `SPEC §30` (ABDD axes), `SPEC §33` (mobile)
 **Related requirements**: `NFR-A11Y-001` (focus visibility residue),
 `NFR-A11Y-006`, `NFR-A11Y-007`
@@ -99,19 +99,32 @@ The first three options all ask **"how much browser should we buy?"** That
 takes the 756 lines as given and shops for a tool to point at them. The
 question worth asking is **what belongs in JavaScript at all.**
 
-### The measurement that changes the answer
+### The measurement — corrected 2026-08-27 by `JS-001`
 
-`dm.js` is **36 decision points against 24 DOM operations.** It is more policy
-than mechanics — and the policy is the part that matters:
+**The figure this section originally carried was wrong.** It said `dm.js` was
+*"36 decision points against 24 DOM operations — more policy than mechanics."*
 
-- fall back to a native submit, or announce and stop?
-- `409` conflict, or non-`409` unavailable?
-- did the change land before the failure, or after?
-- which announcement, in which live region?
+The 24 reproduces exactly. **The 36 does not.** It came from a grep matching
+any line containing `if`, `else`, `return` or `throw`, and `return`/`throw` are
+not decisions. The real figure is **23 branch points**, and they divide:
 
-**Every one of those is a rule, not a manipulation.** None of them needs a
-browser to be true or false. They need a browser only because they are
-currently written where nothing else can reach them.
+| | movable policy | mechanics | guard clause |
+|---|---|---|---|
+| `dm.js` | 6 sites / **4 rules** | 5 | **12** |
+| `board.js` | 9 sites / **4 rules** | 1 | 12 |
+| `search.js` | 2 | 16 | 4 |
+
+**Guard clauses are the largest bucket in both files that matter** — 52% and
+55%. Across all three scripts there are roughly **ten distinct movable rules**,
+and three of `board.js`'s four are the same rules `dm.js` enforces against the
+same endpoint.
+
+That is a small, concrete number. It is not "more policy than mechanics."
+
+**Ten rules is still worth moving** — a `409`-vs-other classification written
+twice in two scripts is two homes for one fact, and this project has closed
+that shape six times. But the size is what it is, and this section previously
+overstated it by a factor the owner was asked to schedule against.
 
 ### The precedent is this project's own
 
@@ -144,12 +157,53 @@ immediately and locally rather than subtle and conditional. That is a
 categorically better residue than the fallback boundary, which
 `STATUS-002`'s review caught by reading and which reading catches once.
 
-### Then, and only then, the browser question
+### The rule I staked this on cannot move — and that is the finding
 
-After the shrink the question is no longer "do we need a browser for 756 lines
-of policy and mechanics" but "do we need one for N lines of mechanics" — a
-smaller question with a cheaper answer, and one that can be answered against a
-real number rather than a fear.
+`dm.js`'s fallback boundary — *"falling back to a native submit is correct
+before the server has applied the change and wrong after"* — was named in the
+step-1 handoff as the one rule most worth moving.
+
+**`JS-001` traced it and it does not survive extraction.** `applyChange` holds
+its own `try { … } catch { announce; reload }`. The guarantee is that an
+exception raised inside it unwinds into *that* handler and therefore never
+reaches the outer `.catch()` that calls `fallback()`. **There is no boolean
+anywhere.** The property is a fact about which handler is nested where.
+
+A `mutationConfirmed` flag would make the rule *legible* — one branch instead
+of two nested handlers — and would not make it testable: the branch stays in
+JavaScript, and a Rust test would assert something no shipped code consults.
+**Legibility is not testability.**
+
+**So moving policy does not protect the thing this RFC most wanted protected.**
+Steps 2–3 buy deduplication and about ten Rust-testable rules. That is worth
+doing and it is not what was claimed for it.
+
+### What the trace surfaced instead — step 1b
+
+The regression `JS-001` names is *"someone flattening the two `catch` blocks
+back into one, or removing `applyChange`'s inner `try`"*. **That is a shape,
+not a behaviour.**
+
+This project has seven guards that assert shapes in source text, and
+`static_js_scan` already reads these files. A guard asserting that
+`applyChange` contains its own `try`/`catch`, and that `fallback(` is called
+**outside** it, is deterministic, needs no browser, costs one test, and catches
+exactly the regression that `STATUS-002`'s review caught by reading — which
+reading catches once.
+
+**It does not test that the boundary works. It pins the structure the boundary
+is made of** — the same claim `test_harness_scan` makes about clock-derived
+temp paths: not that the harness is correct, but that the shape which made it
+incorrect cannot return.
+
+**Step 1b comes before any policy moves**, because it is the cheapest item here
+and it protects the one thing the rest of the plan turned out not to.
+
+### Then the browser question
+
+After 1b and the shrink, what remains uncovered is DOM mechanics plus one
+control-flow guarantee now pinned by a guard. **The question at step 4 is
+narrower and better posed than the one this RFC opened with.**
 
 **I am not pre-deciding it.** It may still be yes.
 
@@ -160,19 +214,28 @@ the next one.
 
 | | Release | What | Exit condition |
 |---|---|---|---|
-| **1** | 0.29.0 | **Inventory.** Classify every decision in the three scripts as *movable policy* or *irreducible mechanics*, with the count. No code moves. | A table the owner can read, and a number for what would remain |
-| **2** | 0.30.0 | **Move `dm.js`'s policy**, the highest-risk file and the one whose boundary has already been got wrong once. Rust-side tests for every rule moved. | `§10.15`'s entry updated with the new residue |
-| **3** | 0.31.0 | **Move `board.js`'s and `search.js`'s.** | The residue is mechanics only |
+| **1** | 0.29.0 | **Inventory.** ✅ Done — `JS-001`. Corrected the count, found ~10 movable rules, and established that the fallback boundary is not one of them. | — |
+| **1b** | 0.29.0 | **Pin the fallback boundary's shape**, in `static_js_scan`'s family. No browser, no dependency. | The two-catch structure cannot be flattened silently |
+| **2** | 0.30.0 | **Move `dm.js`'s four rules and `board.js`'s duplicates of them.** Value stated at its real size: one authority for a `409` classification currently written twice, plus Rust tests for ~10 rules. **Not** the fallback boundary. | `§10.15`'s entry updated with the new residue |
+| **3** | 0.31.0 | **`board.js`'s remaining rule** (the stale-card case). **`search.js` is excluded** — different shape, and its two "movable" rules fail the purpose: the server has no query-length floor, so moving `MIN_QUERY_LENGTH` would *invent* a second authority rather than remove one. | The residue is mechanics only |
 | **4** | 0.32.0 | **Re-ask the browser question** against the measured residue. | A decision, recorded either way |
 
 **Step 1 is the only thing being asked for now.** It is an audit, it costs one
 handoff, and its output is the input to a decision that is currently being made
 on an estimate.
 
-**If step 1 finds the policy is not movable** — that the decisions are entangled
-with DOM state in ways that do not survive extraction — that is a finding, and
-it returns the browser question immediately with the estimate replaced by
-evidence.
+**Step 1 found exactly the case it was told to look for.** The handoff said:
+*"If the movable fraction is small — if `dm.js` is really mechanics with a few
+guard clauses and my 36 was counting `if (!x) return;` — say that. It is the
+most useful outcome this handoff can have, and it is the one I have staked a
+recommendation against."* It was, and they did.
+
+**One decision in `board.js` is left open by the inventory rather than settled
+by it.** A malformed `2xx` body is announced as unavailable by `dm.js` and
+passed over in silence by `board.js` — the same failure class, two behaviours.
+Step 2 forces the choice. **`dm.js` is right**: a mutation that failed and says
+nothing is the worse default, and `NFR-A11Y-008`'s assertive region exists so a
+failure can be heard.
 
 ## Decisions taken 2026-08-27
 
