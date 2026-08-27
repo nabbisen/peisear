@@ -167,6 +167,50 @@ async fn wrapped_checkboxes_keep_their_aria_label() {
     }
 }
 
+/// `TT-002-review.md` §2 (round 2, correction 1) — the five tests above
+/// verify that [`TOUCH_TARGET`] and the rendered page agree with each
+/// other. None of them verify that the value they agree on is the one
+/// `NFR-A11Y-007` actually demands. A `TOUCH_TARGET` of
+/// `"min-h-8 min-w-8"` (32px) would pass every other test in this file
+/// — confirmed by planting it during review. This test resolves the
+/// constant to real pixels via Tailwind's own default spacing scale
+/// and checks it against the 44px floor directly, the same shape
+/// `contrast_scan` uses against WCAG's 4.5:1 rather than against a
+/// copy of itself (baseline `§9.5`: the arithmetic and the scale are
+/// facts outside the requirement, not a restatement of it).
+#[test]
+fn touch_target_resolves_to_at_least_44px_on_both_axes() {
+    let height_px = resolve_min_utility_px(TOUCH_TARGET, "min-h-");
+    let width_px = resolve_min_utility_px(TOUCH_TARGET, "min-w-");
+
+    assert!(
+        height_px >= 44,
+        "TOUCH_TARGET's height resolves to {height_px}px, below NFR-A11Y-007's \
+         44px floor -- TOUCH_TARGET is {TOUCH_TARGET:?}"
+    );
+    assert!(
+        width_px >= 44,
+        "TOUCH_TARGET's width resolves to {width_px}px, below NFR-A11Y-007's \
+         44px floor -- TOUCH_TARGET is {TOUCH_TARGET:?}"
+    );
+}
+
+/// Resolve a `{prefix}{n}` Tailwind utility (e.g. `min-h-11`) to CSS
+/// pixels via the default spacing scale: `n * 0.25rem`, `1rem = 16px`,
+/// so `n * 4px`. `TT-001` §7 confirmed no project-level
+/// `tailwind.config` override exists in this tree, so the default
+/// scale is the one that actually applies.
+fn resolve_min_utility_px(classes: &str, prefix: &str) -> u32 {
+    let n = classes
+        .split_whitespace()
+        .find_map(|class| class.strip_prefix(prefix))
+        .unwrap_or_else(|| panic!("no {prefix:?} utility found in {classes:?}"));
+    let n: u32 = n.parse().unwrap_or_else(|e| {
+        panic!("{prefix:?} utility {n:?} in {classes:?} isn't a plain integer: {e}")
+    });
+    n * 4
+}
+
 /// `TT-002` §7.2 — the constant is the source of the rendered value,
 /// not a hardcoded copy of it. This reads [`TOUCH_TARGET`] itself
 /// rather than the literal `"min-h-11 min-w-11"`: if the constant's

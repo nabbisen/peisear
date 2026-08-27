@@ -19,7 +19,7 @@ use peisear_core::CurrentUser;
 use peisear_i18n::MessageKey;
 
 use super::layout::AppShell;
-use super::t;
+use super::{grow, t};
 
 #[component]
 pub fn ConfirmDeletePage(
@@ -50,12 +50,12 @@ pub fn ConfirmDeletePage(
                         <h1 class="text-lg font-semibold text-error">{heading}</h1>
                         <p class="text-sm text-base-content/70 mt-1">{consequence}</p>
                         <div class="card-actions justify-end mt-4">
-                            <a href=cancel_href class="btn btn-ghost btn-sm min-h-11 min-w-11">
+                            <a href=cancel_href class=grow("btn btn-ghost btn-sm")>
                                 {t(MessageKey::CancelButton)}
                             </a>
                             <form method="post" action=confirm_action>
                                 {hidden_inputs}
-                                <button type="submit" class="btn btn-error btn-sm min-h-11 min-w-11">
+                                <button type="submit" class=grow("btn btn-error btn-sm")>
                                     {t(MessageKey::DeleteButton)}
                                 </button>
                             </form>

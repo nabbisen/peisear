@@ -824,7 +824,7 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
                     type="submit"
                     name="status"
                     value=target.as_str()
-                    class="btn btn-ghost btn-xs min-h-11 min-w-11 px-2 normal-case"
+                    class=grow("btn btn-ghost btn-xs px-2 normal-case")
                     aria-label=aria_label>
                     {label}
                 </button>

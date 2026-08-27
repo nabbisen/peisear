@@ -187,13 +187,18 @@ async fn each_status_control_has_a_distinguishing_accessible_name() {
 /// were the first control in `src/components/` to meet the 44px
 /// touch-target minimum — `min-h-11 min-w-11` on top of `btn-xs`'s own
 /// 24px box, since joined by 136 more (`TT-002`, `tests/touch_target.rs`)
-/// composed from the same fact via `components::grow`, this one
-/// remains a hardcoded literal rather than `grow`'s call site (`TT-002`
-/// left it untouched — see that handoff's review package for why).
-/// Nothing asserted this control specifically until now; the
-/// baseline's claim that `board_keyboard` verified `NFR-A11Y-007` was
-/// never true, and deleting either class today would be invisible to
-/// every one of this suite's other tests.
+/// composed from the same fact via `components::grow`. Nothing asserted
+/// this control specifically until now; the baseline's claim that
+/// `board_keyboard` verified `NFR-A11Y-007` was never true.
+///
+/// **Scoped to each `<button ... name="status" ...>` tag individually**,
+/// not a bare `body.contains("min-h-11")` — `TT-002-review.md` §1 found
+/// this exact test still passing with this button's own `grow()` call
+/// removed, because other controls on the same board page (e.g. the
+/// per-row status `join` on `issues.rs`) also carry `min-h-11`/
+/// `min-w-11` once `TT-002` shipped, so an unscoped check no longer
+/// proves anything about *this* control specifically. Same shape as
+/// `touch_target.rs`'s `grown_input_reaches_the_rendered_page` fix.
 #[tokio::test]
 async fn per_card_status_button_meets_the_touch_target_minimum() {
     let app = TestApp::spawn().await;
@@ -206,15 +211,27 @@ async fn per_card_status_button_meets_the_touch_target_minimum() {
     let resp = app.server.get(&url).await;
     let body = resp.text();
 
+    let mut checked = 0;
+    let mut rest = body.as_str();
+    while let Some(button_start) = rest.find("<button") {
+        let tag_end = rest[button_start..]
+            .find('>')
+            .expect("a <button tag has a closing '>'");
+        let tag = &rest[button_start..button_start + tag_end];
+        if tag.contains(r#"name="status""#) {
+            assert!(
+                tag.contains("min-h-11") && tag.contains("min-w-11"),
+                "a board status-move button must carry min-h-11 and min-w-11 \
+                 (44px); tag: {tag}"
+            );
+            checked += 1;
+        }
+        rest = &rest[button_start + tag_end..];
+    }
     assert!(
-        body.contains("min-h-11"),
-        "the board's per-card status button must carry min-h-11 (44px) \
-         -- NFR-A11Y-007's one compliant control; body: {body}"
-    );
-    assert!(
-        body.contains("min-w-11"),
-        "the board's per-card status button must carry min-w-11 (44px) \
-         -- NFR-A11Y-007's one compliant control; body: {body}"
+        checked > 0,
+        "expected to find at least one status-move <button name=\"status\"> \
+         on the board page; body: {body}"
     );
 }
 
