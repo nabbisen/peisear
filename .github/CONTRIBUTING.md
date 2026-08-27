@@ -76,8 +76,8 @@ cargo test -p peisear-storage --lib
 cargo test -p peisear-i18n
 cargo test -p peisear-notify  -- --test-threads=1
 for t in aggregate_privacy assignee_candidates auth_boundary basis_route \
-         board_keyboard breadcrumb calendar calendar_surfaces confirmation \
-         health_explainability inbox_refinements issue_edit_url \
+         board_keyboard breadcrumb calendar calendar_surfaces chart_equivalence \
+         confirmation health_explainability inbox_refinements issue_edit_url \
          optimistic_lock search smoke sprint_plan status_control \
          status_segment sub_issues today_panel updated_at_authority \
          view_state workload_privacy; do

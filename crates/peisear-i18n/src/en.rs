@@ -412,7 +412,25 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::VelocityCaptionClosingNote => {
             " Numbers describe what happened — they don't grade it.".to_string()
         }
-        MessageKey::BarChartAriaLabel => "Bar chart of recent sprint outcomes".to_string(),
+        MessageKey::ChartTableSummaryLabel => "View as a table".to_string(),
+        MessageKey::VelocitySummaryPointsList {
+            points_list,
+            sprint_count,
+        } => format!("Completed points across the last {sprint_count} sprints: {points_list}."),
+        MessageKey::VelocitySummaryMedianClause { median } => {
+            format!(" The median is {median}.")
+        }
+        MessageKey::VelocityTableAriaLabel => "Completed sprint values".to_string(),
+        MessageKey::VelocityTableSprintHeader => "Sprint".to_string(),
+        MessageKey::MedianRowLabel => "Median".to_string(),
+        MessageKey::BarChartAriaLabel {
+            sprint_count,
+            min_completed,
+            max_completed,
+        } => format!(
+            "Bar chart of {sprint_count} sprints, completed points from \
+             {min_completed} to {max_completed}"
+        ),
         MessageKey::MedianLabel { median } => format!("median {median}"),
         MessageKey::NewSprintLabel => "New sprint".to_string(),
         MessageKey::SprintNamePlaceholder => "e.g. Sprint 5".to_string(),
@@ -448,6 +466,23 @@ pub(crate) fn render(key: MessageKey) -> String {
             last_label,
             max_val,
         } => format!("Burndown chart from {first_label} to {last_label}, max value {max_val}"),
+        MessageKey::BurndownSummary {
+            day_count,
+            first_label,
+            last_label,
+            first_committed,
+            last_committed,
+            first_completed,
+            last_completed,
+            gap,
+        } => format!(
+            "Across the {day_count} days from {first_label} to {last_label}, committed \
+             went from {first_committed} to {last_committed} pt and completed went from \
+             {first_completed} to {last_completed} pt. The gap between them, {gap} pt, \
+             is in flight."
+        ),
+        MessageKey::BurndownTableAriaLabel => "Burndown values".to_string(),
+        MessageKey::BurndownTableDateHeader => "Date".to_string(),
         MessageKey::IssuesInSprintAriaLabel => "Issues in sprint".to_string(),
         MessageKey::IssuesHeading => "Issues".to_string(),
         MessageKey::NoIssuesInSprintMessage => {

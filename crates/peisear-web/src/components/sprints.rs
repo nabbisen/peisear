@@ -30,6 +30,17 @@
 //!
 //! Both charts use simple SVG with no JS. Accessible labels
 //! describe what the chart shows in words for screen readers.
+//!
+//! `HLT-002` (RFC 008 §5, `NFR-A11Y-003`) added, per chart: a
+//! two-to-three sentence textual summary stating the finding (not the
+//! encoding — the existing caption above still does that), and a
+//! `<details>`-hidden `<table>` of the exact plotted values. Both live
+//! inside the chart's own render function, so neither can render
+//! without it, and both inherit `QA-017`'s suppression — the
+//! burndown's summary and table are gated by `show_trajectory`
+//! through `render_burndown`'s own call site, not a second predicate;
+//! the velocity table's median row is gated by `show_median`, the
+//! same flag the reference line uses.
 
 use axum::response::Html;
 use leptos::prelude::*;
@@ -233,6 +244,11 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) 
     // Median of completed_points across the window. Used as
     // the reference line.
     let mut completed_vals: Vec<i64> = data.iter().map(|(_, s)| s.completed_points).collect();
+    // `HLT-002` §1/§6: the chart's accessible name describes the
+    // completed-points range, taken before the sort below is used
+    // for the median -- the range never names the median itself.
+    let min_completed = completed_vals.iter().copied().min().unwrap_or(0);
+    let max_completed = completed_vals.iter().copied().max().unwrap_or(0);
     completed_vals.sort_unstable();
     let median = if completed_vals.is_empty() {
         0
@@ -288,6 +304,61 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) 
     let y_max_label_y = margin_t + 4;
     let median_label_y = median_y - 4;
 
+    // `HLT-002` §4: the completed-points list mirrors the bars' own
+    // left-to-right order, not the sorted list used for the median
+    // above -- it reads the same as the picture, not a reordering of
+    // it.
+    let points_list = data
+        .iter()
+        .map(|(_, s)| s.completed_points.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    let sprint_count = n as i64;
+    let summary_lead = t(MessageKey::VelocitySummaryPointsList {
+        points_list,
+        sprint_count,
+    });
+    // §3.3: stating the exact median figure only when the line/row
+    // that disclose it are themselves showing -- same `show_median`
+    // predicate, not a second copy.
+    let summary_median_clause =
+        show_median.then(|| t(MessageKey::VelocitySummaryMedianClause { median }));
+    let bar_chart_aria = t(MessageKey::BarChartAriaLabel {
+        sprint_count,
+        min_completed,
+        max_completed,
+    });
+
+    // `HLT-002` §2/§3.2: the table is a second rendering of the same
+    // `data` the bars above plot, not a reconstruction. It renders
+    // whenever the bars do -- unlike the burndown table, nothing here
+    // is gated -- except its median row, which uses the same
+    // `show_median` predicate the reference line uses, not a second
+    // copy. This is the one case (§3.2) where the chart stays and
+    // something inside it must not.
+    let table_rows = data
+        .iter()
+        .map(|(sprint, summ)| {
+            let name = sprint.name.clone();
+            view! {
+                <tr>
+                    <td>{name}</td>
+                    <td class="tabular-nums">{summ.completed_points}</td>
+                    <td class="tabular-nums">{summ.carried_over_points}</td>
+                </tr>
+            }
+        })
+        .collect_view();
+    let median_row = show_median.then(|| {
+        view! {
+            <tr>
+                <td><strong>{t(MessageKey::MedianRowLabel)}</strong></td>
+                <td class="tabular-nums">{median}</td>
+                <td>{t(MessageKey::NoValuePlaceholder)}</td>
+            </tr>
+        }
+    });
+
     view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm mb-4"
                  aria-label=t(MessageKey::RecentCompletedSprintsAriaLabel)>
@@ -305,7 +376,10 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) 
                     {show_median.then(|| t(MessageKey::VelocityCaptionMedianSentence))}
                     {t(MessageKey::VelocityCaptionClosingNote)}
                 </p>
-                <div role="img" aria-label=t(MessageKey::BarChartAriaLabel)>
+                <p class="text-xs text-base-content/70 mt-1">
+                    {summary_lead}{summary_median_clause}
+                </p>
+                <div role="img" aria-label=bar_chart_aria>
                     <svg viewBox=format!("0 0 {} {}", chart_w, chart_h)
                          xmlns="http://www.w3.org/2000/svg"
                          class="w-full h-auto">
@@ -341,6 +415,26 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) 
                         {bars}
                     </svg>
                 </div>
+                <details class="text-xs mt-2">
+                    <summary class="cursor-pointer text-base-content/70 hover:text-base-content">
+                        {t(MessageKey::ChartTableSummaryLabel)}
+                    </summary>
+                    <div class="overflow-x-auto mt-1">
+                        <table class="table table-sm" aria-label=t(MessageKey::VelocityTableAriaLabel)>
+                            <thead>
+                                <tr>
+                                    <th>{t(MessageKey::VelocityTableSprintHeader)}</th>
+                                    <th>{t(MessageKey::CompletedStatLabel)}</th>
+                                    <th>{t(MessageKey::CarriedOverHeading)}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {table_rows}
+                                {median_row}
+                            </tbody>
+                        </table>
+                    </div>
+                </details>
             </div>
         </section>
     }
@@ -729,6 +823,41 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
     let baseline_y = margin_t + plot_h;
     let date_label_y = baseline_y + 14;
 
+    // `HLT-002` §3.1/§3.3: summary and table are built from `points`
+    // -- the same values the lines above just plotted -- and both
+    // live inside this function so neither can render, or drift,
+    // without the chart. `render_burndown` is only ever called from
+    // behind `show_trajectory`'s gate (see `burndown_card` at this
+    // function's call site); there is no second predicate to keep in
+    // sync.
+    let first_committed = points.first().map(|p| p.cumulative_committed).unwrap_or(0);
+    let last_committed = points.last().map(|p| p.cumulative_committed).unwrap_or(0);
+    let first_completed = points.first().map(|p| p.cumulative_completed).unwrap_or(0);
+    let last_completed = points.last().map(|p| p.cumulative_completed).unwrap_or(0);
+    let summary_text = t(MessageKey::BurndownSummary {
+        day_count: n as i64,
+        first_label: first_label.clone(),
+        last_label: last_label.clone(),
+        first_committed,
+        last_committed,
+        first_completed,
+        last_completed,
+        gap: (last_committed - last_completed).max(0),
+    });
+    let table_rows = points
+        .iter()
+        .map(|p| {
+            let date = p.day.format("%Y-%m-%d").to_string();
+            view! {
+                <tr>
+                    <td>{date}</td>
+                    <td class="tabular-nums">{p.cumulative_committed}</td>
+                    <td class="tabular-nums">{p.cumulative_completed}</td>
+                </tr>
+            }
+        })
+        .collect_view();
+
     view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
                  aria-label=t(MessageKey::BurndownSectionAriaLabel)>
@@ -739,6 +868,7 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
                     {t(MessageKey::BurndownCaptionMiddle)} <strong>{t(MessageKey::CaptionWordCompleted)}</strong>
                     {t(MessageKey::BurndownCaptionTail)}
                 </p>
+                <p class="text-xs text-base-content/70 mt-1">{summary_text}</p>
                 <div role="img" aria-label=aria_label_text>
                     <svg viewBox=format!("0 0 {} {}", chart_w, chart_h)
                          xmlns="http://www.w3.org/2000/svg"
@@ -785,6 +915,23 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
                         {t(MessageKey::BurndownLegendCompleted)}
                     </span>
                 </div>
+                <details class="text-xs mt-2">
+                    <summary class="cursor-pointer text-base-content/70 hover:text-base-content">
+                        {t(MessageKey::ChartTableSummaryLabel)}
+                    </summary>
+                    <div class="overflow-x-auto mt-1">
+                        <table class="table table-sm" aria-label=t(MessageKey::BurndownTableAriaLabel)>
+                            <thead>
+                                <tr>
+                                    <th>{t(MessageKey::BurndownTableDateHeader)}</th>
+                                    <th>{t(MessageKey::CommittedStatLabel)}</th>
+                                    <th>{t(MessageKey::CompletedStatLabel)}</th>
+                                </tr>
+                            </thead>
+                            <tbody>{table_rows}</tbody>
+                        </table>
+                    </div>
+                </details>
             </div>
         </section>
     }

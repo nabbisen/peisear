@@ -313,7 +313,22 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::VelocityCaptionCarriedOverClose => "[fx-bars-carried-over-close]".to_string(),
         MessageKey::VelocityCaptionMedianSentence => "[fx-bars-median-sentence]".to_string(),
         MessageKey::VelocityCaptionClosingNote => "[fx-bars-closing-note]".to_string(),
-        MessageKey::BarChartAriaLabel => "[fx-bar-chart]".to_string(),
+        MessageKey::ChartTableSummaryLabel => "[fx-chart-table-summary]".to_string(),
+        MessageKey::VelocitySummaryPointsList {
+            points_list,
+            sprint_count,
+        } => format!("[fx-bars-summary] {points_list} {sprint_count}"),
+        MessageKey::VelocitySummaryMedianClause { median } => {
+            format!("[fx-bars-summary-median-{median}]")
+        }
+        MessageKey::VelocityTableAriaLabel => "[fx-bars-table]".to_string(),
+        MessageKey::VelocityTableSprintHeader => "[fx-bars-table-sprint-header]".to_string(),
+        MessageKey::MedianRowLabel => "[fx-median-row]".to_string(),
+        MessageKey::BarChartAriaLabel {
+            sprint_count,
+            min_completed,
+            max_completed,
+        } => format!("[fx-bar-chart] {sprint_count} {min_completed} {max_completed}"),
         MessageKey::MedianLabel { median } => format!("[fx-median-{median}]"),
         MessageKey::NewSprintLabel => "[fx-new-sprint]".to_string(),
         MessageKey::SprintNamePlaceholder => "[fx-sprint-name-ph]".to_string(),
@@ -343,6 +358,21 @@ pub fn render(key: MessageKey) -> String {
             last_label,
             max_val,
         } => format!("[fx-burndown-chart] {first_label} {last_label} {max_val}"),
+        MessageKey::BurndownSummary {
+            day_count,
+            first_label,
+            last_label,
+            first_committed,
+            last_committed,
+            first_completed,
+            last_completed,
+            gap,
+        } => format!(
+            "[fx-burndown-summary] {day_count} {first_label} {last_label} {first_committed} \
+             {last_committed} {first_completed} {last_completed} {gap}"
+        ),
+        MessageKey::BurndownTableAriaLabel => "[fx-burndown-table]".to_string(),
+        MessageKey::BurndownTableDateHeader => "[fx-burndown-table-date-header]".to_string(),
         MessageKey::IssuesInSprintAriaLabel => "[fx-issues-in-sprint]".to_string(),
         MessageKey::IssuesHeading => "[fx-issues-heading]".to_string(),
         MessageKey::NoIssuesInSprintMessage => "[fx-no-issues-in-sprint]".to_string(),

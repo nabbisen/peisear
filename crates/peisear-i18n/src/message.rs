@@ -1057,7 +1057,64 @@ pub enum MessageKey {
     /// would silently drop a commitment that has nothing to do with
     /// contributor count.
     VelocityCaptionClosingNote,
-    BarChartAriaLabel,
+
+    // ---- HLT-002 (RFC 008 §5): chart equivalence -- summaries and
+    // ---- tabular equivalents for both charts. ----
+    /// Shared `<details><summary>` label for both charts' tabular
+    /// equivalents — same generic-across-uses reasoning as
+    /// [`MessageKey::IndicatorBasisLinkText`] (`HLT-001`).
+    ChartTableSummaryLabel,
+    /// The velocity summary's first sentence — the completed-points
+    /// figure per sprint, in bar order (left to right), not sorted.
+    /// This is the same data the bars already show; stating it as
+    /// text discloses nothing new (`QA-017`'s suppression is the
+    /// *median*, not the per-sprint totals — `aggregate_privacy`'s
+    /// `one_contributor_velocity_bars_present_median_absent` already
+    /// establishes the bars themselves are never gated). `points_list`
+    /// is formatted data (a comma-joined number list), not composed
+    /// prose — same shape as [`MessageKey::SprintCardAriaLabel`]'s
+    /// `dates: String`.
+    VelocitySummaryPointsList {
+        points_list: String,
+        sprint_count: i64,
+    },
+    /// The velocity summary's second, optional sentence — the exact
+    /// figure the median line/table row disclose. Gated on
+    /// `show_median` at the call site, the same predicate the line
+    /// and the table's median row use — §3.3's rule stated for prose:
+    /// "a velocity summary must not state the median when the median
+    /// is suppressed."
+    VelocitySummaryMedianClause {
+        median: i64,
+    },
+    /// `<table>` `aria-label` for the velocity chart's tabular
+    /// equivalent. Never gated — the table renders whenever the bars
+    /// do (§3.2: the chart stays; only its median row is withheld).
+    VelocityTableAriaLabel,
+    /// Column header for the velocity table's sprint-name column.
+    VelocityTableSprintHeader,
+    /// The velocity table's median row label — bare "Median", the
+    /// standalone table-header-word context. Distinct from
+    /// [`MessageKey::MedianLabel`], which composes "median {n}" for
+    /// the SVG reference line's own text node; the table needs a
+    /// plain header word instead, same non-coupling as
+    /// [`MessageKey::CaptionWordCompleted`] vs.
+    /// [`MessageKey::CompletedStatLabel`]. Reused nowhere else, but
+    /// gated the same way the row itself is (§3.2) — this key is
+    /// never rendered on its own.
+    MedianRowLabel,
+    /// Rewritten per §1: the previous bare label named the chart's
+    /// *type* ("Bar chart of recent sprint outcomes"), which is an
+    /// accessible name, not the summary `NFR-A11Y-003` asks for.
+    /// `min_completed`/`max_completed` come from the same sorted list
+    /// used for the median, computed *before* the median itself, and
+    /// deliberately exclude it — naming the median here would make
+    /// this label a §3.2 case (§6), so the range is stated instead.
+    BarChartAriaLabel {
+        sprint_count: i64,
+        min_completed: i64,
+        max_completed: i64,
+    },
     MedianLabel {
         median: i64,
     },
@@ -1135,6 +1192,32 @@ pub enum MessageKey {
         last_label: String,
         max_val: i64,
     },
+    /// The burndown's textual summary — §3.3: it states the
+    /// trajectory the chart plots, so it lives inside `render_burndown`
+    /// and inherits `show_trajectory`'s gate the same way the table
+    /// does (§3.1); there is no separate predicate to keep in sync.
+    /// All eight fields are read from the same `Vec<BurndownPoint>`
+    /// the lines plot — first/last day and each line's first/last
+    /// cumulative value, plus `gap`, the two latest values' difference
+    /// (the same "in flight" quantity the caption names without a
+    /// number).
+    BurndownSummary {
+        day_count: i64,
+        first_label: String,
+        last_label: String,
+        first_committed: i64,
+        last_committed: i64,
+        first_completed: i64,
+        last_completed: i64,
+        gap: i64,
+    },
+    /// `<table>` `aria-label` for the burndown's tabular equivalent.
+    /// Lives, and is gated, exactly where the summary above is (§3.1).
+    BurndownTableAriaLabel,
+    /// Column header for the burndown table's date column. No
+    /// existing `Field` variant fits a bare "Date" column heading —
+    /// this is a table-column word, not a form field.
+    BurndownTableDateHeader,
     IssuesInSprintAriaLabel,
     IssuesHeading,
     NoIssuesInSprintMessage,
@@ -2477,7 +2560,21 @@ impl MessageKey {
             MessageKey::VelocityCaptionCarriedOverClose,
             MessageKey::VelocityCaptionMedianSentence,
             MessageKey::VelocityCaptionClosingNote,
-            MessageKey::BarChartAriaLabel,
+            // -- HLT-002: chart equivalence --
+            MessageKey::ChartTableSummaryLabel,
+            MessageKey::VelocitySummaryPointsList {
+                points_list: "8, 13, 5, 11, 9".to_string(),
+                sprint_count: 5,
+            },
+            MessageKey::VelocitySummaryMedianClause { median: 9 },
+            MessageKey::VelocityTableAriaLabel,
+            MessageKey::VelocityTableSprintHeader,
+            MessageKey::MedianRowLabel,
+            MessageKey::BarChartAriaLabel {
+                sprint_count: 5,
+                min_completed: 5,
+                max_completed: 13,
+            },
             MessageKey::MedianLabel { median: 5 },
             MessageKey::NewSprintLabel,
             MessageKey::SprintNamePlaceholder,
@@ -2507,6 +2604,18 @@ impl MessageKey {
                 last_label: "08-14".to_string(),
                 max_val: 20,
             },
+            MessageKey::BurndownSummary {
+                day_count: 14,
+                first_label: "08-01".to_string(),
+                last_label: "08-14".to_string(),
+                first_committed: 10,
+                last_committed: 15,
+                first_completed: 0,
+                last_completed: 8,
+                gap: 7,
+            },
+            MessageKey::BurndownTableAriaLabel,
+            MessageKey::BurndownTableDateHeader,
             MessageKey::IssuesInSprintAriaLabel,
             MessageKey::IssuesHeading,
             MessageKey::NoIssuesInSprintMessage,
