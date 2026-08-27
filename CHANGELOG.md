@@ -7,6 +7,75 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.29.0] — 2026-08-27
+
+No schema migration. `0017` remains the most recent; a downgrade to 0.28.0
+is a restore from a pre-migration backup, not a forward fix.
+
+This release closes baseline `§10.4`, open since 0.19.1 and slipped three
+times — **partially**, and the word matters. `NFR-A11Y-003` is met in full.
+`FR-HLT-007` is met on two limbs of three: **history is deferred**, because
+an indicator's history is a time series, and for a project with one active
+contributor it is that person's history — the same reason 0.28.0 already
+suppressed the sprint burndown and the completed-work median below two
+contributors. It returns with `QA-017`'s contributor predicate or not at
+all. **Definition of Done item 3 moves this release, from "Partially met"
+to "Met, with one limb outstanding"** — the first of the five conditions
+to move outright since 0.19.1.
+
+### Added
+
+- **Every health indicator now discloses how it is calculated.** A
+  disclosure per indicator states the Good and Watch boundaries and the
+  window, read from the same named constants the indicator's own
+  classification uses — never retyped, so the two cannot drift apart.
+- **Five of six health indicators now link to what they are counting.** A
+  new route, `GET /projects/{id}/health/{indicator}/basis`, renders exactly
+  the issue set behind that indicator's number — the same set the count
+  itself is the length of, not a second query re-deriving it. It inherits
+  the project's own access check and adds no new one: this is the first
+  HTML route added since 0.25.0's confirmation screens, worth naming
+  because a new route is the kind of thing a self-hoster running a reverse
+  proxy notices.
+  - **WIP compliance is the one indicator with no link, and that is a
+    decision, not an omission.** Its basis is which of a team's assignees
+    are over their personal WIP limit, and a limit is data visible only to
+    its subject. The indicator already states this as a count —
+    *"{n} active assignees are over their WIP limit"* — and never names
+    them; a basis route would have to.
+
+### Changed
+
+- **Both sprint charts — the burndown and "Completed work this period" —
+  now carry a two-to-three sentence summary and a table of the exact
+  values plotted**, hidden behind a disclosure rather than always on
+  screen. Both inherit 0.28.0's contributor-count suppression rather than
+  a second copy of it: the burndown's table is hidden whenever the
+  burndown itself is, and the completed-work table's median row is hidden
+  whenever its median reference line is. See 0.28.0's entry for why an
+  aggregate that resolves to one person is withheld.
+- **The completed-work chart's accessible name now describes its data
+  instead of its type.** It read *"Bar chart of recent sprint outcomes"*;
+  it now states the completed-points range the bars actually show.
+
+### Changed (internal)
+
+- **A new guard pins the shape `dm.js`'s fallback boundary is made of** —
+  that a function named `applyChange` still exists and still keeps its own
+  error handling separate from the code path that can resubmit an
+  already-applied change. It does not test that the boundary behaves
+  correctly; `§10.15` stays open, reviewed again at 0.32.0.
+- **Two doc-comment notes were added to `en.rs`**, naming the two
+  vocabulary rules that govern copy written there and where each is
+  enforced — added after both were violated once, each caught only by a
+  failing test in a different crate.
+
+**Do not read this release as making the product explainable, or as
+explainability being done.** Two limbs of three closed; the third —
+history — is a deliberate deferral tied to a privacy predicate this
+project has not built the aggregate-scale version of yet, not an
+oversight.
+
 ## [0.28.0] — 2026-08-26
 
 **Schema migration**: `0017_updated_at_single_authority.sql` adds triggers to
