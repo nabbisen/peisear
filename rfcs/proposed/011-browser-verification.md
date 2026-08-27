@@ -6,7 +6,8 @@
 **Related requirements**: `NFR-A11Y-001` (focus visibility residue),
 `NFR-A11Y-006`, `NFR-A11Y-007`
 **Closes if adopted**: baseline `§10.15` — by shrinking it, then re-asking
-**Governing decisions**: `DEC-021` (JavaScript as progressive enhancement)
+**Governing decisions**: `DEC-021` (JavaScript as progressive enhancement);
+introduces `DEC-048` (conditional acceptance of a non-deterministic gate)
 **Last updated**: 2026-08-27 — reconciled against the code before drafting
 
 ## Summary
@@ -172,6 +173,53 @@ on an estimate.
 with DOM state in ways that do not survive extraction — that is a finding, and
 it returns the browser question immediately with the estimate replaced by
 evidence.
+
+## Decisions taken 2026-08-27
+
+**Step 1 is approved.** Nothing past it is committed.
+
+### `DEC-048` — a non-deterministic gate is accepted, conditionally
+
+The owner's words: *"the non-deterministic gate is accepted if there is a
+concrete plan to solve it at good timing."*
+
+**This is an acceptance with an obligation attached, and the obligation is the
+architect's.** It is recorded as a decision rather than a note because
+`§10.13` is on record about what a flaky gate does — *"a repeated run is not a
+reliable detector for a deterministic property"* — and an acceptance without
+the plan would be that lesson unlearned.
+
+**The plan, due at step 4 and binding on it:**
+
+1. **No external network.** The harness drives a locally-spawned instance, as
+   `TestApp::spawn` already does. A gate that can fail because a CDN is slow is
+   not acceptable at any timing.
+2. **No wall-clock dependence.** The undo window is five seconds; a test that
+   waits for it is a test that fails on a loaded runner. Time is controlled, or
+   the behaviour is not tested this way.
+3. **A flake is a defect with an owner, not a re-run.** Any browser test that
+   fails and then passes unchanged is **quarantined the same day**, dated, and
+   either converted into a deterministic assertion or deleted. **Silent retries
+   are forbidden** — `§10.13`'s defect survived four releases because
+   re-running was the response.
+4. **A quarantined test is not coverage.** If the quarantine list is non-empty
+   at a release, that release's candidate names it, and it is not counted in
+   any total.
+
+**If that plan cannot be met, step 4's answer is no** — and this decision is
+what says so in advance, rather than after a gate has started costing
+attention.
+
+### `§10.15`'s review date
+
+**0.32.0**, at step 4. The register entry carries that date, so it stays open
+by decision rather than by inertia — which is what it had been for three
+releases.
+
+### Still open
+
+**Nothing blocking.** Steps 2–4 are scheduled but not committed; each is
+re-decided at its own release against step 1's evidence.
 
 ## Out of scope
 

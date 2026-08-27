@@ -76,6 +76,7 @@ the RFC number they are keyed to.
 | [`handoffs/004b-direct-manipulation-board/`](./handoffs/004b-direct-manipulation-board/README.md) | 004b — historical, RFC implemented |
 | [`handoffs/004a-direct-manipulation-status/`](./handoffs/004a-direct-manipulation-status/README.md) | 004a — historical, RFC implemented |
 | [`handoffs/010-destructive-action-confirmation/`](./handoffs/010-destructive-action-confirmation/README.md) | 010 — historical, RFC implemented |
+| [`handoffs/011-browser-verification/`](./handoffs/011-browser-verification/README.md) | 011 — active; step 1 only |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
 | [`handoffs/002-calendar-surfaces/`](./handoffs/002-calendar-surfaces/README.md) | 002 — historical, RFC implemented |
