@@ -72,6 +72,17 @@
 //!   `apply_change_exists_by_name` — correctly, since that is exactly
 //!   the kind of change this guard exists to force a deliberate
 //!   decision about, not a false negative to work around.
+//! - **Closed in round 2** (`JS-002-review.md` §2): a `try`/`catch`
+//!   nested inside `applyChange`'s own `showUndoToast` callback used
+//!   to satisfy `apply_change_carries_its_own_try_catch`'s bare
+//!   substring search without protecting anything — the function's
+//!   own top-level statements (`setPressed`, `announcePolite`, …)
+//!   would still throw straight out to the outer chain's `fallback()`.
+//!   Unlike the three limits above, this was not a shape with no
+//!   reason to appear — moving error handling closer to what throws is
+//!   ordinary good instinct, and someone would plausibly make this
+//!   change on purpose. `contains_top_level_try` fixes it by requiring
+//!   the `try` at brace-depth 0 of `applyChange`'s own body.
 
 use std::fs;
 use std::path::Path;
@@ -144,6 +155,40 @@ fn find_function_body<'a>(source: &'a str, function_name: &str) -> &'a str {
     panic!("`{function_name}`'s body in dm.js never closes");
 }
 
+/// Whether `try {` appears in `body` at brace-depth 0 -- as one of the
+/// function's own top-level statements, not nested inside a callback
+/// or any other brace pair defined within it.
+///
+/// `JS-002` round 2 (the architect's own plant, `JS-002-review.md`
+/// §2): a bare `body.contains("try {")` still matches a `try`/`catch`
+/// moved *inside* the callback `applyChange` already passes to
+/// `showUndoToast` -- the substring is present, but it no longer
+/// protects anything. An exception in `setPressed`/`announcePolite`,
+/// now outside any handler, would propagate straight to the outer
+/// chain's `fallback()` catch after the mutation has already landed --
+/// `STATUS-002`'s defect, reopened, with the scan passing. Depth 0
+/// here is `applyChange`'s own body, one level inside the function's
+/// opening brace and no deeper; a `try` written inside the
+/// `showUndoToast` callback's own `{ }` is at depth 1 and does not
+/// count.
+fn contains_top_level_try(body: &str) -> bool {
+    let bytes = body.as_bytes();
+    let mut depth: i32 = 0;
+    let mut i = 0;
+    while i < bytes.len() {
+        if depth == 0 && body[i..].starts_with("try {") {
+            return true;
+        }
+        match bytes[i] {
+            b'{' => depth += 1,
+            b'}' => depth -= 1,
+            _ => {}
+        }
+        i += 1;
+    }
+    false
+}
+
 /// The name pin (`QA-021`'s precedent), independent of and checked
 /// before either assertion about the body below.
 #[test]
@@ -161,17 +206,24 @@ fn apply_change_exists_by_name() {
 /// §2.1 of `JS-002`: `applyChange` must carry its own `try`/`catch` —
 /// the handler that turns a post-mutation UI failure into a reload
 /// instead of letting it propagate to the outer chain's `fallback()`.
+/// The `try` must be at `applyChange`'s own top level (`JS-002` round
+/// 2, see `contains_top_level_try`'s doc comment) -- a `try` nested
+/// inside a callback the function happens to pass elsewhere satisfies
+/// a bare substring search without protecting the statements that run
+/// before it.
 #[test]
 fn apply_change_carries_its_own_try_catch() {
     let source = strip_line_comments(&read_dm_js());
     let body = find_function_body(&source, "applyChange");
     assert!(
-        body.contains("try {") && body.contains("catch ("),
-        "applyChange no longer carries its own try/catch -- this is the handler that \
-         keeps a post-mutation UI failure from reaching the outer fallback() catch. \
-         Losing it reopens the exact defect STATUS-002's review caught by reading: a \
-         UI failure after the server already applied the change would resubmit with a \
-         stale lock value. Body scanned:\n{body}"
+        contains_top_level_try(body) && body.contains("catch ("),
+        "applyChange no longer carries its own top-level try/catch -- this is the \
+         handler that keeps a post-mutation UI failure from reaching the outer \
+         fallback() catch. A try/catch nested inside a callback (e.g. the one passed \
+         to showUndoToast) does not count: it leaves applyChange's own statements \
+         (setPressed, announcePolite, ...) unprotected, and an exception there would \
+         propagate to the outer chain and call fallback() after the mutation already \
+         landed -- STATUS-002's defect, reopened. Body scanned:\n{body}"
     );
 }
 
