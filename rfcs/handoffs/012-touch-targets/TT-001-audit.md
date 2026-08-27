@@ -53,21 +53,38 @@ surface is for, and say why in one line per surface.
 | `sprint_plan.rs` | 6 |
 | `notifications.rs` | 5 |
 | `calendar.rs` | 4 |
-| `notification_preferences.rs` | 3 (the checkboxes) |
+| `notification_preferences.rs` | 3 |
 | `layout.rs` | 3 |
 | `search.rs`, `confirmation.rs` | 2 each |
 | `me.rs`, `error_page.rs` | 1 each |
 
-**Counts are `btn-sm`/`btn-xs`/`input-sm`/`input-xs`/`select-sm`/`select-xs`
-occurrences and are a starting point, not the answer.** Three controls in the
-tree already carry `min-h-11 min-w-11` **on top of** a small size class and are
-already compliant — `confirmation.rs:53`, `confirmation.rs:58`,
-`issues.rs:825`. A count that ignores overrides is wrong by exactly that many,
-and that error is already on this project's record: the baseline stated 139 and
-149 in different places and reached the right total only because two errors
-cancelled.
+**That column counts `btn-sm`/`btn-xs`/`input-sm`/`input-xs`/`select-sm`/
+`select-xs` occurrences. It is not the number of non-conforming controls**, and
+the two quantities are easy to confuse because they happen to be the same
+number. The arithmetic:
 
-**Re-derive the number yourself.** If it is not 139, that is a finding.
+| | |
+|---|---|
+| Sizing-class occurrences (the column above) | **139** |
+| — of which already overridden to 44 px by `min-h-11 min-w-11` | −3 |
+| Checkbox controls, **not counted in that column at all** | +3 |
+| **Interactive elements below a 44 px target** | **139** |
+
+The three already-compliant controls are `confirmation.rs:53`,
+`confirmation.rs:58` and `issues.rs:825`. The three checkboxes are all in
+`notification_preferences.rs` — that file's `3` in the table above is
+`btn-sm` ×2 and `select-xs` ×1, and its checkboxes are **additional**.
+
+**Re-derive all of this yourself rather than trusting the table.** This exact
+count has already been wrong on this project's record in three ways at once: the
+baseline stated 139 in one place and 149 in another, counted `grep` matches
+rather than controls for the checkbox row, and missed the three overrides
+entirely — arriving at a correct total only because two of the errors cancelled.
+A number that survives because its errors cancel stops surviving the moment
+either is fixed alone.
+
+**If your figure is not 139, that is a finding**, and so is a different
+decomposition reaching the same total.
 
 ## 4. What to produce
 
