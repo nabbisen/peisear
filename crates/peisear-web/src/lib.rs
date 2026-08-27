@@ -25,6 +25,8 @@ mod contrast_scan;
 mod dec_007_ci_scan;
 #[cfg(test)]
 mod dec_007_scan;
+#[cfg(test)]
+mod dm_fallback_boundary_scan;
 pub mod error;
 pub mod extractors;
 pub mod handlers;
