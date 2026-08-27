@@ -77,6 +77,37 @@ impl AppError {
         }
     }
 
+    /// The HTTP status an optimistic-lock conflict actually produces
+    /// — `JS-003` (RFC 011 step 2). `dm.js`'s and `board.js`'s copy
+    /// islands read this value instead of hardcoding `409` a fourth
+    /// time; if the mapping above ever changes, the value they check
+    /// against changes with it, rather than needing a second, easily
+    /// forgotten edit. Constructs a real `OptimisticLockConflict` and
+    /// reads `.status()` off it — the same call
+    /// [`check_optimistic_lock`] triggers on a genuine stale write —
+    /// rather than writing `StatusCode::CONFLICT` out a second time by
+    /// hand, which would prove nothing if the match arm above ever
+    /// changed. The field values are placeholders; `.status()` matches
+    /// only on the variant.
+    ///
+    /// **`ApiAppError::status()` (below `error.rs`, the `/api/*`
+    /// sibling) maps its own `OptimisticLockConflict` arm to
+    /// `StatusCode::CONFLICT` too, but as a second, independently
+    /// maintained `match` arm on a different type — nothing keeps the
+    /// two in sync.** They agree today. This function derives only
+    /// from `AppError::status()`, the mapping actually in effect for
+    /// the status-change endpoint these two scripts call
+    /// (`/projects/{id}/issues/{id}/status`, not an `/api/*` route).
+    pub fn conflict_status_code() -> u16 {
+        Self::OptimisticLockConflict {
+            entity_type: EntityKind::Issue,
+            entity_id: String::new(),
+            current_updated_at: chrono::Utc::now(),
+        }
+        .status()
+        .as_u16()
+    }
+
     pub fn public_message(&self) -> String {
         match self {
             // `IntoResponse` (below) redirects `Unauthorized` to `/login`

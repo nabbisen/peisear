@@ -83,6 +83,24 @@
 //!   ordinary good instinct, and someone would plausibly make this
 //!   change on purpose. `contains_top_level_try` fixes it by requiring
 //!   the `try` at brace-depth 0 of `applyChange`'s own body.
+//! - **Open, recorded in RFC 011 only (`JS-003` §7): a *narrowed*
+//!   top-level `try` still passes.** `contains_top_level_try` proves a
+//!   `try {` exists at depth 0 — it does not prove that `try` extends
+//!   to `applyChange`'s own closing brace, only that one starts
+//!   somewhere at the top level. A rewrite that closes the `try` early
+//!   and leaves later top-level statements unprotected —
+//!   ```js
+//!   try { setPressed(form, newStatus); } catch (e) { ...; return; }
+//!   var message = copy.movedTo[newStatus]; // now outside the try
+//!   showUndoToast(form, message, function () { ... });
+//!   ```
+//!   — would still satisfy both current assertions. Closing this
+//!   needs the `try`'s own matching close brace located (the same
+//!   depth-counting `find_function_body` already does, applied a
+//!   second time to the `try` block itself) and a rule that nothing
+//!   but the `catch` follows it — a second depth-counting pass, not a
+//!   parser, but more than a bare substring check, which is why it is
+//!   named here rather than built in this round.
 
 use std::fs;
 use std::path::Path;

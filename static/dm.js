@@ -50,8 +50,14 @@
     !copy ||
     !copy.movedTo ||
     typeof copy.undoLabel !== "string" ||
-    typeof copy.conflictMessage !== "string" ||
-    typeof copy.unavailableMessage !== "string"
+    !copy.outcomes ||
+    typeof copy.outcomes.conflictStatus !== "number" ||
+    !copy.outcomes.conflict ||
+    typeof copy.outcomes.conflict.message !== "string" ||
+    !copy.outcomes.unavailable ||
+    typeof copy.outcomes.unavailable.message !== "string" ||
+    !copy.outcomes.unconfirmed ||
+    typeof copy.outcomes.unconfirmed.message !== "string"
   ) {
     return;
   }
@@ -70,6 +76,16 @@
   function announceAssertive(message) {
     var region = document.getElementById("status-announcements-assertive");
     if (region) region.textContent = message;
+  }
+
+  // `JS-003` (RFC 011 step 2): the one place a classified outcome
+  // becomes an action -- announce, then reload if the outcome says
+  // to. `copy.outcomes`'s three keys (`conflict`/`unavailable`/
+  // `unconfirmed`) are the classification; this is just "read it and
+  // act", not policy of its own.
+  function applyOutcome(outcome) {
+    announceAssertive(outcome.message);
+    if (outcome.reload) window.location.reload();
   }
 
   function statusUrl(projectId, issueId) {
@@ -229,23 +245,34 @@
   }
 
   // Undo has no form to fall back to, so every outcome here ends in
-  // announce + reload, never a resubmit. A 409 means someone else
-  // changed the issue; anything else (network rejection, other
-  // non-2xx, a malformed body) is merely unavailable, not a
-  // conflict, and must not be announced as one. No retry, no force.
+  // announce + reload, never a resubmit. `copy.outcomes` classifies
+  // the response into one of three keys (`JS-003`, RFC 011 step 2) --
+  // `conflictStatus` means someone else changed the issue; anything
+  // else (network rejection, other non-2xx) is `unavailable`; a
+  // malformed 2xx body is `unconfirmed`. None of the three is
+  // announced as one of the others. No retry, no force.
   function performUndo(form, projectId, issueId, previousStatus, clientInput) {
-    var wasConflict = false;
+    // `JS-003`: which of `copy.outcomes`'s three keys this attempt
+    // landed on, named as it's discovered rather than inferred from
+    // a boolean. `null` covers a network-level rejection, which never
+    // reaches either `.then()` below -- `outcomes.unavailable` is the
+    // right read for "the request didn't even get a response".
+    var outcomeKey = null;
     postStatus(projectId, issueId, previousStatus, clientInput.value)
       .then(function (res) {
-        if (res.status === 409) {
-          wasConflict = true;
+        if (res.status === copy.outcomes.conflictStatus) {
+          outcomeKey = "conflict";
           throw new Error("undo-conflict");
         }
-        if (!res.ok) throw new Error("undo-not-ok");
+        if (!res.ok) {
+          outcomeKey = "unavailable";
+          throw new Error("undo-not-ok");
+        }
         return res.json();
       })
       .then(function (body) {
         if (!body || typeof body.updated_at !== "string" || !body.updated_at) {
+          outcomeKey = "unconfirmed";
           throw new Error("undo-bad-shape");
         }
         clientInput.value = body.updated_at;
@@ -253,8 +280,7 @@
         announcePolite(copy.movedTo[previousStatus]);
       })
       .catch(function () {
-        announceAssertive(wasConflict ? copy.conflictMessage : copy.unavailableMessage);
-        window.location.reload();
+        applyOutcome(copy.outcomes[outcomeKey || "unavailable"]);
       });
   }
 

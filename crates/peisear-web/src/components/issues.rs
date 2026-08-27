@@ -4,6 +4,7 @@ use axum::response::Html;
 use leptos::prelude::*;
 
 use super::{Column, layout::AppShell};
+use crate::error::AppError;
 use peisear_core::{
     AssigneeOption, CurrentUser, DisplayHealthState, Issue, IssueStatus, Priority, Project,
     UserLoad,
@@ -655,6 +656,43 @@ fn assignee_label<'a>(id: &'a str, assignees: &'a [AssigneeOption]) -> &'a str {
 /// not markup, and every value in it is server-authored copy, never
 /// user data, so there is nothing here for `inner_html` to need
 /// escaping from.
+/// `JS-003` (RFC 011 step 2): the response-classification lookup
+/// both scripts read instead of encoding `409`/other-failure/
+/// malformed-body themselves — one shared builder, not two similar
+/// `outcomes` literals, so `conflictStatus` (and the shape itself)
+/// cannot drift between `dm.js`'s island and `board.js`'s the way
+/// the classification used to be written three times across the two
+/// files.
+///
+/// The message and `reload` flag per outcome are **surface-specific**
+/// and supplied by each caller — the two scripts do not act
+/// identically on the same classification (`dm.js`'s undo always
+/// reloads; `board.js`'s plain-`unavailable` case does not, since
+/// reverting the card in place is already enough), and that
+/// difference is real, not duplication (§4: "keep the rule in one
+/// place; do not force the actions to match"). `unconfirmed` reuses
+/// the caller's own `unavailable` copy rather than new copy — the
+/// handoff's own template, and "copy is not yours to write" besides:
+/// a malformed response and an outright failure read the same to a
+/// user either way.
+///
+/// `conflictStatus` comes from [`AppError::conflict_status_code`],
+/// never written out as a literal here.
+fn response_outcomes(
+    conflict_message: String,
+    conflict_reload: bool,
+    unavailable_message: String,
+    unavailable_reload: bool,
+    unconfirmed_reload: bool,
+) -> serde_json::Value {
+    serde_json::json!({
+        "conflictStatus": AppError::conflict_status_code(),
+        "conflict": { "message": conflict_message, "reload": conflict_reload },
+        "unavailable": { "message": unavailable_message.clone(), "reload": unavailable_reload },
+        "unconfirmed": { "message": unavailable_message, "reload": unconfirmed_reload },
+    })
+}
+
 fn render_status_enhancement_assets() -> impl IntoView {
     let copy = serde_json::json!({
         "movedTo": {
@@ -663,8 +701,17 @@ fn render_status_enhancement_assets() -> impl IntoView {
             "done": t(MessageKey::StatusChangedAnnouncement { status: IssueStatusLabel::Done }),
         },
         "undoLabel": t(MessageKey::UndoButtonLabel),
-        "conflictMessage": t(MessageKey::StatusChangeUndoConflictMessage),
-        "unavailableMessage": t(MessageKey::StatusChangeUndoUnavailableMessage),
+        // `dm.js`'s undo has no in-place recovery path (no card to
+        // revert, no form left to resubmit), so every outcome reloads
+        // — unchanged from its pre-`JS-003` behaviour, now data
+        // instead of an unconditional `window.location.reload()`.
+        "outcomes": response_outcomes(
+            t(MessageKey::StatusChangeUndoConflictMessage),
+            true,
+            t(MessageKey::StatusChangeUndoUnavailableMessage),
+            true,
+            true,
+        ),
     })
     .to_string();
 
@@ -685,14 +732,26 @@ fn render_status_enhancement_assets() -> impl IntoView {
 fn render_board_copy_assets() -> impl IntoView {
     let copy = serde_json::json!({
         "reloadMessage": t(MessageKey::BoardReloadMessage),
-        "conflictMessage": t(MessageKey::BoardConflictMessage),
-        "unavailableMessage": t(MessageKey::BoardUnavailableMessage),
         "movedTo": {
             "open": t(MessageKey::StatusChangedAnnouncement { status: IssueStatusLabel::Open }),
             "in_progress": t(MessageKey::StatusChangedAnnouncement { status: IssueStatusLabel::InProgress }),
             "done": t(MessageKey::StatusChangedAnnouncement { status: IssueStatusLabel::Done }),
         },
         "undoLabel": t(MessageKey::UndoButtonLabel),
+        // `JS-003` §4: `board.js`'s plain-`unavailable` case does not
+        // reload (reverting the card in place is enough); `conflict`
+        // and the new `unconfirmed` outcome both do — the latter was
+        // a silent `return` before this handoff, which left the
+        // dragged card's `data-updated-at` stale and the optimistic
+        // move never reverted (confirmed by reading `board.js:135`
+        // and `:220` before this change; see the review package).
+        "outcomes": response_outcomes(
+            t(MessageKey::BoardConflictMessage),
+            true,
+            t(MessageKey::BoardUnavailableMessage),
+            false,
+            true,
+        ),
     })
     .to_string();
 

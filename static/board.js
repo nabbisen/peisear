@@ -28,10 +28,16 @@
   if (
     !copy ||
     typeof copy.reloadMessage !== "string" ||
-    typeof copy.conflictMessage !== "string" ||
-    typeof copy.unavailableMessage !== "string" ||
     !copy.movedTo ||
-    typeof copy.undoLabel !== "string"
+    typeof copy.undoLabel !== "string" ||
+    !copy.outcomes ||
+    typeof copy.outcomes.conflictStatus !== "number" ||
+    !copy.outcomes.conflict ||
+    typeof copy.outcomes.conflict.message !== "string" ||
+    !copy.outcomes.unavailable ||
+    typeof copy.outcomes.unavailable.message !== "string" ||
+    !copy.outcomes.unconfirmed ||
+    typeof copy.outcomes.unconfirmed.message !== "string"
   ) {
     return;
   }
@@ -50,6 +56,17 @@
   function announceAssertive(message) {
     var region = document.getElementById("status-announcements-assertive");
     if (region) region.textContent = message;
+  }
+
+  // `JS-003` (RFC 011 step 2): the one place a classified outcome
+  // becomes an action -- announce, then reload if the outcome says
+  // to. `copy.outcomes`'s three keys (`conflict`/`unavailable`/
+  // `unconfirmed`) are the classification; this is just "read it and
+  // act", not policy of its own. Reverting the card, where it's
+  // needed, is the caller's job -- it happens before this runs.
+  function applyOutcome(outcome) {
+    announceAssertive(outcome.message);
+    if (outcome.reload) window.location.reload();
   }
 
   function postStatus(statusValue, updatedAt, issueId) {
@@ -114,31 +131,39 @@
   // undoes the drag visually right away (optimistic, same as the
   // drag's own move); `moveForward` re-applies it if the undo
   // request itself fails -- the drag did land, only the undo didn't.
+  // `copy.outcomes` classifies the response (`JS-003`, RFC 011 step
+  // 2); `false` from the first `.then` is a sentinel meaning "already
+  // handled", distinct from a real (possibly malformed) response
+  // body, so the second `.then` doesn't double-announce.
   function performUndo(card, issueId, targetStatus, moveBack, moveForward) {
     moveBack();
     postStatus(targetStatus, card.dataset.updatedAt, issueId)
       .then(function (res) {
-        if (res.status === 409) {
+        if (res.status === copy.outcomes.conflictStatus) {
           moveForward();
-          announceAssertive(copy.conflictMessage);
-          window.location.reload();
-          return;
+          applyOutcome(copy.outcomes.conflict);
+          return false;
         }
         if (!res.ok) {
           moveForward();
-          announceAssertive(copy.unavailableMessage);
-          return;
+          applyOutcome(copy.outcomes.unavailable);
+          return false;
         }
         return res.json();
       })
       .then(function (body) {
-        if (!body || typeof body.updated_at !== "string" || !body.updated_at) return;
+        if (body === false) return;
+        if (!body || typeof body.updated_at !== "string" || !body.updated_at) {
+          moveForward();
+          applyOutcome(copy.outcomes.unconfirmed);
+          return;
+        }
         card.dataset.updatedAt = body.updated_at;
         announcePolite(copy.movedTo[targetStatus]);
       })
       .catch(function () {
         moveForward();
-        announceAssertive(copy.unavailableMessage);
+        applyOutcome(copy.outcomes.unavailable);
       });
   }
 
@@ -199,25 +224,38 @@
         return;
       }
 
+      // `copy.outcomes` classifies the response (`JS-003`, RFC 011
+      // step 2); `false` from the first `.then` is a sentinel meaning
+      // "already handled", distinct from a real (possibly malformed)
+      // response body, so the second `.then` doesn't double-announce
+      // -- same shape as `performUndo` above.
       postStatus(newStatus, clientUpdatedAt, issueId)
         .then(function (res) {
-          if (res.status === 409) {
+          if (res.status === copy.outcomes.conflictStatus) {
             revert();
-            announceAssertive(copy.conflictMessage);
             // No automatic retry. Reload to pick up authoritative
             // state (fresh updated_at values on every card).
-            window.location.reload();
-            return;
+            applyOutcome(copy.outcomes.conflict);
+            return false;
           }
           if (!res.ok) {
             revert();
-            announceAssertive(copy.unavailableMessage);
-            return;
+            applyOutcome(copy.outcomes.unavailable);
+            return false;
           }
           return res.json();
         })
         .then(function (body) {
-          if (!body || typeof body.updated_at !== "string" || !body.updated_at) return;
+          if (body === false) return;
+          if (!body || typeof body.updated_at !== "string" || !body.updated_at) {
+            // A 2xx with no usable `updated_at` -- the mutation's
+            // fate is unknown, so the optimistic move is reverted
+            // rather than left standing on a guess, and reload picks
+            // up whatever the server actually did.
+            revert();
+            applyOutcome(copy.outcomes.unconfirmed);
+            return;
+          }
           // Confirmed applied past this point -- update in place, no
           // reload, matching `dm.js`'s posture (STATUS-002).
           card.dataset.updatedAt = body.updated_at;
@@ -229,7 +267,7 @@
         })
         .catch(function () {
           revert();
-          announceAssertive(copy.unavailableMessage);
+          applyOutcome(copy.outcomes.unavailable);
         });
     });
   });
