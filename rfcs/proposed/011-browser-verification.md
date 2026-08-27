@@ -215,7 +215,7 @@ the next one.
 | | Release | What | Exit condition |
 |---|---|---|---|
 | **1** | 0.29.0 | **Inventory.** ✅ Done — `JS-001`. Corrected the count, found ~10 movable rules, and established that the fallback boundary is not one of them. | — |
-| **1b** | 0.29.0 | **Pin the fallback boundary's shape**, in `static_js_scan`'s family. No browser, no dependency. | The two-catch structure cannot be flattened silently |
+| **1b** | 0.29.0 | **Pin the fallback boundary's shape.** ✅ Done — `JS-002`. Three assertions: the function exists by name, its body carries a `try` at its **own** depth, and `fallback(` is never called inside it. A nested-callback `try` was found to defeat the first version and was closed in review. | The two-catch structure cannot be flattened silently. **Residual**: a *narrowed* top-level `try` still passes — closing it would need a parser, or a rule that fails on the current tree |
 | **2** | 0.30.0 | **Move `dm.js`'s four rules and `board.js`'s duplicates of them.** Value stated at its real size: one authority for a `409` classification currently written twice, plus Rust tests for ~10 rules. **Not** the fallback boundary. | `§10.15`'s entry updated with the new residue |
 | **3** | 0.31.0 | **`board.js`'s remaining rule** (the stale-card case). **`search.js` is excluded** — different shape, and its two "movable" rules fail the purpose: the server has no query-length floor, so moving `MIN_QUERY_LENGTH` would *invent* a second authority rather than remove one. | The residue is mechanics only |
 | **4** | 0.32.0 | **Re-ask the browser question** against the measured residue. | A decision, recorded either way |
