@@ -1,11 +1,11 @@
 # RFC 0011: Browser verification — deciding what it buys before buying it
 
 **Status**: Proposed
-**Target**: 0.29.0 for the decision; implementation 0.30.0 at the earliest
+**Target**: 0.29.0 for step 1 (an inventory); steps 2-4 across 0.30.0-0.32.0
 **Related spec sections**: `SPEC §30` (ABDD axes), `SPEC §33` (mobile)
 **Related requirements**: `NFR-A11Y-001` (focus visibility residue),
 `NFR-A11Y-006`, `NFR-A11Y-007`
-**Closes if adopted**: baseline `§10.15`
+**Closes if adopted**: baseline `§10.15` — by shrinking it, then re-asking
 **Governing decisions**: `DEC-021` (JavaScript as progressive enhancement)
 **Last updated**: 2026-08-27 — reconciled against the code before drafting
 
@@ -78,42 +78,100 @@ uncovered surface is the enhancement, not the function.**
 
 ## The options
 
-**(a) Adopt.** Close `§10.15`, unblock three items, accept a non-deterministic
-gate and a dependency.
+**(a) Adopt.** Close `§10.15`, unblock three items, accept a
+non-deterministic gate and a dependency.
 
 **(b) Decline, and say so properly.** `§10.15` stays open **by decision rather
 than by default**, with `DEC-021`'s degradation named as the mitigation it
-actually is. The three items stay open with their reasons recorded. **This is
-not the same as the current state**, which is three releases of "not
-scheduled".
+actually is.
 
-**(c) Adopt narrowly.** One job, the three scripts' happy paths and the fallback
-boundary — not the mobile flows, not accessibility. Buys the largest single
-item; leaves the ones a browser is worst at.
+**(c) Adopt narrowly.** One job, the three scripts' happy paths and the
+fallback boundary.
 
-## Recommendation
+**(d) Shrink what cannot be verified, then decide about what is left.**
 
-**(c), and I hold it loosely.**
+## Recommendation: (d), and the first three were the wrong question
 
-`§10.15`'s real exposure is the fallback boundary: *"falling back to a native
-form submit is correct before the server has applied the change and wrong
-after"* — a distinction `STATUS-002`'s review caught by reading, and the kind
-of thing reading catches once. That is worth a browser.
+*Revised 2026-08-27 after the owner rejected a cost-shaped recommendation.*
 
-The mobile and accessibility items are where a browser flatters itself most: it
-answers *"does this work at 375px in a headless Chromium"*, and the requirement
-asks about a phone. **Buying a browser to answer those would let us mark them
-verified on evidence that is one inference from what was asked** — and this
-project has spent twenty-one handoffs finding claims of exactly that shape.
+The first three options all ask **"how much browser should we buy?"** That
+takes the 756 lines as given and shops for a tool to point at them. The
+question worth asking is **what belongs in JavaScript at all.**
 
-## Open questions
+### The measurement that changes the answer
 
-1. **(a), (b) or (c)?** The decision this RFC exists for.
-2. **If (b), does `§10.15` get a recorded review date** rather than staying
-   open indefinitely?
-3. **If (a) or (c), is a non-deterministic gate acceptable at all**, given
-   `§10.13`? A browser job that fails one run in fifty is worse than no job if
-   the response is to re-run it.
+`dm.js` is **36 decision points against 24 DOM operations.** It is more policy
+than mechanics — and the policy is the part that matters:
+
+- fall back to a native submit, or announce and stop?
+- `409` conflict, or non-`409` unavailable?
+- did the change land before the failure, or after?
+- which announcement, in which live region?
+
+**Every one of those is a rule, not a manipulation.** None of them needs a
+browser to be true or false. They need a browser only because they are
+currently written where nothing else can reach them.
+
+### The precedent is this project's own
+
+**RFC 006 moved copy out of Rust into a message table so it could be
+checked.** Before it, every string was correct by review; after it, a violation
+is unconstructible. The strings did not become easier to test — they moved to
+where testing was possible.
+
+**`QA-019` did the same for `updated_at`**: one authority, in the layer that
+can enforce it. **`HLT-001` did it again**: return the set rather than
+re-derive it, so a count and its basis cannot disagree.
+
+**The pattern this project keeps arriving at is *move the fact to where it can
+be checked*, never *add a checker where the fact is*.** A browser harness is
+the second of those, and it is the first time this project would have chosen
+it.
+
+### The shape
+
+**Policy becomes data.** The `board-copy` JSON island already carries copy from
+Rust to the scripts. It carries **decisions** too: a table of
+outcome → action, computed and tested in Rust, that the scripts look up rather
+than encode.
+
+The scripts keep what genuinely needs a browser — reading a `fetch` result,
+moving a node, starting a timer — and stop holding the rules about *when*.
+
+**What that leaves uncovered is DOM mechanics**, where a failure is visible
+immediately and locally rather than subtle and conditional. That is a
+categorically better residue than the fallback boundary, which
+`STATUS-002`'s review caught by reading and which reading catches once.
+
+### Then, and only then, the browser question
+
+After the shrink the question is no longer "do we need a browser for 756 lines
+of policy and mechanics" but "do we need one for N lines of mechanics" — a
+smaller question with a cheaper answer, and one that can be answered against a
+real number rather than a fear.
+
+**I am not pre-deciding it.** It may still be yes.
+
+## Schedule
+
+Controlled, with a review point between each step and nothing committed past
+the next one.
+
+| | Release | What | Exit condition |
+|---|---|---|---|
+| **1** | 0.29.0 | **Inventory.** Classify every decision in the three scripts as *movable policy* or *irreducible mechanics*, with the count. No code moves. | A table the owner can read, and a number for what would remain |
+| **2** | 0.30.0 | **Move `dm.js`'s policy**, the highest-risk file and the one whose boundary has already been got wrong once. Rust-side tests for every rule moved. | `§10.15`'s entry updated with the new residue |
+| **3** | 0.31.0 | **Move `board.js`'s and `search.js`'s.** | The residue is mechanics only |
+| **4** | 0.32.0 | **Re-ask the browser question** against the measured residue. | A decision, recorded either way |
+
+**Step 1 is the only thing being asked for now.** It is an audit, it costs one
+handoff, and its output is the input to a decision that is currently being made
+on an estimate.
+
+**If step 1 finds the policy is not movable** — that the decisions are entangled
+with DOM state in ways that do not survive extraction — that is a finding, and
+it returns the browser question immediately with the estimate replaced by
+evidence.
 
 ## Out of scope
 
