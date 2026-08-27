@@ -1,7 +1,7 @@
 # Handoffs — RFC 008, explainability
 
 Implementation companions for
-[RFC 008](../../accepted/008-explainability.md), target **0.29.0**.
+[RFC 008](../../done/008-explainability.md), target **0.29.0**.
 
 **This file is an index, not a status board.** Current status of any handoff
 lives in `.git-exclude/reviewed/`.

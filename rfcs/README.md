@@ -29,9 +29,7 @@ the owner approves, the dev team implements.
 
 Design settled. Implementation may begin.
 
-| ID | Title | Target |
-|----|-------|--------|
-| 008 | [Explainability](./accepted/008-explainability.md) — the basis behind an indicator; closes `§10.4` and **Definition of Done item 3**. Narrows `FR-HLT-007` for one indicator on `NFR-PRIV-002` grounds | 0.29.0 |
+None. RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 ## Proposed
 
@@ -48,6 +46,7 @@ Open for review. Design may still change.
 | 004b | [Direct manipulation — the board (D-2)](./done/004b-direct-manipulation-board.md) — *has handoffs*; the drag already shipped, this brought its copy under the vocabulary check | 0.26.0 |
 | 004a | [Direct manipulation — status change (D-1)](./done/004a-direct-manipulation-status.md) — *has handoffs*; two steps, the no-JS path first | 0.25.0 (step 1), 0.26.0 (step 2) |
 | 010 | [Destructive-action confirmation](./done/010-destructive-action-confirmation.md) — *has handoffs*; closed external design §17.4 | 0.25.0 |
+| 008 | [Explainability](./done/008-explainability.md) — *has handoffs*; closes `§10.4` **partially** — history deferred, one indicator narrowed on privacy grounds | 0.29.0 |
 | 005 | [Quality consolidation](./done/005-quality-consolidation.md) — *has handoffs*; Phase E, fourteen sections, `QA-001`–`QA-021`. **Three commitments outlive it** — see its closing note | 0.22.0–0.28.0 |
 | 003 | [Inbox refinements](./done/003-inbox-refinements.md) — *has handoffs*; **rewritten** before dispatch | 0.24.0 |
 | 002 | [Calendar surfaces](./done/002-calendar-surfaces.md) — *has handoffs* | 0.23.0 |
@@ -76,6 +75,7 @@ the RFC number they are keyed to.
 | [`handoffs/004b-direct-manipulation-board/`](./handoffs/004b-direct-manipulation-board/README.md) | 004b — historical, RFC implemented |
 | [`handoffs/004a-direct-manipulation-status/`](./handoffs/004a-direct-manipulation-status/README.md) | 004a — historical, RFC implemented |
 | [`handoffs/010-destructive-action-confirmation/`](./handoffs/010-destructive-action-confirmation/README.md) | 010 — historical, RFC implemented |
+| [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
 | [`handoffs/002-calendar-surfaces/`](./handoffs/002-calendar-surfaces/README.md) | 002 — historical, RFC implemented |
 | [`handoffs/001-sprint-planning-page/`](./handoffs/001-sprint-planning-page/README.md) | 001 — historical, RFC implemented |

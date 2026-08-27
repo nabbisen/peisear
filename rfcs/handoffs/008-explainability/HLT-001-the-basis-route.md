@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-27 — **re-issued**; the first version's premise was wrong
 **Priority**: P2 by `FR-HLT-007`; closes **Definition of Done item 3**
-**Governing RFC**: [008](../../accepted/008-explainability.md) §1–§3
+**Governing RFC**: [008](../../done/008-explainability.md) §1–§3
 **Depends on**: nothing.
 
 ---

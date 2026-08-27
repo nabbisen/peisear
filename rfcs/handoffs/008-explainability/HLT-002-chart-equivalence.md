@@ -4,7 +4,7 @@
 **Date**: 2026-08-27
 **Priority**: P1 — `NFR-A11Y-003`; with `HLT-001` it closes `§10.4` and
 **Definition of Done item 3**
-**Governing RFC**: [008](../../accepted/008-explainability.md) §5
+**Governing RFC**: [008](../../done/008-explainability.md) §5
 **Depends on**: `HLT-001`, closed. Independent of it in code.
 
 ---

@@ -1,6 +1,6 @@
 # RFC 0008: Explainability — the basis behind an indicator
 
-**Status**: **Accepted 2026-08-27**
+**Status**: **Implemented (0.29.0)** — `HLT-001`, `HLT-002`; history deferred
 **Target**: 0.29.0
 **Related spec sections**: `SPEC §28.3` (indicator basis), `SPEC §31.1`
 (chart equivalence), `SPEC §41.3` (Definition of Done)
@@ -8,7 +8,34 @@
 with `NFR-PRIV-002` and `NFR-PRIV-007` — see §2 and §4
 **Governing decisions**: `DEC-019` (management, not oversight)
 **Closes**: baseline `§10.4`, and **Definition of Done item 3**
-**Last updated**: 2026-08-27 — reconciled against the code before drafting
+**Last updated**: 2026-08-27 — moved to `done/`
+
+> **Closing note.**
+>
+> **`§10.4` closes partially, and the word matters.** `NFR-A11Y-003` is met in
+> full. `FR-HLT-007` is met on two limbs of three — **history is deferred**,
+> because an indicator's history is a time series and for a one-contributor
+> project it is that person's history. It returns with `QA-017`'s predicate or
+> not at all.
+>
+> **One limb was narrowed rather than met.** WIP compliance offers no basis
+> route; its basis is personal data. §2 carved that and the owner approved it.
+> The design then made the carve-out **structural** — each indicator's basis is
+> the set its own computation returns, and WIP compliance's returns users, not
+> issues — so the exception is a shape the design cannot express rather than a
+> case someone might helpfully close.
+>
+> **§1 was rewritten mid-flight and the first version was wrong.** It said the
+> issue list's existing filters reach most indicators' bases. Three of six
+> could not be expressed that way, and building the missing filters would have
+> put the staleness clock in two places. The implementer found it by
+> reproducing the table before building — which §2 of the handoff asked for,
+> and which is why it asked. **The count is now the length of its own
+> membership**, so a count and its basis cannot disagree.
+>
+> **What outlives this RFC**: `FR-HLT-007`'s history limb, and the bus-factor
+> basis being the full in-flight set rather than a per-assignee breakdown —
+> recorded in `HLT-002`'s package as a limitation rather than sold as a design.
 
 ## Summary
 
