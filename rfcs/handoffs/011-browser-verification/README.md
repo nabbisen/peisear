@@ -10,3 +10,4 @@ own releases against step 1's evidence.
 |---|---|---|---|---|
 | JS-001 | [JS-001](./JS-001-policy-inventory.md) | Step 1 — classify every decision in the three scripts as movable policy or irreducible mechanics. **No code moves.** | 0.29.0 | — |
 | JS-002 | [JS-002](./JS-002-pin-the-boundary.md) | Step 1b — pin the two-catch shape `dm.js`'s fallback boundary is made of. `JS-001` proved the rule itself cannot move. | 0.29.0 | JS-001 |
+| JS-003 | [JS-003](./JS-003-one-outcome-authority.md) | Step 2 — one authority for response classification: the `409`/other/malformed decision, written three times in JS, moves into the server-authored copy island. Settles `board.js`'s silent malformed-body case. | 0.30.0 | JS-001, JS-002 |
