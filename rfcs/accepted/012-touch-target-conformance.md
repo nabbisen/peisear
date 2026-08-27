@@ -58,6 +58,39 @@ in §2 below.
    inspection per surface until rendered-geometry measurement is available
    (`§10.15`)."*
 
+**Amended 2026-08-27 after `TT-001`, which found the fact that makes clause (2)
+mostly self-enforcing.** CSS `gap` on a flex or grid container is applied by the
+layout engine independent of a child's box size — a child that grows cannot
+consume it. So:
+
+4. **`Grow` is the default mechanism, and a grown cluster inside a container
+   with a positive `gap` is presumed to satisfy clause (2)** with no further
+   verification, at any gap value.
+5. **`Expand` is permitted only where the expanded target is a real
+   layout-participating element** — a `<label>` wrapping its input, or padding
+   on the control itself — **never an invisible overlay** (pseudo-element,
+   absolute inset) that escapes normal flow. A target that participates in
+   layout keeps the gap's protection and stays guardable; one that does not
+   forfeits both.
+6. **Any `Expand` must come with a demonstrated clearance**, not a stated
+   preference for compactness.
+
+*Why this is stronger than the "Grow is simpler and should be the default" this
+RFC originally said.* `TT-001` established that `Expand` is **structurally
+unsafe by default** (its hit area escapes flow and can overlap a neighbour's),
+**unguardable** (its own §4.3 excludes it explicitly), and **unprecedented** —
+zero implementations exist in this codebase to derive a pattern from. Every use
+of it converts a cluster the layout engine was protecting for free into one that
+needs inspection and cannot be guarded. That is not a co-equal option.
+
+**`TT-001` reported two "confirmed overlap hazards" that this amendment
+dissolves.** Both are `gap-1` clusters of `btn-xs` controls, and both overlap
+only under `Expand`; under `Grow` the layout engine keeps the boxes apart and
+there is nothing to fix. The audit had both halves of that and did not join
+them — which is what review is for, and is recorded here because the near-miss
+is the useful part: six `Expand` recommendations and two "design decisions" were
+about to be scoped against a hazard that does not exist.
+
 **`SPEC §33.2` amendment pending**, recorded the way `DEC-030` records `§28.1`'s.
 
 ### Why not the alternatives
@@ -152,11 +185,20 @@ It lands with or immediately after the work that makes it true.
 
 ## Open questions
 
-- **Whether clause (2) can be partially guarded from source.** Sibling
-  interactive elements in one flex/grid container with a known gap utility may
-  be checkable without rendering. The audit should say whether that is true
-  often enough to be worth a guard, or whether it is inspection-only until
-  0.32.0.
+- ~~**Whether clause (2) can be partially guarded from source.**~~ **Answered by
+  `TT-001`**: yes for one case — `Grow` siblings inside a container with an
+  explicit positive `gap-*` utility, roughly a third of all clusters found and
+  now the great majority, since `Expand` drops to the three checkboxes. No for
+  bare DaisyUI component gaps (`.card-actions`, `.alert`, `.table-sm` padding),
+  which carry their gap in the component stylesheet rather than a visible class,
+  though the pinned CSS makes those numbers available to hardcode as
+  `touch_target_scan` already hardcodes `checkbox-xs`'s. No for table-row
+  clusters, where content width and line-height are not statically fixed.
+- **Whether `NFR-A11Y-007` should cover interactive elements that carry no
+  sizing class at all** — plain `<a>` links, breadcrumbs, whole-card links.
+  `TT-001` §5 established these sit **outside** the counting method rather than
+  inside it and passing. Named as a limit of the requirement rather than closed;
+  a separate decision, deliberately not folded into this one.
 
 ## References
 
