@@ -993,9 +993,11 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::UndoButtonLabel => "[fx-undo]".to_string(),
         MessageKey::StatusChangeUndoConflictMessage => "[fx-undo-conflict]".to_string(),
         MessageKey::StatusChangeUndoUnavailableMessage => "[fx-undo-unavailable]".to_string(),
+        MessageKey::StatusChangeUndoUnconfirmedMessage => "[fx-undo-unconfirmed]".to_string(),
         MessageKey::BoardReloadMessage => "[fx-board-reload]".to_string(),
         MessageKey::BoardConflictMessage => "[fx-board-conflict]".to_string(),
         MessageKey::BoardUnavailableMessage => "[fx-board-unavailable]".to_string(),
+        MessageKey::BoardUnconfirmedMessage => "[fx-board-unconfirmed]".to_string(),
         MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count } => {
             format!("[fx-confirm-issue-cascade] {sub_issue_count}")
         }

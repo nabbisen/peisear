@@ -2270,6 +2270,16 @@ pub enum MessageKey {
     /// distinction (`CONFLICT_MESSAGE` vs. `UNAVAILABLE_MESSAGE`);
     /// this is that same split for undo.
     StatusChangeUndoUnavailableMessage,
+    /// Undo's `unconfirmed` case (`JS-003-review.md` §3, round 2) — a
+    /// `2xx` response whose body carries no usable `updated_at`. The
+    /// mutation's outcome is genuinely unknown, not failed: the
+    /// server returned success, just not confirmation. Deliberately
+    /// **not** [`MessageKey::StatusChangeUndoUnavailableMessage`]
+    /// reused — that key asserts *"this change could not be
+    /// completed"*, which the code cannot support here (it may well
+    /// have completed) and this product does not assert what it does
+    /// not know (`NFR-LANG-002`, `FR-HLT-005`/`006`).
+    StatusChangeUndoUnconfirmedMessage,
 
     // ---- BOARD-001: the three sentences that lived in board.js
     // ---- (RFC 004b / D-2), moved here byte-exact per the handoff's
@@ -2286,6 +2296,15 @@ pub enum MessageKey {
     /// non-2xx response. `board.js` reverts the card without
     /// reloading.
     BoardUnavailableMessage,
+    /// A drag's `unconfirmed` case (`JS-003-review.md` §3, round 2) —
+    /// same reasoning as
+    /// [`MessageKey::StatusChangeUndoUnconfirmedMessage`]:
+    /// [`MessageKey::BoardUnavailableMessage`]'s *"…The card has been
+    /// returned to its previous column"* is false here for a
+    /// two-fold reason — the mutation may have applied, and the
+    /// reload this outcome triggers can show the card in its new
+    /// column moments later, directly contradicting the announcement.
+    BoardUnconfirmedMessage,
 
     // ---- QA-006: the optimistic-lock audit (RFC 005 §2) ----
     /// The issue delete interstitial's consequence line when the
@@ -3106,9 +3125,11 @@ impl MessageKey {
             MessageKey::UndoButtonLabel,
             MessageKey::StatusChangeUndoConflictMessage,
             MessageKey::StatusChangeUndoUnavailableMessage,
+            MessageKey::StatusChangeUndoUnconfirmedMessage,
             MessageKey::BoardReloadMessage,
             MessageKey::BoardConflictMessage,
             MessageKey::BoardUnavailableMessage,
+            MessageKey::BoardUnconfirmedMessage,
             // Both the singular and plural templates render different
             // text (`en.rs` branches on `sub_issue_count == 1`), so
             // both need a sample -- one representative value would

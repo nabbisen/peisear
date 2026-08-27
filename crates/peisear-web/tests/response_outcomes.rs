@@ -149,3 +149,71 @@ async fn board_unconfirmed_message_is_non_empty() {
          pre-JS-003 silent `return` at lines 135/220 announced nothing at all: {island}"
     );
 }
+
+/// Fetch both islands for a fresh fixture project. Shared by checks 4
+/// and 5 below, which both need to inspect `reload` on every island.
+async fn both_islands() -> (serde_json::Value, serde_json::Value) {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "P").await;
+    let issue_id = create_issue(&app.db, &project_id, &user_id, "T").await;
+
+    let detail_resp = app
+        .server
+        .get(&format!("/projects/{project_id}/issues/{issue_id}"))
+        .await;
+    let dm_island = extract_island(&detail_resp.text(), "status-enhancement-copy");
+
+    let board_resp = app
+        .server
+        .get(&format!("/projects/{project_id}?view=board"))
+        .await;
+    let board_island = extract_island(&board_resp.text(), "board-copy");
+
+    (dm_island, board_island)
+}
+
+/// Check 4 (round 2, `JS-003-review.md` §2): `conflict.reload` is
+/// `true` on every island. A `409` means the client's lock value is
+/// stale by definition; continuing without re-fetching guarantees the
+/// next write conflicts too.
+#[tokio::test]
+async fn conflict_outcome_always_reloads() {
+    let (dm_island, board_island) = both_islands().await;
+    for (island, surface) in [(&dm_island, "dm.js"), (&board_island, "board.js")] {
+        assert_eq!(
+            island["outcomes"]["conflict"]["reload"].as_bool(),
+            Some(true),
+            "{surface}'s conflict outcome must reload -- a stale lock value \
+             guarantees the next write conflicts too: {island}"
+        );
+    }
+}
+
+/// Check 5 (round 2, `JS-003-review.md` §2): `unconfirmed.reload` is
+/// `true` on every island. The mutation's outcome is genuinely
+/// unknown; re-fetching is the only way to learn it -- not reloading
+/// leaves the interface asserting a state it does not know to be
+/// true.
+///
+/// `unavailable.reload` is deliberately **not** asserted anywhere in
+/// this file: it is legitimately per-surface (`board.js` can revert
+/// its card in place and skip the reload; `dm.js`'s undo has neither
+/// a card nor a form left to fall back to, so it always reloads).
+/// Pinning it would restate the code, not check an invariant --
+/// `conflict` and `unconfirmed` both carry a reason for `reload=true`
+/// that holds independently of what either script happens to do
+/// today; `unavailable` does not.
+#[tokio::test]
+async fn unconfirmed_outcome_always_reloads() {
+    let (dm_island, board_island) = both_islands().await;
+    for (island, surface) in [(&dm_island, "dm.js"), (&board_island, "board.js")] {
+        assert_eq!(
+            island["outcomes"]["unconfirmed"]["reload"].as_bool(),
+            Some(true),
+            "{surface}'s unconfirmed outcome must reload -- the mutation's fate is \
+             unknown, and re-fetching is the only way to learn it: {island}"
+        );
+    }
+}

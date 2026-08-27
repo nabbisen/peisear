@@ -670,11 +670,16 @@ fn assignee_label<'a>(id: &'a str, assignees: &'a [AssigneeOption]) -> &'a str {
 /// reloads; `board.js`'s plain-`unavailable` case does not, since
 /// reverting the card in place is already enough), and that
 /// difference is real, not duplication (§4: "keep the rule in one
-/// place; do not force the actions to match"). `unconfirmed` reuses
-/// the caller's own `unavailable` copy rather than new copy — the
-/// handoff's own template, and "copy is not yours to write" besides:
-/// a malformed response and an outright failure read the same to a
-/// user either way.
+/// place; do not force the actions to match").
+///
+/// **`unconfirmed` does *not* reuse `unavailable`'s copy**
+/// (`JS-003-review.md` §3, round 2 — the original design did, and it
+/// was wrong): `unavailable`'s copy asserts the change *failed*,
+/// which the code cannot support when the server returned `2xx` and
+/// the outcome is merely unconfirmed — it may well have applied. This
+/// product does not assert what it does not know
+/// (`NFR-LANG-002`, `FR-HLT-005`/`006`), so `unconfirmed` gets its own
+/// message, specified at each call site.
 ///
 /// `conflictStatus` comes from [`AppError::conflict_status_code`],
 /// never written out as a literal here.
@@ -683,13 +688,14 @@ fn response_outcomes(
     conflict_reload: bool,
     unavailable_message: String,
     unavailable_reload: bool,
+    unconfirmed_message: String,
     unconfirmed_reload: bool,
 ) -> serde_json::Value {
     serde_json::json!({
         "conflictStatus": AppError::conflict_status_code(),
         "conflict": { "message": conflict_message, "reload": conflict_reload },
-        "unavailable": { "message": unavailable_message.clone(), "reload": unavailable_reload },
-        "unconfirmed": { "message": unavailable_message, "reload": unconfirmed_reload },
+        "unavailable": { "message": unavailable_message, "reload": unavailable_reload },
+        "unconfirmed": { "message": unconfirmed_message, "reload": unconfirmed_reload },
     })
 }
 
@@ -710,6 +716,7 @@ fn render_status_enhancement_assets() -> impl IntoView {
             true,
             t(MessageKey::StatusChangeUndoUnavailableMessage),
             true,
+            t(MessageKey::StatusChangeUndoUnconfirmedMessage),
             true,
         ),
     })
@@ -750,6 +757,7 @@ fn render_board_copy_assets() -> impl IntoView {
             true,
             t(MessageKey::BoardUnavailableMessage),
             false,
+            t(MessageKey::BoardUnconfirmedMessage),
             true,
         ),
     })

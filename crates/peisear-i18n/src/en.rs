@@ -1348,6 +1348,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::StatusChangeUndoUnavailableMessage => {
             "This change could not be completed. Reload to see the current state.".to_string()
         }
+        MessageKey::StatusChangeUndoUnconfirmedMessage => {
+            "This change may not have completed. The current state is now shown.".to_string()
+        }
         MessageKey::BoardReloadMessage => {
             "This page is showing an earlier version of the board. Reload to see the current state."
                 .to_string()
@@ -1358,6 +1361,10 @@ pub(crate) fn render(key: MessageKey) -> String {
         }
         MessageKey::BoardUnavailableMessage => {
             "This status change could not be completed. The card has been returned to its previous column."
+                .to_string()
+        }
+        MessageKey::BoardUnconfirmedMessage => {
+            "This status change may not have completed. The board has been refreshed to show the current state."
                 .to_string()
         }
         MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count } => {
