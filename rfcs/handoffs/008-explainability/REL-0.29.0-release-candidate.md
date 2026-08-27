@@ -4,7 +4,7 @@
 **Date**: 2026-08-27
 **Priority**: P0 — the release
 **Governing RFC**: [008](../../done/008-explainability.md), and
-[011](../../proposed/011-browser-verification.md) step 1b
+[011](../../accepted/011-browser-verification.md) step 1b
 **Depends on**: `HLT-001`, `HLT-002`, `JS-001`, `JS-002` — all closed.
 
 **Do not tag. Do not publish.**

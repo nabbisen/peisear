@@ -1,7 +1,7 @@
 # Handoffs — RFC 011, browser verification
 
 Implementation companions for
-[RFC 011](../../proposed/011-browser-verification.md).
+[RFC 011](../../accepted/011-browser-verification.md).
 
 **Steps 1 and 1b are committed.** Steps 2–4 are scheduled and re-decided at their
 own releases against step 1's evidence.

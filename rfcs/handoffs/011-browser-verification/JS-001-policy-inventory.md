@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-08-27
 **Priority**: P2 — an inventory; it decides how a P1 gap gets closed
-**Governing RFC**: [011](../../proposed/011-browser-verification.md), step 1
+**Governing RFC**: [011](../../accepted/011-browser-verification.md), step 1
 **Depends on**: nothing.
 
 **No code moves. No test is added. Nothing is refactored.** This is a

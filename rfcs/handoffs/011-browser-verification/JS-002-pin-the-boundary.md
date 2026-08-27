@@ -4,7 +4,7 @@
 **Date**: 2026-08-27
 **Priority**: P1 — it protects the one thing `JS-001` proved the rest of RFC
 011 does not
-**Governing RFC**: [011](../../proposed/011-browser-verification.md), step 1b
+**Governing RFC**: [011](../../accepted/011-browser-verification.md), step 1b
 **Depends on**: `JS-001`, closed. Its trace is the input; do not re-derive it.
 
 ---
