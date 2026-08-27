@@ -38,6 +38,7 @@ Open for review. Design may still change.
 | ID | Title | Target |
 |----|-------|--------|
 | 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) — umbrella; substeps get their own RFCs | — |
+| 011 | [Browser verification](./proposed/011-browser-verification.md) — **a decision, not a design**: what a headless browser would and would not buy for `§10.15`, and at what cost | 0.29.0 (decision) |
 
 ## Implemented
 
