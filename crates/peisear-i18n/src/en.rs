@@ -29,7 +29,9 @@
 //!
 //! *Added 2026-08-27 after `HLT-001` round 2 drafted six arms using a
 //! forbidden word and learned it only from a failing test in another
-//! crate. The guard caught it; nothing told the author first.*
+//! crate, and extended the same day after `HLT-002` hit a second
+//! variant of it. The guards caught both; nothing told either author
+//! first, which is what this note exists to change.*
 //!
 //! **1. The §1.7 table — this crate.** [`crate::guard`] holds sixteen
 //! banned phrases (`"velocity"`, `"completion rate"`, `"top performer"`,
@@ -37,6 +39,19 @@
 //! [`MessageKey::all`] rendering against them. Adding a key without
 //! adding it to `all()` is caught separately, by
 //! `tests/enumeration_guard.rs`.
+//!
+//! **The ban covers the test fixtures too, and this sentence used to
+//! omit that.** `guard::shipped_and_fixture_tables_contain_no_prohibited_vocabulary`
+//! checks `tests/common/fixture_locale.rs` alongside this file — its
+//! name says so — so a `Velocity*` key whose fixture reads
+//! `"[fx-velocity-…]"` fails even though no shipped string changed.
+//! **The convention the existing keys follow is `bars`**:
+//! `VelocityCaptionLead`'s fixture is `"[fx-bars-lead]"`. Name a
+//! fixture after what the thing *is*, not after the variant.
+//!
+//! *(Added 2026-08-27 from `HLT-002`, which hit exactly this. The
+//! paragraph above was written a day earlier, for the same asymmetry,
+//! and was incomplete in the way that let the next instance through.)*
 //!
 //! **2. `NFR-LANG-002`'s Watch ceiling — enforced in `peisear-web`.**
 //! No rendered page may carry a severity word beyond Watch. The test is
