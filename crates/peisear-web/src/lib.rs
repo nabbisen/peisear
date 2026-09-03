@@ -24,6 +24,8 @@ mod contrast_scan;
 #[cfg(test)]
 mod dec_007_ci_scan;
 #[cfg(test)]
+mod dec_007_fs_scan;
+#[cfg(test)]
 mod dec_007_scan;
 #[cfg(test)]
 mod dm_fallback_boundary_scan;

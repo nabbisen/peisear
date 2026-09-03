@@ -41,33 +41,61 @@ async fn detail_renders_three_segment_status_control() {
     resp.assert_status(StatusCode::OK);
     let body = resp.text();
 
-    // The group wrapper.
+    // The group wrapper -- co-location, not two independent facts:
+    // the literal rendered tag (Leptos attribute order:
+    // `role`, `aria-label`, `class`).
     assert!(
-        body.contains(r#"role="group""#) && body.contains(r#"aria-label="Issue status""#),
-        "status segment group wrapper missing"
+        body.contains(r#"<div role="group" aria-label="Issue status" class="join mb-3">"#),
+        "status segment group wrapper missing: {body}"
     );
+
+    // Scoped to the segment container, not the whole page.
+    // `TT-003` §5, confirmed by planting: this page also renders a
+    // `status-enhancement-copy` JSON island (`JS-003`'s `movedTo`
+    // client-side copy: "Moved to Open.", "Moved to In Progress.",
+    // "Moved to Done.") -- an unrelated data blob that happens to
+    // contain the same three words. Blanking the segment buttons'
+    // own labels left the old unscoped checks passing, satisfied
+    // entirely by that JSON island.
+    let segment_start = body
+        .find(r#"<div role="group" aria-label="Issue status" class="join mb-3">"#)
+        .expect("segment container present");
+    let segment_end = body[segment_start..]
+        .find("</div>")
+        .map(|i| segment_start + i)
+        .expect("segment container has a closing </div>");
+    let segment = &body[segment_start..segment_end];
 
     // All three labels present (Open / In Progress / Done).
     // We look for the literal labels as rendered, which lets
     // this test catch wording changes intentionally.
-    assert!(body.contains("Open"), "missing 'Open' segment label");
     assert!(
-        body.contains("In Progress"),
-        "missing 'In Progress' segment label"
+        segment.contains("Open"),
+        "missing 'Open' segment label: {segment}"
     );
-    assert!(body.contains("Done"), "missing 'Done' segment label");
+    assert!(
+        segment.contains("In Progress"),
+        "missing 'In Progress' segment label: {segment}"
+    );
+    assert!(
+        segment.contains("Done"),
+        "missing 'Done' segment label: {segment}"
+    );
 
-    // The active segment carries aria-pressed="true". A new
-    // issue's default status is open, so we'd expect at least
-    // one aria-pressed="true" and at least one
-    // aria-pressed="false".
-    assert!(
-        body.contains(r#"aria-pressed="true""#),
-        "active segment must carry aria-pressed=true"
+    // The active segment carries aria-pressed="true" -- counted, not
+    // just `contains`, and scoped to the segment: three buttons
+    // total, so exactly one true and exactly two false (same
+    // double-pressed gap already found and fixed in
+    // `status_control.rs`'s sibling test).
+    let true_count = segment.matches(r#"aria-pressed="true""#).count();
+    let false_count = segment.matches(r#"aria-pressed="false""#).count();
+    assert_eq!(
+        true_count, 1,
+        "expected exactly one segment pressed, found {true_count}: {segment}"
     );
-    assert!(
-        body.contains(r#"aria-pressed="false""#),
-        "inactive segments must carry aria-pressed=false"
+    assert_eq!(
+        false_count, 2,
+        "expected exactly two segments unpressed, found {false_count}: {segment}"
     );
 }
 

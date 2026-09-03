@@ -200,19 +200,30 @@ async fn subjects_own_today_and_settings_still_show_capacity() {
     logout(&app).await;
     login(&app, &bob).await;
 
+    // Not a bare `contains("5") && contains("pt")` -- every page loads
+    // Tailwind from a CDN URL containing "3.4.15" (`components/layout.rs`),
+    // which already satisfies both halves regardless of whether the
+    // capacity value itself rendered at all (`TT-003` §5, confirmed by
+    // planting: hardcoding the rendered capacity to 0 left this check
+    // passing). `" / 5 pt"` is `LoadWithCapacityValue`'s own literal
+    // format (`en.rs`: `"{in_flight}/{capacity} pt"`) with the known
+    // fixture capacity, not a bare digit.
     let resp = app.server.get("/today").await;
     resp.assert_status(StatusCode::OK);
     let today_body = resp.text();
     assert!(
-        today_body.contains("5") && today_body.contains("pt"),
+        today_body.contains(" / 5 pt"),
         "Bob's own /today must still show his capacity; body: {today_body}"
     );
 
     let resp = app.server.get("/settings").await;
     resp.assert_status(StatusCode::OK);
     let settings_body = resp.text();
+    // `CapacityRowAriaLabel`'s own literal format
+    // (`en.rs`: `"Capacity {points} points, period {from} to {to}."`),
+    // not a bare digit -- same reasoning as the /today check above.
     assert!(
-        settings_body.contains('5'),
+        settings_body.contains("Capacity 5 points"),
         "Bob's own /settings must still show his capacity value; body: {settings_body}"
     );
 }

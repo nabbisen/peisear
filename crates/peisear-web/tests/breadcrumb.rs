@@ -24,6 +24,29 @@ use common::auth::{TestUser, register_and_login};
 use common::fixture::{create_issue, create_personal_project};
 use common::server::TestApp;
 
+/// The `<nav aria-label="Breadcrumb">...</nav>` block's own markup,
+/// not the whole page. `TT-003` §5, confirmed by planting: the
+/// navbar's account-dropdown menu also links to `href="/today"`
+/// (`components/layout.rs`), and the navbar's brand/logo link also
+/// points to `href="/projects"` -- both render on every authenticated
+/// page, independent of whatever the breadcrumb component itself
+/// produces, so unscoped checks for either stayed green with the
+/// breadcrumb's own entries removed.
+fn breadcrumb_nav(body: &str) -> &str {
+    let marker = r#"aria-label="Breadcrumb""#;
+    let marker_at = body
+        .find(marker)
+        .expect("breadcrumb nav aria-label present");
+    let nav_start = body[..marker_at]
+        .rfind("<nav")
+        .expect("a <nav tag precedes the breadcrumb aria-label");
+    let nav_end = body[nav_start..]
+        .find("</nav>")
+        .map(|i| nav_start + i)
+        .expect("breadcrumb nav has a closing </nav>");
+    &body[nav_start..nav_end]
+}
+
 #[tokio::test]
 async fn project_detail_breadcrumb_starts_with_today() {
     let app = TestApp::spawn().await;
@@ -35,15 +58,16 @@ async fn project_detail_breadcrumb_starts_with_today() {
     resp.assert_status(StatusCode::OK);
     let body = resp.text();
 
+    let breadcrumb = breadcrumb_nav(&body);
     // 1. Leading entry: a link to /today labelled "Today".
     assert!(
-        body.contains(r#"href="/today""#),
-        "project detail breadcrumb missing /today entry-point link"
+        breadcrumb.contains(r#"href="/today""#),
+        "project detail breadcrumb missing /today entry-point link: {breadcrumb}"
     );
     // 2. The Projects ancestor link.
     assert!(
-        body.contains(r#"href="/projects""#),
-        "project detail breadcrumb missing Projects link"
+        breadcrumb.contains(r#"href="/projects""#),
+        "project detail breadcrumb missing Projects link: {breadcrumb}"
     );
     // 3. Terminal node carries aria-current="page".
     assert!(
@@ -71,18 +95,22 @@ async fn issue_detail_breadcrumb_full_chain() {
     resp.assert_status(StatusCode::OK);
     let body = resp.text();
 
+    let breadcrumb = breadcrumb_nav(&body);
     // Today entry point.
-    assert!(body.contains(r#"href="/today""#), "missing /today link");
+    assert!(
+        breadcrumb.contains(r#"href="/today""#),
+        "missing /today link: {breadcrumb}"
+    );
     // Projects ancestor.
     assert!(
-        body.contains(r#"href="/projects""#),
-        "missing /projects link"
+        breadcrumb.contains(r#"href="/projects""#),
+        "missing /projects link: {breadcrumb}"
     );
     // Project ancestor (link to project detail).
     let project_link = format!(r#"href="/projects/{project_id}""#);
     assert!(
-        body.contains(&project_link),
-        "missing parent-project link {project_link}"
+        breadcrumb.contains(&project_link),
+        "missing parent-project link {project_link}: {breadcrumb}"
     );
     // Terminal aria-current.
     assert!(

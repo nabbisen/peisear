@@ -22,6 +22,7 @@
 mod common;
 
 use axum::http::StatusCode;
+use common::assertion;
 use common::auth::{TestUser, register_and_login};
 use common::fixture::{
     create_issue, create_personal_project, create_planned_sprint, create_team_project,
@@ -101,22 +102,8 @@ async fn cancel_and_delete_both_meet_the_touch_target_minimum() {
     let cancel_markup = &body[actions_start..form_start];
     let delete_markup = &body[form_start..];
 
-    assert!(
-        cancel_markup.contains("min-h-11"),
-        "Cancel must carry min-h-11: {cancel_markup}"
-    );
-    assert!(
-        cancel_markup.contains("min-w-11"),
-        "Cancel must carry min-w-11: {cancel_markup}"
-    );
-    assert!(
-        delete_markup.contains("min-h-11"),
-        "Delete must carry min-h-11: {delete_markup}"
-    );
-    assert!(
-        delete_markup.contains("min-w-11"),
-        "Delete must carry min-w-11: {delete_markup}"
-    );
+    assertion::meets_the_touch_target_minimum(cancel_markup, "Cancel");
+    assertion::meets_the_touch_target_minimum(delete_markup, "Delete");
 }
 
 #[tokio::test]
@@ -342,12 +329,25 @@ async fn cancel_targets_the_parent_and_return_to_is_ignored() {
         ))
         .await;
     resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+    // Scoped to the card-actions block, not a bare `body.contains(...)` --
+    // the navbar's own brand link (`components/layout.rs`, every
+    // authenticated page) renders the identical `<a href="/projects" ...>`
+    // prefix, so an unscoped check here is satisfied by the navbar
+    // regardless of what Cancel actually points to. Found by planting
+    // (`TT-003` §5): changing the production `cancel_href` to a wrong
+    // value left this assertion passing.
+    let actions_start = body
+        .find(r#"class="card-actions justify-end"#)
+        .expect("card-actions block present");
     assert!(
-        resp.text().contains(r#"<a href="/projects""#),
-        "project cancel should target the project list, ignoring return_to"
+        body[actions_start..].contains(r#"<a href="/projects""#),
+        "project cancel should target the project list, ignoring return_to; \
+         card-actions block: {}",
+        &body[actions_start..]
     );
     assert!(
-        !resp.text().contains("evil.example"),
+        !body.contains("evil.example"),
         "a caller-supplied return_to must not be reflected anywhere"
     );
 

@@ -15,6 +15,7 @@
 
 use axum::http::StatusCode;
 use axum_test::TestServer;
+use peisear_web::components::TOUCH_TARGET;
 
 /// The URL is a peisear endpoint that exposes personal data of
 /// `target_user_id`. Asserts:
@@ -90,4 +91,27 @@ pub async fn stale_update_returns_409(
         resp.status_code(),
         resp.text()
     );
+}
+
+/// Asserts `markup` carries every utility in
+/// [`peisear_web::components::TOUCH_TARGET`] — checked one axis at a
+/// time (`TOUCH_TARGET.split_whitespace()`), so a failure names which
+/// axis is missing rather than only that the pair as a whole isn't
+/// present.
+///
+/// `TT-003` (`§10.15`/`TT-002-round2-review.md` §4): `board_keyboard.rs`
+/// and `confirmation.rs` used to assert the literal `"min-h-11"` /
+/// `"min-w-11"` directly — `grow()`'s premise (one home for the 44px
+/// fact) undone one layer up, in test code rather than production.
+/// Reading the constant here instead means a future change to
+/// `TOUCH_TARGET` is what these tests track, not a frozen copy of its
+/// value at the time they were written.
+pub fn meets_the_touch_target_minimum(markup: &str, what: &str) {
+    for utility in TOUCH_TARGET.split_whitespace() {
+        assert!(
+            markup.contains(utility),
+            "{what} must carry {utility:?} (part of components::TOUCH_TARGET, \
+             {TOUCH_TARGET:?}) -- NFR-A11Y-007's 44px floor; markup: {markup}"
+        );
+    }
 }

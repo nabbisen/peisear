@@ -192,8 +192,17 @@ async fn results_page_renders_with_query() {
     resp.assert_status(StatusCode::OK);
     let body = resp.text();
     assert!(body.contains("Login error"), "results page missing issue");
-    // Heading echoes the query.
-    assert!(body.contains("Login"), "results page should echo query");
+    // Heading echoes the query, quoted (`format!("\"{q}\"")` in
+    // `search.rs` -- text content, so the quotes render literally, not
+    // as `&quot;`) -- not a bare `contains("Login")`, which the fixture
+    // issue's own title ("Login error") already satisfies regardless
+    // of whether the heading echoes anything at all (`TT-003` §5,
+    // confirmed by planting: a hardcoded wrong heading value left the
+    // unscoped check passing).
+    assert!(
+        body.contains(r#"font-mono">"Login""#),
+        "results page heading should echo the query, quoted: {body}"
+    );
     // Section headings present.
     assert!(body.contains("Projects"), "missing Projects section");
     assert!(body.contains("Open issues"), "missing Open issues section");

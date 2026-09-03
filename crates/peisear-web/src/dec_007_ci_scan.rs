@@ -273,7 +273,14 @@ fn every_dec_007_block_target_has_a_matching_ci_run_line() {
 /// `\`-continued list the same way it splits on the spaces between
 /// names, so the only cleanup needed is dropping the lone `\`
 /// continuation tokens themselves.
-fn for_loop_targets(block: &str) -> Vec<String> {
+///
+/// `pub(crate)` since `TT-003` (`dec_007_fs_scan`): the filesystem→block
+/// link needs the same literal list this module already extracts to
+/// know which `peisear-web` integration test files the block's shell
+/// loop covers, and re-parsing the loop a second, subtly different way
+/// is exactly what `dec_007_block`/`appears_at_word_boundary` already
+/// avoid for the sibling link.
+pub(crate) fn for_loop_targets(block: &str) -> Vec<String> {
     let start_marker = "for t in ";
     let Some(start) = block.find(start_marker) else {
         return Vec::new();

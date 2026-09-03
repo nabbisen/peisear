@@ -40,19 +40,48 @@ async fn list_view_renders_with_filter_toolbar() {
     let body = resp.text();
 
     // Toolbar form's GET action.
+    let toolbar_marker = r#"aria-label="Filter and sort issues""#;
     assert!(
-        body.contains(r#"aria-label="Filter and sort issues""#),
+        body.contains(toolbar_marker),
         "list view missing filter/sort toolbar"
     );
+    // Scoped to the toolbar `<form>`, not the whole page.
+    // `TT-003` §5, confirmed by planting: each list row also renders
+    // its own status-change form (`issues.rs:1050`, `name="status"`)
+    // and carries a hidden `name="sort"` field
+    // (`issues.rs`, the per-row form's own sort-preserving input) --
+    // both independent of the toolbar's own `<select>`s, so an
+    // unscoped check on either stayed green with the toolbar select
+    // deleted entirely. `name="assignee"` has no such collision (the
+    // per-row form's equivalent field is named `filter_assignee`) but
+    // is scoped the same way for consistency.
+    let marker_at = body
+        .find(toolbar_marker)
+        .expect("toolbar aria-label present");
+    let form_start = body[..marker_at]
+        .rfind("<form")
+        .expect("a <form tag precedes the toolbar's aria-label");
+    let form_end = body[form_start..]
+        .find("</form>")
+        .map(|i| form_start + i)
+        .expect("toolbar form has a closing </form>");
+    let toolbar = &body[form_start..form_end];
+
     // Status select.
-    assert!(body.contains(r#"name="status""#), "missing status select");
+    assert!(
+        toolbar.contains(r#"name="status""#),
+        "missing status select: {toolbar}"
+    );
     // Assignee select.
     assert!(
-        body.contains(r#"name="assignee""#),
-        "missing assignee select"
+        toolbar.contains(r#"name="assignee""#),
+        "missing assignee select: {toolbar}"
     );
     // Sort select.
-    assert!(body.contains(r#"name="sort""#), "missing sort select");
+    assert!(
+        toolbar.contains(r#"name="sort""#),
+        "missing sort select: {toolbar}"
+    );
 }
 
 #[tokio::test]

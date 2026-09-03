@@ -161,10 +161,29 @@ async fn two_contributors_burndown_table_renders_with_matching_cells() {
          rendered its own row rather than the chart's date labels leaking \
          through: {body}"
     );
-    assert!(
-        body.contains(">8<"),
+    // Scoped to the "Burndown values" table and counted, not a bare
+    // `contains(">8<")` -- both facts were checked independently. Two
+    // real gaps found by planting (`TT-003` §5): (1) `contains` only
+    // proves ">8<" appears *somewhere*, so breaking the completed
+    // cell's own value (while committed stayed correct) still left the
+    // check passing; (2) the burndown SVG's y-axis tick labels are
+    // `<text>` elements on the same page that can independently render
+    // the literal text "8", so even a table-wide count needs to be
+    // scoped to the table itself, not the whole body.
+    let table_start = body
+        .find(r#"aria-label="Burndown values""#)
+        .expect("Burndown values table present");
+    let table_end = body[table_start..]
+        .find("</table>")
+        .map(|i| table_start + i)
+        .expect("Burndown values table has a closing </table>");
+    let table_markup = &body[table_start..table_end];
+    let eight_count = table_markup.matches(">8<").count();
+    assert_eq!(
+        eight_count, 2,
         "both issues are effort 4, so the table's committed and completed \
-         cells for today should both read 8: {body}"
+         cells for today should both read 8 (found {eight_count} in the \
+         table, not the whole page); table: {table_markup}"
     );
 }
 

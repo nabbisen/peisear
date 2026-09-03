@@ -73,10 +73,24 @@ async fn today_folds_rhythm_panel_by_default() {
     );
 
     // Inside Rhythm: Throughput is one of the chips. Confirms
-    // the content rendered (just hidden visually).
+    // the content rendered (just hidden visually). Scoped to the
+    // chip's own `<div title="Issues you have moved to Done">`,
+    // not a bare `body.contains("Throughput")` -- the page's own
+    // glossary section (`ThroughputGlossaryDefinition`, further
+    // down the same page) independently renders the word
+    // "Throughput" too, so an unscoped check stayed green with the
+    // chip's own label blanked out (`TT-003` §5, confirmed by
+    // planting).
+    let chip_marker = r#"title="Issues you have moved to Done""#;
+    let chip_at = body.find(chip_marker).expect("throughput chip present");
+    let chip_end = body[chip_at..]
+        .find("</div>")
+        .map(|i| chip_at + i)
+        .expect("throughput chip div has a closing </div>");
+    let chip = &body[chip_at..chip_end];
     assert!(
-        body.contains("Throughput"),
-        "Throughput chip absent from Rhythm"
+        chip.contains("Throughput"),
+        "Throughput chip absent from Rhythm: {chip}"
     );
 
     // Confirm `<details>` doesn't have `open` attribute on

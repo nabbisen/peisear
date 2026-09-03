@@ -117,10 +117,35 @@ async fn plan_page_renders_two_columns_for_planned_sprint() {
     );
     assert!(body.contains("Backlog candidate"));
     assert!(body.contains("Already committed"));
+    // Scoped to each `<section aria-labelledby="...">` block, not two
+    // independent whole-page checks -- the doc string's own claim
+    // ("in the backlog column"/"in the sprint items column") is
+    // stronger than what an unscoped `body.contains(...)` pair proves.
+    // Confirmed by planting (`TT-003` §5): swapping which action each
+    // column's form actually uses left the unscoped version passing.
+    let backlog_start = body
+        .find(r#"aria-labelledby="backlog-heading""#)
+        .expect("backlog section present");
+    let sprint_items_start = body
+        .find(r#"aria-labelledby="sprint-items-heading""#)
+        .expect("sprint items section present");
     assert!(
-        body.contains("/plan/add") && body.contains("/plan/remove"),
-        "expected a move form (action targeting /plan/add) in the backlog column and one \
-         (targeting /plan/remove) in the sprint items column: {body}"
+        backlog_start < sprint_items_start,
+        "expected the backlog section to precede the sprint items section in \
+         document order, so slicing between their start markers scopes each \
+         correctly: {body}"
+    );
+    let backlog_section = &body[backlog_start..sprint_items_start];
+    let sprint_items_section = &body[sprint_items_start..];
+    assert!(
+        backlog_section.contains("/plan/add"),
+        "expected a move form (action targeting /plan/add) in the backlog \
+         column specifically: {backlog_section}"
+    );
+    assert!(
+        sprint_items_section.contains("/plan/remove"),
+        "expected a move form (action targeting /plan/remove) in the sprint \
+         items column specifically: {sprint_items_section}"
     );
 }
 

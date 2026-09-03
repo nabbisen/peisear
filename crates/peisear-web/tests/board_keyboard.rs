@@ -13,6 +13,7 @@ mod common;
 
 use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
+use common::assertion;
 use common::auth::{TestUser, register_and_login};
 use common::fixture::{create_issue, create_personal_project};
 use common::server::{TestApp, ensure_distinct_timestamp};
@@ -191,14 +192,19 @@ async fn each_status_control_has_a_distinguishing_accessible_name() {
 /// this control specifically until now; the baseline's claim that
 /// `board_keyboard` verified `NFR-A11Y-007` was never true.
 ///
-/// **Scoped to each `<button ... name="status" ...>` tag individually**,
-/// not a bare `body.contains("min-h-11")` — `TT-002-review.md` §1 found
-/// this exact test still passing with this button's own `grow()` call
-/// removed, because other controls on the same board page (e.g. the
-/// per-row status `join` on `issues.rs`) also carry `min-h-11`/
-/// `min-w-11` once `TT-002` shipped, so an unscoped check no longer
+/// **Scoped to each `<button ... name="status" ...>` tag
+/// individually**, not a bare `body.contains(...)` — `TT-002-review.md`
+/// §1 found this exact test still passing with this button's own
+/// `grow()` call removed, because other controls on the same board
+/// page (e.g. the per-row status `join` on `issues.rs`) also carry the
+/// same classes once `TT-002` shipped, so an unscoped check no longer
 /// proves anything about *this* control specifically. Same shape as
 /// `touch_target.rs`'s `grown_input_reaches_the_rendered_page` fix.
+///
+/// **Reads `components::TOUCH_TARGET`** (`common::assertion::
+/// meets_the_touch_target_minimum`), not the literal `"min-h-11"`/
+/// `"min-w-11"` — `TT-003` §4 collapsed this and `confirmation.rs`'s
+/// four sites onto the one production constant.
 #[tokio::test]
 async fn per_card_status_button_meets_the_touch_target_minimum() {
     let app = TestApp::spawn().await;
@@ -219,11 +225,7 @@ async fn per_card_status_button_meets_the_touch_target_minimum() {
             .expect("a <button tag has a closing '>'");
         let tag = &rest[button_start..button_start + tag_end];
         if tag.contains(r#"name="status""#) {
-            assert!(
-                tag.contains("min-h-11") && tag.contains("min-w-11"),
-                "a board status-move button must carry min-h-11 and min-w-11 \
-                 (44px); tag: {tag}"
-            );
+            assertion::meets_the_touch_target_minimum(tag, "a board status-move button");
             checked += 1;
         }
         rest = &rest[button_start + tag_end..];

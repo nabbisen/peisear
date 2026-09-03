@@ -228,13 +228,23 @@ async fn aria_pressed_marks_the_current_status_on_the_detail_segment() {
         .await;
     resp.assert_status(StatusCode::OK);
     let body = resp.text();
-    assert!(
-        body.contains(r#"aria-pressed="true""#),
-        "exactly one segment should be pressed (the current status): {body}"
+    // Counted, not just `contains(...)` -- a plain `contains` proves
+    // "true" and "false" each appear *somewhere*, which a defect
+    // marking a second, wrong segment pressed (e.g. two segments both
+    // `aria-pressed="true"`) would still satisfy (`TT-003` §5, planted:
+    // forcing `Done` to also read as current left the unscoped version
+    // passing). `IssueStatus::all()` renders exactly three segments, so
+    // exactly one must be pressed and the other two must not be.
+    let true_count = body.matches(r#"aria-pressed="true""#).count();
+    let false_count = body.matches(r#"aria-pressed="false""#).count();
+    assert_eq!(
+        true_count, 1,
+        "expected exactly one segment pressed (the current status), found \
+         {true_count}: {body}"
     );
-    assert!(
-        body.contains(r#"aria-pressed="false""#),
-        "the other segments should be unpressed: {body}"
+    assert_eq!(
+        false_count, 2,
+        "expected exactly two segments unpressed, found {false_count}: {body}"
     );
 }
 
@@ -293,10 +303,7 @@ async fn neither_surface_depends_on_script() {
         !detail_body.contains(r#"type="button""#),
         "no detail segment may be type=\"button\" -- that submits nothing: {detail_body}"
     );
-    assert!(
-        detail_body.contains(r#"type="submit""#) && detail_body.contains(r#"name="status""#),
-        "detail segments must be real type=\"submit\" status controls: {detail_body}"
-    );
+    assert_status_buttons_are_real_submit_controls(&detail_body, "detail");
 
     let list_resp = app
         .server
@@ -317,9 +324,50 @@ async fn neither_surface_depends_on_script() {
         !list_body.contains(r#"type="button""#),
         "no list-row segment may be type=\"button\" -- that submits nothing: {list_body}"
     );
+    assert_status_buttons_are_real_submit_controls(&list_body, "list-row");
+}
+
+/// At least one `<button ... name="status" ...>` tag exists in `body`
+/// and every one of them also carries `type="submit"` **on the same
+/// tag** — proving co-location, not merely that both facts appear
+/// somewhere on the page independently.
+///
+/// `TT-003` §5: the two calls this replaced checked
+/// `body.contains(r#"type="submit""#) && body.contains(r#"name="status""#)`
+/// as two independent whole-page facts. Planting confirmed the list-row
+/// call was a real instance of the "widening" pattern: the list view's
+/// filter toolbar renders its own unrelated `<select name="status">`
+/// (`issues.rs:920`), so renaming the list-row button's own
+/// `name="status"` to `name="statusx"` — a real, injected defect — left
+/// this assertion passing, because the toolbar's `name="status"` and
+/// some other element's `type="submit"` still satisfied the two checks
+/// independently. The detail-page call happened not to have a second
+/// `name="status"` element on that route with today's fixture, so it
+/// passed the same plant — but that was the fixture, not a guarantee,
+/// so both calls are scoped the same way rather than only the one that
+/// failed today.
+fn assert_status_buttons_are_real_submit_controls(body: &str, surface: &str) {
+    let mut checked = 0;
+    let mut rest = body;
+    while let Some(button_start) = rest.find("<button") {
+        let tag_end = rest[button_start..]
+            .find('>')
+            .expect("a <button tag has a closing '>'");
+        let tag = &rest[button_start..button_start + tag_end];
+        if tag.contains(r#"name="status""#) {
+            assert!(
+                tag.contains(r#"type="submit""#),
+                "a {surface} status button must be type=\"submit\" on the same tag \
+                 as name=\"status\", not merely somewhere on the page; tag: {tag}"
+            );
+            checked += 1;
+        }
+        rest = &rest[button_start + tag_end..];
+    }
     assert!(
-        list_body.contains(r#"type="submit""#) && list_body.contains(r#"name="status""#),
-        "list-row segments must be real type=\"submit\" status controls: {list_body}"
+        checked > 0,
+        "expected at least one <button name=\"status\"> on the {surface} surface; \
+         body: {body}"
     );
 }
 
