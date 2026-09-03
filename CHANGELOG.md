@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.30.0] — 2026-09-03
+
+No schema migration. `0017` remains the most recent; a downgrade to 0.29.0
+is a restore from a pre-migration backup, not a forward fix.
+
+This release is mostly deduplication: one fact — how to classify the
+response to a status-change request — was written three times in
+JavaScript and once in Rust. It is now written once, in Rust, and read as
+data by both surfaces. That is worth stating plainly; it is not a feature.
+
+### Fixed
+
+- **The board no longer passes a failed status change over in silence.**
+  Previously, a `2xx` response whose body was missing a usable
+  `updated_at` left the dragged card sitting in its new column with a
+  stale lock value and no announcement — so the *next* drag of that card
+  produced an unexplained "someone else changed this" conflict. This was
+  latent and never reported; it is fixed because the deduplication above
+  gave both surfaces a case for it, not because a user hit it. The board
+  now announces the outcome and reloads, the same as the issue detail
+  page's own undo path already did.
+
+### Changed
+
+- **New copy for the case where a mutation's outcome is unknown.** *"This
+  status change may not have completed. The current state is now
+  shown."* replaces text that read *"could not be completed"* — which
+  asserted two things the code could not support: that the change had in
+  fact failed (the server had returned `2xx`), and that the page the user
+  was looking at was still current (a reload could show the card in its
+  new column moments later). The new copy says only what is known.
+
+### Changed (internal)
+
+- **`409` is no longer written in JavaScript at all.** The response
+  classification — conflict, unavailable, or unconfirmed — is authored
+  once in Rust and read as data by both `dm.js` and `board.js`, replacing
+  three separate copies of the same rule.
+
+**What this does not do.** `§10.15` is still open: the shipped JavaScript
+is still executed by no test in this project's own suite. This release
+shrinks the untested surface — the classification itself moved out of
+JavaScript and into Rust, where it is tested — it does not remove the
+surface. Read this as deduplication with one latent defect fixed as a
+side effect, not as the board becoming reliable in a way it previously
+was not; the fallback boundary `JS-002` guards is unchanged and still
+unverified by execution.
+
 ## [0.29.0] — 2026-08-27
 
 No schema migration. `0017` remains the most recent; a downgrade to 0.28.0
