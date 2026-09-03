@@ -57,9 +57,18 @@
 //! matters here too: a doc comment reading *"`btn-sm` is 32px"* must
 //! not **fail** this guard either. [`quoted_string_spans`] walks the
 //! source char-by-char and only yields the span between an actual
-//! `"..."` Rust string literal's quotes — a `///`/`//` comment is
-//! never inside quotes, so prose is invisible to it in both
-//! directions, with no need to special-case comment syntax at all.
+//! `"..."` Rust string literal's quotes.
+//!
+//! **`TT-003-review.md` §3 — that claim held in only one direction.**
+//! A doc comment reading *"`btn-sm` is 32px"* (backticked, no quotes)
+//! was already invisible, correctly. But `quoted_string_spans` has no
+//! notion of comments at all, so a sizing class **inside quotes
+//! inside a comment** — `// quoted: "input-xs" is 24px.` — read as a
+//! real class literal and **failed the guard on a correct tree**,
+//! exactly the failure mode this module's own `checkbox-xs` history
+//! warns about. [`strip_line_comments`] runs first now, so both
+//! directions hold: prose can neither satisfy the guard nor break it,
+//! whether or not it happens to sit inside quotes.
 //!
 //! **A named limit, not a parser** — the same boundary `JS-002` hit
 //! and the same answer: [`quoted_string_spans`] handles the one string
@@ -81,6 +90,24 @@
 //! `TT-002`'s 139-control counting method entirely, not inside it and
 //! passing. A green result here is a claim about class-carrying
 //! controls, not about every interactive element in the tree.
+//!
+//! **`TT-003-review.md` §2 — bare checkboxes were the same kind of
+//! gap, at the other end of `TT-002`'s own scope.** `class="checkbox"`
+//! carries no `btn-*`/`input-*`/`select-*` sizing class, so
+//! [`every_sizing_class_site_composes_the_touch_target`] never sees
+//! it — and `TT-002` §8 already named the check this handoff needed
+//! (*"assert each of the three checkbox source sites is wrapped in a
+//! `<label>` carrying `grow(...)`"*), dropped when this module's own
+//! §2 was first written. [`every_bare_checkbox_is_label_wrapped_with_grow`]
+//! closes it: every `class="checkbox"` site must be enclosed by a
+//! `<label class=grow(...)>` — the sanctioned `Expand` wrap
+//! (`DEC-049` as amended) that keeps the box itself at 24px while the
+//! label reaches 44px. A checkbox with no enclosing `<label>` at all,
+//! or one whose `<label>` doesn't call `grow`, fails. `checkbox-xs`
+//! and `checkbox-sm` stay out of scope here — `checkbox_xs_appears_nowhere`
+//! already bans the one that mattered, and `checkbox-sm` (`20px`) has
+//! no legitimate use in this tree today per this module's own opening
+//! note.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -138,6 +165,25 @@ fn checkbox_xs_appears_nowhere() {
             .collect::<Vec<_>>()
             .join("\n")
     );
+}
+
+/// Strips `//`-style line comments (plain, `///` doc comments, and
+/// `//!` inner doc comments alike — all start with `//`) before
+/// `quoted_string_spans` ever sees the text, so a sizing class or
+/// `"checkbox"` mentioned inside a comment can neither satisfy nor
+/// break either scan below (`TT-003-review.md` §3). Line-based,
+/// duplicated from `prose_scan.rs`/`test_harness_scan.rs`'s own
+/// identical function rather than shared — small enough that a
+/// shared module would add more indirection than it saves. Does not
+/// account for `//` appearing inside a real string literal (a URL,
+/// say); no `class=` attribute in this tree carries one today, the
+/// same documented limitation the two sibling copies already carry.
+fn strip_line_comments(source: &str) -> String {
+    source
+        .lines()
+        .map(|line| line.split("//").next().unwrap_or(""))
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
 /// The six sizing classes `TT-001`'s survey found below 44px and
@@ -221,10 +267,11 @@ fn every_sizing_class_site_composes_the_touch_target() {
     for path in &files {
         let source =
             fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-        for (quote_pos, content_start, content_end) in quoted_string_spans(&source) {
-            let content = &source[content_start..content_end];
-            if carries_a_sizing_class(content) && !is_grow_call_argument(&source, quote_pos) {
-                let line = source[..quote_pos].matches('\n').count() + 1;
+        let stripped = strip_line_comments(&source);
+        for (quote_pos, content_start, content_end) in quoted_string_spans(&stripped) {
+            let content = &stripped[content_start..content_end];
+            if carries_a_sizing_class(content) && !is_grow_call_argument(&stripped, quote_pos) {
+                let line = stripped[..quote_pos].matches('\n').count() + 1;
                 offenders.push(format!(
                     "{}:{line}: {content:?} carries a sizing class but is not the \
                      argument of a components::grow(...) call",
@@ -241,6 +288,103 @@ fn every_sizing_class_site_composes_the_touch_target() {
          converted every site this scan found on the tree it shipped against, so a \
          new offender means either a new control shipped without grow() or an \
          existing one lost it:\n{}",
+        offenders
+            .iter()
+            .map(|o| format!("  {o}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
+
+/// True if `content` (a string literal's contents) carries the bare
+/// `checkbox` class as a whole space-separated token — the same
+/// delimiter reasoning as [`carries_a_sizing_class`]. Does not match
+/// `checkbox-xs`/`checkbox-sm` (different tokens entirely); those are
+/// out of this scan's scope, see the module doc.
+fn carries_the_bare_checkbox_class(content: &str) -> bool {
+    content.split_whitespace().any(|token| token == "checkbox")
+}
+
+/// True if the string literal whose opening quote sits at `quote_pos`
+/// is a `class=` attribute's value — i.e. the text immediately before
+/// the quote, whitespace trimmed, ends with `class=`. Needed because
+/// `<input type="checkbox" class="checkbox">` carries the literal
+/// text `"checkbox"` **twice**: once as `type`'s value, once as
+/// `class`'s. [`carries_the_bare_checkbox_class`] matches both
+/// (`type="checkbox"`'s content is the single token `"checkbox"` too)
+/// -- caught planting a real bare checkbox during round 2, where the
+/// unscoped version reported the one offending site twice. Only the
+/// `class=` occurrence is the fact this scan cares about.
+fn is_class_attribute_value(source: &str, quote_pos: usize) -> bool {
+    source[..quote_pos].trim_end().ends_with("class=")
+}
+
+/// True if the bare `class="checkbox"` literal whose opening quote
+/// sits at `quote_pos` in `source` is enclosed by a
+/// `<label class=grow(...)>` wrapper — the sanctioned `Expand`
+/// pattern (`DEC-049` as amended, `TT-002` §4): the box stays at its
+/// native 24px, the label reaches 44px and participates in layout.
+///
+/// Finds the nearest `<label` before `quote_pos`, then requires two
+/// things: that `<label` must not already be closed by a `</label>`
+/// before reaching the checkbox (otherwise it is some earlier,
+/// unrelated label and the checkbox is not actually inside it), and
+/// that label's own opening tag must contain `class=grow(`.
+fn is_label_wrapped_with_grow(source: &str, quote_pos: usize) -> bool {
+    let before = &source[..quote_pos];
+    let Some(label_start) = before.rfind("<label") else {
+        return false;
+    };
+    if before[label_start..].contains("</label>") {
+        return false;
+    }
+    let after_label = &source[label_start..];
+    let Some(tag_end) = after_label.find('>') else {
+        return false;
+    };
+    after_label[..tag_end].contains("class=grow(")
+}
+
+#[test]
+fn every_bare_checkbox_is_label_wrapped_with_grow() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let components_dir = manifest_dir.join("src").join("components");
+    let mut files = Vec::new();
+    collect_rs_files(&components_dir, &mut files);
+    assert!(
+        !files.is_empty(),
+        "found no .rs files under src/components/ -- the workspace layout \
+         assumption this scan depends on may have changed"
+    );
+
+    let mut offenders = Vec::new();
+    for path in &files {
+        let source =
+            fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let stripped = strip_line_comments(&source);
+        for (quote_pos, content_start, content_end) in quoted_string_spans(&stripped) {
+            let content = &stripped[content_start..content_end];
+            if carries_the_bare_checkbox_class(content)
+                && is_class_attribute_value(&stripped, quote_pos)
+                && !is_label_wrapped_with_grow(&stripped, quote_pos)
+            {
+                let line = stripped[..quote_pos].matches('\n').count() + 1;
+                offenders.push(format!(
+                    "{}:{line}: {content:?} must be enclosed by a \
+                     <label class=grow(...)> wrapper -- the box itself stays \
+                     24px, only the label reaches 44px",
+                    path.display()
+                ));
+            }
+        }
+    }
+
+    assert!(
+        offenders.is_empty(),
+        "every bare checkbox in src/components/ must be wrapped in a 44px \
+         label (NFR-A11Y-007, DEC-049 as amended) -- TT-002 wrapped the three \
+         it found, so a new offender means either a new checkbox shipped \
+         unwrapped or an existing one lost its wrap:\n{}",
         offenders
             .iter()
             .map(|o| format!("  {o}"))
