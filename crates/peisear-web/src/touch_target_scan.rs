@@ -70,6 +70,18 @@
 //! directions hold: prose can neither satisfy the guard nor break it,
 //! whether or not it happens to sit inside quotes.
 //!
+//! **That holds for `//` line comments only.** `strip_line_comments`
+//! does not strip block comments, so a sizing class quoted inside a
+//! `/* ... */` block still reads as a class literal and would fail
+//! this scan on a correct tree. No block comment exists anywhere in
+//! this crate, so the gap is latent rather than live — but it is the
+//! one direction of the "both directions hold" claim above that is
+//! not actually true, and a guard that fails on correct code is the
+//! failure mode this module's own `checkbox-xs` history warns about.
+//! Named here (architect, `TT-003` round-2 review) rather than fixed,
+//! because stripping block comments correctly is the parser boundary
+//! the paragraph below declines to cross.
+//!
 //! **A named limit, not a parser** — the same boundary `JS-002` hit
 //! and the same answer: [`quoted_string_spans`] handles the one string
 //! form every `class=` site in `src/components/` actually uses today
