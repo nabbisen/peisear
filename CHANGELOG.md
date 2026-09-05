@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.31.0] — 2026-09-05
+
+No schema migration. `0017` remains the most recent; a downgrade to 0.30.0
+is a restore from a pre-migration backup, not a forward fix.
+
+This release closes baseline `NFR-A11Y-007`, open since 0.19.1 and the
+oldest condition in the Definition of Done table — **with a named limit**,
+and the word matters the same way it did for item 3 at 0.29.0.
+**Definition of Done item 5 moves this release, from "Partially met" to
+"Met, with mobile completion outstanding"** — not to "Met": `NFR-A11Y-006`
+(mobile completion, the other open limb of item 5) is unaffected by this
+release and stays open.
+
+### Changed
+
+- **Every interactive control the touch-target guard covers now presents
+  a 44 × 44 px touch target.** 139 controls: 136 grew, so the visible
+  control itself now reaches 44 px; three checkboxes kept their native
+  24 px box and gained a wrapping `<label>` that reaches 44 px instead.
+  **What this changes visibly**: some controls are larger and some table
+  rows are taller. That is the cost of this release and it was accepted
+  deliberately, not incidentally — see `RFC 012` for the reasoning.
+- **What this does not claim, in the same breath.** The guard enforcing
+  the above keys off DaisyUI's sizing classes and the bare `checkbox`
+  class. **Plain `<a>` links — breadcrumbs, whole-card links, inline text
+  links — carry neither, so they are unassessed by this guard, not
+  passing it.** WCAG's own inline-link exception probably covers the text
+  links; *probably* is the accurate word, not a hedge to tighten later.
+  **This release does not claim the product is WCAG conformant** —
+  0.28.0's entry said plainly that it was not, and this release improves
+  the position without settling it.
+
+### Changed (internal)
+
+- **Eleven test assertions were found passing while no longer testing
+  what they name, and are fixed.** Every one was correct when written and
+  none was broken by a commit — each decayed because the page it checked
+  grew a second, unrelated source of the exact string the assertion
+  looked for: a CDN script tag's own version number containing the digit
+  `5`, the navbar rendering the same link on every authenticated page,
+  this release's own 139 identical class pairs among them. No gate this
+  project owns detects this class of decay, and none plausibly could
+  without rendering every page and reasoning about everything else on
+  it — all eleven were found only by planting a real defect against each
+  assertion and watching it pass anyway. Recorded as baseline `§10.17`.
+- **A structural guard's own scope was the gap, not its rule.** The
+  guards watching `DEC-007`'s command block checked that every *target*
+  named there has a matching CI job; nothing checked that every test
+  *file* is named in the block at all, so a new file could get no CI job,
+  silently — which is exactly what happened once, this release. Closed
+  by a twelfth structural scan (`peisear-web --lib` now carries twelve,
+  up from eleven).
+
+**What a reader should not conclude.** The rule's adjacency half — that
+two touch targets must not overlap — is structurally guaranteed for every
+control now in the tree, but verifying that claim in general wants
+rendered geometry this project does not have (`§10.15`, external design
+`§17.6`). Separately, whether text stays vertically centred inside the
+65 grown inputs and selects (of the 139) is a rendering question for the
+same reason: **the box is provably 44 px; how it looks inside that box is
+not proven.**
+
 ## [0.30.0] — 2026-09-03
 
 No schema migration. `0017` remains the most recent; a downgrade to 0.29.0
