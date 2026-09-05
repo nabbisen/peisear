@@ -56,16 +56,17 @@ release and stays open.
   guards watching `DEC-007`'s command block checked that every *target*
   named there has a matching CI job; nothing checked that every test
   *file* is named in the block at all, so a new file could get no CI job,
-  silently — which is exactly what happened once, this release. Closed
-  by a twelfth structural scan (`peisear-web --lib` now carries twelve,
-  up from eleven).
+  silently. **No file ever did** — this release added one, and it was
+  wired in by hand by the author who added it. The gap was that nothing
+  would have said otherwise. Closed by a twelfth structural scan
+  (`peisear-web --lib` now carries twelve, up from eleven).
 
 **What a reader should not conclude.** The rule's adjacency half — that
 two touch targets must not overlap — is structurally guaranteed for every
 control now in the tree, but verifying that claim in general wants
 rendered geometry this project does not have (`§10.15`, external design
 `§17.6`). Separately, whether text stays vertically centred inside the
-65 grown inputs and selects (of the 139) is a rendering question for the
+57 grown inputs and selects (of the 139) is a rendering question for the
 same reason: **the box is provably 44 px; how it looks inside that box is
 not proven.**
 

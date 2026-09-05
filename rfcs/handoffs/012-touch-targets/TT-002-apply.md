@@ -79,7 +79,10 @@ justification requires knowing how a browser lays out a text input whose
 `line-height` is shorter than its box, **that is exactly the escalation in §6**
 — say so rather than guessing, and say what you would need.
 
-**65 of the 139 are `input-*` or `select-*`.** This is not a corner case.
+**57 of the 139 are `input-*` or `select-*`.** This is not a corner case.
+*(Corrected 2026-09-05: this read 65, which was wrong — `input-sm` 29 +
+`select-sm` 21 + `input-xs` 5 + `select-xs` 2 = 57. The figure propagated
+into the review record and the 0.31.0 changelog before it was re-derived.)*
 
 ## 4. The three checkboxes
 

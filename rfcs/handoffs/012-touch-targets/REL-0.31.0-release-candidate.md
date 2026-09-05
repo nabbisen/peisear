@@ -80,7 +80,7 @@ This is the substance of the package. `[0.31.0]` covers five things.
    in general wants rendered geometry this project does not have (`§10.15`,
    external design `§17.6`). And whether text stays vertically centred inside
    the taller inputs and selects is a rendering question for the same reason:
-   **the box is provably 44 px; how it looks is not proven.** 65 of the 139 are
+   **the box is provably 44 px; how it looks is not proven.** 57 of the 139 are
    inputs or selects. State it.
 
 **Run `find_violations` over the finished section** and report the character
