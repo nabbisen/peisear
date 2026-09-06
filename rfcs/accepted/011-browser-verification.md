@@ -77,6 +77,37 @@ uncovered surface is the enhancement, not the function.**
 - **Maintenance.** The harness needs its own fixtures, and it is the only part
   of the suite that would need updating when a class name changes.
 
+### Corrected 2026-09-06, after actually doing it once
+
+**The first bullet is wrong, and it was the one carrying the argument.**
+
+An inspection was run against a live instance using headless Chromium driven
+over the Chrome DevTools Protocol from Node — **with no dependency of any kind**.
+Chromium and Node were already installed on the development machine; the driver
+is about sixty lines using Node's built-in `WebSocket`. Nothing was added to any
+`Cargo.toml`. It is kept untracked at `.git-exclude/tools/cdp.mjs`.
+
+So *"a dependency and a runtime"* overstates the cost of **looking**. It does
+not overstate the cost of a **gate** — CI time and maintenance stand, and
+`DEC-048`'s non-determinism concern is entirely about CI. **But the two were
+conflated in this section, and the conflation made the cheap half look
+expensive.**
+
+**What the inspection found is recorded in
+`.git-exclude/tasks/architect/013-browser-inspection-findings.md`.** In short: it
+cleared one open question outright (vertical centring, 57 controls), narrowed a
+second (adjacency — the recorded guarantee was wrong, `§10.19`), showed a third
+is worse than recorded (the named limit contains `<summary>` disclosure toggles
+at 16 px, which external design `§5.7` names as in scope), and **found a defect
+nobody was looking for: every authenticated page scrolls horizontally by 17 px,
+in every release shipped so far** (`§10.18`, `LAYOUT-001`).
+
+**That last one is the finding that matters to this RFC**, because it is outside
+every category this RFC reasoned about. `§10.15` is about JavaScript that no
+test executes. This was CSS, executing correctly, doing exactly what
+`visibility: hidden` is specified to do — and it was invisible to the test
+suite, to source review, and to this RFC's own framing of the problem.
+
 ## The options
 
 **(a) Adopt.** Close `§10.15`, unblock three items, accept a
@@ -218,7 +249,7 @@ the next one.
 | **1b** | 0.29.0 | **Pin the fallback boundary's shape.** ✅ Done — `JS-002`. Three assertions: the function exists by name, its body carries a `try` at its **own** depth, and `fallback(` is never called inside it. A nested-callback `try` was found to defeat the first version and was closed in review. | The two-catch structure cannot be flattened silently. **Residual**: a *narrowed* top-level `try` still passes — closing it would need a parser, or a rule that fails on the current tree |
 | **2** | 0.30.0 | **Move `dm.js`'s four rules and `board.js`'s duplicates of them.** ✅ **Built, not yet released** — `JS-003`, merged after the 0.29.0 tag. The `409`/other-failure/malformed-body classification moved into the copy island both scripts read, built by one shared function, `conflictStatus` derived from a real `AppError::OptimisticLockConflict`. **Movable sites 15 → 3.** Settled the malformed-body asymmetry in `dm.js`'s favour and closed a latent stale-lock defect with it. Two review rounds: the reload flags were policy moved into Rust that nothing checked, and `unconfirmed` reusing `unavailable`'s copy asserted an outcome the code cannot support — both architect errors. | ✅ `§10.15` updated with the new residue |
 | **3** | 0.31.0 | **`board.js`'s remaining rule** (the stale-card case). **`search.js` is excluded** — different shape, and its two "movable" rules fail the purpose: the server has no query-length floor, so moving `MIN_QUERY_LENGTH` would *invent* a second authority rather than remove one. | The residue is mechanics only |
-| **4** | 0.32.0 | **Re-ask the browser question** against the measured residue. | A decision, recorded either way |
+| **4** | 0.32.0 | **Re-ask the browser question** — **re-scoped 2026-09-06**. Not *"is a browser affordable"* (it is; see Cost) and no longer only *"does it cover the JavaScript residue"*. The question is **which checks belong in CI**, given that a one-off inspection has now done the finding and `DEC-048` governs the gate. | A decision, recorded either way |
 
 **Step 1 was the only thing asked for at the time of writing.** It was an audit,
 it cost one handoff, and its output was the input to a decision then being made
