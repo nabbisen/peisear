@@ -90,7 +90,7 @@ pub fn ProjectDetailPage(
                     {desc_node}
                 </div>
 
-                <div class="flex items-center gap-2 shrink-0">
+                <div class="flex flex-wrap items-center gap-2">
                     <div class="join">
                         <a href=board_link class=board_classes>{t(MessageKey::ViewToggleBoard)}</a>
                         <a href=list_link class=list_classes>{t(MessageKey::ViewToggleList)}</a>
