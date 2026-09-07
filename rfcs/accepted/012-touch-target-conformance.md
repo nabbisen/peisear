@@ -93,6 +93,56 @@ about to be scoped against a hazard that does not exist.
 
 **`SPEC §33.2` amendment pending**, recorded the way `DEC-030` records `§28.1`'s.
 
+### `DEC-050` — one number, one declared exception (2026-09-08)
+
+**`DEC-049`'s clause 1 is amended and its named limit is removed**, after the
+limit was measured and found not to be narrow.
+
+> **Every interactive element MUST present a 44 × 44 CSS px target.** The target
+> is the area that responds to pointer or touch and need not equal the visible
+> bounds. **The sole exception is a link inside a block of running text, which
+> MUST be declared as such in the markup.** Targets of distinct elements MUST NOT
+> overlap.
+
+**What changed and why.** `DEC-049` was enforced by a guard keying off DaisyUI
+sizing classes, and everything else was recorded as a *named limit* — plain
+links "unassessed rather than passing", with WCAG's inline-link exception
+*probably* covering them. Measured across ten pages
+(`.git-exclude/tasks/architect/014-…`), **exactly one** sub-44 control was a link
+inside running text. The rest were an entire account menu on every page,
+`<summary>` disclosure toggles at 16 px that external design `§5.7` names by
+hand, breadcrumbs, and `FR-HLT-007`'s own indicator basis links at 17 px.
+
+**A limit that size is a hole, not a limit.**
+
+**Why one number rather than two.** A two-tier rule (44 px for controls, WCAG AA
+24 px + spacing for text affordances) was proposed and **withdrawn**. Its second
+tier rests on the spacing exception, which is a claim about **rendered geometry**
+— evaluable once with a browser, not maintainable as a build gate. That is a
+continuous cost on every change, and a requirement whose main clause cannot fail
+a build is asserted rather than checked.
+
+**Familiarity does not require the second tier**, because **target ≠ visual
+size**. A breadcrumb reaching 44 px means a padded row, not 44 px type. Account
+menu rows at 44 px are the familiar mobile pattern; a 44 px brand link fits
+inside a 64 px navbar; 44 px disclosure rows are ordinary. Only a link *inside a
+sentence* is genuinely disturbed by padding — and that is precisely what WCAG
+2.5.5 and 2.5.8 exempt.
+
+**Why the exception is declared, not detected.** A guard can infer "link inside
+text" from the DOM; that heuristic produced the measurement above. **A heuristic
+is the continuous maintenance cost this decision exists to avoid** — it drifts,
+it argues with edge cases, and nobody can audit it. A marker in the markup is
+deterministic, greppable and **countable**: the exception's full population can
+be listed at any time, and its growth is visible in review.
+
+**A limit this decision does not remove, and states instead.** The guard proves a
+**declaration is present**. It cannot prove the declaration **works** — a
+`min-h-11` on an inline element does nothing, and a source scan would pass it
+while the rendered target stayed 20 px. **Conformance therefore rests on the
+guard plus measurement, and the requirement says so** rather than implying the
+guard is sufficient.
+
 ### Why not the alternatives
 
 **Amend to WCAG AA (24 px + spacing), or adopt a two-tier rule (44 px where a
