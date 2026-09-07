@@ -11,4 +11,5 @@ wait on an open decision.
 
 | ID | Link | What | Release |
 |---|---|---|---|
-| LAYOUT-001 | [LAYOUT-001](./LAYOUT-001-navbar-overflow.md) | Every authenticated page scrolls horizontally by ~17 px, at every viewport width, because the closed account dropdown still occupies layout. | 0.32.0 |
+| LAYOUT-001 | [LAYOUT-001](./LAYOUT-001-navbar-overflow.md) | ✅ Done. Authenticated pages scrolled horizontally when the signed-in email was long and unbreakable — a flex item's content-based minimum width, not the dropdown's position. | 0.32.0 |
+| LAYOUT-002 | [LAYOUT-002](./LAYOUT-002-project-toolbar.md) | Project detail overflows 6 px at 390 px: the view/action toolbar cannot wrap. **Not caused by RFC 012** — measured. | 0.32.0 |
