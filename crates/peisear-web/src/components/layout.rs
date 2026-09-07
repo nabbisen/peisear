@@ -173,7 +173,14 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                         </svg>
                     </label>
                     <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-48 border border-base-300">
-                        <li class="menu-title"><span class="text-xs opacity-70">{user.email}</span></li>
+                        // `LAYOUT-001`: an unbreakable email (no spaces) is a flex
+                        // item that ignores `w-48` unless `min-w-0` opts it out of
+                        // the default content-based minimum; without it, and while
+                        // the menu is closed (`visibility: hidden`, still in layout),
+                        // the escaped width drove the whole document's horizontal
+                        // scroll. `overflow-hidden` + `truncate` keep it inside the
+                        // box in both the closed and open states.
+                        <li class="menu-title w-full min-w-0 overflow-hidden"><span class="text-xs opacity-70 truncate">{user.email}</span></li>
                         <li><a href="/today">{t(MessageKey::NavLinkToday)}</a></li>
                         <li><a href="/teams">{t(MessageKey::NavLinkTeams)}</a></li>
                         <li><a href="/inbox">{t(MessageKey::NavLinkInbox)}</a></li>
