@@ -7,3 +7,4 @@ egress and a layout gate becomes possible at all.
 | ID | Link | What | Release |
 |---|---|---|---|
 | ASSET-001 | [ASSET-001](./ASSET-001-vendor-tailwind-daisyui.md) | Purged Tailwind via the standalone binary; DaisyUI as its prebuilt stylesheet. No Node. | 0.32.0 |
+| REL-0.32.0 | [REL-0.32.0](./REL-0.32.0-release-candidate.md) | Release candidate — the two layout fixes, `TT-004`, and the vendoring. **The entry must read as neither a triumph nor a confession.** | 0.32.0 |
