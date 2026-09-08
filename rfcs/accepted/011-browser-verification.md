@@ -108,6 +108,47 @@ test executes. This was CSS, executing correctly, doing exactly what
 `visibility: hidden` is specified to do — and it was invisible to the test
 suite, to source review, and to this RFC's own framing of the problem.
 
+### `DEC-051` — vendor the CSS, standalone binary, no Node (2026-09-08)
+
+**Authorised by the owner at step 4.** Tailwind and DaisyUI are vendored into
+`static/` and served by the application. The two halves are built differently
+because they *are* different:
+
+- **Tailwind** is not a stylesheet today. `cdn.tailwindcss.com/3.4.15` returns
+  `text/javascript` — 451 KB of **Play CDN**, a JIT compiler that scans the DOM
+  and generates CSS in the user's browser on every load. It is replaced by a
+  **purged build produced with Tailwind's standalone CLI binary**, pinned by
+  version *and* checksum. **No Node, no npm, no lockfile** — the cost that
+  option (b) would have charged every release forever.
+- **DaisyUI** *is* a stylesheet. `dist/full.min.css` is self-contained and needs
+  no plugin build. **The standalone binary bundles first-party plugins only**, so
+  DaisyUI is vendored as the prebuilt file it already is, not run as a plugin.
+
+**Why, in the order the reasons actually rank:**
+
+1. **A self-hosted instance with no egress currently renders unstyled** —
+   measured: `.btn` 44 px → **17 px**, system font → Times New Roman, the account
+   menu unable to collapse. Every guarantee RFC 012 established is contingent on
+   two CDNs being reachable by the end user's browser. `NFR-CMP-002` says
+   self-hostable, status Implemented.
+2. **It removes a runtime compiler from every page load.** 451 KB of JavaScript
+   that generates CSS client-side, replaced by static CSS.
+3. **It is the precondition for any layout gate** — `DEC-048` condition 1
+   forbids a gate that can fail because a CDN is slow.
+
+**Bytes are not the argument, and the honest figure is recorded so nobody
+assumes they are.** The server already runs a `CompressionLayer`; DaisyUI's
+2.93 MB gzips to **174 KB**. Vendoring as-is is roughly neutral on transfer and
+clearly better on client CPU. **Pruning DaisyUI's 32 themes to the two this
+product uses (`corporate`, `dark`) is a further large reduction and is
+deliberately not part of this work** — compounding a fragile text transform on a
+third-party artefact into a change whose whole purpose is verifiability would be
+the wrong order.
+
+**The build output is committed.** A self-hoster runs `cargo build` and gets a
+styled application; the standalone binary is needed only to *regenerate* the CSS,
+which is a maintainer's task.
+
 ## The options
 
 **(a) Adopt.** Close `§10.15`, unblock three items, accept a
