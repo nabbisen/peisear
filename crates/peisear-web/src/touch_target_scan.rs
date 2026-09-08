@@ -248,8 +248,40 @@ fn quoted_string_spans(source: &str) -> Vec<(usize, usize, usize)> {
 /// `grow(`. This is `components::grow`'s exact call shape
 /// (`class=grow("...")`); `TT-002` never composes a sizing class any
 /// other way.
+///
+/// **`TT-004` round 3** widened this from "immediately preceded by
+/// `grow(`" to also accept one branch of an `if`/`else` whose whole
+/// value is `grow(...)`'s sole argument --
+/// `grow(if cond { "..." } else { "..." })` -- the shape round 3
+/// moved every affected `let` binding to, so this guard and
+/// [`class_value_identifier_binding_calls_grow`] agree on what
+/// "declares a target" means (round 2's review §3: change the code
+/// so `grow(` is the outermost call, not the guard's cleverness).
+/// Walks backward from `quote_pos` tracking bracket depth (`)`/`}`/`]`
+/// open a skip region; `{`/`[` closes one, and is transparent at
+/// depth 0 -- an `if`/`else` block boundary says nothing about what
+/// encloses it, so the scan continues past it) until it finds the
+/// nearest `(` at depth 0, then checks that paren is immediately
+/// preceded by `grow`.
 fn is_grow_call_argument(source: &str, quote_pos: usize) -> bool {
-    source[..quote_pos].trim_end().ends_with("grow(")
+    let bytes = source.as_bytes();
+    let mut depth: i32 = 0;
+    let mut i = quote_pos;
+    while i > 0 {
+        i -= 1;
+        match bytes[i] {
+            b')' | b'}' | b']' => depth += 1,
+            b'(' => {
+                if depth == 0 {
+                    return source[..i].trim_end().ends_with("grow");
+                }
+                depth -= 1;
+            }
+            b'{' | b'[' if depth > 0 => depth -= 1,
+            _ => {}
+        }
+    }
+    false
 }
 
 /// True if `content` (a string literal's contents) carries one of
@@ -507,29 +539,37 @@ fn bare_class_identifier(tag: &str) -> Option<&str> {
 
 /// True if `tag`'s `class=` value is a bare identifier (see
 /// [`bare_class_identifier`]) and the *nearest* `let` binding of that
-/// identifier **before** `tag_start` in `source` calls `grow(`
-/// somewhere in its initialiser -- the fix for `TT-004-review.md` §2:
-/// the binding is followed, not just its name.
+/// identifier **before** `tag_start` in `source` has `grow(` as the
+/// **outermost call of its initialiser** -- `TT-004-review.md` round 2
+/// §2/§3: requiring `grow(` merely to *appear* in the initialiser
+/// passed `let cls = if cond { grow("...") } else { "...".to_string() };`,
+/// where only one branch actually grows and the other reaches this
+/// guard as a plain string. That is not a contrived shape -- it is
+/// the one every affected site in this codebase used, since an
+/// `if`/`else` choosing between two `grow(...)` calls looks identical
+/// to source scanning as one choosing between a `grow(...)` call and
+/// a plain literal.
 ///
-/// **Nearest preceding, not "anywhere in the file."** An earlier
-/// version searched the whole file and returned true if *any*
-/// same-named `let` anywhere called `grow(` -- so a shadowed or
-/// wholly unrelated `let cls` elsewhere in the file (a different
-/// closure, a different function) could vouch for a defective one at
-/// the actual use site. Rust scoping means the binding in effect at
-/// `tag_start` is the nearest one that precedes it lexically, the
-/// same "nearest preceding tag" reasoning [`is_label_wrapped_with_grow`]
-/// already uses for `<label>` wraps, applied here to `let` instead.
+/// **The fix changes the code, not the guard's cleverness** (round
+/// 2's own review, §3, citing this project's own pattern -- `RFC
+/// 006`, `QA-019`, `HLT-001`, `JS-003` -- move the fact to where it
+/// can be checked): every affected `let` was restructured so `grow(`
+/// wraps the whole conditional rather than sitting inside each
+/// branch --
+/// `let cls = grow(if is_current { "..." } else { "..." });` -- and
+/// this function's rule is now simply **the initialiser, trimmed of
+/// leading whitespace, starts with `grow(`**. No bracket-depth
+/// tracking, no branch analysis: a `grow(` anywhere else in the
+/// initialiser (buried in one arm, or inside a string literal) no
+/// longer counts, because it isn't at the start.
 ///
 /// Finds `let {ident}` as a whole word (the character right after the
 /// identifier must not itself be an identifier character, so `let
-/// cls` doesn't match inside `let clsx`), then walks forward from
-/// that binding's `=` tracking bracket depth (`{`, `(`, `[` open it;
-/// `}`, `)`, `]` close it) to find the top-level `;` that ends the
-/// `let` statement -- so `let cls = if cond { grow("...") } else { grow("...") };`
-/// is read as one initialiser, not truncated at the first inner `}`.
-/// `grow(` appearing anywhere in that span is enough, the same
-/// declaration-only standard this guard holds every other site to.
+/// cls` doesn't match inside `let clsx`) via `rfind` on the text
+/// before `tag_start` -- the nearest preceding binding, not any
+/// same-named one anywhere in the file (round 2's own self-caught
+/// bug), the same reasoning [`is_label_wrapped_with_grow`] already
+/// uses for `<label>` wraps.
 fn class_value_identifier_binding_calls_grow(source: &str, tag_start: usize, tag: &str) -> bool {
     let Some(ident) = bare_class_identifier(tag) else {
         return false;
@@ -548,23 +588,7 @@ fn class_value_identifier_binding_calls_grow(source: &str, tag_start: usize, tag
             .is_none_or(|c| !c.is_alphanumeric() && c != '_');
         if is_word_boundary && let Some(eq_offset) = source[after_ident..].find('=') {
             let body_start = after_ident + eq_offset + 1;
-            let bytes = source.as_bytes();
-            let mut depth: i32 = 0;
-            let mut j = body_start;
-            let mut stmt_end = source.len();
-            while j < bytes.len() {
-                match bytes[j] {
-                    b'{' | b'(' | b'[' => depth += 1,
-                    b'}' | b')' | b']' => depth -= 1,
-                    b';' if depth <= 0 => {
-                        stmt_end = j;
-                        break;
-                    }
-                    _ => {}
-                }
-                j += 1;
-            }
-            return source[body_start..stmt_end].contains("grow(");
+            return source[body_start..].trim_start().starts_with("grow(");
         }
         search_end = pos;
     }

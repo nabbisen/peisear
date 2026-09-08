@@ -51,16 +51,16 @@ pub fn ProjectDetailPage(
     let project_id_for_list = project.id.clone();
     let project_id_for_health = project.id.clone();
 
-    let board_classes = if is_board {
-        grow("join-item btn btn-sm btn-active btn-primary")
+    let board_classes = grow(if is_board {
+        "join-item btn btn-sm btn-active btn-primary"
     } else {
-        grow("join-item btn btn-sm btn-ghost")
-    };
-    let list_classes = if is_board {
-        grow("join-item btn btn-sm btn-ghost")
+        "join-item btn btn-sm btn-ghost"
+    });
+    let list_classes = grow(if is_board {
+        "join-item btn btn-sm btn-ghost"
     } else {
-        grow("join-item btn btn-sm btn-active btn-primary")
-    };
+        "join-item btn btn-sm btn-active btn-primary"
+    });
 
     let desc_node = if project.description.is_empty() {
         ().into_any()
@@ -1039,11 +1039,11 @@ fn ListView(
                             let status_segments = IssueStatus::all().into_iter().map(|s| {
                                 let is_current = s == current_status;
                                 let pressed = if is_current { "true" } else { "false" };
-                                let cls = if is_current {
-                                    grow("join-item btn btn-xs btn-primary")
+                                let cls = grow(if is_current {
+                                    "join-item btn btn-xs btn-primary"
                                 } else {
-                                    grow("join-item btn btn-xs btn-ghost")
-                                };
+                                    "join-item btn btn-xs btn-ghost"
+                                });
                                 let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
                                 view! {
                                     <button type="submit"
@@ -1831,11 +1831,11 @@ fn IssueView(
                 {IssueStatus::all().into_iter().map(|s| {
                     let is_current = s == current_status;
                     let pressed = if is_current { "true" } else { "false" };
-                    let cls = if is_current {
-                        grow("join-item btn btn-sm btn-primary")
+                    let cls = grow(if is_current {
+                        "join-item btn btn-sm btn-primary"
                     } else {
-                        grow("join-item btn btn-sm btn-ghost")
-                    };
+                        "join-item btn btn-sm btn-ghost"
+                    });
                     let label = t(MessageKey::IssueStatusName { label: s.to_i18n_label() });
                     view! {
                         <button type="submit"

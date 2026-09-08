@@ -297,11 +297,11 @@ fn render_nav(
             let label = t(MessageKey::CalendarViewName {
                 view: v.to_i18n_label(),
             });
-            let class = if v == view {
-                grow("btn btn-xs btn-primary")
+            let class = grow(if v == view {
+                "btn btn-xs btn-primary"
             } else {
-                grow("btn btn-xs btn-ghost")
-            };
+                "btn btn-xs btn-ghost"
+            });
             view! { <a href=href class=class>{label}</a> }
         })
         .collect_view();
