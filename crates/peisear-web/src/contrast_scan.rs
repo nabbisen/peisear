@@ -6,10 +6,12 @@
 //! case for a scan to mis-flag.
 //!
 //! **Pinned measurement.** `daisyui@4.12.14`'s `corporate` theme,
-//! resolved from its actual shipped CSS
-//! (`https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css`,
-//! the exact version `components/layout.rs` loads) — `QA-012`'s own
-//! source, not assumed: `base-content` `#181A2A`, `base-100`
+//! resolved from its actual shipped CSS (`static/daisyui.min.css`,
+//! vendored by `ASSET-001`/`DEC-051` — pinned by version and SHA-256,
+//! see `style/tailwindcss/README.md`; the exact version
+//! `components/layout.rs` loads, and now the file this crate ships
+//! rather than one fetched from `cdn.jsdelivr.net` at runtime) —
+//! `QA-012`'s own source, not assumed: `base-content` `#181A2A`, `base-100`
 //! `#FFFFFF`, `base-200` `#E8E8E8`, `base-300` `#D1D1D1`. `/70` clears
 //! 4.5:1 against all three (6.36:1 / 5.76:1 / 5.15:1); everything below
 //! it either fails outright or passes by a margin small enough that

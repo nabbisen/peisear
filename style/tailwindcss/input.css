@@ -1,0 +1,8 @@
+/* ASSET-001 (DEC-051): the standalone build's entry file, replacing
+   the Play CDN <script> that generated an equivalent stylesheet in
+   the browser on every page load. Base/components/utilities mirrors
+   the Play CDN's own default layer set -- it did not disable any of
+   them, so this build does not either. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

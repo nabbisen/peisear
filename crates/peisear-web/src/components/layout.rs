@@ -14,9 +14,27 @@ use super::{grow, t};
 
 /// Minimum HTML scaffold. Children render inside `<main>`.
 ///
-/// Tailwind + daisyUI are loaded from CDN so the app runs without a
-/// Node toolchain. For production, ship them as local assets (see
-/// README).
+/// `ASSET-001` (`DEC-051`): Tailwind and DaisyUI are vendored under
+/// `static/`, not loaded from CDN. `NFR-CMP-002` says self-hostable;
+/// with both CDNs unreachable the pre-`ASSET-001` app rendered
+/// unstyled -- `.btn` at 17px instead of 44px, the account menu
+/// unable to collapse, `.btn` `display: inline` instead of `flex` --
+/// so every guarantee `RFC 012` established was contingent on a third
+/// party being reachable by the end user's browser. `cargo build` now
+/// produces a fully self-contained styled application; see
+/// `style/tailwindcss/README.md` for how the two vendored files are
+/// pinned and regenerated.
+///
+/// **Stylesheet order matches the CDN-served page's own cascade,
+/// verified empirically rather than assumed** (`document.styleSheets`
+/// against the running, pre-`ASSET-001` app): DaisyUI's `<link>`
+/// loads synchronously in document order, but the Play CDN `<script>`
+/// this replaced injected its generated `<style>` tag at the *end* of
+/// `<head>` -- after `app.css`, not at the script tag's own position.
+/// `static/tailwind.css` keeps that same last position so a
+/// same-specificity conflict (`app.css`'s own `.line-clamp-2` and
+/// Tailwind's native utility of the same name both exist) resolves
+/// the same way it did before.
 #[component]
 pub fn Base(
     /// Page title shown in `<title>` and browser tab.
@@ -31,10 +49,9 @@ pub fn Base(
                 <meta charset="utf-8"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
                 <title>{title}</title>
-                <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet"/>
-                <script src="https://cdn.tailwindcss.com/3.4.15"></script>
+                <link href="/static/daisyui.min.css" rel="stylesheet"/>
                 <link rel="stylesheet" href="/static/app.css"/>
-                <script inner_html="tailwind.config = { darkMode: ['class', '[data-theme=\"dark\"]'] };"></script>
+                <link href="/static/tailwind.css" rel="stylesheet"/>
             </head>
             <body class="min-h-screen bg-base-200 text-base-content">
                 {children()}

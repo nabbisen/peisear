@@ -1,7 +1,9 @@
 //! `QA-015` §5 (`NFR-A11Y-007`, RFC 005 §6) — `checkbox-xs` resolves to
-//! `16×16px` in `daisyui@4.12.14`'s pinned CSS
-//! (`https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css`,
-//! the version `components/layout.rs` loads), below WCAG 2.2's own AA
+//! `16×16px` in `daisyui@4.12.14`'s pinned CSS (`static/daisyui.min.css`,
+//! vendored by `ASSET-001`/`DEC-051` — pinned by version and SHA-256,
+//! see `style/tailwindcss/README.md`; the version `components/layout.rs`
+//! loads, and now the file this crate ships rather than one fetched
+//! from `cdn.jsdelivr.net` at runtime), below WCAG 2.2's own AA
 //! floor (2.5.8: 24×24) — the only class `QA-014`'s survey found doing
 //! that, everything else in `src/components/` is 24px or larger.
 //! `QA-015` removed it from the three real checkbox controls that
