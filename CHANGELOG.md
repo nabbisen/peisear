@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.32.0] — 2026-09-09
+
+No schema migration. `0017` remains the most recent; a downgrade to 0.31.0
+is a restore from a pre-migration backup, not a forward fix.
+
+**Definition of Done item 5 moves this release**, from "Partially met" to
+"Met, with mobile completion outstanding" — the oldest condition in that
+table, unmoved since 0.19.1. Not to "Met": `NFR-A11Y-006` (mobile
+completion, the other open limb of item 5) is unaffected by this release
+and stays open.
+
+### Fixed
+
+- **A self-hosted instance without internet access was rendering
+  unstyled, and now is not.** `.btn` at 17 px instead of 44, the type
+  falling back to Times New Roman, the account menu unable to
+  collapse — measured with both CDNs this product loaded from blocked.
+  **Nothing was broken**: every link worked, every form submitted, the
+  no-JavaScript path held throughout. It was a degradation, not a
+  failure, and the fix is to stop depending on either CDN at all —
+  Tailwind and DaisyUI are now vendored and shipped with the
+  application. Tailwind's 451 KB runtime JIT compiler is replaced by
+  14,395 bytes of purged, static CSS (3,699 bytes gzipped); DaisyUI is
+  vendored as the 2,930,630-byte prebuilt stylesheet it already was
+  (174,259 bytes gzipped). `NFR-CMP-002` said *self-hostable,
+  Implemented*; the claim had not previously been checked against a
+  network with no egress.
+- **Every authenticated page scrolled sideways when the signed-in
+  account's email was long enough.** The cause was a flex item's own
+  content-based minimum width inside the account menu, not the
+  dropdown's position — and the defect was **conditional on the
+  account**, not universal to every page as first measured.
+- **The project detail page's view/action toolbar could not wrap below
+  390 px**, overflowing the viewport by a few pixels on a phone.
+  **Neither defect was caused by the touch-target work that shipped
+  two releases ago** — that was suspected in both cases and measured
+  false before either fix was written.
+
+### Changed
+
+- **The touch-target rule now covers every interactive element, not
+  the class-carrying subset a guard could see.** The limit recorded at
+  0.31.0 as *"plain links are unassessed, not passing"* was measured
+  and found not narrow: an account menu present on every page,
+  `<summary>` disclosure toggles at 16 px, and the product's own
+  indicator basis links. `DEC-050` replaces that named limit with one
+  rule and one declared exception — a link inside a block of running
+  text, marked as such in the markup — rather than a class of controls
+  a guard happens to key off.
+- **Three call sites are excluded by design**, named in the guard
+  rather than silently passed. The calendar's event blocks are the
+  clearest case: their height is proportional to an appointment's
+  actual duration, so a uniform 44 px floor would make a fifteen-minute
+  meeting occupy the same visual space as a two-hour one —
+  misrepresenting the schedule the view exists to show, not merely a
+  density trade-off.
+
+**What a reader should not conclude.** The test suite did not grow to
+match this release's size: 254 → 255, and three of the four handoffs
+that shipped here added no tests at all, because nothing this project
+owns observes rendered layout (`§10.15`'s counterpart, now `§17.8`).
+Every defect above was found by a person looking at the running product
+with a browser, once — that is not a gate, and this release does not add
+one. `§10.21` (a 314 px overlap on issue rows, visible only when a
+project has content) stays open. The product still does not claim WCAG
+conformance.
+
 ## [0.31.0] — 2026-09-05
 
 No schema migration. `0017` remains the most recent; a downgrade to 0.30.0
