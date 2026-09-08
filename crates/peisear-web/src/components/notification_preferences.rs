@@ -86,7 +86,7 @@ pub fn PreferencesPage(
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/settings">{t(MessageKey::SettingsSectionName)}</a></li>
+                    <li><a href="/settings" class=grow("")>{t(MessageKey::SettingsSectionName)}</a></li>
                     <li>{notifications_breadcrumb}</li>
                 </ul></div>
                 <div class="flex items-center justify-between mb-4">
@@ -106,7 +106,7 @@ pub fn PreferencesPage(
                 </p>
 
                 <details class="card bg-base-100 border border-base-300 shadow-sm">
-                    <summary class="card-body cursor-pointer py-3 flex flex-row items-center justify-between gap-2">
+                    <summary class=grow("card-body cursor-pointer py-3 flex flex-row items-center justify-between gap-2")>
                         <span class="font-medium">{t(MessageKey::PerKindDeliverySummary)}</span>
                         <span class="text-xs text-base-content/70">
                             {t(MessageKey::ClickToExpandHint)}

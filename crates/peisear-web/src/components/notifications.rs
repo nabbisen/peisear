@@ -152,7 +152,16 @@ pub fn InboxPage(
                             </p>
                             <p class="text-xs text-base-content/70 mt-1">
                                 {t(MessageKey::InboxEmptyFooterLead)}
-                                <a href="/settings/notifications" class="link link-primary">{t(MessageKey::SettingsLinkWord)}</a>
+                                // `TT-004`/`DEC-050`: the sole declared exception --
+                                // a link that completes a sentence inside a block of
+                                // running text ("Configure delivery in settings."),
+                                // where padding to 44px would disturb the paragraph
+                                // around it (WCAG 2.5.5/2.5.8's own carve-out).
+                                // `data-inline-text-link` is the declared marker
+                                // `touch_target_scan`'s guard looks for -- countable,
+                                // greppable, and not a heuristic (`DEC-050` §"Why the
+                                // exception is declared, not detected").
+                                <a href="/settings/notifications" class="link link-primary" data-inline-text-link="">{t(MessageKey::SettingsLinkWord)}</a>
                                 {t(MessageKey::InboxEmptyFooterTail)}
                             </p>
                         </div>
@@ -237,7 +246,7 @@ fn render_row(n: Notification) -> impl IntoView {
                                 </span>
                             })}
                             {link_target.map(|target| view! {
-                                <a href={target} class="link link-primary">
+                                <a href={target} class=grow("link link-primary")>
                                     {t(MessageKey::ViewContextLinkLabel)}
                                 </a>
                             })}

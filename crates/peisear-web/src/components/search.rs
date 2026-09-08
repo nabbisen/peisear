@@ -176,7 +176,7 @@ fn SearchSection(
                         let prev_url = format!("/search?q={}&page={}",
                             urlencode(&q_prev), prev_page);
                         view! {
-                            <a href=prev_url class="link link-hover">
+                            <a href=prev_url class=grow("link link-hover")>
                                 {t(MessageKey::PreviousPageLink)}
                             </a>
                         }
@@ -185,7 +185,7 @@ fn SearchSection(
                         let next_url = format!("/search?q={}&page={}",
                             urlencode(&q_next), next_page);
                         view! {
-                            <a href=next_url class="link link-hover">
+                            <a href=next_url class=grow("link link-hover")>
                                 {t(MessageKey::NextPageLink)}
                             </a>
                         }
@@ -203,7 +203,7 @@ fn SearchHitRow(hit: SearchHit) -> impl IntoView {
             let url = format!("/projects/{id}");
             view! {
                 <li>
-                    <a href=url class="block px-3 py-2 hover:bg-base-200">
+                    <a href=url class=grow("block px-3 py-2 hover:bg-base-200")>
                         <div class="font-medium">{name}</div>
                         <div class="text-xs text-base-content/70">{t(MessageKey::ProjectHitTypeLabel)}</div>
                     </a>
@@ -231,7 +231,7 @@ fn SearchHitRow(hit: SearchHit) -> impl IntoView {
             };
             view! {
                 <li>
-                    <a href=url class="block px-3 py-2 hover:bg-base-200">
+                    <a href=url class=grow("block px-3 py-2 hover:bg-base-200")>
                         <div class="font-medium">{title}</div>
                         <div class="text-xs text-base-content/70">{caption}</div>
                     </a>

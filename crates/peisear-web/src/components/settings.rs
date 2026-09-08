@@ -135,7 +135,7 @@ pub fn SettingsPage(
                         </div>
 
                         <details class="mt-2">
-                            <summary class="cursor-pointer text-sm">
+                            <summary class=grow("cursor-pointer text-sm")>
                                 {t(MessageKey::AddCapacityRowSummary)}
                             </summary>
                             <form method="post" action="/settings/capacity"
@@ -277,7 +277,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
         <tr aria-label=aria>
             <td>
                 <details class="dropdown">
-                    <summary class="cursor-pointer">
+                    <summary class=grow("cursor-pointer")>
                         <span class="font-medium">{row.points}</span>
                         {t(MessageKey::PointsUnitSuffix)}
                     </summary>

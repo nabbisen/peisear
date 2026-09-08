@@ -109,7 +109,7 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
     view! {
         <header class="navbar bg-base-100 shadow-sm border-b border-base-300 px-4">
             <div class="flex-1">
-                <a href="/projects" class="text-lg font-semibold tracking-tight">
+                <a href="/projects" class=grow("text-lg font-semibold tracking-tight inline-flex items-center")>
                     <span class="text-primary">"●"</span>" "{t(MessageKey::AppBrandName)}
                 </a>
             </div>
@@ -181,13 +181,28 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                         // scroll. `overflow-hidden` + `truncate` keep it inside the
                         // box in both the closed and open states.
                         <li class="menu-title w-full min-w-0 overflow-hidden"><span class="text-xs opacity-70 truncate">{user.email}</span></li>
-                        <li><a href="/today">{t(MessageKey::NavLinkToday)}</a></li>
-                        <li><a href="/teams">{t(MessageKey::NavLinkTeams)}</a></li>
-                        <li><a href="/inbox">{t(MessageKey::NavLinkInbox)}</a></li>
-                        <li><a href="/settings">{t(MessageKey::NavLinkSettings)}</a></li>
+                        // `TT-004`: DaisyUI's own `.menu` selector already
+                        // blockifies a plain <a> here to `display: grid` with
+                        // `align-items: center`, so the target grows without
+                        // needing an explicit flex wrapper -- verified by
+                        // measurement, not assumed (`TT-004` §2's own trap).
+                        <li><a href="/today" class=grow("")>{t(MessageKey::NavLinkToday)}</a></li>
+                        <li><a href="/teams" class=grow("")>{t(MessageKey::NavLinkTeams)}</a></li>
+                        <li><a href="/inbox" class=grow("")>{t(MessageKey::NavLinkInbox)}</a></li>
+                        <li><a href="/settings" class=grow("")>{t(MessageKey::NavLinkSettings)}</a></li>
                         <li>
                             <form method="post" action="/logout">
-                                <button type="submit" class="text-error">{t(MessageKey::NavSignOut)}</button>
+                                // The DaisyUI menu-item grid/padding lands on
+                                // this <form> (its own direct-child selector
+                                // target), not the <button> inside it, so the
+                                // actual clickable element needed its own
+                                // target -- reusing the .btn family (already
+                                // guarded, already centers correctly) rather
+                                // than hand-building flex centering.
+                                <button type="submit"
+                                        class=grow("btn btn-ghost btn-sm text-error w-full justify-start normal-case")>
+                                    {t(MessageKey::NavSignOut)}
+                                </button>
                             </form>
                         </li>
                     </ul>

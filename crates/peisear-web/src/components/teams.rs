@@ -107,7 +107,7 @@ fn render_team_card((team, role): (Team, TeamRole)) -> impl IntoView {
 
     view! {
         <li>
-            <a href=href class="card bg-base-100 border border-base-300 shadow-sm hover:bg-base-200/40 transition-colors block"
+            <a href=href class=grow("card bg-base-100 border border-base-300 shadow-sm hover:bg-base-200/40 transition-colors block")
                aria-label=aria>
                 <div class="card-body p-4">
                     <div class="flex items-center justify-between gap-3">
@@ -138,7 +138,7 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                   unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams">{t(MessageKey::NavLinkTeams)}</a></li>
+                    <li><a href="/teams" class=grow("")>{t(MessageKey::NavLinkTeams)}</a></li>
                     <li>{t(MessageKey::NewBreadcrumbWord)}</li>
                 </ul></div>
 
@@ -254,7 +254,7 @@ pub fn TeamDetailPage(
     let add_member_form = is_admin.then(|| {
         view! {
             <details class="card bg-base-100 border border-base-300 shadow-sm mt-4">
-                <summary class="card-body cursor-pointer py-3 flex flex-row items-center gap-2">
+                <summary class=grow("card-body cursor-pointer py-3 flex flex-row items-center gap-2")>
                     <span class="font-medium">{t(MessageKey::InviteMemberSummary)}</span>
                     <span class="text-xs text-base-content/70">{t(MessageKey::ByEmailHint)}</span>
                 </summary>
@@ -297,7 +297,7 @@ pub fn TeamDetailPage(
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams">{t(MessageKey::NavLinkTeams)}</a></li>
+                    <li><a href="/teams" class=grow("")>{t(MessageKey::NavLinkTeams)}</a></li>
                     <li>{team_name.clone()}</li>
                 </ul></div>
 
@@ -383,7 +383,7 @@ fn render_projects_section(
             view! {
                 <tr>
                     <td>
-                        <a href=href class="link link-hover font-medium">
+                        <a href=href class=grow("link link-hover font-medium inline-flex items-center")>
                             {p.name}
                         </a>
                     </td>
@@ -533,8 +533,8 @@ pub fn TeamEditPage(
                   unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams">{t(MessageKey::NavLinkTeams)}</a></li>
-                    <li><a href=back_href.clone()>{team_name.clone()}</a></li>
+                    <li><a href="/teams" class=grow("")>{t(MessageKey::NavLinkTeams)}</a></li>
+                    <li><a href=back_href.clone() class=grow("")>{team_name.clone()}</a></li>
                     <li>{t(MessageKey::NavLinkSettings)}</li>
                 </ul></div>
 

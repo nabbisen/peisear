@@ -257,7 +257,7 @@ fn render_backlog(
             view! {
                 <li class="py-2 flex items-center justify-between gap-3" aria-label=aria>
                     <div class="min-w-0 flex-1">
-                        <a href=href class="link link-hover font-medium truncate block">{issue.title}</a>
+                        <a href=href class=grow("link link-hover font-medium truncate flex items-center")>{issue.title}</a>
                         <div class="flex items-center gap-2 text-xs text-base-content/70 mt-0.5">
                             <span>{row.project_name}</span>
                             <span class="badge badge-xs badge-ghost">{priority_label}</span>
@@ -314,7 +314,7 @@ fn render_sprint_items(
             view! {
                 <li class="py-2 flex items-center justify-between gap-3" aria-label=aria>
                     <div class="min-w-0 flex-1">
-                        <a href=href class="link link-hover font-medium truncate block">{title}</a>
+                        <a href=href class=grow("link link-hover font-medium truncate flex items-center")>{title}</a>
                         <div class="text-xs text-base-content/70 mt-0.5 tabular-nums">{points_text}</div>
                     </div>
                     {move_form}

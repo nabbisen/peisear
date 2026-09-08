@@ -63,7 +63,7 @@ fn ProjectCard(project: Project) -> impl IntoView {
     let desc = project.description.clone();
     let name = project.name.clone();
     view! {
-        <a href=href class="card bg-base-100 border border-base-300 hover:border-primary hover:shadow-md transition">
+        <a href=href class=grow("card bg-base-100 border border-base-300 hover:border-primary hover:shadow-md transition")>
             <div class="card-body p-4">
                 <div class="font-medium truncate">{name}</div>
                 <div class="text-xs text-base-content/70 line-clamp-2 min-h-[2rem]">
@@ -111,7 +111,7 @@ pub fn ProjectNewPage(
         <AppShell title=t(MessageKey::ProjectNewPageTitle) user=user flash=flash>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects">{t(MessageKey::ProjectsSectionName)}</a></li>
+                    <li><a href="/projects" class=grow("")>{t(MessageKey::ProjectsSectionName)}</a></li>
                     <li>{t(MessageKey::NewBreadcrumbWord)}</li>
                 </ul></div>
 
@@ -190,8 +190,8 @@ pub fn ProjectEditPage(
         <AppShell title=title user=user flash=flash>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects">{t(MessageKey::ProjectsSectionName)}</a></li>
-                    <li><a href=project_href>{name_for_breadcrumb}</a></li>
+                    <li><a href="/projects" class=grow("")>{t(MessageKey::ProjectsSectionName)}</a></li>
+                    <li><a href=project_href class=grow("")>{name_for_breadcrumb}</a></li>
                     <li>{t(MessageKey::EditWord)}</li>
                 </ul></div>
 

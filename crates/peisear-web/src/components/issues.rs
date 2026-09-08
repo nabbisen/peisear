@@ -248,7 +248,7 @@ fn HealthStrip(health: ProjectHealthReport, project_id: String) -> impl IntoView
             <p class="text-sm text-base-content/70 mb-2">{summary}</p>
 
             <details class="text-xs">
-                <summary class="cursor-pointer text-base-content/70 hover:text-base-content">
+                <summary class=grow("cursor-pointer text-base-content/70 hover:text-base-content")>
                     {t(MessageKey::IndicatorsSummaryLabel)}
                 </summary>
                 // Phase B PR3 (B-2): human-language
@@ -309,7 +309,7 @@ fn render_explanation_row(
             {text}
             {has_basis.then(|| view! {
                 " "
-                <a href=basis_href class="link link-hover" aria-label=basis_aria>
+                <a href=basis_href class=grow("link link-hover inline-flex items-center") aria-label=basis_aria>
                     {basis_text}
                 </a>
             })}
@@ -529,7 +529,7 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
                 <h3 class="text-xs uppercase tracking-wide text-base-content/70">
                     {t(MessageKey::WorkloadHeading)}
                 </h3>
-                <a href="/settings" class="text-xs link link-hover opacity-70">
+                <a href="/settings" class=grow("text-xs link link-hover opacity-70")>
                     {t(MessageKey::WorkloadSetCapacityLink)}
                 </a>
             </div>
@@ -854,7 +854,7 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
             // link ghost — since two nested drag sources now
             // exist (DEV-002-005-review.md §1.3). This makes the
             // outer div the sole drag source.
-            <a href=href class="block" draggable="false">
+            <a href=href class=grow("block") draggable="false">
                 <div class="text-sm font-medium line-clamp-2">{issue.title}</div>
                 <div class="flex items-center justify-between gap-2 mt-2 text-[11px] text-base-content/70">
                     <div class="flex items-center gap-1 flex-wrap">
@@ -1059,7 +1059,7 @@ fn ListView(
                             view! {
                                 <tr class="hover">
                                     <td>
-                                        <a href=href class="link link-hover font-medium">
+                                        <a href=href class=grow("link link-hover font-medium inline-flex items-center")>
                                             {issue.title}
                                         </a>
                                     </td>
@@ -1127,8 +1127,8 @@ pub fn IssueNewPage(
         <AppShell title=title user=user flash=flash>
             <div class="max-w-2xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects">{t(MessageKey::ProjectsSectionName)}</a></li>
-                    <li><a href=back_link_for_breadcrumb>{name_for_breadcrumb}</a></li>
+                    <li><a href="/projects" class=grow("")>{t(MessageKey::ProjectsSectionName)}</a></li>
+                    <li><a href=back_link_for_breadcrumb class=grow("")>{name_for_breadcrumb}</a></li>
                     <li>{t(MessageKey::NewIssueLabel)}</li>
                 </ul></div>
 
@@ -1265,9 +1265,9 @@ pub fn SubIssueNewPage(
         <AppShell title=title user=user flash=flash>
             <div class="max-w-2xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects">{t(MessageKey::ProjectsSectionName)}</a></li>
-                    <li><a href=project_href>{project_name}</a></li>
-                    <li><a href=parent_href>{parent_title}</a></li>
+                    <li><a href="/projects" class=grow("")>{t(MessageKey::ProjectsSectionName)}</a></li>
+                    <li><a href=project_href class=grow("")>{project_name}</a></li>
+                    <li><a href=parent_href class=grow("")>{parent_title}</a></li>
                     <li>{t(MessageKey::NewSubIssueLabel)}</li>
                 </ul></div>
 
@@ -1524,7 +1524,7 @@ pub fn IssueDetailPage(
                                             <span class=status_badge_class>
                                                 {status_label}
                                             </span>
-                                            <a href=detail_href class="text-sm hover:underline flex-1">
+                                            <a href=detail_href class=grow("text-sm hover:underline flex-1")>
                                                 {si.title}
                                             </a>
                                         </li>
@@ -1980,7 +1980,7 @@ fn HealthIndicatorBasisPage(
             };
             view! {
                 <tr>
-                    <td><a href=href class="link link-hover">{issue.title}</a></td>
+                    <td><a href=href class=grow("link link-hover inline-flex items-center")>{issue.title}</a></td>
                     <td><span class=status_class>{status_label}</span></td>
                 </tr>
             }
@@ -1991,8 +1991,8 @@ fn HealthIndicatorBasisPage(
         <AppShell title=title.clone() user=user flash=None>
             <div class="max-w-2xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects">{t(MessageKey::ProjectsSectionName)}</a></li>
-                    <li><a href=back_link>{project.name}</a></li>
+                    <li><a href="/projects" class=grow("")>{t(MessageKey::ProjectsSectionName)}</a></li>
+                    <li><a href=back_link class=grow("")>{project.name}</a></li>
                     <li>{title.clone()}</li>
                 </ul></div>
 

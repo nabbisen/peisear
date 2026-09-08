@@ -52,7 +52,7 @@ pub fn LoginPage(flash: Option<String>, email: String) -> impl IntoView {
                         <button type="submit" class=grow("btn btn-primary btn-sm mt-2")>{t(MessageKey::SignInWord)}</button>
                         <div class="text-center text-xs mt-1 text-base-content/70">
                             {t(MessageKey::NoAccountPrompt)}
-                            <a href="/register" class="link link-primary">{t(MessageKey::CreateOneLinkWord)}</a>
+                            <a href="/register" class=grow("link link-primary inline-flex items-center align-middle")>{t(MessageKey::CreateOneLinkWord)}</a>
                         </div>
                     </form>
                 </div>
@@ -99,7 +99,7 @@ pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) 
                         <button type="submit" class=grow("btn btn-primary btn-sm mt-2")>{t(MessageKey::CreateAccountButton)}</button>
                         <div class="text-center text-xs mt-1 text-base-content/70">
                             {t(MessageKey::AlreadyHaveAccountPrompt)}
-                            <a href="/login" class="link link-primary">{t(MessageKey::SignInWord)}</a>
+                            <a href="/login" class=grow("link link-primary inline-flex items-center align-middle")>{t(MessageKey::SignInWord)}</a>
                         </div>
                     </form>
                 </div>

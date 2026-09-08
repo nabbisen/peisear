@@ -315,8 +315,8 @@ pub fn PersonalDashboard(
                 // Default-closed `<details>` keeps the page
                 // scannable.
                 <details class="mb-6">
-                    <summary class="cursor-pointer text-xs uppercase tracking-wide \
-                                    text-base-content/70 mb-2 inline-block"
+                    <summary class=grow("cursor-pointer text-xs uppercase tracking-wide \
+                                    text-base-content/70 mb-2 inline-flex items-center")
                              aria-label=t(MessageKey::RhythmAriaLabel)>
                         {t(MessageKey::RhythmSummaryLabel)}
                     </summary>
@@ -352,7 +352,7 @@ pub fn PersonalDashboard(
 
                 <section class="text-xs text-base-content/70">
                     <details>
-                        <summary class="cursor-pointer">{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
+                        <summary class=grow("cursor-pointer")>{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
                         <div class="mt-2 space-y-2">
                             <p>
                                 <strong>{t(MessageKey::WipChipLabel)}</strong>
@@ -501,7 +501,7 @@ fn render_burnout_panel(
                 {sustainability_heading}
             </h2>
             <details open=any_watch>
-                <summary class="cursor-pointer text-sm text-base-content/80 mb-2">
+                <summary class=grow("cursor-pointer text-sm text-base-content/80 mb-2")>
                     {summary}
                 </summary>
                 {has_streaks.then(|| view! {

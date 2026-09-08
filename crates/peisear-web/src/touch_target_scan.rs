@@ -404,3 +404,202 @@ fn every_bare_checkbox_is_label_wrapped_with_grow() {
             .join("\n")
     );
 }
+
+// ─────────────────────────────────────────────────────────────────
+// `TT-004` (`DEC-050`) -- from class-carrying controls to every
+// interactive element.
+// ─────────────────────────────────────────────────────────────────
+//
+// `DEC-050` replaces `DEC-049`'s named limit ("plain links are
+// unassessed, not passing") with one rule and one declared
+// exception: every interactive element must present a 44x44 target,
+// and the sole exception is a link inside a block of running text,
+// which must say so in the markup. This section is the guard for
+// that rule -- everything above this line still guards the
+// class-carrying subset `TT-002` covered; this covers the rest.
+//
+// **The declaration, not the guard, does the padding.** As `DEC-050`
+// itself states: this guard proves a declaration (`grow(...)`, or
+// the exemption marker) is present. It cannot prove the declaration
+// *works* -- `min-h-11` on an element that turns out to render
+// `display: inline` would still pass this guard while the rendered
+// target stayed under 44px. `TT-004`'s own package measured every
+// site this guard covers against a running instance before this
+// module shipped; a future site needs the same measurement, not
+// just a passing guard.
+//
+// **The declared exception.** `data-inline-text-link` is the marker
+// `TT-004` chose -- present on an interactive element, it means "this
+// is the WCAG 2.5.5/2.5.8 inline-link exception, verified by eye
+// against the surrounding markup, not by this guard." The guard only
+// checks that the marker is *present*, the same standard it holds
+// `grow(...)` to.
+//
+// **A small, named, audited allowlist -- not a growing exception
+// list.** Four sites compose a sizing/touch-target class in a `let`
+// binding and apply it to the tag via a bare variable
+// (`class=IDENT`) rather than a direct `class=grow(...)` call:
+// `board_classes`/`list_classes` and `cls` (`issues.rs`, the board's
+// view-toggle and per-status buttons) and `class`
+// (`calendar.rs::render_nav`, the Day/Week/Month switcher). All four
+// were read by hand and confirmed to route through `grow(...)` in
+// their own `let`, and are additionally already covered by
+// [`every_sizing_class_site_composes_the_touch_target`] above, which
+// scans string literals regardless of where they're later used. This
+// list is not a place to add a fifth entry on faith -- a new
+// `class=IDENT` site on an interactive element must be read the same
+// way before joining it, or it should fail this guard and be given
+// `grow(...)` directly instead.
+const AUDITED_CLASS_IDENTIFIERS: [&str; 4] = ["board_classes", "list_classes", "cls", "class"];
+
+/// **Two named exclusions, pending `TT-004` §5's escalation, not a
+/// hole.** Both are sites this handoff's own package measured,
+/// judged unsuitable for a uniform 44px pad, and escalated rather
+/// than decided:
+///
+/// - **Calendar event-chip links** (`calendar.rs::render_block`,
+///   `render_day_view`) -- keyed on `bg-primary/1`, a class fragment
+///   unique to these two links (`bg-primary/10`, `bg-primary/15`) and
+///   not shared by any other control in this crate, including
+///   `calendar.rs`'s own already-declared prev/next and
+///   Day/Week/Month links. The day view's own block height is
+///   duration-proportional (a 15-minute appointment is visibly
+///   shorter than a 2-hour one); a 44px floor would misrepresent
+///   that, and the month/week view packs several chips into one day
+///   cell, where a 44px row would dominate the cell.
+/// - **The per-indicator "why" toggle** (`issues.rs::indicator_row`)
+///   -- keyed on its exact, unwrapped class literal (the *only*
+///   remaining site using this literal without `grow(...)`; its
+///   twin at `HealthStrip`'s own "Indicators" toggle already carries
+///   one). Up to seven of these chips render side by side in one
+///   wrapped row (`HealthStrip`); padding each toggle to 44px would
+///   make the disclosure controls, not the health data, the row's
+///   dominant visual element.
+///
+/// Closing either is `TT-004` §5's decision, not this guard's to
+/// make -- when it is, delete the matching arm here and the site
+/// will need `grow(...)` (or a rework, if the decision goes the
+/// other way) to keep passing.
+fn is_named_escalation_exclusion(tag: &str) -> bool {
+    tag.contains("bg-primary/1")
+        || tag.contains("cursor-pointer text-base-content/70 hover:text-base-content")
+}
+
+/// True if `tag`'s `class=` value is one of [`AUDITED_CLASS_IDENTIFIERS`]
+/// used as a bare, unquoted identifier -- `class=cls`, not
+/// `class="cls"` (a literal string that happens to spell one) and not
+/// `class=clsx` (a different, longer identifier that happens to start
+/// the same way). Checks the character immediately following the
+/// identifier is whitespace or the tag's closing `>`, the same
+/// word-boundary reasoning [`carries_a_sizing_class`] uses for
+/// space-separated class tokens, applied here to one bare identifier
+/// instead.
+fn class_value_is_audited_identifier(tag: &str) -> bool {
+    AUDITED_CLASS_IDENTIFIERS.iter().any(|id| {
+        let needle = format!("class={id}");
+        tag.find(needle.as_str()).is_some_and(|pos| {
+            let after = pos + needle.len();
+            tag[after..]
+                .chars()
+                .next()
+                .is_none_or(|c| c.is_whitespace() || c == '>')
+        })
+    })
+}
+
+/// Every `<a`, `<button`, or `<summary` tag's span in `source` --
+/// `(tag_start, span_end)`, `span_end` being the position of the
+/// first `>` that is not inside a quoted string, scanned forward
+/// from the tag's own start. Requires the character right after the
+/// tag name to be whitespace or `>`, so `<a` doesn't also match some
+/// future `<article`.
+///
+/// **A named limit, not a parser** -- the same boundary
+/// [`quoted_string_spans`] states for itself: a bare (unquoted) `>`
+/// inside a `{ }` Rust expression between a tag's own start and its
+/// closing `>` (a comparison operator, say) would end the span
+/// early. Verified empirically against this crate's actual tree
+/// (`TT-004`): no interactive tag's opening carries one today.
+fn interactive_tag_spans(source: &str) -> Vec<(usize, usize)> {
+    const TAG_NAMES: [&str; 3] = ["a", "button", "summary"];
+    let bytes = source.as_bytes();
+    let mut spans = Vec::new();
+    let mut i = 0;
+    while i < bytes.len() {
+        if bytes[i] == b'<' {
+            let after_bracket = &source[i + 1..];
+            let matched = TAG_NAMES.iter().find(|name| {
+                after_bracket.starts_with(**name)
+                    && after_bracket[name.len()..]
+                        .chars()
+                        .next()
+                        .is_none_or(|c| c.is_whitespace() || c == '>')
+            });
+            if let Some(name) = matched {
+                let mut j = i + 1 + name.len();
+                let mut in_quote = false;
+                while j < bytes.len() {
+                    match bytes[j] {
+                        b'"' => in_quote = !in_quote,
+                        b'>' if !in_quote => break,
+                        _ => {}
+                    }
+                    j += 1;
+                }
+                spans.push((i, j.min(bytes.len())));
+                i = j;
+                continue;
+            }
+        }
+        i += 1;
+    }
+    spans
+}
+
+#[test]
+fn every_interactive_element_declares_a_touch_target() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let components_dir = manifest_dir.join("src").join("components");
+    let mut files = Vec::new();
+    collect_rs_files(&components_dir, &mut files);
+    assert!(
+        !files.is_empty(),
+        "found no .rs files under src/components/ -- the workspace layout \
+         assumption this scan depends on may have changed"
+    );
+
+    let mut offenders = Vec::new();
+    for path in &files {
+        let source =
+            fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let stripped = strip_line_comments(&source);
+        for (start, end) in interactive_tag_spans(&stripped) {
+            let tag = &stripped[start..end];
+            let declares_target = tag.contains("class=grow(")
+                || tag.contains("data-inline-text-link")
+                || class_value_is_audited_identifier(tag)
+                || is_named_escalation_exclusion(tag);
+            if !declares_target {
+                let line = stripped[..start].matches('\n').count() + 1;
+                let snippet: String = tag.chars().take(80).collect();
+                offenders.push(format!("{}:{line}: {snippet:?}...", path.display()));
+            }
+        }
+    }
+
+    assert!(
+        offenders.is_empty(),
+        "every interactive element (<a>, <button>, <summary>) must declare a \
+         44x44 touch target via components::grow(...), or carry \
+         data-inline-text-link if it is a link inside a block of running \
+         text (NFR-A11Y-007, DEC-050) -- TT-004 brought every site this scan \
+         found on the tree it shipped against into one of those two states, \
+         so a new offender means either a new control shipped without a \
+         declaration or an existing one lost it:\n{}",
+        offenders
+            .iter()
+            .map(|o| format!("  {o}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
