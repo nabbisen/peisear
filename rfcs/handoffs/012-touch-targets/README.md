@@ -1,6 +1,6 @@
 # Handoffs — RFC 012, touch target conformance
 
-Handoffs implementing [RFC 012](../../accepted/012-touch-target-conformance.md).
+Handoffs implementing [RFC 012](../../done/012-touch-target-conformance.md).
 
 | ID | Link | What | Release | Depends on |
 |---|---|---|---|---|

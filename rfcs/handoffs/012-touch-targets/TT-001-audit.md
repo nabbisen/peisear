@@ -1,6 +1,6 @@
 # TT-001 — the touch-target audit
 
-**Governing RFC**: [012](../../accepted/012-touch-target-conformance.md), step 2
+**Governing RFC**: [012](../../done/012-touch-target-conformance.md), step 2
 **Target release**: 0.30.0
 **Depends on**: step 1 (the amended `NFR-A11Y-007`) — done before this issues
 

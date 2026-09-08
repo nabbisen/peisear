@@ -1,6 +1,6 @@
 # TT-003 — make the touch-target rule unconstructible
 
-**Governing RFC**: [012](../../accepted/012-touch-target-conformance.md),
+**Governing RFC**: [012](../../done/012-touch-target-conformance.md),
 step 3, `DEC-049` as amended
 **Target release**: 0.31.0
 **Depends on**: `TT-002`, both rounds — closed. **Read both reviews**

@@ -1,6 +1,6 @@
 # TT-002 — apply the touch-target rule
 
-**Governing RFC**: [012](../../accepted/012-touch-target-conformance.md),
+**Governing RFC**: [012](../../done/012-touch-target-conformance.md),
 step 3, and `DEC-049` **as amended after `TT-001`**
 **Target release**: 0.31.0
 **Depends on**: `TT-001` — delivered and reviewed. **Read the review**

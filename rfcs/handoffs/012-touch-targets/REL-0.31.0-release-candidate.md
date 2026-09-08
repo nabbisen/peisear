@@ -1,6 +1,6 @@
 # REL-0.31.0 — release candidate
 
-**Governing RFC**: [012](../../accepted/012-touch-target-conformance.md) — the
+**Governing RFC**: [012](../../done/012-touch-target-conformance.md) — the
 whole of it, `TT-001` through `TT-003`.
 **Depends on**: nothing outstanding. All three handoffs are reviewed and closed.
 

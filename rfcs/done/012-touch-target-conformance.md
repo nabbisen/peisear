@@ -1,6 +1,6 @@
 # RFC 012 — Touch target conformance
 
-**Status**: Accepted
+**Status**: Done
 **Author**: architect
 **Target**: 0.30.0 (amendment + audit), 0.31.0 (application + guard)
 **Supersedes**: nothing. Amends `SPEC §33.2` via `DEC-049`.

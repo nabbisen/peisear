@@ -1,6 +1,6 @@
 # TT-004 — one rule, one declared exception
 
-**Governing RFC**: [012](../../accepted/012-touch-target-conformance.md),
+**Governing RFC**: [012](../../done/012-touch-target-conformance.md),
 **`DEC-050`** (2026-09-08)
 **Target release**: 0.32.0
 **Depends on**: `TT-003` — closed. **Read `DEC-050` first**; it amends

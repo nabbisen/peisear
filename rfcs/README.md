@@ -32,7 +32,6 @@ Design settled. Implementation may begin.
 | ID | Title | Target |
 |----|-------|--------|
 | 011 | [Browser verification](./accepted/011-browser-verification.md) — **a decision, not a design**: what a headless browser would and would not buy for `§10.15`, and at what cost | steps 1, 1b and 2 shipped 0.29.0; step 3 targets 0.31.0 |
-| 012 | [Touch target conformance](./accepted/012-touch-target-conformance.md) — `§33.2` is amended, not relaxed: a *target*-size rule with an adjacency clause, chosen because the alternatives cannot be verified from source | steps 1-2 at 0.30.0; step 3 at 0.31.0 |
 
 RFC 008 shipped in 0.29.0 and moved to `done/`.
 
@@ -48,6 +47,7 @@ Open for review. Design may still change.
 
 | ID | Title | Shipped in |
 |----|-------|------------|
+| 012 | [Touch target conformance](./done/012-touch-target-conformance.md) — *has handoffs*; `§33.2` amended twice (`DEC-049`, `DEC-050`), the guard corrected three times, and the named limit measured and removed | 0.31.0 (rule + 139 controls), 0.32.0 (every interactive element) |
 | 004b | [Direct manipulation — the board (D-2)](./done/004b-direct-manipulation-board.md) — *has handoffs*; the drag already shipped, this brought its copy under the vocabulary check | 0.26.0 |
 | 004a | [Direct manipulation — status change (D-1)](./done/004a-direct-manipulation-status.md) — *has handoffs*; two steps, the no-JS path first | 0.25.0 (step 1), 0.26.0 (step 2) |
 | 010 | [Destructive-action confirmation](./done/010-destructive-action-confirmation.md) — *has handoffs*; closed external design §17.4 | 0.25.0 |
