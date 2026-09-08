@@ -435,22 +435,22 @@ fn every_bare_checkbox_is_label_wrapped_with_grow() {
 // checks that the marker is *present*, the same standard it holds
 // `grow(...)` to.
 //
-// **A small, named, audited allowlist -- not a growing exception
-// list.** Four sites compose a sizing/touch-target class in a `let`
-// binding and apply it to the tag via a bare variable
-// (`class=IDENT`) rather than a direct `class=grow(...)` call:
-// `board_classes`/`list_classes` and `cls` (`issues.rs`, the board's
-// view-toggle and per-status buttons) and `class`
-// (`calendar.rs::render_nav`, the Day/Week/Month switcher). All four
-// were read by hand and confirmed to route through `grow(...)` in
-// their own `let`, and are additionally already covered by
-// [`every_sizing_class_site_composes_the_touch_target`] above, which
-// scans string literals regardless of where they're later used. This
-// list is not a place to add a fifth entry on faith -- a new
-// `class=IDENT` site on an interactive element must be read the same
-// way before joining it, or it should fail this guard and be given
-// `grow(...)` directly instead.
-const AUDITED_CLASS_IDENTIFIERS: [&str; 4] = ["board_classes", "list_classes", "cls", "class"];
+// **`class=IDENT` is followed to its binding, not accepted on the
+// name.** `TT-004` round 1 shipped a four-name allowlist here
+// (`board_classes`/`list_classes`/`cls`/`class`) that checked only
+// which identifier a tag's `class=` used, never what it was bound to
+// -- `TT-004-review.md` §2 planted `let cls = "link link-hover";` on
+// an otherwise-guarded site and the guard stayed green while the
+// rendered target shrank from 44px to 20px. `cls` and `class` are
+// among the most ordinary names in this codebase; granting either a
+// pass on sight is exactly the shape this module's own `checkbox-xs`
+// history warns about -- an allowlist that looks like an audit and
+// behaves like an exemption. [`class_value_identifier_binding_calls_grow`]
+// replaces it: for `class=IDENT`, the nearest `let IDENT = ...;` in
+// the same file must itself call `grow(` somewhere in its
+// initialiser. No allowlist to extend on faith -- a fifth
+// `class=IDENT` site needs no decision, it only has to route through
+// `grow(`.
 
 /// **Two named exclusions, pending `TT-004` §5's escalation, not a
 /// hole.** Both are sites this handoff's own package measured,
@@ -485,26 +485,89 @@ fn is_named_escalation_exclusion(tag: &str) -> bool {
         || tag.contains("cursor-pointer text-base-content/70 hover:text-base-content")
 }
 
-/// True if `tag`'s `class=` value is one of [`AUDITED_CLASS_IDENTIFIERS`]
-/// used as a bare, unquoted identifier -- `class=cls`, not
-/// `class="cls"` (a literal string that happens to spell one) and not
-/// `class=clsx` (a different, longer identifier that happens to start
-/// the same way). Checks the character immediately following the
-/// identifier is whitespace or the tag's closing `>`, the same
-/// word-boundary reasoning [`carries_a_sizing_class`] uses for
-/// space-separated class tokens, applied here to one bare identifier
-/// instead.
-fn class_value_is_audited_identifier(tag: &str) -> bool {
-    AUDITED_CLASS_IDENTIFIERS.iter().any(|id| {
-        let needle = format!("class={id}");
-        tag.find(needle.as_str()).is_some_and(|pos| {
-            let after = pos + needle.len();
-            tag[after..]
-                .chars()
-                .next()
-                .is_none_or(|c| c.is_whitespace() || c == '>')
-        })
-    })
+/// The bare identifier in `tag`'s `class=` value, if it has one --
+/// `None` if the tag carries no `class=` attribute, or if the value is
+/// a quoted literal (`class="..."`) or a direct `class=grow(...)` call
+/// rather than a plain variable reference. `class=cls` yields
+/// `Some("cls")`; `class="cls"` and `class=grow("cls")` both yield
+/// `None`, since neither is a bare identifier this function needs to
+/// chase to a binding.
+fn bare_class_identifier(tag: &str) -> Option<&str> {
+    let pos = tag.find("class=")?;
+    let after = &tag[pos + "class=".len()..];
+    if after.starts_with('"') || after.starts_with("grow(") {
+        return None;
+    }
+    let end = after
+        .find(|c: char| c.is_whitespace() || c == '>')
+        .unwrap_or(after.len());
+    let ident = &after[..end];
+    (!ident.is_empty()).then_some(ident)
+}
+
+/// True if `tag`'s `class=` value is a bare identifier (see
+/// [`bare_class_identifier`]) and the *nearest* `let` binding of that
+/// identifier **before** `tag_start` in `source` calls `grow(`
+/// somewhere in its initialiser -- the fix for `TT-004-review.md` §2:
+/// the binding is followed, not just its name.
+///
+/// **Nearest preceding, not "anywhere in the file."** An earlier
+/// version searched the whole file and returned true if *any*
+/// same-named `let` anywhere called `grow(` -- so a shadowed or
+/// wholly unrelated `let cls` elsewhere in the file (a different
+/// closure, a different function) could vouch for a defective one at
+/// the actual use site. Rust scoping means the binding in effect at
+/// `tag_start` is the nearest one that precedes it lexically, the
+/// same "nearest preceding tag" reasoning [`is_label_wrapped_with_grow`]
+/// already uses for `<label>` wraps, applied here to `let` instead.
+///
+/// Finds `let {ident}` as a whole word (the character right after the
+/// identifier must not itself be an identifier character, so `let
+/// cls` doesn't match inside `let clsx`), then walks forward from
+/// that binding's `=` tracking bracket depth (`{`, `(`, `[` open it;
+/// `}`, `)`, `]` close it) to find the top-level `;` that ends the
+/// `let` statement -- so `let cls = if cond { grow("...") } else { grow("...") };`
+/// is read as one initialiser, not truncated at the first inner `}`.
+/// `grow(` appearing anywhere in that span is enough, the same
+/// declaration-only standard this guard holds every other site to.
+fn class_value_identifier_binding_calls_grow(source: &str, tag_start: usize, tag: &str) -> bool {
+    let Some(ident) = bare_class_identifier(tag) else {
+        return false;
+    };
+    let needle = format!("let {ident}");
+    let before = &source[..tag_start];
+    let mut search_end = before.len();
+    loop {
+        let Some(pos) = before[..search_end].rfind(needle.as_str()) else {
+            return false;
+        };
+        let after_ident = pos + needle.len();
+        let is_word_boundary = source[after_ident..]
+            .chars()
+            .next()
+            .is_none_or(|c| !c.is_alphanumeric() && c != '_');
+        if is_word_boundary && let Some(eq_offset) = source[after_ident..].find('=') {
+            let body_start = after_ident + eq_offset + 1;
+            let bytes = source.as_bytes();
+            let mut depth: i32 = 0;
+            let mut j = body_start;
+            let mut stmt_end = source.len();
+            while j < bytes.len() {
+                match bytes[j] {
+                    b'{' | b'(' | b'[' => depth += 1,
+                    b'}' | b')' | b']' => depth -= 1,
+                    b';' if depth <= 0 => {
+                        stmt_end = j;
+                        break;
+                    }
+                    _ => {}
+                }
+                j += 1;
+            }
+            return source[body_start..stmt_end].contains("grow(");
+        }
+        search_end = pos;
+    }
 }
 
 /// Every `<a`, `<button`, or `<summary` tag's span in `source` --
@@ -577,7 +640,7 @@ fn every_interactive_element_declares_a_touch_target() {
             let tag = &stripped[start..end];
             let declares_target = tag.contains("class=grow(")
                 || tag.contains("data-inline-text-link")
-                || class_value_is_audited_identifier(tag)
+                || class_value_identifier_binding_calls_grow(&stripped, start, tag)
                 || is_named_escalation_exclusion(tag);
             if !declares_target {
                 let line = stripped[..start].matches('\n').count() + 1;
