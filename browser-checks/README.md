@@ -1,0 +1,116 @@
+# Browser checks — a gate, not a test
+
+`BROWSER-001` (RFC 011 step 4, `DEC-048`). This directory holds the
+horizontal-overflow gate: one assertion, `scrollWidth <= clientWidth`, on
+twelve rendered pages at four widths, driven by a minimal Chrome DevTools
+Protocol harness with no npm dependency.
+
+**This does not run inside `cargo test --workspace` and is not counted in
+`DEC-007`'s own inventory.** It runs as its own CI job, on the same footing
+`fmt` and `clippy` already have — a check that gates a merge without being
+a Rust test. See `rfcs/handoffs/011-browser-verification/BROWSER-001-overflow-gate.md`
+for why that separation is load-bearing (§2): a Rust integration test here
+would put Chromium on every contributor's `cargo test --workspace`,
+including `DEC-007`'s own three-consecutive-run gate before every release.
+
+## What it checks, and deliberately does not
+
+**One assertion only**: `scrollWidth <= clientWidth`, the check that found
+`LAYOUT-001` and `LAYOUT-002` — two defects that had shipped for many
+releases and that nothing else this project owns could observe.
+
+**Not target size** (`TT-004`'s own guard covers the class-carrying
+subset from source; a rendered-size gate is step 4's second-ranked
+candidate, not this one). **Not overlap** (`§10.19`/`§10.21` are real, but
+their measurement artefacts — a closed `<details>`'s stale
+`getBoundingClientRect`, a dropdown's close-animation `scale()` — aren't
+understood well enough yet to gate on). **Not JavaScript** (`DEC-048`
+condition 2 forbids wall-clock-dependent checks, and `JS-001` measured the
+untested surface as thin anyway).
+
+**Do not widen this gate.** Adding a second assertion before the first has
+run stable in CI for a while is how `DEC-048` condition 3 starts costing
+attention.
+
+## Files
+
+- `cdp.mjs` — the harness. Drives one headless browser tab over CDP using
+  Node's built-in `WebSocket` and `fetch`; no bundled browser, no npm
+  dependency. See its own doc comment for the browser-binary resolution
+  order and its three known limits (one page at a time, waits on
+  `document.readyState` only, no notion of animation completion).
+- `overflow-gate.mjs` — the gate itself: starts a scratch instance,
+  creates fixtures through the real forms, sweeps twelve pages × four
+  widths, and exits non-zero if any cell overflows or if any request
+  reached a host other than `127.0.0.1`.
+
+## Running it locally
+
+```bash
+cargo build -p peisear
+node browser-checks/overflow-gate.mjs
+```
+
+Needs a Chrome-family browser on `$PATH` (`google-chrome-stable`,
+`google-chrome`, `chromium`, or `chromium-browser`) or `CDP_BROWSER_BIN`
+pointing at one. `PEISEAR_BIN` overrides the binary path (default
+`target/debug/peisear`); `PEISEAR_PORT` overrides the scratch port
+(default `4173`).
+
+## `DEC-048`, condition by condition
+
+1. **No external network.** `overflow-gate.mjs` calls
+   `blockNonLocalRequests()` before the sweep starts and asserts the
+   blocked list is empty at the end — not just "nothing broke," but "here
+   is the request list, and it's empty." `ASSET-001` (0.32.0) is what made
+   this checkable at all: until then every page fetched CSS from two CDNs,
+   and a gate that can fail because a CDN is slow is exactly what this
+   condition forbids.
+2. **No wall-clock dependence.** `goto()` waits on `document.readyState`;
+   `waitForSelector()` polls for a specific element rather than sleeping a
+   fixed duration. If a page ever needs an actual settle delay to measure
+   stably, that is a finding about the page, to be named and fixed, not a
+   licence to add a `setTimeout`.
+3. **A flake is a defect with an owner — decided now, not after.** If this
+   gate produces an unstable result (fails intermittently on an unchanged
+   tree), the response is: open an issue naming the specific page/width
+   cell and the failure mode, mark the check `continue-on-error: true` in
+   the workflow with a comment linking that issue, and the issue's owner
+   is whoever is working `RFC 011` step 4 at the time — currently the
+   architect. **No silent retry**: no re-run step, no matrix retry, no
+   `continue-on-error` added without an issue link beside it. `§10.13`'s
+   own defect survived four releases because re-running was the response
+   each time.
+4. **A quarantined check is not coverage.** If this gate is ever
+   quarantined per condition 3, the next release candidate names it as
+   quarantined rather than reporting a clean run.
+
+## Fixtures
+
+`overflow-gate.mjs` registers a user, creates a team, a project, and two
+issues — all through the real HTTP forms the application exposes, the
+same way the investigations that found `LAYOUT-001` and `§10.21` did.
+
+Two choices are deliberate, not incidental:
+
+- **The signed-in email is long and hyphen-free**
+  (`browseroverflowgatefixtureaccount@example.org`). `LAYOUT-001` was
+  conditional on exactly that shape — a short-email fixture would not
+  have caught it, and neither would one with a hyphen the browser could
+  wrap at.
+- **One issue's title is long.** `§10.21` (a 314px anchor/row overlap) was
+  invisible on the architect's own ten-page sweep because the fixtures
+  were empty — a layout gate with empty fixtures measures a layout nobody
+  sees.
+
+## Coverage
+
+Twelve pages: `/today`, `/inbox`, `/today/calendar`, `/projects`, a
+project detail page (with issues), the board (list view), an issue detail
+page, `/settings`, `/settings/notifications`, `/teams`, `/search`, and a
+delete confirmation interstitial.
+
+Four widths: 390, 768, 1280, 1920.
+
+**Every failing cell is reported, not just the first** — a gate that stops
+at the first failure hides the shape of the problem.
