@@ -149,6 +149,47 @@ the wrong order.
 styled application; the standalone binary is needed only to *regenerate* the CSS,
 which is a maintainer's task.
 
+### `DEC-052` — step 3 is withdrawn as **mis-classified**, and replaced (2026-09-10)
+
+**Not withdrawn for low value.** Step 3 was to move `board.js`'s stale-card rule
+into Rust. Read directly, that rule is three lines:
+
+```js
+if (!clientUpdatedAt) { revert(); announceAssertive(copy.reloadMessage); return; }
+```
+
+- **The condition** — *this DOM element has no `data-updated-at`* — is a fact
+  about what the browser is holding. **Rust cannot observe it**, so it cannot
+  move.
+- **The message** moved already, at `BOARD-001` (`MessageKey::BoardReloadMessage`).
+- The remainder is DOM mechanics.
+
+**Step 3's object does not exist.** `JS-001` classified this rule as *movable*
+and the classification was wrong — recorded here because that inventory is cited
+elsewhere as authoritative, and this is the second of its figures to need
+correcting.
+
+**What examining it found instead.** The JavaScript defends against a card with
+no lock value, and **nothing guarantees the server never renders one**. The
+attribute is emitted at `components/issues.rs:847`; no test asserts it is ever
+present.
+
+Not a crash — **a silent no-op**: a card that cannot be dropped, on a page that
+looks fine. `NFR-CONC-001`'s optimistic lock is what stops two people
+overwriting each other, and this attribute is how the board participates in it.
+The JavaScript handles it correctly today, and **that handling is the only thing
+standing there**.
+
+**So step 3 is replaced by `LOCK-001`**: one Rust test asserting every rendered
+board card carries a non-empty `data-updated-at`. No browser, in the counted
+suite. **The JavaScript branch stays** — it still covers the one case the server
+cannot, a page cached from an older build. Defence in depth, with the depth now
+guaranteed rather than assumed.
+
+**This is the project's own move, again**: not *handle the bad state*, but *make
+it unconstructible and assert it* — `RFC 006`'s message table, `QA-019`'s one
+authority, `HLT-001`'s returned set, `JS-003`'s one classification.
+
 ## The options
 
 **(a) Adopt.** Close `§10.15`, unblock three items, accept a
@@ -289,7 +330,7 @@ the next one.
 | **1** | 0.29.0 | **Inventory.** ✅ Done — `JS-001`. Corrected the count, found ~10 movable rules, and established that the fallback boundary is not one of them. | — |
 | **1b** | 0.29.0 | **Pin the fallback boundary's shape.** ✅ Done — `JS-002`. Three assertions: the function exists by name, its body carries a `try` at its **own** depth, and `fallback(` is never called inside it. A nested-callback `try` was found to defeat the first version and was closed in review. | The two-catch structure cannot be flattened silently. **Residual**: a *narrowed* top-level `try` still passes — closing it would need a parser, or a rule that fails on the current tree |
 | **2** | 0.30.0 | **Move `dm.js`'s four rules and `board.js`'s duplicates of them.** ✅ **Built, not yet released** — `JS-003`, merged after the 0.29.0 tag. The `409`/other-failure/malformed-body classification moved into the copy island both scripts read, built by one shared function, `conflictStatus` derived from a real `AppError::OptimisticLockConflict`. **Movable sites 15 → 3.** Settled the malformed-body asymmetry in `dm.js`'s favour and closed a latent stale-lock defect with it. Two review rounds: the reload flags were policy moved into Rust that nothing checked, and `unconfirmed` reusing `unavailable`'s copy asserted an outcome the code cannot support — both architect errors. | ✅ `§10.15` updated with the new residue |
-| **3** | 0.31.0 | **`board.js`'s remaining rule** (the stale-card case). **`search.js` is excluded** — different shape, and its two "movable" rules fail the purpose: the server has no query-length floor, so moving `MIN_QUERY_LENGTH` would *invent* a second authority rather than remove one. | The residue is mechanics only |
+| **3** | ~~0.31.0~~ **withdrawn** | **`board.js`'s remaining rule** (the stale-card case). **`search.js` is excluded** — different shape, and its two "movable" rules fail the purpose: the server has no query-length floor, so moving `MIN_QUERY_LENGTH` would *invent* a second authority rather than remove one. | The residue is mechanics only  ❌ **Withdrawn 2026-09-10 (`DEC-052`) — mis-classified, not low value.** The rule's condition is a DOM fact Rust cannot observe and its message moved at `BOARD-001`; there was nothing to move. **Replaced by `LOCK-001`**, which asserts the server-side guarantee the JavaScript was covering for. |
 | **4** | 0.32.0 — **decided**; gate at 0.33.0 | **Re-ask the browser question** — **re-scoped 2026-09-06**. Not *"is a browser affordable"* (it is; see Cost) and no longer only *"does it cover the JavaScript residue"*. The question is **which checks belong in CI**, given that a one-off inspection has now done the finding and `DEC-048` governs the gate. | A decision, recorded either way  ✅ **Answered** (`.git-exclude/tasks/architect/015-…`): yes to a browser in CI, for **layout**, not for the JavaScript residue this RFC was written about. `DEC-051` removed condition 1's blocker; `BROWSER-001` builds the overflow gate. |
 
 **Step 1 was the only thing asked for at the time of writing.** It was an audit,

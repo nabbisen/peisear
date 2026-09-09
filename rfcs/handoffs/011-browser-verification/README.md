@@ -13,3 +13,4 @@ own releases against step 1's evidence.
 | JS-003 | [JS-003](./JS-003-one-outcome-authority.md) | Step 2 — one authority for response classification: the `409`/other/malformed decision, written three times in JS, moves into the server-authored copy island. Settles `board.js`'s silent malformed-body case. | 0.30.0 | JS-001, JS-002 |
 | REL-0.30.0 | [REL-0.30.0](./REL-0.30.0-release-candidate.md) | Release candidate — `JS-003` alone. **Branches from `7845751`, not `main`**, because `main` already carries RFC 012. | 0.30.0 | JS-003 |
 | BROWSER-001 | [BROWSER-001](./BROWSER-001-overflow-gate.md) | Step 4 — one assertion, `scrollWidth <= clientWidth`, as a CI job rather than a `cargo test`. Binding on `DEC-048`. | 0.33.0 |
+| LOCK-001 | [LOCK-001](./LOCK-001-board-card-lock-value.md) | Step 3's **replacement** (`DEC-052`) — assert every board card renders a non-empty `data-updated-at`, the guarantee `board.js` was covering for. | 0.33.0 |
