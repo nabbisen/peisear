@@ -1,6 +1,6 @@
 # JS-003 — one authority for response classification
 
-**Governing RFC**: [011](../../accepted/011-browser-verification.md), step 2
+**Governing RFC**: [011](../../done/011-browser-verification.md), step 2
 **Target release**: 0.30.0
 **Depends on**: `JS-001` (the inventory), `JS-002` (the fallback boundary guard)
 

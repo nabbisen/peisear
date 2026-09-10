@@ -1,6 +1,6 @@
 # LOCK-001 — assert the guarantee the JavaScript was covering for
 
-**Governing RFC**: [011](../../accepted/011-browser-verification.md), **`DEC-052`**
+**Governing RFC**: [011](../../done/011-browser-verification.md), **`DEC-052`**
 — step 3's replacement. **Target release**: 0.33.0.
 
 ## 1. What this is

@@ -29,9 +29,7 @@ the owner approves, the dev team implements.
 
 Design settled. Implementation may begin.
 
-| ID | Title | Target |
-|----|-------|--------|
-| 011 | [Browser verification](./accepted/011-browser-verification.md) — **a decision, not a design**: what a headless browser would and would not buy for `§10.15`, and at what cost | steps 1, 1b and 2 shipped 0.29.0; step 3 targets 0.31.0 |
+**None.** RFC 011 closed at 0.33.0 and RFC 012 at 0.32.0; both moved to `done/`.
 
 RFC 008 shipped in 0.29.0 and moved to `done/`.
 
@@ -47,6 +45,7 @@ Open for review. Design may still change.
 
 | ID | Title | Shipped in |
 |----|-------|------------|
+| 011 | [Browser verification](./done/011-browser-verification.md) — *has handoffs*; asked whether a headless browser was worth buying to test the shipped JavaScript. **Answer: no for the JavaScript, yes for the layout** — a category the RFC never considered, and where it found four defects in three days | 0.29.0–0.33.0 |
 | 012 | [Touch target conformance](./done/012-touch-target-conformance.md) — *has handoffs*; `§33.2` amended twice (`DEC-049`, `DEC-050`), the guard corrected three times, and the named limit measured and removed | 0.31.0 (rule + 139 controls), 0.32.0 (every interactive element) |
 | 004b | [Direct manipulation — the board (D-2)](./done/004b-direct-manipulation-board.md) — *has handoffs*; the drag already shipped, this brought its copy under the vocabulary check | 0.26.0 |
 | 004a | [Direct manipulation — status change (D-1)](./done/004a-direct-manipulation-status.md) — *has handoffs*; two steps, the no-JS path first | 0.25.0 (step 1), 0.26.0 (step 2) |
@@ -80,7 +79,7 @@ the RFC number they are keyed to.
 | [`handoffs/004b-direct-manipulation-board/`](./handoffs/004b-direct-manipulation-board/README.md) | 004b — historical, RFC implemented |
 | [`handoffs/004a-direct-manipulation-status/`](./handoffs/004a-direct-manipulation-status/README.md) | 004a — historical, RFC implemented |
 | [`handoffs/010-destructive-action-confirmation/`](./handoffs/010-destructive-action-confirmation/README.md) | 010 — historical, RFC implemented |
-| [`handoffs/011-browser-verification/`](./handoffs/011-browser-verification/README.md) | 011 — active; steps 1, 1b and 2 done, step 3 open |
+| [`handoffs/011-browser-verification/`](./handoffs/011-browser-verification/README.md) | 011 — historical, RFC implemented |
 | [`handoffs/012-touch-targets/`](./handoffs/012-touch-targets/README.md) | 012 — historical, RFC implemented |
 | [`handoffs/013-layout-defects/`](./handoffs/013-layout-defects/README.md) | **Not RFC-governed** — defects found by browser inspection |
 | [`handoffs/014-vendored-assets/`](./handoffs/014-vendored-assets/README.md) | `DEC-051` — Tailwind and DaisyUI move out of two CDNs into `static/` |

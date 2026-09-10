@@ -1,6 +1,6 @@
 # BROWSER-001 — the horizontal-overflow gate
 
-**Governing RFC**: [011](../../accepted/011-browser-verification.md), **step 4**
+**Governing RFC**: [011](../../done/011-browser-verification.md), **step 4**
 **Target release**: 0.33.0
 **Binding**: `DEC-048`'s four conditions. Read them before anything else — they
 were written to constrain exactly this handoff, and one of them is why step 4

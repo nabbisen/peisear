@@ -1,6 +1,6 @@
 # REL-0.30.0 — release candidate
 
-**Governing RFC**: [011](../../accepted/011-browser-verification.md), step 2
+**Governing RFC**: [011](../../done/011-browser-verification.md), step 2
 **Contents**: `JS-003` only — both rounds.
 **Depends on**: nothing outstanding. `JS-003` is reviewed and approved.
 

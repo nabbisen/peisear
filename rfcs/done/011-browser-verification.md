@@ -1,6 +1,6 @@
 # RFC 0011: Browser verification — deciding what it buys before buying it
 
-**Status**: Accepted
+**Status**: Done
 **Target**: steps 1 and 1b shipped in 0.29.0; step 2 is **done but unreleased**, shipping in 0.30.0; steps 3-4 at 0.31.0 and 0.32.0
 **Related spec sections**: `SPEC §30` (ABDD axes), `SPEC §33` (mobile)
 **Related requirements**: `NFR-A11Y-001` (focus visibility residue),
