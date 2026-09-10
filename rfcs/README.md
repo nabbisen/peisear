@@ -83,6 +83,7 @@ the RFC number they are keyed to.
 | [`handoffs/012-touch-targets/`](./handoffs/012-touch-targets/README.md) | 012 — historical, RFC implemented |
 | [`handoffs/013-layout-defects/`](./handoffs/013-layout-defects/README.md) | **Not RFC-governed** — defects found by browser inspection |
 | [`handoffs/014-vendored-assets/`](./handoffs/014-vendored-assets/README.md) | `DEC-051` — Tailwind and DaisyUI move out of two CDNs into `static/` |
+| [`handoffs/015-mobile-completion/`](./handoffs/015-mobile-completion/README.md) | **Not RFC-governed** — closing `NFR-A11Y-006`, unverified since Phase E |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
 | [`handoffs/002-calendar-surfaces/`](./handoffs/002-calendar-surfaces/README.md) | 002 — historical, RFC implemented |
