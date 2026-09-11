@@ -448,7 +448,12 @@ pub fn ProjectCalendarPage(
                     super::breadcrumb::BreadcrumbItem::link(project_name.clone(), project_href),
                     super::breadcrumb::BreadcrumbItem::current(t(MessageKey::CalendarBreadcrumbWord)),
                 ])}
-                <h1 class="text-xl font-semibold mb-1">
+                // `LAYOUT-005` shape B — see the "two shapes, two
+                // remedies" note in `components.rs`. The heading quotes
+                // the project name; the box is already the right width,
+                // only the text overflows it. Measured: `break-words`
+                // → 0, `min-w-0` at any level → no change.
+                <h1 class="text-xl font-semibold mb-1 break-words">
                     {t(MessageKey::ProjectCalendarPageTitle { project_name })}
                 </h1>
                 <p class="text-xs text-base-content/70 mb-3">{t(MessageKey::CalendarUtcNote)}</p>

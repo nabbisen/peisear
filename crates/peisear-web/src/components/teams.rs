@@ -309,7 +309,14 @@ pub fn TeamDetailPage(
                 </ul></div>
 
                 <div class="flex items-center justify-between mb-2 gap-3">
-                    <div>
+                    // `LAYOUT-005` shape A — see the "two shapes, two
+                    // remedies" note in `components.rs`. Confirmed by
+                    // injection: **this wrapper**, not the `<h1>`, is
+                    // the flex item whose `min-width: auto` an
+                    // unbreakable run in the team name sets. It also
+                    // carries the description, so both classes sit
+                    // here and `overflow-wrap` inherits to both.
+                    <div class="min-w-0 break-words">
                         <h1 class="text-xl font-semibold">{team_name.clone()}</h1>
                         {has_description.then(|| view! {
                             <p class="text-sm text-base-content/70 mt-1">{team_description}</p>
