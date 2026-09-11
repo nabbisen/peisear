@@ -2,7 +2,7 @@
 
 `BROWSER-001` (RFC 011 step 4, `DEC-048`). This directory holds the
 horizontal-overflow gate: one assertion, `scrollWidth <= clientWidth`, on
-fourteen rendered pages at four widths, driven by a minimal Chrome DevTools
+fourteen rendered pages at five widths, driven by a minimal Chrome DevTools
 Protocol harness with no npm dependency.
 
 **This does not run inside `cargo test --workspace` and is not counted in
@@ -40,7 +40,7 @@ attention.
   order and its three known limits (one page at a time, waits on
   `document.readyState` only, no notion of animation completion).
 - `overflow-gate.mjs` — the gate itself: starts a scratch instance,
-  creates fixtures through the real forms, sweeps fourteen pages × four
+  creates fixtures through the real forms, sweeps fourteen pages × five
   widths, and exits non-zero if any cell overflows or if any request
   reached a host other than `127.0.0.1`.
 
@@ -128,7 +128,16 @@ not covered by the fixture, however good the fixture is.** It also
 renamed the `board` key, which pointed at `?view=list` — the board is
 `project_detail`.
 
-Four widths: 390, 768, 1280, 1920.
+Five widths: 320, 390, 768, 1280, 1920.
+
+`BROWSER-002` added 320. It was held back one round because it turned
+every page red by 24px — `LAYOUT-006`'s navbar defect, not a per-page
+one, and `DEC-048` condition 3 forbids landing a red gate without an
+issue link beside it. What the width buys is narrower than its original
+case: with an unbreakable run in the fixture, the board defect it was
+meant to catch (`LAYOUT-003`) already fails at 390. Its value is the
+defect that manifests **only** at the narrowest phone, which is what it
+caught on its first run.
 
 **Every failing cell is reported, not just the first** — a gate that stops
 at the first failure hides the shape of the problem.

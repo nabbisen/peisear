@@ -24,7 +24,21 @@ const REPO_ROOT = new URL('..', import.meta.url).pathname;
 const BIN_PATH = process.env.PEISEAR_BIN || join(REPO_ROOT, 'target/debug/peisear');
 const PORT = process.env.PEISEAR_PORT || '4173';
 const BASE = `http://127.0.0.1:${PORT}`;
-const WIDTHS = [[390, 844, true], [768, 1024, false], [1280, 900, false], [1920, 1080, false]];
+// `BROWSER-002` round 2. 320 was held back once: it turned every page
+// red by 24px, which was `LAYOUT-006`'s navbar defect rather than
+// anything per-page, and `DEC-048` condition 3 forbids landing a red
+// gate without an issue link. `LAYOUT-006` fixed it, so it lands now.
+//
+// What it buys is narrower than the original case for it. With the old
+// fixture the board (`LAYOUT-003`) overflowed only below 390, so 320
+// looked like the width that would have caught it; with `BROWSER-002`'s
+// unbroken run that same defect fails at 390 too. 320's value is the
+// defect that manifests *only* at the narrowest phone — which is
+// exactly what it caught on its first run.
+const WIDTHS = [
+  [320, 568, true], [390, 844, true], [768, 1024, false],
+  [1280, 900, false], [1920, 1080, false],
+];
 
 // A long-enough, unbreakable local part -- `LAYOUT-001` was
 // conditional on exactly this shape (no hyphen for the browser's
