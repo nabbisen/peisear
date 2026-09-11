@@ -605,7 +605,19 @@ fn BoardView(
                 let project_id = project_id.clone();
                 let assignees_for_col = assignees.clone();
                 view! {
-                    <section class="bg-base-100 border border-base-300 rounded-lg flex flex-col min-h-[200px]">
+                    // `LAYOUT-003`: `min-w-0` opts this grid item out of
+                    // the default `min-width: auto` — its content's
+                    // minimum — which an unbreakable run in an issue
+                    // title sets to the whole run, pushing the column
+                    // out of the grid below 768px where the board is a
+                    // single column (`LAYOUT-001`'s mechanism, on a
+                    // grid item instead of a flex item). Pairs with
+                    // `break-words` on the card title: measured, this
+                    // one alone leaves the title cut mid-word, and
+                    // `break-words` alone does nothing at all, since
+                    // `overflow-wrap: break-word` is defined not to
+                    // affect min-content intrinsic size.
+                    <section class="bg-base-100 border border-base-300 rounded-lg flex flex-col min-h-[200px] min-w-0">
                         <header class="flex items-center justify-between px-3 py-2 border-b border-base-300">
                             <div class="flex items-center gap-2">
                                 <span class=status_dot></span>
@@ -855,7 +867,12 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
             // exist (DEV-002-005-review.md §1.3). This makes the
             // outer div the sole drag source.
             <a href=href class=grow("block") draggable="false">
-                <div class="text-sm font-medium line-clamp-2">{issue.title}</div>
+                // `break-words` gives the unbreakable run a break
+                // opportunity so the clamped two lines still read as
+                // the title, rather than being cut mid-word at the
+                // box edge by `line-clamp-2`'s own `overflow: hidden`
+                // (`LAYOUT-003`; see the column's `min-w-0`).
+                <div class="text-sm font-medium line-clamp-2 break-words">{issue.title}</div>
                 <div class="flex items-center justify-between gap-2 mt-2 text-[11px] text-base-content/70">
                     <div class="flex items-center gap-1 flex-wrap">
                         <span class=badge>{t(MessageKey::PriorityName { label: issue.priority.to_i18n_label() })}</span>
