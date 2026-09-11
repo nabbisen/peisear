@@ -1807,7 +1807,12 @@ fn IssueView(
 
     view! {
         <div class="flex items-start justify-between gap-3 mb-3">
-            <h1 class="text-xl font-semibold tracking-tight">{issue.title}</h1>
+            // `LAYOUT-004` shape A — see the "two shapes, two remedies"
+            // note in `components.rs`. The flex item here is the `<h1>`
+            // itself (confirmed by injection, not assumed): without
+            // `min-w-0` an unbreakable run in the title sets its
+            // min-content width and pushes Edit/Delete off the page.
+            <h1 class="text-xl font-semibold tracking-tight min-w-0 break-words">{issue.title}</h1>
             <div class="flex gap-2 shrink-0">
                 <a href=edit_href.clone() class=grow("btn btn-ghost btn-sm")>{t(MessageKey::EditWord)}</a>
                 <a href=delete_href class=grow("btn btn-ghost btn-sm text-error")>

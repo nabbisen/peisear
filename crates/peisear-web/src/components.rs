@@ -13,6 +13,47 @@
 //! Hydration (`hydrate` feature) would give client-side reactivity but
 //! requires a second compile to wasm, which we leave as future work
 //! (see the README).
+//!
+//! # Rendering user-supplied text: two shapes, two remedies
+//!
+//! `LAYOUT-004`, and the rule `LAYOUT-001`/`LAYOUT-003` are each one
+//! instance of. **Any container holding text a user typed can be forced
+//! wider than the viewport by a single unbreakable run** — a URL, a
+//! token, a checksum. `line-clamp` and `truncate` do not help: they
+//! clip lines, they do not introduce a break opportunity. The page then
+//! scrolls sideways on a phone.
+//!
+//! **There are two shapes, and their remedies do not interchange.
+//! Applying the wrong one is a silent no-op in both directions**, so
+//! classify the site before fixing it — measure whether the element's
+//! own *box* is too wide, or whether its *text* overflows a
+//! correctly-sized box.
+//!
+//! - **Shape A — the box.** A flex or grid item defaults to
+//!   `min-width: auto`, meaning its content's minimum, which an
+//!   unbreakable run sets to the whole run. The item then leaves its
+//!   container. Needs **`min-w-0` on the item** *and* `break-words` on
+//!   the text: `min-w-0` alone shrinks the box and cuts the text
+//!   mid-word, and `break-words` alone does nothing at all, because
+//!   `overflow-wrap: break-word` is defined not to affect min-content
+//!   intrinsic size. Sites: the account menu (`LAYOUT-001`), the board
+//!   column (`LAYOUT-003`), issue detail's `<h1>`.
+//!   **The item is not always the element holding the text** — on team
+//!   detail it is a wrapper `<div>` — so find it, don't assume it.
+//! - **Shape B — the text.** An ordinary block whose box is already
+//!   the right width; only the text overflows it. Needs
+//!   **`break-words` alone**; `min-w-0` is the no-op here.
+//!   `overflow-wrap` inherits, so one class on the container covering
+//!   the user text is enough. Sites: the delete interstitials, search
+//!   results, the teams list.
+//!
+//! **This is not guarded from source.** Which text is user-supplied is
+//! not a property a scan can read off a class string
+//! (`LAYOUT-003-review.md` §4). What catches it is the overflow gate's
+//! fixture, which since `BROWSER-002` carries a 64-character unbroken
+//! run in the issue title, the project name and the team name — add
+//! new user-text surfaces to `browser-checks/overflow-gate.mjs`'s page
+//! list rather than trusting review to spot the class.
 
 pub mod auth;
 pub mod breadcrumb;

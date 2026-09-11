@@ -111,7 +111,14 @@ fn render_team_card((team, role): (Team, TeamRole)) -> impl IntoView {
                aria-label=aria>
                 <div class="card-body p-4">
                     <div class="flex items-center justify-between gap-3">
-                        <div class="flex-1 min-w-0">
+                        // `LAYOUT-004` shape B — see the "two shapes,
+                        // two remedies" note in `components.rs`. The
+                        // `min-w-0` here was already right and was not
+                        // enough on its own: the box shrank, and the
+                        // team name went on overflowing it. The name
+                        // and the description both need the break
+                        // opportunity, and `overflow-wrap` inherits.
+                        <div class="flex-1 min-w-0 break-words">
                             <h3 class="font-medium">{team.name}</h3>
                             {description}
                         </div>

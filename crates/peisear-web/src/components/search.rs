@@ -196,6 +196,11 @@ fn SearchSection(
     }
 }
 
+/// `LAYOUT-004` shape B — see the "two shapes, two remedies" note in
+/// `components.rs`. Every row is user text: a project name, an issue
+/// title, or a caption quoting both. `break-words` goes on the row's
+/// own `<a>` rather than each inner `<div>`, since `overflow-wrap`
+/// inherits and the caption is built from names too.
 #[component]
 fn SearchHitRow(hit: SearchHit) -> impl IntoView {
     match hit {
@@ -203,7 +208,7 @@ fn SearchHitRow(hit: SearchHit) -> impl IntoView {
             let url = format!("/projects/{id}");
             view! {
                 <li>
-                    <a href=url class=grow("block px-3 py-2 hover:bg-base-200")>
+                    <a href=url class=grow("block px-3 py-2 hover:bg-base-200 break-words")>
                         <div class="font-medium">{name}</div>
                         <div class="text-xs text-base-content/70">{t(MessageKey::ProjectHitTypeLabel)}</div>
                     </a>
@@ -231,7 +236,7 @@ fn SearchHitRow(hit: SearchHit) -> impl IntoView {
             };
             view! {
                 <li>
-                    <a href=url class=grow("block px-3 py-2 hover:bg-base-200")>
+                    <a href=url class=grow("block px-3 py-2 hover:bg-base-200 break-words")>
                         <div class="font-medium">{title}</div>
                         <div class="text-xs text-base-content/70">{caption}</div>
                     </a>

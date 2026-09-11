@@ -46,7 +46,13 @@ pub fn ConfirmDeletePage(
         <AppShell title=page_title user=user flash={None::<String>} unread_count=unread_count>
             <div class="max-w-md mx-auto mt-8">
                 <div class="card bg-base-100 border border-error/30 shadow-sm">
-                    <div class="card-body">
+                    // `LAYOUT-004` shape B — see the "two shapes, two
+                    // remedies" note in `components.rs`. Both the
+                    // heading and the consequence line quote a name the
+                    // user typed; `overflow-wrap` inherits, so one class
+                    // here covers both. Serves the issue and the project
+                    // delete interstitials alike.
+                    <div class="card-body break-words">
                         <h1 class="text-lg font-semibold text-error">{heading}</h1>
                         <p class="text-sm text-base-content/70 mt-1">{consequence}</p>
                         <div class="card-actions justify-end mt-4">
