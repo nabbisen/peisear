@@ -167,9 +167,28 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                 </form>
             </div>
 
-            <div class="flex-none gap-2">
+            // `LAYOUT-006`: this block was `flex-none`, and that — not any
+            // `min-width: auto` — was what made every page overflow a 320px
+            // phone by 24px for a 21-character display name. `flex-none` is
+            // `flex-shrink: 0`, so nothing on this side of the row could
+            // give anything up and `min-w-0` was inert at every level of the
+            // nesting (measured, one level at a time, before any edit).
+            // Dropping `flex-none` is the whole change here: a flex item's
+            // default is `flex: 0 1 auto`, so removing it restores the
+            // shrink that `flex: none` had taken away. Better than pairing
+            // `flex-none` with a `shrink` that contradicts it and resolves
+            // on stylesheet order.
+            //
+            // The name gives way and nothing else does: the bell is
+            // `shrink-0` below, and the button's own `min-w-11` (via
+            // `grow()`) floors it at 44px, so `NFR-A11Y-007` holds without a
+            // rule of its own — measured at 44x44 with the name removed
+            // entirely, which is also the proof that brand + bell + button
+            // do fit 320 and the floor is not the problem (§5's first
+            // escalation, checked and not triggered).
+            <div class="min-w-0 gap-2">
                 <a href="/inbox"
-                   class=grow("btn btn-ghost btn-sm relative")
+                   class=grow("btn btn-ghost btn-sm relative shrink-0")
                    aria-label=bell_aria>
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
                          viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -180,12 +199,31 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                     </svg>
                     {unread_badge}
                 </a>
-                <div class="dropdown dropdown-end">
-                    <label tabindex="0" class=grow("btn btn-ghost btn-sm normal-case")>
-                        {user.display_name.clone()}
+                <div class="dropdown dropdown-end min-w-0">
+                    // `LAYOUT-006`: the name shows at every width and gives
+                    // way with an ellipsis only when the row cannot fit —
+                    // no breakpoint, no character limit, nothing hidden on
+                    // phones. `max-w-full` is the load-bearing one and the
+                    // least obvious: without it the label keeps its
+                    // content width, the `<span>` never reaches its
+                    // `truncate`, and 320 stalls 2px short (measured:
+                    // 24 -> 2 without it, 24 -> 0 with it). The `<span>`
+                    // exists so there is something to truncate — a bare
+                    // text node cannot be.
+                    //
+                    // `flex-nowrap` because DaisyUI's own `.btn` sets
+                    // `flex-wrap: wrap`: once the button starts shrinking,
+                    // the chevron drops onto a second line inside it and
+                    // the layout is what gives way instead of the name.
+                    // Costs 22px of visible name at 320 and keeps the
+                    // button one line, which is the decision this handoff
+                    // made.
+                    <label tabindex="0" class=grow("btn btn-ghost btn-sm normal-case min-w-0 max-w-full flex-nowrap")>
+                        <span class="truncate min-w-0">{user.display_name.clone()}</span>
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
                              fill="none" stroke="currentColor" stroke-width="2"
-                             stroke-linecap="round" stroke-linejoin="round">
+                             stroke-linecap="round" stroke-linejoin="round"
+                             class="shrink-0">
                             <polyline points="6 9 12 15 18 9"/>
                         </svg>
                     </label>
