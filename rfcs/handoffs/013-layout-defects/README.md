@@ -14,3 +14,4 @@ wait on an open decision.
 | LAYOUT-001 | [LAYOUT-001](./LAYOUT-001-navbar-overflow.md) | ✅ Done. Authenticated pages scrolled horizontally when the signed-in email was long and unbreakable — a flex item's content-based minimum width, not the dropdown's position. | 0.32.0 |
 | LAYOUT-002 | [LAYOUT-002](./LAYOUT-002-project-toolbar.md) | Project detail overflows 6 px at 390 px: the view/action toolbar cannot wrap. **Not caused by RFC 012** — measured. | 0.32.0 |
 | LAYOUT-003 | [LAYOUT-003](./LAYOUT-003-board-column-overflow.md) | The board's columns overflow 33 px at 320 px on an unbreakable issue title — `LAYOUT-001`'s mechanism again, below the gate's narrowest width. | 0.33.0 |
+| LAYOUT-004 | [LAYOUT-004](./LAYOUT-004-unbreakable-text-two-shapes.md) | Three more surfaces overflow on unbreakable text — in **two shapes** with non-interchangeable remedies. Issue detail overflows at widths the gate already sweeps. | 0.33.0 |

@@ -14,3 +14,4 @@ own releases against step 1's evidence.
 | REL-0.30.0 | [REL-0.30.0](./REL-0.30.0-release-candidate.md) | Release candidate — `JS-003` alone. **Branches from `7845751`, not `main`**, because `main` already carries RFC 012. | 0.30.0 | JS-003 |
 | BROWSER-001 | [BROWSER-001](./BROWSER-001-overflow-gate.md) | Step 4 — one assertion, `scrollWidth <= clientWidth`, as a CI job rather than a `cargo test`. Binding on `DEC-048`. | 0.33.0 |
 | LOCK-001 | [LOCK-001](./LOCK-001-board-card-lock-value.md) | Step 3's **replacement** (`DEC-052`) — assert every board card renders a non-empty `data-updated-at`, the guarantee `board.js` was covering for. | 0.33.0 |
+| BROWSER-002 | [BROWSER-002](./BROWSER-002-fixture-and-320.md) | The gate is green on a tree with three overflow defects, because its fixture has a space at every point. An unbroken run in the fixture, then 320 px. **Fixture first, and watch it go red.** | 0.33.0 |
