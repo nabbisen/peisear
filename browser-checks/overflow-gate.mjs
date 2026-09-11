@@ -116,6 +116,10 @@ async function createFixtures() {
     description: '',
   });
   if (teamRes.status !== 303) throw new Error(`create team: expected 303, got ${teamRes.status}`);
+  // `LAYOUT-005`: team detail is a gate page now, so the slug has to
+  // come back out of here. It is generated from the name, which
+  // carries the unbroken run, and truncated to `SLUG_MAX_LEN`.
+  const teamSlug = teamRes.headers.get('location').split('/teams/')[1].split(/[/?]/)[0];
 
   const projectRes = await jar.fetchForm(`${BASE}/projects`, {
     name: LONG_PROJECT_NAME,
@@ -151,7 +155,7 @@ async function createFixtures() {
   const issue2Location = issue2Res.headers.get('location');
   const issueId = issue2Location.split('/issues/')[1].split(/[/?]/)[0];
 
-  return { cookie: jar.header(), projectId, issueId };
+  return { cookie: jar.header(), projectId, issueId, teamSlug };
 }
 
 async function main() {
@@ -178,7 +182,7 @@ async function main() {
     await waitForServer(`${BASE}/login`);
     log('server ready');
 
-    const { cookie, projectId, issueId } = await createFixtures();
+    const { cookie, projectId, issueId, teamSlug } = await createFixtures();
     log(`fixtures created: project=${projectId} issue=${issueId}`);
 
     const pages = {
@@ -187,7 +191,15 @@ async function main() {
       calendar: `${BASE}/today/calendar`,
       projects: `${BASE}/projects`,
       project_detail: `${BASE}/projects/${projectId}`,
-      board: `${BASE}/projects/${projectId}?view=list`,
+      // `LAYOUT-005`: this key was `board`, and it points at the list
+      // view. The board is the default view, which `project_detail`
+      // above already covers -- a coverage log should not name a page
+      // after the one it is not.
+      list: `${BASE}/projects/${projectId}?view=list`,
+      // `LAYOUT-005`: both absent from this list until now, which is
+      // why the fixture that exposed five sites never saw these two.
+      project_calendar: `${BASE}/projects/${projectId}/calendar`,
+      team_detail: `${BASE}/teams/${teamSlug}`,
       issue_detail: `${BASE}/projects/${projectId}/issues/${issueId}`,
       settings: `${BASE}/settings`,
       settings_notifications: `${BASE}/settings/notifications`,

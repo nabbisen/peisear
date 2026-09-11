@@ -2,7 +2,7 @@
 
 `BROWSER-001` (RFC 011 step 4, `DEC-048`). This directory holds the
 horizontal-overflow gate: one assertion, `scrollWidth <= clientWidth`, on
-twelve rendered pages at four widths, driven by a minimal Chrome DevTools
+fourteen rendered pages at four widths, driven by a minimal Chrome DevTools
 Protocol harness with no npm dependency.
 
 **This does not run inside `cargo test --workspace` and is not counted in
@@ -40,7 +40,7 @@ attention.
   order and its three known limits (one page at a time, waits on
   `document.readyState` only, no notion of animation completion).
 - `overflow-gate.mjs` — the gate itself: starts a scratch instance,
-  creates fixtures through the real forms, sweeps twelve pages × four
+  creates fixtures through the real forms, sweeps fourteen pages × four
   widths, and exits non-zero if any cell overflows or if any request
   reached a host other than `127.0.0.1`.
 
@@ -115,10 +115,18 @@ Three choices are deliberate, not incidental:
 
 ## Coverage
 
-Twelve pages: `/today`, `/inbox`, `/today/calendar`, `/projects`, a
-project detail page (with issues), the board (list view), an issue detail
-page, `/settings`, `/settings/notifications`, `/teams`, `/search`, and a
-delete confirmation interstitial.
+Fourteen pages: `/today`, `/inbox`, `/today/calendar`, `/projects`, a
+project detail page (the board — it is the default view), the same
+project's list view, a project calendar, a team detail page, an issue
+detail page, `/settings`, `/settings/notifications`, `/teams`,
+`/search`, and a delete confirmation interstitial.
+
+`LAYOUT-005` added the project calendar and team detail. Both carried an
+overflow this gate could not see, for the same reason `BROWSER-002`'s
+fixture could not see the other five: **a page absent from this list is
+not covered by the fixture, however good the fixture is.** It also
+renamed the `board` key, which pointed at `?view=list` — the board is
+`project_detail`.
 
 Four widths: 390, 768, 1280, 1920.
 
