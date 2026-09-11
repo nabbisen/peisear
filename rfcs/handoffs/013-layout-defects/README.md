@@ -15,3 +15,5 @@ wait on an open decision.
 | LAYOUT-002 | [LAYOUT-002](./LAYOUT-002-project-toolbar.md) | Project detail overflows 6 px at 390 px: the view/action toolbar cannot wrap. **Not caused by RFC 012** — measured. | 0.32.0 |
 | LAYOUT-003 | [LAYOUT-003](./LAYOUT-003-board-column-overflow.md) | The board's columns overflow 33 px at 320 px on an unbreakable issue title — `LAYOUT-001`'s mechanism again, below the gate's narrowest width. | 0.33.0 |
 | LAYOUT-004 | [LAYOUT-004](./LAYOUT-004-unbreakable-text-two-shapes.md) | Three more surfaces overflow on unbreakable text — in **two shapes** with non-interchangeable remedies. Issue detail overflows at widths the gate already sweeps. | 0.33.0 |
+| LAYOUT-005 | [LAYOUT-005](./LAYOUT-005-calendar-and-team-detail.md) | The two sites `LAYOUT-004` reported and did not fix — project calendar (shape B) and team detail (shape A) — and the two gate pages that would have seen them. | 0.33.0 |
+| LAYOUT-006 | [LAYOUT-006](./LAYOUT-006-navbar-at-320.md) | Every page overflows a 320 px phone when the display name is 21 characters — a third mechanism, a flex row's content minimum. Sequenced before `BROWSER-002`'s 320 px. | 0.33.0 |
