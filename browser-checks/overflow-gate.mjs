@@ -31,8 +31,30 @@ const WIDTHS = [[390, 844, true], [768, 1024, false], [1280, 900, false], [1920,
 // default word-wrap to break at), so the fixture must be too, or the
 // gate would not have caught the defect it exists to catch.
 const LONG_EMAIL = 'browseroverflowgatefixtureaccount@example.org';
+
+// `BROWSER-002`: a 64-character unbroken run, carried by the issue
+// title, the project name and the team name.
+//
+// The gate swept issue detail at 390 and 414 for a full release while
+// that page overflowed by 624 and 600 px, and reported 48/48 clean.
+// The reason was one character class: every fixture string above had
+// a space at every point, so no container ever received text it could
+// not break, and `min-width: auto` never had anything to bite on.
+// Four of the five layout defects this project has found -- and both
+// shapes of `LAYOUT-004` -- were conditional on exactly this input.
+//
+// A SHA-256 is the realistic form: 64 hex characters, no break
+// opportunity anywhere in it, and the kind of thing that genuinely
+// lands in an issue title. It is the empty string's digest, which
+// makes it recognisable rather than arbitrary.
+const UNBROKEN_RUN = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+// 190 characters, against the form's own 200-char ceiling -- the run
+// has to fit inside a title the product will actually accept, or the
+// fixture tests a state no user can reach.
 const LONG_ISSUE_TITLE =
-  'An issue whose title is long enough on its own to be the kind of content that made §10.21 invisible on empty fixtures';
+  `An issue whose title is long enough on its own to be the kind of content that made §10.21 invisible on empty fixtures, digest ${UNBROKEN_RUN}`;
+const LONG_PROJECT_NAME = `Overflow Gate Project ${UNBROKEN_RUN}`;
+const LONG_TEAM_NAME = `Overflow Gate Team ${UNBROKEN_RUN}`;
 
 function log(...args) {
   console.log('[overflow-gate]', ...args);
@@ -89,14 +111,14 @@ async function createFixtures() {
   }
 
   const teamRes = await jar.fetchForm(`${BASE}/teams`, {
-    name: 'Overflow Gate Team',
+    name: LONG_TEAM_NAME,
     slug: '',
     description: '',
   });
   if (teamRes.status !== 303) throw new Error(`create team: expected 303, got ${teamRes.status}`);
 
   const projectRes = await jar.fetchForm(`${BASE}/projects`, {
-    name: 'Overflow Gate Project',
+    name: LONG_PROJECT_NAME,
     description: 'Fixture project for the BROWSER-001 overflow gate.',
     team_id: '',
   });

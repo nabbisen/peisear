@@ -91,7 +91,7 @@ pointing at one. `PEISEAR_BIN` overrides the binary path (default
 issues — all through the real HTTP forms the application exposes, the
 same way the investigations that found `LAYOUT-001` and `§10.21` did.
 
-Two choices are deliberate, not incidental:
+Three choices are deliberate, not incidental:
 
 - **The signed-in email is long and hyphen-free**
   (`browseroverflowgatefixtureaccount@example.org`). `LAYOUT-001` was
@@ -102,6 +102,16 @@ Two choices are deliberate, not incidental:
   invisible on the architect's own ten-page sweep because the fixtures
   were empty — a layout gate with empty fixtures measures a layout nobody
   sees.
+- **The issue title, the project name and the team name each carry a
+  64-character unbroken run** (`BROWSER-002`). Long is not the same as
+  unbreakable: for a full release this gate swept issue detail at 390 and
+  414 while that page overflowed by hundreds of pixels, and reported
+  48/48 clean — because every fixture string had a space at every point,
+  so no container ever received text it could not break. Four of the five
+  layout defects this project has found were conditional on unbreakable
+  text. The run is a SHA-256 (the empty string's), which is both
+  guaranteed break-free and the kind of thing that really does end up in
+  an issue title.
 
 ## Coverage
 
