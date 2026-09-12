@@ -1,10 +1,10 @@
 # REL-0.33.0 — release candidate
 
 **Contents**: `BROWSER-001`, `BROWSER-002` (both halves), `LOCK-001`,
-`LAYOUT-003`, `LAYOUT-004`, `LAYOUT-005`, `LAYOUT-006`, `LAYOUT-007`,
-`A11Y-006` (superseded by the architect's direct verification, `NFR-A11Y-006`
-Met). **Depends on**: `LAYOUT-007` reviewed and closed. **Do not start before
-that review is in `.git-exclude/reviewed/`.**
+`LAYOUT-003` through `LAYOUT-008`, `A11Y-006` (superseded by the architect's
+direct verification, `NFR-A11Y-006` Met). **Depends on**: `LAYOUT-008`
+reviewed and closed. **Do not start before that review is in
+`.git-exclude/reviewed/`.**
 
 **Do not tag. Do not publish.** Produce the candidate and stop.
 
