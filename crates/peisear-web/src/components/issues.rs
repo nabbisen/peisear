@@ -1824,7 +1824,11 @@ fn IssueView(
     });
 
     view! {
-        <div class="flex items-start justify-between gap-3 mb-3">
+        // `LAYOUT-009` (`§10.27`): same header shape as sprint detail's,
+        // same fix. `shrink-0` on the actions below stays — with
+        // `flex-wrap` it is what makes them drop whole rather than
+        // squeeze, and the 44px floor forbids squeezing them.
+        <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
             // `LAYOUT-004` shape A — see the "two shapes, two remedies"
             // note in `components.rs`. The flex item here is the `<h1>`
             // itself (confirmed by injection, not assumed): without

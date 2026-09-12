@@ -673,7 +673,15 @@ pub fn SprintDetailPage(
                 ])}
                 {super::breadcrumb::render_back_link(NavSection::Sprints, sprints_href)}
 
-                <div class="flex items-center justify-between gap-3 mb-2">
+                // `LAYOUT-009` (`§10.27`): the row wraps rather than
+                // squeezing the title. Without `flex-wrap` the actions
+                // column keeps its content width and the title takes
+                // whatever is left — 54px and eleven lines at 320px for
+                // an ordinary sprint name, with nothing overflowing, so
+                // the gate is green on it. `LAYOUT-002`'s mechanism on a
+                // header. No breakpoint: the row wraps when its content
+                // does not fit and not otherwise.
+                <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
                     // `LAYOUT-008` shape A, nested twice — the first of
                     // its kind, see the note in `components.rs`. This
                     // bare wrapper is a flex item, and so is the `<h1>`
@@ -684,7 +692,19 @@ pub fn SprintDetailPage(
                     // so the goal and dates lines inherit it — they
                     // quote the sprint's own text too.
                     <div class="min-w-0 break-words">
-                        <div class="flex items-center gap-3">
+                        // `LAYOUT-009`: the status badge wraps below the
+                        // title rather than taking width from it. The
+                        // handoff left this to measurement: beside the
+                        // title the badge costs 86px, so at 320 an
+                        // ordinary name gets 202px and three lines;
+                        // wrapping the group gives it the full 288px and
+                        // two. At 768 and above the badge still sits
+                        // beside the title, because there the row fits.
+                        // Preferred to moving the badge onto the dates
+                        // line, which measured the same at every width
+                        // and separates the status from what it
+                        // describes.
+                        <div class="flex flex-wrap items-center gap-3">
                             <h1 class="text-xl font-semibold min-w-0">{sprint_name}</h1>
                             <span class=status_class>{status_label}</span>
                         </div>
