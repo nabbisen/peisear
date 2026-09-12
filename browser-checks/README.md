@@ -91,7 +91,7 @@ pointing at one. `PEISEAR_BIN` overrides the binary path (default
 issues — all through the real HTTP forms the application exposes, the
 same way the investigations that found `LAYOUT-001` and `§10.21` did.
 
-Three choices are deliberate, not incidental:
+Four choices are deliberate, not incidental:
 
 - **The signed-in email is long and hyphen-free**
   (`browseroverflowgatefixtureaccount@example.org`). `LAYOUT-001` was
@@ -112,6 +112,20 @@ Three choices are deliberate, not incidental:
   text. The run is a SHA-256 (the empty string's), which is both
   guaranteed break-free and the kind of thing that really does end up in
   an issue title.
+- **The signed-in user's display name carries one too** (`LAYOUT-007`),
+  77 characters against the register form's own 80-char ceiling. This
+  was the last fixture field whose value had a space at every point, and
+  it hid three more overflows on pages this gate was already sweeping
+  green: `/today`'s subtitle, `/settings`' subtitle, and the list view's
+  assignee filter, whose `<select>` takes its width from its widest
+  `<option>` — display names. The spaced words lead so the navbar still
+  shows something recognisable once `LAYOUT-006`'s truncation takes the
+  rest.
+
+**The pattern across `BROWSER-002` and `LAYOUT-007` is the thing to
+remember**: every time a fixture field gained an unbroken run, this gate
+found defects on pages it was already visiting. What the gate sees is
+exactly its fixture and its page list.
 
 ## Coverage
 

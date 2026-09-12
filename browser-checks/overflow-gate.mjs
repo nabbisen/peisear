@@ -69,6 +69,16 @@ const LONG_ISSUE_TITLE =
   `An issue whose title is long enough on its own to be the kind of content that made §10.21 invisible on empty fixtures, digest ${UNBROKEN_RUN}`;
 const LONG_PROJECT_NAME = `Overflow Gate Project ${UNBROKEN_RUN}`;
 const LONG_TEAM_NAME = `Overflow Gate Team ${UNBROKEN_RUN}`;
+// `LAYOUT-007`: the display name is user text too, and this field was
+// the last one whose fixture value had a space at every point. Two
+// subtitles quote it -- `/today`'s and `/settings`' -- and both
+// overflowed a 320px phone on a name with an unbroken run while this
+// gate swept them green. `BROWSER-002` §1, one field over.
+//
+// 77 characters against the register form's own 80-char `maxlength`.
+// The spaced words lead so the navbar still shows something a user
+// recognises once `LAYOUT-006`'s truncation takes the rest.
+const LONG_DISPLAY_NAME = `Gate Fixture ${UNBROKEN_RUN}`;
 
 function log(...args) {
   console.log('[overflow-gate]', ...args);
@@ -116,7 +126,7 @@ async function createFixtures() {
   const jar = makeCookieJar();
 
   const registerRes = await jar.fetchForm(`${BASE}/register`, {
-    display_name: 'Overflow Gate Fixture',
+    display_name: LONG_DISPLAY_NAME,
     email: LONG_EMAIL,
     password: 'password1234',
   });
