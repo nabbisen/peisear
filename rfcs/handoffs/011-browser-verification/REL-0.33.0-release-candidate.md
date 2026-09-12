@@ -94,6 +94,10 @@ breath, exactly what it is not.
      suite by design, and a `cargo test` that reads markup cannot observe it.
    - **`§10.17` is open** — assertions that decay while staying green — and
      nothing here changes that.
+   - **`§10.27` is open and passes the gate**: sprint detail's title reads
+     eight lines deep on a 320 px phone with an ordinary name, because its
+     header row squeezes the title rather than wrapping. Zero overflow.
+     Named so nobody reads 90 green cells as "renders well on a phone".
    - The product still does not claim WCAG conformance.
 
 **Run `find_violations`** over the finished section and report the character

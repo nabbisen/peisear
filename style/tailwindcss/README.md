@@ -90,3 +90,10 @@ is a **superset** of what the markup uses, not an inventory of it. When a
 regeneration diff shows a class appearing from nowhere, look for it in prose
 before looking for it in markup. Classes *disappearing* remain the trap that
 matters, as above.
+
+## A hand-written utility exists only once the markup uses it
+
+`@layer utilities` entries in `input.css` are purged like every other class:
+a regeneration run before any markup uses the new class adds **nothing**, and
+looks like a broken build. Write the utility, use it, then regenerate
+(`LAYOUT-008`, `wrap-anywhere`).
