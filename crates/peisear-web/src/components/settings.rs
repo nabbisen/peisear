@@ -96,7 +96,10 @@ pub fn SettingsPage(
                     <li>{settings_breadcrumb}</li>
                 </ul></div>
                 <h1 class="text-xl font-semibold mb-1">{settings_heading}</h1>
-                <p class="text-sm text-base-content/70 mb-6">
+                // `LAYOUT-007` shape B — see the "two shapes, two
+                // remedies" note in `components.rs`. Same subtitle shape
+                // as `/today`'s, same remedy.
+                <p class="text-sm text-base-content/70 mb-6 break-words">
                     {t(MessageKey::SettingsSubtitle { display_name })}
                 </p>
 

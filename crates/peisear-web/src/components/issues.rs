@@ -947,7 +947,15 @@ fn ListView(
                 </select>
             </label>
 
-            <label class="form-control">
+            // `LAYOUT-007` shape A — see the "two shapes, two remedies"
+            // note in `components.rs`. A `<select>`'s intrinsic width is
+            // its widest `<option>`, and these options are display
+            // names, so one unbroken name sets this flex item's
+            // content-based minimum and takes the whole filter row off a
+            // 320px screen. `break-words` is the no-op here: nothing
+            // wraps inside a `<select>`. The sibling status and sort
+            // filters need nothing — their options are our own strings.
+            <label class="form-control min-w-0">
                 <div class="label py-0">
                     <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                 </div>

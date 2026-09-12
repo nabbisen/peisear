@@ -251,7 +251,11 @@ pub fn PersonalDashboard(
                         {t(MessageKey::CalendarBreadcrumbWord)}
                     </a>
                 </div>
-                <p class="text-sm text-base-content/70 mb-4">
+                // `LAYOUT-007` shape B — see the "two shapes, two
+                // remedies" note in `components.rs`. The subtitle quotes
+                // the display name, which is user text like any other:
+                // a name that is one unbroken run overflows this box.
+                <p class="text-sm text-base-content/70 mb-4 break-words">
                     {t(MessageKey::PersonalDashboardSubtitle { display_name })}
                 </p>
 
