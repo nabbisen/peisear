@@ -2,7 +2,7 @@
 
 `BROWSER-001` (RFC 011 step 4, `DEC-048`). This directory holds the
 horizontal-overflow gate: one assertion, `scrollWidth <= clientWidth`, on
-fourteen rendered pages at five widths, driven by a minimal Chrome DevTools
+eighteen rendered pages at five widths, driven by a minimal Chrome DevTools
 Protocol harness with no npm dependency.
 
 **This does not run inside `cargo test --workspace` and is not counted in
@@ -40,7 +40,7 @@ attention.
   order and its three known limits (one page at a time, waits on
   `document.readyState` only, no notion of animation completion).
 - `overflow-gate.mjs` — the gate itself: starts a scratch instance,
-  creates fixtures through the real forms, sweeps fourteen pages × five
+  creates fixtures through the real forms, sweeps eighteen pages × five
   widths, and exits non-zero if any cell overflows or if any request
   reached a host other than `127.0.0.1`.
 
@@ -87,11 +87,11 @@ pointing at one. `PEISEAR_BIN` overrides the binary path (default
 
 ## Fixtures
 
-`overflow-gate.mjs` registers a user, creates a team, a project, and two
-issues — all through the real HTTP forms the application exposes, the
+`overflow-gate.mjs` registers a user, creates a team, a sprint, a project
+and two issues — all through the real HTTP forms the application exposes, the
 same way the investigations that found `LAYOUT-001` and `§10.21` did.
 
-Four choices are deliberate, not incidental:
+Five choices are deliberate, not incidental:
 
 - **The signed-in email is long and hyphen-free**
   (`browseroverflowgatefixtureaccount@example.org`). `LAYOUT-001` was
@@ -121,19 +121,29 @@ Four choices are deliberate, not incidental:
   `<option>` — display names. The spaced words lead so the navbar still
   shows something recognisable once `LAYOUT-006`'s truncation takes the
   rest.
+- **A sprint whose name and goal both carry the run** (`LAYOUT-008`).
+  Three pages render one or both — the sprints list, sprint detail and
+  the plan page — and none of the three was in the page list until that
+  handoff added them. Sprint detail is also the only site found so far
+  that overflows a **1280 px desktop**, so a phone-only fixture would
+  not have been enough either.
 
-**The pattern across `BROWSER-002` and `LAYOUT-007` is the thing to
-remember**: every time a fixture field gained an unbroken run, this gate
+**The pattern across `BROWSER-002`, `LAYOUT-007` and `LAYOUT-008` is the
+thing to remember**: every time a fixture field gained an unbroken run, this gate
 found defects on pages it was already visiting. What the gate sees is
 exactly its fixture and its page list.
 
 ## Coverage
 
-Fourteen pages: `/today`, `/inbox`, `/today/calendar`, `/projects`, a
+Eighteen pages: `/today`, `/inbox`, `/today/calendar`, `/projects`, a
 project detail page (the board — it is the default view), the same
-project's list view, a project calendar, a team detail page, an issue
-detail page, `/settings`, `/settings/notifications`, `/teams`,
+project's list view, a project calendar, a team detail page, a sprints
+list, a sprint detail page, a sprint plan page, an issue detail page,
+the new-issue form, `/settings`, `/settings/notifications`, `/teams`,
 `/search`, and a delete confirmation interstitial.
+
+`LAYOUT-008` added the three sprint pages and the new-issue form. All
+four were red on the run that added them.
 
 `LAYOUT-005` added the project calendar and team detail. Both carried an
 overflow this gate could not see, for the same reason `BROWSER-002`'s

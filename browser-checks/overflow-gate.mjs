@@ -79,6 +79,11 @@ const LONG_TEAM_NAME = `Overflow Gate Team ${UNBROKEN_RUN}`;
 // The spaced words lead so the navbar still shows something a user
 // recognises once `LAYOUT-006`'s truncation takes the rest.
 const LONG_DISPLAY_NAME = `Gate Fixture ${UNBROKEN_RUN}`;
+// `LAYOUT-008`: the fifth deliberate fixture property. A sprint whose
+// name and goal both carry the run -- three sprint pages render them,
+// and none of the three was in this list until now.
+const LONG_SPRINT_NAME = `Gate Fixture Sprint ${UNBROKEN_RUN}`;
+const LONG_SPRINT_GOAL = `Ship the gate fixture work, digest ${UNBROKEN_RUN}`;
 
 function log(...args) {
   console.log('[overflow-gate]', ...args);
@@ -145,6 +150,18 @@ async function createFixtures() {
   // carries the unbroken run, and truncated to `SLUG_MAX_LEN`.
   const teamSlug = teamRes.headers.get('location').split('/teams/')[1].split(/[/?]/)[0];
 
+  // `LAYOUT-008`: a sprint, through the real form like everything else
+  // here. Its name and goal carry the run; the sprints list, the sprint
+  // detail page and the plan page all render one or both.
+  const sprintRes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints`, {
+    name: LONG_SPRINT_NAME,
+    goal: LONG_SPRINT_GOAL,
+    starts_on: '2026-09-01',
+    ends_on: '2026-09-14',
+  });
+  if (sprintRes.status !== 303) throw new Error(`create sprint: expected 303, got ${sprintRes.status}`);
+  const sprintId = sprintRes.headers.get('location').split('/sprints/')[1].split(/[/?]/)[0];
+
   const projectRes = await jar.fetchForm(`${BASE}/projects`, {
     name: LONG_PROJECT_NAME,
     description: 'Fixture project for the BROWSER-001 overflow gate.',
@@ -179,7 +196,7 @@ async function createFixtures() {
   const issue2Location = issue2Res.headers.get('location');
   const issueId = issue2Location.split('/issues/')[1].split(/[/?]/)[0];
 
-  return { cookie: jar.header(), projectId, issueId, teamSlug };
+  return { cookie: jar.header(), projectId, issueId, teamSlug, sprintId };
 }
 
 async function main() {
@@ -206,7 +223,7 @@ async function main() {
     await waitForServer(`${BASE}/login`);
     log('server ready');
 
-    const { cookie, projectId, issueId, teamSlug } = await createFixtures();
+    const { cookie, projectId, issueId, teamSlug, sprintId } = await createFixtures();
     log(`fixtures created: project=${projectId} issue=${issueId}`);
 
     const pages = {
@@ -224,6 +241,13 @@ async function main() {
       // why the fixture that exposed five sites never saw these two.
       project_calendar: `${BASE}/projects/${projectId}/calendar`,
       team_detail: `${BASE}/teams/${teamSlug}`,
+      // `LAYOUT-008`: four more absent pages. Three render the sprint
+      // name or goal; `issue_new` renders the workload hint's chips,
+      // which hold display names.
+      sprints: `${BASE}/teams/${teamSlug}/sprints`,
+      sprint_detail: `${BASE}/teams/${teamSlug}/sprints/${sprintId}`,
+      sprint_plan: `${BASE}/teams/${teamSlug}/sprints/${sprintId}/plan`,
+      issue_new: `${BASE}/projects/${projectId}/issues/new`,
       issue_detail: `${BASE}/projects/${projectId}/issues/${issueId}`,
       settings: `${BASE}/settings`,
       settings_notifications: `${BASE}/settings/notifications`,

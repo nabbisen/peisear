@@ -39,8 +39,8 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
 
   # BROWSER-001 (RFC 011 step 4): the horizontal-overflow gate. One
-  # assertion -- scrollWidth <= clientWidth -- on fourteen rendered
-  # pages at five widths (LAYOUT-005, BROWSER-002), driven by
+  # assertion -- scrollWidth <= clientWidth -- on eighteen rendered
+  # pages at five widths (LAYOUT-005, BROWSER-002, LAYOUT-008), driven by
   # browser-checks/cdp.mjs (no npm dependency; Chromium is already
   # present on ubuntu-latest). This is a gate on the same footing as
   # fmt/clippy above, deliberately
