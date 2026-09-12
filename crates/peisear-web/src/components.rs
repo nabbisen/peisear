@@ -45,7 +45,28 @@
 //!   **`break-words` alone**; `min-w-0` is the no-op here.
 //!   `overflow-wrap` inherits, so one class on the container covering
 //!   the user text is enough. Sites: the delete interstitials, search
-//!   results, the teams list.
+//!   results, the teams list, the sprints list, the `/today` and
+//!   `/settings` subtitles.
+//! - **Shape C — the container sizes itself to the text.** A
+//!   shrink-to-fit box — `inline-flex` at the one site we have;
+//!   `inline-block`, a float or a table cell would behave the same —
+//!   takes its width from its content's *min-content*. **Both of the
+//!   remedies above are inert here**: `min-w-0` does not change what an
+//!   item contributes to min-content, and `overflow-wrap: break-word`
+//!   is defined not to affect min-content at all. Needs
+//!   **`wrap-anywhere`** (`overflow-wrap: anywhere`, defined once in
+//!   `style/tailwindcss/input.css`) on the text. `anywhere` breaks in
+//!   the same places `break-word` does and differs in exactly one
+//!   respect: its soft-wrap opportunities count toward min-content.
+//!   Site: the workload hint's chips on the issue forms.
+//!
+//! **`wrap-anywhere` is not a universal replacement**, and this was
+//! measured so nobody re-derives it: with every existing
+//! `min-w-0`/`break-words` stripped, it alone clears nine of the
+//! thirteen known sites and fails two — the board's `line-clamp-2`
+//! title (a `-webkit-box` does not shrink its min-content; the
+//! column's `min-w-0` is what bounds it) and the list view's
+//! `<select>` (a control, not text). Three shapes, three rows.
 //!
 //! **This is not guarded from source.** Which text is user-supplied is
 //! not a property a scan can read off a class string

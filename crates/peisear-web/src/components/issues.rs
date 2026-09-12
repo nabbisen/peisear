@@ -566,7 +566,17 @@ fn WorkloadHint(workload: Vec<UserLoad>) -> impl IntoView {
             });
             view! {
                 <span class="inline-flex items-center gap-1">
-                    <span class="text-base-content/70">{u.display_name}</span>
+                    // `LAYOUT-008` shape C — see the "two shapes, two
+                    // remedies" note in `components.rs`. The chip row is
+                    // `inline-flex`, which is shrink-to-fit: it sizes to
+                    // its content's min-content, and neither `min-w-0` on
+                    // any item nor `break-words` on the name changes what
+                    // the name contributes to that (measured: 182 at 320
+                    // for all three). `wrap-anywhere` does, because its
+                    // soft-wrap opportunities count toward min-content —
+                    // the one respect in which it differs from
+                    // `break-word`.
+                    <span class="text-base-content/70 wrap-anywhere">{u.display_name}</span>
                     <span class="badge badge-xs badge-ghost">{snapshot}</span>
                 </span>
             }

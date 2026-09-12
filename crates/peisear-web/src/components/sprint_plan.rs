@@ -114,7 +114,11 @@ pub fn SprintPlanPage(
                 {super::breadcrumb::render_back_link(NavSection::Sprints, detail_href)}
 
                 <div class="flex items-center gap-3 mb-1">
-                    <h1 class="text-xl font-semibold">{sprint_name}</h1>
+                    // `LAYOUT-008` shape A — see the "two shapes, two
+                    // remedies" note in `components.rs`. Measured at 320:
+                    // `break-words` alone 504 (inert), `min-w-0` alone
+                    // 418, both 0.
+                    <h1 class="text-xl font-semibold min-w-0 break-words">{sprint_name}</h1>
                     <span class=status_class>{status_label}</span>
                 </div>
                 <p class="text-sm text-base-content/70 mb-4">{committed_total}</p>

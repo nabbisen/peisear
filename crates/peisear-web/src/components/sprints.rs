@@ -201,7 +201,13 @@ fn render_sprint_card(team_slug: String, s: Sprint, sum: SprintSummary) -> impl 
                aria-label=aria>
                 <div class="card-body p-4">
                     <div class="flex items-center justify-between gap-3">
-                        <div class="flex-1 min-w-0">
+                        // `LAYOUT-008` shape B — see the "two shapes, two
+                        // remedies" note in `components.rs`. The same
+                        // pattern as the teams list: the `min-w-0` was
+                        // already right and the sprint name still had no
+                        // break opportunity. `overflow-wrap` inherits, so
+                        // the dates and summary lines are covered too.
+                        <div class="flex-1 min-w-0 break-words">
                             <h3 class="font-medium">{s.name.clone()}</h3>
                             <p class="text-xs text-base-content/70 mt-1">
                                 {dates}
@@ -668,9 +674,18 @@ pub fn SprintDetailPage(
                 {super::breadcrumb::render_back_link(NavSection::Sprints, sprints_href)}
 
                 <div class="flex items-center justify-between gap-3 mb-2">
-                    <div>
+                    // `LAYOUT-008` shape A, nested twice — the first of
+                    // its kind, see the note in `components.rs`. This
+                    // bare wrapper is a flex item, and so is the `<h1>`
+                    // inside its own row, so both need `min-w-0`;
+                    // measured one step at a time at 320, the ladder is
+                    // 652 → 504 (wrapper) → 418 (h1) → 172 (h1 text) → 0.
+                    // `break-words` sits here rather than on the `<h1>`
+                    // so the goal and dates lines inherit it — they
+                    // quote the sprint's own text too.
+                    <div class="min-w-0 break-words">
                         <div class="flex items-center gap-3">
-                            <h1 class="text-xl font-semibold">{sprint_name}</h1>
+                            <h1 class="text-xl font-semibold min-w-0">{sprint_name}</h1>
                             <span class=status_class>{status_label}</span>
                         </div>
                         <p class="text-sm text-base-content/70 mt-1">{dates}</p>

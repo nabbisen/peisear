@@ -6,3 +6,20 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* LAYOUT-008: shape C's remedy, and the only class this project defines
+   by hand. Tailwind v3 has no utility for `overflow-wrap: anywhere`;
+   v4 ships one under exactly this name, so an upgrade renames nothing.
+
+   Why it is needed at all, when `break-words` exists: `anywhere` and
+   `break-word` break in the same places, but only `anywhere`'s soft-wrap
+   opportunities count toward min-content. A shrink-to-fit container
+   (`inline-flex` here) sizes itself to its content's min-content, so
+   `break-words` on the text and `min-w-0` on the items are both inert
+   there -- see the "two shapes, two remedies" note in `components.rs`,
+   shape C. */
+@layer utilities {
+  .wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+}
