@@ -39,10 +39,11 @@ jobs:
       - run: cargo clippy --workspace --all-targets -- -D warnings
 
   # BROWSER-001 (RFC 011 step 4): the horizontal-overflow gate. One
-  # assertion -- scrollWidth <= clientWidth -- on twelve rendered
-  # pages at four widths, driven by browser-checks/cdp.mjs (no npm
-  # dependency; Chromium is already present on ubuntu-latest). This
-  # is a gate on the same footing as fmt/clippy above, deliberately
+  # assertion -- scrollWidth <= clientWidth -- on fourteen rendered
+  # pages at five widths (LAYOUT-005, BROWSER-002), driven by
+  # browser-checks/cdp.mjs (no npm dependency; Chromium is already
+  # present on ubuntu-latest). This is a gate on the same footing as
+  # fmt/clippy above, deliberately
   # NOT a Rust test: see browser-checks/README.md for why it doesn't
   # run inside cargo test --workspace, and for DEC-048 condition 3's
   # own quarantine policy if this job ever needs one. No retry step

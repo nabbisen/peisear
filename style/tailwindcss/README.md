@@ -79,3 +79,14 @@ not by re-reading the diff for plausibility. A safelist that lists classes
 by hand is an exception list, and this project's history with those —
 `touch_target_scan`'s own doc comment — is why `ASSET-001` treats a
 non-empty diff as something to explain, not paper over with one.
+
+## The extractor reads comments too
+
+Tailwind's content scanner tokenises raw file text, comments included. A CSS
+property or utility name written in a Rust comment — `flex-shrink`, `shrink`
+— becomes a rule in `static/tailwind.css` even when no markup uses it
+(`LAYOUT-006` added two such rules by explaining a fix). So the vendored file
+is a **superset** of what the markup uses, not an inventory of it. When a
+regeneration diff shows a class appearing from nowhere, look for it in prose
+before looking for it in markup. Classes *disappearing* remain the trap that
+matters, as above.
