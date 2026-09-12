@@ -7,6 +7,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.33.0] — 2026-09-12
+
+No schema migration. `0017` remains the most recent.
+
+**A check now looks at the rendered page.** One assertion —
+`scrollWidth <= clientWidth`, "does this page scroll sideways" — on
+eighteen pages at five widths from 320 px up, driven by a
+dependency-free Chrome DevTools Protocol harness in the new
+`browser-checks/` directory. It runs as its own CI job, beside `fmt`
+and `clippy`; it is **not** a `cargo test` and is **not** counted in the
+suite's 256. It is the only assertion: it does not observe overlap,
+rendered target size, or anything else about how the product looks. It
+reports every failing cell rather than stopping at the first, and it was
+watched fail — on three deliberately planted defects and on the navbar
+defect below — before any of its passes were believed.
+
+**What that check could not see is this release's actual lesson.** It
+was green on a tree with three overflow defects, because every string in
+its fixture had a space at every point and no container ever received
+text it could not break. It was green on two more pages because they
+were not in its list, on a third pair because the fixture's *display
+name* also had spaces, and on the sprint pages because the fixture had
+no sprint. Four times, the gap was the fixture or the list — not the
+assertion. **What this gate sees is exactly its fixture and its page
+list**, and both are now stated so the coverage can be judged rather
+than inferred: the fixture carries a 64-character unbroken run in the
+issue title, project name, team name, display name, sprint name and
+sprint goal; the page list is eighteen.
+
+### Fixed
+
+- **Unbreakable text — a long run with no space, like a URL, a token or
+  a checksum — pushed thirteen surfaces off the side of the screen.**
+  Board columns, issue detail, both delete interstitials, search
+  results, the teams list, team detail, the project calendar, the
+  `/today` and `/settings` subtitles, the list view's assignee filter,
+  the three sprint pages and the issue form's workload chips — one of
+  them on a 1280 px desktop, the rest on phones. **Every one is
+  conditional on content**: a title or a name containing such a run.
+  Ordinary text was never affected, at any width.
+  They are **three shapes whose remedies are not interchangeable** — an
+  item whose content sets its own minimum width, an ordinary block whose
+  text overflows a correctly sized box, and a container that sizes
+  itself to its text. Applying the wrong one changes nothing and says
+  nothing, in either direction; one site in committed code already
+  carried the wrong one. The rule is now recorded once in the source,
+  next to the code it governs.
+- **Every page scrolled sideways on a 320 px phone for a user whose
+  display name ran to 21 characters.** Not unbreakable text: a
+  navigation row that could not give anything up. The account button now
+  keeps the name at every width and lets it end in an ellipsis only when
+  the row will not otherwise fit — no breakpoint, no character limit,
+  and the name is never hidden. **This is the defect the 320 px width
+  exists to catch**, and that width was held back a round until it could
+  land green rather than shipping quarantined.
+
+### Changed
+
+- **Definition of Done item 5 is Met** — the oldest condition in that
+  table, open since 0.19.1. `NFR-A11Y-006` was verified by driving each
+  flow it names to completion with emulated touch at three phone
+  viewports, and the status change both with JavaScript and with it
+  disabled. **The three limits belong with the result**: only the flows
+  the requirement names were verified, in one browser (Chromium), with
+  emulated touch rather than a device — so no soft keyboard and no
+  focus-driven viewport resize was exercised. `NFR-A11Y-007` keeps its
+  three call sites excluded by design and named in the guard: a met
+  requirement with recorded exceptions, not an unmet one.
+
+### Internal
+
+- **`RFC 011` is complete.** Its step 3 was withdrawn as mis-classified
+  (`DEC-052`): the JavaScript it would have moved into Rust was covering
+  for a server-side guarantee, and that guarantee is now asserted
+  directly — every board card renders a non-empty optimistic-lock value.
+  One test, which is the release's only addition to the suite. The other
+  three steps shipped across 0.29.0 – 0.33.0.
+- **One property is gated, and only one.** Overlap (`§10.19`) is open,
+  rendered target size is unobserved, and nothing checks anything
+  visual. The suite grew by exactly one test while thirteen surfaces
+  were fixed, which is correct rather than a gap: what was wrong was the
+  rendered layout, the gate observes it from outside the suite by
+  design, and a `cargo test` reading markup cannot see it. `§10.17` —
+  assertions that decay while staying green — is open and untouched by
+  any of this. `§10.27` is open and **passes the gate**: sprint detail's
+  title reads eight lines deep on a 320 px phone with an ordinary name,
+  because that header row squeezes the title instead of wrapping. Zero
+  overflow, and named here so ninety green cells are not read as
+  "renders well on a phone". The product still does not claim WCAG
+  conformance.
+
 ## [0.32.0] — 2026-09-09
 
 No schema migration. `0017` remains the most recent; a downgrade to 0.31.0
