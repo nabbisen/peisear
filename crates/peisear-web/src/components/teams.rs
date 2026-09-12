@@ -308,7 +308,15 @@ pub fn TeamDetailPage(
                     <li>{team_name.clone()}</li>
                 </ul></div>
 
-                <div class="flex items-center justify-between mb-2 gap-3">
+                // `LAYOUT-009` round 2 (`§10.27`): the third header of
+                // this shape, and the last. Same row, same remedy as
+                // sprint detail and issue detail — without `flex-wrap`
+                // the Settings button keeps its width and the title
+                // takes what is left, 193px and three lines at 320 for
+                // an ordinary team name. Milder than sprint detail's
+                // because one button is narrower than four, which is a
+                // difference in degree, not in kind.
+                <div class="flex flex-wrap items-center justify-between mb-2 gap-3">
                     // `LAYOUT-005` shape A — see the "two shapes, two
                     // remedies" note in `components.rs`. Confirmed by
                     // injection: **this wrapper**, not the `<h1>`, is
