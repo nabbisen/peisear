@@ -45,13 +45,49 @@
 //! 44px value already has one home in production and seven in test
 //! code; this guard must not be an eighth).
 //!
-//! **No exception list.** `TT-002` round 2 converted the last three
-//! hardcoded `min-h-11 min-w-11` literals specifically so this guard
-//! would need none (`TT-002-round2-review.md` §2). If a future change
-//! needs one, that is a finding to report, not a line to add — this
-//! module's own `checkbox-xs` history already states why: a rule that
-//! fails on a correct tree gets weakened until it passes, and an
-//! exception list is how that weakening looks in practice.
+//! **What is allowed through, and what is not** (`TT-006`, `§10.28` —
+//! this paragraph used to say "no exception list", which was true of
+//! the size clause and had stopped being true of the coverage one).
+//!
+//! The reasoning that paragraph carried still holds and is why the
+//! allowances below are three call sites rather than twelve: **a rule
+//! that fails on a correct tree gets weakened until it passes**, and an
+//! exception list is how that weakening looks in practice — this
+//! module's own `checkbox-xs` history is the worked example.
+//!
+//! The two assertions differ, and the difference is the point:
+//!
+//! - [`every_sizing_class_site_composes_the_touch_target`] — the size
+//!   clause — **needs no allowances at all.** That is what `TT-002`
+//!   round 2 bought by converting the last three hardcoded
+//!   `min-h-11 min-w-11` literals (`TT-002-round2-review.md` §2).
+//! - [`every_interactive_element_declares_a_touch_target`] — the
+//!   coverage clause, added by `TT-004` — has two kinds of allowance,
+//!   both decided by `DEC-050` and reported as findings before they
+//!   were written:
+//!   - **One declared exception**: `data-inline-text-link`, a marker in
+//!     the markup for a link inside a block of running text
+//!     (WCAG 2.5.5/2.5.8's own carve-out). It is a property of the
+//!     rule, so it is spelled in the assertion itself.
+//!   - **Two named escalation exclusions** covering three call sites —
+//!     the calendar's event chips and the per-indicator "why" toggle —
+//!     in [`is_named_escalation_exclusion`], **which is the list; read
+//!     it there.** Each arm carries its measured reason, and closing
+//!     either is deleting an arm (`TT-004` §5's decision, not this
+//!     guard's).
+//!
+//! **A declared exception is a property of the rule; a named
+//! escalation exclusion is a decision about three specific call
+//! sites.** The code draws that line deliberately and this doc keeps
+//! it: collapsing them into one word would lose what `DEC-050`
+//! settled.
+//!
+//! The old paragraph's own prediction is what happened, which is worth
+//! recording rather than quietly overwriting: a future change did need
+//! an allowance, it *was* reported as a finding (`TT-004`, three
+//! rounds), the decision *was* taken, and a line *was* added. The
+//! failure was that the doc went on denying it 470 lines above the
+//! list.
 //!
 //! **Scans string-literal contents, not lines and not raw file
 //! text.** `QA-004` found a guard satisfied by a doc-comment mention;
