@@ -1,17 +1,23 @@
 # RFC 0004d: Direct manipulation — the calendar (D-3)
 
-**Status**: **Proposed**
+**Status**: **Accepted** (2026-09-13) — implementation may begin
 **Target**: 0.36.0
-**Umbrella**: [RFC 0004](./004-direct-manipulation.md) — substep D-3
+**Umbrella**: [RFC 0004](../proposed/004-direct-manipulation.md) — substep D-3
 **Governing decisions**: `DEC-021`, `DEC-013`, `DEC-049`
 **Related requirements**: `FR-CAL-*`, `FR-DM-002/005`, `NFR-CONC-001`,
 `NFR-LANG-001`, `NFR-A11Y-001/006/007`
-**Last updated**: 2026-09-13
+**Scope as accepted**: reschedule by body drag, day view only — one of the
+D-3 sketch's three actions
+**Last updated**: 2026-09-13 — accepted; all three open questions settled below
 
 ## Summary
 
-Drag an issue block on the calendar to reschedule it, and drag its edge to
-change how long it runs.
+Drag an issue block on the calendar to reschedule it.
+
+**As accepted this substep carries one of the D-3 sketch's three actions**, and
+the two that are out are out for reasons the project's own rules give rather
+than for scope. The table below is the sketch as written; §Open questions
+settles what survives it.
 
 **This substep is the first since D-1 where the optimistic lock applies in
 full.** An issue's `planned_start_at` and `planned_end_at` live on the
@@ -27,14 +33,20 @@ drafted.
 | Sketch action | Requirement 0 |
 |---|---|
 | **Body drag → reschedule** (move both planned timestamps by the delta) | **Satisfied.** The issue edit form carries `datetime-local` inputs for `planned_start_at` and `planned_end_at`, and the handler parses both |
-| **Edge drag → resize** (change `planned_end_at`) | **Satisfied.** Same form, same field |
+| **Edge drag → resize** (change `planned_end_at`) | **Satisfied**, but the action leaves this substep for a different reason — see open question 2 |
 | **Empty-cell drag → new-issue dialog with the date pre-filled** | **Not satisfied.** The new-issue form has no planned-date prefill from a query parameter. There is no plain-form path to "create an issue already scheduled on this day" |
 
-**Recommendation: the third action leaves this substep.** Either it ships its
-own no-JS path first — a query-parameter prefill on the new-issue form, which
-is small and useful on its own — or it moves to its own substep. Folding it in
-would make the enhancement the first implementation of the action, which is
-exactly what requirement 0 exists to prevent.
+**Settled at acceptance: the third action leaves this substep.** Either it
+ships its own no-JS path first — a query-parameter prefill on the new-issue
+form, which is small and useful on its own — or it moves to its own substep.
+Folding it in would make the enhancement the first implementation of the
+action, which is exactly what requirement 0 exists to prevent.
+
+**And the second leaves it too**, for an unrelated reason that only appeared
+once the first was settled: a resize needs an edge affordance, and an edge
+affordance cannot carry `NFR-A11Y-007`'s 44 px floor inside a fifteen-minute
+block without breaking the proportionality `DEC-050`'s own exclusion exists to
+protect. Open question 2 has the argument. **What ships is the body drag.**
 
 ## Background — reconciled against the code, 2026-09-13
 
@@ -69,7 +81,11 @@ be described as how a phone user reschedules an issue.**
 
 ## Requirements
 
-1. **Reschedule and resize only.** The empty-cell action is out, per §Summary.
+1. **Reschedule only** — body drag, both timestamps by one delta. The
+   empty-cell action is out per §Summary (no plain-form path); **resize is out
+   per open question 2** (its edge affordance cannot satisfy
+   `NFR-A11Y-007` without breaking `DEC-050`'s proportionality). One of the
+   sketch's three actions ships.
 2. **No user-visible string is authored inside the new script** — the island
    pattern, as in D-2 and D-4.
 3. **The optimistic lock applies in full.** The mutation carries
@@ -91,10 +107,11 @@ be described as how a phone user reschedules an issue.**
    (requirement 2a).
 7. **Any new interactive element takes `grow()`** (`NFR-A11Y-007`), and the
    existing block exclusion is not extended.
-8. **The day view's proportional geometry is preserved.** A resize changes
-   `planned_end_at`, and the block's height must follow from the new duration
-   rather than from where the pointer stopped. The two must not be allowed to
-   disagree.
+8. **The day view's proportional geometry is preserved.** A reschedule moves
+   both timestamps by one delta, so the duration — and therefore the block's
+   height — is unchanged by definition. If a block's height changes after a
+   reschedule, the delta was applied to one timestamp and not both, which is
+   the defect this requirement exists to catch.
 9. **`calendar_surfaces`'s ten tests pass unchanged**, and the no-JS path — the
    edit form — is untouched.
 
@@ -161,28 +178,49 @@ viewer can already see.
 
 - **The empty-cell → new-issue action** (§Summary). Its no-JS prefill path
   ships first, separately, or the action does not ship.
+- **Resize** (open question 2). Its own step, if wanted, with the 44 px
+  question answered first.
 - Week and month view drag (§D1).
 - Reordering, which is D-5.
 - Drag on touch, which does not work (§Background).
 
-## Open questions
+## Open questions — all three settled at acceptance, 2026-09-13
 
-1. **Is the day view enough?** §D1 recommends it. If the value is mostly in
-   the month view — where a user plans a week at a glance — then this substep
-   is the wrong shape and should be rethought before it is accepted.
-2. **Does a 44 px drag handle fit a fifteen-minute block?** If not, the choice
-   is between a handle that violates `NFR-A11Y-007`, a block minimum that
-   breaks the proportionality `DEC-050` protected, and dragging the block body
-   with no handle at all. **Recommendation: the body, no handle** — it needs no
-   new interactive element, so the question does not arise. Resize then needs
-   an edge affordance, which is the same question again and is why resize may
-   belong in its own substep.
-3. **Fifteen-minute snap, or free?** §D2 recommends snapping and says the
-   value belongs in the island.
+**1. The day view only.** It is the one view whose geometry *is* time, so a
+drag distance maps to a duration; in week and month a drag maps to a date at
+best and a resize maps to nothing. Week and month follow once the day view's
+mechanics are proved, or not at all.
+
+*The risk in this answer, named*: if a user's planning actually happens in the
+month view, this substep buys little. Nothing measured says which view is
+used — this product has no usage telemetry and `NFR-PRIV-*` is why — so the
+choice rests on the geometry argument alone. That is a real limit on the
+confidence, not a hedge.
+
+**2. Drag the block body. No handle.** A handle would be a new interactive
+element, so `NFR-A11Y-007` would give it a 44 px floor, and a 44 px floor
+inside a fifteen-minute block would break exactly the proportionality
+`DEC-050`'s exclusion was created to protect. The body needs no new element,
+so the question does not arise.
+
+**This settles the shape of the substep, and it splits resize out.** An edge
+resize needs an edge affordance, which is question 2 again with no better
+answer available. **Resize leaves this substep**: reschedule ships first,
+body-drag only, and resize becomes its own step if it is wanted — with the
+44 px question answered before it starts, not during. So the substep as
+accepted carries **one** of the sketch's three actions, and both of the others
+are out for reasons requirement 0 and `NFR-A11Y-007` give rather than for
+scope.
+
+**3. Fifteen-minute snap, and the value lives in the island.** A calendar that
+snaps is what a user expects, and `NFR-LANG-001`'s sibling rule about where
+facts live applies to numbers as much as to copy: a `15` in the script is a
+policy decision in a file no test executes (`§10.15`). It comes from the
+JSON island the server authors.
 
 ## References
 
-- [RFC 0004](./004-direct-manipulation.md) — umbrella
+- [RFC 0004](../proposed/004-direct-manipulation.md) — umbrella
 - [RFC 0004c](./004c-direct-manipulation-sprint-plan.md) — D-4, and the touch
   finding this substep inherits
 - [RFC 0002](../done/002-calendar-surfaces.md) — the views and their geometry

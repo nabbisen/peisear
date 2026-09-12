@@ -7,9 +7,10 @@ D-3 to D-5 unscheduled
 scenarios), §32 (keyboard alternatives), §39 (Phase D plan)
 **Governing decisions**: `DEC-021` (JavaScript posture),
 `DEC-018` (board keyboard control)
-**Last updated**: 2026-09-13 — D-4 and D-3 written as `0004c` and `0004d`, in
-that release order; **one cross-cutting fact added below**, from their
-reconciliation
+**Last updated**: 2026-09-13 — D-4 and D-3 written as `0004c` and `0004d` and
+**accepted**, in that release order; **one cross-cutting fact added below**,
+from their reconciliation. Two of the D-3 sketch's three actions and all of
+the D-4 sketch's keyboard binding did not survive it
 
 > **Reconciliation note (2026-08-16).** Checked against the code before any
 > substep RFC was written, per the practice RFC 003 established. **The shape
@@ -48,8 +49,8 @@ require form submissions or page navigation:
 |---|---|---|---|
 | D-1 | Issue list, issue detail | Click status badge / segment to advance status | **Shipped** — [RFC 004a](../done/004a-direct-manipulation-status.md), 0.25.0 and 0.26.0 |
 | D-2 | Kanban (new view on project detail) | Drag issue between status columns | **Shipped** — [RFC 004b](../done/004b-direct-manipulation-board.md), 0.26.0 |
-| D-3 | Calendar | Drag issue blocks to reschedule | **Written** — [RFC 0004d](./004d-direct-manipulation-calendar.md), Proposed, 0.36.0 |
-| D-4 | Sprint plan | Drag between backlog and sprint | **Written** — [RFC 0004c](./004c-direct-manipulation-sprint-plan.md), Proposed, 0.35.0 |
+| D-3 | Calendar | Drag issue blocks to reschedule | **Accepted** — [RFC 0004d](../accepted/004d-direct-manipulation-calendar.md), 0.36.0. **Reschedule only**: the empty-cell action has no plain-form path (requirement 0), and resize's edge affordance cannot meet `NFR-A11Y-007` without breaking `DEC-050`'s block proportionality |
+| D-4 | Sprint plan | Drag between backlog and sprint | **Accepted** — [RFC 0004c](../accepted/004c-direct-manipulation-sprint-plan.md), 0.35.0. **This sketch's keyboard binding is withdrawn** — the move buttons are already the keyboard path, as on the board |
 | D-5 | Issue list | Drag rows to reorder | Not written |
 
 **Substep status, 2026-08-25.** D-1 and D-2 are done and their RFCs are in

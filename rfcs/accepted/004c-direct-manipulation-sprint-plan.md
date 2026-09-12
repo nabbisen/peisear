@@ -1,12 +1,12 @@
 # RFC 0004c: Direct manipulation — the sprint plan (D-4)
 
-**Status**: **Proposed**
+**Status**: **Accepted** (2026-09-13) — implementation may begin
 **Target**: 0.35.0
-**Umbrella**: [RFC 0004](./004-direct-manipulation.md) — substep D-4
+**Umbrella**: [RFC 0004](../proposed/004-direct-manipulation.md) — substep D-4
 **Governing decisions**: `DEC-021`, `DEC-013`
 **Related requirements**: `FR-SPR-*`, `FR-DM-002/005`, `NFR-LANG-001`,
 `NFR-A11Y-001/006/007`
-**Last updated**: 2026-09-13
+**Last updated**: 2026-09-13 — accepted; both open questions settled below
 
 ## Summary
 
@@ -158,24 +158,36 @@ the handler, as they are today.
   buttons are the touch path.
 - Any change to the sprint lifecycle or to what a completed sprint shows.
 
-## Open questions
+## Open questions — both settled at acceptance, 2026-09-13
 
-1. **Is the sketch's keyboard binding built at all?** "Tab to issue, Space to
-   move (cycles through destination columns; Enter confirms)" adds a second
-   keyboard path beside the buttons, which already satisfy requirement 1.
-   D-2's own open question 1 asked this and the answer there was to keep the
-   per-card form as the keyboard path and build no keyboard drag.
-   **Recommendation: the same answer, for the same reason** — a second
-   keyboard idiom on one screen is a cost with no user reaching for it.
-2. **Does the undo toast belong on a two-column bulk screen?** The umbrella
-   requires it of every substep. On a planning screen a user may make eight
-   moves in twenty seconds, and eight toasts stacking is worse than none.
-   **Recommendation: one toast at a time, replaced rather than stacked**, each
-   undoing its own move. Worth settling at acceptance rather than in review.
+**1. The sketch's keyboard binding is not built.** "Tab to issue, Space to
+move (cycles through destination columns; Enter confirms)" would add a second
+keyboard idiom to a screen whose buttons already satisfy requirement 1. D-2
+asked the same question and answered it the same way: the per-card form stays
+the keyboard path and no keyboard drag is built. **The sketch's binding is
+withdrawn**, and `RFC 004`'s D-4 sketch should be read with that line struck.
+
+*The reason it is withdrawn rather than deferred*: a second idiom is a
+permanent maintenance cost and a permanent thing to explain, bought for a user
+who is already served. If someone later finds a keyboard user reaching for a
+drag, that is evidence and this can be revisited on it.
+
+**2. One toast at a time, replaced rather than stacked.** The umbrella
+requires an undo toast of every substep, and on a bulk-planning screen a user
+may make eight moves in twenty seconds. Eight stacked toasts would bury the
+screen the user is working on. **Each new move replaces the toast and the
+replaced move is no longer undoable through that path** — the user can still
+issue the inverse move with the buttons, which is what requirement 4's own
+last clause already says happens after five seconds.
+
+*What this costs, stated rather than discovered*: a fast user loses the undo
+for every move but the last. That is the same bargain the five-second timeout
+already makes, applied to a second axis, and the alternative — a stack — trades
+it for a screen the user cannot see past.
 
 ## References
 
-- [RFC 0004](./004-direct-manipulation.md) — umbrella, cross-cutting
+- [RFC 0004](../proposed/004-direct-manipulation.md) — umbrella, cross-cutting
   requirements 0–9 and the substep contract
 - [RFC 0004b](../done/004b-direct-manipulation-board.md) — the substep this one
   most resembles
