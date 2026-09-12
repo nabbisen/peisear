@@ -7,7 +7,9 @@ D-3 to D-5 unscheduled
 scenarios), §32 (keyboard alternatives), §39 (Phase D plan)
 **Governing decisions**: `DEC-021` (JavaScript posture),
 `DEC-018` (board keyboard control)
-**Last updated**: 2026-08-25 — D-1 and D-2 recorded as shipped
+**Last updated**: 2026-09-13 — D-4 and D-3 written as `0004c` and `0004d`, in
+that release order; **one cross-cutting fact added below**, from their
+reconciliation
 
 > **Reconciliation note (2026-08-16).** Checked against the code before any
 > substep RFC was written, per the practice RFC 003 established. **The shape
@@ -46,8 +48,8 @@ require form submissions or page navigation:
 |---|---|---|---|
 | D-1 | Issue list, issue detail | Click status badge / segment to advance status | **Shipped** — [RFC 004a](../done/004a-direct-manipulation-status.md), 0.25.0 and 0.26.0 |
 | D-2 | Kanban (new view on project detail) | Drag issue between status columns | **Shipped** — [RFC 004b](../done/004b-direct-manipulation-board.md), 0.26.0 |
-| D-3 | Calendar | Drag issue blocks to reschedule | Not written |
-| D-4 | Sprint plan | Drag between backlog and sprint | Not written |
+| D-3 | Calendar | Drag issue blocks to reschedule | **Written** — [RFC 0004d](./004d-direct-manipulation-calendar.md), Proposed, 0.36.0 |
+| D-4 | Sprint plan | Drag between backlog and sprint | **Written** — [RFC 0004c](./004c-direct-manipulation-sprint-plan.md), Proposed, 0.35.0 |
 | D-5 | Issue list | Drag rows to reorder | Not written |
 
 **Substep status, 2026-08-25.** D-1 and D-2 are done and their RFCs are in
@@ -207,6 +209,16 @@ excludes. See open question 1, now resolved.
    introduced here — toasts, conflict notices, announcements —
    is table copy subject to the vocabulary guard. No inline
    user-visible literals.
+
+10. **A drag is not a touch path, and no substep may describe it as one.**
+   *Added 2026-09-13, from `0004c`'s reconciliation.* `static/board.js` — the
+   only drag this product ships — contains no `touchstart`, `touchmove` or
+   `pointerdown` handler, and HTML5 drag-and-drop does not fire for touch
+   input. **The board's drag therefore does not exist on a phone**, and
+   `NFR-A11Y-006`'s mobile verification passed through the form path rather
+   than the drag. Requirement 1 gives every drag a keyboard equivalent; this
+   requirement says the plain path is also the touch path, and that a substep
+   claiming phone parity from a drag is claiming something untrue.
 
 ### Substep contracts
 

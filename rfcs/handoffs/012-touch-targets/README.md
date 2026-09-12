@@ -9,6 +9,8 @@ Handoffs implementing [RFC 012](../../done/012-touch-target-conformance.md).
 | TT-003 | [TT-003](./TT-003-guard.md) | Step 3 — the size guard with no exception list, `§10.16`'s filesystem→block reopening, the test-side literals, and the unscoped-assertion sweep. **Closes RFC 012.** | 0.31.0 | TT-002 |
 | REL-0.31.0 | [REL-0.31.0](./REL-0.31.0-release-candidate.md) | Release candidate — RFC 012 in full. Ordinary cut from `main`'s tip; the milestone is real and the entry must not spend the word "met". | 0.31.0 | TT-003 |
 | TT-004 | [TT-004](./TT-004-one-rule-one-exception.md) | `DEC-050` — the named limit was measured and was not narrow. One rule, one declared exception, guard extended to every interactive element. | 0.32.0 |
+| TT-005 | [TT-005](./TT-005-adjacency-measured.md) | `§10.19` — measure the two `<summary>` overlaps that nobody has looked at, and settle whether the adjacency clause is violated. **A measurement, not a fix**, and either answer is a result. | 0.34.0 |
+| TT-006 | [TT-006](./TT-006-the-guard-doc-denies-its-own-exception-list.md) | `§10.28` — the guard's module doc says it has no exception list; it has had one since `TT-004`. One paragraph, doc only. | 0.34.0 |
 
 **Step 1 is the architect's own work and has no handoff** — `NFR-A11Y-007` and
 external design `§5.7` carry the amended rule, and `DEC-049` records it.

@@ -40,6 +40,8 @@ Open for review. Design may still change.
 | ID | Title | Target |
 |----|-------|--------|
 | 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) — umbrella; substeps get their own RFCs | — |
+| 004c | [Direct manipulation — the sprint plan (D-4)](./proposed/004c-direct-manipulation-sprint-plan.md) — the no-JS path already ships; **the first substep with no optimistic lock to carry** | 0.35.0 |
+| 004d | [Direct manipulation — the calendar (D-3)](./proposed/004d-direct-manipulation-calendar.md) — the lock applies in full; the sketch's third action has no no-JS path and leaves the substep | 0.36.0 |
 
 ## Implemented
 
