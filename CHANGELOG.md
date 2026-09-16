@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.34.0] — 2026-09-16
+
+No schema migration. `0017` remains the most recent.
+
+**A small release, and a different shape from the last four**: one fix a
+user can see, and two corrections to things this project had published
+about itself.
+
+### Fixed
+
+- **Page headers that pair a title with actions now wrap, instead of
+  squeezing the title into whatever the buttons leave.** On a 320 px
+  phone a sprint detail page rendered an ordinary sprint name in a
+  **54 px column, eleven lines deep**, because its four controls kept
+  their width and the title took the remainder; it now takes the full
+  width in two lines with the actions below it, every control still
+  44 px. Issue detail and team detail carried the same shape and take
+  the same fix. **Nothing overflowed before and nothing overflows
+  now** — this was never horizontal scroll, which is why the overflow
+  gate that shipped in 0.33.0 was green on it throughout, and why a page
+  passing that gate is not the same as a page that reads well on a
+  phone.
+
+### Corrected
+
+- **Two defects this project recorded did not exist.** An internal
+  register entry listed three overlapping pairs of controls, found by a
+  browser inspection in September. One is real (below). **The two
+  involving a disclosure toggle could not be reproduced — neither on the
+  current code nor on the code they were originally measured from**,
+  rebuilt and served with the stylesheets it shipped with, by two
+  independent probes, each checked by planting an overlap of a known
+  size and confirming it was found. Both are withdrawn. **What produced
+  the original measurements is still not identified**, and is recorded
+  that way: a withdrawal that invents an explanation is worth less than
+  one that admits it has none.
+- **The 0.31.0 entry said the touch-target rule's adjacency half — that
+  two touch targets must not overlap — was "structurally guaranteed for
+  every control now in the tree". The word that was wrong is "every".**
+  There is one overlap in the product: segmented buttons in a `join`
+  group share a **1 px column**, because that shared border is how the
+  grouping is drawn. It is deliberate, it measures the same on every
+  version tried across seven releases, and a tap on the seam reaches one
+  of the two segments — an adjacent member of the group being aimed at,
+  not some unrelated control. A 1 px seam between visually contiguous
+  segments is not something a user can encounter as a defect; the claim
+  was simply broader than the truth, and the requirement now states the
+  exception instead of denying it.
+
+### Internal
+
+- **No new guard came out of any of this, deliberately.** Overlap is not
+  becoming an automated assertion: the measurement found exactly one
+  class of overlap and it is intentional, so such a check would ship
+  with an exception on its first day — which is the pattern that turns a
+  rule into something that gets weakened until it passes.
+- A structural guard's own doc comment claimed the guard had **no
+  exception list** while it had carried one for two releases. The list
+  is three call sites, each decided deliberately and each documented
+  beside the code it excludes; the defect was the denial, not the list.
+  Corrected — documentation only, no behaviour change.
+
+**What a reader should not conclude.** The test suite did not grow this
+release, and this time neither did the product's behaviour beyond the
+header fix; that is what this release is, rather than something missing
+from it. Two register entries remain open, both by decision rather than
+by schedule: the shipped JavaScript is executed by no test and cannot
+usefully be, and assertions that quietly decay while still passing have
+no check that would catch them. The product still does not claim WCAG
+conformance.
+
 ## [0.33.0] — 2026-09-12
 
 No schema migration. `0017` remains the most recent.
