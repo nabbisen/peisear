@@ -48,13 +48,13 @@ about itself.
   every control now in the tree". The word that was wrong is "every".**
   There is one overlap in the product: segmented buttons in a `join`
   group share a **1 px column**, because that shared border is how the
-  grouping is drawn. It is deliberate, it measures the same on every
-  version tried across seven releases, and a tap on the seam reaches one
-  of the two segments — an adjacent member of the group being aimed at,
-  not some unrelated control. A 1 px seam between visually contiguous
-  segments is not something a user can encounter as a defect; the claim
-  was simply broader than the truth, and the requirement now states the
-  exception instead of denying it.
+  grouping is drawn. It is deliberate, it measures the same on both
+  versions tried — ten days and three releases apart — and a tap on the
+  seam reaches one of the two segments, an adjacent member of the group
+  being aimed at rather than some unrelated control. A 1 px seam between
+  visually contiguous segments is not something a user can encounter as
+  a defect; the claim was simply broader than the truth, and the
+  requirement now states the exception instead of denying it.
 
 ### Internal
 

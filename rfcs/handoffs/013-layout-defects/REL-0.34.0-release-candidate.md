@@ -52,7 +52,7 @@ published record. Five things, in this order.
    never been corrected here. **There is one overlap in the product**:
    segmented buttons in a `join` group share a 1 px column, because the
    grouping is made by collapsing their adjacent borders. It is deliberate, it
-   is the same on every tree tried across seven releases, and a tap on the seam
+   is the same on both trees tried, three releases apart, and a tap on the seam
    reaches one of the two — an adjacent member of the group the user was aiming
    at. The requirement now says so rather than claiming otherwise. **Correct
    the claim plainly and do not inflate it**: a 1 px seam between visually
