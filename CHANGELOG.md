@@ -12,12 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 No schema migration. `0017` remains the most recent. No product behaviour
 changed this release — not a line.
 
-**This is a privacy milestone and a published correction, and the milestone
-needs its bound stated in the same breath every time it's mentioned.** The
-product did not become more private this release. Every boundary this work
-touched already refused correctly, each measured before a test was written
-for it. What changed is that the behaviour is now asserted, and that this
-project's own record stopped disagreeing with itself.
+**This release records a privacy milestone and corrects a published claim.**
+The product did not become more private: every boundary this work touched
+already refused correctly, each measured before a test was written for it.
+What changed is that the behaviour is now asserted, and that this project's
+own record stopped disagreeing with itself.
 
 ### Changed
 
@@ -42,9 +41,9 @@ project's own record stopped disagreeing with itself.
 
 ### Internal
 
-- **Five assertions, in one sentence**: the unauthenticated case for two of
-  the three personal-data endpoints, and the cross-user attempt on the
-  three capacity-row mutations.
+- **Five new assertions**: the unauthenticated case for two of the three
+  personal-data endpoints, and the cross-user attempt on each of the three
+  capacity-row mutations.
 
 **What a reader should not conclude.** No behaviour changed, no schema
 changed, and nothing a user can see is different. **The suite grew by
