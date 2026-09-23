@@ -276,6 +276,10 @@ would have diverged the client from the server silently. Both are in
 there is the work. The added bullet in §6 above is why neither the suite nor
 the evidence run saw it.
 
+*The sequence requirement this round produced is now standing, in
+`static/README.md`, beside the files it governs (`§10.15`, amended
+2026-09-24).*
+
 **Round 2 is done and approved** (`4d1b1f9`,
 `.git-exclude/reviewed/PLAN-002-round2-review.md`). Each column now renders
 `data-plan-row-move`, so the script inverts nothing; the drop posts the
