@@ -10,7 +10,7 @@ regression test for a property that already holds.**
 
 | ID | Link | What | Release |
 |---|---|---|---|
-| PRIV-001 | [PRIV-001](./PRIV-001-the-seven-missing-assertions.md) | The seven assertions, each paired with a known positive, and the module doc whose stated reason for their absence is wrong | 0.37.0 |
+| PRIV-001 | [PRIV-001](./PRIV-001-the-seven-missing-assertions.md) | ✅ Done. **Five, not the seven I counted** — two Class A cells were already covered and the implementer checked rather than inherited. Each new refusal paired with a known positive; the module doc corrected. Planting showed the three capacity tests load-bearing, and measured `§10.3`'s two independent barriers for the first time. | 0.37.0 |
 
 ## The classification is the useful part
 
