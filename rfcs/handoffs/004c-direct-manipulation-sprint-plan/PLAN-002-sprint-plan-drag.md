@@ -224,6 +224,14 @@ empty-state messages (§4.4), and one message for an undo that did not apply.
 - **Report the new `DEC-007` count.** It was 256 and it will move; no new test
   *file* is needed, so the command block itself should not change. If you find
   it does, that is an escalation.
+- **Exercise a sequence, not only states.** *Added 2026-09-23 after round 1,
+  which passed every gate and still shipped a defect this line would have
+  caught.* The optimistic update exists so a user can act repeatedly without a
+  page load, so the evidence run must do that: move a row, move **the same row**
+  back, move it in again, and undo — **with no reload anywhere in the middle** —
+  reporting the row's marker, its column and its form action at each step, then
+  reloading once at the end to show the server agrees. A run that reloads
+  between directions verifies two first moves, not a round trip.
 - `fmt`, `clippy`, three consecutive `cargo test --workspace`.
 
 ## 7. Escalate rather than deciding
@@ -256,3 +264,14 @@ workspace runs.
 
 **Who holds what**: dev team — all of §4. Architect — §3.4's limit once the
 evidence is in, and anything §7 raises. **What's next**: review request.
+
+---
+
+## Round 2 — 2026-09-23
+
+Round 1 passed every gate and shipped a defect: a row moved by drag could not
+be dragged again until a reload, and the stale form action that failure masked
+would have diverged the client from the server silently. Both are in
+`.git-exclude/reviewed/PLAN-002-review.md` with the runs that show them; §6
+there is the work. The added bullet in §6 above is why neither the suite nor
+the evidence run saw it.
