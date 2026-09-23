@@ -1268,16 +1268,27 @@ The system SHOULD provide direct manipulation for: status change from a
 list, kanban column drag, calendar block drag, sprint-planning drag, and
 issue list reordering.
 *Source*: `SPEC §21.2`, `SPEC §39`. *Acceptance*: `status_control` (12),
-`board_keyboard` (6). *Status*: **Partial — two of five**. Kanban column
+`board_keyboard` (6). *Status*: **Partial — four of five**. Kanban column
 drag has shipped since approximately 0.6.0; status change from the issue
 list and issue detail shipped at 0.25.0 (no-JS path) and 0.26.0 (in-place),
-RFC 004a. Calendar block drag (D-3), sprint-planning drag (D-4) and issue
-list reordering (D-5) remain Deferred — no substep RFC written.
+RFC 004a; sprint-planning drag (D-4) shipped at 0.35.0, RFC 0004c; calendar
+block drag (D-3) shipped at 0.36.0, RFC 0004d. **Issue list reordering
+(D-5) is the one surface not built**, and a recommendation to retire it
+rather than build it is with the owner as of 0.38.0.
 *Priority*: P2.
 *Correction*: recorded `Deferred` at 0.19.1 while one of its five surfaces
 was in production. That misstatement is what allowed `FR-DM-002` to be
 violated unnoticed — a requirement believed dormant is not checked. The
 per-surface breakdown above exists so the same reading cannot recur.
+*Correction (2026-09-24)*: **it recurred anyway, in this requirement, and
+the per-surface breakdown did not prevent it.** Between 0.35.0 and 0.38.0
+this entry read `two of five` and described D-3 and D-4 as Deferred with
+`no substep RFC written`, while both RFCs were written, accepted and
+shipped — and their RFCs sat in `accepted/` for four releases after the
+fact. A finer-grained record is still a record: it prevents a wrong
+*reading*, not a stale *writing*. What the first correction should have
+added, and this one does, is the obligation: **a release that ships a
+surface amends this line in the same change.**
 
 **FR-DM-002 — Keyboard parity**
 Every direct-manipulation action MUST have a keyboard equivalent

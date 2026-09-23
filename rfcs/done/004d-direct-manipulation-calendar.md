@@ -1,6 +1,8 @@
 # RFC 0004d: Direct manipulation — the calendar (D-3)
 
-**Status**: **Accepted** (2026-09-13) — implementation may begin
+**Status**: **Done** — shipped at 0.36.0.
+(Accepted 2026-09-13; moved to `done/` 2026-09-24, having sat in
+`accepted/` for four releases after shipping.)
 **Target**: 0.36.0
 **Umbrella**: [RFC 0004](../proposed/004-direct-manipulation.md) — substep D-3
 **Governing decisions**: `DEC-021`, `DEC-013`, `DEC-049`

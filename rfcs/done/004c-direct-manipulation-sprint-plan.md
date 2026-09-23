@@ -1,6 +1,8 @@
 # RFC 0004c: Direct manipulation — the sprint plan (D-4)
 
-**Status**: **Accepted** (2026-09-13) — implementation may begin
+**Status**: **Done** — shipped at 0.35.0.
+(Accepted 2026-09-13; moved to `done/` 2026-09-24, having sat in
+`accepted/` for four releases after shipping.)
 **Target**: 0.35.0
 **Umbrella**: [RFC 0004](../proposed/004-direct-manipulation.md) — substep D-4
 **Governing decisions**: `DEC-021`, `DEC-013`

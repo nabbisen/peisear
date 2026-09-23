@@ -1,7 +1,7 @@
 # CAL-003 — drag a day-view block to reschedule it
 
 **Target release**: 0.36.0. **Governing RFC**:
-[RFC 0004d](../../accepted/004d-direct-manipulation-calendar.md) (D-3), under
+[RFC 0004d](../../done/004d-direct-manipulation-calendar.md) (D-3), under
 [RFC 0004](../../proposed/004-direct-manipulation.md)'s cross-cutting
 requirements 0–10. **Depends on**: nothing.
 

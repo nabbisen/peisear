@@ -1,7 +1,7 @@
 # Handoffs — RFC 004d, the calendar (D-3)
 
 Implementation companion for
-[RFC 004d](../../accepted/004d-direct-manipulation-calendar.md), target
+[RFC 004d](../../done/004d-direct-manipulation-calendar.md), target
 **0.36.0**.
 
 **This file is an index, not a status board.** It lists what each handoff

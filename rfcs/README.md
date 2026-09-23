@@ -31,8 +31,8 @@ Design settled. Implementation may begin.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 004c | [Direct manipulation — the sprint plan (D-4)](./accepted/004c-direct-manipulation-sprint-plan.md) — the no-JS path already ships; **the first substep with no optimistic lock to carry**. Accepted 2026-09-13; the sketch's keyboard binding withdrawn | 0.35.0 |
-| 004d | [Direct manipulation — the calendar (D-3)](./accepted/004d-direct-manipulation-calendar.md) — the lock applies in full. Accepted 2026-09-13 carrying **one of the sketch's three actions**: the empty-cell action has no plain-form path, and resize cannot have a 44 px affordance without breaking the block proportionality `DEC-050` protects | 0.36.0 |
+| 004c | [Direct manipulation — the sprint plan (D-4)](./done/004c-direct-manipulation-sprint-plan.md) — the no-JS path already ships; **the first substep with no optimistic lock to carry**. **Shipped at 0.35.0.** Accepted 2026-09-13; the sketch's keyboard binding withdrawn | 0.35.0 |
+| 004d | [Direct manipulation — the calendar (D-3)](./done/004d-direct-manipulation-calendar.md) — the lock applies in full. **Shipped at 0.36.0.** Accepted 2026-09-13 carrying **one of the sketch's three actions**: the empty-cell action has no plain-form path, and resize cannot have a 44 px affordance without breaking the block proportionality `DEC-050` protects | 0.36.0 |
 
 RFC 011 closed at 0.33.0 and RFC 012 at 0.32.0; both moved to `done/`.
 

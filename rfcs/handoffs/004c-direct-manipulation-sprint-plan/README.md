@@ -1,7 +1,7 @@
 # Handoffs — RFC 004c, the sprint plan (D-4)
 
 Implementation companion for
-[RFC 004c](../../accepted/004c-direct-manipulation-sprint-plan.md), target
+[RFC 004c](../../done/004c-direct-manipulation-sprint-plan.md), target
 **0.35.0**.
 
 **This file is an index, not a status board.** It lists what each handoff
