@@ -781,6 +781,11 @@ impl BacklogIssueRow {
 /// `in_progress` issue is already committed to work in a way a
 /// backlog candidate isn't.
 ///
+/// **Returned in display order**: project name, then severity
+/// (urgent, high, medium, low), then newest first. The severity term
+/// is applied here in Rust, not in the SQL -- see the comments at the
+/// `ORDER BY` and on `Priority::severity_rank` for why.
+///
 /// Filters are applied in SQL via the `(?n IS NULL OR col = ?n)`
 /// idiom already used by `user_capacities`'s period-overlap
 /// queries, rather than fetched-then-filtered in Rust — the
@@ -815,7 +820,11 @@ pub async fn backlog_for_team(
               OR (?4 = 'unassigned' AND i.assignee_id IS NULL)
               OR i.assignee_id = ?4
           )
-        ORDER BY p.name ASC, i.priority DESC, i.created_at DESC
+        -- Priority is deliberately absent from this ORDER BY: it is a TEXT
+        -- column, so `priority DESC` sorts alphabetically (urgent, medium,
+        -- low, high -- `high` last). Severity is applied in Rust below with
+        -- `Priority::severity_rank`. Do not put it back here.
+        ORDER BY p.name ASC, i.created_at DESC
         "#,
     )
     .bind(team_id)
@@ -824,9 +833,26 @@ pub async fn backlog_for_team(
     .bind(filter.assignee_id.as_deref())
     .fetch_all(pool)
     .await?;
-    rows.into_iter()
+    let mut backlog = rows
+        .into_iter()
         .map(BacklogIssueRow::into_backlog_row)
-        .collect()
+        .collect::<StorageResult<Vec<_>>>()?;
+    // `PLAN-003`: the query orders by project name, then newest first;
+    // this puts severity between them. **`sort_by` is stable, and that is
+    // load-bearing**: it is what keeps `created_at DESC` within each
+    // (project, priority) group, so only the priority term's behaviour
+    // changes. `project_name` compares as byte order, which is what
+    // SQLite's default BINARY collation did for `p.name` (no column in
+    // this schema declares another), so this cannot reorder projects.
+    backlog.sort_by(|a, b| {
+        a.project_name.cmp(&b.project_name).then_with(|| {
+            a.issue
+                .priority
+                .severity_rank()
+                .cmp(&b.issue.priority.severity_rank())
+        })
+    });
+    Ok(backlog)
 }
 
 // ──────────────────────────────────────────────────────────────

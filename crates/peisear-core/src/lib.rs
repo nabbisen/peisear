@@ -154,6 +154,33 @@ impl Priority {
         [Self::Low, Self::Medium, Self::High, Self::Urgent]
     }
 
+    /// Severity as a sort key: **smaller is more severe** --
+    /// `Urgent` 0, `High` 1, `Medium` 2, `Low` 3. This is the one place
+    /// severity order is written down (`PLAN-003`).
+    ///
+    /// It exists because `issues.priority` is a TEXT column, so SQL
+    /// cannot order by severity: `ORDER BY priority DESC` sorts
+    /// alphabetically -- `urgent medium low high`, with `high` last,
+    /// below `low` -- and the sprint-plan backlog shipped that way from
+    /// `PLAN-001`. Anything that needs severity order sorts in Rust
+    /// with this key (use a *stable* sort to keep a query's own
+    /// tiebreak). A SQL `CASE` would fix the symptom but write the
+    /// order a second time in a second language, with nothing keeping
+    /// the two equal.
+    ///
+    /// Not the enum's declaration order (`Low` .. `Urgent`, ascending)
+    /// and not a derived `Ord`; a new priority is added here, in
+    /// [`Priority::all`], and in the `match`es above, and the compiler
+    /// finds every one of them.
+    pub fn severity_rank(self) -> u8 {
+        match self {
+            Self::Urgent => 0,
+            Self::High => 1,
+            Self::Medium => 2,
+            Self::Low => 3,
+        }
+    }
+
     /// daisyUI badge class mapping — kept in core so any future
     /// read-only surface (email summary, future client, etc.) can
     /// reuse the canonical severity palette.

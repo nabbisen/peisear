@@ -169,13 +169,10 @@ fn apply_filter_and_sort(
     match query.sort.as_deref() {
         Some(SORT_PRIORITY) => {
             // Stable sort preserves the storage-default order
-            // among issues with equal priority.
-            issues.sort_by_key(|i| match i.priority {
-                Priority::Urgent => 0u8,
-                Priority::High => 1,
-                Priority::Medium => 2,
-                Priority::Low => 3,
-            });
+            // among issues with equal priority. The severity order
+            // itself lives in `Priority::severity_rank` (`PLAN-003`),
+            // not here.
+            issues.sort_by_key(|i| i.priority.severity_rank());
         }
         Some(SORT_CREATED) => {
             issues.sort_by_key(|i| std::cmp::Reverse(i.created_at));

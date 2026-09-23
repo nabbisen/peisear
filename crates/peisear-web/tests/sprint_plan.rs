@@ -1046,3 +1046,243 @@ async fn remove_form_markup_carries_the_same_filter_fields_as_add() {
         );
     }
 }
+
+// ──────────────────────────────────────────────────────────────
+// `PLAN-003` — the backlog column's order.
+//
+// `backlog_for_team` used to `ORDER BY p.name ASC, i.priority DESC,
+// i.created_at DESC`. `priority` is TEXT, so `DESC` is alphabetical:
+// `urgent medium low high` -- `high` last, below `low`. Everything
+// above asserts membership, never sequence, which is why this
+// survived from `PLAN-001`. Every assertion below is by **relative
+// byte offset in the rendered body**, not `body.contains`, which
+// passes on any order (`PLAN-002` round 2's first attempt failed
+// review for exactly that).
+// ──────────────────────────────────────────────────────────────
+
+/// Pin `created_at` explicitly: it is a one-second `CURRENT_TIMESTAMP`
+/// and these tests insert rows in microseconds, so "which is newer"
+/// would otherwise be a coin flip.
+async fn pin_created_at(app: &TestApp, issue_id: &str, created_at: &str) {
+    sqlx::query("UPDATE issues SET created_at = ?1 WHERE id = ?2")
+        .bind(created_at)
+        .bind(issue_id)
+        .execute(&app.db)
+        .await
+        .expect("pin created_at");
+}
+
+fn offset_of(body: &str, needle: &str) -> usize {
+    body.find(needle)
+        .unwrap_or_else(|| panic!("{needle:?} not found in body: {body}"))
+}
+
+/// Byte offsets of `titles` in `body`, in the order given -- so a
+/// caller asserts `offsets.windows(2).all(|w| w[0] < w[1])` to say
+/// "these appear in this sequence".
+fn offsets_of(body: &str, titles: &[&str]) -> Vec<usize> {
+    titles.iter().map(|t| offset_of(body, t)).collect()
+}
+
+/// The backlog reads urgent, high, medium, low. Created in the
+/// *reverse* of severity, so neither insertion order nor a bare
+/// `created_at` sort can produce the expected sequence by accident.
+#[tokio::test]
+async fn backlog_reads_urgent_high_medium_low() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+
+    for (title, priority) in [
+        ("PLAN3-low", Priority::Low),
+        ("PLAN3-medium", Priority::Medium),
+        ("PLAN3-high", Priority::High),
+        ("PLAN3-urgent", Priority::Urgent),
+    ] {
+        insert_open_issue(&app, &project_id, &admin_id, title, priority, Some(1)).await;
+    }
+
+    let resp = app.server.get(&plan_url(&slug, &sprint_id)).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+    let offsets = offsets_of(
+        &body,
+        &["PLAN3-urgent", "PLAN3-high", "PLAN3-medium", "PLAN3-low"],
+    );
+    assert!(
+        offsets.windows(2).all(|w| w[0] < w[1]),
+        "the backlog must read urgent, high, medium, low -- the old TEXT `DESC` \
+         gave urgent, medium, low, high: {offsets:?}"
+    );
+    assert!(
+        offset_of(&body, "PLAN3-high") < offset_of(&body, "PLAN3-low"),
+        "`high` must no longer sort below `low`"
+    );
+}
+
+/// `p.name ASC` still groups first; severity orders *within* a
+/// project. Beta's urgent issue is more severe than everything in
+/// Alpha and must still come after all of it, and Alpha's `high` must
+/// come before Alpha's `low` (alphabetically the old order had them the
+/// other way round).
+#[tokio::test]
+async fn backlog_groups_by_project_name_then_severity() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    // Created Beta first, so neither project creation order nor id order
+    // is what puts Alpha first.
+    let beta = create_team_project(&app.db, &admin_id, &team_id, "Beta").await;
+    let alpha = create_team_project(&app.db, &admin_id, &team_id, "Alpha").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+
+    insert_open_issue(
+        &app,
+        &beta,
+        &admin_id,
+        "GRP-beta-urgent",
+        Priority::Urgent,
+        Some(1),
+    )
+    .await;
+    insert_open_issue(
+        &app,
+        &beta,
+        &admin_id,
+        "GRP-beta-medium",
+        Priority::Medium,
+        Some(1),
+    )
+    .await;
+    insert_open_issue(
+        &app,
+        &alpha,
+        &admin_id,
+        "GRP-alpha-low",
+        Priority::Low,
+        Some(1),
+    )
+    .await;
+    insert_open_issue(
+        &app,
+        &alpha,
+        &admin_id,
+        "GRP-alpha-high",
+        Priority::High,
+        Some(1),
+    )
+    .await;
+
+    let body = app.server.get(&plan_url(&slug, &sprint_id)).await.text();
+    let offsets = offsets_of(
+        &body,
+        &[
+            "GRP-alpha-high",
+            "GRP-alpha-low",
+            "GRP-beta-urgent",
+            "GRP-beta-medium",
+        ],
+    );
+    assert!(
+        offsets.windows(2).all(|w| w[0] < w[1]),
+        "expected Alpha (high, low) then Beta (urgent, medium): {offsets:?}"
+    );
+}
+
+/// Within one (project, priority) group the order is still
+/// `created_at DESC` -- newest first -- because the Rust re-sort is
+/// *stable*; only the priority term's behaviour changed. The two
+/// `medium` issues are separated in time by a `high` one, so the
+/// group is not simply adjacent in creation order.
+#[tokio::test]
+async fn backlog_keeps_newest_first_within_a_priority() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+
+    let older = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "REC-medium-older",
+        Priority::Medium,
+        Some(1),
+    )
+    .await;
+    let mid = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "REC-high",
+        Priority::High,
+        Some(1),
+    )
+    .await;
+    let newer = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "REC-medium-newer",
+        Priority::Medium,
+        Some(1),
+    )
+    .await;
+    pin_created_at(&app, &older, "2026-01-01 09:00:00").await;
+    pin_created_at(&app, &mid, "2026-01-02 09:00:00").await;
+    pin_created_at(&app, &newer, "2026-01-03 09:00:00").await;
+
+    let body = app.server.get(&plan_url(&slug, &sprint_id)).await.text();
+    let offsets = offsets_of(&body, &["REC-high", "REC-medium-newer", "REC-medium-older"]);
+    assert!(
+        offsets.windows(2).all(|w| w[0] < w[1]),
+        "expected high, then the two mediums newest first: {offsets:?}"
+    );
+}
+
+/// The priority *filter* is an equality test on the same query and
+/// is unaffected: each band returns only itself.
+#[tokio::test]
+async fn backlog_priority_filter_returns_only_the_chosen_band() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+
+    let bands = [
+        ("low", "FLT-low", Priority::Low),
+        ("medium", "FLT-medium", Priority::Medium),
+        ("high", "FLT-high", Priority::High),
+        ("urgent", "FLT-urgent", Priority::Urgent),
+    ];
+    for (_, title, priority) in bands {
+        insert_open_issue(&app, &project_id, &admin_id, title, priority, Some(1)).await;
+    }
+
+    for (param, wanted, _) in bands {
+        let body = app
+            .server
+            .get(&format!("{}?priority={param}", plan_url(&slug, &sprint_id)))
+            .await
+            .text();
+        for (_, title, _) in bands {
+            assert_eq!(
+                body.contains(title),
+                title == wanted,
+                "`?priority={param}` must show {wanted} and nothing else; {title} presence wrong"
+            );
+        }
+    }
+}
