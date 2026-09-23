@@ -4,7 +4,7 @@
 **Date**: 2026-08-25
 **Priority**: P1 — 0.26.0
 **Governing RFC**: [004b](../../done/004b-direct-manipulation-board.md),
-under [RFC 004](../../proposed/004-direct-manipulation.md)'s cross-cutting
+under [RFC 004](../../done/004-direct-manipulation.md)'s cross-cutting
 contract
 **Depends on**: STATUS-002 (landed, both rounds)
 

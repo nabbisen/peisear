@@ -2,7 +2,7 @@
 
 **Target release**: 0.36.0. **Governing RFC**:
 [RFC 0004d](../../done/004d-direct-manipulation-calendar.md) (D-3), under
-[RFC 0004](../../proposed/004-direct-manipulation.md)'s cross-cutting
+[RFC 0004](../../done/004-direct-manipulation.md)'s cross-cutting
 requirements 0–10. **Depends on**: nothing.
 
 ## 1. What ships, and what was already cut from it

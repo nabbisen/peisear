@@ -1,8 +1,9 @@
 # RFC 0004: Direct manipulation
 
-**Status**: Proposed
+**Status**: **Done** — closed 2026-09-24. Four substeps shipped; **D-5 is
+retired by owner decision** and no `0004e` exists (`ORD-001`, 0.38.0).
 **Target**: Phase D, across releases — D-1 at 0.25.0/0.26.0, D-2 at 0.26.0,
-D-3 to D-5 unscheduled
+D-4 at 0.35.0, D-3 at 0.36.0, D-5 retired
 **Related spec sections**: §22-27 (direct manipulation
 scenarios), §32 (keyboard alternatives), §39 (Phase D plan)
 **Governing decisions**: `DEC-021` (JavaScript posture),
@@ -51,7 +52,7 @@ require form submissions or page navigation:
 | D-2 | Kanban (new view on project detail) | Drag issue between status columns | **Shipped** — [RFC 004b](../done/004b-direct-manipulation-board.md), 0.26.0 |
 | D-3 | Calendar | Drag issue blocks to reschedule | **Shipped** at 0.36.0 — [RFC 0004d](../done/004d-direct-manipulation-calendar.md), 0.36.0. **Reschedule only**: the empty-cell action has no plain-form path (requirement 0), and resize's edge affordance cannot meet `NFR-A11Y-007` without breaking `DEC-050`'s block proportionality |
 | D-4 | Sprint plan | Drag between backlog and sprint | **Shipped** at 0.35.0 — [RFC 0004c](../done/004c-direct-manipulation-sprint-plan.md), 0.35.0. **This sketch's keyboard binding is withdrawn** — the move buttons are already the keyboard path, as on the board |
-| D-5 | Issue list | Drag rows to reorder | Not written |
+| D-5 | Issue list | Drag rows to reorder | **Retired** 2026-09-24, owner-approved — no `0004e`. The product already answers *what is next* with priority, sprint membership and planned dates, and **the sprint is the better answer**: named, shared, time-boxed, on its own page. A manual order would be a second answer with no name in the UI and no visible provenance. Requirement 10 settles the affordance — on a phone this is per-row buttons, which do not order a long backlog. `ORD-001` removes `position`. Reversible; the revisit trigger is in `FR-DM-001` |
 
 **Substep status, 2026-08-25.** D-1 and D-2 are done and their RFCs are in
 `done/`. Two things they settled that D-3 through D-5 inherit rather than
@@ -411,7 +412,31 @@ A drag handle that appears where a button does not is a second, divergent
 answer to "may this user move this issue" — the shape RFC 009 §D1 exists to
 prevent. Derive from the same flag the buttons use.
 
-#### D-5: Issue list reorder
+#### D-5: Issue list reorder — **RETIRED 2026-09-24, owner-approved**
+
+> **Not built, and the sketch below is wrong in three places.** Left visible
+> because the reasoning against it is worth more than the sketch was.
+>
+> **Why retired.** The product already answers *what do we do next* with
+> priority bands, sprint membership and planned dates, and **the sprint is the
+> better answer** — named, shared, time-boxed, on a page of its own. A manual
+> order would be a second answer to the same question with no name in the UI
+> and no visible provenance. Cross-cutting requirement 10 settles the
+> affordance: a drag is not a touch path, so on a phone this is per-row
+> buttons, which do not order a long backlog at any width.
+>
+> **Where the sketch was wrong**, found by reviewing it against the code
+> (`.git-exclude/tasks/architect/020-…`, `021-…`): (1) *per-user ordering*
+> would fork the board, which already renders `position` to everyone;
+> (2) *"a global column on `issues` doesn't work"* — the column exists, is
+> scoped `(project_id, status)`, and is written on insert; (3) the endpoint
+> taking *the full new order* would rewrite many rows, and `0017`'s trigger
+> would bump every one of their `updated_at` values, raising conflict errors
+> on issues nobody touched.
+>
+> **What ships instead**: `ORD-001` removes `position` and orders both list
+> queries by `created_at DESC`. `FR-DM-001` is amended to four surfaces and
+> carries the revisit trigger.
 
 - Drag rows in the issue list to reorder.
 - Order is per-user (the user's reading order; doesn't
@@ -436,7 +461,7 @@ Within Phase D, ship in this order:
 3. **D-4** (no schema; reuses D-2's column-style picker for
    keyboard parity).
 4. **D-3** (uses calendar from RFC 0002; no schema).
-5. **D-5** (introduces the per-user-order schema).
+5. ~~**D-5** (introduces the per-user-order schema).~~ **Retired** — no schema was ever needed; `ORD-001` removes the column instead.
 
 D-3 has the most complex interaction and benefits from D-1
 & D-2 having validated the optimistic-lock + rollback path.

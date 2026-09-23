@@ -1263,18 +1263,30 @@ endpoint of this shape is why one authorisation test remains disabled
 
 ### 4.16 Direct manipulation — `FR-DM`
 
-**FR-DM-001 — Five direct-manipulation surfaces**
+**FR-DM-001 — Four direct-manipulation surfaces**
 The system SHOULD provide direct manipulation for: status change from a
-list, kanban column drag, calendar block drag, sprint-planning drag, and
-issue list reordering.
+list, kanban column drag, calendar block drag, and sprint-planning drag.
+*Amended 2026-09-24, owner-approved*: this read **five** surfaces and
+included *issue list reordering*. That fifth surface is retired — see the
+Status note. The other four are unchanged and all four ship, so the
+amendment closes this requirement rather than narrowing it to stay open.
 *Source*: `SPEC §21.2`, `SPEC §39`. *Acceptance*: `status_control` (12),
-`board_keyboard` (6). *Status*: **Partial — four of five**. Kanban column
+`board_keyboard` (6). *Status*: **Met** — all four surfaces ship. Kanban column
 drag has shipped since approximately 0.6.0; status change from the issue
 list and issue detail shipped at 0.25.0 (no-JS path) and 0.26.0 (in-place),
 RFC 004a; sprint-planning drag (D-4) shipped at 0.35.0, RFC 0004c; calendar
-block drag (D-3) shipped at 0.36.0, RFC 0004d. **Issue list reordering
-(D-5) is the one surface not built**, and a recommendation to retire it
-rather than build it is with the owner as of 0.38.0.
+block drag (D-3) shipped at 0.36.0, RFC 0004d. **Issue list reordering (D-5) is
+retired by owner decision, 2026-09-24** — four of the five surfaces ship and
+the fifth will not be built. The product already answers *what is next* with
+priority bands, sprint membership and planned dates, and the sprint is the
+better answer: named, shared, time-boxed, and on a page of its own. A manual
+order would be a second answer to the same question with no name in the UI
+and no visible provenance, and RFC 0004's cross-cutting requirement 10 means
+that on a phone it would be per-row buttons rather than a drag. `ORD-001`
+(0.38.0) removes the `position` column the surface would have used.
+**Revisit if** a user asks for manual ordering, or if the sprint-plan
+backlog's filters prove insufficient for grooming; reversing costs the same
+migration, inverted.
 *Priority*: P2.
 *Correction*: recorded `Deferred` at 0.19.1 while one of its five surfaces
 was in production. That misstatement is what allowed `FR-DM-002` to be

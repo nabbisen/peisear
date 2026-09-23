@@ -4,7 +4,7 @@
 (Accepted 2026-09-13; moved to `done/` 2026-09-24, having sat in
 `accepted/` for four releases after shipping.)
 **Target**: 0.36.0
-**Umbrella**: [RFC 0004](../proposed/004-direct-manipulation.md) — substep D-3
+**Umbrella**: [RFC 0004](../done/004-direct-manipulation.md) — substep D-3
 **Governing decisions**: `DEC-021`, `DEC-013`, `DEC-049`
 **Related requirements**: `FR-CAL-*`, `FR-DM-002/005`, `NFR-CONC-001`,
 `NFR-LANG-001`, `NFR-A11Y-001/006/007`
@@ -222,7 +222,7 @@ JSON island the server authors.
 
 ## References
 
-- [RFC 0004](../proposed/004-direct-manipulation.md) — umbrella
+- [RFC 0004](../done/004-direct-manipulation.md) — umbrella
 - [RFC 0004c](./004c-direct-manipulation-sprint-plan.md) — D-4, and the touch
   finding this substep inherits
 - [RFC 0002](../done/002-calendar-surfaces.md) — the views and their geometry

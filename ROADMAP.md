@@ -70,26 +70,26 @@ out across five phases, one per minor release:
   - **PR2 — Sprint planning page** *(target: 0.20.0)*.
     `/teams/{slug}/sprints/{id}/plan` with backlog → sprint
     list-based assignment UI. (DnD lands in Phase D.)
-    Detailed design: [`rfcs/001-sprint-planning-page.md`](./rfcs/accepted/001-sprint-planning-page.md).
+    Detailed design: [`rfcs/001-sprint-planning-page.md`](./rfcs/done/001-sprint-planning-page.md).
   - **PR3 — Calendar surfaces** *(target: 0.21.0)*.
     `/today/calendar` (personal axis) and
     `/projects/{id}/calendar` (project axis). No team axis
     per §10.2. Read-only display in this PR; DnD is Phase D.
-    Detailed design: [`rfcs/002-calendar-surfaces.md`](./rfcs/accepted/002-calendar-surfaces.md).
+    Detailed design: [`rfcs/002-calendar-surfaces.md`](./rfcs/done/002-calendar-surfaces.md).
   - **PR4 — Inbox refinements** *(target: 0.22.0)*.
     Notification preferences UI, mark-all-read, snooze.
-    Detailed design: [`rfcs/003-inbox-refinements.md`](./rfcs/accepted/003-inbox-refinements.md).
+    Detailed design: [`rfcs/003-inbox-refinements.md`](./rfcs/done/003-inbox-refinements.md).
 - **Phase D — Direct manipulation** *(target: 0.23.0)*. The
   five direct-manipulation surfaces (status click toggle,
   kanban DnD, calendar DnD, sprint-plan DnD, list reorder)
   rolled out in five sub-steps D-1 through D-5.
-  Detailed design: [`rfcs/004-direct-manipulation.md`](./rfcs/proposed/004-direct-manipulation.md).
+  Detailed design: [`rfcs/004-direct-manipulation.md`](./rfcs/done/004-direct-manipulation.md).
 - **Phase E — Quality consolidation** *(now 0.27.0)*.
   ABDD QA + Security QA. The §11.5 authorization assertions
   and §21.4 optimistic-lock assertions reach full coverage on
   all relevant endpoints. WCAG AA contrast, mobile completion
   for the four key flows, language consistency.
-  Detailed design: [`rfcs/005-quality-consolidation.md`](./rfcs/proposed/005-quality-consolidation.md).
+  Detailed design: [`rfcs/005-quality-consolidation.md`](./rfcs/done/005-quality-consolidation.md).
 
 *Phase target versions above are historical. The current plan is
 the milestone and release tables below, agreed 2026-08-01.*
@@ -116,14 +116,14 @@ Building M2 first would mean auditing it twice.
 
 | Version | Content | RFC | Milestone |
 |---|---|---|---|
-| **0.20.0** | Compliance pass — four P0/P1 corrections | [007](./rfcs/accepted/007-compliance-pass.md) | M1 |
-| **0.21.0** | i18n architecture + vocabulary guard | [006](./rfcs/proposed/006-i18n-architecture.md) | M1 |
-| **0.22.0** | Sprint planning page | [001](./rfcs/accepted/001-sprint-planning-page.md) | M2 |
-| **0.23.0** | Calendar surfaces | [002](./rfcs/accepted/002-calendar-surfaces.md) | M2 |
-| **0.24.0** | Inbox refinements | [003](./rfcs/accepted/003-inbox-refinements.md) | M2 |
+| **0.20.0** | Compliance pass — four P0/P1 corrections | [007](./rfcs/done/007-compliance-pass.md) | M1 |
+| **0.21.0** | i18n architecture + vocabulary guard | [006](./rfcs/done/006-i18n-architecture.md) | M1 |
+| **0.22.0** | Sprint planning page | [001](./rfcs/done/001-sprint-planning-page.md) | M2 |
+| **0.23.0** | Calendar surfaces | [002](./rfcs/done/002-calendar-surfaces.md) | M2 |
+| **0.24.0** | Inbox refinements | [003](./rfcs/done/003-inbox-refinements.md) | M2 |
 | **0.25.0** | Explainability — indicator basis, chart alternatives | 008 *(to write)* | M3 |
-| **0.26.0** | Direct manipulation | [004](./rfcs/proposed/004-direct-manipulation.md) | M4 |
-| **0.27.0** | Quality consolidation | [005](./rfcs/proposed/005-quality-consolidation.md) | M5 |
+| **0.26.0** | Direct manipulation | [004](./rfcs/done/004-direct-manipulation.md) | M4 |
+| **0.27.0** | Quality consolidation | [005](./rfcs/done/005-quality-consolidation.md) | M5 |
 
 Development continues in the 0.x series; no 1.0 transition is
 scheduled. That is an owner decision and is not inferable from RFC

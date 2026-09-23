@@ -162,7 +162,7 @@ Required — this RFC touches both §11.5 and §21.4.
 
 ## References
 
-- [RFC 004 — direct manipulation](../proposed/004-direct-manipulation.md) (DEV-002 is its
+- [RFC 004 — direct manipulation](../done/004-direct-manipulation.md) (DEV-002 is its
   no-JS baseline for D-2)
 - [RFC 006 — i18n architecture](./006-i18n-architecture.md) (the
   vocabulary guard that would have caught DEV-004's defects mechanically)

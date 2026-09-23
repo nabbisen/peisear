@@ -2,7 +2,7 @@
 
 **Target release**: 0.35.0. **Governing RFC**:
 [RFC 0004c](../../done/004c-direct-manipulation-sprint-plan.md) (D-4),
-under [RFC 0004](../../proposed/004-direct-manipulation.md)'s cross-cutting
+under [RFC 0004](../../done/004-direct-manipulation.md)'s cross-cutting
 requirements 0–10. **Depends on**: nothing.
 
 ## 1. What ships

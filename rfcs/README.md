@@ -29,10 +29,7 @@ the owner approves, the dev team implements.
 
 Design settled. Implementation may begin.
 
-| ID | Title | Target |
-|----|-------|--------|
-| 004c | [Direct manipulation — the sprint plan (D-4)](./done/004c-direct-manipulation-sprint-plan.md) — the no-JS path already ships; **the first substep with no optimistic lock to carry**. **Shipped at 0.35.0.** Accepted 2026-09-13; the sketch's keyboard binding withdrawn | 0.35.0 |
-| 004d | [Direct manipulation — the calendar (D-3)](./done/004d-direct-manipulation-calendar.md) — the lock applies in full. **Shipped at 0.36.0.** Accepted 2026-09-13 carrying **one of the sketch's three actions**: the empty-cell action has no plain-form path, and resize cannot have a 44 px affordance without breaking the block proportionality `DEC-050` protects | 0.36.0 |
+**Nothing is currently accepted and unbuilt.**
 
 RFC 011 closed at 0.33.0 and RFC 012 at 0.32.0; both moved to `done/`.
 
@@ -42,14 +39,16 @@ RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 Open for review. Design may still change.
 
-| ID | Title | Target |
-|----|-------|--------|
-| 004 | [Direct manipulation](./proposed/004-direct-manipulation.md) — umbrella; substeps get their own RFCs | — |
+**Nothing is currently proposed.** RFC 004, the last one here, closed
+2026-09-24.
 
 ## Implemented
 
 | ID | Title | Shipped in |
 |----|-------|------------|
+| 004 | [Direct manipulation](./done/004-direct-manipulation.md) — umbrella, **closed 2026-09-24**. Four of its five substeps shipped; **D-5 (issue list reorder) is retired by owner decision** rather than built — the sprint is the product's better answer to *what is next*, and requirement 10 makes the drag desktop-only. `ORD-001` removes the column it would have used | 0.25.0–0.36.0, closed 0.38.0 |
+| 004d | [Direct manipulation — the calendar (D-3)](./done/004d-direct-manipulation-calendar.md) — *has handoffs*; the lock applies in full. Accepted carrying **one of the sketch's three actions** | 0.36.0 |
+| 004c | [Direct manipulation — the sprint plan (D-4)](./done/004c-direct-manipulation-sprint-plan.md) — *has handoffs*; **the first substep with no optimistic lock to carry**; the sketch's keyboard binding withdrawn | 0.35.0 |
 | 011 | [Browser verification](./done/011-browser-verification.md) — *has handoffs*; asked whether a headless browser was worth buying to test the shipped JavaScript. **Answer: no for the JavaScript, yes for the layout** — a category the RFC never considered, and where it found four defects in three days | 0.29.0–0.33.0 |
 | 012 | [Touch target conformance](./done/012-touch-target-conformance.md) — *has handoffs*; `§33.2` amended twice (`DEC-049`, `DEC-050`), the guard corrected three times, and the named limit measured and removed | 0.31.0 (rule + 139 controls), 0.32.0 (every interactive element) |
 | 004b | [Direct manipulation — the board (D-2)](./done/004b-direct-manipulation-board.md) — *has handoffs*; the drag already shipped, this brought its copy under the vocabulary check | 0.26.0 |
@@ -92,6 +91,7 @@ the RFC number they are keyed to.
 | [`handoffs/014-vendored-assets/`](./handoffs/014-vendored-assets/README.md) | `DEC-051` — Tailwind and DaisyUI move out of two CDNs into `static/` |
 | [`handoffs/016-privacy-coverage/`](./handoffs/016-privacy-coverage/README.md) | not RFC-governed — `NFR-PRIV-008`'s coverage, target 0.37.0 |
 | [`handoffs/017-backlog-ordering/`](./handoffs/017-backlog-ordering/README.md) | **Not RFC-governed** — `PLAN-003`, the sprint-plan backlog's priority sort, target 0.38.0 |
+| [`handoffs/018-issue-ordering/`](./handoffs/018-issue-ordering/README.md) | RFC 0004 — `ORD-001` **retires substep D-5** and removes `position`, target 0.38.0 |
 | [`handoffs/015-mobile-completion/`](./handoffs/015-mobile-completion/README.md) | **Not RFC-governed** — closing `NFR-A11Y-006`, unverified since Phase E |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
