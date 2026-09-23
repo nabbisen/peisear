@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.35.0] — 2026-09-23
+
+No schema migration. `0017` remains the most recent.
+
+**The first release in six with something a user can see.** 0.29.0 was the
+last one with an `### Added` section; the five between it and 0.34.0 were
+defect and quality work, for good reasons each of those entries gives in
+full, and 0.34.0's baseline named the gap as a thing to decide rather than
+drift into. This is that decision taking effect — said once, plainly, and
+without relitigating the five releases that found real defects and were
+worth doing on their own terms.
+
+### Added
+
+- **On the sprint planning screen, an issue can now be dragged from the
+  team backlog into the sprint, and back out.** The move shows immediately
+  and the request goes out behind it, so a planner working through a
+  backlog is not waiting for a page load per decision. A five-second Undo
+  follows each move. **The move buttons stay** — they are the path without
+  JavaScript, the path from the keyboard, and the path on a phone: HTML
+  drag-and-drop does not fire for touch input, so the drag is a pointer
+  affordance layered beside those three paths, not a replacement for any
+  of them, and nothing here can be dragged on a phone. A planner using
+  this from a phone is using exactly the buttons that were already there.
+- **One toast at a time.** A planner making several moves in a few seconds
+  sees each move replace the last toast rather than stack it, so the
+  undoable window stays legible instead of burying the screen being
+  worked on. The replaced move is no longer undoable through the toast —
+  the move buttons still reverse it — the same bargain the five-second
+  timeout already makes.
+
+### Fixed
+
+- **Removing an issue from a sprint with the button silently discarded
+  the active backlog filter, while adding one kept it.** The remove
+  form omitted three fields its own handler already accepted. A planner
+  who had filtered the backlog to one project lost that filter every
+  time they took something out of the sprint — a fix a user feels on its
+  own, independently of the drag above.
+
+**What a reader should not conclude.** **The drag itself is executed by no
+test.** The suite grew by six and none of them performs a drag — they
+assert the markup, the copy island and the server, the same standing limit
+this project has recorded for its other scripts. **Nothing about
+concurrency changed.** Two planners editing the same sprint converge
+rather than conflict, because the row being moved carries no version to
+compare against; there is no new conflict path here and none was added.
+`§10.15` and `§10.17` remain the two open register entries, both open by
+decision rather than by schedule. The product still does not claim WCAG
+conformance.
+
 ## [0.34.0] — 2026-09-16
 
 No schema migration. `0017` remains the most recent.
