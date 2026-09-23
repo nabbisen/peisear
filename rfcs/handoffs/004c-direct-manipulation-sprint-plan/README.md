@@ -18,6 +18,7 @@ one is reviewed.
 | # | Handoff | Covers | Depends on |
 |---|---|---|---|
 | PLAN-002 | [PLAN-002](./PLAN-002-sprint-plan-drag.md) | The drag itself: the server-rendered attachment attribute, the copy island, `static/plan.js`, the one-at-a-time toast, and the filter-field defect the reconciliation turned up | — |
+| REL-0.35.0 | [REL-0.35.0](./REL-0.35.0-release-candidate.md) | Release candidate — `PLAN-002`, rounds 1 and 2. **The first release in six with something a user can see**, and the changelog's trap is claiming reach the drag does not have. | PLAN-002 |
 
 ## What is different about this substep, in one place
 
