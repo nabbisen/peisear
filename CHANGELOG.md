@@ -7,6 +7,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.36.0] — 2026-09-23
+
+No schema migration. `0017` remains the most recent. The reschedule writes
+columns migration `0016` added at 0.23.0; nothing new was needed.
+
+### Added
+
+- **On the calendar's day view, an issue block can now be dragged up or down
+  to move the appointment to a new time.** Both planned timestamps move
+  together, so the appointment keeps its length and the block keeps its
+  height. Movement snaps to fifteen minutes. A five-second Undo follows each
+  move. **This is the day view only** — the one view whose vertical axis is
+  time, so a drag distance means a duration; in the week and month views it
+  would mean nothing — **and it moves an appointment, it does not resize
+  one**: a resize needs a grab handle, and one large enough to meet this
+  product's own 44 px touch-target floor would not fit inside a
+  fifteen-minute block without destroying the proportionality that makes the
+  day view readable.
+- **There is no control on the page for this move** — the calendar shows
+  links, nothing else. Rescheduling without a pointer means opening the issue
+  and editing its planned dates, exactly as it was before this release —
+  including on a phone, where drag-and-drop does not fire at all.
+
+### Changed
+
+- **A reschedule can now conflict, the same way an issue edit or a board
+  drag already could.** If someone else changed the issue while the calendar
+  was open, the move is refused and the page reloads showing the current
+  state, rather than overwriting their change. This is not a new hazard —
+  it is the same optimistic-lock behaviour this product has had for
+  releases, reaching a third surface.
+
+### Internal
+
+- The move goes through a narrow endpoint that carries only the two
+  timestamps and the version stamp, beside the existing edit-form path
+  rather than replacing it.
+
+**What a reader should not conclude.** **The drag itself is executed by no
+test.** Eleven new tests assert the endpoint, the markup and the copy; none
+performs a drag — the same standing limit this project has recorded for its
+other scripts. **No schema changed, and no data moved.** `§10.15` and
+`§10.17` remain the two open register entries, both open by decision. The
+product still does not claim WCAG conformance.
+
+**This is a specific, bounded addition to one view, not a direction of
+travel.** It is the second drag feature in two releases, and the remaining
+direct-manipulation substep is unscheduled and needs schema — nothing about
+that has been decided, and this entry does not imply otherwise. The calendar
+still does one thing more than it did last week, not a programme of things.
+
 ## [0.35.0] — 2026-09-23
 
 No schema migration. `0017` remains the most recent.
