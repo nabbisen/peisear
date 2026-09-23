@@ -535,6 +535,11 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::SprintPlanNotEditableMessage => {
             "This sprint's plan can no longer be edited.".to_string()
         }
+        MessageKey::PlanMovedToSprintAnnouncement => "Moved to the sprint.".to_string(),
+        MessageKey::PlanMovedToBacklogAnnouncement => "Moved to the backlog.".to_string(),
+        MessageKey::PlanUndoUnavailableMessage => {
+            "This move could not be undone. Reload to see the current state.".to_string()
+        }
         MessageKey::NewTeamLink => "+ New team".to_string(),
         MessageKey::TeamsEmptyIntro => {
             "Teams group people who collaborate on projects. You can keep working \

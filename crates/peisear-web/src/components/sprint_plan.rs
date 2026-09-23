@@ -1,19 +1,23 @@
-//! Sprint planning page (`PLAN-001` / RFC 001).
+//! Sprint planning page (`PLAN-001` / RFC 001, `PLAN-002` / RFC 004c
+//! D-4).
 //!
 //! `SprintPlanPage` for `/teams/{slug}/sprints/{sprint_id}/plan` —
 //! a two-column bulk-assign surface: a filterable, team-wide
 //! backlog on the left, the sprint's currently-committed items on
-//! the right, with button-driven moves between the two (no drag and
-//! drop; that's Phase D-4, RFC 004).
+//! the right, with button-driven moves between the two, and —
+//! `PLAN-002` — a row dragged from one column to the other as a
+//! second affordance over the same two endpoints. The buttons are
+//! the no-JavaScript path, the keyboard path and the touch path;
+//! `plan.js` enhances rather than replaces them.
 //!
 //! ## Three shapes, not two (`PLAN-001-review.md` §3.2)
 //!
-//! | Sprint status | Role | Backlog column | Move buttons |
-//! |---|---|---|---|
-//! | Planned | admin / member | shown | shown |
-//! | Planned | viewer | shown | hidden |
-//! | Active | any | shown | hidden |
-//! | Completed | any | hidden | hidden |
+//! | Sprint status | Role | Backlog column | Move buttons | Drag (`PLAN-002`) |
+//! |---|---|---|---|---|
+//! | Planned | admin / member | shown | shown | attached |
+//! | Planned | viewer | shown | hidden | not attached |
+//! | Active | any | shown | hidden | not attached |
+//! | Completed | any | hidden | hidden | not attached |
 //!
 //! `can_move` and `show_backlog` are independent flags for exactly
 //! this reason: a viewer or an active sprint suppress move forms
@@ -22,7 +26,9 @@
 //! hides the backlog outright — RFC 001's own reasoning, "re-opening
 //! a completed sprint to add issues is not a flow we support." The
 //! sprint items column is unconditional; only the backlog and the
-//! move forms vary.
+//! move forms vary. `plan.js`'s drag attachment reads the same
+//! `can_move` flag the move buttons do (`PLAN-002` §3.3) — never a
+//! second expression that happens to agree with it today.
 
 use axum::response::Html;
 use leptos::prelude::*;
@@ -89,14 +95,23 @@ pub fn SprintPlanPage(
 
     let backlog_section = render_backlog(
         backlog,
+        add_action.clone(),
+        remove_action.clone(),
+        can_move,
+        active_project.clone(),
+        active_priority.clone(),
+        active_assignee.clone(),
+    );
+
+    let sprint_items_section = render_sprint_items(
+        sprint_items,
         add_action,
+        remove_action,
         can_move,
         active_project,
         active_priority,
         active_assignee,
     );
-
-    let sprint_items_section = render_sprint_items(sprint_items, remove_action, can_move);
 
     view! {
         <AppShell title=t(MessageKey::SprintPlanPageTitle { sprint_name: sprint_name.clone() })
@@ -123,6 +138,18 @@ pub fn SprintPlanPage(
                 </div>
                 <p class="text-sm text-base-content/70 mb-4">{committed_total}</p>
 
+                // `PLAN-002` §4.2: a polite and an assertive live
+                // region, the same pair and the same ids `issues.rs`
+                // renders for `dm.js`/`board.js` (`QA-011` §2,
+                // `NFR-A11Y-008`) — a successful move announces here
+                // politely; a failed undo announces assertively.
+                // Rendered unconditionally, same as `issues.rs`'s
+                // pair: empty and hidden until a script writes to
+                // them, harmless on the three shapes where nothing
+                // ever does.
+                <div id="status-announcements" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
+                <div id="status-announcements-assertive" role="alert" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
+
                 // The filter only ever narrows the backlog, so it
                 // shares `show_backlog`'s gate rather than its own.
                 {show_backlog.then_some(filter_form)}
@@ -131,6 +158,15 @@ pub fn SprintPlanPage(
                     {show_backlog.then_some(backlog_section)}
                     {sprint_items_section}
                 </main>
+
+                // `PLAN-002` §4.3/§4.5: the copy island and
+                // `plan.js`'s own tag, gated on `can_move` (§6: "the
+                // script tag asserted, and absent where it would have
+                // nothing to enhance") — the other three shapes in
+                // the table above render no `data-plan-move`/
+                // `data-plan-drop` markers at all, so there is
+                // nothing here for the script to attach to.
+                {can_move.then(render_plan_copy_assets)}
             </div>
         </AppShell>
     }
@@ -205,6 +241,42 @@ fn render_filter_form(
     }
 }
 
+/// `PLAN-002` §3.5: `plan.js`'s copy island, the same JSON-island
+/// pattern `dm.js` and `board.js` use
+/// (`render_status_enhancement_assets`/`render_board_copy_assets` in
+/// `issues.rs`) — every string the script can show is rendered here
+/// through `peisear_i18n` rather than authored in the `.js` file
+/// itself (`static_js_scan` covers `static/*.js`; §6 requires no
+/// allowlist entry for `plan.js`).
+///
+/// **Deliberately no `outcomes` block.** `dm.js`'s and `board.js`'s
+/// islands carry one because both surfaces have an optimistic lock to
+/// conflict over; this one does not (§1's third bullet —
+/// `sprint_issues` has no `updated_at`, so there is no 409 branch to
+/// classify). A future reader should find this sentence rather than a
+/// missing-looking key.
+///
+/// Six keys: two "moved to" announcements, the undo label, the two
+/// empty-state messages (reused byte-for-byte from the no-JavaScript
+/// page, not restated), and one message for an undo that did not
+/// apply.
+fn render_plan_copy_assets() -> impl IntoView {
+    let copy = serde_json::json!({
+        "movedToSprint": t(MessageKey::PlanMovedToSprintAnnouncement),
+        "movedToBacklog": t(MessageKey::PlanMovedToBacklogAnnouncement),
+        "undoLabel": t(MessageKey::UndoButtonLabel),
+        "noBacklogIssuesMessage": t(MessageKey::NoBacklogIssuesMessage),
+        "noSprintItemsMessage": t(MessageKey::NoSprintItemsInPlanMessage),
+        "undoUnavailableMessage": t(MessageKey::PlanUndoUnavailableMessage),
+    })
+    .to_string();
+
+    view! {
+        <script type="application/json" id="plan-copy" inner_html=copy></script>
+        <script src="/static/plan.js" defer=true></script>
+    }
+}
+
 fn row_aria(title: &str, points: Option<i64>, in_backlog: bool) -> String {
     let points = points.unwrap_or(0);
     if in_backlog {
@@ -220,9 +292,35 @@ fn row_aria(title: &str, points: Option<i64>, in_backlog: bool) -> String {
     }
 }
 
+/// `PLAN-002` §3.3/§4.1: the row and column markers `plan.js` reads,
+/// every one of them gated on the same `can_move` the move buttons
+/// read — never a second expression that happens to agree with it
+/// today. `None` on any of these omits the attribute entirely, which
+/// is what makes the four-shape table in the module doc true of the
+/// rendered markup, not just of the buttons.
+///
+/// - A row's `data-plan-move` names the action dropping it elsewhere
+///   performs — `"add"` for a backlog row, `"remove"` for a sprint
+///   item — and doubles as the value a destination column's
+///   `data-plan-drop` must match for the drop to be accepted, which
+///   is also what makes dropping a row back onto its own column a
+///   no-op: a backlog row's `"add"` never matches the backlog
+///   column's own `data-plan-drop="remove"`.
+/// - `data-plan-project-id` is carried on *every* draggable row,
+///   backlog or sprint, because undoing a remove needs it
+///   (`plan_add`'s handler requires `project_id`) and the row's own
+///   form doesn't always have it — `PlanRemoveForm` has no such
+///   field, so a sprint row moved to the backlog and then undone has
+///   nowhere else to read it from.
+/// - `data-plan-list`/`data-plan-empty` mark the `<ul>` and the
+///   empty-state `<p>`, whichever one SSR rendered (`§2d`: exactly
+///   one of the two exists at load) — `plan.js` needs to find and
+///   replace whichever is there when a column's emptiness changes
+///   (§4's "handle the empty and no-longer-empty cases").
 fn render_backlog(
     backlog: Vec<BacklogRow>,
     add_action: String,
+    remove_action: String,
     can_move: bool,
     active_project: String,
     active_priority: String,
@@ -258,10 +356,26 @@ fn render_backlog(
                 }
             });
 
+            // `PLAN-002` §3.2: the row (`<li>`), not a new grip
+            // control, is the drag source; `draggable="false"` on the
+            // inner `<a>` is the fix for the nested-drag-source trap
+            // `board.js` already paid for (`DEV-002-005-review.md`
+            // §1.3) -- an `<a href>` is draggable by browser default.
+            let draggable = can_move.then_some("true");
+            let link_draggable = can_move.then_some("false");
+            let plan_issue_id = can_move.then(|| issue.id.clone());
+            let plan_project_id = can_move.then(|| issue.project_id.clone());
+            let plan_move = can_move.then_some("add");
+
             view! {
-                <li class="py-2 flex items-center justify-between gap-3" aria-label=aria>
+                <li class="py-2 flex items-center justify-between gap-3" aria-label=aria
+                    draggable=draggable
+                    data-plan-issue-id=plan_issue_id
+                    data-plan-project-id=plan_project_id
+                    data-plan-move=plan_move>
                     <div class="min-w-0 flex-1">
-                        <a href=href class=grow("link link-hover font-medium truncate flex items-center")>{issue.title}</a>
+                        <a href=href draggable=link_draggable
+                           class=grow("link link-hover font-medium truncate flex items-center")>{issue.title}</a>
                         <div class="flex items-center gap-2 text-xs text-base-content/70 mt-0.5">
                             <span>{row.project_name}</span>
                             <span class="badge badge-xs badge-ghost">{priority_label}</span>
@@ -274,15 +388,27 @@ fn render_backlog(
         })
         .collect_view();
 
+    // `PLAN-002` §4.1: the backlog column is the drop target for a
+    // sprint row (`data-plan-move="remove"`), so its own marker is
+    // `data-plan-drop="remove"` and its URL is `remove_action` --
+    // `plan.js` reads this to undo a just-applied add, too (the
+    // opposite column's URL from wherever a row currently sits).
+    let plan_drop = can_move.then_some("remove");
+    let plan_url = can_move.then_some(remove_action);
+    let plan_list_marker = can_move.then_some("");
+    let plan_empty_marker = can_move.then_some("");
+
     view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm" aria-labelledby="backlog-heading">
-            <div class="card-body">
+            <div class="card-body" data-plan-drop=plan_drop data-plan-url=plan_url>
                 <h2 id="backlog-heading" class="text-base font-medium">{t(MessageKey::BacklogHeading)}</h2>
                 {(!has).then(|| view! {
-                    <p class="text-sm text-base-content/70 italic">{t(MessageKey::NoBacklogIssuesMessage)}</p>
+                    <p class="text-sm text-base-content/70 italic" data-plan-empty=plan_empty_marker>
+                        {t(MessageKey::NoBacklogIssuesMessage)}
+                    </p>
                 })}
                 {has.then(|| view! {
-                    <ul class="divide-y">{rows.clone()}</ul>
+                    <ul class="divide-y" data-plan-list=plan_list_marker>{rows.clone()}</ul>
                 })}
             </div>
         </section>
@@ -291,8 +417,12 @@ fn render_backlog(
 
 fn render_sprint_items(
     sprint_items: Vec<(String, String, String, Option<i64>, String)>,
+    add_action: String,
     remove_action: String,
     can_move: bool,
+    active_project: String,
+    active_priority: String,
+    active_assignee: String,
 ) -> impl IntoView {
     let has = !sprint_items.is_empty();
     let rows = sprint_items
@@ -304,10 +434,18 @@ fn render_sprint_items(
                 .unwrap_or_default();
             let aria = row_aria(&title, effort, false);
 
+            // `PLAN-002` §2c/§4.6: this form used to omit the three
+            // filter fields the add form already carries, so a
+            // button-driven remove silently dropped the backlog
+            // filter. `PlanRemoveForm` already accepts all three
+            // (`#[serde(default)]`) -- only the markup was short.
             let move_form = can_move.then(|| {
                 view! {
                     <form method="post" action=remove_action.clone()>
                         <input type="hidden" name="issue_id" value=issue_id.clone()/>
+                        <input type="hidden" name="project" value=active_project.clone()/>
+                        <input type="hidden" name="priority" value=active_priority.clone()/>
+                        <input type="hidden" name="assignee" value=active_assignee.clone()/>
                         <button type="submit" class=grow("btn btn-ghost btn-xs")>
                             {t(MessageKey::MoveToBacklogButton)}
                         </button>
@@ -315,10 +453,21 @@ fn render_sprint_items(
                 }
             });
 
+            let draggable = can_move.then_some("true");
+            let link_draggable = can_move.then_some("false");
+            let plan_issue_id = can_move.then(|| issue_id.clone());
+            let plan_project_id = can_move.then(|| project_id.clone());
+            let plan_move = can_move.then_some("remove");
+
             view! {
-                <li class="py-2 flex items-center justify-between gap-3" aria-label=aria>
+                <li class="py-2 flex items-center justify-between gap-3" aria-label=aria
+                    draggable=draggable
+                    data-plan-issue-id=plan_issue_id
+                    data-plan-project-id=plan_project_id
+                    data-plan-move=plan_move>
                     <div class="min-w-0 flex-1">
-                        <a href=href class=grow("link link-hover font-medium truncate flex items-center")>{title}</a>
+                        <a href=href draggable=link_draggable
+                           class=grow("link link-hover font-medium truncate flex items-center")>{title}</a>
                         <div class="text-xs text-base-content/70 mt-0.5 tabular-nums">{points_text}</div>
                     </div>
                     {move_form}
@@ -327,15 +476,25 @@ fn render_sprint_items(
         })
         .collect_view();
 
+    // The sprint column is the drop target for a backlog row
+    // (`data-plan-move="add"`), so its marker is
+    // `data-plan-drop="add"` and its URL is `add_action`.
+    let plan_drop = can_move.then_some("add");
+    let plan_url = can_move.then_some(add_action);
+    let plan_list_marker = can_move.then_some("");
+    let plan_empty_marker = can_move.then_some("");
+
     view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm" aria-labelledby="sprint-items-heading">
-            <div class="card-body">
+            <div class="card-body" data-plan-drop=plan_drop data-plan-url=plan_url>
                 <h2 id="sprint-items-heading" class="text-base font-medium">{t(MessageKey::SprintItemsHeading)}</h2>
                 {(!has).then(|| view! {
-                    <p class="text-sm text-base-content/70 italic">{t(MessageKey::NoSprintItemsInPlanMessage)}</p>
+                    <p class="text-sm text-base-content/70 italic" data-plan-empty=plan_empty_marker>
+                        {t(MessageKey::NoSprintItemsInPlanMessage)}
+                    </p>
                 })}
                 {has.then(|| view! {
-                    <ul class="divide-y">{rows.clone()}</ul>
+                    <ul class="divide-y" data-plan-list=plan_list_marker>{rows.clone()}</ul>
                 })}
             </div>
         </section>

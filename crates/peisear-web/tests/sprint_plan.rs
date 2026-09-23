@@ -678,3 +678,341 @@ async fn delete_refuses_an_active_sprint() {
         "an active sprint must survive a delete attempt"
     );
 }
+
+// ──────────────────────────────────────────────────────────────
+// `PLAN-002` (RFC 004c D-4) — drag between the backlog and the
+// sprint
+// ──────────────────────────────────────────────────────────────
+
+/// Extract a `<script type="application/json" id="{id}">…</script>`
+/// island's JSON content from a rendered page body. Same shape as
+/// `response_outcomes.rs`'s own `extract_island` — duplicated rather
+/// than shared, same reasoning `static_js_scan.rs`'s module doc gives
+/// for its own small duplicated helpers.
+fn extract_island(body: &str, id: &str) -> serde_json::Value {
+    let marker = format!(r#"id="{id}""#);
+    let start = body
+        .find(&marker)
+        .unwrap_or_else(|| panic!("island id={id:?} not found in body: {body}"));
+    let after_marker = &body[start..];
+    let content_start = after_marker
+        .find('>')
+        .expect("island opening tag closes with `>`")
+        + 1;
+    let content = &after_marker[content_start..];
+    let end = content
+        .find("</script>")
+        .expect("island script tag has a closing </script>");
+    serde_json::from_str(&content[..end]).unwrap_or_else(|e| {
+        panic!(
+            "island id={id:?} is not valid JSON: {e}\ncontent: {}",
+            &content[..end]
+        )
+    })
+}
+
+/// §6's most important new test: the drag markers, `plan.js`'s tag
+/// and its copy island are all attached for an admin on a `Planned`
+/// sprint — the one cell in the module doc's four-shape table where
+/// `can_move` is true.
+#[tokio::test]
+async fn drag_markers_attached_for_admin_on_planned_sprint() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+
+    let backlog_issue = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Backlog candidate",
+        Priority::Medium,
+        Some(3),
+    )
+    .await;
+    let committed_issue = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Committed item",
+        Priority::Medium,
+        Some(5),
+    )
+    .await;
+    sprints::add_issue(&app.db, &sprint_id, &committed_issue)
+        .await
+        .expect("add committed issue to sprint");
+
+    let resp = app.server.get(&plan_url(&slug, &sprint_id)).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    assert!(
+        body.contains(r#"data-plan-move="add""#),
+        "a backlog row must carry data-plan-move=\"add\": {body}"
+    );
+    assert!(
+        body.contains(r#"data-plan-move="remove""#),
+        "a sprint item row must carry data-plan-move=\"remove\": {body}"
+    );
+    assert!(
+        body.contains(r#"data-plan-drop="add""#),
+        "the sprint column must carry data-plan-drop=\"add\": {body}"
+    );
+    assert!(
+        body.contains(r#"data-plan-drop="remove""#),
+        "the backlog column must carry data-plan-drop=\"remove\": {body}"
+    );
+    assert!(
+        body.contains(r#"draggable="true""#) && body.contains(r#"draggable="false""#),
+        "a draggable row and its inner link's draggable=\"false\" must both be present \
+         (§3.2 — the nested-drag-source trap board.js already paid for): {body}"
+    );
+    assert!(
+        body.contains(&format!(r#"data-plan-issue-id="{backlog_issue}""#)),
+        "the backlog row must carry its own issue id: {body}"
+    );
+    assert!(
+        body.contains(r#"<script src="/static/plan.js" defer"#),
+        "plan.js must be referenced with defer when drag is attached: {body}"
+    );
+    assert!(
+        body.contains(r#"id="plan-copy""#),
+        "the copy island must be present when drag is attached: {body}"
+    );
+
+    let island = extract_island(&body, "plan-copy");
+    for key in [
+        "movedToSprint",
+        "movedToBacklog",
+        "undoLabel",
+        "noBacklogIssuesMessage",
+        "noSprintItemsMessage",
+        "undoUnavailableMessage",
+    ] {
+        let value = island[key].as_str();
+        assert!(
+            value.is_some_and(|v| !v.is_empty()),
+            "plan-copy must carry a non-empty {key}: {island}"
+        );
+    }
+    assert!(
+        island.get("outcomes").is_none(),
+        "plan-copy must carry no outcomes block (§3.5 — there is no lock to \
+         conflict over): {island}"
+    );
+}
+
+/// The three shapes where drag is *not* attached (module doc's
+/// table): a viewer on a planned sprint, any role on an active
+/// sprint, any role on a completed sprint. One test per shape, same
+/// granularity the rest of this file already uses for role/status
+/// combinations.
+#[tokio::test]
+async fn drag_markers_absent_for_viewer_on_planned_sprint() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Backlog item",
+        Priority::Medium,
+        Some(3),
+    )
+    .await;
+
+    let viewer = TestUser::new("vic");
+    let viewer_id = register_and_login(&app, &viewer).await;
+    peisear_storage::teams::add_member(&app.db, &team_id, &viewer_id, TeamRole::Viewer)
+        .await
+        .expect("add viewer");
+
+    let resp = app.server.get(&plan_url(&slug, &sprint_id)).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+    assert_no_drag_markers(&body);
+}
+
+#[tokio::test]
+async fn drag_markers_absent_on_active_sprint() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let issue_id = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Committed item",
+        Priority::Medium,
+        Some(3),
+    )
+    .await;
+    sprints::add_issue(&app.db, &sprint_id, &issue_id)
+        .await
+        .expect("add issue to sprint");
+    sprints::start(&app.db, &sprint_id).await.expect("start");
+
+    let resp = app.server.get(&plan_url(&slug, &sprint_id)).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+    assert_no_drag_markers(&body);
+}
+
+#[tokio::test]
+async fn drag_markers_absent_on_completed_sprint() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let issue_id = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Historical item",
+        Priority::Medium,
+        Some(3),
+    )
+    .await;
+    sprints::add_issue(&app.db, &sprint_id, &issue_id)
+        .await
+        .expect("add issue to sprint");
+    sprints::start(&app.db, &sprint_id).await.expect("start");
+    sprints::complete(&app.db, &sprint_id)
+        .await
+        .expect("complete");
+
+    let resp = app.server.get(&plan_url(&slug, &sprint_id)).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+    assert_no_drag_markers(&body);
+}
+
+fn assert_no_drag_markers(body: &str) {
+    for needle in [
+        "data-plan-move",
+        "data-plan-drop",
+        "plan-copy",
+        "/static/plan.js",
+    ] {
+        assert!(
+            !body.contains(needle),
+            "drag must not be attached here -- found {needle:?}: {body}"
+        );
+    }
+}
+
+/// §4.6: the remove form omitted the three filter fields the add
+/// form already carries (`§2c`), so a button-driven remove silently
+/// dropped the active backlog filter from the redirect. Same shape
+/// as `filter_round_trip_narrows_backlog_and_survives_move` (test 9)
+/// above, but for `/plan/remove`.
+#[tokio::test]
+async fn plan_remove_preserves_the_active_filter_like_add_does() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+
+    let committed_id = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Committed item",
+        Priority::High,
+        Some(2),
+    )
+    .await;
+    sprints::add_issue(&app.db, &sprint_id, &committed_id)
+        .await
+        .expect("add committed issue");
+
+    let resp = app
+        .server
+        .post(&format!("{}/remove", plan_url(&slug, &sprint_id)))
+        .form(&[("issue_id", committed_id.as_str()), ("priority", "high")])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+    let location = resp
+        .headers()
+        .get("location")
+        .expect("redirect must carry a Location header")
+        .to_str()
+        .unwrap();
+    assert!(
+        location.contains("priority=high"),
+        "a button-driven remove must preserve the active filter, got {location}"
+    );
+
+    let now_in_backlog = sprints::sprint_for_issue(&app.db, &committed_id)
+        .await
+        .expect("query sprint_for_issue");
+    assert_eq!(
+        now_in_backlog, None,
+        "the issue must have actually moved to the backlog"
+    );
+}
+
+/// The rendered remove form itself carries the three hidden filter
+/// inputs, mirroring the add form's own markup (§2c/§4.6) — the
+/// no-JavaScript, button-driven path this proves works even without
+/// a POST, by inspecting what a click would submit.
+#[tokio::test]
+async fn remove_form_markup_carries_the_same_filter_fields_as_add() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let committed_id = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Committed item",
+        Priority::Medium,
+        Some(3),
+    )
+    .await;
+    sprints::add_issue(&app.db, &sprint_id, &committed_id)
+        .await
+        .expect("add committed issue");
+
+    let resp = app
+        .server
+        .get(&format!("{}?priority=medium", plan_url(&slug, &sprint_id)))
+        .await;
+    let body = resp.text();
+    let remove_form_start = body
+        .find("/plan/remove")
+        .expect("a remove form must be present");
+    let form_slice = &body[remove_form_start..];
+    let form_end = form_slice.find("</form>").expect("form has a close tag");
+    let form_slice = &form_slice[..form_end];
+    for name in ["project", "priority", "assignee"] {
+        assert!(
+            form_slice.contains(&format!(r#"name="{name}""#)),
+            "the remove form must carry a hidden {name} input, matching the add form: {form_slice}"
+        );
+    }
+}

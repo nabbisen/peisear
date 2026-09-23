@@ -1279,6 +1279,32 @@ pub enum MessageKey {
     /// also covers active — see `PLAN-001`'s handler doc comment for
     /// why active is included too).
     SprintPlanNotEditableMessage,
+
+    // ---- PLAN-002: drag between the backlog and the sprint (RFC
+    // ---- 004c, D-4) ----
+    /// `plan.js`'s "moved to" announcement, added-to-sprint direction.
+    /// Distinct from [`MessageKey::MoveToSprintButton`] (a button
+    /// label, not an announcement) and from
+    /// [`MessageKey::StatusChangedAnnouncement`] (a status change, not
+    /// a sprint assignment) — its own key because this copy island
+    /// deliberately carries no `outcomes` block (handoff §3.5): there
+    /// is no lock to conflict over, so this island's message space is
+    /// smaller than `dm.js`'s or `board.js`'s and does not compose
+    /// from theirs.
+    PlanMovedToSprintAnnouncement,
+    /// `plan.js`'s "moved to" announcement, removed-to-backlog
+    /// direction.
+    PlanMovedToBacklogAnnouncement,
+    /// The one message this island needs beyond the three it reuses
+    /// ([`MessageKey::UndoButtonLabel`],
+    /// [`MessageKey::NoBacklogIssuesMessage`],
+    /// [`MessageKey::NoSprintItemsInPlanMessage`]): an undo that did
+    /// not apply. `plan.js`'s undo has no form to fall back to
+    /// (`dm.js`'s rule, carried over unchanged — handoff §4), so every
+    /// undo failure ends in announce + reload, never a resubmit; this
+    /// is what gets announced.
+    PlanUndoUnavailableMessage,
+
     NewTeamLink,
     TeamsEmptyIntro,
     TeamsEmptyCta,
@@ -2668,6 +2694,9 @@ impl MessageKey {
             MessageKey::NoBacklogIssuesMessage,
             MessageKey::NoSprintItemsInPlanMessage,
             MessageKey::SprintPlanNotEditableMessage,
+            MessageKey::PlanMovedToSprintAnnouncement,
+            MessageKey::PlanMovedToBacklogAnnouncement,
+            MessageKey::PlanUndoUnavailableMessage,
             MessageKey::NewTeamLink,
             MessageKey::TeamsEmptyIntro,
             MessageKey::TeamsEmptyCta,
