@@ -77,7 +77,14 @@ impl IssueRow {
 /// tie, and SQLite returns ties in scan order -- oldest first -- which
 /// would make a burst of creations read backwards.
 /// `view_state::issues_created_in_the_same_second_list_newest_first`
-/// fails without it. [`list_all_in_project`] orders identically.
+/// fails without it. What it guarantees is a **stable, deterministic**
+/// order within a tie, and creation order in the ordinary case -- not
+/// creation order unconditionally: SQLite reuses the rowid of a deleted
+/// highest row (measured), so deleting the newest issue and creating
+/// another within the same second can invert that pair. Every
+/// alternative tiebreak is arbitrary in *all* cases, so this is never
+/// worse; do not build anything on it that needs more.
+/// [`list_all_in_project`] orders identically.
 pub async fn list_in_project(pool: &Pool, project_id: &str) -> StorageResult<Vec<Issue>> {
     let rows = sqlx::query_as::<_, IssueRow>(
         r#"
