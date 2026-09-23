@@ -81,6 +81,7 @@ the RFC number they are keyed to.
 
 | Directory | Governing RFC |
 |---|---|
+| [`handoffs/004c-direct-manipulation-sprint-plan/`](./handoffs/004c-direct-manipulation-sprint-plan/README.md) | 004c — active, target 0.35.0 |
 | [`handoffs/004b-direct-manipulation-board/`](./handoffs/004b-direct-manipulation-board/README.md) | 004b — historical, RFC implemented |
 | [`handoffs/004a-direct-manipulation-status/`](./handoffs/004a-direct-manipulation-status/README.md) | 004a — historical, RFC implemented |
 | [`handoffs/010-destructive-action-confirmation/`](./handoffs/010-destructive-action-confirmation/README.md) | 010 — historical, RFC implemented |
