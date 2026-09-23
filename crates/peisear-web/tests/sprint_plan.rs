@@ -1286,3 +1286,43 @@ async fn backlog_priority_filter_returns_only_the_chosen_band() {
         }
     }
 }
+
+/// `ORD-002`: the backlog's recency term ties on a one-second
+/// timestamp and SQLite returns a tie oldest-first, so four issues
+/// written in one burst used to read first, second, third, fourth --
+/// the reverse of "newest first". Every issue shares one `created_at`
+/// (pinned, so a burst straddling a second boundary cannot hide it).
+#[tokio::test]
+async fn backlog_reads_a_same_second_burst_newest_first() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+
+    let titles = ["BURST-first", "BURST-second", "BURST-third", "BURST-fourth"];
+    for title in titles {
+        let id = insert_open_issue(
+            &app,
+            &project_id,
+            &admin_id,
+            title,
+            Priority::Medium,
+            Some(1),
+        )
+        .await;
+        pin_created_at(&app, &id, "2026-03-01 09:00:00").await;
+    }
+
+    let body = app.server.get(&plan_url(&slug, &sprint_id)).await.text();
+    let offsets = offsets_of(
+        &body,
+        &["BURST-fourth", "BURST-third", "BURST-second", "BURST-first"],
+    );
+    assert!(
+        offsets.windows(2).all(|w| w[0] < w[1]),
+        "a same-second burst must read newest first: {offsets:?}"
+    );
+}

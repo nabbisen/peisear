@@ -106,6 +106,13 @@ pub async fn effective_for_user(pool: &Pool, user_id: &str) -> StorageResult<Opt
 /// [`effective_for_user`] in that it returns the row, not just
 /// the points value, so callers can tell whether the active row
 /// is period-bounded ("(this period)" UI hint, etc.).
+///
+/// **Tiebreak (`ORD-002`)**: `created_at` is a one-second
+/// `CURRENT_TIMESTAMP`, so two saves in one second tie and a bare
+/// `DESC LIMIT 1` returns the *superseded* row. Every timestamp
+/// ordering in this crate therefore ends in a `rowid` term in the same
+/// direction; what that does and does not guarantee is written on
+/// `issues::list_in_project`.
 pub async fn effective_row_for_user(
     pool: &Pool,
     user_id: &str,
@@ -118,7 +125,7 @@ pub async fn effective_row_for_user(
         WHERE user_id = ?1
           AND (period_start IS NULL OR period_start <= ?2)
           AND (period_end   IS NULL OR period_end   >= ?2)
-        ORDER BY created_at DESC
+        ORDER BY created_at DESC, rowid DESC
         LIMIT 1
         "#,
     )
@@ -148,7 +155,7 @@ pub async fn effective_for_user_on_date(
         WHERE user_id = ?1
           AND (period_start IS NULL OR period_start <= ?2)
           AND (period_end   IS NULL OR period_end   >= ?2)
-        ORDER BY created_at DESC
+        ORDER BY created_at DESC, rowid DESC
         LIMIT 1
         "#,
     )
@@ -172,7 +179,8 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Capa
         ORDER BY
             CASE WHEN period_start IS NULL THEN 0 ELSE 1 END,
             period_start ASC,
-            created_at ASC
+            created_at ASC,
+            rowid ASC
         "#,
     )
     .bind(user_id)
@@ -250,7 +258,7 @@ pub async fn overlaps_existing(
               (period_end   IS NOT NULL AND ?3 IS NOT NULL AND period_end   < ?3)
            OR (period_start IS NOT NULL AND ?4 IS NOT NULL AND period_start > ?4)
           )
-        ORDER BY created_at ASC
+        ORDER BY created_at ASC, rowid ASC
         LIMIT 1
         "#,
     )

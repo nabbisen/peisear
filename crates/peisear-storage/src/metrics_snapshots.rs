@@ -152,7 +152,7 @@ pub async fn recent_for_project(
         WHERE project_id = ?1
           AND captured_at <= datetime('now', ?2)
           AND captured_at >= datetime('now', ?3)
-        ORDER BY captured_at ASC
+        ORDER BY captured_at ASC, rowid ASC
         "#,
     )
     .bind(project_id)

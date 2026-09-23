@@ -49,7 +49,7 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Proj
         WHERE
             (p.team_id IS NULL AND p.owner_id = ?1)
          OR (p.team_id IS NOT NULL AND m.user_id = ?1)
-        ORDER BY p.updated_at DESC
+        ORDER BY p.updated_at DESC, p.rowid DESC
         "#,
     )
     .bind(user_id)
@@ -66,7 +66,7 @@ pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Proj
             wip_limit_default, team_id, created_at, updated_at
         FROM projects
         WHERE team_id = ?1
-        ORDER BY updated_at DESC
+        ORDER BY updated_at DESC, rowid DESC
         "#,
     )
     .bind(team_id)

@@ -99,7 +99,7 @@ pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Spri
                status, started_at, completed_at, created_at, updated_at
         FROM sprints
         WHERE team_id = ?1
-        ORDER BY starts_on DESC, created_at DESC
+        ORDER BY starts_on DESC, created_at DESC, rowid DESC
         "#,
     )
     .bind(team_id)
@@ -118,7 +118,7 @@ pub async fn active_for_team(pool: &Pool, team_id: &str) -> StorageResult<Option
                status, started_at, completed_at, created_at, updated_at
         FROM sprints
         WHERE team_id = ?1 AND status = 'active'
-        ORDER BY started_at DESC
+        ORDER BY started_at DESC, rowid DESC
         LIMIT 1
         "#,
     )
@@ -359,7 +359,7 @@ pub async fn issues_in_sprint(
         JOIN issues i ON i.id = si.issue_id
         WHERE si.sprint_id = ?1
           AND i.parent_issue_id IS NULL
-        ORDER BY i.status ASC, si.assigned_at ASC
+        ORDER BY i.status ASC, si.assigned_at ASC, si.rowid ASC
         "#,
     )
     .bind(sprint_id)
@@ -470,7 +470,7 @@ pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<Burndow
             FROM sprint_issues si
             JOIN issues i ON i.id = si.issue_id
             WHERE si.sprint_id = ?1
-            ORDER BY si.assigned_at ASC
+            ORDER BY si.assigned_at ASC, si.rowid ASC
             "#,
     )
     .bind(sprint_id)
@@ -653,7 +653,7 @@ pub async fn recent_completed_for_team(
                    status, started_at, completed_at, created_at, updated_at
             FROM sprints
             WHERE team_id = ?1 AND status = 'completed'
-            ORDER BY completed_at DESC
+            ORDER BY completed_at DESC, rowid DESC
             LIMIT ?2
             "#,
         )
@@ -824,7 +824,7 @@ pub async fn backlog_for_team(
         -- column, so `priority DESC` sorts alphabetically (urgent, medium,
         -- low, high -- `high` last). Severity is applied in Rust below with
         -- `Priority::severity_rank`. Do not put it back here.
-        ORDER BY p.name ASC, i.created_at DESC
+        ORDER BY p.name ASC, i.created_at DESC, i.rowid DESC
         "#,
     )
     .bind(team_id)

@@ -143,7 +143,7 @@ pub async fn list_sub_issues_of(pool: &Pool, parent_issue_id: &str) -> StorageRe
                created_at, updated_at
         FROM issues
         WHERE parent_issue_id = ?1
-        ORDER BY created_at ASC
+        ORDER BY created_at ASC, rowid ASC
         "#,
     )
     .bind(parent_issue_id)
@@ -854,7 +854,7 @@ pub async fn project_workload(
              WHERE uc.user_id = u.id
                AND (uc.period_start IS NULL OR uc.period_start <= date('now'))
                AND (uc.period_end   IS NULL OR uc.period_end   >= date('now'))
-             ORDER BY uc.created_at DESC
+             ORDER BY uc.created_at DESC, uc.rowid DESC
              LIMIT 1
             ) AS capacity_points,
             COALESCE(SUM(CASE
@@ -954,7 +954,7 @@ pub async fn planned_for_user(
         WHERE assignee_id = ?1
           AND parent_issue_id IS NULL
           AND {PLANNED_WINDOW_OVERLAP_PREDICATE}
-        ORDER BY planned_start_at ASC
+        ORDER BY planned_start_at ASC, rowid ASC
         "#,
     ))
     .bind(user_id)
@@ -986,7 +986,7 @@ pub async fn planned_for_project(
         WHERE project_id = ?1
           AND parent_issue_id IS NULL
           AND {PLANNED_WINDOW_OVERLAP_PREDICATE}
-        ORDER BY planned_start_at ASC
+        ORDER BY planned_start_at ASC, rowid ASC
         "#,
     ))
     .bind(project_id)

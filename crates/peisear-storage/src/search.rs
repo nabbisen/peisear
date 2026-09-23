@@ -100,7 +100,7 @@ pub async fn projects_by_name(
               WHERE m.team_id = p.team_id AND m.user_id = ?2
             )
           )
-        ORDER BY p.updated_at DESC
+        ORDER BY p.updated_at DESC, p.rowid DESC
         LIMIT ?3
         "#,
     )
@@ -160,7 +160,7 @@ pub async fn open_issues_by_title(
               WHERE m.team_id = p.team_id AND m.user_id = ?2
             )
           )
-        ORDER BY i.updated_at DESC
+        ORDER BY i.updated_at DESC, i.rowid DESC
         LIMIT ?3
         "#,
     )

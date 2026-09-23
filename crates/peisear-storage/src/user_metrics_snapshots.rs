@@ -120,7 +120,7 @@ pub async fn recent_for_user(
         FROM user_metrics_snapshots
         WHERE user_id = ?1
           AND captured_at >= datetime('now', ?2)
-        ORDER BY captured_at ASC
+        ORDER BY captured_at ASC, rowid ASC
         "#,
     )
     .bind(user_id)

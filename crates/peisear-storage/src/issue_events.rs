@@ -133,7 +133,7 @@ pub async fn in_progress_seconds_for_issue(
         FROM issue_events
         WHERE issue_id = ?1
           AND event_type = 'status_changed'
-        ORDER BY occurred_at ASC
+        ORDER BY occurred_at ASC, rowid ASC
         "#,
     )
     .bind(issue_id)

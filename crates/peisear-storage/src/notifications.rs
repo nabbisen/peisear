@@ -123,7 +123,7 @@ pub async fn recent_for_user(
                created_at, read_at, dispatched_via
         FROM notifications
         WHERE user_id = ?1
-        ORDER BY created_at DESC
+        ORDER BY created_at DESC, rowid DESC
         LIMIT ?2
         "#,
     )
