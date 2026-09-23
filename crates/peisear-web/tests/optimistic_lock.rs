@@ -26,7 +26,7 @@ mod common;
 
 use axum::http::StatusCode;
 use chrono::{DateTime, Utc};
-use common::auth::{TestUser, register_and_login};
+use common::auth::{TestUser, logout, register_and_login};
 use common::fixture::{
     create_issue, create_personal_project, create_planned_sprint, create_team_with_admin,
 };
@@ -634,6 +634,179 @@ async fn capacity_close_with_stale_timestamp_returns_409() {
         StatusCode::CONFLICT,
         "stale client_updated_at on /close must 409, got {}",
         resp.status_code()
+    );
+}
+
+// -------------------------------------------------------------------
+// Capacity routes — cross-user (`PRIV-001`, `NFR-PRIV-008` coverage
+// audit)
+// -------------------------------------------------------------------
+//
+// `auth_boundary.rs`'s module doc used to say settings mutations are
+// "session-scoped, not addressed by `user_id` in the path, so
+// cross-user POST isn't expressible against them today" -- true of
+// `/settings/wip-limit` (no path parameter at all), false of these
+// three: `/settings/capacity/{id}` names a *resource* id, and naming
+// another user's row is exactly the cross-user request. It's expected
+// to 404, not 403 -- `update_capacity`/`close_capacity`/
+// `delete_capacity` all re-read the row through `user_capacities::
+// find(&state.db, &user.id, &row_id)`, scoped by `(user_id, id)`
+// together, so a row that exists but belongs to someone else and a
+// row that doesn't exist at all produce the identical `NotFound` --
+// the same access-safe denial `/inbox/{id}/read` (`auth_boundary.rs`)
+// already returns for a different resource, not something decided
+// fresh here.
+//
+// **Each test proves the owner's identical request succeeds first.**
+// All three routes require `client_updated_at`; a request missing or
+// mismatching it fails validation (400/409) before the ownership
+// check in `find` is ever reached, so a refusal alone would prove
+// nothing about ownership specifically. Bob's own request below
+// always carries the row's *real*, current lock value -- one that
+// would succeed if it reached the write -- so a 404 is legible as
+// "this row isn't yours," not "your lock is stale."
+
+/// `POST /settings/capacity/{id}` (`update_capacity`).
+#[tokio::test]
+async fn capacity_update_walls_off_another_user() {
+    let app = TestApp::spawn().await;
+    let owner = TestUser::new("alice");
+    let owner_id = register_and_login(&app, &owner).await;
+    let row_id = create_capacity_row(&app, &owner_id, 8).await;
+
+    // Owner succeeds first.
+    let t0 = read_capacity_updated_at(&app, &row_id).await;
+    let resp = post_capacity_update(&app, &row_id, &t0, 10).await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let t1 = read_capacity_updated_at(&app, &row_id).await;
+    logout(&app).await;
+    let bob = TestUser::new("bob");
+    register_and_login(&app, &bob).await;
+
+    let resp = post_capacity_update(&app, &row_id, &t1, 99).await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::NOT_FOUND,
+        "bob must not be able to update alice's capacity row; got {}",
+        resp.status_code()
+    );
+
+    let still_alices = peisear_storage::user_capacities::find(&app.db, &owner_id, &row_id)
+        .await
+        .expect("query capacity row")
+        .expect("row still exists");
+    assert_eq!(
+        still_alices.points, 10,
+        "bob's rejected update must not have changed alice's capacity row -- \
+         a refusal that still mutated would pass a status assertion alone"
+    );
+}
+
+/// `POST /settings/capacity/{id}/close` (`close_capacity`).
+#[tokio::test]
+async fn capacity_close_walls_off_another_user() {
+    let app = TestApp::spawn().await;
+    let owner = TestUser::new("alice");
+    let owner_id = register_and_login(&app, &owner).await;
+    let row_id = create_capacity_row(&app, &owner_id, 8).await;
+
+    // Owner succeeds first.
+    let t0 = read_capacity_updated_at(&app, &row_id).await;
+    let resp = app
+        .server
+        .post(&format!("/settings/capacity/{row_id}/close"))
+        .form(&[
+            ("period_end", "2026-06-30"),
+            ("client_updated_at", t0.as_str()),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let t1 = read_capacity_updated_at(&app, &row_id).await;
+    logout(&app).await;
+    let bob = TestUser::new("bob");
+    register_and_login(&app, &bob).await;
+
+    let resp = app
+        .server
+        .post(&format!("/settings/capacity/{row_id}/close"))
+        .form(&[
+            ("period_end", "2099-01-01"),
+            ("client_updated_at", t1.as_str()),
+        ])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::NOT_FOUND,
+        "bob must not be able to close alice's capacity row; got {}",
+        resp.status_code()
+    );
+
+    let still_alices = peisear_storage::user_capacities::find(&app.db, &owner_id, &row_id)
+        .await
+        .expect("query capacity row")
+        .expect("row still exists");
+    assert_eq!(
+        still_alices.period_end,
+        chrono::NaiveDate::from_ymd_opt(2026, 6, 30),
+        "bob's rejected close must not have changed alice's period_end"
+    );
+}
+
+/// `POST /settings/capacity/{id}/delete` (`delete_capacity`). Two
+/// rows: row A proves a well-formed delete-by-owner succeeds and is
+/// gone afterward; row B is bob's attack target, a *different*,
+/// still-existing row, so a 404 there can only mean ownership, not
+/// the row simply being absent (`§4`: the 404 is identical either
+/// way, so proving the row *survives* is the assertion that
+/// disambiguates them).
+#[tokio::test]
+async fn capacity_delete_walls_off_another_user() {
+    let app = TestApp::spawn().await;
+    let owner = TestUser::new("alice");
+    let owner_id = register_and_login(&app, &owner).await;
+
+    let row_a = create_capacity_row(&app, &owner_id, 8).await;
+    let t0_a = read_capacity_updated_at(&app, &row_a).await;
+    let resp = app
+        .server
+        .post(&format!("/settings/capacity/{row_a}/delete"))
+        .form(&[("client_updated_at", t0_a.as_str())])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+    assert!(
+        peisear_storage::user_capacities::find(&app.db, &owner_id, &row_a)
+            .await
+            .expect("query capacity row")
+            .is_none(),
+        "alice's own delete must have removed row A -- the positive half of the pair"
+    );
+
+    let row_b = create_capacity_row(&app, &owner_id, 12).await;
+    let t0_b = read_capacity_updated_at(&app, &row_b).await;
+    logout(&app).await;
+    let bob = TestUser::new("bob");
+    register_and_login(&app, &bob).await;
+
+    let resp = app
+        .server
+        .post(&format!("/settings/capacity/{row_b}/delete"))
+        .form(&[("client_updated_at", t0_b.as_str())])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::NOT_FOUND,
+        "bob must not be able to delete alice's capacity row; got {}",
+        resp.status_code()
+    );
+
+    let still_there = peisear_storage::user_capacities::find(&app.db, &owner_id, &row_b)
+        .await
+        .expect("query capacity row");
+    assert!(
+        still_there.is_some(),
+        "bob's rejected delete must not have removed alice's row B"
     );
 }
 

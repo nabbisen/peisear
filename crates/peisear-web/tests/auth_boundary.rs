@@ -19,12 +19,28 @@
 //! POST endpoint (`/api/users/{user_id}/wip-limit` or similar,
 //! `FR-API-006`) that has never been scheduled. It was withdrawn
 //! rather than left `#[ignore]`d — an ignored test on a privacy
-//! boundary reads as coverage that does not exist. Settings
-//! mutations (`/settings/wip-limit`, `/settings/capacity/*`) are
-//! session-scoped, not addressed by `user_id` in the path, so
-//! "cross-user POST" isn't expressible against them today. If
-//! `FR-API-006` ever lands a user-scoped POST surface, reinstate an
-//! equivalent test against it.
+//! boundary reads as coverage that does not exist.
+//!
+//! **Corrected (`PRIV-001`): the claim below was true of one route
+//! and written as if it covered both.** `/settings/wip-limit` is
+//! session-scoped and takes **no path parameter at all** — there is
+//! no id to substitute, so "cross-user POST" genuinely isn't
+//! expressible against it. `/settings/capacity/{id}` is a different
+//! shape: it names a *resource* id, and naming another user's row
+//! *is* the cross-user request this note said wasn't expressible.
+//! It is, and `optimistic_lock.rs`'s
+//! `capacity_update_walls_off_another_user`,
+//! `capacity_close_walls_off_another_user` and
+//! `capacity_delete_walls_off_another_user` make the attempt three
+//! times — all three refuse with `404` (`user_capacities::find`'s
+//! `(user_id, id)` scoping), the same access-safe denial this file's
+//! own `/inbox/{id}/read` test below already demonstrates for a
+//! different resource (`QA-007-review.md` §2: "no `user_id` in the
+//! path" only rules out impersonation, not a resource id naming
+//! someone else's row). If `FR-API-006` ever lands a user-scoped POST
+//! surface for `/settings/wip-limit` specifically, reinstate an
+//! equivalent test against it — that route's own reasoning still
+//! holds.
 
 mod common;
 
@@ -365,6 +381,42 @@ async fn unauthed_api_users_returns_401_not_redirect() {
         body.contains("\"unauthorized\""),
         "/api/* unauth body should carry the 'unauthorized' code; got: {body}"
     );
+}
+
+// -------------------------------------------------------------------
+// `PRIV-001` (`NFR-PRIV-008` coverage audit) — `unauthed_api_users_
+// returns_401_not_redirect` above only names `burnout`; extended here
+// to `capacity` and `notifications` as a *new* test rather than an
+// edit to that one, so the existing sixteen stay unchanged.
+//
+// **Not extending `team_admin_cannot_read_member_personal_data`
+// (above) the same way — it already covers all three endpoints.**
+// The audit this handoff is built from reported the administrator
+// case as existing "once, against `burnout` only," but that test has
+// asserted `capacity` and `notifications` too since `10c786d2`
+// (2026-05-07), months before the audit. Adding a duplicate assertion
+// here would check nothing the existing test doesn't already.
+// -------------------------------------------------------------------
+
+#[tokio::test]
+async fn capacity_and_notifications_endpoints_unauthenticated_return_401() {
+    let app = TestApp::spawn().await;
+    // No login on this app.
+    for path in ["capacity", "notifications"] {
+        let resp = app.server.get(&format!("/api/users/some-id/{path}")).await;
+        assert_eq!(
+            resp.status_code(),
+            StatusCode::UNAUTHORIZED,
+            "/api/users/{{id}}/{path} unauth must be 401, not redirect; got {}",
+            resp.status_code()
+        );
+        let body = resp.text();
+        assert!(
+            body.contains("\"error\"") && body.contains("\"unauthorized\""),
+            "/api/users/{{id}}/{path} unauth response should be JSON carrying the \
+             'unauthorized' code; got: {body}"
+        );
+    }
 }
 
 // -------------------------------------------------------------------
