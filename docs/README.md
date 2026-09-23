@@ -52,6 +52,16 @@ Deeper topics that don't fit cleanly into the other sections.
 - [Upgrading to hydration](guides/hydration-upgrade.md) — path from
   SSR to full Leptos reactivity
 
+## Specification
+
+You want to know what the product is required to do, or what it presents.
+
+- [Specification](specification/README.md) — the normative source of truth:
+  [requirements](specification/requirements.md) (including `§10`, the
+  compliance register) and [external design](specification/external-design.md)
+  (including `§17`, where design and implementation have diverged). English
+  only; amended at every release.
+
 ## Elsewhere in the repo
 
 - [README](../README.md) — the elevator pitch and quickstart

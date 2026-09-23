@@ -84,7 +84,8 @@ pace", "performance is increasing/decreasing"), judgement ("concerning trend",
 emphasis, and failure framing ("Failed to", "Error:").
 
 Read §1.7 from
-`.git-exclude/specs/peisear-0.20.0-requirements-en.md` and transcribe it
+`docs/specification/history/peisear-0.20.0-requirements-en.md` (moved
+there from the private working area at 0.38.0, `DEC-020`) and transcribe it
 completely. If a term is ambiguous to encode, **report it rather than
 dropping it**.
 

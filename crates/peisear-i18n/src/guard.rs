@@ -1,7 +1,8 @@
 //! The vocabulary guard: word-boundary-aware, case-insensitive
 //! matching of rendered copy against the requirements baseline's
 //! §1.7 prohibited-vocabulary list
-//! (`.git-exclude/specs/peisear-0.20.0-requirements-en.md`).
+//! (`docs/specification/history/peisear-0.20.0-requirements-en.md` —
+//! moved out of the private working area at 0.38.0, `DEC-020`).
 //!
 //! Deliberately dependency-free — no `regex`. Matching is a manual
 //! substring scan with a boundary check on both sides of each hit,

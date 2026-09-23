@@ -70,7 +70,8 @@ handoff specifies (workflow §9.2).
 ## Before you start: the 0.19.1 baseline has known-incorrect statuses
 
 Onboarding sends you to
-`.git-exclude/specs/peisear-0.19.1-requirements-en.md`. Read it — it is the
+`docs/specification/history/peisear-0.19.1-requirements-en.md` (moved there
+from the private working area at 0.38.0, `DEC-020`). Read it — it is the
 right document — but four recorded statuses are wrong, and three bear
 directly on this queue. Read
 `.git-exclude/tasks/architect/004-requirements-baseline-amendments.md` **§B**
