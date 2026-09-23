@@ -256,10 +256,15 @@ fn render_filter_form(
 /// classify). A future reader should find this sentence rather than a
 /// missing-looking key.
 ///
-/// Six keys: two "moved to" announcements, the undo label, the two
+/// Eight keys: two "moved to" announcements, the undo label, the two
 /// empty-state messages (reused byte-for-byte from the no-JavaScript
-/// page, not restated), and one message for an undo that did not
-/// apply.
+/// page, not restated), one message for an undo that did not apply,
+/// and — round 2 (`PLAN-002-review.md` §6c) — the two move-button
+/// labels, so the script can bring a moved row's own form (its
+/// fallback path) into line with its new position without authoring
+/// a string: `MoveToSprintButton`/`MoveToBacklogButton` already
+/// exist and render the buttons themselves, reused rather than
+/// restated.
 fn render_plan_copy_assets() -> impl IntoView {
     let copy = serde_json::json!({
         "movedToSprint": t(MessageKey::PlanMovedToSprintAnnouncement),
@@ -268,6 +273,8 @@ fn render_plan_copy_assets() -> impl IntoView {
         "noBacklogIssuesMessage": t(MessageKey::NoBacklogIssuesMessage),
         "noSprintItemsMessage": t(MessageKey::NoSprintItemsInPlanMessage),
         "undoUnavailableMessage": t(MessageKey::PlanUndoUnavailableMessage),
+        "sprintButtonLabel": t(MessageKey::MoveToSprintButton),
+        "backlogButtonLabel": t(MessageKey::MoveToBacklogButton),
     })
     .to_string();
 
@@ -393,14 +400,24 @@ fn render_backlog(
     // `data-plan-drop="remove"` and its URL is `remove_action` --
     // `plan.js` reads this to undo a just-applied add, too (the
     // opposite column's URL from wherever a row currently sits).
+    //
+    // Round 2 (`PLAN-002-review.md` §2/§6a): `data-plan-row-move` is
+    // the value a row *sitting in this column* carries -- `"add"`
+    // here, because a backlog row's next move is always an add. This
+    // is deliberately not the same value as `data-plan-drop`
+    // (`"remove"`) -- they are opposites on every column by
+    // construction, and the review's defect was the script computing
+    // one from the other by hand instead of reading this fact
+    // straight from the server, which already renders both.
     let plan_drop = can_move.then_some("remove");
+    let plan_row_move = can_move.then_some("add");
     let plan_url = can_move.then_some(remove_action);
     let plan_list_marker = can_move.then_some("");
     let plan_empty_marker = can_move.then_some("");
 
     view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm" aria-labelledby="backlog-heading">
-            <div class="card-body" data-plan-drop=plan_drop data-plan-url=plan_url>
+            <div class="card-body" data-plan-drop=plan_drop data-plan-row-move=plan_row_move data-plan-url=plan_url>
                 <h2 id="backlog-heading" class="text-base font-medium">{t(MessageKey::BacklogHeading)}</h2>
                 {(!has).then(|| view! {
                     <p class="text-sm text-base-content/70 italic" data-plan-empty=plan_empty_marker>
@@ -478,15 +495,20 @@ fn render_sprint_items(
 
     // The sprint column is the drop target for a backlog row
     // (`data-plan-move="add"`), so its marker is
-    // `data-plan-drop="add"` and its URL is `add_action`.
+    // `data-plan-drop="add"` and its URL is `add_action`. Round 2:
+    // `data-plan-row-move="remove"` -- a row sitting in the sprint
+    // always moves away by a remove. See the backlog column's own
+    // comment above for why this is a second attribute rather than
+    // the script inverting `data-plan-drop`.
     let plan_drop = can_move.then_some("add");
+    let plan_row_move = can_move.then_some("remove");
     let plan_url = can_move.then_some(add_action);
     let plan_list_marker = can_move.then_some("");
     let plan_empty_marker = can_move.then_some("");
 
     view! {
         <section class="card bg-base-100 border border-base-300 shadow-sm" aria-labelledby="sprint-items-heading">
-            <div class="card-body" data-plan-drop=plan_drop data-plan-url=plan_url>
+            <div class="card-body" data-plan-drop=plan_drop data-plan-row-move=plan_row_move data-plan-url=plan_url>
                 <h2 id="sprint-items-heading" class="text-base font-medium">{t(MessageKey::SprintItemsHeading)}</h2>
                 {(!has).then(|| view! {
                     <p class="text-sm text-base-content/70 italic" data-plan-empty=plan_empty_marker>

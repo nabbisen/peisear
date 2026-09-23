@@ -767,6 +767,20 @@ async fn drag_markers_attached_for_admin_on_planned_sprint() {
         body.contains(r#"data-plan-drop="remove""#),
         "the backlog column must carry data-plan-drop=\"remove\": {body}"
     );
+    // Round 2 (`PLAN-002-review.md` §6a/§6e): the value a row *sitting
+    // in* each column carries -- the opposite of that column's own
+    // `data-plan-drop` -- rendered server-side so the script never
+    // inverts one to get the other.
+    assert!(
+        body.contains(r#"data-plan-row-move="remove""#),
+        "the sprint column must carry data-plan-row-move=\"remove\" \
+         (a row sitting there moves away by a remove): {body}"
+    );
+    assert!(
+        body.contains(r#"data-plan-row-move="add""#),
+        "the backlog column must carry data-plan-row-move=\"add\" \
+         (a row sitting there moves away by an add): {body}"
+    );
     assert!(
         body.contains(r#"draggable="true""#) && body.contains(r#"draggable="false""#),
         "a draggable row and its inner link's draggable=\"false\" must both be present \
@@ -793,6 +807,11 @@ async fn drag_markers_attached_for_admin_on_planned_sprint() {
         "noBacklogIssuesMessage",
         "noSprintItemsMessage",
         "undoUnavailableMessage",
+        // Round 2 (`PLAN-002-review.md` §6c): the two move-button
+        // labels, so `syncRowForm` can relabel a moved row's own
+        // button without authoring a string.
+        "sprintButtonLabel",
+        "backlogButtonLabel",
     ] {
         let value = island[key].as_str();
         assert!(
@@ -908,6 +927,7 @@ fn assert_no_drag_markers(body: &str) {
     for needle in [
         "data-plan-move",
         "data-plan-drop",
+        "data-plan-row-move",
         "plan-copy",
         "/static/plan.js",
     ] {

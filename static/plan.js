@@ -26,6 +26,21 @@
 // can show comes from `components/sprint_plan.rs`
 // (`render_plan_copy_assets`) as a JSON island at `#plan-copy`, read
 // once at load.
+//
+// Round 2 (`PLAN-002-review.md`): round 1 set a moved row's
+// `data-plan-move` to the action just performed, which is that
+// value's *opposite* on every column by construction -- the row
+// carried a fact about where it had come from, not where it was
+// sitting, so a second drag of the same row (no reload in between)
+// silently failed its `data-plan-move !== data-plan-drop` guard and
+// did nothing. `applyMove`/`performUndo` now read the row's new
+// value straight off the column it lands in (`data-plan-row-move`,
+// rendered server-side beside `data-plan-drop`) rather than
+// inverting anything client-side, and `syncRowForm` brings the row's
+// own form -- action, the `project_id` field, the button's label --
+// into line with its new position, so the fallback path and a plain
+// click on the still-visible button both stay correct after any
+// number of drags.
 (function () {
   "use strict";
 
@@ -49,7 +64,9 @@
     typeof copy.undoLabel !== "string" ||
     typeof copy.noBacklogIssuesMessage !== "string" ||
     typeof copy.noSprintItemsMessage !== "string" ||
-    typeof copy.undoUnavailableMessage !== "string"
+    typeof copy.undoUnavailableMessage !== "string" ||
+    typeof copy.sprintButtonLabel !== "string" ||
+    typeof copy.backlogButtonLabel !== "string"
   ) {
     return;
   }
@@ -144,6 +161,46 @@
     ul.parentNode.replaceChild(p, ul);
   }
 
+  // Round 2 (`PLAN-002-review.md` §6c): brings the row's own form --
+  // its fallback path -- into line with its new position after a
+  // confirmed move, so the fallback (and a plain click on the
+  // still-visible button) submits to the right place. `newMove` is
+  // the value the row now carries (`data-plan-row-move` of the
+  // column it's sitting in, never computed by inverting anything
+  // here -- see the row/column marker comments in
+  // `components/sprint_plan.rs`). `newUrl` is always the *other*
+  // column's `data-plan-url` -- the endpoint a further move from here
+  // would need, which is also exactly what undoing the move just
+  // performed would post to. The button's label comes from the copy
+  // island (`sprintButtonLabel`/`backlogButtonLabel`), never authored
+  // here -- this is real DOM work, not markup authorship, the same
+  // distinction `ensureList`/`ensureEmpty` already draw.
+  function syncRowForm(row, newMove, newUrl) {
+    var form = row.querySelector("form");
+    if (!form) return;
+    form.action = newUrl;
+
+    var projectIdInput = form.querySelector('input[name="project_id"]');
+    if (newMove === "add") {
+      // `plan_add` requires `project_id`; `plan_remove` doesn't
+      // declare the field at all (`PlanRemoveForm`).
+      if (!projectIdInput) {
+        projectIdInput = document.createElement("input");
+        projectIdInput.type = "hidden";
+        projectIdInput.name = "project_id";
+        form.appendChild(projectIdInput);
+      }
+      projectIdInput.value = row.dataset.planProjectId;
+    } else if (projectIdInput) {
+      projectIdInput.remove();
+    }
+
+    var button = form.querySelector('button[type="submit"]');
+    if (button) {
+      button.textContent = newMove === "add" ? copy.sprintButtonLabel : copy.backlogButtonLabel;
+    }
+  }
+
   function removeToast(row) {
     var toast = row._planToast;
     if (!toast) return;
@@ -200,12 +257,16 @@
   // Undo has no form to fall back to (`dm.js`'s rule, carried over
   // unchanged): every outcome here ends in announce + reload, never
   // a resubmit.
+  //
+  // `undoContainer` is where the row must go back to; `currentContainer`
+  // is where it sits right now, pre-undo (the destination the
+  // original move landed it in).
   function performUndo(row, undoContainer, currentContainer) {
-    var undoMove = undoContainer.dataset.planDrop;
+    var performedMove = undoContainer.dataset.planDrop; // the action *this* undo performs
     var undoUrl = undoContainer.dataset.planUrl;
     var body = new URLSearchParams();
     body.set("issue_id", row.dataset.planIssueId);
-    if (undoMove === "add") {
+    if (performedMove === "add") {
       body.set("project_id", row.dataset.planProjectId);
     }
 
@@ -219,8 +280,18 @@
         var destList = ensureList(undoContainer);
         destList.appendChild(row);
         ensureEmpty(currentContainer, emptyMessageFor(currentContainer));
-        row.dataset.planMove = undoMove;
-        announcePolite(movedMessage(undoMove));
+        // Round 2 (`PLAN-002-review.md` §4/§6a): the row's new
+        // `data-plan-move` is `undoContainer`'s own
+        // `data-plan-row-move` -- the fact the server already
+        // renders for "a row sitting here" -- never `performedMove`
+        // (the action just taken) and never computed by inverting
+        // it. Those two coincided in round 1's code by accident and
+        // diverge the moment a row is dragged, undone, then dragged
+        // again.
+        var newMove = undoContainer.dataset.planRowMove;
+        row.dataset.planMove = newMove;
+        syncRowForm(row, newMove, currentContainer.dataset.planUrl);
+        announcePolite(movedMessage(performedMove));
       })
       .catch(function () {
         announceAssertive(copy.undoUnavailableMessage);
@@ -228,20 +299,25 @@
       });
   }
 
-  // The mutation already succeeded server-side here -- `row.dataset
-  // .planMove` updates first (metadata only, never the row's visible
-  // markup -- §3.4) so a second drag reads the row's new direction
-  // correctly even before any reload.
-  function applyMove(row, targetMove, originContainer) {
+  // The mutation already succeeded server-side here. `performedMove`
+  // is the action just taken (for the announcement); the row's new
+  // `data-plan-move` is a separate fact -- `destContainer`'s own
+  // `data-plan-row-move` (round 2, same distinction `performUndo`
+  // draws above) -- read directly rather than derived from
+  // `performedMove`, which is its opposite on every column by
+  // construction and was round 1's defect.
+  function applyMove(row, performedMove, originContainer, destContainer) {
     try {
-      row.dataset.planMove = targetMove;
-      var message = movedMessage(targetMove);
+      var newMove = destContainer.dataset.planRowMove;
+      row.dataset.planMove = newMove;
+      syncRowForm(row, newMove, originContainer.dataset.planUrl);
+      var message = movedMessage(performedMove);
       announcePolite(message);
       showUndoToast(row, message, function () {
-        performUndo(row, originContainer, row.closest("[data-plan-drop]"));
+        performUndo(row, originContainer, destContainer);
       });
     } catch (e) {
-      announcePolite(movedMessage(targetMove));
+      announcePolite(movedMessage(performedMove));
       window.location.reload();
     }
   }
@@ -300,7 +376,7 @@
       destList.appendChild(row);
       ensureEmpty(originContainer, emptyMessageFor(originContainer));
 
-      var targetMove = column.dataset.planDrop;
+      var performedMove = column.dataset.planDrop;
       var body = new URLSearchParams(new FormData(form));
 
       // `PLAN-002` §3.1: `plan_add`/`plan_remove` both return a `303`
@@ -315,12 +391,19 @@
       // `redirect: "follow"` with `res.ok`: that would re-render and
       // discard the whole plan page server-side per move, on exactly
       // the screen where a user makes many in a row.
-      fetch(form.action, { method: "POST", body: body, redirect: "manual" })
+      //
+      // Round 2 (`PLAN-002-review.md` §6b): posts `column.dataset
+      // .planUrl`, the destination column's own server-rendered URL
+      // -- not `form.action`. They agree on a row's first drag, but
+      // not after a confirmed move has left the row's own form
+      // stale until `syncRowForm` catches it up; `performUndo`
+      // already posted its own container's URL for the same reason.
+      fetch(column.dataset.planUrl, { method: "POST", body: body, redirect: "manual" })
         .then(function (res) {
           if (res.type !== "opaqueredirect") {
             throw new Error("plan-move-not-redirect");
           }
-          applyMove(row, targetMove, originContainer);
+          applyMove(row, performedMove, originContainer, destContainer);
         })
         .catch(function () {
           revertMove(row, originContainer, destContainer);
