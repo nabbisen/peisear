@@ -771,15 +771,25 @@ async fn drag_markers_attached_for_admin_on_planned_sprint() {
     // in* each column carries -- the opposite of that column's own
     // `data-plan-drop` -- rendered server-side so the script never
     // inverts one to get the other.
+    //
+    // `PLAN-002-round2-review.md` §4: checked as one substring per
+    // column, pinning `data-plan-drop` to its own `data-plan-row-move`
+    // rather than two independent unscoped checks -- both strings
+    // appear on the page regardless of which column carries which, so
+    // the unscoped pair would still pass with the two columns'
+    // attributes swapped, which is exactly the association this round
+    // exists to get right.
     assert!(
-        body.contains(r#"data-plan-row-move="remove""#),
-        "the sprint column must carry data-plan-row-move=\"remove\" \
-         (a row sitting there moves away by a remove): {body}"
+        body.contains(r#"data-plan-drop="add" data-plan-row-move="remove""#),
+        "the sprint column must pair data-plan-drop=\"add\" with its own \
+         data-plan-row-move=\"remove\" (a row sitting there moves away by \
+         a remove): {body}"
     );
     assert!(
-        body.contains(r#"data-plan-row-move="add""#),
-        "the backlog column must carry data-plan-row-move=\"add\" \
-         (a row sitting there moves away by an add): {body}"
+        body.contains(r#"data-plan-drop="remove" data-plan-row-move="add""#),
+        "the backlog column must pair data-plan-drop=\"remove\" with its own \
+         data-plan-row-move=\"add\" (a row sitting there moves away by an \
+         add): {body}"
     );
     assert!(
         body.contains(r#"draggable="true""#) && body.contains(r#"draggable="false""#),
