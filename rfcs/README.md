@@ -91,6 +91,7 @@ the RFC number they are keyed to.
 | [`handoffs/013-layout-defects/`](./handoffs/013-layout-defects/README.md) | **Not RFC-governed** — defects found by browser inspection |
 | [`handoffs/014-vendored-assets/`](./handoffs/014-vendored-assets/README.md) | `DEC-051` — Tailwind and DaisyUI move out of two CDNs into `static/` |
 | [`handoffs/016-privacy-coverage/`](./handoffs/016-privacy-coverage/README.md) | not RFC-governed — `NFR-PRIV-008`'s coverage, target 0.37.0 |
+| [`handoffs/017-backlog-ordering/`](./handoffs/017-backlog-ordering/README.md) | **Not RFC-governed** — `PLAN-003`, the sprint-plan backlog's priority sort, target 0.38.0 |
 | [`handoffs/015-mobile-completion/`](./handoffs/015-mobile-completion/README.md) | **Not RFC-governed** — closing `NFR-A11Y-006`, unverified since Phase E |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
