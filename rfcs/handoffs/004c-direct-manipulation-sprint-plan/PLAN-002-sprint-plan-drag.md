@@ -275,3 +275,18 @@ would have diverged the client from the server silently. Both are in
 `.git-exclude/reviewed/PLAN-002-review.md` with the runs that show them; §6
 there is the work. The added bullet in §6 above is why neither the suite nor
 the evidence run saw it.
+
+**Round 2 is done and approved** (`4d1b1f9`,
+`.git-exclude/reviewed/PLAN-002-round2-review.md`). Each column now renders
+`data-plan-row-move`, so the script inverts nothing; the drop posts the
+column's URL; and `syncRowForm` brings a moved row's action, `project_id`
+input and button label into line after every confirmed move. Verified by an
+independent no-reload sequence — in, out, in, undo — with the server agreeing
+after a final reload.
+
+**One line remains**, and it needs no review round: the two
+`data-plan-row-move` assertions are unscoped, so swapping the two columns'
+attributes would still pass both. Pin the pairing by asserting
+`data-plan-drop="…" data-plan-row-move="…"` as one substring per column, and
+say in the release candidate that it was done. That is `§10.17`'s class in the
+one place this round was about.
