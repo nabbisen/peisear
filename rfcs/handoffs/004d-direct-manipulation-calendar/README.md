@@ -18,6 +18,7 @@ one is reviewed.
 | # | Handoff | Covers | Depends on |
 |---|---|---|---|
 | CAL-003 | [CAL-003](./CAL-003-day-view-reschedule.md) | The day-view reschedule: a new narrow JSON endpoint returning the lock value, the block's wrapper and identity attributes, `static/calendar.js`, and the state sync `PLAN-002` earned the hard way | — |
+| REL-0.36.0 | [REL-0.36.0](./REL-0.36.0-release-candidate.md) | Release candidate — `CAL-003`. **The second drag feature in two releases**, and the changelog's trap is reading as a programme rather than a bounded addition. First release since the CSS was vendored where `static/tailwind.css` legitimately changes. | CAL-003 |
 
 ## What is different about this substep
 
