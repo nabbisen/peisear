@@ -11,6 +11,7 @@ regression test for a property that already holds.**
 | ID | Link | What | Release |
 |---|---|---|---|
 | PRIV-001 | [PRIV-001](./PRIV-001-the-seven-missing-assertions.md) | ✅ Done. **Five, not the seven I counted** — two Class A cells were already covered and the implementer checked rather than inherited. Each new refusal paired with a known positive; the module doc corrected. Planting showed the three capacity tests load-bearing, and measured `§10.3`'s two independent barriers for the first time. | 0.37.0 |
+| REL-0.37.0 | [REL-0.37.0](./REL-0.37.0-release-candidate.md) | Release candidate — `PRIV-001`. **Definition of Done item 1 reaches Met**, and 0.20.0's published claim that a boundary *"cannot exist"* is corrected. No behaviour changed at all. | 0.37.0 |
 
 ## The classification is the useful part
 
