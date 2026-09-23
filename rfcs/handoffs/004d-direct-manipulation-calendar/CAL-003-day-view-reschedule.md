@@ -46,6 +46,18 @@ D-4 did not follow it was that D-4 had no lock.** This substep does.
 one.** A reschedule moves both timestamps by one delta, so an ordering that
 was valid before stays valid by construction.
 
+> **Corrected 2026-09-23, by the implementer, and left visible.** *"Anywhere"*
+> was wrong: migration `0016` carries
+> `issues_planned_range_check_insert`/`_update`, which `RAISE(ABORT, …)` when
+> both dates are set and the end precedes the start. I searched the web
+> handlers and `IssueForm::validate` and wrote a conclusion one scope wider
+> than the search. **The instruction below still stands and for the same
+> reason** — a delta applied to both timestamps cannot invalidate an ordering
+> that was valid, so the trigger never fires for a real drag, and no
+> application-layer check was added. `update_schedule` routes its error
+> through `translate_trigger_error`, so the defensive path is correctly worded
+> for free.
+
 **d. The day container is a fixed `height: 960px` for 24 hours.** Not a
 percentage of the viewport — `render_day_view` renders
 `style="height: 960px;"` and positions blocks by percentage inside it. So
