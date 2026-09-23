@@ -616,6 +616,71 @@ pub async fn update_status(
     Ok(new_updated_at)
 }
 
+/// `CAL-003` (RFC 004d D-3): moves both planned timestamps together —
+/// a reschedule, not a general edit. Two fields where [`update`] has
+/// ten; same shape as [`update_status`] otherwise, including the
+/// same-transaction `updated_at` read after the trigger fires (see
+/// that function's own comment for why `RETURNING` doesn't work
+/// here). No ordering rule between the two — the handoff's §2c found
+/// none exists anywhere in this codebase, and a reschedule moves both
+/// timestamps by the same delta, so an ordering that was valid stays
+/// valid by construction; inventing one here would be new, unasked-for
+/// behaviour.
+///
+/// No event is emitted for the change — [`update`] (the ten-field
+/// form) doesn't diff `planned_start_at`/`planned_end_at` into an
+/// event either (only status/effort/assignee), so this doesn't
+/// introduce an inconsistency; it follows the existing precedent.
+pub async fn update_schedule(
+    pool: &Pool,
+    id: &str,
+    project_id: &str,
+    planned_start_at: Option<DateTime<Utc>>,
+    planned_end_at: Option<DateTime<Utc>>,
+) -> StorageResult<DateTime<Utc>> {
+    let mut tx = pool.begin().await?;
+
+    let res = sqlx::query(
+        r#"
+        UPDATE issues
+        SET planned_start_at = ?3, planned_end_at = ?4
+        WHERE id = ?1 AND project_id = ?2
+        "#,
+    )
+    .bind(id)
+    .bind(project_id)
+    .bind(planned_start_at)
+    .bind(planned_end_at)
+    .execute(&mut *tx)
+    .await;
+
+    let res = match res {
+        Ok(r) => r,
+        Err(e) => return Err(translate_trigger_error(e)),
+    };
+    if res.rows_affected() == 0 {
+        return Err(StorageError::NotFound);
+    }
+
+    // Same reasoning as `update_status`: a same-transaction read
+    // after the `AFTER` trigger has advanced `updated_at` is the one
+    // way to hand the caller the real new lock value.
+    let new_updated_at: DateTime<Utc> = sqlx::query_scalar(
+        r#"
+        SELECT updated_at FROM issues
+        WHERE id = ?1 AND project_id = ?2
+        "#,
+    )
+    .bind(id)
+    .bind(project_id)
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(StorageError::NotFound)?;
+
+    tx.commit().await?;
+    Ok(new_updated_at)
+}
+
 pub async fn delete(pool: &Pool, id: &str, project_id: &str, actor_id: &str) -> StorageResult<()> {
     let mut tx = pool.begin().await?;
 

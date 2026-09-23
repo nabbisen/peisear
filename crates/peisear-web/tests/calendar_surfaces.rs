@@ -492,3 +492,316 @@ async fn sub_issues_appear_on_neither_axis() {
         "a sub-issue must not appear on the personal axis: {body}"
     );
 }
+
+// ──────────────────────────────────────────────────────────────
+// `CAL-003` (RFC 004d D-3) — drag a day-view block to reschedule it
+// ──────────────────────────────────────────────────────────────
+
+/// The `data-updated-at` attribute's value on the one day-view block
+/// whose `data-issue-id` is `issue_id` — scoped to that block's own
+/// wrapper `<div ...>` tag, same discipline
+/// `board_card_lock_value.rs`'s `card_updated_at` uses (`§10.17`'s
+/// lesson: not a whole-body search).
+fn block_attr<'a>(body: &'a str, issue_id: &str, attr: &str, label: &str) -> &'a str {
+    let id_marker = format!(r#"data-issue-id="{issue_id}""#);
+    let id_pos = body.find(&id_marker).unwrap_or_else(|| {
+        panic!("no block for {label:?} (issue {issue_id}) found in body: {body}")
+    });
+    let tag_start = body[..id_pos]
+        .rfind("<div")
+        .unwrap_or_else(|| panic!("no <div precedes data-issue-id for {label:?}: {body}"));
+    let tag_end = body[tag_start..]
+        .find('>')
+        .map(|e| tag_start + e)
+        .unwrap_or_else(|| panic!("block <div> for {label:?} has no closing '>': {body}"));
+    let tag = &body[tag_start..tag_end];
+    let marker = format!(r#"{attr}=""#);
+    let attr_start = tag.find(&marker).unwrap_or_else(|| {
+        panic!("block for {label:?} (issue {issue_id}) carries no {attr} attribute at all: {tag}")
+    });
+    let value_start = attr_start + marker.len();
+    let value_end = tag[value_start..]
+        .find('"')
+        .map(|e| value_start + e)
+        .unwrap_or_else(|| panic!("{attr} attribute unterminated on {label:?}'s block: {tag}"));
+    &tag[value_start..value_end]
+}
+
+/// `LOCK-001`'s guarantee (`DEC-052`), extended per handoff §4.3 to
+/// the day view's own drag identity: every block renders a non-empty
+/// `data-updated-at`, the optimistic lock `calendar.js` participates
+/// in. Two blocks, same shape `board_card_lock_value.rs` uses (a
+/// one-block page can't distinguish "every block" from "a block").
+#[tokio::test]
+async fn every_day_view_block_carries_a_non_empty_lock_value() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "Lock value fixture").await;
+    let d = today();
+
+    let first_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "First block",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+    let second_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Second block",
+        None,
+        Some(utc_hms(d, 13, 0)),
+        Some(utc_hms(d, 14, 0)),
+    )
+    .await;
+
+    let resp = app
+        .server
+        .get(&format!("/projects/{project_id}/calendar?view=day"))
+        .await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    for (issue_id, label) in [(&first_id, "First block"), (&second_id, "Second block")] {
+        let value = block_attr(&body, issue_id, "data-updated-at", label);
+        assert!(
+            !value.is_empty(),
+            "the {label:?} block (issue {issue_id}) carries an empty data-updated-at -- \
+             calendar.js has no way to send a lock value it never received: {body}"
+        );
+    }
+}
+
+/// §4.1: a stale `client_updated_at` against `/schedule` returns the
+/// conflict status through `check_optimistic_lock`, the same shared
+/// function every mutation path uses — not a hand-written 409, and no
+/// second lock check introduced for this endpoint.
+#[tokio::test]
+async fn change_schedule_rejects_a_stale_lock() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    let issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Stale lock fixture",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{issue_id}/schedule"
+        ))
+        .json(&serde_json::json!({
+            "planned_start_at": format!("{}T09:30", d.format("%Y-%m-%d")),
+            "planned_end_at": format!("{}T10:30", d.format("%Y-%m-%d")),
+            "client_updated_at": "1970-01-01T00:00:00Z",
+        }))
+        .await;
+    resp.assert_status(StatusCode::CONFLICT);
+
+    let unchanged = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .planned_start_at
+        .expect("still planned");
+    assert_eq!(
+        unchanged,
+        utc_hms(d, 9, 0),
+        "a rejected reschedule must not have moved the issue"
+    );
+}
+
+/// §4.1's success case: both timestamps move by the same delta, the
+/// response carries the new lock value, and `time_label`/
+/// `announcement` are both present and non-empty.
+#[tokio::test]
+async fn change_schedule_moves_both_timestamps_and_returns_the_new_lock() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    let issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Reschedule fixture",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+
+    let before = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .updated_at;
+
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{issue_id}/schedule"
+        ))
+        .json(&serde_json::json!({
+            "planned_start_at": format!("{}T11:15", d.format("%Y-%m-%d")),
+            "planned_end_at": format!("{}T12:15", d.format("%Y-%m-%d")),
+            "client_updated_at": before.to_rfc3339(),
+        }))
+        .await;
+    resp.assert_status(StatusCode::OK);
+    let json: serde_json::Value = resp.json();
+    assert!(
+        json["updated_at"].as_str().is_some_and(|v| !v.is_empty()),
+        "response must carry a non-empty updated_at: {json}"
+    );
+    assert_eq!(
+        json["time_label"].as_str(),
+        Some("11:15–12:15"),
+        "response must carry the server-formatted time label: {json}"
+    );
+    assert!(
+        json["announcement"]
+            .as_str()
+            .is_some_and(|a| a.contains("11:15–12:15")),
+        "response's announcement must name the new time: {json}"
+    );
+
+    let after = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue");
+    assert_eq!(after.planned_start_at, Some(utc_hms(d, 11, 15)));
+    assert_eq!(after.planned_end_at, Some(utc_hms(d, 12, 15)));
+    // Not `assert_ne!(after.updated_at, before)` -- `CURRENT_TIMESTAMP`
+    // (`0017`'s trigger) is second-resolution, and this test's two
+    // writes can land in the same wall-clock second, same shape
+    // `json_status_change_returns_the_new_updated_at` (`status_control.rs`)
+    // already avoids for the same reason. The response's own value
+    // matching what the row actually holds is the meaningful check.
+    assert_eq!(
+        json["updated_at"].as_str(),
+        Some(after.updated_at.to_rfc3339().as_str()),
+        "the response's updated_at must equal what the row actually holds"
+    );
+}
+
+/// §4.1: a forged `project_id` (an issue that actually lives in a
+/// different project) is refused the same way the form path already
+/// refuses one — `issues::find` is scoped by `(issue_id, project_id)`
+/// together, so this needs no defense-in-depth check of its own.
+#[tokio::test]
+async fn change_schedule_rejects_a_forged_project_id() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let real_project_id = create_personal_project(&app.db, &admin_id, "Real project").await;
+    let other_project_id = create_personal_project(&app.db, &admin_id, "Other project").await;
+    let d = today();
+    let issue_id = insert_planned_issue(
+        &app,
+        &real_project_id,
+        &admin_id,
+        "Forged id fixture",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{other_project_id}/issues/{issue_id}/schedule"
+        ))
+        .json(&serde_json::json!({
+            "planned_start_at": format!("{}T09:30", d.format("%Y-%m-%d")),
+            "planned_end_at": format!("{}T10:30", d.format("%Y-%m-%d")),
+            "client_updated_at": "2020-01-01T00:00:00Z",
+        }))
+        .await;
+    resp.assert_status(StatusCode::NOT_FOUND);
+
+    let unchanged = issues::find(&app.db, &issue_id, &real_project_id)
+        .await
+        .expect("find issue")
+        .planned_start_at
+        .expect("still planned");
+    assert_eq!(unchanged, utc_hms(d, 9, 0));
+}
+
+/// §4.7: `calendar.js` is referenced with `defer` on day view and
+/// absent on week/month view — the other two shapes have no
+/// `data-issue-id`/`draggable` markers for it to attach to (`CAL-003`
+/// §6, mirroring `dm_js_is_served_with_defer_on_both_surfaces`'s
+/// negative-case shape).
+#[tokio::test]
+async fn calendar_js_is_referenced_only_on_day_view() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Script tag fixture",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+
+    let day_resp = app
+        .server
+        .get(&format!("/projects/{project_id}/calendar?view=day"))
+        .await;
+    let day_body = day_resp.text();
+    assert!(
+        day_body.contains(r#"<script src="/static/calendar.js" defer"#),
+        "day view must reference calendar.js with defer: {day_body}"
+    );
+
+    let week_resp = app
+        .server
+        .get(&format!("/projects/{project_id}/calendar?view=week"))
+        .await;
+    let week_body = week_resp.text();
+    assert!(
+        !week_body.contains("/static/calendar.js"),
+        "week view must not load calendar.js -- it has nothing there to enhance: {week_body}"
+    );
+
+    let month_resp = app
+        .server
+        .get(&format!("/projects/{project_id}/calendar?view=month"))
+        .await;
+    let month_body = month_resp.text();
+    assert!(
+        !month_body.contains("/static/calendar.js"),
+        "month view must not load calendar.js either: {month_body}"
+    );
+
+    // The personal axis shares the same gate (`view == Day`), so one
+    // check there is enough to confirm it isn't a project-axis-only
+    // condition.
+    let personal_day_resp = app.server.get("/today/calendar?view=day").await;
+    let personal_day_body = personal_day_resp.text();
+    assert!(
+        personal_day_body.contains(r#"<script src="/static/calendar.js" defer"#),
+        "the personal axis's day view must also reference calendar.js: {personal_day_body}"
+    );
+}

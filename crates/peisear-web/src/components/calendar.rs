@@ -32,15 +32,26 @@ use super::layout::AppShell;
 use super::{CalendarDay, CalendarView, grow, t};
 
 /// A block's rendered time text, e.g. `"09:00"` or `"09:00–10:30"`.
-/// Empty only if `planned_start_at` is somehow `None` — every block
-/// reaching this component came from a query that filters on
+/// Empty only if `start` is somehow `None` — every block reaching
+/// this component came from a query that filters on
 /// `planned_start_at IS NOT NULL`, so that's defensive, not expected.
-fn time_label(issue: &Issue) -> String {
-    let Some(start) = issue.planned_start_at else {
+///
+/// `pub(crate)` and free of `Issue` (`CAL-003` §3.6): the schedule
+/// endpoint's response carries this same text (`handlers::issues::
+/// apply_schedule_change`), computed once from the values the
+/// handler just validated and wrote, rather than reformatted a
+/// second time in `calendar.js` from data the client has reason to
+/// distrust mid-drag. One function, not two copies of the same
+/// format string drifting apart.
+pub(crate) fn time_label_for(
+    start: Option<chrono::DateTime<chrono::Utc>>,
+    end: Option<chrono::DateTime<chrono::Utc>>,
+) -> String {
+    let Some(start) = start else {
         return String::new();
     };
     let start_str = start.format("%H:%M").to_string();
-    match issue.planned_end_at {
+    match end {
         Some(end) => format!("{start_str}–{}", end.format("%H:%M")),
         None => start_str,
     }
@@ -80,7 +91,7 @@ fn crowding_chip(count: usize) -> Option<impl IntoView> {
 fn render_block(issue: &Issue, project_badge: Option<String>) -> impl IntoView + use<> {
     let href = format!("/projects/{}/issues/{}", issue.project_id, issue.id);
     let title = issue.title.clone();
-    let time = time_label(issue);
+    let time = time_label_for(issue.planned_start_at, issue.planned_end_at);
     let badge = project_badge
         .map(|name| view! { <span class="text-[10px] opacity-70 truncate">{name}</span> });
     view! {
@@ -92,11 +103,38 @@ fn render_block(issue: &Issue, project_badge: Option<String>) -> impl IntoView +
     }
 }
 
+/// `CAL-003` §3.3: `datetime-local` shape (`YYYY-MM-DDTHH:MM`), the
+/// same one [`super::super::handlers::issues::parse_planned_datetime`]
+/// (via `apply_schedule_change`) parses back — not a second format
+/// for `calendar.js` to reconcile with. `None` renders as `""`, the
+/// same "empty means unset" convention every planned-date field in
+/// this codebase already uses.
+fn plan_datetime_attr(dt: Option<chrono::DateTime<chrono::Utc>>) -> String {
+    dt.map(|d| d.format("%Y-%m-%dT%H:%M").to_string())
+        .unwrap_or_default()
+}
+
 /// Day view: one column, an hour ruler (00–23) down the side, blocks
 /// absolute-positioned by percentage of the 24h day. Percentage
 /// positioning (not JS) so the layout reflows on screen size —
 /// `DEC-021` permits JS only as an enhancement over a working no-JS
 /// path, and this is the no-JS path.
+///
+/// `CAL-003` §3.3: each block is now a wrapper `<div>` (identity,
+/// position, `draggable`) around the same `<a>` (appearance, `href`,
+/// `draggable="false"`) — the board card's own shape
+/// (`components/issues.rs::IssueCard`), for the same reason: a
+/// `<form>` can't nest inside an `<a>`, so a future sibling element
+/// (an undo affordance, say) needs the wrapper to attach to, and an
+/// `<a href>` is draggable by browser default, which `board.js`
+/// already paid to learn the hard way (`DEV-002-005-review.md`
+/// §1.3). **`bg-primary/15` and `href` stay on the `<a>`** —
+/// `touch_target_scan`'s `is_named_escalation_exclusion` keys on the
+/// former, and the latter is the plain path (a click still
+/// navigates). The wrapper introduces no new site for
+/// `NFR-A11Y-007`: it carries no `role`, no handler of its own
+/// visible to assistive tech, the same non-interactive status the
+/// board card's wrapper `<div>` already has.
 fn render_day_view(
     day: &CalendarDay,
     project_badge_for: impl Fn(&Issue) -> Option<String>,
@@ -126,18 +164,31 @@ fn render_day_view(
             let style = format!("top:{top}%;height:{height}%;");
             let href = format!("/projects/{}/issues/{}", issue.project_id, issue.id);
             let title = issue.title.clone();
-            let time = time_label(issue);
+            let time = time_label_for(issue.planned_start_at, issue.planned_end_at);
             let badge = project_badge_for(issue).map(|name| {
                 view! { <span class="text-[10px] opacity-70 block truncate">{name}</span> }
             });
+            let issue_id = issue.id.clone();
+            let project_id = issue.project_id.clone();
+            let updated_at = issue.updated_at.to_rfc3339();
+            let planned_start_attr = plan_datetime_attr(issue.planned_start_at);
+            let planned_end_attr = plan_datetime_attr(issue.planned_end_at);
             Some(view! {
-                <a href=href style=style
-                   class="absolute left-12 right-1 rounded bg-primary/15 hover:bg-primary/25 \
-                          border-l-2 border-primary px-1.5 py-0.5 text-xs overflow-hidden">
-                    <span class="tabular-nums opacity-70 mr-1">{time}</span>
-                    <span>{title}</span>
-                    {badge}
-                </a>
+                <div style=style class="absolute left-12 right-1"
+                     data-issue-id=issue_id
+                     data-project-id=project_id
+                     data-updated-at=updated_at
+                     data-planned-start-at=planned_start_attr
+                     data-planned-end-at=planned_end_attr
+                     draggable="true">
+                    <a href=href draggable="false"
+                       class="block w-full h-full rounded bg-primary/15 hover:bg-primary/25 \
+                              border-l-2 border-primary px-1.5 py-0.5 text-xs overflow-hidden">
+                        <span class="tabular-nums opacity-70 mr-1">{time}</span>
+                        <span>{title}</span>
+                        {badge}
+                    </a>
+                </div>
             })
         })
         .collect_view();
@@ -157,7 +208,11 @@ fn render_day_view(
     let aria = cell_aria(day.date, day.blocks.len());
 
     view! {
-        <div class="relative border border-base-300 rounded bg-base-100" style="height: 960px;"
+        // `id="day-view"` scopes `calendar.js`'s queries, the same
+        // role `#board-root` plays for `board.js` — this container is
+        // the sole drop target (one continuous timeline, not discrete
+        // columns), so the script needs one stable handle to it.
+        <div id="day-view" class="relative border border-base-300 rounded bg-base-100" style="height: 960px;"
              role="group" aria-label=aria>
             {hours}
             {blocks}
@@ -354,6 +409,50 @@ fn render_grid(
     }
 }
 
+/// `CAL-003` §3.2/§4.5: `calendar.js`'s copy island — **the opposite
+/// of `PLAN-002`'s**, and that difference is the lock, not a change
+/// of mind. `PLAN-002` had no lock and no `outcomes` block by
+/// decision; this substep's lock applies in full (`/schedule` shares
+/// `check_optimistic_lock` with every other mutation path), a `409`
+/// is reachable, and the three outcomes `JS-003` classifies are all
+/// distinguishable — so the island carries them, built from the same
+/// [`super::issues::response_outcomes`] `dm.js`'s and `board.js`'s
+/// islands already use (`response_outcomes.rs` gains this as a third
+/// surface).
+///
+/// No `movedTo`-style lookup table: unlike a status (three fixed
+/// values) or a plan-drag direction (two), a reschedule's new time
+/// has no enumerable set of values, so the success announcement is
+/// rendered fully, server-side, per request
+/// (`handlers::issues::apply_schedule_change`) rather than carried
+/// here — this island only needs what's genuinely static at page
+/// load: the undo label and the snap interval.
+///
+/// **The snap interval lives here, not as a literal in `calendar.js`**
+/// (§3.4): it's a policy decision (`JS-001`'s "movable policy stays
+/// out of files no test executes"), and it's mine to set — see the
+/// handoff §7.
+fn render_calendar_copy_assets() -> impl IntoView {
+    let copy = serde_json::json!({
+        "undoLabel": t(MessageKey::UndoButtonLabel),
+        "snapMinutes": 15,
+        "outcomes": super::issues::response_outcomes(
+            t(MessageKey::CalendarRescheduleConflictMessage),
+            true,
+            t(MessageKey::CalendarRescheduleUnavailableMessage),
+            false,
+            t(MessageKey::CalendarRescheduleUnconfirmedMessage),
+            true,
+        ),
+    })
+    .to_string();
+
+    view! {
+        <script type="application/json" id="calendar-copy" inner_html=copy></script>
+        <script src="/static/calendar.js" defer=true></script>
+    }
+}
+
 fn render_sprint_band(sprint: Sprint) -> impl IntoView + use<> {
     let aria = t(MessageKey::SprintBandAriaLabel {
         sprint_name: sprint.name.clone(),
@@ -410,8 +509,18 @@ pub fn PersonalCalendarPage(
                 ])}
                 <h1 class="text-xl font-semibold mb-1">{t(MessageKey::PersonalCalendarPageTitle)}</h1>
                 <p class="text-xs text-base-content/70 mb-3">{t(MessageKey::CalendarUtcNote)}</p>
+                // `CAL-003` §2f/§4.4: this page carries no other form
+                // or live region (`issues.rs` renders its own pair
+                // per page) — day view's `calendar.js` writes here.
+                <div id="status-announcements" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
+                <div id="status-announcements-assertive" role="alert" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
                 {nav}
                 {grid}
+                // Gated on `view` the same way `board.js`'s tag is
+                // gated on board mode (`issues.rs`): day view is the
+                // only shape with `data-issue-id`/`draggable` markers
+                // for this script to attach to.
+                {matches!(view, CalendarView::Day).then(render_calendar_copy_assets)}
                 <p class="text-xs text-base-content/70 mt-4">{t(MessageKey::PersonalCalendarPrivacyFootnote)}</p>
             </div>
         </AppShell>
@@ -457,9 +566,12 @@ pub fn ProjectCalendarPage(
                     {t(MessageKey::ProjectCalendarPageTitle { project_name })}
                 </h1>
                 <p class="text-xs text-base-content/70 mb-3">{t(MessageKey::CalendarUtcNote)}</p>
+                <div id="status-announcements" role="status" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
+                <div id="status-announcements-assertive" role="alert" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
                 {nav}
                 {band}
                 {grid}
+                {matches!(view, CalendarView::Day).then(render_calendar_copy_assets)}
                 <p class="text-xs text-base-content/70 mt-4">{t(MessageKey::ProjectCalendarPrivacyFootnote)}</p>
             </div>
         </AppShell>

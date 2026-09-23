@@ -1081,3 +1081,137 @@ pub async fn change_status_form_list(
     }
     Ok(Redirect::to(&query))
 }
+
+// --- Day-view drag-and-drop reschedule (`CAL-003`, RFC 004d D-3): a
+// JSON endpoint modelled directly on `/status` (handoff §2b/§3.1),
+// since D-4's plan-drag substep had no lock and this one does. The
+// lock check is the one shared function every mutation path uses
+// (requirement 3); parsing is the same `parse_planned_datetime` the
+// edit form uses, not a second parser (§2c/§3.1).
+
+/// Validate the lock, parse both planned timestamps, and write them
+/// together. Shared shape with [`apply_status_change`] above, and
+/// deliberately the only entry point into [`issues::update_schedule`]
+/// so the lock check cannot drift between a JSON caller and some
+/// future form caller the way `DEV-001` found it had for status.
+///
+/// Returns `(updated_at, time_label, announcement)` — **the
+/// announcement sentence is rendered here too, in full**, extending
+/// §3.6's own principle ("the time label comes from the server...
+/// rather than being formatted in JavaScript") to the sentence that
+/// wraps it. `calendar.js` cannot enumerate every possible time the
+/// way `dm.js`'s `movedTo` table enumerates three statuses, so the
+/// alternative would be composing "Rescheduled to " + a raw value in
+/// the script — fixed English word order baked into a `.js` file,
+/// exactly what this codebase's i18n discipline exists to prevent
+/// elsewhere. One `t()` call here keeps sentence construction where
+/// `peisear-i18n` owns it.
+async fn apply_schedule_change(
+    state: &AppState,
+    user_id: &str,
+    project_id: &str,
+    issue_id: &str,
+    planned_start_at_str: &str,
+    planned_end_at_str: &str,
+    client_updated_at: &str,
+) -> AppResult<(chrono::DateTime<chrono::Utc>, String, String)> {
+    // Authorisation precedes concurrency, same order every other
+    // mutation path here uses.
+    let _project = projects::find_accessible(&state.db, project_id, user_id).await?;
+
+    let issue_now = issues::find(&state.db, issue_id, project_id).await?;
+    crate::error::check_optimistic_lock(
+        client_updated_at,
+        issue_now.updated_at,
+        peisear_i18n::EntityKind::Issue,
+        issue_id,
+    )?;
+
+    let planned_start_at =
+        parse_planned_datetime(planned_start_at_str, peisear_i18n::Field::PlannedStartDate)?;
+    let planned_end_at =
+        parse_planned_datetime(planned_end_at_str, peisear_i18n::Field::PlannedEndDate)?;
+
+    let updated_at = issues::update_schedule(
+        &state.db,
+        issue_id,
+        project_id,
+        planned_start_at,
+        planned_end_at,
+    )
+    .await?;
+
+    // §3.6: the label is computed here, once, from the values this
+    // handler just validated and wrote — not reformatted a second
+    // time in JavaScript from data the client already has reason to
+    // distrust mid-drag. Shares the exact function `components::
+    // calendar` renders every block's own time text with.
+    let time_label = crate::components::calendar::time_label_for(planned_start_at, planned_end_at);
+    let announcement = t(MessageKey::CalendarRescheduledAnnouncement {
+        time_label: time_label.clone(),
+    });
+
+    Ok((updated_at, time_label, announcement))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ScheduleChange {
+    /// `datetime-local` shape (`YYYY-MM-DDTHH:MM`), same as
+    /// [`IssueForm::planned_start_at`] — parsed by the same
+    /// [`parse_planned_datetime`], not a second format. Empty string
+    /// is never expected in practice (a block being dragged always
+    /// has a start), but `#[serde(default)]` keeps a missing/blank
+    /// field on the same "fails through validation, not the
+    /// extractor" path every other field on this struct already
+    /// takes, rather than a bare 422.
+    #[serde(default)]
+    pub planned_start_at: String,
+    /// Same shape; empty means "no end date" (the half-open case,
+    /// `CAL-002` must-have 5) and is preserved rather than rejected —
+    /// a reschedule shifts whatever the issue already had.
+    #[serde(default)]
+    pub planned_end_at: String,
+    /// RFC3339 timestamp from the dragged block's own
+    /// `data-updated-at` (`components/calendar.rs`). Same
+    /// `#[serde(default)]` treatment as [`StatusChange::client_updated_at`]
+    /// — see that field's doc comment.
+    #[serde(default)]
+    pub client_updated_at: String,
+}
+
+/// The new lock value, the server-formatted time label, and the
+/// full success announcement — all returned so `calendar.js` never
+/// formats a timestamp or composes a sentence itself (§3.1/§3.6).
+#[derive(Debug, Serialize)]
+pub struct ScheduleChangeResponse {
+    pub updated_at: String,
+    pub time_label: String,
+    pub announcement: String,
+}
+
+/// `POST /projects/{project_id}/issues/{issue_id}/schedule` —
+/// `calendar.js`'s drag-and-drop entry point. No form sibling: the
+/// day view has no plain control to fall back to (§2f), so unlike
+/// `/status` this endpoint has no `StatusChangeForm`-shaped twin.
+pub async fn change_schedule(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((project_id, issue_id)): Path<(String, String)>,
+    Json(body): Json<ScheduleChange>,
+) -> AppResult<Json<ScheduleChangeResponse>> {
+    let (updated_at, time_label, announcement) = apply_schedule_change(
+        &state,
+        &user.id,
+        &project_id,
+        &issue_id,
+        &body.planned_start_at,
+        &body.planned_end_at,
+        &body.client_updated_at,
+    )
+    .await?;
+    Ok(Json(ScheduleChangeResponse {
+        updated_at: updated_at.to_rfc3339(),
+        time_label,
+        announcement,
+    }))
+}

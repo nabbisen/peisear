@@ -1384,6 +1384,23 @@ pub(crate) fn render(key: MessageKey) -> String {
                 )
             }
         }
+        MessageKey::CalendarRescheduledAnnouncement { time_label } => {
+            format!("Rescheduled to {time_label}.")
+        }
+        MessageKey::CalendarRescheduleConflictMessage => {
+            "Another member changed this issue first. The calendar now shows the current state."
+                .to_string()
+        }
+        MessageKey::CalendarRescheduleUnavailableMessage => {
+            "This reschedule could not be completed. The block has been returned to its \
+             previous time."
+                .to_string()
+        }
+        MessageKey::CalendarRescheduleUnconfirmedMessage => {
+            "This reschedule may not have completed. The calendar has been refreshed to \
+             show the current state."
+                .to_string()
+        }
         MessageKey::ConfirmDeleteSprintPlannedNote => {
             "Issues currently linked to it will be unlinked.".to_string()
         }

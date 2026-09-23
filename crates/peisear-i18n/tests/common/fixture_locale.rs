@@ -1004,6 +1004,12 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count } => {
             format!("[fx-confirm-issue-cascade] {sub_issue_count}")
         }
+        MessageKey::CalendarRescheduledAnnouncement { time_label } => {
+            format!("[fx-cal-rescheduled] {time_label}")
+        }
+        MessageKey::CalendarRescheduleConflictMessage => "[fx-cal-conflict]".to_string(),
+        MessageKey::CalendarRescheduleUnavailableMessage => "[fx-cal-unavailable]".to_string(),
+        MessageKey::CalendarRescheduleUnconfirmedMessage => "[fx-cal-unconfirmed]".to_string(),
     }
 }
 

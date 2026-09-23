@@ -2347,6 +2347,40 @@ pub enum MessageKey {
     ConfirmDeleteIssueCascadeNote {
         sub_issue_count: i64,
     },
+
+    // ---- CAL-003: drag a day-view block to reschedule it (RFC
+    // ---- 004d D-3) ----
+    /// `calendar.js`'s success announcement, both for the initial
+    /// drag and for undo — undoing *is* a reschedule (back to the
+    /// original values), so it earns the identical phrasing rather
+    /// than a second key. `time_label` is the server-formatted text
+    /// (`components::calendar::time_label_for`, e.g. `"09:00–10:30"`)
+    /// the schedule-change response already computed — rendered here,
+    /// server-side, rather than composed in JavaScript from a raw
+    /// value the client would otherwise have to assemble into a
+    /// sentence itself (§3.6's principle, extended to the
+    /// announcement the same way it already applies to the label).
+    CalendarRescheduledAnnouncement {
+        time_label: String,
+    },
+    /// `calendar.js`'s `409` case: someone else changed the issue
+    /// between page load and the drop. No retry, no force — announce
+    /// this and reload, the same posture `board.js` takes on
+    /// conflict, and mandatory here per the handoff §3.5 ("a 409 in
+    /// particular must end in a reload").
+    CalendarRescheduleConflictMessage,
+    /// `calendar.js`'s non-`409` failure case — a network rejection
+    /// or any other non-2xx response. The block has already been
+    /// reverted to its pre-drag position by the time this is shown.
+    CalendarRescheduleUnavailableMessage,
+    /// `calendar.js`'s `unconfirmed` case — a `2xx` response whose
+    /// body carries no usable `updated_at`/`time_label`. Deliberately
+    /// **not** [`MessageKey::CalendarRescheduleUnavailableMessage`]
+    /// reused: that key asserts the change *failed*, which cannot be
+    /// supported here (it may well have applied) — same reasoning as
+    /// [`MessageKey::StatusChangeUndoUnconfirmedMessage`]
+    /// (`NFR-LANG-002`, `FR-HLT-005`/`006`).
+    CalendarRescheduleUnconfirmedMessage,
 }
 
 impl MessageKey {
@@ -3166,6 +3200,12 @@ impl MessageKey {
             // this guard.
             MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count: 1 },
             MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count: 2 },
+            MessageKey::CalendarRescheduledAnnouncement {
+                time_label: "09:00–10:30".to_string(),
+            },
+            MessageKey::CalendarRescheduleConflictMessage,
+            MessageKey::CalendarRescheduleUnavailableMessage,
+            MessageKey::CalendarRescheduleUnconfirmedMessage,
         ];
         keys.extend(
             CalendarViewLabel::all()

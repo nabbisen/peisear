@@ -5,10 +5,16 @@
 //! instead of the classification being written three times across the
 //! two scripts. These tests check the *data* the islands render, not
 //! the scripts' own consumption of it — `§10.15` still holds that.
+//!
+//! `CAL-003` (RFC 004d D-3) adds `calendar.js`'s island as a third
+//! surface — the opposite of `PLAN-002`'s deliberate omission,
+//! because `/schedule` shares the same lock every other mutation path
+//! does.
 
 mod common;
 
 use axum::http::StatusCode;
+use chrono::TimeZone;
 use common::auth::{TestUser, register_and_login};
 use common::fixture::{create_issue, create_personal_project};
 use common::server::TestApp;
@@ -37,10 +43,49 @@ fn extract_island(body: &str, id: &str) -> serde_json::Value {
     })
 }
 
-/// Check 1: both islands carry `outcomes` with all three keys, each
-/// with a non-empty `message`, and a numeric `conflictStatus`.
+/// A planned issue, day-view-visible on `date`, and that page's own
+/// `#calendar-copy` island. `date` is passed explicitly rather than
+/// relying on "today" so the fixture and the request agree without
+/// depending on wall-clock time.
+async fn calendar_island_for(
+    app: &TestApp,
+    project_id: &str,
+    user_id: &str,
+    date: chrono::NaiveDate,
+) -> (String, serde_json::Value) {
+    let issue_id = create_issue(&app.db, project_id, user_id, "Scheduled").await;
+    let start = chrono::Utc.from_utc_datetime(&date.and_hms_opt(9, 0, 0).unwrap());
+    let end = chrono::Utc.from_utc_datetime(&date.and_hms_opt(10, 0, 0).unwrap());
+    peisear_storage::issues::update_schedule(
+        &app.db,
+        &issue_id,
+        project_id,
+        Some(start),
+        Some(end),
+    )
+    .await
+    .expect("set planned dates");
+
+    let resp = app
+        .server
+        .get(&format!(
+            "/projects/{project_id}/calendar?view=day&date={}",
+            date.format("%Y-%m-%d")
+        ))
+        .await;
+    resp.assert_status(StatusCode::OK);
+    let island = extract_island(&resp.text(), "calendar-copy");
+    (issue_id, island)
+}
+
+fn fixture_date() -> chrono::NaiveDate {
+    chrono::NaiveDate::from_ymd_opt(2026, 6, 15).expect("valid date")
+}
+
+/// Check 1: all three islands carry `outcomes` with all three keys,
+/// each with a non-empty `message`, and a numeric `conflictStatus`.
 #[tokio::test]
-async fn both_islands_carry_outcomes_with_all_three_keys() {
+async fn all_islands_carry_outcomes_with_all_three_keys() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
@@ -62,6 +107,10 @@ async fn both_islands_carry_outcomes_with_all_three_keys() {
     board_resp.assert_status(StatusCode::OK);
     let board_island = extract_island(&board_resp.text(), "board-copy");
     assert_outcomes_shape(&board_island, "board.js");
+
+    let (_scheduled_id, calendar_island) =
+        calendar_island_for(&app, &project_id, &user_id, fixture_date()).await;
+    assert_outcomes_shape(&calendar_island, "calendar.js");
 }
 
 fn assert_outcomes_shape(island: &serde_json::Value, surface: &str) {
@@ -122,6 +171,45 @@ async fn conflict_status_matches_a_real_409() {
     );
 }
 
+/// Check 2b (`CAL-003`): the calendar island's declared
+/// `conflictStatus` equals what `/schedule` actually returns for a
+/// genuine stale `client_updated_at` — the same discipline as check 2
+/// above, routed through the real endpoint rather than assumed to
+/// match `/status`'s because the two share `check_optimistic_lock`.
+#[tokio::test]
+async fn calendar_conflict_status_matches_a_real_409() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "P").await;
+    let date = fixture_date();
+    let (issue_id, island) = calendar_island_for(&app, &project_id, &user_id, date).await;
+
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{issue_id}/schedule"
+        ))
+        .json(&serde_json::json!({
+            "planned_start_at": format!("{}T09:30", date.format("%Y-%m-%d")),
+            "planned_end_at": format!("{}T10:30", date.format("%Y-%m-%d")),
+            "client_updated_at": "1970-01-01T00:00:00Z",
+        }))
+        .await;
+    resp.assert_status(StatusCode::CONFLICT);
+    let real_status = resp.status_code().as_u16();
+
+    let declared = island["outcomes"]["conflictStatus"]
+        .as_u64()
+        .expect("conflictStatus is a number") as u16;
+
+    assert_eq!(
+        declared, real_status,
+        "calendar.js's declared conflictStatus must equal what /schedule's real \
+         optimistic-lock conflict actually returns"
+    );
+}
+
 /// Check 3 (the assertion that would have failed on `board.js`'s
 /// pre-`JS-003` silent `return`): the board island's `unconfirmed`
 /// message is non-empty.
@@ -150,9 +238,10 @@ async fn board_unconfirmed_message_is_non_empty() {
     );
 }
 
-/// Fetch both islands for a fresh fixture project. Shared by checks 4
-/// and 5 below, which both need to inspect `reload` on every island.
-async fn both_islands() -> (serde_json::Value, serde_json::Value) {
+/// Fetch all three islands for a fresh fixture project. Shared by
+/// checks 4 and 5 below, which both need to inspect `reload` on
+/// every island.
+async fn three_islands() -> (serde_json::Value, serde_json::Value, serde_json::Value) {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
@@ -171,7 +260,10 @@ async fn both_islands() -> (serde_json::Value, serde_json::Value) {
         .await;
     let board_island = extract_island(&board_resp.text(), "board-copy");
 
-    (dm_island, board_island)
+    let (_scheduled_id, calendar_island) =
+        calendar_island_for(&app, &project_id, &user_id, fixture_date()).await;
+
+    (dm_island, board_island, calendar_island)
 }
 
 /// Check 4 (round 2, `JS-003-review.md` §2): `conflict.reload` is
@@ -180,8 +272,12 @@ async fn both_islands() -> (serde_json::Value, serde_json::Value) {
 /// next write conflicts too.
 #[tokio::test]
 async fn conflict_outcome_always_reloads() {
-    let (dm_island, board_island) = both_islands().await;
-    for (island, surface) in [(&dm_island, "dm.js"), (&board_island, "board.js")] {
+    let (dm_island, board_island, calendar_island) = three_islands().await;
+    for (island, surface) in [
+        (&dm_island, "dm.js"),
+        (&board_island, "board.js"),
+        (&calendar_island, "calendar.js"),
+    ] {
         assert_eq!(
             island["outcomes"]["conflict"]["reload"].as_bool(),
             Some(true),
@@ -198,17 +294,21 @@ async fn conflict_outcome_always_reloads() {
 /// true.
 ///
 /// `unavailable.reload` is deliberately **not** asserted anywhere in
-/// this file: it is legitimately per-surface (`board.js` can revert
-/// its card in place and skip the reload; `dm.js`'s undo has neither
-/// a card nor a form left to fall back to, so it always reloads).
-/// Pinning it would restate the code, not check an invariant --
-/// `conflict` and `unconfirmed` both carry a reason for `reload=true`
-/// that holds independently of what either script happens to do
-/// today; `unavailable` does not.
+/// this file: it is legitimately per-surface (`board.js` and
+/// `calendar.js` can both revert their optimistic move in place and
+/// skip the reload; `dm.js`'s undo has neither a card nor a form left
+/// to fall back to, so it always reloads). Pinning it would restate
+/// the code, not check an invariant -- `conflict` and `unconfirmed`
+/// both carry a reason for `reload=true` that holds independently of
+/// what any one script happens to do today; `unavailable` does not.
 #[tokio::test]
 async fn unconfirmed_outcome_always_reloads() {
-    let (dm_island, board_island) = both_islands().await;
-    for (island, surface) in [(&dm_island, "dm.js"), (&board_island, "board.js")] {
+    let (dm_island, board_island, calendar_island) = three_islands().await;
+    for (island, surface) in [
+        (&dm_island, "dm.js"),
+        (&board_island, "board.js"),
+        (&calendar_island, "calendar.js"),
+    ] {
         assert_eq!(
             island["outcomes"]["unconfirmed"]["reload"].as_bool(),
             Some(true),

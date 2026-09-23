@@ -705,7 +705,7 @@ fn assignee_label<'a>(id: &'a str, assignees: &'a [AssigneeOption]) -> &'a str {
 ///
 /// `conflictStatus` comes from [`AppError::conflict_status_code`],
 /// never written out as a literal here.
-fn response_outcomes(
+pub(super) fn response_outcomes(
     conflict_message: String,
     conflict_reload: bool,
     unavailable_message: String,
