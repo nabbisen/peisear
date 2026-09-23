@@ -21,7 +21,6 @@ struct IssueRow {
     description: String,
     status: String,
     priority: String,
-    position: i64,
     effort: Option<i64>,
     assignee_id: Option<String>,
     /// Sub-issue parent reference (Phase C PR1, migration
@@ -49,7 +48,6 @@ impl IssueRow {
             description: self.description,
             status,
             priority,
-            position: self.position,
             effort: self.effort,
             assignee_id: self.assignee_id,
             parent_issue_id: self.parent_issue_id,
@@ -68,17 +66,29 @@ impl IssueRow {
 /// function applies that filter — callers that want every row
 /// (e.g. analytics, project_workload, health computation)
 /// should use [`list_all_in_project`].
+///
+/// **Ordering (`ORD-001`): newest first, and nothing else** --
+/// `created_at DESC, rowid DESC`. There is deliberately no `status`
+/// term (it is TEXT, so `ASC` was alphabetical and put `done` first;
+/// the board gets its column order from `IssueStatus::all()`) and no
+/// stored manual order (`position` was removed by migration `0018`).
+/// **`rowid DESC` is load-bearing, not redundant**: `created_at` is a
+/// one-second `CURRENT_TIMESTAMP`, so issues created in the same second
+/// tie, and SQLite returns ties in scan order -- oldest first -- which
+/// would make a burst of creations read backwards.
+/// `view_state::issues_created_in_the_same_second_list_newest_first`
+/// fails without it. [`list_all_in_project`] orders identically.
 pub async fn list_in_project(pool: &Pool, project_id: &str) -> StorageResult<Vec<Issue>> {
     let rows = sqlx::query_as::<_, IssueRow>(
         r#"
         SELECT id, project_id, author_id, title, description,
-               status, priority, position, effort, assignee_id, parent_issue_id,
+               status, priority, effort, assignee_id, parent_issue_id,
                planned_start_at, planned_end_at,
                created_at, updated_at
         FROM issues
         WHERE project_id = ?1
           AND parent_issue_id IS NULL
-        ORDER BY status ASC, position ASC, created_at DESC
+        ORDER BY created_at DESC, rowid DESC
         "#,
     )
     .bind(project_id)
@@ -96,12 +106,12 @@ pub async fn list_all_in_project(pool: &Pool, project_id: &str) -> StorageResult
     let rows = sqlx::query_as::<_, IssueRow>(
         r#"
         SELECT id, project_id, author_id, title, description,
-               status, priority, position, effort, assignee_id, parent_issue_id,
+               status, priority, effort, assignee_id, parent_issue_id,
                planned_start_at, planned_end_at,
                created_at, updated_at
         FROM issues
         WHERE project_id = ?1
-        ORDER BY status ASC, position ASC, created_at DESC
+        ORDER BY created_at DESC, rowid DESC
         "#,
     )
     .bind(project_id)
@@ -121,7 +131,7 @@ pub async fn list_sub_issues_of(pool: &Pool, parent_issue_id: &str) -> StorageRe
     let rows = sqlx::query_as::<_, IssueRow>(
         r#"
         SELECT id, project_id, author_id, title, description,
-               status, priority, position, effort, assignee_id, parent_issue_id,
+               status, priority, effort, assignee_id, parent_issue_id,
                planned_start_at, planned_end_at,
                created_at, updated_at
         FROM issues
@@ -139,7 +149,7 @@ pub async fn find(pool: &Pool, issue_id: &str, project_id: &str) -> StorageResul
     let row = sqlx::query_as::<_, IssueRow>(
         r#"
         SELECT id, project_id, author_id, title, description,
-               status, priority, position, effort, assignee_id, parent_issue_id,
+               status, priority, effort, assignee_id, parent_issue_id,
                planned_start_at, planned_end_at,
                created_at, updated_at
         FROM issues
@@ -186,24 +196,12 @@ pub async fn insert(
     // commits.
     let mut tx = pool.begin().await?;
 
-    let next_pos: i64 = sqlx::query_scalar::<_, i64>(
-        r#"
-        SELECT COALESCE(MAX(position), 0) + 1
-        FROM issues
-        WHERE project_id = ?1 AND status = ?2
-        "#,
-    )
-    .bind(project_id)
-    .bind(fields.status.as_str())
-    .fetch_one(&mut *tx)
-    .await?;
-
     let res = sqlx::query(
         r#"
         INSERT INTO issues
             (id, project_id, author_id, title, description, status, priority,
-             position, effort, assignee_id, planned_start_at, planned_end_at)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)
+             effort, assignee_id, planned_start_at, planned_end_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
         "#,
     )
     .bind(id)
@@ -213,7 +211,6 @@ pub async fn insert(
     .bind(fields.description)
     .bind(fields.status.as_str())
     .bind(fields.priority.as_str())
-    .bind(next_pos)
     .bind(fields.effort)
     .bind(fields.assignee_id)
     .bind(fields.planned_start_at)
@@ -256,12 +253,9 @@ pub async fn insert(
 /// surfaces those as `StorageError::Validation` rather than
 /// raw SQL errors so the caller can render them to the user.
 ///
-/// Sub-issues use a separate position counter from their
-/// parent's status group: they're listed under the parent in
-/// creation order (see `list_sub_issues_of`), not interspersed
-/// in the project's main kanban. We therefore default position
-/// to 0 — it's not meaningful for sub-issues, but the column
-/// is NOT NULL.
+/// Sub-issues are listed under their parent in creation order
+/// (see `list_sub_issues_of`), not interspersed in the project's
+/// main kanban.
 #[allow(clippy::too_many_arguments)]
 pub async fn insert_sub_issue(
     pool: &Pool,
@@ -282,8 +276,8 @@ pub async fn insert_sub_issue(
         r#"
         INSERT INTO issues
             (id, project_id, author_id, title, description, status, priority,
-             position, effort, assignee_id, parent_issue_id)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 0, ?8, ?9, ?10)
+             effort, assignee_id, parent_issue_id)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
         "#,
     )
     .bind(id)
@@ -946,7 +940,7 @@ pub async fn planned_for_user(
     let rows = sqlx::query_as::<_, IssueRow>(&format!(
         r#"
         SELECT id, project_id, author_id, title, description,
-               status, priority, position, effort, assignee_id, parent_issue_id,
+               status, priority, effort, assignee_id, parent_issue_id,
                planned_start_at, planned_end_at,
                created_at, updated_at
         FROM issues
@@ -978,7 +972,7 @@ pub async fn planned_for_project(
     let rows = sqlx::query_as::<_, IssueRow>(&format!(
         r#"
         SELECT id, project_id, author_id, title, description,
-               status, priority, position, effort, assignee_id, parent_issue_id,
+               status, priority, effort, assignee_id, parent_issue_id,
                planned_start_at, planned_end_at,
                created_at, updated_at
         FROM issues

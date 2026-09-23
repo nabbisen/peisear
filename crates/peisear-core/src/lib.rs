@@ -182,7 +182,6 @@ pub struct Issue {
     pub description: String,
     pub status: IssueStatus,
     pub priority: Priority,
-    pub position: i64,
     /// Effort estimate in story points. `None` means the issue has not
     /// been estimated yet — this is the default for newly created
     /// issues and for issues that existed before estimation was

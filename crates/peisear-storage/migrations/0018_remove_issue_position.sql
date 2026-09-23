@@ -1,0 +1,39 @@
+-- 0018_remove_issue_position.sql
+--
+-- `ORD-001` (RFC 0004, substep D-5 retired by decision): drop
+-- `issues.position`.
+--
+-- ## Why the column goes
+--
+-- `position` was assigned `MAX(position)+1` per `(project_id,
+-- status)` on insert and never recomputed -- a status change writes
+-- `status` alone -- so an issue carried its old band's number into
+-- its new band, and the order the list and every board column
+-- displayed was one nobody chose and nothing explained. D-5 would
+-- have made it a real, shared manual order; the product already
+-- answers "what do we do next" with priority bands, sprint
+-- membership and planned dates, so D-5 is retired rather than built
+-- and the column has no remaining purpose. Issue lists now order by
+-- `created_at DESC` (newest first) and nothing else.
+--
+-- ## Why this is a plain DROP COLUMN
+--
+-- `position` was declared in `0001_initial.sql` and has, in the whole
+-- schema, no index, no trigger, no view and no foreign key on it
+-- (checked across every migration, not sampled), which is what
+-- `ALTER TABLE ... DROP COLUMN` requires. The linked SQLite is 3.46.0
+-- (`SELECT sqlite_version()` through the application's own pool);
+-- `DROP COLUMN` needs 3.35. `0017`'s `issues_updated_at` trigger and
+-- `0015`/`0016`'s triggers reference other columns only and are
+-- untouched, so no table rebuild -- and no trigger re-creation -- is
+-- needed.
+--
+-- `0001` is applied history and is not edited.
+--
+-- ## No data is lost that anything read
+--
+-- Nothing outside the two ordering queries (removed in the same
+-- change) ever read the value; sub-issues carried a literal `0` that
+-- was documented as meaningless.
+
+ALTER TABLE issues DROP COLUMN position;

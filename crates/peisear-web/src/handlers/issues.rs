@@ -142,12 +142,15 @@ const SORT_UPDATED: &str = "updated";
 /// `assignee = "<id>"` → only that user's issues.
 /// `assignee = ""` or unset → no assignee filter.
 /// `sort = "priority"` → urgent first, then high, medium, low,
-///   stable on prior order within ties (so the existing
-///   `status ASC, position ASC` remains as a tiebreaker).
+///   stable on prior order within ties (so the storage default,
+///   newest first, remains as the tiebreaker).
 /// `sort = "created"` → newest first.
 /// `sort = "updated"` → most-recently-updated first.
 /// Unknown / missing → preserve the storage-layer default
-///   ordering (status ASC, position ASC, created_at DESC).
+///   ordering: `created_at DESC, rowid DESC` -- newest first, and
+///   nothing else (`ORD-001`). The board's status columns are built
+///   from `IssueStatus::all()`, not from this ordering, so it never
+///   decides which column comes first.
 fn apply_filter_and_sort(
     mut issues: Vec<peisear_core::Issue>,
     query: &ProjectViewQuery,

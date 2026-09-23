@@ -722,7 +722,6 @@ struct BacklogIssueRow {
     description: String,
     status: String,
     priority: String,
-    position: i64,
     effort: Option<i64>,
     assignee_id: Option<String>,
     parent_issue_id: Option<String>,
@@ -748,7 +747,6 @@ impl BacklogIssueRow {
                 description: self.description,
                 status,
                 priority,
-                position: self.position,
                 effort: self.effort,
                 assignee_id: self.assignee_id,
                 parent_issue_id: self.parent_issue_id,
@@ -796,7 +794,7 @@ pub async fn backlog_for_team(
     let rows = sqlx::query_as::<_, BacklogIssueRow>(
         r#"
         SELECT i.id, i.project_id, i.author_id, i.title, i.description,
-               i.status, i.priority, i.position, i.effort, i.assignee_id,
+               i.status, i.priority, i.effort, i.assignee_id,
                i.parent_issue_id, i.planned_start_at, i.planned_end_at,
                i.created_at, i.updated_at,
                p.name AS project_name
