@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.37.0] — 2026-09-23
+
+No schema migration. `0017` remains the most recent. No product behaviour
+changed this release — not a line.
+
+**This is a privacy milestone and a published correction, and the milestone
+needs its bound stated in the same breath every time it's mentioned.** The
+product did not become more private this release. Every boundary this work
+touched already refused correctly, each measured before a test was written
+for it. What changed is that the behaviour is now asserted, and that this
+project's own record stopped disagreeing with itself.
+
+### Changed
+
+- **Definition of Done item 1 — "Privacy maintained" — is now Met.** It had
+  read *"Largely met"* since 0.19.1, the second-oldest condition in that
+  table to move, after item 5 at 0.33.0. The guarantee itself has not
+  changed; the evidence for it has.
+
+### Corrected
+
+- **The 0.20.0 entry withdrew an ignored test and gave a reason that was
+  half wrong.** It said the boundary *"cannot exist while settings mutations
+  (`/settings/wip-limit`, `/settings/capacity/*`) are session-scoped rather
+  than addressed by `user_id` in the path."* Withdrawing the test was
+  right — an ignored test on a privacy boundary reads as coverage that does
+  not exist. **The reason was not**, for half of what it named. It holds for
+  `/settings/wip-limit`, which takes no path parameter at all, so there is
+  nothing to substitute. It does not hold for `/settings/capacity/{id}`,
+  which names a row: asking for someone else's row is exactly the
+  cross-user request, the boundary is real, and it refuses. Three tests now
+  make that attempt.
+
+### Internal
+
+- **Five assertions, in one sentence**: the unauthenticated case for two of
+  the three personal-data endpoints, and the cross-user attempt on the
+  three capacity-row mutations.
+
+**What a reader should not conclude.** No behaviour changed, no schema
+changed, and nothing a user can see is different. **The suite grew by
+four**, and the value is in what they would catch later, not in anything
+they found now. `§10.15` and `§10.17` remain the two open register entries,
+both open by decision. The product still does not claim WCAG conformance.
+
 ## [0.36.0] — 2026-09-23
 
 No schema migration. `0017` remains the most recent. The reschedule writes
