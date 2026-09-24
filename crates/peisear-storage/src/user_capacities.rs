@@ -32,12 +32,32 @@
 //!   and dates), rather than a generic constraint violation,
 //! - is straightforward to test in isolation.
 //!
-//! There is a small window between `overlaps_existing` and the
-//! INSERT where a concurrent writer could land a conflicting row.
-//! For peisear's single-process / WAL-serialized-write model
-//! this window is zero in practice, but a future PostgreSQL
-//! backend would want a transaction-level lock or an exclusion
-//! constraint. Documented; not addressed today.
+//! ## The check and the write are one transaction (`CAP-001`)
+//!
+//! **Correction.** This section used to say the window between
+//! `overlaps_existing` and the write was "zero in practice" for
+//! peisear's single-process / WAL-serialized-write model. **That was
+//! false.** WAL serializes write *transactions*; it does nothing for a
+//! read on one pooled connection followed by a write on another with no
+//! transaction between them, which is what this code did. Measured:
+//! twelve simultaneous open-ended saves stored six overlapping rows
+//! (`tests/capacity_atomicity.rs` fails on the old code every run).
+//!
+//! It is closed now. [`insert`] and [`update`] each open the
+//! transaction with `BEGIN IMMEDIATE` (`Pool::begin_with`), which takes
+//! SQLite's write lock *before* the check, run the check through that
+//! same transaction, write, and commit. Two saves for the same user
+//! therefore cannot both read before either writes: the second waits
+//! for the first (up to the pool's 5 s busy timeout), then sees its row
+//! and is refused. A plain `pool.begin()` would not do this — it starts
+//! a deferred transaction that takes the lock only at the first write,
+//! so both could still read first.
+//!
+//! The application-level check is kept, not replaced by a trigger or
+//! index: overlap is a range predicate that no unique index expresses,
+//! and the check is what produces the useful error above. A backend
+//! without `BEGIN IMMEDIATE` would need an equivalent lock or an
+//! exclusion constraint.
 
 use chrono::NaiveDate;
 use sqlx::FromRow;
@@ -234,13 +254,20 @@ pub struct ConflictInfo {
 ///   AND existing.period_start > proposed.period_end
 ///
 /// Negate that and you get the overlap condition.
-pub async fn overlaps_existing(
-    pool: &Pool,
+///
+/// Takes an executor rather than a [`Pool`] so [`insert`] and
+/// [`update`] can run it *inside* their transaction (`CAP-001`); a
+/// `&Pool` still works for a standalone read.
+pub async fn overlaps_existing<'e, E>(
+    executor: E,
     user_id: &str,
     period_start: Option<NaiveDate>,
     period_end: Option<NaiveDate>,
     excluding_id: Option<&str>,
-) -> StorageResult<Option<ConflictInfo>> {
+) -> StorageResult<Option<ConflictInfo>>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+{
     // We bind period_start/period_end as Option<NaiveDate>; sqlx
     // turns None into NULL and the SQL expression handles it.
     //
@@ -266,7 +293,7 @@ pub async fn overlaps_existing(
     .bind(exclude_id)
     .bind(period_start)
     .bind(period_end)
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await?;
 
     Ok(row.map(|(id, ps, pe, points)| ConflictInfo {
@@ -296,7 +323,12 @@ pub async fn insert(
             peisear_i18n::MessageKey::PeriodStartMustPrecedeEndMessage,
         ));
     }
-    if let Some(conflict) = overlaps_existing(pool, user_id, period_start, period_end, None).await?
+    // `BEGIN IMMEDIATE`: take the write lock before the check, so the
+    // check and the INSERT cannot interleave with another save (see
+    // the module docs). Returning early drops `tx`, which rolls back.
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    if let Some(conflict) =
+        overlaps_existing(&mut *tx, user_id, period_start, period_end, None).await?
     {
         return Err(StorageError::Conflict(
             peisear_i18n::MessageKey::CapacityPeriodOverlapMessage {
@@ -328,8 +360,9 @@ pub async fn insert(
     .bind(period_start)
     .bind(period_end)
     .bind(note)
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+    tx.commit().await?;
     Ok(id)
 }
 
@@ -344,8 +377,10 @@ pub async fn update(
     period_end: Option<NaiveDate>,
     note: Option<&str>,
 ) -> StorageResult<()> {
+    // Same `BEGIN IMMEDIATE` shape as `insert`.
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     if let Some(conflict) =
-        overlaps_existing(pool, user_id, period_start, period_end, Some(id)).await?
+        overlaps_existing(&mut *tx, user_id, period_start, period_end, Some(id)).await?
     {
         return Err(StorageError::Conflict(
             peisear_i18n::MessageKey::CapacityPeriodOverlapMessage {
@@ -376,12 +411,13 @@ pub async fn update(
     .bind(period_start)
     .bind(period_end)
     .bind(note)
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
 
     if res.rows_affected() == 0 {
         return Err(StorageError::NotFound);
     }
+    tx.commit().await?;
     Ok(())
 }
 
