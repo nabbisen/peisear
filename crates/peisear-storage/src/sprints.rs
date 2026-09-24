@@ -77,7 +77,10 @@ impl From<SprintRow> for Sprint {
     }
 }
 
-pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Sprint>> {
+pub async fn find_by_id<'e, E>(executor: E, id: &str) -> StorageResult<Option<Sprint>>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+{
     let row = sqlx::query_as::<_, SprintRow>(
         r#"
         SELECT id, team_id, name, goal, starts_on, ends_on,
@@ -87,7 +90,7 @@ pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Sprint>> 
         "#,
     )
     .bind(id)
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await?;
     Ok(row.map(Sprint::from))
 }
@@ -111,7 +114,10 @@ pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Spri
 /// The (zero or one) currently active sprint. The application
 /// allows at most one `active` sprint per team — enforced at the
 /// `start` call site, not the schema level.
-pub async fn active_for_team(pool: &Pool, team_id: &str) -> StorageResult<Option<Sprint>> {
+pub async fn active_for_team<'e, E>(executor: E, team_id: &str) -> StorageResult<Option<Sprint>>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+{
     let row = sqlx::query_as::<_, SprintRow>(
         r#"
         SELECT id, team_id, name, goal, starts_on, ends_on,
@@ -123,7 +129,7 @@ pub async fn active_for_team(pool: &Pool, team_id: &str) -> StorageResult<Option
         "#,
     )
     .bind(team_id)
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await?;
     Ok(row.map(Sprint::from))
 }
@@ -206,8 +212,20 @@ pub async fn delete(pool: &Pool, id: &str) -> StorageResult<()> {
 /// Transition `planned` → `active`. Refuses if another sprint
 /// in the same team is already active (prevents two-active-
 /// sprint ambiguity).
+///
+/// **The check and the write are one transaction (`RACE-001`).** This
+/// used to read on the pool and write on the pool, so two concurrent
+/// starts on different sprints of one team both saw no active sprint
+/// and both started, leaving two -- a state this function's own rule
+/// says cannot exist, and one [`active_for_team`]'s deterministic pick
+/// would then have hidden. It opens `BEGIN IMMEDIATE` (the reasoning
+/// for `IMMEDIATE` over a deferred `BEGIN` is in
+/// `user_capacities`'s module docs) so the second start waits, sees the
+/// first, and is refused. Starts in different teams contend only for
+/// the database's one write lock, briefly.
 pub async fn start(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
-    let sprint = find_by_id(pool, sprint_id)
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let sprint = find_by_id(&mut *tx, sprint_id)
         .await?
         .ok_or(StorageError::NotFound)?;
     match sprint.status {
@@ -223,7 +241,7 @@ pub async fn start(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
             ));
         }
     }
-    if let Some(other) = active_for_team(pool, &sprint.team_id).await? {
+    if let Some(other) = active_for_team(&mut *tx, &sprint.team_id).await? {
         return Err(StorageError::Conflict(
             peisear_i18n::MessageKey::OtherSprintActiveInTeamMessage {
                 sprint_name: other.name,
@@ -238,8 +256,9 @@ pub async fn start(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
         "#,
     )
     .bind(sprint_id)
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+    tx.commit().await?;
     Ok(())
 }
 

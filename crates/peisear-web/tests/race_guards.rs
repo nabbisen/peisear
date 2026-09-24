@@ -25,12 +25,13 @@
 mod common;
 
 use axum::http::StatusCode;
+use chrono::NaiveDate;
 use common::auth::{TestUser, login, register};
 use common::fixture::create_team_with_admin;
 use common::server::TestApp;
 use peisear_core::teams::TeamRole;
 use peisear_i18n::MessageKey;
-use peisear_storage::{StorageError, teams};
+use peisear_storage::{StorageError, sprints, teams};
 use std::sync::Arc;
 use tokio::sync::Barrier;
 
@@ -389,4 +390,111 @@ async fn demoting_two_different_admins_of_a_five_admin_team_both_succeed() {
     let results = all_at_once::<Result<(), StorageError>>(jobs).await;
     assert!(results.iter().all(|r| r.is_ok()), "{results:?}");
     assert_eq!(admins_in(&app, &team_id).await, 3);
+}
+
+// ─────────────────────────────────────────────────────────────
+// 2.2 — sprints::start
+// ─────────────────────────────────────────────────────────────
+
+async fn planned_sprint(app: &TestApp, team_id: &str, name: &str) -> String {
+    let day = NaiveDate::from_ymd_opt(2026, 3, 1).unwrap();
+    sprints::insert(
+        &app.db,
+        team_id,
+        name,
+        None,
+        day,
+        day + chrono::Duration::days(14),
+    )
+    .await
+    .expect("insert sprint")
+}
+
+async fn active_count(app: &TestApp, team_id: &str) -> i64 {
+    sqlx::query_scalar("SELECT COUNT(*) FROM sprints WHERE team_id = ?1 AND status = 'active'")
+        .bind(team_id)
+        .fetch_one(&app.db)
+        .await
+        .expect("count active")
+}
+
+/// `N` planned sprints of one team, all started at once: exactly one
+/// becomes active and the rest are refused.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn sprints_of_one_team_started_at_once_leave_one_active() {
+    let app = TestApp::spawn().await;
+    let (_, admin) = user(&app, "alice").await;
+    let team_id = create_team_with_admin(&app.db, &admin, "Team").await;
+    let mut sprint_ids = Vec::new();
+    for i in 0..N {
+        sprint_ids.push(planned_sprint(&app, &team_id, &format!("Sprint {i}")).await);
+    }
+    let jobs: Vec<_> = sprint_ids
+        .iter()
+        .map(|id| {
+            let (db, id) = (app.db.clone(), id.clone());
+            Box::pin(async move { sprints::start(&db, &id).await })
+                as std::pin::Pin<Box<dyn std::future::Future<Output = _> + Send>>
+        })
+        .collect();
+    let results = all_at_once::<Result<(), StorageError>>(jobs).await;
+
+    let ok = results.iter().filter(|r| r.is_ok()).count();
+    let refused = results.iter().filter(|r| is_conflict(r)).count();
+    let active = active_count(&app, &team_id).await;
+    assert_eq!(
+        (ok, refused, active),
+        (1, N - 1, 1),
+        "one winner, {} refusals, one active sprint; results {results:?}",
+        N - 1
+    );
+}
+
+/// Sequential behaviour, unchanged: a second start is refused naming
+/// the sprint that is already active; starting an active sprint says it
+/// is already active.
+#[tokio::test]
+async fn starting_a_second_sprint_is_refused_naming_the_active_one() {
+    let app = TestApp::spawn().await;
+    let (_, admin) = user(&app, "alice").await;
+    let team_id = create_team_with_admin(&app.db, &admin, "Team").await;
+    let first = planned_sprint(&app, &team_id, "First").await;
+    let second = planned_sprint(&app, &team_id, "Second").await;
+
+    sprints::start(&app.db, &first).await.expect("first start");
+    match sprints::start(&app.db, &second).await {
+        Err(StorageError::Conflict(MessageKey::OtherSprintActiveInTeamMessage { sprint_name })) => {
+            assert_eq!(sprint_name, "First")
+        }
+        other => panic!("expected the conflict naming the active sprint, got {other:?}"),
+    }
+    assert!(matches!(
+        sprints::start(&app.db, &first).await,
+        Err(StorageError::Validation(
+            MessageKey::SprintAlreadyActiveMessage
+        ))
+    ));
+    assert_eq!(active_count(&app, &team_id).await, 1);
+}
+
+/// Sprints in *different* teams start concurrently without interfering.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn sprints_of_different_teams_started_at_once_all_start() {
+    let app = TestApp::spawn().await;
+    let (_, admin) = user(&app, "alice").await;
+    let mut sprint_ids = Vec::new();
+    for i in 0..N {
+        let team_id = create_team_with_admin(&app.db, &admin, &format!("Team {i}")).await;
+        sprint_ids.push(planned_sprint(&app, &team_id, "S").await);
+    }
+    let jobs: Vec<_> = sprint_ids
+        .iter()
+        .map(|id| {
+            let (db, id) = (app.db.clone(), id.clone());
+            Box::pin(async move { sprints::start(&db, &id).await })
+                as std::pin::Pin<Box<dyn std::future::Future<Output = _> + Send>>
+        })
+        .collect();
+    let results = all_at_once::<Result<(), StorageError>>(jobs).await;
+    assert!(results.iter().all(|r| r.is_ok()), "{results:?}");
 }
