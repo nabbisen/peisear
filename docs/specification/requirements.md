@@ -1560,8 +1560,33 @@ Every mutation of an entity owned by a single record MUST carry the
 client's observed `updated_at` and MUST be rejected with 409 if it does
 not match the stored value.
 *Source*: `SPEC §21.4.2`. *Acceptance*: `optimistic_lock` test crate (**16**
-tests), `board_keyboard`, `confirmation`. *Status*: Implemented (0.20.0);
-**extended to all four destructive deletes at 0.27.0**. *Priority*: P0.
+tests), `optimistic_lock_atomicity` (**14**), `board_keyboard`,
+`confirmation`. *Status*: Implemented (0.20.0); **extended to all four
+destructive deletes at 0.27.0**; **made atomic at 0.39.0** (`RACE-002`).
+*Priority*: P0.
+*Extension (0.39.0, `RACE-002`) — the comparison happens inside the write.*
+Until 0.39.0 the handler read `updated_at`, compared it, and then wrote, with
+nothing atomic across the three, so two requests carrying the same valid stamp
+both passed. **Measured, the outcome differed by route**: a project edit
+answered all eight racing saves `303` and stored one — seven people told they
+had saved — while issue edits answered `500`, their deferred transaction dying
+on the write's upgrade rather than returning the conflict it owed. All thirteen
+locking paths now compare atomically: six as a `WHERE` predicate on the single
+statement, seven — those with a state check, an overlap check or an event diff
+to keep consistent — by holding the write lock from the stamp's read to the
+commit.
+*Limit of the stamp, stated because this requirement states a guarantee.*
+`updated_at` has **one-second resolution**, and `0017`'s trigger sets it to
+`CURRENT_TIMESTAMP`, which within the same second equals the value it replaces.
+**So a row whose previous write landed in the current second does not move its
+stamp, and a second save holding that stamp is indistinguishable from a fresh
+one and is accepted.** Reproduced directly. This is a property of the version
+value, not of how it is compared; it predates 0.39.0 and is unchanged by it.
+The lock refuses a **stale page** — the case it exists for, minutes or hours
+old — every time. It does not refuse **two saves inside one request window** on
+a row someone else has just written. Closing it needs a finer version stamp: a
+millisecond column or a counter, a schema and stored-format change declined for
+now on the reasoning `ORD-002` §3 used for `created_at`.
 *Extension (0.27.0, `QA-006`)*: two of the four destructive deletes —
 project and issue — took no lock at all, while sprint and capacity delete
 did. `RFC 010`'s confirmation interstitial had widened the window this
@@ -4125,6 +4150,45 @@ optimistic lock itself. Those are `RACE-001` and `RACE-002`, 0.39.0. **This
 entry stays closed**; what the survey found is not this defect recurring but
 the same mistake made independently in four places, which is the argument for
 fixing them as a family rather than one at a time.
+
+### 10.31 A deferred transaction failed writes that shared nothing — **closed**, `CAP-001`/`RACE-001`/`RACE-002`, 0.39.0; found 2026-09-24
+
+A read-then-write transaction opened with a plain `BEGIN` is **deferred**: the
+first `SELECT` takes a read snapshot and the write tries to upgrade to the
+write lock. If another writer committed in between, SQLite fails the upgrade at
+once with `SQLITE_BUSY_SNAPSHOT`, which **the busy timeout does not retry.**
+
+**The cost was not the lost update it was found looking for.** Measured on the
+issue write path: 64 concurrent status changes on **64 different issues**,
+sharing no row —
+
+| shape | result |
+|---|---|
+| deferred `BEGIN` | **6–16 of 64 succeeded; 48–58 failed** |
+| `BEGIN IMMEDIATE` | **64 of 64 succeeded**, in 79–104 ms |
+
+So the product answered a server error to three writes in four in a burst, on
+rows with nothing in common, and the user was owed neither an error nor a
+conflict. `RACE-002` §2 measured the user-visible half: eight racing issue
+edits returned seven `500`s where a conflict was owed, while a project edit
+returned eight `303`s and stored one.
+
+**This reframes every performance number in the three handoffs that closed it.**
+`CAP-001`, `RACE-001` and `RACE-002` each reported `BEGIN IMMEDIATE` as several
+times slower than what it replaced under a saturating burst. On the paths that
+were deferred read-then-write, **the faster baseline was faster because it gave
+up**; the honest comparison is 104 ms against a failure. On the three
+`RACE-001` sites, which were not in a transaction at all, the slowdown is
+like-for-like and was reported as such.
+
+**Closed, and the property is now stated.** Every read-then-write in
+`peisear-storage` takes `BEGIN IMMEDIATE`; the three remaining plain `begin()`
+calls (`teams::insert`, `issues::insert`, `issues::insert_sub_issue`) each
+**begin with a write**, so they take the lock on their first statement and
+cannot fail this way. **Nothing tests that**, and the obligation is therefore a
+reader's: a transaction whose first statement is a `SELECT` and whose later
+statement writes must be `IMMEDIATE`. `§17.9`'s lesson in a second place — the
+rule is written down, which is one more than before and fewer than a check.
 
 ## 11. Deferred and future requirements
 
