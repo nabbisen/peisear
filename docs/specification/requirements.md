@@ -4021,10 +4021,25 @@ something.** Three instances:
 | a sprint's issue list | `status ASC` | Done first, on both surfaces that render it |
 
 **Shape two — a timestamp with one-second resolution, and SQLite returns ties
-in scan order, oldest first.** Every `DESC` ordering therefore read *backwards*
-within a tie. **22 sites**, of which three resolved *a user's current capacity*
-with `… DESC LIMIT 1` and so returned the **superseded** value rather than
-merely a wrong order.
+in scan order, oldest first.** **22 orderings carried no tiebreak**, of which
+three resolved *a user's current capacity* with `… DESC LIMIT 1` and so
+returned the **superseded** value rather than merely a wrong order.
+
+> **Correction, 2026-09-24, from `REL-0.38.0`'s review.** This paragraph read
+> *"Every `DESC` ordering therefore read backwards within a tie. 22 sites."*
+> **That is wider than the evidence.** 22 orderings lacked a tiebreak; how many
+> *rendered* backwards was never measured, and at least one did not — the
+> dev team drove the released 0.37.0 binary and found the team sprint list
+> already newest-first, because a reverse walk of `idx_sprints_team_dates`
+> returns ties in `rowid DESC` by accident of the plan. Reproduced: three
+> sprints sharing a `created_at`, ordered `starts_on DESC, created_at DESC`
+> with no tiebreak, come back newest first. The tiebreak is still right there —
+> it makes an accident of the query plan into a stated property — but it
+> changed no rendered order. **The defect this entry records is that the terms
+> did not determine an order, which is true of all 22; what each one displayed
+> was measured for four of them.** This is the eighth conclusion in that
+> release cycle written wider than its search, and the only one written inside
+> the entry recording that shape.
 
 **None of this was found by the suite, and none of it could have been.** The
 first was found by reading `position` during a design review of a different
