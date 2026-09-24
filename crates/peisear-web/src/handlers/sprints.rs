@@ -604,26 +604,9 @@ pub async fn assign_issue(
 
     let sprint_id_trimmed = form.sprint_id.trim();
     if sprint_id_trimmed.is_empty() {
-        // Unassign. A completed sprint's record is read from its
-        // membership, so removal is refused there as assignment is
-        // (`SPRINT-001`). The check below is the early refusal; the delete
-        // re-checks the status atomically and returns the same message.
-        if let Some(current) = sprints::sprint_for_issue(&state.db, &issue_id).await?
-            && let Some(current) = sprints::find_by_id(&state.db, &current).await?
-            && matches!(current.status, SprintStatus::Completed)
-        {
-            return Err(AppError::Validation(t(
-                MessageKey::CannotUnassignFromCompletedSprintMessage,
-            )));
-        }
-        sprints::remove_issue_if_status(
-            &state.db,
-            &issue_id,
-            &[SprintStatus::Planned, SprintStatus::Active],
-            MessageKey::CannotUnassignFromCompletedSprintMessage,
-        )
-        .await
-        .map_err(refusal_as_validation)?;
+        // Unassign. Not refused on a completed sprint: its record is captured
+        // at completion (`DEC-054`), so membership may move freely.
+        sprints::remove_issue(&state.db, &issue_id).await?;
     } else {
         // Verify the sprint belongs to this team.
         let sprint = sprints::find_by_id(&state.db, sprint_id_trimmed)

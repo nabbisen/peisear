@@ -442,21 +442,16 @@ pub async fn add_issue(pool: &Pool, sprint_id: &str, issue_id: &str) -> StorageR
 }
 
 /// [`remove_issue`], but only if the sprint the issue is currently in has a
-/// status in `allowed` **at the moment of the delete** (`SPRINT-001`, and
+/// status in `allowed` **at the moment of the delete** (`SPRINT-001` §2,
 /// `RACE-003`'s twin of [`add_issue_if_status`]). The caller passes the
 /// refusal it owes, so each route keeps its own message.
 ///
-/// Two defects, one function. A **completed** sprint's record -- its
-/// committed figure, its completed figure and its burndown -- is derived
-/// from its `sprint_issues` rows, so removing a row rewrites history; the
-/// assign route already refuses to *add* to a completed sprint for that
-/// reason, and the unassign route did not refuse to *remove*, so one click
-/// changed what a finished sprint said it had done. And a `start` landing
-/// between `plan_remove`'s status read and its delete removed an issue from
-/// a sprint that was no longer plannable. The status read and the delete
-/// share one `BEGIN IMMEDIATE` transaction (see `user_capacities`'s module
-/// docs for why `IMMEDIATE`); [`start_guarded`] and [`complete_guarded`]
-/// take the same lock.
+/// `plan_remove` reads the sprint's status and refuses on it; that read is
+/// on the pool, so a `start` landing between it and the delete removed an
+/// issue from a sprint that was no longer plannable. The status read and the
+/// delete share one `BEGIN IMMEDIATE` transaction (see `user_capacities`'s
+/// module docs for why `IMMEDIATE`); [`start_guarded`] and
+/// [`complete_guarded`] take the same lock.
 ///
 /// An issue that is in no sprint is still not an error -- nothing to
 /// remove, as [`remove_issue`] always was.
@@ -496,9 +491,11 @@ pub async fn remove_issue_if_status(
 /// issue that wasn't in a sprint is not an error (matches the
 /// natural "make sure it isn't" mental model).
 ///
-/// **Unconditional: it removes the membership wherever it is, including
-/// from a completed sprint.** The routes use [`remove_issue_if_status`]
-/// instead; this remains for callers that own that decision.
+/// **Unconditional: it removes the membership wherever it is.** That is
+/// deliberate on a completed sprint too (`DEC-054`): the record of a
+/// completed sprint is captured at completion, so its membership may change
+/// (carry-over moves issues out of it). `plan_remove` uses
+/// [`remove_issue_if_status`] because a plan is only editable while planned.
 pub async fn remove_issue(pool: &Pool, issue_id: &str) -> StorageResult<()> {
     sqlx::query(r#"DELETE FROM sprint_issues WHERE issue_id = ?1"#)
         .bind(issue_id)

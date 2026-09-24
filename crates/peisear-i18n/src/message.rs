@@ -1868,13 +1868,6 @@ pub enum MessageKey {
     SprintsPersonalProjectMessage,
     SprintProjectTeamMismatchMessage,
     CannotAssignToCompletedSprintMessage,
-    /// `SPRINT-001`: the removal twin of
-    /// [`MessageKey::CannotAssignToCompletedSprintMessage`]. A completed
-    /// sprint's record -- its committed figure and its burndown -- is read
-    /// from its membership rows, so removing one rewrites history; the
-    /// assign message says *assign* and would tell a user removing an
-    /// issue the wrong thing.
-    CannotUnassignFromCompletedSprintMessage,
 
     // ---- I18N-005e: handlers/teams.rs ----
     TeamNameRequiredMessage,
@@ -3033,7 +3026,6 @@ impl MessageKey {
             MessageKey::SprintsPersonalProjectMessage,
             MessageKey::SprintProjectTeamMismatchMessage,
             MessageKey::CannotAssignToCompletedSprintMessage,
-            MessageKey::CannotUnassignFromCompletedSprintMessage,
             MessageKey::TeamNameRequiredMessage,
             MessageKey::SlugDerivationFailedMessage,
             MessageKey::InvalidRoleMessage,

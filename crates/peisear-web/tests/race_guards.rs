@@ -17,8 +17,9 @@
 //!    back a `points` value it had read before a concurrent edit.
 //!
 //! `RACE-003` and `SPRINT-001` add to the end of this file (`SPRINT-001`'s
-//! first half is not a race at all -- it is here because it is the same
-//! two routes and the same helpers).
+//! first half, refusing an unassign from a completed sprint, was reverted
+//! by `SPRINT-004` once the sprint's record was captured at completion; its
+//! `plan_remove` half stands).
 //!
 //! `RACE-003` adds two smaller ones at the end of this file: an issue
 //! joining a sprint whose status changed under it, and a concurrent
@@ -891,109 +892,13 @@ async fn the_sequential_refusals_keep_their_messages() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// SPRINT-001 — a completed sprint's record must not change
+// SPRINT-001 §2 (and what it left standing) -- see DEC-054
 // ─────────────────────────────────────────────────────────────
-
-/// Insert an issue with an effort and a status, for a sprint whose
-/// committed and completed figures the test then reads.
-async fn issue_with_effort(
-    app: &TestApp,
-    project_id: &str,
-    author_id: &str,
-    title: &str,
-    effort: i64,
-    status: &str,
-) -> String {
-    let id = create_issue(&app.db, project_id, author_id, title).await;
-    sqlx::query("UPDATE issues SET effort = ?2, status = ?3 WHERE id = ?1")
-        .bind(&id)
-        .bind(effort)
-        .bind(status)
-        .execute(&app.db)
-        .await
-        .expect("set effort and status");
-    id
-}
-
-/// **§1, sequentially -- no barrier, no forced interleaving.** A sprint
-/// with three issues (efforts 3, 5, 7; the 3 and the 5 done) is completed.
-/// Its `summary` and `burndown` are recorded, one issue is unassigned from
-/// it, and **the figures must be the same afterwards** and the request
-/// refused with the message written for *removal*. The assertion that
-/// matters is the figures: the defect is that history moved, not that a
-/// status code was wrong.
-#[tokio::test]
-async fn unassigning_from_a_completed_sprint_is_refused_and_history_does_not_move() {
-    let app = TestApp::spawn().await;
-    let (u, admin) = user(&app, "alice").await;
-    let team_id = create_team_with_admin(&app.db, &admin, "Team").await;
-    let project_id = create_team_project(&app.db, &admin, &team_id, "Proj").await;
-    let sprint_id = planned_sprint(&app, &team_id, "S").await;
-    let a = issue_with_effort(&app, &project_id, &admin, "a", 3, "done").await;
-    let b = issue_with_effort(&app, &project_id, &admin, "b", 5, "done").await;
-    let c = issue_with_effort(&app, &project_id, &admin, "c", 7, "open").await;
-    for id in [&a, &b, &c] {
-        sprints::add_issue(&app.db, &sprint_id, id).await.unwrap();
-    }
-    sprints::start(&app.db, &sprint_id).await.unwrap();
-    sprints::complete(&app.db, &sprint_id).await.unwrap();
-    login(&app, &u).await;
-
-    let summary_before = sprints::summary(&app.db, &sprint_id).await.unwrap();
-    let burndown_before = sprints::burndown(&app.db, &sprint_id).await.unwrap();
-    assert_eq!(
-        (
-            summary_before.committed_points,
-            summary_before.completed_points
-        ),
-        (15, 8),
-        "fixture: 3+5+7 committed, 3+5 done"
-    );
-
-    let mut refusals = Vec::new();
-    for issue in [&b, &a, &c] {
-        let resp = app
-            .server
-            .post(&format!("/projects/{project_id}/issues/{issue}/sprint"))
-            .form(&[("sprint_id", "")])
-            .await;
-        refusals.push((
-            resp.status_code(),
-            resp.text().contains(
-                &peisear_i18n::Locale::English
-                    .render(MessageKey::CannotUnassignFromCompletedSprintMessage),
-            ),
-        ));
-    }
-
-    // `SprintSummary` and `BurndownPoint` carry no `PartialEq`; their
-    // `Debug` output is every field, which is what "the same figures" means.
-    assert_eq!(
-        format!("{:?}", sprints::summary(&app.db, &sprint_id).await.unwrap()),
-        format!("{summary_before:?}"),
-        "a completed sprint's committed/completed figures must not move"
-    );
-    assert_eq!(
-        format!(
-            "{:?}",
-            sprints::burndown(&app.db, &sprint_id).await.unwrap()
-        ),
-        format!("{burndown_before:?}"),
-        "nor its burndown"
-    );
-    assert_eq!(members_of_sprint(&app, &sprint_id).await, 3);
-    // the figures are the point; the refusal is checked after them so a
-    // failure reports that history moved before it reports a status code
-    assert_eq!(
-        refusals,
-        vec![(StatusCode::BAD_REQUEST, true); 3],
-        "each unassign is refused with the message written for removal"
-    );
-}
 
 /// What must still work: unassigning from a planned sprint and from an
 /// active one, `plan_remove` on a planned sprint, and assigning an issue
-/// across sprints. Only a *completed* sprint refuses removal.
+/// across sprints. (Membership of a *completed* sprint may also change,
+/// since `SPRINT-004`; that is covered in `sprint_record.rs`.)
 #[tokio::test]
 async fn removal_and_reassignment_still_work_on_planned_and_active_sprints() {
     let app = TestApp::spawn().await;
