@@ -51,13 +51,22 @@ decision it made four days ago.** Seven things.
    classes of completed sprint with nothing to tell them apart. **This is a
    decision, not an accident**, and a reader deserves to know which.
 
-4. **The velocity aggregate now shows less** (`NFR-PRIV-007`, `SPRINT-005`).
-   A median across several sprints is shown only if **one of them** had two
-   contributors on its own; previously the union of contributors decided it.
-   A team whose sprints are each one person's work will lose a median line
-   they had. **Give the reason in one sentence** — each sprint's number is that
-   person's output, so the aggregate was reversible to an individual — because
-   a feature quietly showing less invites exactly the wrong guess.
+4. **The completed-work chart's median line now appears less often**
+   (`NFR-PRIV-007`, `SPRINT-005`). It is shown only if **one sprint in the
+   window** had two contributors on its own; previously the union of
+   contributors across the window decided it. A team whose sprints are each one
+   person's work will lose a median line they had. **Give the reason in one
+   sentence** — each sprint's number is that person's output, so the aggregate
+   was reversible to an individual — because a feature quietly showing less
+   invites exactly the wrong guess.
+
+   **Wording, ruled after `find_violations` flagged it: do not write
+   "velocity".** It is a `§1.7` prohibited term and the guard is right to stop
+   it; the product's own heading is *"Completed work this period"* and the
+   0.38.0 changelog never used the word. **Use "the completed-work chart's
+   median line".** *The word entered through my handoff, not your draft* — I
+   used it freely throughout, and running the guard over the finished section
+   is what caught it, which is the check working.
 
 5. **Reopen** (`DEC-053`): an administrator can return a completed sprint to
    active, which discards its captured record; completing again recaptures.
@@ -75,8 +84,11 @@ decision it made four days ago.** Seven things.
    outright, so what looks like a slowdown is a correctness fix.
 
 7. **A retired decision, and this is the honest half of the release.**
-   `SPRINT-001` shipped to `main` refusing to unassign an issue from a
-   completed sprint, and **half of it was taken back out four days later**.
+   `SPRINT-001` reached `main` at 22:05 refusing to unassign an issue from a
+   completed sprint, and **half of it was taken back out at 22:52 the same
+   evening**. *(Corrected: I wrote "four days later". Neither it nor
+   `SPRINT-002` was ever in a release — say that, since a reader's first
+   question is whether they upgraded into it.)*
    `SPRINT-002` was written and withdrawn without being built. Both were aimed
    at freezing membership, which is **one of four inputs** to the figures they
    meant to protect — and they would have blocked carry-over, the product's
@@ -86,8 +98,9 @@ decision it made four days ago.** Seven things.
    built on it was not.
 
 **What a reader should not conclude**, folded in:
-- **`§10.15` and `§10.17` remain open**; `§10.30` and `§10.31` closed this
-  release.
+- **`§10.15` and `§10.17` remain open**; **`§10.31`** closes with this release.
+  *(Corrected: I wrote that `§10.30` closes here too. It is recorded closed at
+  **0.38.0** with `CAP-001`. Do not claim it twice.)*
 - **The optimistic lock still does not refuse two saves inside one request
   window on a row written in that same second** — `updated_at` is one second
   and `NFR-CONC-001` states the limit. **Say "in one request window", not "at

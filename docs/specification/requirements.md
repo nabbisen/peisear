@@ -398,6 +398,18 @@ plural, possessive, participle, gerund, and any capitalisation.
 `"top performers"`, `"ranked"`, `"rankings"` and `"Velocity"` are prohibited
 because `"top performer"`, `"ranking"` and `"velocity"` are.
 
+**Naming convention, stated once so the rest of this document is not read as
+breaking its own rule.** The prohibition governs **what the product says**:
+copy, headings, labels, `aria` text, flashes and release notes. The sprint
+listing's chart is headed *"Completed work this period"* and its table is
+labelled *"Completed sprint values"*; **the product never says the word.**
+This document's prose, the codebase's identifiers (`VELOCITY_MEDIAN_WINDOW`,
+`VelocityTableAriaLabel`) and its comments use *velocity chart* as the internal
+name for that surface, because it is what every reader of the code calls it and
+a second name would be worse than the tension. **A message key may be named for
+it; its value may never contain it**, which is the distinction the sentence
+above draws and `en.rs`'s module doc enforces.
+
 This is a clarification, not a widening. It states what the requirement always
 meant; the base forms were written as examples of a concept, not as a match
 list.
