@@ -8,6 +8,11 @@ plus the record work at `4b14fcd`, `c0ba02b`, `7497379`, `908c539`, `e3e9b40`,
 
 **Do not tag. Do not publish.** Produce the candidate and stop.
 
+**This is the only work in flight.** `RACE-001` and `RACE-002` are written and
+target 0.39.0, and they do **not** open until this release is out — a commit
+landing on `main` while the candidate is cut from its tip would either be
+pulled into a release it was not reviewed for or move the tag under the cut.
+
 ---
 
 ## 1. Ordinary cut

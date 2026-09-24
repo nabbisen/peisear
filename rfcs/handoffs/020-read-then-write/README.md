@@ -9,6 +9,10 @@ the dev team's survey in its review request found four more.
 from that release, and 0.38.0 already carries five changes. Scheduling, not
 severity.
 
+**Neither is open yet.** `REL-0.38.0` cuts its candidate from `main`'s tip and
+is the only work in flight; these two open once 0.38.0 is released, and the
+architect will say when. Reading them now is fine — starting them is not.
+
 | ID | Link | What | Release |
 |---|---|---|---|
 | RACE-001 | [RACE-001](./RACE-001-guards-that-read-then-write.md) | Three sites taking `CAP-001`'s `BEGIN IMMEDIATE` fix. The worst is the **last-admin guard**: `role_for` → `admin_count` → write, all on the pool, so two admins pressing *Leave team* at once leave a team with **zero admins**, which no remaining member can undo. Also `sprints::start` (two active sprints, a state `ORD-002`'s deterministic pick now hides) and `close_at`'s read-modify-write. | 0.39.0 |

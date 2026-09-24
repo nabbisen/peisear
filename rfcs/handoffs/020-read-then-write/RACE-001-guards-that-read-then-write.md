@@ -8,8 +8,13 @@ a regression, and 0.38.0 already carries five changes. Scheduling, not severity.
 **Source**: the dev team's survey in `CAP-001`'s review request §5, after
 `CAP-001` fixed the fourth instance. Rulings in
 `.git-exclude/reviewed/CAP-001-review.md` §3.
-**Depends on**: `CAP-001`, which established the pattern. Not on `RACE-002`,
-which needs a different fix.
+**Depends on**: `CAP-001`, which established the pattern — **and on 0.38.0
+being released**, see below. Not on `RACE-002`, which needs a different fix.
+
+**Do not start this until 0.38.0 is released.** `REL-0.38.0` cuts its candidate
+from `main`'s tip, so a commit landing here first would either be pulled into a
+release it was not reviewed for or move the tag under the cut. **The release
+candidate is the only work in flight**; the architect will say when this opens.
 
 ---
 

@@ -7,8 +7,14 @@
 concurrency mechanism, so read §3 before writing anything.
 **Source**: flagged by the dev team in `CAP-001`'s review request §5 and marked
 *inferred*; confirmed by reading in `.git-exclude/reviewed/CAP-001-review.md` §3.
-**Depends on**: nothing. **Deliberately separate from `RACE-001`** — same shape,
-different fix, and folding them together would hide that.
+**Depends on**: **0.38.0 being released**, see below — and nothing else.
+**Deliberately separate from `RACE-001`** — same shape, different fix, and
+folding them together would hide that.
+
+**Do not start this until 0.38.0 is released.** `REL-0.38.0` cuts its candidate
+from `main`'s tip, so a commit landing here first would either be pulled into a
+release it was not reviewed for or move the tag under the cut. **The release
+candidate is the only work in flight**; the architect will say when this opens.
 
 ---
 
