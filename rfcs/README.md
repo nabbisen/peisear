@@ -39,8 +39,9 @@ RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 Open for review. Design may still change.
 
-**Nothing is currently proposed.** RFC 004, the last one here, closed
-2026-09-24.
+| ID | Title | Target |
+|----|-------|--------|
+| 013 | [The sprint record](./proposed/013-the-sprint-record.md) — capture what a sprint reported at completion, instead of freezing what it contains. **Rewrites `FR-SPR-004`'s mechanism**, withdraws `SPRINT-002` and half of `SPRINT-001` | 0.39.0 |
 
 ## Implemented
 
