@@ -53,10 +53,10 @@ held, and one planned feature was retired.
   alphabetically as though that meant severity or lifecycle — `status` on the
   issue list, `priority` on the backlog, `status` on a sprint's issues. And
   `created_at` and `updated_at` are one-second timestamps whose ties SQLite
-  returns oldest first, so every newest-first ordering read backwards within a
-  tie; 22 orderings in the storage layer now end in a tiebreak on the row's
+  returns oldest first, so a newest-first ordering could read backwards within
+  a tie; 22 orderings in the storage layer now end in a tiebreak on the row's
   insertion order. (Sprint lists were already newest first, by an accident of
-  the index they scan; the tiebreak makes that deliberate.)
+  the index they scan; the tiebreak makes that deliberate.) `§10.29` has it.
 - **A user's current capacity could resolve to a superseded value, and the
   check that should have prevented a second value was not atomic.** Three
   queries picked the current capacity with `… DESC LIMIT 1`, and on a tie the
@@ -67,6 +67,7 @@ held, and one planned feature was retired.
   not**; the module now says so, and the check and the write run in one
   transaction that takes the write lock first. Saved one after another, an
   overlapping period was always refused, with the same message as before.
+  `§10.30` has it.
 
 ### Removed
 
@@ -76,7 +77,7 @@ held, and one planned feature was retired.
 
 ### Internal
 
-- **The suite grew from 272 to 296.** Two test files are new —
+- **The suite grew from 272 to 297.** Two test files are new —
   `ordering.rs` and `capacity_atomicity.rs` — so `DEC-007`'s command block and
   `.github/workflows/test.yml` both changed, after four releases in which
   neither had.
@@ -88,7 +89,7 @@ held, and one planned feature was retired.
 **The test suite found none of this.** No test referenced `position`, and none
 pinned any of the four orders. They were found by reading the code during a
 design review of something else and then following that thread; the oldest had
-been in the product since April. The 24 new tests are worth what they will
+been in the product since April. The 25 new tests are worth what they will
 catch later, not anything they found.
 
 **What a reader should not conclude.** This release fixes one instance of a
