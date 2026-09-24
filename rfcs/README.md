@@ -94,6 +94,7 @@ the RFC number they are keyed to.
 | [`handoffs/018-issue-ordering/`](./handoffs/018-issue-ordering/README.md) | RFC 0004 — `ORD-001` **retires substep D-5** and removes `position`; `ORD-002`/`ORD-003` follow on ordering defects it uncovered, target 0.38.0 |
 | [`handoffs/019-capacity-integrity/`](./handoffs/019-capacity-integrity/README.md) | **Not RFC-governed** — `CAP-001`, the capacity overlap check is not atomic, target 0.38.0 |
 | [`handoffs/020-read-then-write/`](./handoffs/020-read-then-write/README.md) | **Not RFC-governed** — `RACE-001`/`RACE-002`, four more check-then-write races `CAP-001` uncovered, target 0.39.0 |
+| [`handoffs/021-static-is-public/`](./handoffs/021-static-is-public/README.md) | **Not RFC-governed** — `STATIC-001`, a document under the served `static/` directory; **blocks the 0.38.0 tag** |
 | [`handoffs/015-mobile-completion/`](./handoffs/015-mobile-completion/README.md) | **Not RFC-governed** — closing `NFR-A11Y-006`, unverified since Phase E |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
