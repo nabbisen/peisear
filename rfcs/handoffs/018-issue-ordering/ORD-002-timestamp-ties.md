@@ -44,9 +44,19 @@ ORDER BY created_at DESC LIMIT 1          ->  id=old  points=10
 ORDER BY created_at DESC, rowid DESC ...  ->  id=new  points=99
 ```
 
-**The tie returns the superseded row.** Two saves inside one second — what a
-double-click produces — silently keep the first value while the page reports
-success, and that number feeds workload, WIP and the health indicators.
+**The tie returns the superseded row**, and that number feeds workload, WIP and
+the health indicators.
+
+> **Correction, 2026-09-24, from this handoff's own review.** This paragraph
+> read *"Two saves inside one second — what a double-click produces — silently
+> keep the first value while the page reports success."* **That is wrong about
+> the mechanism.** The dev team measured the path through the app: `insert`
+> calls `overlaps_existing` first and the handler renders a visible conflict
+> message, so a *sequential* second save is refused, not stored. The reachable
+> form is a **race between two concurrent requests** — check-then-insert is not
+> in a transaction — which stores several overlapping rows, and the tie then
+> returns a superseded one. The read-side fix below is unchanged and still
+> right. The race itself is `CAP-001`.
 
 This is reachable, it is a wrong number rather than a wrong order, and it is
 why this handoff exists rather than a one-line addition to `PLAN-003`.
