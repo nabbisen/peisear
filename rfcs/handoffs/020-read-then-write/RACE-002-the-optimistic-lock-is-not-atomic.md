@@ -11,11 +11,10 @@ concurrency mechanism, so read §3 before writing anything.
 **Deliberately separate from `RACE-001`** — same shape, different fix, and
 folding them together would hide that.
 
-**Do not start this until 0.38.0 is released.** `REL-0.38.0` cuts its candidate
-from `main`'s tip, so a commit landing here first would either be pulled into a
-release it was not reviewed for or move the tag under the cut. **The release
-candidate is the only work in flight**; the architect will say when this opens.
-
+**Open as of 2026-09-24.** 0.38.0 is tagged (`a0b147f`) and published — all
+seven crates at `max_version` 0.38.0 — and both specifications are amended to
+it (`DEC-028`, `0b606a4`). The hold that said to wait is lifted; start when
+ready. `main`'s tip is the base.
 ---
 
 ## 1. The defect

@@ -9,9 +9,9 @@ the dev team's survey in its review request found four more.
 from that release, and 0.38.0 already carries five changes. Scheduling, not
 severity.
 
-**Neither is open yet.** `REL-0.38.0` cuts its candidate from `main`'s tip and
-is the only work in flight; these two open once 0.38.0 is released, and the
-architect will say when. Reading them now is fine — starting them is not.
+**Both open as of 2026-09-24.** 0.38.0 is tagged and published and both
+specifications are amended to it (`DEC-028`). They can be taken in either
+order; `RACE-001` carries the more consequential defect.
 
 | ID | Link | What | Release |
 |---|---|---|---|
