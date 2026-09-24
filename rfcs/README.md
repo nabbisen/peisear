@@ -95,7 +95,8 @@ the RFC number they are keyed to.
 | [`handoffs/019-capacity-integrity/`](./handoffs/019-capacity-integrity/README.md) | **Not RFC-governed** — `CAP-001`, the capacity overlap check is not atomic, target 0.38.0 |
 | [`handoffs/020-read-then-write/`](./handoffs/020-read-then-write/README.md) | **Not RFC-governed** — `RACE-001`/`RACE-002`, four more check-then-write races `CAP-001` uncovered, target 0.39.0 |
 | [`handoffs/021-static-is-public/`](./handoffs/021-static-is-public/README.md) | **Not RFC-governed** — `STATIC-001`, a document under the served `static/` directory; **blocks the 0.38.0 tag** |
-| [`handoffs/022-sprint-membership/`](./handoffs/022-sprint-membership/README.md) | **Not RFC-governed** — `SPRINT-001`, changes that alter a completed sprint's record, target 0.39.0 |
+| [`handoffs/022-sprint-membership/`](./handoffs/022-sprint-membership/README.md) | **Not RFC-governed** — `SPRINT-001`/`SPRINT-002`, changes that alter a completed sprint's record, target 0.39.0 |
+| [`handoffs/023-sprint-reopen/`](./handoffs/023-sprint-reopen/README.md) | `DEC-053` — `SPRINT-003`, reopening a completed sprint, target 0.39.0 |
 | [`handoffs/015-mobile-completion/`](./handoffs/015-mobile-completion/README.md) | **Not RFC-governed** — closing `NFR-A11Y-006`, unverified since Phase E |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
