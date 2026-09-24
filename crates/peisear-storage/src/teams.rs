@@ -177,6 +177,19 @@ pub async fn members_of_team(
 
 /// Look up a single membership row. None if the user is not a
 /// member of this team. Used by access-control helpers.
+///
+/// **A point-in-time read, and the window that follows it is accepted
+/// (`RACE-003`).** Handlers call this to learn the *actor's* role, test
+/// `can_manage_team()` or `can_write()`, and then write; nothing holds the
+/// database lock across those steps. A role change committed between the
+/// read and the write -- an admin demoted or removed in that gap -- is not
+/// seen by the action already in flight, which still completes. That
+/// window exists in every handler that authorises this way. It is accepted,
+/// not closed: closing it would mean holding the write lock across each
+/// handler's whole body, and the change takes effect on the actor's next
+/// request either way. It does not touch [`update_role`] and
+/// [`remove_member`]'s rule that a team keeps an admin, which reads its
+/// own state again under its own lock.
 pub async fn role_for<'e, E>(
     executor: E,
     team_id: &str,
@@ -314,6 +327,15 @@ pub async fn update_team(
 /// Add a member with the given role. If the user is already a
 /// member, returns `StorageError::Conflict` rather than
 /// silently updating the role (use `update_role` for that).
+///
+/// **Concurrent duplicates (`RACE-003`).** The check below is a fast
+/// path, not the guarantee: two simultaneous adds both pass it. The
+/// guarantee is the table's `PRIMARY KEY (team_id, user_id)`, which
+/// refuses the second `INSERT` -- so the *state* was always right, and
+/// what the loser used to get was the driver's raw error. A unique
+/// violation is now mapped onto the same
+/// `UserAlreadyTeamMemberMessage` the check returns. No transaction is
+/// needed: nothing here is wrong except the words.
 pub async fn add_member(
     pool: &Pool,
     team_id: &str,
@@ -337,7 +359,18 @@ pub async fn add_member(
     .bind(user_id)
     .bind(role.as_str())
     .execute(pool)
-    .await?;
+    .await
+    .map_err(|e| match e {
+        // `sqlx` reports both SQLite's UNIQUE and PRIMARY KEY constraint
+        // codes as `UniqueViolation`; this table has no other unique key,
+        // so on this statement it can only be the duplicate membership.
+        sqlx::Error::Database(db) if db.kind() == sqlx::error::ErrorKind::UniqueViolation => {
+            StorageError::Conflict(peisear_i18n::MessageKey::UserAlreadyTeamMemberMessage {
+                user_id: user_id.to_string(),
+            })
+        }
+        other => other.into(),
+    })?;
     Ok(())
 }
 

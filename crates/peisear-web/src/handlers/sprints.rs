@@ -30,6 +30,15 @@ pub struct FlashQuery {
 
 /// Helper: resolve team by slug, verify the user is a member,
 /// and return (team, role). Errors with 404 for non-members.
+/// `add_issue_if_status`'s refusal is a `Conflict` in storage; both routes
+/// have always answered it as a `400` validation with the same copy.
+fn refusal_as_validation(e: peisear_storage::StorageError) -> AppError {
+    match e {
+        peisear_storage::StorageError::Conflict(key) => AppError::Validation(t(key)),
+        other => other.into(),
+    }
+}
+
 async fn resolve_team_membership(
     state: &AppState,
     user_id: &str,
@@ -614,7 +623,17 @@ pub async fn assign_issue(
                 MessageKey::CannotAssignToCompletedSprintMessage,
             )));
         }
-        sprints::add_issue(&state.db, &sprint.id, &issue_id).await?;
+        // The check above is the early refusal; the write re-checks the
+        // status atomically (`RACE-003`) and returns the same message.
+        sprints::add_issue_if_status(
+            &state.db,
+            &sprint.id,
+            &issue_id,
+            &[SprintStatus::Planned, SprintStatus::Active],
+            MessageKey::CannotAssignToCompletedSprintMessage,
+        )
+        .await
+        .map_err(refusal_as_validation)?;
     }
     let flash = super::percent_encode_query(
         &Locale::English.render(MessageKey::SprintAssignmentSavedFlash),
@@ -826,7 +845,17 @@ pub async fn plan_add(
         )));
     }
 
-    sprints::add_issue(&state.db, &sprint.id, &issue.id).await?;
+    // The check at the top is the early refusal; the write re-checks the
+    // status atomically (`RACE-003`) and returns the same message.
+    sprints::add_issue_if_status(
+        &state.db,
+        &sprint.id,
+        &issue.id,
+        &[SprintStatus::Planned],
+        MessageKey::SprintPlanNotEditableMessage,
+    )
+    .await
+    .map_err(refusal_as_validation)?;
     let qs = plan_query_string(&form.project, &form.priority, &form.assignee);
     Ok(Redirect::to(&format!(
         "/teams/{slug}/sprints/{sprint_id}/plan{qs}"

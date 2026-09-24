@@ -16,6 +16,10 @@
 //! 3. **`user_capacities::close_at`** — a read-modify-write that wrote
 //!    back a `points` value it had read before a concurrent edit.
 //!
+//! `RACE-003` adds two smaller ones at the end of this file: an issue
+//! joining a sprint whose status changed under it, and a concurrent
+//! duplicate team membership answered with a raw database error.
+//!
 //! Every concurrent test drives real tasks on a multi-thread runtime,
 //! released together by a barrier so the requests genuinely overlap.
 //! Tests that need the race to fire *reliably* run many independent
@@ -27,7 +31,7 @@ mod common;
 use axum::http::StatusCode;
 use chrono::NaiveDate;
 use common::auth::{TestUser, login, register};
-use common::fixture::create_team_with_admin;
+use common::fixture::{create_issue, create_team_project, create_team_with_admin};
 use common::server::TestApp;
 use peisear_core::teams::TeamRole;
 use peisear_i18n::MessageKey;
@@ -568,5 +572,316 @@ async fn close_at_does_not_overwrite_a_concurrent_points_edit() {
         lost.is_empty(),
         "{} of {N} rows lost the concurrent points edit (period_end, points): {lost:?}",
         lost.len()
+    );
+}
+
+// ─────────────────────────────────────────────────────────────
+// RACE-003 §2 — teams::add_member: the right state, the right words
+// ─────────────────────────────────────────────────────────────
+
+/// `N` simultaneous adds of one user to one team: one succeeds, every
+/// other is refused with **`UserAlreadyTeamMemberMessage`** -- the message,
+/// not a raw database error -- and exactly one membership row exists.
+/// The primary key already kept the *state* right; the message is what
+/// this asserts.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn concurrent_duplicate_adds_get_the_already_a_member_message() {
+    let app = TestApp::spawn().await;
+    let (_, admin) = user(&app, "alice").await;
+    let (_, newcomer) = user(&app, "bob").await;
+    let team_id = create_team_with_admin(&app.db, &admin, "Team").await;
+
+    let jobs: Vec<_> = (0..N)
+        .map(|_| {
+            let (db, team_id, newcomer) = (app.db.clone(), team_id.clone(), newcomer.clone());
+            Box::pin(
+                async move { teams::add_member(&db, &team_id, &newcomer, TeamRole::Member).await },
+            )
+                as std::pin::Pin<
+                    Box<dyn std::future::Future<Output = Result<(), StorageError>> + Send>,
+                >
+        })
+        .collect();
+    let results = all_at_once::<Result<(), StorageError>>(jobs).await;
+
+    let ok = results.iter().filter(|r| r.is_ok()).count();
+    let owed = results
+        .iter()
+        .filter(|r| {
+            matches!(
+                r,
+                Err(StorageError::Conflict(MessageKey::UserAlreadyTeamMemberMessage { user_id }))
+                    if *user_id == newcomer
+            )
+        })
+        .count();
+    let rows: i64 = sqlx::query_scalar(
+        "SELECT COUNT(*) FROM team_memberships WHERE team_id = ?1 AND user_id = ?2",
+    )
+    .bind(&team_id)
+    .bind(&newcomer)
+    .fetch_one(&app.db)
+    .await
+    .unwrap();
+    assert_eq!(
+        (ok, owed, rows),
+        (1, N - 1, 1),
+        "one add, {} refusals carrying the already-a-member message, one row; got {results:?}",
+        N - 1
+    );
+}
+
+/// Sequential behaviour, unchanged: adding an existing member is refused
+/// with the same message, and the existing role is not touched.
+#[tokio::test]
+async fn adding_an_existing_member_is_refused_with_the_same_message() {
+    let app = TestApp::spawn().await;
+    let (_, admin) = user(&app, "alice").await;
+    let (_, member) = user(&app, "bob").await;
+    let team_id = create_team_with_admin(&app.db, &admin, "Team").await;
+    teams::add_member(&app.db, &team_id, &member, TeamRole::Viewer)
+        .await
+        .expect("first add");
+
+    match teams::add_member(&app.db, &team_id, &member, TeamRole::Admin).await {
+        Err(StorageError::Conflict(MessageKey::UserAlreadyTeamMemberMessage { user_id })) => {
+            assert_eq!(user_id, member)
+        }
+        other => panic!("expected the already-a-member message, got {other:?}"),
+    }
+    assert_eq!(
+        teams::role_for(&app.db, &team_id, &member).await.unwrap(),
+        Some(TeamRole::Viewer),
+        "the refused add must not change the existing role"
+    );
+}
+
+// ─────────────────────────────────────────────────────────────
+// RACE-003 §1 — an issue must not join a sprint whose status has
+// changed under it
+// ─────────────────────────────────────────────────────────────
+//
+// Two routes add an issue to a sprint and both read the sprint's status
+// first: `plan_add` (only a `planned` sprint), and `assign_issue` (any
+// sprint but a `completed` one). Neither carries an optimistic lock, so
+// nothing else closes the gap between the read and the `INSERT`.
+//
+// **Why these are not "N pairs released together".** For an add racing a
+// status change, both serial orders can be legal *and leave the same
+// state*: the add landing just before the change and the add landing just
+// after it (the bug) both end with the issue in the sprint, and a barrier
+// cannot tell which happened. So the interleaving is **forced**: the test
+// holds the database write lock on one connection, fires the requests
+// (each passes its status read, then blocks at its write), changes the
+// sprint's status inside the held transaction, and only then commits -- so
+// every request's write runs strictly after the status change, which is
+// exactly the interleaving the bug needs.
+
+/// Requests held at the write per test. Fewer than the pool's eight
+/// connections minus the one holding the lock, so every request gets past
+/// its own status read before the change lands.
+const HELD: usize = 6;
+
+/// A team, its admin (logged in), a team project, `HELD` open issues
+/// and a sprint in `status`.
+async fn sprint_with_issues(
+    app: &TestApp,
+    status: &str,
+) -> (String, String, String, String, Vec<String>) {
+    let (_, admin) = user(app, "alice").await;
+    let team_id = create_team_with_admin(&app.db, &admin, "Team").await;
+    let slug = teams::find_by_id(&app.db, &team_id)
+        .await
+        .unwrap()
+        .unwrap()
+        .slug;
+    let project_id = create_team_project(&app.db, &admin, &team_id, "Proj").await;
+    let sprint_id = planned_sprint(app, &team_id, "S").await;
+    if status != "planned" {
+        // seed one member so a sprint can complete; then walk the state machine
+        let seed = create_issue(&app.db, &project_id, &admin, "seed").await;
+        sprints::add_issue(&app.db, &sprint_id, &seed)
+            .await
+            .unwrap();
+        sprints::start(&app.db, &sprint_id).await.unwrap();
+    }
+    let mut issue_ids = Vec::new();
+    for i in 0..HELD {
+        issue_ids.push(create_issue(&app.db, &project_id, &admin, &format!("I{i}")).await);
+    }
+    (slug, team_id, project_id, sprint_id, issue_ids)
+}
+
+/// Fire `requests` while a write lock is held, run `change` inside the held
+/// transaction, commit, and return the responses.
+async fn requests_landing_after<T: Send + 'static>(
+    app: &Arc<TestApp>,
+    requests: Vec<std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send>>>,
+    change: &str,
+    sprint_id: &str,
+) -> Vec<T> {
+    let mut tx = app
+        .db
+        .begin_with("BEGIN IMMEDIATE")
+        .await
+        .expect("hold the write lock");
+    let handles: Vec<_> = requests.into_iter().map(tokio::spawn).collect();
+    // Let every request run its status read and block at its write.
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    sqlx::query(change)
+        .bind(sprint_id)
+        .execute(&mut *tx)
+        .await
+        .expect("change the sprint's status under them");
+    tx.commit().await.expect("release the lock");
+    let mut out = Vec::new();
+    for h in handles {
+        out.push(h.await.expect("request task"));
+    }
+    out
+}
+
+async fn members_of_sprint(app: &TestApp, sprint_id: &str) -> i64 {
+    sqlx::query_scalar("SELECT COUNT(*) FROM sprint_issues WHERE sprint_id = ?1")
+        .bind(sprint_id)
+        .fetch_one(&app.db)
+        .await
+        .expect("count sprint members")
+}
+
+/// `plan_add` reads a `planned` sprint; a `start` lands before its write.
+/// The plan is no longer editable, so **no issue may be added**.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn plan_add_does_not_add_to_a_sprint_started_under_it() {
+    let app = TestApp::spawn().await;
+    let (slug, _team, project_id, sprint_id, issue_ids) = sprint_with_issues(&app, "planned").await;
+    let app = Arc::new(app);
+
+    let requests: Vec<_> = issue_ids
+        .iter()
+        .map(|issue_id| {
+            let (app, slug, sprint_id, project_id, issue_id) = (
+                app.clone(),
+                slug.clone(),
+                sprint_id.clone(),
+                project_id.clone(),
+                issue_id.clone(),
+            );
+            Box::pin(async move {
+                app.server
+                    .post(&format!("/teams/{slug}/sprints/{sprint_id}/plan/add"))
+                    .form(&[
+                        ("issue_id", issue_id.as_str()),
+                        ("project_id", project_id.as_str()),
+                    ])
+                    .await
+                    .status_code()
+            })
+                as std::pin::Pin<Box<dyn std::future::Future<Output = StatusCode> + Send>>
+        })
+        .collect();
+    let statuses = requests_landing_after(
+        &app,
+        requests,
+        "UPDATE sprints SET status = 'active', started_at = CURRENT_TIMESTAMP WHERE id = ?1",
+        &sprint_id,
+    )
+    .await;
+
+    assert_eq!(
+        (members_of_sprint(&app, &sprint_id).await, statuses.clone()),
+        (0, vec![StatusCode::BAD_REQUEST; HELD]),
+        "no issue may join a sprint that started under the request, and each is \
+         refused with the plan-not-editable validation (400)"
+    );
+}
+
+/// `assign_issue` reads an `active` sprint; a `complete` lands before its
+/// write. A completed sprint's summary must stay stable, so **no issue may
+/// be added**.
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn assigning_an_issue_does_not_join_a_sprint_completed_under_it() {
+    let app = TestApp::spawn().await;
+    let (_slug, _team, project_id, sprint_id, issue_ids) = sprint_with_issues(&app, "active").await;
+    let seeded = members_of_sprint(&app, &sprint_id).await;
+    let app = Arc::new(app);
+
+    let requests: Vec<_> = issue_ids
+        .iter()
+        .map(|issue_id| {
+            let (app, sprint_id, project_id, issue_id) = (
+                app.clone(),
+                sprint_id.clone(),
+                project_id.clone(),
+                issue_id.clone(),
+            );
+            Box::pin(async move {
+                app.server
+                    .post(&format!("/projects/{project_id}/issues/{issue_id}/sprint"))
+                    .form(&[("sprint_id", sprint_id.as_str())])
+                    .await
+                    .status_code()
+            })
+                as std::pin::Pin<Box<dyn std::future::Future<Output = StatusCode> + Send>>
+        })
+        .collect();
+    let statuses = requests_landing_after(
+        &app,
+        requests,
+        "UPDATE sprints SET status = 'completed', completed_at = CURRENT_TIMESTAMP WHERE id = ?1",
+        &sprint_id,
+    )
+    .await;
+
+    assert_eq!(
+        (members_of_sprint(&app, &sprint_id).await, statuses.clone()),
+        (seeded, vec![StatusCode::BAD_REQUEST; HELD]),
+        "no issue may join a sprint completed under the request, and each is refused (400)"
+    );
+}
+
+/// Sequential behaviour and copy, unchanged, for the two refusals the
+/// storage check now also makes: assigning to a completed sprint, and
+/// adding to a sprint that is no longer planned. (`sprint_plan.rs`'s
+/// `plan_add_rejects_a_completed_sprint` covers the completed case of the
+/// second by its status; the messages are pinned here.)
+#[tokio::test]
+async fn the_sequential_refusals_keep_their_messages() {
+    let app = TestApp::spawn().await;
+    let (slug, _team, project_id, sprint_id, issue_ids) = sprint_with_issues(&app, "active").await;
+
+    // plan_add on an active sprint: the plan-not-editable message
+    let resp = app
+        .server
+        .post(&format!("/teams/{slug}/sprints/{sprint_id}/plan/add"))
+        .form(&[
+            ("issue_id", issue_ids[0].as_str()),
+            ("project_id", project_id.as_str()),
+        ])
+        .await;
+    resp.assert_status(StatusCode::BAD_REQUEST);
+    assert!(
+        resp.text().contains(
+            &peisear_i18n::Locale::English.render(MessageKey::SprintPlanNotEditableMessage)
+        ),
+        "plan_add's refusal must carry its message"
+    );
+
+    // assign_issue to a completed sprint: the cannot-assign message
+    sprints::complete(&app.db, &sprint_id).await.unwrap();
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{}/sprint",
+            issue_ids[1]
+        ))
+        .form(&[("sprint_id", sprint_id.as_str())])
+        .await;
+    resp.assert_status(StatusCode::BAD_REQUEST);
+    assert!(
+        resp.text().contains(
+            &peisear_i18n::Locale::English.render(MessageKey::CannotAssignToCompletedSprintMessage)
+        ),
+        "assign_issue's refusal must carry its message"
     );
 }

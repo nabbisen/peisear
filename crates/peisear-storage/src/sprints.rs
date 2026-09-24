@@ -375,6 +375,51 @@ pub async fn complete_guarded(
     Ok(Guarded::Written(()))
 }
 
+/// [`add_issue`], but only if the sprint's status is one of `allowed` **at
+/// the moment of the write** (`RACE-003`). The caller passes the refusal it
+/// owes, so each route keeps its own message.
+///
+/// The routes that add an issue read the sprint's status first and refuse
+/// on it; that read is on the pool, so a `start` or `complete` landing
+/// between it and the `INSERT` left an issue in a sprint the request would
+/// have refused. Neither route carries an optimistic lock (a deliberate
+/// choice, not this function's to change), so there is no stamp to move.
+/// The status read and the insert now share one `BEGIN IMMEDIATE`
+/// transaction -- see `user_capacities`'s module docs for why `IMMEDIATE`
+/// -- and [`start_guarded`] / [`complete_guarded`] take the same lock, so
+/// they serialise. A vanished sprint is `NotFound`; a status outside
+/// `allowed` is [`StorageError::Conflict`] carrying `refusal`.
+pub async fn add_issue_if_status(
+    pool: &Pool,
+    sprint_id: &str,
+    issue_id: &str,
+    allowed: &[SprintStatus],
+    refusal: peisear_i18n::MessageKey,
+) -> StorageResult<()> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let sprint = find_by_id(&mut *tx, sprint_id)
+        .await?
+        .ok_or(StorageError::NotFound)?;
+    if !allowed.contains(&sprint.status) {
+        return Err(StorageError::Conflict(refusal));
+    }
+    sqlx::query(
+        r#"
+        INSERT INTO sprint_issues (issue_id, sprint_id)
+        VALUES (?1, ?2)
+        ON CONFLICT(issue_id) DO UPDATE SET
+            sprint_id = excluded.sprint_id,
+            assigned_at = CURRENT_TIMESTAMP
+        "#,
+    )
+    .bind(issue_id)
+    .bind(sprint_id)
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
 /// Add an issue to a sprint. If the issue is already in
 /// another sprint, it gets moved (single-sprint-per-issue
 /// invariant). Returns Ok regardless of whether this was a
