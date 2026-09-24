@@ -26,6 +26,9 @@ first.
   six crates and what belongs in each
 - [Leptos SSR](architecture/leptos-ssr.md) — why SSR-only mode, what it
   buys us, and what it rules out
+- [Verifying the shipped JavaScript](static-js-verification.md) — what
+  `cargo test` does not execute in `static/`, and the evidence runs that
+  stand in for it
 
 ## Operations
 

@@ -2884,7 +2884,7 @@ open items cannot show whether a class of defect recurs.
 | §10.12 health **summary prose** names the unclamped state | **Closed** — 0.20.1 |
 | §10.13 the integration-test harness collides with itself | **Closed** — 0.22.0 |
 | §10.14 the board's script tag was guarded by nothing | **Closed** — after 0.26.0 |
-| §10.15 the shipped JavaScript is executed by no test | Open; **the gap is permanent, its size is not** — 820 lines in three files when declared permanent at 0.33.0, **1,663 in five** at 0.37.0. The old rationale ("a failure is immediate and local") was falsified by `PLAN-002` round 1, which passed every gate and reached review. No tool is bought; two required evidence runs are recorded instead, each having caught one defect no gate could — see `static/README.md` |
+| §10.15 the shipped JavaScript is executed by no test | Open; **the gap is permanent, its size is not** — 820 lines in three files when declared permanent at 0.33.0, **1,663 in five** at 0.37.0. The old rationale ("a failure is immediate and local") was falsified by `PLAN-002` round 1, which passed every gate and reached review. No tool is bought; two required evidence runs are recorded instead, each having caught one defect no gate could — see `docs/static-js-verification.md` |
 | §10.16 the four structural guards have no CI job | **Closed** — 0.27.0; **reopened and re-closed** in 0.31.0 |
 | §10.17 assertions keep passing while no longer testing what they name | Open, **recorded not scheduled** — 11 instances found and fixed in 0.31.0 |
 | §10.18 authenticated pages scroll horizontally when the signed-in email is long | **Closed** — `LAYOUT-001`, 0.32.0 |
@@ -3444,8 +3444,8 @@ inferring coverage from a green gate — the same inference §10.13 punished.
 > | **the no-reload sequence run** — act on the same element twice, then undo, then reload once and confirm the server agrees | `PLAN-002` round 1's marker, above. A run that reloads between actions verifies two first actions, not a round trip |
 > | **the before-and-after rendering check** — computed style for the same data, before and after a markup change | `CAL-003`'s `h-full`, a class never used in this codebase, so the purged stylesheet had never emitted it and a block's height silently collapsed from 59.875 px to 20 px |
 >
-> Both are now written down in `static/README.md`, beside the files they
-> govern, rather than living in whichever handoff last remembered to ask.
+> Both are now written down in `docs/static-js-verification.md`,
+> alongside the rest of the documentation, rather than living in whichever handoff last remembered to ask.
 >
 > *One figure corrected in passing: I said in review that the sequence run had
 > caught a defect "twice". It has caught one. The second catch was the

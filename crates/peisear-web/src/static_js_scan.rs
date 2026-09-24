@@ -49,6 +49,18 @@
 //! does not exist, and inventing one for a type-ahead dropdown is
 //! disproportionate.
 //!
+//! **`STATIC-001` — a second, unrelated guard lives here because this
+//! module already walks `static/`.** `app.rs` mounts
+//! `ServeDir::new("static")`, so every file in that directory is a public
+//! URL on every deployment. [`every_entry_under_static_is_a_servable_asset_type`]
+//! asserts that each file under it (recursively) has an extension on the
+//! short list in [`SERVABLE_ASSET_TYPES`]. **That is all it checks**: the
+//! extension, compared case-sensitively. It does not read a file's
+//! content, so a `.js` or `.css` file holding something that should not be
+//! public still passes; and a file with no extension, a dotfile, a `.md`,
+//! a `.bak` or a `.orig` fails. Adding an asset type is deliberately a
+//! one-line change with its reason beside it.
+//!
 //! **Comments are stripped before scanning**, same choice
 //! `prose_scan.rs`/`test_harness_scan.rs` made and for the same
 //! reason: otherwise a doc comment that quotes UI copy — this file's
@@ -279,5 +291,94 @@ fn search_js_allowlist_entry_still_matches_something() {
         !violations.is_empty(),
         "search.js no longer has anything this guard would flag -- if it was converted, \
          remove the allowlist entry and let this guard cover it"
+    );
+}
+
+/// File extensions allowed under `static/`, each with the reason it is
+/// there (`STATIC-001`). The directory is served in full, so this list is
+/// the list of things the project has decided to publish. Adding a type --
+/// a `.svg`, a `.woff2` -- is a deliberate one-line change, with the reason
+/// beside it, the same shape `touch_target_scan`'s
+/// `is_named_escalation_exclusion` uses.
+const SERVABLE_ASSET_TYPES: &[(&str, &str)] = &[
+    (
+        "js",
+        "the scripts the pages load: board, calendar, dm, plan and search",
+    ),
+    (
+        "css",
+        "the stylesheets the pages load: app, daisyui and tailwind",
+    ),
+];
+
+fn is_servable_asset_type(path: &Path) -> bool {
+    path.extension()
+        .and_then(|e| e.to_str())
+        .is_some_and(|ext| {
+            SERVABLE_ASSET_TYPES
+                .iter()
+                .any(|(allowed, _)| *allowed == ext)
+        })
+}
+
+/// Every file under `dir`, recursively (`ServeDir` serves
+/// subdirectories too).
+fn collect_all_files(dir: &Path, out: &mut Vec<PathBuf>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for entry in entries {
+        let path = entry.expect("dir entry").path();
+        if path.is_dir() {
+            collect_all_files(&path, out);
+        } else {
+            out.push(path);
+        }
+    }
+}
+
+/// `STATIC-001`: nothing under `static/` that is not a servable asset
+/// type. See the module doc for what this does and does not check.
+#[test]
+fn every_entry_under_static_is_a_servable_asset_type() {
+    let static_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("static");
+    let mut files = Vec::new();
+    collect_all_files(&static_dir, &mut files);
+    assert!(
+        !files.is_empty(),
+        "found nothing under static/ -- the workspace layout assumption this scan \
+         depends on may have changed"
+    );
+
+    let mut offenders: Vec<String> = files
+        .iter()
+        .filter(|p| !is_servable_asset_type(p))
+        .map(|p| {
+            p.strip_prefix(&static_dir)
+                .unwrap_or(p)
+                .display()
+                .to_string()
+        })
+        .collect();
+    offenders.sort();
+    assert!(
+        offenders.is_empty(),
+        "static/ is served in full (`ServeDir::new(\"static\")` in app.rs), so every file \
+         in it is a public URL on every deployment -- and these are not an allowed asset \
+         type (allowed: {}). Move a document to docs/; to publish a new kind of asset, add \
+         its extension and a reason to SERVABLE_ASSET_TYPES in static_js_scan.rs:\n{}",
+        SERVABLE_ASSET_TYPES
+            .iter()
+            .map(|(ext, _)| format!(".{ext}"))
+            .collect::<Vec<_>>()
+            .join(", "),
+        offenders
+            .iter()
+            .map(|o| format!("  static/{o}"))
+            .collect::<Vec<_>>()
+            .join("\n")
     );
 }

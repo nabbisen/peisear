@@ -1,3 +1,7 @@
+// No test executes this file, or `board.js`, `plan.js` or `calendar.js`.
+// What that costs, and the two evidence runs that stand in for a test, are
+// written down in `docs/static-js-verification.md` (baseline `§10.15`).
+//
 // Direct-manipulation status enhancement — RFC 004a step 2
 // (STATUS-002), over STATUS-001's real `<form>`-based status
 // controls on the issue detail page and the issue list. Intercepts
