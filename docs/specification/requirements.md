@@ -4005,6 +4005,98 @@ paragraph's own prediction coming true** rather than overwriting it: a future
 change did need an allowance, it was reported as a finding, the decision was
 taken, and a line was added. The failure was the denial, not the list.
 
+### 10.29 An `ORDER BY` whose terms do not determine an order — **closed**, `ORD-001`/`PLAN-003`/`ORD-002`/`ORD-003`, 0.38.0; found 2026-09-23
+
+Four ordering defects in two days, in two shapes with one cause: **a query
+asked to order by something that does not carry the order it looks like it
+carries.**
+
+**Shape one — a TEXT column ordered as though alphabetical order meant
+something.** Three instances:
+
+| where | term | what users saw |
+|---|---|---|
+| the default issue list | `status ASC` | SQLite orders `done, in_progress, open` — **Done at the top, Open at the bottom** |
+| the sprint-plan backlog | `priority DESC` | `urgent, medium, low, high` — **`high` last, below `low`**, on the screen for choosing what to work on next |
+| a sprint's issue list | `status ASC` | Done first, on both surfaces that render it |
+
+**Shape two — a timestamp with one-second resolution, and SQLite returns ties
+in scan order, oldest first.** Every `DESC` ordering therefore read *backwards*
+within a tie. **22 sites**, of which three resolved *a user's current capacity*
+with `… DESC LIMIT 1` and so returned the **superseded** value rather than
+merely a wrong order.
+
+**None of this was found by the suite, and none of it could have been.** The
+first was found by reading `position` during a design review of a different
+feature; the second by enumerating the first's blast radius; the third and
+fourth by the dev team while implementing the second. **No test referenced
+`position` at all**, and none pinned any of the four orders — which is why
+three of them had shipped since `PLAN-001` or earlier and one since `0001`.
+`§10.27`'s lesson in a third place: a gate that checks a property cannot see a
+property nobody stated.
+
+**The register's own shape held again.** Three of the four were found by the
+dev team, two of them by declining to follow an instruction of mine that was
+wrong — `ORD-001`'s §6 asserted a before-state that was not true, and
+`ORD-002`'s §1 enumerated two column names while calling the result *every
+timestamp ordering*. The fourth, `issues_in_sprint`, was found and
+**deliberately left alone** as a different defect rather than folded into a
+timestamp handoff.
+
+**What closes it.** Severity and status order are each written exactly once, in
+`Priority::severity_rank` and `IssueStatus::lifecycle_rank`, in Rust, because a
+SQL `CASE` would write the order a second time in a second language. Every
+timestamp ordering carries an explicit `rowid` tiebreak in the matching
+direction — including the two `ASC` sites that were correct only by accident,
+which are now correct on purpose. `position`, which ordered two surfaces by a
+number nobody chose, is gone.
+
+**No fourth instance of shape one exists**: every `ORDER BY` in `crates/` was
+enumerated case-insensitively and classified, and the Rust sorts with it. The
+remaining non-numeric orderings are names, where alphabetical *is* the meaning,
+and one role ordering written as an explicit SQL `CASE` — correct today, and
+the shape to watch on the day anything in Rust needs role order.
+
+**Not closed by a new check**, deliberately. Three instances in one file family,
+all now fixed, with the enumeration recorded above, is a smaller thing than a
+guard that would have to understand which columns carry meaning in their
+sort order.
+
+### 10.30 A comment asserted a concurrency guarantee the code did not provide — **closed**, `CAP-001`, 0.38.0; found 2026-09-24
+
+`user_capacities`'s module doc said the window between its overlap check and
+its INSERT *"could"* admit a concurrent writer, and then closed it: **"for
+peisear's single-process / WAL-serialized-write model this window is zero in
+practice."** It was not zero. Twelve simultaneous saves stored **six**
+overlapping rows — a state the same file, and migration `0009`, both describe
+as impossible.
+
+**The reasoning was wrong in a specific and instructive way.** WAL serializes
+write *transactions*. The check was a `SELECT` on one pooled connection and the
+INSERT a separate statement on another, with no transaction across them, so
+there was nothing for WAL to serialize. The comment named the right hazard and
+then dismissed it with a property that does not apply.
+
+**The comment is the defect, not the race.** An acknowledged gap invites a
+second look; a gap declared closed does not, and this one was declared closed
+in `0009` and left for six releases. `§10.16` was a comment claiming a test
+that did not exist and `§10.28` a guard's doc stricter than the guard — **this
+is the third of that family and the first where the false claim was about
+runtime behaviour rather than about the apparatus.**
+
+**What closes it.** `insert` and `update` open `BEGIN IMMEDIATE`, take the
+write lock *before* the check, and commit both together. The comment now opens
+with **Correction**, quotes the retracted claim, states what WAL does and does
+not serialize, and cites the measurement — the old claim left visible, which is
+the more useful half.
+
+**The survey it prompted found four more instances of the shape**, one of them
+a guard whose failure leaves a team with no administrator, and one the
+optimistic lock itself. Those are `RACE-001` and `RACE-002`, 0.39.0. **This
+entry stays closed**; what the survey found is not this defect recurring but
+the same mistake made independently in four places, which is the argument for
+fixing them as a family rather than one at a time.
+
 ## 11. Deferred and future requirements
 
 Accepted in principle, deliberately not scheduled.
