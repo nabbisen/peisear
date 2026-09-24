@@ -7,6 +7,99 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.38.0] — 2026-09-24
+
+**One schema migration: `0018_remove_issue_position.sql` drops the
+`issues.position` column.** It runs on start. Nothing outside the two list
+queries this release also changes ever read that column, so no value anyone
+could see is lost. **`Issue.position` is also removed from `peisear-core`'s
+public API** — a breaking change to a published crate, carried by this minor
+version as 0.x allows; a downstream crate that names the field will not
+compile until it stops.
+
+**Most of this release changes what a screen shows, and almost none of it is
+a feature.** Four orderings were wrong, one concurrency guarantee was not
+held, and one planned feature was retired.
+
+### Changed
+
+- **Reordering the issue list by hand (D-5) will not be built, and
+  `FR-DM-001` is amended from five direct-manipulation surfaces to four — and
+  is Met.** The other four ship. The product already answers *what do we do
+  next* with priority bands, sprint membership and planned dates, and the
+  sprint is the better answer: named, shared, time-boxed, and on a page of
+  its own. A manual order would have been a second answer to the same
+  question with no name in the UI and no visible provenance, and on a phone
+  it would have been per-row buttons, which do not order a long backlog.
+  RFC 0004 is closed at four of five. **Revisit if** a user asks for manual
+  ordering, or if the sprint-plan backlog's filters prove insufficient for
+  grooming; reversing costs the same migration, inverted.
+- **Screens that read differently now:**
+  - The **issue list** is newest first. It put Done issues at the top.
+  - Each **board column** is newest first. It read oldest first.
+  - The **sprint-plan backlog** reads urgent, high, medium, low. `high` was
+    last, below `low`.
+  - A **sprint's issues** read Open, In progress, Done, in the order they were
+    assigned within each. Done was first.
+  - **Things created in the same second** — inbox entries, projects, search
+    results — read newest first instead of oldest first.
+  - **`sort=priority`** orders issues of equal priority newest first. It
+    ordered them by status name, then by a stored number, as a consequence of
+    the storage order this release changes.
+
+### Fixed
+
+- **Four orderings, one cause each.** A **TEXT** column was sorted
+  alphabetically as though that meant severity or lifecycle — `status` on the
+  issue list, `priority` on the backlog, `status` on a sprint's issues. And
+  `created_at` and `updated_at` are one-second timestamps whose ties SQLite
+  returns oldest first, so every newest-first ordering read backwards within a
+  tie; 22 orderings in the storage layer now end in a tiebreak on the row's
+  insertion order. (Sprint lists were already newest first, by an accident of
+  the index they scan; the tiebreak makes that deliberate.)
+- **A user's current capacity could resolve to a superseded value, and the
+  check that should have prevented a second value was not atomic.** Three
+  queries picked the current capacity with `… DESC LIMIT 1`, and on a tie the
+  earlier row won. Underneath, the overlap check and the write were two
+  separate statements: twelve simultaneous saves stored six overlapping rows,
+  in a file whose comment said that could not happen. The comment said the
+  window was zero for a single-process, write-ahead-logged database. **It was
+  not**; the module now says so, and the check and the write run in one
+  transaction that takes the write lock first. Saved one after another, an
+  overlapping period was always refused, with the same message as before.
+
+### Removed
+
+- The **`issues.position`** column and the **`Issue.position`** field — see
+  the top of this entry. It was assigned on insert and never recomputed when
+  a status changed, so it ordered two surfaces by a number nobody chose.
+
+### Internal
+
+- **The suite grew from 272 to 296.** Two test files are new —
+  `ordering.rs` and `capacity_atomicity.rs` — so `DEC-007`'s command block and
+  `.github/workflows/test.yml` both changed, after four releases in which
+  neither had.
+- **The specification is now in the repository**, under `docs/specification/`,
+  with three superseded baselines under `history/` and a README saying which
+  of the identifiers in it can be opened. `DEC-020`, open since 0.19.1, is
+  closed: it is English, it is here, and it is the single source of truth.
+
+**The test suite found none of this.** No test referenced `position`, and none
+pinned any of the four orders. They were found by reading the code during a
+design review of something else and then following that thread; the oldest had
+been in the product since April. The 24 new tests are worth what they will
+catch later, not anything they found.
+
+**What a reader should not conclude.** This release fixes one instance of a
+shape and **knows of four more**: read-then-write races in the same style,
+scheduled for 0.39.0 — one of them can leave a team with no administrator, and
+another concerns the optimistic lock itself. The shape is not closed.
+`§10.15` — the shipped JavaScript is executed by no test — remains open; its
+entry now says the gap is permanent and its size is not (820 lines in three
+files at 0.33.0, 1,663 in five at 0.37.0). `§10.17` remains open by decision.
+The product still does not claim WCAG conformance.
+
 ## [0.37.0] — 2026-09-23
 
 No schema migration. `0017` remains the most recent. No product behaviour
