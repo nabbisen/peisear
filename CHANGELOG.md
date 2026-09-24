@@ -7,6 +7,119 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.39.0] — 2026-09-25
+
+**Two schema migrations, and both rewrite rows that already exist.**
+`0019_sprint_records.sql` adds two tables that hold a completed sprint's
+captured record — its totals and its burndown — and **backfills one for every
+sprint that is already completed**. `0020_sprint_record_contributor_basis.sql`
+adds two columns to that record saying who contributed to it, and backfills
+those. Both run on start. **What the backfill does to your data is described
+under *Changed*, and it is not a reconstruction.** Nothing was removed from any
+existing table. No public item was removed; a few storage functions were
+widened to accept a transaction as well as a pool, and new ones were added.
+
+**This release changes a data model, and makes one page show less than it did.**
+A completed sprint's figures stop moving; a team whose sprints are each one
+person's work loses a median line it had; and a set of read-then-write pairs
+that were not atomic now are.
+
+### Added
+
+- **An administrator can reopen a completed sprint** (`DEC-053`). *Reopen
+  sprint* sits beside *Delete* on a completed sprint's page, returns it to
+  active, and discards its captured record; completing it again captures
+  afresh. **It is for correcting a sprint completed by mistake**, which
+  became impossible once the record stopped moving, and it is why fixing the
+  record is tolerable. It is refused while another sprint in the team is
+  active — the rule that governs starting one — and it needs no confirmation,
+  because completing the sprint again undoes it.
+
+### Changed
+
+- **A completed sprint's figures no longer change** (`DEC-054`, RFC 0013). Its
+  committed and completed points and counts, its carried-over figure and its
+  burndown are **captured when it completes** and read from the capture
+  afterwards. Until now they were computed live from four inputs — its
+  membership, and each member issue's status, effort and last-edit time — so
+  carrying an unfinished issue into the next sprint and finishing it a month
+  later moved a finished sprint's numbers.
+- **Its issue list is deliberately still live**, so a completed sprint's list
+  can change while its figures do not, and the page says which is which: the
+  figures are headed *Summary at completion* and the list *Issues in this
+  sprint now*. Membership of a completed sprint is not frozen; carrying
+  unfinished work over is how the product handles it.
+- **The backfill is wrong, on purpose.** Sprints that were already completed
+  are captured **from today's live computation, which already carries whatever
+  drift has happened to them**: an issue carried over and finished since is
+  counted as it stands now, not as the sprint reported it. They become
+  *consistently* wrong rather than continuing to move. The alternative was two
+  kinds of completed sprint with nothing to tell them apart, and that was
+  judged worse. This is a decision, not an accident.
+- **The completed-work chart's median line appears less often.** It is now
+  shown only if **one sprint in the window, on its own,** had two
+  contributors; before, the union of the contributors across the whole window
+  decided it. A team whose sprints are each one person's work will lose a
+  median line it had, because each sprint's number is that person's output, so
+  the aggregate could be read back to an individual. The same reading applies
+  to a single completed sprint's burndown: whether it is shown is decided by
+  who contributed **when the sprint completed**, so work finished or moved
+  afterwards can neither reveal a trajectory that was hidden nor hide one that
+  was shown.
+- **Reopening a sprint flashes a confirmation**, as starting and completing
+  one already did.
+
+### Fixed
+
+- **Five check-then-write pairs were not atomic**, and two requests could both
+  pass the check. **The one worth naming is the last-admin guard**: two
+  administrators pressing *Leave team* at once could each see two
+  administrators, and both left, leaving a team with **no administrator** that
+  no remaining member could repair. The others: starting sprints (twelve
+  simultaneous starts on one team left six active), closing a capacity period
+  (a concurrent edit to its points was overwritten with the old value), and an
+  issue joining or leaving a sprint whose status had changed under the
+  request. Two smaller ones ride along: a concurrent duplicate team membership
+  was refused, correctly, with a raw database error instead of the message it
+  is owed.
+- **The optimistic lock compared a value read earlier**, so two saves carrying
+  the same version stamp could both pass and the earlier one was lost — eight
+  simultaneous project saves all reported success. The comparison is now made
+  in the write itself. **`§10.31`** carries the finding that reframes the
+  rest: the deferred transactions this replaced did not merely risk a lost
+  update, they **failed writes that shared nothing** — in a synthetic burst of
+  64 writes to different issues, most failed — so what looks like a slowdown in
+  some of these paths is a correctness fix.
+
+### Internal
+
+- **The suite grew from 297 to 346.** Three test files are new —
+  `race_guards.rs`, `optimistic_lock_atomicity.rs` and `sprint_record.rs` — so
+  `DEC-007`'s command block and `.github/workflows/test.yml` both changed.
+- **The overflow gate covers nineteen pages, not eighteen** — 95 cells. Its
+  fixture now carries a completed sprint with a captured record, so the page
+  that carries the new control and headings is reached. A page was added, not
+  swapped for the planned sprint's, whose plan page carries the backlog.
+- **Both specifications are amended to 0.39.0**, including the completed
+  sprint's page and the requirement whose mechanism was replaced.
+
+**A retired decision, and the honest half of this release.** `SPRINT-001`
+reached `main` at 22:05 refusing to unassign an issue from a completed sprint,
+and half of it was taken back out at 22:52 the same evening; `SPRINT-002` was
+written and withdrawn without being built. **Neither was ever in a release**,
+so no upgrade went through either. Both aimed at freezing a completed sprint's
+*membership* — one of four inputs to the figures they meant to protect — and
+would have blocked carry-over, the product's designed path for unfinished
+work. The second was stopped before any code was written, by measuring the flow
+it would have broken. RFC 0013 replaced the mechanism. The requirement's
+rationale was right throughout; the sentence built on it was not.
+
+**What a reader should not conclude.** `§10.15` and `§10.17` remain open;
+`§10.31` closes with this release. The optimistic lock still does not refuse
+two saves **in one request window** on a row that was itself written in that
+same second — the version stamp is one second, and `NFR-CONC-001` states the
+limit. The product still does not claim WCAG conformance.
+
 ## [0.38.0] — 2026-09-24
 
 **One schema migration: `0018_remove_issue_position.sql` drops the
