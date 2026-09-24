@@ -102,6 +102,33 @@ impl IssueStatus {
     pub fn all() -> [IssueStatus; 3] {
         [Self::Open, Self::InProgress, Self::Done]
     }
+
+    /// Lifecycle position as a sort key: **smaller is earlier** --
+    /// `Open` 0, `InProgress` 1, `Done` 2. This is the one place the
+    /// order "what is left first, finished work last" is written down
+    /// (`ORD-003`), the same shape as [`Priority::severity_rank`] and
+    /// for the same reason.
+    ///
+    /// It exists because `issues.status` is a TEXT column, so SQL
+    /// cannot order by lifecycle: `ORDER BY status ASC` is alphabetical
+    /// -- `done, in_progress, open`, Done first -- and a sprint's issue
+    /// list shipped that way from its first release. Anything that
+    /// needs lifecycle order sorts in Rust with this key (use a
+    /// *stable* sort to keep a query's own tiebreak).
+    ///
+    /// Not a derived `Ord` and not the enum's declaration order by
+    /// accident, and deliberately a `match` rather than a search of
+    /// [`IssueStatus::all`] (which happens to be in lifecycle order and
+    /// is what the board builds its columns from): an index lookup to
+    /// answer a constant is slower and says less than the `match`, and
+    /// a new status is added here and the compiler finds this site.
+    pub fn lifecycle_rank(self) -> u8 {
+        match self {
+            Self::Open => 0,
+            Self::InProgress => 1,
+            Self::Done => 2,
+        }
+    }
 }
 
 impl fmt::Display for IssueStatus {

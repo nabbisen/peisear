@@ -286,3 +286,182 @@ async fn projects_created_in_one_second_list_newest_first() {
         .collect::<Vec<_>>();
     assert_eq!(got, ["PROJ-third", "PROJ-second", "PROJ-first"]);
 }
+
+// ──────────────────────────────────────────────────────────────
+// ORD-003 — a sprint's issues read Open, In progress, Done.
+//
+// `issues_in_sprint` used to order `i.status ASC`, and `status` is
+// TEXT, so that was alphabetical: `done, in_progress, open` -- Done
+// first, on both surfaces that render the list. The status term is now
+// applied in Rust with `IssueStatus::lifecycle_rank` (a *stable* sort,
+// so the query's `assigned_at` order survives inside each status).
+// ──────────────────────────────────────────────────────────────
+
+/// (title, status, effort), listed in **assignment order**. Two Open
+/// and two Done so "assignment order inside a status" has something to
+/// say; one In progress between them so the bands are not adjacent.
+const SPRINT_ITEMS: [(&str, peisear_core::IssueStatus, i64); 5] = [
+    ("SPR-done-1", peisear_core::IssueStatus::Done, 3),
+    ("SPR-open-1", peisear_core::IssueStatus::Open, 5),
+    ("SPR-prog-1", peisear_core::IssueStatus::InProgress, 2),
+    ("SPR-done-2", peisear_core::IssueStatus::Done, 1),
+    ("SPR-open-2", peisear_core::IssueStatus::Open, 4),
+];
+
+/// A planned sprint holding `SPRINT_ITEMS`. The issues are *created* in
+/// the reverse of assignment order and `assigned_at` is pinned to one
+/// distinct minute each, so neither creation order nor a one-second
+/// tie can stand in for "assignment order". Returns (app, team slug,
+/// sprint id).
+async fn sprint_with_items_in_every_status() -> (TestApp, String, String) {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = common::fixture::create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = peisear_storage::teams::find_by_id(&app.db, &team_id)
+        .await
+        .expect("find team")
+        .expect("team exists")
+        .slug;
+    let project_id =
+        common::fixture::create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = common::fixture::create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+
+    let mut ids = Vec::new();
+    for (title, status, effort) in SPRINT_ITEMS.iter().rev() {
+        let id = uuid::Uuid::new_v4().to_string();
+        peisear_storage::issues::insert(
+            &app.db,
+            &id,
+            &project_id,
+            &admin_id,
+            peisear_storage::issues::IssueFields {
+                title,
+                description: "",
+                status: *status,
+                priority: peisear_core::Priority::Medium,
+                effort: Some(*effort),
+                assignee_id: None,
+                planned_start_at: None,
+                planned_end_at: None,
+            },
+        )
+        .await
+        .expect("insert issue");
+        ids.push((*title, id));
+    }
+    // Assign in SPRINT_ITEMS order, minute by minute.
+    for (minute, (title, _, _)) in SPRINT_ITEMS.iter().enumerate() {
+        let id = &ids.iter().find(|(t, _)| t == title).expect("created").1;
+        peisear_storage::sprints::add_issue(&app.db, &sprint_id, id)
+            .await
+            .expect("add to sprint");
+        sqlx::query("UPDATE sprint_issues SET assigned_at = ?1 WHERE issue_id = ?2")
+            .bind(format!("2026-03-01 09:{minute:02}:00"))
+            .bind(id)
+            .execute(&app.db)
+            .await
+            .expect("pin assigned_at");
+    }
+    (app, slug, sprint_id)
+}
+
+/// Both surfaces that render `issues_in_sprint`: the sprint's detail
+/// page and the sprint plan's sprint column.
+async fn sprint_surfaces(
+    app: &TestApp,
+    slug: &str,
+    sprint_id: &str,
+) -> [(&'static str, String); 2] {
+    [
+        (
+            "sprint detail",
+            app.server
+                .get(&format!("/teams/{slug}/sprints/{sprint_id}"))
+                .await
+                .text(),
+        ),
+        (
+            "sprint plan",
+            app.server
+                .get(&format!("/teams/{slug}/sprints/{sprint_id}/plan"))
+                .await
+                .text(),
+        ),
+    ]
+}
+
+fn band(body: &str, titles: &[&str]) -> (usize, usize) {
+    let offsets: Vec<usize> = titles.iter().map(|t| offset_of(body, t)).collect();
+    (
+        *offsets.iter().min().expect("non-empty band"),
+        *offsets.iter().max().expect("non-empty band"),
+    )
+}
+
+/// Every Open issue above every In progress issue above every Done
+/// issue, on both surfaces. Compares whole bands (last of one against
+/// first of the next), so it says nothing about the order *inside* a
+/// band -- that is a later test's job. Both surfaces are checked
+/// before failing, so a failure names each one that is wrong.
+#[tokio::test]
+async fn sprint_issues_read_open_then_in_progress_then_done() {
+    let (app, slug, sprint_id) = sprint_with_items_in_every_status().await;
+    let mut wrong = Vec::new();
+    for (surface, body) in sprint_surfaces(&app, &slug, &sprint_id).await {
+        let open = band(&body, &["SPR-open-1", "SPR-open-2"]);
+        let progress = band(&body, &["SPR-prog-1"]);
+        let done = band(&body, &["SPR-done-1", "SPR-done-2"]);
+        if !(open.1 < progress.0 && progress.1 < done.0) {
+            wrong.push(format!(
+                "{surface}: open {open:?}, in progress {progress:?}, done {done:?}"
+            ));
+        }
+    }
+    assert!(
+        wrong.is_empty(),
+        "expected Open, In progress, Done (byte offsets shown): {wrong:#?}"
+    );
+}
+
+/// Named so the old behaviour cannot silently return: the alphabetical
+/// order put Done first, so the first of the five titles on a page must
+/// not be a Done one. Both surfaces are checked before failing.
+#[tokio::test]
+async fn done_is_no_longer_first_in_a_sprint() {
+    let (app, slug, sprint_id) = sprint_with_items_in_every_status().await;
+    let mut done_first = Vec::new();
+    for (surface, body) in sprint_surfaces(&app, &slug, &sprint_id).await {
+        let first = SPRINT_ITEMS
+            .iter()
+            .min_by_key(|(title, ..)| offset_of(&body, title))
+            .expect("items");
+        if first.1 == peisear_core::IssueStatus::Done {
+            done_first.push(format!("{surface}: {} leads", first.0));
+        }
+    }
+    assert!(
+        done_first.is_empty(),
+        "the alphabetical `status ASC` put Done first: {done_first:#?}"
+    );
+}
+
+/// Assignment order survives inside a status: `assigned_at` is the
+/// SQL order and the Rust sort is stable. Open-1 was assigned before
+/// Open-2 and Done-1 before Done-2 -- the reverse of creation order --
+/// so neither creation order nor an unstable sort can pass this.
+#[tokio::test]
+async fn sprint_issues_keep_assignment_order_within_a_status() {
+    let (app, slug, sprint_id) = sprint_with_items_in_every_status().await;
+    let mut wrong = Vec::new();
+    for (surface, body) in sprint_surfaces(&app, &slug, &sprint_id).await {
+        for (earlier, later) in [("SPR-open-1", "SPR-open-2"), ("SPR-done-1", "SPR-done-2")] {
+            if offset_of(&body, earlier) >= offset_of(&body, later) {
+                wrong.push(format!(
+                    "{surface}: {earlier} was assigned before {later} and must stay above it"
+                ));
+            }
+        }
+    }
+    assert!(wrong.is_empty(), "{wrong:#?}");
+}

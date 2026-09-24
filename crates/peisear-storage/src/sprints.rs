@@ -340,7 +340,11 @@ pub async fn sprint_for_issue(pool: &Pool, issue_id: &str) -> StorageResult<Opti
 }
 
 /// Issues currently linked to a sprint, with their effort and
-/// status. Used by the sprint detail page.
+/// status. Used by the sprint detail page and the sprint plan's
+/// sprint column.
+///
+/// **Returned in display order (`ORD-003`): Open, In progress, Done,
+/// and in assignment order within each status.**
 ///
 /// Phase C PR1: only **top-level** issues are listed here.
 /// Sub-issues follow the parent's sprint membership; rendering
@@ -352,19 +356,30 @@ pub async fn issues_in_sprint(
     sprint_id: &str,
 ) -> StorageResult<Vec<(String, String, String, Option<i64>, String)>> {
     // Returns (issue_id, project_id, title, effort, status).
-    let rows = sqlx::query_as(
+    let mut rows: Vec<(String, String, String, Option<i64>, String)> = sqlx::query_as(
         r#"
         SELECT i.id, i.project_id, i.title, i.effort, i.status
         FROM sprint_issues si
         JOIN issues i ON i.id = si.issue_id
         WHERE si.sprint_id = ?1
           AND i.parent_issue_id IS NULL
-        ORDER BY i.status ASC, si.assigned_at ASC, si.rowid ASC
+        -- Status is deliberately absent from this ORDER BY: it is a TEXT
+        -- column, so `status ASC` sorts alphabetically (done, in_progress,
+        -- open -- Done first). Lifecycle order is applied in Rust below with
+        -- `IssueStatus::lifecycle_rank`. Do not put it back here.
+        ORDER BY si.assigned_at ASC, si.rowid ASC
         "#,
     )
     .bind(sprint_id)
     .fetch_all(pool)
     .await?;
+    // Grouped Open, In progress, Done. `sort_by_key` is stable, and that
+    // is load-bearing: it keeps the query's `assigned_at` order inside each
+    // status. A status string that does not parse cannot occur (the column
+    // is CHECK-constrained), but sorts last rather than panicking.
+    rows.sort_by_key(|(.., status)| {
+        peisear_core::IssueStatus::parse(status).map_or(u8::MAX, |s| s.lifecycle_rank())
+    });
     Ok(rows)
 }
 
