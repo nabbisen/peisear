@@ -371,6 +371,131 @@ pub async fn complete_guarded(
     .bind(sprint_id)
     .execute(&mut *tx)
     .await?;
+    // Capture what the sprint reports, in this same transaction (`DEC-054`).
+    // Inside it are: the status `UPDATE` above, the reads of current
+    // membership and issue state that `live_totals` and `burndown_live` make,
+    // and the inserts of the record and the series. Outside it is nothing --
+    // a crash or a competing writer cannot leave a `completed` sprint without
+    // its record, nor a record for a sprint that did not complete.
+    capture_record(&mut tx, sprint_id).await?;
+    tx.commit().await?;
+    Ok(Guarded::Written(()))
+}
+
+/// Write the record of a sprint that has just been set `completed`, on the
+/// transaction that set it. `completed_at` is already written there, which
+/// the burndown's end date reads.
+async fn capture_record(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    sprint_id: &str,
+) -> StorageResult<()> {
+    let sprint = find_by_id(&mut **tx, sprint_id)
+        .await?
+        .ok_or(StorageError::NotFound)?;
+    let (committed_points, completed_points, committed_count, completed_count) =
+        live_totals(tx, sprint_id).await?;
+    let points = burndown_live(tx, &sprint).await?;
+
+    // A stale record cannot be here (`reopen` deletes it), but replacing is
+    // the right answer if one were: the record is what the sprint reports *now*.
+    sqlx::query("DELETE FROM sprint_burndown_points WHERE sprint_id = ?1")
+        .bind(sprint_id)
+        .execute(&mut **tx)
+        .await?;
+    sqlx::query(
+        r#"
+        INSERT OR REPLACE INTO sprint_records
+            (sprint_id, committed_points, completed_points, committed_count, completed_count)
+        VALUES (?1, ?2, ?3, ?4, ?5)
+        "#,
+    )
+    .bind(sprint_id)
+    .bind(committed_points)
+    .bind(completed_points)
+    .bind(committed_count)
+    .bind(completed_count)
+    .execute(&mut **tx)
+    .await?;
+    for p in points {
+        sqlx::query(
+            r#"
+            INSERT INTO sprint_burndown_points
+                (sprint_id, day, cumulative_committed, cumulative_completed)
+            VALUES (?1, ?2, ?3, ?4)
+            "#,
+        )
+        .bind(sprint_id)
+        .bind(p.day)
+        .bind(p.cumulative_committed)
+        .bind(p.cumulative_completed)
+        .execute(&mut **tx)
+        .await?;
+    }
+    Ok(())
+}
+
+/// Return a `completed` sprint to `active` (`DEC-053`; `SPRINT-004`): **un-capture
+/// and resume**. The record captured at completion is deleted, so the sprint is
+/// live again -- its figures and burndown follow its membership -- and
+/// completing it again captures afresh.
+pub async fn reopen(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
+    reopen_guarded(pool, sprint_id, None)
+        .await
+        .map(Guarded::unguarded)
+}
+
+/// [`reopen`], applied only if the sprint still carries `expected` as its
+/// `updated_at` (`RACE-002`). One `BEGIN IMMEDIATE` transaction holds: the
+/// stamp and status reads, the check that the team has no other active sprint
+/// (`FR-SPR-002` binds reopen exactly as it binds [`start`] -- and non-atomically
+/// this is the defect that left six active sprints, `RACE-001`), the status
+/// write, and the two deletes. A sprint that is not `completed` is refused with
+/// `SprintNotCompletedMessage`; another active sprint with
+/// `OtherSprintActiveInTeamMessage`, the words `start` uses.
+pub async fn reopen_guarded(
+    pool: &Pool,
+    sprint_id: &str,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let sprint = find_by_id(&mut *tx, sprint_id)
+        .await?
+        .ok_or(StorageError::NotFound)?;
+    if !stamp_matches(expected, sprint.updated_at) {
+        return Ok(Guarded::Stale {
+            current_updated_at: sprint.updated_at,
+        });
+    }
+    if !matches!(sprint.status, SprintStatus::Completed) {
+        return Err(StorageError::Validation(
+            peisear_i18n::MessageKey::SprintNotCompletedMessage,
+        ));
+    }
+    if let Some(other) = active_for_team(&mut *tx, &sprint.team_id).await? {
+        return Err(StorageError::Conflict(
+            peisear_i18n::MessageKey::OtherSprintActiveInTeamMessage {
+                sprint_name: other.name,
+            },
+        ));
+    }
+    sqlx::query(
+        r#"
+        UPDATE sprints
+        SET status = 'active', completed_at = NULL
+        WHERE id = ?1
+        "#,
+    )
+    .bind(sprint_id)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("DELETE FROM sprint_burndown_points WHERE sprint_id = ?1")
+        .bind(sprint_id)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM sprint_records WHERE sprint_id = ?1")
+        .bind(sprint_id)
+        .execute(&mut *tx)
+        .await?;
     tx.commit().await?;
     Ok(Guarded::Written(()))
 }
@@ -580,10 +705,16 @@ pub async fn issues_in_sprint(
     Ok(rows)
 }
 
-/// Compute the live summary numbers (committed/completed/
-/// carried-over) for one sprint.
-pub async fn summary(pool: &Pool, sprint_id: &str) -> StorageResult<SprintSummary> {
-    // Use COALESCE because SUM on an empty set returns NULL.
+/// The four totals a sprint's figures are made of, computed from **current**
+/// membership and issue state: committed points, completed points, committed
+/// count, completed count. This is the live computation; a completed sprint
+/// does not use it for display (see [`summary`]) -- `complete` calls it once,
+/// inside its transaction, to write the record.
+async fn live_totals(
+    conn: &mut sqlx::SqliteConnection,
+    sprint_id: &str,
+) -> StorageResult<(i64, i64, i64, i64)> {
+    // COALESCE because SUM on an empty set returns NULL.
     let row: (i64, i64, i64, i64) = sqlx::query_as(
         r#"
         SELECT
@@ -594,7 +725,7 @@ pub async fn summary(pool: &Pool, sprint_id: &str) -> StorageResult<SprintSummar
                 AS completed_points,
             COUNT(*)
                 AS committed_count,
-            SUM(CASE WHEN i.status = 'done' THEN 1 ELSE 0 END)
+            COALESCE(SUM(CASE WHEN i.status = 'done' THEN 1 ELSE 0 END), 0)
                 AS completed_count
         FROM sprint_issues si
         JOIN issues i ON i.id = si.issue_id
@@ -602,29 +733,58 @@ pub async fn summary(pool: &Pool, sprint_id: &str) -> StorageResult<SprintSummar
         "#,
     )
     .bind(sprint_id)
-    .fetch_one(pool)
+    .fetch_one(conn)
     .await?;
+    Ok(row)
+}
 
-    let (committed_points, completed_points, committed_count, completed_count) = row;
-
-    // Carried-over is meaningful only on completed sprints.
-    // For active/planned, it's 0 by convention.
+/// The summary figures for one sprint.
+///
+/// **A `completed` sprint reads the record captured when it completed**
+/// (`DEC-054`, RFC 0013): what it reported does not change afterwards, however
+/// its issues are carried over, finished, edited or re-estimated. Any other
+/// sprint computes live from its current membership; carried-over is `0` for
+/// those by convention.
+///
+/// A completed sprint with **no** record is a fault, not a case to fall back
+/// on: computing live there would be the drift this function exists to stop,
+/// returning quietly with figures that look right. It is an error
+/// ([`StorageError::InvalidData`]). Migration `0019` backfills every sprint
+/// that was completed before it, and `complete` writes the record in the
+/// transaction that sets the status, so a missing record means a bug.
+pub async fn summary(pool: &Pool, sprint_id: &str) -> StorageResult<SprintSummary> {
     let sprint = find_by_id(pool, sprint_id)
         .await?
         .ok_or(StorageError::NotFound)?;
-    let (carried_over_points, carried_over_count) = match sprint.status {
+
+    let (committed_points, completed_points, committed_count, completed_count) = match sprint.status
+    {
         SprintStatus::Completed => {
-            // Carried-over = committed − completed at the time
-            // of completion. Today's view is the same as
-            // "current committed − current completed" since
-            // completion freezes status semantically (the
-            // sprint is done; remaining issues will move to
-            // another sprint via `move_issue_to_sprint`, but
-            // the summary captures the moment).
-            let cp = committed_points - completed_points;
-            let cc = committed_count - completed_count;
-            (cp.max(0), cc.max(0))
+            let row: Option<(i64, i64, i64, i64)> = sqlx::query_as(
+                r#"
+                SELECT committed_points, completed_points, committed_count, completed_count
+                FROM sprint_records
+                WHERE sprint_id = ?1
+                "#,
+            )
+            .bind(sprint_id)
+            .fetch_optional(pool)
+            .await?;
+            row.ok_or_else(|| missing_record(sprint_id))?
         }
+        _ => {
+            let mut conn = pool.acquire().await?;
+            live_totals(&mut conn, sprint_id).await?
+        }
+    };
+
+    // Carried-over is meaningful only on completed sprints: what the sprint
+    // reported as committed but not completed. Derived, never stored.
+    let (carried_over_points, carried_over_count) = match sprint.status {
+        SprintStatus::Completed => (
+            (committed_points - completed_points).max(0),
+            (committed_count - completed_count).max(0),
+        ),
         _ => (0, 0),
     };
 
@@ -639,6 +799,13 @@ pub async fn summary(pool: &Pool, sprint_id: &str) -> StorageResult<SprintSummar
     })
 }
 
+fn missing_record(sprint_id: &str) -> StorageError {
+    StorageError::InvalidData(format!(
+        "completed sprint {sprint_id} has no captured record (DEC-054); migration 0019 \
+         backfills earlier sprints and `complete` writes one, so this is a fault"
+    ))
+}
+
 /// One issue's contribution to a sprint's burndown, as read from
 /// the join in [`burndown`]. Kept private and local to this
 /// function's computation — not a table row on its own.
@@ -651,7 +818,53 @@ struct BurndownIssueRow {
     updated_at: DateTime<Utc>,
 }
 
-/// Compute the burndown timeline for a sprint.
+/// The burndown timeline for a sprint.
+///
+/// **A `completed` sprint reads the series captured when it completed**
+/// (`DEC-054`); any other sprint computes it live. As for [`summary`], a
+/// completed sprint with no record is an error, not a reason to compute live.
+pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<BurndownPoint>> {
+    let sprint = find_by_id(pool, sprint_id)
+        .await?
+        .ok_or(StorageError::NotFound)?;
+    if !matches!(sprint.status, SprintStatus::Completed) {
+        let mut conn = pool.acquire().await?;
+        return burndown_live(&mut conn, &sprint).await;
+    }
+    let has_record: Option<i64> =
+        sqlx::query_scalar("SELECT 1 FROM sprint_records WHERE sprint_id = ?1")
+            .bind(sprint_id)
+            .fetch_optional(pool)
+            .await?;
+    if has_record.is_none() {
+        return Err(missing_record(sprint_id));
+    }
+    let rows: Vec<(NaiveDate, i64, i64)> = sqlx::query_as(
+        r#"
+        SELECT day, cumulative_committed, cumulative_completed
+        FROM sprint_burndown_points
+        WHERE sprint_id = ?1
+        ORDER BY day ASC
+        "#,
+    )
+    .bind(sprint_id)
+    .fetch_all(pool)
+    .await?;
+    Ok(rows
+        .into_iter()
+        .map(
+            |(day, cumulative_committed, cumulative_completed)| BurndownPoint {
+                day,
+                cumulative_committed,
+                cumulative_completed,
+            },
+        )
+        .collect())
+}
+
+/// Compute the burndown timeline for a sprint **from current state**. Used
+/// for sprints that are not completed, and once by `complete` to write the
+/// captured series.
 ///
 /// Strategy:
 /// - One row per calendar day from `starts_on` to `min(today,
@@ -671,11 +884,11 @@ struct BurndownIssueRow {
 /// We compute in Rust rather than SQL to keep the date-bucketing
 /// logic readable. The data volume is bounded (< 30 days × < 100
 /// issues = a few thousand rows in the worst case).
-pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<BurndownPoint>> {
-    let sprint = find_by_id(pool, sprint_id)
-        .await?
-        .ok_or(StorageError::NotFound)?;
-
+async fn burndown_live(
+    conn: &mut sqlx::SqliteConnection,
+    sprint: &Sprint,
+) -> StorageResult<Vec<BurndownPoint>> {
+    let sprint_id = sprint.id.as_str();
     let issues: Vec<BurndownIssueRow> = sqlx::query_as(
         r#"
             SELECT i.id, i.effort, i.status, si.assigned_at, i.updated_at
@@ -686,7 +899,7 @@ pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<Burndow
             "#,
     )
     .bind(sprint_id)
-    .fetch_all(pool)
+    .fetch_all(&mut *conn)
     .await?;
 
     if issues.is_empty() {
@@ -735,7 +948,7 @@ pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<Burndow
     for id in &issue_ids {
         q = q.bind(id);
     }
-    let done_events: Vec<(String, DateTime<Utc>)> = q.fetch_all(pool).await?;
+    let done_events: Vec<(String, DateTime<Utc>)> = q.fetch_all(&mut *conn).await?;
     let done_map: std::collections::HashMap<String, NaiveDate> = done_events
         .into_iter()
         .map(|(id, ts)| (id, ts.date_naive()))

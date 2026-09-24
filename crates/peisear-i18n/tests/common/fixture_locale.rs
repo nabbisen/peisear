@@ -339,6 +339,9 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::CreateSprintButton => "[fx-create-sprint]".to_string(),
         MessageKey::StartSprintLabel => "[fx-start-sprint]".to_string(),
         MessageKey::CompleteSprintLabel => "[fx-complete-sprint]".to_string(),
+        MessageKey::ReopenSprintLabel => "[fx-reopen-sprint]".to_string(),
+        MessageKey::SummaryAtCompletionHeading => "[fx-summary-at-completion]".to_string(),
+        MessageKey::IssuesInSprintNowHeading => "[fx-issues-in-sprint-now]".to_string(),
         MessageKey::GoalFieldPrefixLabel => "[fx-goal-prefix]".to_string(),
         MessageKey::SummaryHeading => "[fx-summary]".to_string(),
         MessageKey::CommittedStatLabel => "[fx-committed-stat]".to_string(),
@@ -891,6 +894,7 @@ pub fn render(key: MessageKey) -> String {
             format!("[fx-other-sprint-active] {sprint_name}")
         }
         MessageKey::SprintNotStartedYetMessage => "[fx-sprint-not-started]".to_string(),
+        MessageKey::SprintNotCompletedMessage => "[fx-sprint-not-completed]".to_string(),
         MessageKey::SprintAlreadyCompletedMessage => "[fx-sprint-already-completed]".to_string(),
         MessageKey::SprintActiveCannotBeDeletedMessage => {
             "[fx-sprint-active-cannot-be-deleted]".to_string()

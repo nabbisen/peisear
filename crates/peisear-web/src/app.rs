@@ -112,6 +112,10 @@ pub fn build_router(state: AppState) -> Router {
             "/teams/{slug}/sprints/{sprint_id}/complete",
             post(sprints::complete),
         )
+        .route(
+            "/teams/{slug}/sprints/{sprint_id}/reopen",
+            post(sprints::reopen),
+        )
         // CONF-001 (RFC 010): GET renders the confirmation
         // interstitial (serves both planned and completed sprints);
         // POST performs the delete, unchanged.

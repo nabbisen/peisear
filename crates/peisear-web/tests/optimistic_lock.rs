@@ -450,6 +450,52 @@ async fn sprint_edit_with_stale_timestamp_returns_409() {
     );
 }
 
+/// `SPRINT-004`: `/reopen` locks like `/start` and `/complete`, and
+/// `optimistic_lock`'s per-route convention wants a test naming the route.
+#[tokio::test]
+async fn sprint_reopen_with_stale_timestamp_returns_409() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let team_id = create_team_with_admin(&app.db, &user_id, "Engineering").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let team_slug = read_team_slug(&app, &team_id).await;
+    peisear_storage::sprints::start(&app.db, &sprint_id)
+        .await
+        .expect("start sprint");
+    peisear_storage::sprints::complete(&app.db, &sprint_id)
+        .await
+        .expect("complete sprint");
+
+    let t0 = read_sprint_updated_at(&app, &sprint_id).await;
+
+    // Concurrent edit: bump updated_at by renaming the sprint.
+    ensure_distinct_timestamp().await;
+    let today = chrono::Utc::now().date_naive();
+    let ends = today + chrono::Duration::days(14);
+    peisear_storage::sprints::update(&app.db, &sprint_id, "Sprint 1 (renamed)", None, today, ends)
+        .await
+        .expect("rename sprint");
+
+    let resp = app
+        .server
+        .post(&format!("/teams/{team_slug}/sprints/{sprint_id}/reopen"))
+        .form(&[("client_updated_at", t0.as_str())])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "stale client_updated_at on /reopen must 409 (got {})",
+        resp.status_code()
+    );
+    let status: String = sqlx::query_scalar("SELECT status FROM sprints WHERE id = ?1")
+        .bind(&sprint_id)
+        .fetch_one(&app.db)
+        .await
+        .unwrap();
+    assert_eq!(status, "completed", "a refused reopen changes nothing");
+}
+
 /// See `sprint_edit_with_stale_timestamp_returns_409` — same gap,
 /// `/complete` half.
 #[tokio::test]

@@ -460,6 +460,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::CreateSprintButton => "Create sprint".to_string(),
         MessageKey::StartSprintLabel => "Start sprint".to_string(),
         MessageKey::CompleteSprintLabel => "Complete sprint".to_string(),
+        MessageKey::ReopenSprintLabel => "Reopen sprint".to_string(),
+        MessageKey::SummaryAtCompletionHeading => "Summary at completion".to_string(),
+        MessageKey::IssuesInSprintNowHeading => "Issues in this sprint now".to_string(),
         MessageKey::GoalFieldPrefixLabel => "Goal: ".to_string(),
         MessageKey::SummaryHeading => "Summary".to_string(),
         MessageKey::CommittedStatLabel => "Committed".to_string(),
@@ -1222,6 +1225,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         ),
         MessageKey::SprintNotStartedYetMessage => "Sprint hasn't been started yet.".to_string(),
         MessageKey::SprintAlreadyCompletedMessage => "Sprint is already completed.".to_string(),
+        MessageKey::SprintNotCompletedMessage => {
+            "Only a completed sprint can be reopened.".to_string()
+        }
         MessageKey::SprintActiveCannotBeDeletedMessage => {
             "An active sprint cannot be deleted. Complete it first, then delete it.".to_string()
         }

@@ -431,6 +431,56 @@ pub async fn complete(
     }
 }
 
+/// Return a completed sprint to `active` (`DEC-053`, `SPRINT-004`): **un-capture
+/// and resume** -- the record captured at completion is discarded and the sprint
+/// is live again. Administrator action, as `start` and `complete`; carries the
+/// optimistic lock like them; refused while another sprint in the team is active
+/// (`FR-SPR-002`), in the words `start` uses. A plain `POST` form beside the
+/// other lifecycle actions, no interstitial: reopening is reversible.
+pub async fn reopen(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((slug, sprint_id)): Path<(String, String)>,
+    Form(form): Form<LifecycleForm>,
+) -> AppResult<Redirect> {
+    let (team, role) = resolve_team_membership(&state, &user.id, &slug).await?;
+    if !role.can_manage_team() {
+        return Err(AppError::Forbidden);
+    }
+    let sprint = sprints::find_by_id(&state.db, &sprint_id)
+        .await?
+        .ok_or(AppError::NotFound)?;
+    if sprint.team_id != team.id {
+        return Err(AppError::NotFound);
+    }
+    let stamp = crate::error::check_optimistic_lock(
+        &form.client_updated_at,
+        sprint.updated_at,
+        peisear_i18n::EntityKind::Sprint,
+        &sprint_id,
+    )?;
+    match sprints::reopen_guarded(&state.db, &sprint.id, Some(stamp)).await {
+        Ok(peisear_storage::Guarded::Stale { current_updated_at }) => {
+            Err(crate::error::stale_conflict(
+                peisear_i18n::EntityKind::Sprint,
+                &sprint_id,
+                current_updated_at,
+            ))
+        }
+        Ok(peisear_storage::Guarded::Written(())) => {
+            Ok(Redirect::to(&format!("/teams/{slug}/sprints/{sprint_id}")))
+        }
+        Err(peisear_storage::StorageError::Conflict(msg)) => {
+            let encoded = super::percent_encode_query(&t(msg));
+            Ok(Redirect::to(&format!(
+                "/teams/{slug}/sprints/{sprint_id}?error={encoded}"
+            )))
+        }
+        Err(peisear_storage::StorageError::Validation(msg)) => Err(AppError::Validation(t(msg))),
+        Err(e) => Err(e.into()),
+    }
+}
+
 /// `CONF-001`: the confirmation interstitial, `GET`. Same
 /// authorisation as [`delete_sprint`]'s `POST` —
 /// `role.can_manage_team()` plus the sprint belonging to this team.

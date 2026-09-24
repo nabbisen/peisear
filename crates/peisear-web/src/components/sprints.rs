@@ -576,7 +576,9 @@ pub fn SprintDetailPage(
     // `updated_at`.
     let client_updated_at = sprint.updated_at.to_rfc3339();
     let cua_start = client_updated_at.clone();
-    let cua_complete = client_updated_at;
+    let cua_complete = client_updated_at.clone();
+    let cua_reopen = client_updated_at;
+    let reopen_action = format!("/teams/{}/sprints/{}/reopen", team_slug, sprint.id);
 
     let is_admin = role.can_manage_team();
     let sprint_name = sprint.name.clone();
@@ -636,6 +638,13 @@ pub fn SprintDetailPage(
         .into_any(),
         SprintStatus::Completed => view! {
             <div class="flex gap-2 flex-wrap">
+                <form method="post" action=reopen_action>
+                    <input type="hidden" name="client_updated_at" value=cua_reopen/>
+                    <button type="submit" class=grow("btn btn-primary btn-sm")
+                            aria-label=t(MessageKey::ReopenSprintLabel)>
+                        {t(MessageKey::ReopenSprintLabel)}
+                    </button>
+                </form>
                 <a href=delete_href class=grow("btn btn-ghost btn-sm text-error")>
                     {t(MessageKey::DeleteButton)}
                 </a>
@@ -738,7 +747,13 @@ pub fn SprintDetailPage(
 fn render_summary_card(status: SprintStatus, sum: SprintSummary) -> impl IntoView {
     let in_flight_pt = (sum.committed_points - sum.completed_points).max(0);
     let in_flight_count = (sum.committed_count - sum.completed_count).max(0);
-    let label = t(MessageKey::SummaryHeading);
+    // A completed sprint's figures are what it reported at completion
+    // (`DEC-054`), and say so; the issue list below them is current membership.
+    let label = if matches!(status, SprintStatus::Completed) {
+        t(MessageKey::SummaryAtCompletionHeading)
+    } else {
+        t(MessageKey::SummaryHeading)
+    };
     let label_for_aria = label.clone();
 
     view! {
@@ -974,9 +989,14 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
 
 fn render_issues_table(
     issues: Vec<(String, String, String, Option<i64>, String)>,
-    _status: SprintStatus,
+    status: SprintStatus,
 ) -> impl IntoView {
     let has = !issues.is_empty();
+    let heading = if matches!(status, SprintStatus::Completed) {
+        t(MessageKey::IssuesInSprintNowHeading)
+    } else {
+        t(MessageKey::IssuesHeading)
+    };
     let rows = issues
         .into_iter()
         .map(|(issue_id, project_id, title, effort, status)| {
@@ -1013,7 +1033,7 @@ fn render_issues_table(
         <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
                  aria-label=t(MessageKey::IssuesInSprintAriaLabel)>
             <div class="card-body">
-                <h2 class="text-base font-medium">{t(MessageKey::IssuesHeading)}</h2>
+                <h2 class="text-base font-medium">{heading}</h2>
                 {(!has).then(|| view! {
                     <p class="text-sm text-base-content/70 italic">
                         {t(MessageKey::NoIssuesInSprintMessage)}

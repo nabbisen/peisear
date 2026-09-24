@@ -1139,6 +1139,21 @@ pub enum MessageKey {
     StartSprintLabel,
     /// See [`MessageKey::StartSprintLabel`].
     CompleteSprintLabel,
+    /// See [`MessageKey::StartSprintLabel`]. The button that returns a completed
+    /// sprint to active (`DEC-053`, `SPRINT-004`): a plain `POST` form beside the
+    /// sprint's other lifecycle actions. No confirmation dialog -- it is
+    /// reversible; completing the sprint again undoes it.
+    ReopenSprintLabel,
+    /// The heading of the summary card on a **completed** sprint's page
+    /// (`DEC-054`): those figures are what the sprint reported when it
+    /// completed, captured then, and stay as they were however its issues move
+    /// afterwards. The list below them is *current* membership; the two headings
+    /// say which is which (RFC 0013, decision 2).
+    SummaryAtCompletionHeading,
+    /// The heading of the issue list on a **completed** sprint's page: what is
+    /// in the sprint now, which is not what it reported. See
+    /// [`MessageKey::SummaryAtCompletionHeading`].
+    IssuesInSprintNowHeading,
     /// "Goal: " — deliberately **not** combined with the goal value
     /// into one `"Goal: {goal}"` key the way
     /// [`MessageKey::CreatedAt`]/[`MessageKey::UpdatedAt`] combine
@@ -2047,6 +2062,9 @@ pub enum MessageKey {
     },
     SprintNotStartedYetMessage,
     SprintAlreadyCompletedMessage,
+    /// Reopen's wrong-state refusal, as `start` and `complete` each have their
+    /// own (`SprintAlreadyActiveMessage`, `SprintNotStartedYetMessage`).
+    SprintNotCompletedMessage,
     /// `QA-002` item 1: `handlers::sprints::{delete_confirm,
     /// delete_sprint}`'s refusal for an `Active` sprint — a state
     /// constraint (`400`), not an authorisation failure. Names the
@@ -2664,6 +2682,9 @@ impl MessageKey {
             MessageKey::CreateSprintButton,
             MessageKey::StartSprintLabel,
             MessageKey::CompleteSprintLabel,
+            MessageKey::ReopenSprintLabel,
+            MessageKey::SummaryAtCompletionHeading,
+            MessageKey::IssuesInSprintNowHeading,
             MessageKey::GoalFieldPrefixLabel,
             MessageKey::SummaryHeading,
             MessageKey::CommittedStatLabel,
@@ -3107,6 +3128,7 @@ impl MessageKey {
             },
             MessageKey::SprintNotStartedYetMessage,
             MessageKey::SprintAlreadyCompletedMessage,
+            MessageKey::SprintNotCompletedMessage,
             MessageKey::SprintActiveCannotBeDeletedMessage,
             // -- I18N-006: peisear-storage/src/teams.rs --
             MessageKey::TeamSlugCannotBeEmptyMessage,
