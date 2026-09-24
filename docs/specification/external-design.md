@@ -2,11 +2,11 @@
 
 **Document type**: External design (basic design)
 **Document status**: Baseline
-**Covers release**: `0.37.0` (implementation through `0.37.0`)
+**Covers release**: `0.38.0` (implementation through `0.38.0`)
 **Supersedes**: [`history/peisear-0.19.1-external-design-en.md`](./history/peisear-0.19.1-external-design-en.md),
 retained unedited as the record of that release
 **Language**: English (normative)
-**Prepared**: 2026-07-27 · **Amended**: 2026-09-23 (0.37.0)
+**Prepared**: 2026-07-27 · **Amended**: 2026-09-24 (0.38.0)
 **Location**: `docs/specification/external-design.md`. **Normative**, English
 only, placed 2026-09-24 (`DEC-020`, closed). See
 [the directory README](./README.md) for how its citations resolve
@@ -793,6 +793,38 @@ The mitigation is the structure of this table rather than a test: a total
 failure of those files degrades to the tested column.
 
 ---
+
+### 5.9 List order
+
+**Every list-bearing screen states the order it presents its items in.** Added
+at 0.38.0; see `§17.9` for why it was absent and what that cost.
+
+Stated **once here** rather than repeated per screen, because the four defects
+`§10.29` records all came from an order being expressed in more than one place
+or in none.
+
+| Surface | Order | Obligation |
+|---|---|---|
+| Issue list (`SCR-08`), default | **Newest first.** No status grouping | The board is the status-grouped view; a second grouping rule on the list would be redundant, and `status` is TEXT so ordering by it was alphabetical |
+| Issue list, explicit sort | `priority` (urgent → low), `created`, `updated` | Severity comes from `Priority::severity_rank`, never from the stored string. Ties keep the default order |
+| Board columns (`SCR-08`) | Columns **Open, In progress, Done**; within a column, **newest first** | Column order is the lifecycle, from `IssueStatus::all()`, never from SQL |
+| Sprint issue list (`SCR-20`, and the plan's sprint column) | **Open, In progress, Done**; within each, **assignment order, oldest first** | Grouped, unlike the issue list, because a sprint has no board beside it and *what is left* is the question the screen answers. Status order comes from `IssueStatus::lifecycle_rank` |
+| Sprint-plan backlog | **Project name, then severity urgent → low, then newest first** | |
+| Inbox (`SCR-05`) | **Newest first** | |
+| Project list (`SCR-06`), search results | **Most recently updated first** | |
+| Sub-issues (`SCR-11`) | **Creation order, oldest first** | The order they were defined in |
+| Capacity history (`SCR-22`) | **Oldest first** | |
+
+**Two obligations that apply to all of them.**
+
+1. **An order must be total.** Every ordering above resolves ties to a single
+   arrangement — timestamps carry a `rowid` tiebreak in the matching direction,
+   because the stored resolution is one second and a burst would otherwise be
+   arranged by whatever the query plan happened to do.
+2. **An order must not be carried by a value's spelling.** Severity and
+   lifecycle are ranks, expressed once each in `peisear-core`. Ordering a TEXT
+   column and relying on its alphabetical order is what `§10.29` records.
+
 
 ## 6. Screen specifications
 
@@ -2188,12 +2220,44 @@ Implemented routes are listed in §4.2; reserved routes in §4.4. Every
 route in §4.2 maps to exactly one screen in §3.3 or to a mutation
 action documented in §7.
 
+### 17.9 The order a list presents its items in was specified nowhere — **opened and closed at 0.38.0**
+
+This document is the record of what the product presents. Through 0.37.0 it
+stated, for every list-bearing screen, **what the list contains and not the
+order it is in.**
+
+Four orderings were wrong at once (`§10.29` in the requirements): the issue
+list led with Done issues, the sprint-plan backlog put `high` below `low`, a
+sprint's issues led with Done, and 22 timestamp orderings carried no tiebreak.
+**None of them was a divergence from this document**, because this document
+said nothing for them to diverge from — so a reader checking the implementation
+against the external design would have found it conformant on every one.
+
+That is the same shape as `§17.8` and `§10.27` in a third place: **a property
+nobody stated cannot be checked by anything**, whether the checker is a gate,
+a test or a person reading the specification.
+
+**Closed in the same release it opened.** `§5.9` now states the order of every
+list-bearing screen, as an obligation rather than a description, so the next
+wrong ordering is a divergence a reader can find. It is **one table rather than
+a line per screen**, deliberately: all four defects came from an order being
+expressed in more than one place or in none, and a per-screen line would have
+been nine places to disagree. `§5.9` also carries the two rules underneath the
+four — that an order must be total, and that it must not be carried by a
+value's spelling.
+
+**What this does not close**: nothing verifies these lines. They are
+obligations a reader can check, in a document a reader can read — which is one
+more than existed before and fewer than a test. `§17.6` and `§17.8` remain the
+entries about what is executed by nothing.
+
 ## Appendix C — Change history
 
 | Version | Change |
 |---|---|
 | GUI v0.1 | Original GUI external specification, based on `0.16.0` |
-| **0.37.0 (this baseline)** | No externally observable behaviour changed. The status table's cross-user rows, split at 0.36.0 into *named by a user id* (403) and *named by a resource id* (404), are now **asserted** rather than only measured: three tests make the cross-user attempt on the capacity-row mutations and one covers the unauthenticated case for two more endpoints |
+| **0.38.0 (this baseline)** | **Six surfaces change the order in which they present their items, and none of them changes what it contains.** The issue list no longer leads with Done issues — it is newest first; each board column reads newest first where it read oldest first; the sprint-plan backlog reads urgent, high, medium, low, where `high` sorted **last, below low**; a sprint's issues read Open, In progress, Done, where Done led; lists of items created in the same second read newest first instead of backwards; and `sort=priority`'s tie order follows the new storage order. **`§17.9` opens and closes in the same release**: this document stated the *contents* of every list and the *order* of none, which is why four wrong orderings were invisible to anyone checking the implementation against it. §6's list-bearing screens now carry an order line. **No screen, route, status code or copy string changed**, and the one behaviour change that is not presentation is the capacity overlap check, which now refuses concurrent overlapping saves rather than storing both |
+| 0.37.0 | No externally observable behaviour changed. The status table's cross-user rows, split at 0.36.0 into *named by a user id* (403) and *named by a resource id* (404), are now **asserted** rather than only measured: three tests make the cross-user attempt on the capacity-row mutations and one covers the unauthenticated case for two more endpoints |
 | 0.36.0 | **`SCR-27`/`SCR-28`'s day view gains a drag to reschedule** — one action, one view: the day view is the only one whose vertical axis is time, so a drag distance means a duration. The block's markup becomes a wrapper carrying identity and position around the same `<a>`, which keeps its `href` and its `bg-primary/15` — the latter because that class is the key `touch_target_scan` uses to recognise `DEC-050`'s duration-proportional exclusion. **No new interactive element**, so the exclusion is not extended. A reschedule can conflict, and the page reloads showing the current state rather than overwriting the other writer's change |
 | 0.35.0 | **`SCR-26`'s obligation line changes for the first time since 0.22.0**: button-driven moves *and* drag, rather than "not drag", now that `FR-PLAN-002`'s deferred half has shipped. The screen's responsive row — *"columns stack; move actions remain, drag does not"* — was written before the drag existed and is **correct as written**, which is worth recording: it anticipated the touch limit that RFC 0004 has now made a cross-cutting requirement. Nothing else about the screen's externally observable behaviour changed: the same two endpoints, the same permissions, the same filters in the URL |
 | 0.34.0 | **§3.1's page-title-row obligation is now met on every page that has one** (`LAYOUT-009`): a header pairing a title with actions wraps rather than squeezing the title, and the actions move below only when the row cannot fit. Three headers; a sweep of every `justify-between` row found no fourth. **§17.8 gains a decision rather than a deferral**: overlap does not become a second gate assertion, because measuring it has produced three artefacts to one fact, and the one fact — a `join` group's 1 px seam — is deliberate, so the assertion would ship with an exception on its first day. The requirement carries the carve-out instead, where a reader can find it |
