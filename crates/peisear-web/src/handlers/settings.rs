@@ -210,7 +210,7 @@ pub async fn update_capacity(
     let current = user_capacities::find(&state.db, &user.id, &row_id)
         .await?
         .ok_or(AppError::NotFound)?;
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         &form.client_updated_at,
         current.updated_at,
         peisear_i18n::EntityKind::CapacityPeriod,
@@ -235,7 +235,7 @@ pub async fn update_capacity(
         Some(form.note.trim())
     };
 
-    match user_capacities::update(
+    match user_capacities::update_guarded(
         &state.db,
         &user.id,
         &row_id,
@@ -243,10 +243,18 @@ pub async fn update_capacity(
         period_start,
         period_end,
         note,
+        Some(stamp),
     )
     .await
     {
-        Ok(()) => {
+        Ok(peisear_storage::Guarded::Stale { current_updated_at }) => {
+            Err(crate::error::stale_conflict(
+                peisear_i18n::EntityKind::CapacityPeriod,
+                &row_id,
+                current_updated_at,
+            ))
+        }
+        Ok(peisear_storage::Guarded::Written(())) => {
             let flash = super::percent_encode_query(
                 &Locale::English.render(MessageKey::CapacityRowUpdatedFlash),
             );
@@ -274,14 +282,18 @@ pub async fn delete_capacity(
     let current = user_capacities::find(&state.db, &user.id, &row_id)
         .await?
         .ok_or(AppError::NotFound)?;
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         &form.client_updated_at,
         current.updated_at,
         peisear_i18n::EntityKind::CapacityPeriod,
         &row_id,
     )?;
 
-    user_capacities::delete(&state.db, &user.id, &row_id).await?;
+    crate::error::lock_outcome(
+        user_capacities::delete_guarded(&state.db, &user.id, &row_id, Some(stamp)).await?,
+        peisear_i18n::EntityKind::CapacityPeriod,
+        &row_id,
+    )?;
     let flash =
         super::percent_encode_query(&Locale::English.render(MessageKey::CapacityRowRemovedFlash));
     Ok(Redirect::to(&format!("/settings?flash={flash}")))
@@ -306,7 +318,7 @@ pub async fn close_capacity(
     let current = user_capacities::find(&state.db, &user.id, &row_id)
         .await?
         .ok_or(AppError::NotFound)?;
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         &form.client_updated_at,
         current.updated_at,
         peisear_i18n::EntityKind::CapacityPeriod,
@@ -323,7 +335,12 @@ pub async fn close_capacity(
             field: Field::CloseDate,
         }))
     })?;
-    user_capacities::close_at(&state.db, &user.id, &row_id, period_end).await?;
+    crate::error::lock_outcome(
+        user_capacities::close_at_guarded(&state.db, &user.id, &row_id, period_end, Some(stamp))
+            .await?,
+        peisear_i18n::EntityKind::CapacityPeriod,
+        &row_id,
+    )?;
     let flash = super::percent_encode_query(&Locale::English.render(MessageKey::RowClosedFlash));
     Ok(Redirect::to(&format!("/settings?flash={flash}")))
 }

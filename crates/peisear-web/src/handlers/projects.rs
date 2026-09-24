@@ -135,21 +135,26 @@ pub async fn update(
     // Read the current project row; both for the access check
     // and for its `updated_at` to compare against the form.
     let current = projects::find_accessible(&state.db, &project_id, &user.id).await?;
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         &form.client_updated_at,
         current.updated_at,
         peisear_i18n::EntityKind::Project,
         &project_id,
     )?;
 
-    projects::update(
-        &state.db,
+    crate::error::lock_outcome(
+        projects::update_guarded(
+            &state.db,
+            &project_id,
+            &user.id,
+            form.name.trim(),
+            form.description.trim(),
+            Some(stamp),
+        )
+        .await?,
+        peisear_i18n::EntityKind::Project,
         &project_id,
-        &user.id,
-        form.name.trim(),
-        form.description.trim(),
-    )
-    .await?;
+    )?;
     Ok(Redirect::to(&format!("/projects/{project_id}")))
 }
 
@@ -214,13 +219,17 @@ pub async fn delete(
     if project.owner_id != user.id {
         return Err(AppError::NotFound);
     }
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         &form.client_updated_at,
         project.updated_at,
         peisear_i18n::EntityKind::Project,
         &project_id,
     )?;
-    projects::delete(&state.db, &project_id, &user.id).await?;
+    crate::error::lock_outcome(
+        projects::delete_guarded(&state.db, &project_id, &user.id, Some(stamp)).await?,
+        peisear_i18n::EntityKind::Project,
+        &project_id,
+    )?;
     let flash =
         super::percent_encode_query(&Locale::English.render(MessageKey::ProjectDeletedFlash));
     Ok(Redirect::to(&format!("/projects?flash={flash}")))

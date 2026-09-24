@@ -38,7 +38,7 @@ use peisear_core::{Issue, IssueStatus, Priority};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-use crate::{Pool, StorageError, StorageResult};
+use crate::{Guarded, Pool, StorageError, StorageResult, stamp_matches, zero_rows_outcome};
 
 /// Raw `sprints` row as returned by sqlx. Kept private — the
 /// public API returns [`peisear_core::sprints::Sprint`], which
@@ -173,6 +173,23 @@ pub async fn update(
     starts_on: NaiveDate,
     ends_on: NaiveDate,
 ) -> StorageResult<()> {
+    update_guarded(pool, id, name, goal, starts_on, ends_on, None)
+        .await
+        .map(Guarded::unguarded)
+}
+
+/// [`update`], applied only if the sprint still carries `expected` as its
+/// `updated_at` (`RACE-002`) -- a predicate on the one `UPDATE` (see
+/// `projects::update_guarded` for why the `julianday` form).
+pub async fn update_guarded(
+    pool: &Pool,
+    id: &str,
+    name: &str,
+    goal: Option<&str>,
+    starts_on: NaiveDate,
+    ends_on: NaiveDate,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
     if starts_on > ends_on {
         return Err(StorageError::Validation(
             peisear_i18n::MessageKey::SprintEndDateMustBeOnOrAfterStartMessage,
@@ -183,6 +200,7 @@ pub async fn update(
         UPDATE sprints
         SET name = ?2, goal = ?3, starts_on = ?4, ends_on = ?5
         WHERE id = ?1
+          AND (?6 IS NULL OR julianday(updated_at) = julianday(?6))
         "#,
     )
     .bind(id)
@@ -190,23 +208,45 @@ pub async fn update(
     .bind(goal)
     .bind(starts_on)
     .bind(ends_on)
+    .bind(expected)
     .execute(pool)
     .await?;
     if res.rows_affected() == 0 {
-        return Err(StorageError::NotFound);
+        return zero_rows_outcome(pool, "sprints", id, None).await;
     }
-    Ok(())
+    Ok(Guarded::Written(()))
 }
 
 pub async fn delete(pool: &Pool, id: &str) -> StorageResult<()> {
-    let res = sqlx::query(r#"DELETE FROM sprints WHERE id = ?1"#)
-        .bind(id)
-        .execute(pool)
-        .await?;
+    delete_guarded(pool, id, None).await.map(Guarded::unguarded)
+}
+
+/// [`delete`], applied only if the sprint still carries `expected` as its
+/// `updated_at` (`RACE-002`). This is also what closes the
+/// delete-versus-`start` race `RACE-001` found: `start` moves the stamp,
+/// so a delete that read the sprint as planned and lands after a start
+/// finds the stamp changed and is refused, rather than deleting a running
+/// sprint.
+pub async fn delete_guarded(
+    pool: &Pool,
+    id: &str,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
+    let res = sqlx::query(
+        r#"
+        DELETE FROM sprints
+        WHERE id = ?1
+          AND (?2 IS NULL OR julianday(updated_at) = julianday(?2))
+        "#,
+    )
+    .bind(id)
+    .bind(expected)
+    .execute(pool)
+    .await?;
     if res.rows_affected() == 0 {
-        return Err(StorageError::NotFound);
+        return zero_rows_outcome(pool, "sprints", id, None).await;
     }
-    Ok(())
+    Ok(Guarded::Written(()))
 }
 
 /// Transition `planned` → `active`. Refuses if another sprint
@@ -224,10 +264,29 @@ pub async fn delete(pool: &Pool, id: &str) -> StorageResult<()> {
 /// first, and is refused. Starts in different teams contend only for
 /// the database's one write lock, briefly.
 pub async fn start(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
+    start_guarded(pool, sprint_id, None)
+        .await
+        .map(Guarded::unguarded)
+}
+
+/// [`start`], applied only if the sprint still carries `expected` as its
+/// `updated_at` (`RACE-002`). The stamp comes from the same read, inside
+/// the same `BEGIN IMMEDIATE` transaction, as the state checks below, and
+/// is answered first -- the order the handler's own comparison had.
+pub async fn start_guarded(
+    pool: &Pool,
+    sprint_id: &str,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     let sprint = find_by_id(&mut *tx, sprint_id)
         .await?
         .ok_or(StorageError::NotFound)?;
+    if !stamp_matches(expected, sprint.updated_at) {
+        return Ok(Guarded::Stale {
+            current_updated_at: sprint.updated_at,
+        });
+    }
     match sprint.status {
         SprintStatus::Planned => {}
         SprintStatus::Active => {
@@ -259,15 +318,36 @@ pub async fn start(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
     .execute(&mut *tx)
     .await?;
     tx.commit().await?;
-    Ok(())
+    Ok(Guarded::Written(()))
 }
 
 /// Transition `active` → `completed`. Sprint can only be
 /// completed if currently active.
 pub async fn complete(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
-    let sprint = find_by_id(pool, sprint_id)
+    complete_guarded(pool, sprint_id, None)
+        .await
+        .map(Guarded::unguarded)
+}
+
+/// [`complete`], applied only if the sprint still carries `expected` as
+/// its `updated_at` (`RACE-002`). Like [`start_guarded`] it reads and
+/// writes under one `BEGIN IMMEDIATE` transaction; that also makes two
+/// simultaneous completes a single one (the second sees `Completed`),
+/// where before both passed and both wrote `completed_at`.
+pub async fn complete_guarded(
+    pool: &Pool,
+    sprint_id: &str,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let sprint = find_by_id(&mut *tx, sprint_id)
         .await?
         .ok_or(StorageError::NotFound)?;
+    if !stamp_matches(expected, sprint.updated_at) {
+        return Ok(Guarded::Stale {
+            current_updated_at: sprint.updated_at,
+        });
+    }
     match sprint.status {
         SprintStatus::Active => {}
         SprintStatus::Planned => {
@@ -289,9 +369,10 @@ pub async fn complete(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
         "#,
     )
     .bind(sprint_id)
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
-    Ok(())
+    tx.commit().await?;
+    Ok(Guarded::Written(()))
 }
 
 /// Add an issue to a sprint. If the issue is already in

@@ -748,7 +748,7 @@ pub async fn update(
     //    page render and the form submit, before we get to the
     //    update query.
     let issue_now = issues::find(&state.db, &issue_id, &project_id).await?;
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         &form.client_updated_at,
         issue_now.updated_at,
         peisear_i18n::EntityKind::Issue,
@@ -768,23 +768,28 @@ pub async fn update(
     let planned_end_at =
         parse_planned_datetime(&form.planned_end_at, peisear_i18n::Field::PlannedEndDate)?;
 
-    issues::update(
-        &state.db,
+    crate::error::lock_outcome(
+        issues::update_guarded(
+            &state.db,
+            &issue_id,
+            &project_id,
+            &user.id,
+            issues::IssueFields {
+                title: form.title.trim(),
+                description: form.description.trim(),
+                status,
+                priority,
+                effort,
+                assignee_id: assignee_id.as_deref(),
+                planned_start_at,
+                planned_end_at,
+            },
+            Some(stamp),
+        )
+        .await?,
+        peisear_i18n::EntityKind::Issue,
         &issue_id,
-        &project_id,
-        &user.id,
-        issues::IssueFields {
-            title: form.title.trim(),
-            description: form.description.trim(),
-            status,
-            priority,
-            effort,
-            assignee_id: assignee_id.as_deref(),
-            planned_start_at,
-            planned_end_at,
-        },
-    )
-    .await?;
+    )?;
     Ok(Redirect::to(&format!(
         "/projects/{project_id}/issues/{issue_id}"
     )))
@@ -849,13 +854,17 @@ pub async fn delete(
     // Access check.
     let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
     let issue = issues::find(&state.db, &issue_id, &project_id).await?;
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         &form.client_updated_at,
         issue.updated_at,
         peisear_i18n::EntityKind::Issue,
         &issue_id,
     )?;
-    issues::delete(&state.db, &issue_id, &project_id, &user.id).await?;
+    crate::error::lock_outcome(
+        issues::delete_guarded(&state.db, &issue_id, &project_id, &user.id, Some(stamp)).await?,
+        peisear_i18n::EntityKind::Issue,
+        &issue_id,
+    )?;
     let flash = super::percent_encode_query(&Locale::English.render(MessageKey::IssueDeletedFlash));
     Ok(Redirect::to(&format!(
         "/projects/{project_id}?flash={flash}"
@@ -883,7 +892,7 @@ async fn apply_status_change(
     let _project = projects::find_accessible(&state.db, project_id, user_id).await?;
 
     let issue_now = issues::find(&state.db, issue_id, project_id).await?;
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         client_updated_at,
         issue_now.updated_at,
         peisear_i18n::EntityKind::Issue,
@@ -892,8 +901,19 @@ async fn apply_status_change(
 
     let status = IssueStatus::parse(status_str)
         .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidStatus)))?;
-    let updated_at =
-        issues::update_status(&state.db, issue_id, project_id, user_id, status).await?;
+    let updated_at = crate::error::lock_outcome(
+        issues::update_status_guarded(
+            &state.db,
+            issue_id,
+            project_id,
+            user_id,
+            status,
+            Some(stamp),
+        )
+        .await?,
+        peisear_i18n::EntityKind::Issue,
+        issue_id,
+    )?;
     Ok(updated_at)
 }
 
@@ -1120,7 +1140,7 @@ async fn apply_schedule_change(
     let _project = projects::find_accessible(&state.db, project_id, user_id).await?;
 
     let issue_now = issues::find(&state.db, issue_id, project_id).await?;
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         client_updated_at,
         issue_now.updated_at,
         peisear_i18n::EntityKind::Issue,
@@ -1132,14 +1152,19 @@ async fn apply_schedule_change(
     let planned_end_at =
         parse_planned_datetime(planned_end_at_str, peisear_i18n::Field::PlannedEndDate)?;
 
-    let updated_at = issues::update_schedule(
-        &state.db,
+    let updated_at = crate::error::lock_outcome(
+        issues::update_schedule_guarded(
+            &state.db,
+            issue_id,
+            project_id,
+            planned_start_at,
+            planned_end_at,
+            Some(stamp),
+        )
+        .await?,
+        peisear_i18n::EntityKind::Issue,
         issue_id,
-        project_id,
-        planned_start_at,
-        planned_end_at,
-    )
-    .await?;
+    )?;
 
     // §3.6: the label is computed here, once, from the values this
     // handler just validated and wrote — not reformatted a second

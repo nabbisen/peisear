@@ -4,7 +4,7 @@ use chrono::{DateTime, Utc};
 use peisear_core::Project;
 use sqlx::FromRow;
 
-use crate::{Pool, StorageError, StorageResult};
+use crate::{Guarded, Pool, StorageError, StorageResult, zero_rows_outcome};
 
 #[derive(FromRow)]
 struct ProjectRow {
@@ -132,23 +132,47 @@ pub async fn update(
     name: &str,
     description: &str,
 ) -> StorageResult<()> {
+    update_guarded(pool, id, owner_id, name, description, None)
+        .await
+        .map(Guarded::unguarded)
+}
+
+/// [`update`], applied only if the project still carries `expected` as
+/// its `updated_at` (`RACE-002`). The comparison is a predicate on the
+/// one `UPDATE`, so it is atomic by construction: two saves holding one
+/// stamp cannot both match, because the first moves it. The predicate
+/// compares `julianday(...)` of both sides, which parses both text
+/// forms this column holds (`CURRENT_TIMESTAMP`'s and the driver's
+/// RFC 3339); `0017`'s `AFTER UPDATE ... WHEN OLD.updated_at =
+/// NEW.updated_at` trigger runs *after* the row matched and does not
+/// interfere.
+pub async fn update_guarded(
+    pool: &Pool,
+    id: &str,
+    owner_id: &str,
+    name: &str,
+    description: &str,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
     let res = sqlx::query(
         r#"
         UPDATE projects
         SET name = ?3, description = ?4
         WHERE id = ?1 AND owner_id = ?2
+          AND (?5 IS NULL OR julianday(updated_at) = julianday(?5))
         "#,
     )
     .bind(id)
     .bind(owner_id)
     .bind(name)
     .bind(description)
+    .bind(expected)
     .execute(pool)
     .await?;
     if res.rows_affected() == 0 {
-        return Err(StorageError::NotFound);
+        return zero_rows_outcome(pool, "projects", id, Some(("owner_id", owner_id))).await;
     }
-    Ok(())
+    Ok(Guarded::Written(()))
 }
 
 /// `WHERE owner_id = ?2` is the authorisation, not a defensive extra:
@@ -163,18 +187,36 @@ pub async fn update(
 /// next reader sees why the row count is deliberate before mistaking
 /// it for a gap the way that review did.
 pub async fn delete(pool: &Pool, id: &str, owner_id: &str) -> StorageResult<()> {
+    delete_guarded(pool, id, owner_id, None)
+        .await
+        .map(Guarded::unguarded)
+}
+
+/// [`delete`], applied only if the project still carries `expected` as its
+/// `updated_at` (`RACE-002`; see [`update_guarded`]). Zero rows is either
+/// `NotFound` (gone, or not the caller's -- the concealment above) or
+/// [`Guarded::Stale`] (present, and edited since the confirmation the
+/// caller is acting on).
+pub async fn delete_guarded(
+    pool: &Pool,
+    id: &str,
+    owner_id: &str,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
     let res = sqlx::query(
         r#"
         DELETE FROM projects
         WHERE id = ?1 AND owner_id = ?2
+          AND (?3 IS NULL OR julianday(updated_at) = julianday(?3))
         "#,
     )
     .bind(id)
     .bind(owner_id)
+    .bind(expected)
     .execute(pool)
     .await?;
     if res.rows_affected() == 0 {
-        return Err(StorageError::NotFound);
+        return zero_rows_outcome(pool, "projects", id, Some(("owner_id", owner_id))).await;
     }
-    Ok(())
+    Ok(Guarded::Written(()))
 }

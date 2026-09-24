@@ -269,12 +269,25 @@ pub type AppResult<T> = Result<T, AppError>;
 /// query before calling this, make sure to read `updated_at`
 /// **before** the mutation — otherwise you'd be comparing
 /// against a fresh timestamp and never detect a stale write.
+///
+/// **This comparison is an early refusal, not the guarantee
+/// (`RACE-002`).** It compares against a value the handler read a moment
+/// ago, so two requests carrying one stamp can both pass it. What makes
+/// the lock hold is the write: the handler passes the stamp this returns
+/// to the storage layer's `*_guarded` function, which applies it only if
+/// the row still carries exactly that value, and turns the outcome into a
+/// conflict with [`lock_outcome`] / [`stale_conflict`]. The early check is
+/// kept because it answers a stale page before the form's other
+/// validation runs and before any write is attempted -- the order every
+/// route has always had.
+///
+/// Returns the client's parsed stamp, for that write.
 pub fn check_optimistic_lock(
     client_updated_at_str: &str,
     current_updated_at: chrono::DateTime<chrono::Utc>,
     entity_type: EntityKind,
     entity_id: impl Into<String>,
-) -> AppResult<()> {
+) -> AppResult<chrono::DateTime<chrono::Utc>> {
     let client_dt = chrono::DateTime::parse_from_rfc3339(client_updated_at_str)
         .map_err(|_| {
             // User-visible (§1.7): no failure vocabulary, no raw
@@ -297,7 +310,38 @@ pub fn check_optimistic_lock(
             current_updated_at,
         });
     }
-    Ok(())
+    Ok(client_dt)
+}
+
+/// The conflict a stale write is owed (`RACE-002`): the same
+/// [`AppError::OptimisticLockConflict`] the early comparison produces,
+/// built from the current stamp the storage layer reported when its
+/// guarded write found the row had moved.
+pub fn stale_conflict(
+    entity_type: EntityKind,
+    entity_id: impl Into<String>,
+    current_updated_at: chrono::DateTime<chrono::Utc>,
+) -> AppError {
+    AppError::OptimisticLockConflict {
+        entity_type,
+        entity_id: entity_id.into(),
+        current_updated_at,
+    }
+}
+
+/// Unwrap a guarded storage write: the value if it landed, the conflict
+/// if the row's stamp had moved.
+pub fn lock_outcome<T>(
+    outcome: peisear_storage::Guarded<T>,
+    entity_type: EntityKind,
+    entity_id: impl Into<String>,
+) -> AppResult<T> {
+    match outcome {
+        peisear_storage::Guarded::Written(value) => Ok(value),
+        peisear_storage::Guarded::Stale { current_updated_at } => {
+            Err(stale_conflict(entity_type, entity_id, current_updated_at))
+        }
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────

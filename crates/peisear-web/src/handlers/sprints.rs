@@ -268,7 +268,7 @@ pub async fn update(
     // The sprint we just fetched carries the canonical
     // `updated_at`; compare it against the form's hidden input
     // before any state-mutating SQL.
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         &form.client_updated_at,
         sprint.updated_at,
         peisear_i18n::EntityKind::Sprint,
@@ -289,8 +289,25 @@ pub async fn update(
     let starts_on = parse_date_required(&form.starts_on, Field::StartDate)?;
     let ends_on = parse_date_required(&form.ends_on, Field::EndDate)?;
 
-    match sprints::update(&state.db, &sprint.id, name, goal, starts_on, ends_on).await {
-        Ok(()) => {
+    match sprints::update_guarded(
+        &state.db,
+        &sprint.id,
+        name,
+        goal,
+        starts_on,
+        ends_on,
+        Some(stamp),
+    )
+    .await
+    {
+        Ok(peisear_storage::Guarded::Stale { current_updated_at }) => {
+            Err(crate::error::stale_conflict(
+                peisear_i18n::EntityKind::Sprint,
+                &sprint_id,
+                current_updated_at,
+            ))
+        }
+        Ok(peisear_storage::Guarded::Written(())) => {
             let flash = super::percent_encode_query(
                 &Locale::English.render(MessageKey::SprintUpdatedFlash),
             );
@@ -329,14 +346,21 @@ pub async fn start(
     if sprint.team_id != team.id {
         return Err(AppError::NotFound);
     }
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         &form.client_updated_at,
         sprint.updated_at,
         peisear_i18n::EntityKind::Sprint,
         &sprint_id,
     )?;
-    match sprints::start(&state.db, &sprint.id).await {
-        Ok(()) => {
+    match sprints::start_guarded(&state.db, &sprint.id, Some(stamp)).await {
+        Ok(peisear_storage::Guarded::Stale { current_updated_at }) => {
+            Err(crate::error::stale_conflict(
+                peisear_i18n::EntityKind::Sprint,
+                &sprint_id,
+                current_updated_at,
+            ))
+        }
+        Ok(peisear_storage::Guarded::Written(())) => {
             let flash = super::percent_encode_query(
                 &Locale::English.render(MessageKey::SprintStartedFlash),
             );
@@ -371,14 +395,21 @@ pub async fn complete(
     if sprint.team_id != team.id {
         return Err(AppError::NotFound);
     }
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         &form.client_updated_at,
         sprint.updated_at,
         peisear_i18n::EntityKind::Sprint,
         &sprint_id,
     )?;
-    match sprints::complete(&state.db, &sprint.id).await {
-        Ok(()) => {
+    match sprints::complete_guarded(&state.db, &sprint.id, Some(stamp)).await {
+        Ok(peisear_storage::Guarded::Stale { current_updated_at }) => {
+            Err(crate::error::stale_conflict(
+                peisear_i18n::EntityKind::Sprint,
+                &sprint_id,
+                current_updated_at,
+            ))
+        }
+        Ok(peisear_storage::Guarded::Written(())) => {
             let flash = super::percent_encode_query(
                 &Locale::English.render(MessageKey::SprintCompletedFlash),
             );
@@ -482,13 +513,17 @@ pub async fn delete_sprint(
             Locale::English.render(MessageKey::SprintActiveCannotBeDeletedMessage),
         ));
     }
-    crate::error::check_optimistic_lock(
+    let stamp = crate::error::check_optimistic_lock(
         &form.client_updated_at,
         sprint.updated_at,
         peisear_i18n::EntityKind::Sprint,
         &sprint_id,
     )?;
-    sprints::delete(&state.db, &sprint.id).await?;
+    crate::error::lock_outcome(
+        sprints::delete_guarded(&state.db, &sprint.id, Some(stamp)).await?,
+        peisear_i18n::EntityKind::Sprint,
+        &sprint_id,
+    )?;
     let flash =
         super::percent_encode_query(&Locale::English.render(MessageKey::SprintDeletedFlash));
     Ok(Redirect::to(&format!(

@@ -8,7 +8,7 @@ use chrono::{DateTime, Utc};
 use peisear_core::{Issue, IssueStatus, Priority};
 use sqlx::FromRow;
 
-use crate::{Pool, StorageError, StorageResult, issue_events};
+use crate::{Guarded, Pool, StorageError, StorageResult, issue_events, stamp_matches};
 
 /// Raw row as returned by sqlx. Kept private — the public API returns
 /// [`peisear_core::Issue`] with parsed enum fields.
@@ -426,15 +426,45 @@ pub async fn update(
     actor_id: &str,
     fields: IssueFields<'_>,
 ) -> StorageResult<()> {
-    let mut tx = pool.begin().await?;
+    update_guarded(pool, id, project_id, actor_id, fields, None)
+        .await
+        .map(Guarded::unguarded)
+}
+
+/// What [`update_guarded`] reads before writing: status, effort, assignee (to
+/// diff into events) and the stamp (to compare).
+type PriorIssueState = (String, Option<i64>, Option<String>, DateTime<Utc>);
+
+/// [`update`], applied only if the issue still carries `expected` as its
+/// `updated_at` (`RACE-002`).
+///
+/// **All four guarded issue writes open `BEGIN IMMEDIATE`, not the
+/// deferred `BEGIN` they used to.** A deferred transaction takes its
+/// read snapshot at the first `SELECT` and only tries for the write lock
+/// at the first write; if another writer committed in between, SQLite
+/// fails the upgrade at once (`SQLITE_BUSY_SNAPSHOT`, which the busy
+/// timeout does not retry) and the request became a `500`. So two saves
+/// holding one stamp did not silently overwrite each other here -- the
+/// loser was answered with a server error instead of the conflict it was
+/// owed. Taking the write lock first makes the loser wait, read the
+/// winner's stamp, and be refused as `Stale`.
+pub async fn update_guarded(
+    pool: &Pool,
+    id: &str,
+    project_id: &str,
+    actor_id: &str,
+    fields: IssueFields<'_>,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Read the previous values inside the same transaction so we
     // can diff and emit one event per changed field. SELECT
     // first, UPDATE second, COMMIT once — the previous read is
-    // self-consistent with the write.
-    let prev: Option<(String, Option<i64>, Option<String>)> = sqlx::query_as(
+    // self-consistent with the write, and (`RACE-002`) so is the stamp.
+    let prev: Option<PriorIssueState> = sqlx::query_as(
         r#"
-        SELECT status, effort, assignee_id
+        SELECT status, effort, assignee_id, updated_at
         FROM issues
         WHERE id = ?1 AND project_id = ?2
         "#,
@@ -444,9 +474,12 @@ pub async fn update(
     .fetch_optional(&mut *tx)
     .await?;
 
-    let Some((prev_status, prev_effort, prev_assignee)) = prev else {
+    let Some((prev_status, prev_effort, prev_assignee, current_updated_at)) = prev else {
         return Err(StorageError::NotFound);
     };
+    if !stamp_matches(expected, current_updated_at) {
+        return Ok(Guarded::Stale { current_updated_at });
+    }
 
     // CAL-001 §2.4: planned_start_at/planned_end_at join this
     // existing UPDATE's SET clause rather than getting a statement
@@ -536,7 +569,7 @@ pub async fn update(
     }
 
     tx.commit().await?;
-    Ok(())
+    Ok(Guarded::Written(()))
 }
 
 pub async fn update_status(
@@ -546,11 +579,28 @@ pub async fn update_status(
     actor_id: &str,
     status: IssueStatus,
 ) -> StorageResult<DateTime<Utc>> {
-    let mut tx = pool.begin().await?;
+    update_status_guarded(pool, id, project_id, actor_id, status, None)
+        .await
+        .map(Guarded::unguarded)
+}
 
-    let prev_status: Option<String> = sqlx::query_scalar(
+/// [`update_status`], applied only if the issue still carries `expected`
+/// as its `updated_at` (`RACE-002`; see [`update_guarded`] for why the
+/// transaction is `BEGIN IMMEDIATE`). On success returns the *new* stamp,
+/// as before -- the caller's next lock value.
+pub async fn update_status_guarded(
+    pool: &Pool,
+    id: &str,
+    project_id: &str,
+    actor_id: &str,
+    status: IssueStatus,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<DateTime<Utc>>> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+
+    let prev: Option<(String, DateTime<Utc>)> = sqlx::query_as(
         r#"
-        SELECT status FROM issues
+        SELECT status, updated_at FROM issues
         WHERE id = ?1 AND project_id = ?2
         "#,
     )
@@ -559,9 +609,12 @@ pub async fn update_status(
     .fetch_optional(&mut *tx)
     .await?;
 
-    let Some(prev_status) = prev_status else {
+    let Some((prev_status, current_updated_at)) = prev else {
         return Err(StorageError::NotFound);
     };
+    if !stamp_matches(expected, current_updated_at) {
+        return Ok(Guarded::Stale { current_updated_at });
+    }
 
     sqlx::query(
         r#"
@@ -614,7 +667,7 @@ pub async fn update_status(
     }
 
     tx.commit().await?;
-    Ok(new_updated_at)
+    Ok(Guarded::Written(new_updated_at))
 }
 
 /// `CAL-003` (RFC 004d D-3): moves both planned timestamps together —
@@ -639,7 +692,38 @@ pub async fn update_schedule(
     planned_start_at: Option<DateTime<Utc>>,
     planned_end_at: Option<DateTime<Utc>>,
 ) -> StorageResult<DateTime<Utc>> {
-    let mut tx = pool.begin().await?;
+    update_schedule_guarded(pool, id, project_id, planned_start_at, planned_end_at, None)
+        .await
+        .map(Guarded::unguarded)
+}
+
+/// [`update_schedule`], applied only if the issue still carries
+/// `expected` as its `updated_at` (`RACE-002`; see [`update_guarded`]).
+/// Returns the new stamp on success.
+pub async fn update_schedule_guarded(
+    pool: &Pool,
+    id: &str,
+    project_id: &str,
+    planned_start_at: Option<DateTime<Utc>>,
+    planned_end_at: Option<DateTime<Utc>>,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<DateTime<Utc>>> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+
+    let current_updated_at: DateTime<Utc> = sqlx::query_scalar(
+        r#"
+        SELECT updated_at FROM issues
+        WHERE id = ?1 AND project_id = ?2
+        "#,
+    )
+    .bind(id)
+    .bind(project_id)
+    .fetch_optional(&mut *tx)
+    .await?
+    .ok_or(StorageError::NotFound)?;
+    if !stamp_matches(expected, current_updated_at) {
+        return Ok(Guarded::Stale { current_updated_at });
+    }
 
     let res = sqlx::query(
         r#"
@@ -679,26 +763,47 @@ pub async fn update_schedule(
     .ok_or(StorageError::NotFound)?;
 
     tx.commit().await?;
-    Ok(new_updated_at)
+    Ok(Guarded::Written(new_updated_at))
 }
 
 pub async fn delete(pool: &Pool, id: &str, project_id: &str, actor_id: &str) -> StorageResult<()> {
-    let mut tx = pool.begin().await?;
+    delete_guarded(pool, id, project_id, actor_id, None)
+        .await
+        .map(Guarded::unguarded)
+}
+
+/// [`delete`], applied only if the issue still carries `expected` as its
+/// `updated_at` (`RACE-002`; see [`update_guarded`]). A delete after a
+/// concurrent edit is refused, so the confirmation's sub-issue count
+/// (`QA-006`) is still the one the delete acts on.
+pub async fn delete_guarded(
+    pool: &Pool,
+    id: &str,
+    project_id: &str,
+    actor_id: &str,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
     // Read the previous status / current state so we can record
     // it in the deletion event. After the DELETE, the cascade
     // SET NULL on issue_id loses the link, but the project_id and
     // event metadata still tell the story.
-    let prev_status: Option<String> =
-        sqlx::query_scalar(r#"SELECT status FROM issues WHERE id = ?1 AND project_id = ?2"#)
-            .bind(id)
-            .bind(project_id)
-            .fetch_optional(&mut *tx)
-            .await?;
+    let prev: Option<(String, DateTime<Utc>)> = sqlx::query_as(
+        r#"SELECT status, updated_at FROM issues WHERE id = ?1 AND project_id = ?2"#,
+    )
+    .bind(id)
+    .bind(project_id)
+    .fetch_optional(&mut *tx)
+    .await?;
 
-    if prev_status.is_none() {
+    let Some((prev_status, current_updated_at)) = prev else {
         return Err(StorageError::NotFound);
+    };
+    if !stamp_matches(expected, current_updated_at) {
+        return Ok(Guarded::Stale { current_updated_at });
     }
+    let prev_status = Some(prev_status);
 
     // Write the deletion event BEFORE the actual delete, while
     // the issue_id reference is still valid. The CASCADE then
@@ -731,7 +836,7 @@ pub async fn delete(pool: &Pool, id: &str, project_id: &str, actor_id: &str) -> 
     }
 
     tx.commit().await?;
-    Ok(())
+    Ok(Guarded::Written(()))
 }
 
 /// The assignee-candidate set for a project, as a `WITH` CTE

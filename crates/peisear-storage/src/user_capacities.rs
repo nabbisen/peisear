@@ -59,11 +59,11 @@
 //! without `BEGIN IMMEDIATE` would need an equivalent lock or an
 //! exclusion constraint.
 
-use chrono::NaiveDate;
+use chrono::{DateTime, NaiveDate, Utc};
 use sqlx::FromRow;
 use uuid::Uuid;
 
-use crate::{Pool, StorageError, StorageResult};
+use crate::{Guarded, Pool, StorageError, StorageResult, stamp_matches, zero_rows_outcome};
 
 /// One capacity row, deserialised from storage.
 #[derive(Debug, Clone)]
@@ -380,11 +380,52 @@ pub async fn update(
     period_end: Option<NaiveDate>,
     note: Option<&str>,
 ) -> StorageResult<()> {
+    update_guarded(
+        pool,
+        user_id,
+        id,
+        points,
+        period_start,
+        period_end,
+        note,
+        None,
+    )
+    .await
+    .map(Guarded::unguarded)
+}
+
+/// [`update`], applied only if the row still carries `expected` as its
+/// `updated_at` (`RACE-002`). This is several statements -- the stamp,
+/// the overlap check, the write -- so the comparison is made inside the
+/// `BEGIN IMMEDIATE` transaction that already holds the write lock from
+/// the check to the commit (`CAP-001`): nothing can move the stamp
+/// between the read below and the `UPDATE`. A stale stamp is answered
+/// before the overlap check, as the handler's own comparison always was.
+#[allow(clippy::too_many_arguments)]
+pub async fn update_guarded(
+    pool: &Pool,
+    user_id: &str,
+    id: &str,
+    points: i64,
+    period_start: Option<NaiveDate>,
+    period_end: Option<NaiveDate>,
+    note: Option<&str>,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
     // Same `BEGIN IMMEDIATE` shape as `insert`.
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let current = find(&mut *tx, user_id, id)
+        .await?
+        .ok_or(StorageError::NotFound)?
+        .updated_at;
+    if !stamp_matches(expected, current) {
+        return Ok(Guarded::Stale {
+            current_updated_at: current,
+        });
+    }
     update_in_tx(&mut tx, user_id, id, points, period_start, period_end, note).await?;
     tx.commit().await?;
-    Ok(())
+    Ok(Guarded::Written(()))
 }
 
 /// The overlap check and the write of [`update`], on a transaction the
@@ -442,15 +483,35 @@ async fn update_in_tx(
 
 /// Delete one row. Scoped to `user_id` for safety.
 pub async fn delete(pool: &Pool, user_id: &str, id: &str) -> StorageResult<()> {
-    let res = sqlx::query(r#"DELETE FROM user_capacities WHERE id = ?1 AND user_id = ?2"#)
-        .bind(id)
-        .bind(user_id)
-        .execute(pool)
-        .await?;
+    delete_guarded(pool, user_id, id, None)
+        .await
+        .map(Guarded::unguarded)
+}
+
+/// [`delete`], applied only if the row still carries `expected` as its
+/// `updated_at` (`RACE-002`) -- a predicate on the one `DELETE`.
+pub async fn delete_guarded(
+    pool: &Pool,
+    user_id: &str,
+    id: &str,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
+    let res = sqlx::query(
+        r#"
+        DELETE FROM user_capacities
+        WHERE id = ?1 AND user_id = ?2
+          AND (?3 IS NULL OR julianday(updated_at) = julianday(?3))
+        "#,
+    )
+    .bind(id)
+    .bind(user_id)
+    .bind(expected)
+    .execute(pool)
+    .await?;
     if res.rows_affected() == 0 {
-        return Err(StorageError::NotFound);
+        return zero_rows_outcome(pool, "user_capacities", id, Some(("user_id", user_id))).await;
     }
-    Ok(())
+    Ok(Guarded::Written(()))
 }
 
 /// "Close" a row by setting its `period_end` to a specific date.
@@ -470,10 +531,30 @@ pub async fn close_at(
     id: &str,
     new_period_end: NaiveDate,
 ) -> StorageResult<()> {
+    close_at_guarded(pool, user_id, id, new_period_end, None)
+        .await
+        .map(Guarded::unguarded)
+}
+
+/// [`close_at`], applied only if the row still carries `expected` as its
+/// `updated_at` (`RACE-002`); the stamp is read with the row, inside the
+/// same transaction.
+pub async fn close_at_guarded(
+    pool: &Pool,
+    user_id: &str,
+    id: &str,
+    new_period_end: NaiveDate,
+    expected: Option<DateTime<Utc>>,
+) -> StorageResult<Guarded<()>> {
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
     let row = find(&mut *tx, user_id, id)
         .await?
         .ok_or(StorageError::NotFound)?;
+    if !stamp_matches(expected, row.updated_at) {
+        return Ok(Guarded::Stale {
+            current_updated_at: row.updated_at,
+        });
+    }
     update_in_tx(
         &mut tx,
         user_id,
@@ -485,5 +566,5 @@ pub async fn close_at(
     )
     .await?;
     tx.commit().await?;
-    Ok(())
+    Ok(Guarded::Written(()))
 }
