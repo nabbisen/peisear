@@ -1384,6 +1384,9 @@ pub enum MessageKey {
     SprintUpdatedFlash,
     SprintStartedFlash,
     SprintCompletedFlash,
+    /// See [`MessageKey::SprintCompletedFlash`]: the flash on a successful reopen
+    /// (`SPRINT-004`/`SPRINT-005`), matching `start` and `complete`.
+    SprintReopenedFlash,
     SprintDeletedFlash,
     SprintAssignmentSavedFlash,
     TeamCreatedFlash,
@@ -2798,6 +2801,7 @@ impl MessageKey {
             MessageKey::SprintUpdatedFlash,
             MessageKey::SprintStartedFlash,
             MessageKey::SprintCompletedFlash,
+            MessageKey::SprintReopenedFlash,
             MessageKey::SprintDeletedFlash,
             MessageKey::SprintAssignmentSavedFlash,
             MessageKey::TeamCreatedFlash,

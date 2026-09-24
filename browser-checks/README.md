@@ -135,12 +135,22 @@ exactly its fixture and its page list.
 
 ## Coverage
 
-Eighteen pages: `/today`, `/inbox`, `/today/calendar`, `/projects`, a
+Nineteen pages: `/today`, `/inbox`, `/today/calendar`, `/projects`, a
 project detail page (the board — it is the default view), the same
 project's list view, a project calendar, a team detail page, a sprints
-list, a sprint detail page, a sprint plan page, an issue detail page,
-the new-issue form, `/settings`, `/settings/notifications`, `/teams`,
-`/search`, and a delete confirmation interstitial.
+list, a sprint detail page, **the same page for a completed sprint**, a
+sprint plan page, an issue detail page, the new-issue form, `/settings`,
+`/settings/notifications`, `/teams`, `/search`, and a delete confirmation
+interstitial. (19 × 5 widths = 95 cells; it was 18 × 5 = 90 until
+`SPRINT-005`.)
+
+`SPRINT-005` added the completed-sprint form of the sprint detail page
+(`§10.27`): a sprint started and completed through the real routes, so it
+carries a captured record. The page carries the **Reopen sprint** control and
+`SPRINT-004`'s two headings, which no page in the list reached while the
+fixture's only sprint was planned — the gate reported 90/90 about a
+different page. The completed sprint has no members (the fixture's project
+is personal, and only a team project's issues can join a sprint).
 
 `LAYOUT-008` added the three sprint pages and the new-issue form. All
 four were red on the run that added them.

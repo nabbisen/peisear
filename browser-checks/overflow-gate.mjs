@@ -196,7 +196,38 @@ async function createFixtures() {
   const issue2Location = issue2Res.headers.get('location');
   const issueId = issue2Location.split('/issues/')[1].split(/[/?]/)[0];
 
-  return { cookie: jar.header(), projectId, issueId, teamSlug, sprintId };
+  // `SPRINT-005` (`§10.27`): a **completed** sprint with a captured record.
+  // The sprint above stays planned -- its plan page is the one with the
+  // backlog and the drag controls -- so the completed-sprint form of the
+  // sprint detail page (the Reopen control, and `SPRINT-004`'s two headings)
+  // was reachable by nothing here, and the gate reported 90/90 about a
+  // different page. It goes through the real routes, so the record is the one
+  // `complete` captures: it is started, then completed (each with the lock
+  // value the page renders). It has no members -- the fixture's project is
+  // personal, and only a team project's issues can join a sprint -- so the
+  // page shows the record and the completed-sprint controls and headings, not
+  // an issue list.
+  const completedRes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints`, {
+    name: `${LONG_SPRINT_NAME} (completed)`,
+    goal: LONG_SPRINT_GOAL,
+    starts_on: '2026-08-01',
+    ends_on: '2026-08-14',
+  });
+  if (completedRes.status !== 303) throw new Error(`create completed sprint: expected 303, got ${completedRes.status}`);
+  const completedSprintId = completedRes.headers.get('location').split('/sprints/')[1].split(/[/?]/)[0];
+  for (const action of ['start', 'complete']) {
+    const page = await (await fetch(`${BASE}/teams/${teamSlug}/sprints/${completedSprintId}`, {
+      headers: { cookie: jar.header() },
+    })).text();
+    const stamp = page.match(/name="client_updated_at"\s+value="([^"]+)"/)?.[1];
+    if (!stamp) throw new Error(`no lock value on the sprint page before ${action}`);
+    const r = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints/${completedSprintId}/${action}`, {
+      client_updated_at: stamp,
+    });
+    if (r.status !== 303) throw new Error(`${action} sprint: expected 303, got ${r.status}`);
+  }
+
+  return { cookie: jar.header(), projectId, issueId, teamSlug, sprintId, completedSprintId };
 }
 
 async function main() {
@@ -223,7 +254,7 @@ async function main() {
     await waitForServer(`${BASE}/login`);
     log('server ready');
 
-    const { cookie, projectId, issueId, teamSlug, sprintId } = await createFixtures();
+    const { cookie, projectId, issueId, teamSlug, sprintId, completedSprintId } = await createFixtures();
     log(`fixtures created: project=${projectId} issue=${issueId}`);
 
     const pages = {
@@ -247,6 +278,8 @@ async function main() {
       sprints: `${BASE}/teams/${teamSlug}/sprints`,
       sprint_detail: `${BASE}/teams/${teamSlug}/sprints/${sprintId}`,
       sprint_plan: `${BASE}/teams/${teamSlug}/sprints/${sprintId}/plan`,
+      // `SPRINT-005`: the completed-sprint form of the detail page.
+      sprint_detail_completed: `${BASE}/teams/${teamSlug}/sprints/${completedSprintId}`,
       issue_new: `${BASE}/projects/${projectId}/issues/new`,
       issue_detail: `${BASE}/projects/${projectId}/issues/${issueId}`,
       settings: `${BASE}/settings`,

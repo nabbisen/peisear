@@ -328,6 +328,14 @@ async fn reopen_returns_the_sprint_to_active_and_makes_it_live_again() {
 
     let resp = w.reopen(&sprint).await;
     resp.assert_status(StatusCode::SEE_OTHER);
+    // success flashes, as `start` and `complete` do
+    let loc = resp.header("location").to_str().unwrap().to_string();
+    let (_, query) = loc.split_once('?').expect("a flash query");
+    let q: std::collections::HashMap<String, String> = serde_urlencoded::from_str(query).unwrap();
+    assert_eq!(
+        q.get("flash").cloned().unwrap_or_default(),
+        peisear_i18n::Locale::English.render(MessageKey::SprintReopenedFlash)
+    );
 
     assert_eq!(w.status_of(&sprint).await, ("active".to_string(), None));
     assert_eq!(

@@ -395,6 +395,7 @@ async fn capture_record(
     let (committed_points, completed_points, committed_count, completed_count) =
         live_totals(tx, sprint_id).await?;
     let points = burndown_live(tx, &sprint).await?;
+    let (contributor_count, unassigned) = live_contributor_basis(tx, sprint_id).await?;
 
     // A stale record cannot be here (`reopen` deletes it), but replacing is
     // the right answer if one were: the record is what the sprint reports *now*.
@@ -405,8 +406,9 @@ async fn capture_record(
     sqlx::query(
         r#"
         INSERT OR REPLACE INTO sprint_records
-            (sprint_id, committed_points, completed_points, committed_count, completed_count)
-        VALUES (?1, ?2, ?3, ?4, ?5)
+            (sprint_id, committed_points, completed_points, committed_count, completed_count,
+             contributor_count, had_unassigned_contributor)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
         "#,
     )
     .bind(sprint_id)
@@ -414,6 +416,8 @@ async fn capture_record(
     .bind(completed_points)
     .bind(committed_count)
     .bind(completed_count)
+    .bind(contributor_count)
+    .bind(i64::from(unassigned > 0))
     .execute(&mut **tx)
     .await?;
     for p in points {
@@ -1000,31 +1004,42 @@ async fn burndown_live(
     Ok(points)
 }
 
-/// Distinct people who **completed** at least one issue across the
-/// given sprints — `QA-017` (`NFR-PRIV-007`). Contributor is scoped to
-/// completed work, not sprint membership: a sprint where Alice
-/// completed everything and Bob holds one still-open issue is still a
-/// sprint whose completion trajectory is Alice's alone, and counting
-/// Bob would let his uninvolved presence launder a disclosure that is
-/// still entirely about Alice.
+/// The contributor floor's input for the given sprints — `QA-017`
+/// (`NFR-PRIV-007`): the **largest number of distinct people who completed
+/// at least one issue in any single one of them**, or `None` when that is
+/// unknown. Contributor is scoped to completed work, not sprint membership: a
+/// sprint where Alice completed everything and Bob holds one still-open issue
+/// is a sprint whose completion trajectory is Alice's alone, and counting Bob
+/// would let his uninvolved presence launder a disclosure that is still
+/// entirely about Alice.
 ///
-/// Takes a **slice** of sprint ids, not one — the burndown's predicate
-/// is over a single sprint, but the velocity chart's median spans up
-/// to [`peisear_core::sprints::VELOCITY_MEDIAN_WINDOW`] sprints and the
-/// predicate there is distinct contributors *across the whole window*,
-/// not per sprint (five solo sprints by the same person is still one
-/// person; by five different people it is a real aggregate). One
-/// function, one query shape, serves both by taking however many ids
-/// the caller has.
+/// **Each sprint is read from the basis it had when it completed**
+/// (`SPRINT-005`, `DEC-054`). A `completed` sprint displays its captured
+/// record, and whether that record is reversible to one person is a property
+/// of who contributed to it, fixed at completion; asking about *now* let work
+/// finished afterwards open a trajectory that was hidden, and carrying a done
+/// issue out hide one that was shown. Sprints that are not completed compute
+/// their basis live.
+///
+/// Takes a **slice**, not one id — the burndown's predicate is over a single
+/// sprint, but the velocity chart's median spans up to
+/// [`peisear_core::sprints::VELOCITY_MEDIAN_WINDOW`] sprints. **The set passes
+/// only if at least one sprint clears the floor on its own** (the maximum of
+/// the per-sprint counts), which is deliberately stricter than the old union
+/// across the window: several sprints each the output of a *different single*
+/// person made a union of several people, yet each sprint's number is one
+/// person's output, so the aggregate was reversible per sprint. Five solo
+/// sprints by the same person still fail, as before.
 ///
 /// Returns `Ok(None)` when the true count is **unknown** rather than
-/// computing a possibly-wrong number: if any completed issue in scope
-/// has no assignee, that issue's real contributor could be the same
-/// person as every other completed issue, or someone new — there is no
-/// way to tell from this data. The safe direction for a privacy
-/// predicate is to treat "unknown" the same as "fewer than two";
-/// callers do that by treating `None` as not-enough-to-show, same as
-/// `Some(0)` or `Some(1)`.
+/// computing a possibly-wrong number: if any completed issue in any of the
+/// sprints has no assignee, that issue's real contributor could be the same
+/// person as every other completed issue, or someone new — there is no way to
+/// tell from this data. The safe direction for a privacy predicate is to treat
+/// "unknown" the same as "fewer than two"; callers do that by treating `None`
+/// as not-enough-to-show, same as `Some(0)` or `Some(1)`. A completed sprint
+/// with no record is a fault ([`StorageError::InvalidData`]), as for
+/// [`summary`].
 pub async fn distinct_contributors(
     pool: &Pool,
     sprint_ids: &[String],
@@ -1033,13 +1048,50 @@ pub async fn distinct_contributors(
         return Ok(Some(0));
     }
 
-    let placeholders = sprint_ids
-        .iter()
-        .enumerate()
-        .map(|(i, _)| format!("?{}", i + 1))
-        .collect::<Vec<_>>()
-        .join(", ");
-    let query = format!(
+    // Each sprint's own basis: `(distinct assignees of done issues, whether any
+    // done issue had none)`. A completed sprint reads the basis captured with
+    // its record; any other sprint computes it live.
+    let mut best = 0_i64;
+    for id in sprint_ids {
+        let Some(sprint) = find_by_id(pool, id).await? else {
+            continue;
+        };
+        let (known, unassigned) = match sprint.status {
+            SprintStatus::Completed => {
+                let row: Option<(i64, i64)> = sqlx::query_as(
+                    r#"
+                    SELECT contributor_count, had_unassigned_contributor
+                    FROM sprint_records
+                    WHERE sprint_id = ?1
+                    "#,
+                )
+                .bind(id)
+                .fetch_optional(pool)
+                .await?;
+                row.ok_or_else(|| missing_record(id))?
+            }
+            _ => {
+                let mut conn = pool.acquire().await?;
+                live_contributor_basis(&mut conn, id).await?
+            }
+        };
+        if unassigned > 0 {
+            return Ok(None);
+        }
+        best = best.max(known);
+    }
+    Ok(Some(best))
+}
+
+/// A sprint's contributor basis computed from current membership and status:
+/// `(COUNT(DISTINCT assignee_id) over done issues, number of done issues with no
+/// assignee)`. Used live for sprints that are not completed, and once by
+/// `complete` to write the captured basis.
+async fn live_contributor_basis(
+    conn: &mut sqlx::SqliteConnection,
+    sprint_id: &str,
+) -> StorageResult<(i64, i64)> {
+    let row: (i64, i64) = sqlx::query_as(
         r#"
         SELECT
             COUNT(DISTINCT i.assignee_id) AS known,
@@ -1047,20 +1099,14 @@ pub async fn distinct_contributors(
                 AS unassigned
         FROM sprint_issues si
         JOIN issues i ON i.id = si.issue_id
-        WHERE si.sprint_id IN ({placeholders})
+        WHERE si.sprint_id = ?1
           AND i.status = 'done'
-        "#
-    );
-    let mut q = sqlx::query_as::<_, (i64, i64)>(&query);
-    for id in sprint_ids {
-        q = q.bind(id);
-    }
-    let (known, unassigned) = q.fetch_one(pool).await?;
-
-    if unassigned > 0 {
-        return Ok(None);
-    }
-    Ok(Some(known))
+        "#,
+    )
+    .bind(sprint_id)
+    .fetch_one(conn)
+    .await?;
+    Ok(row)
 }
 
 /// Recently completed sprints' summaries for the velocity

@@ -455,6 +455,7 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::SprintUpdatedFlash => "[fx-sprint-updated]".to_string(),
         MessageKey::SprintStartedFlash => "[fx-sprint-started]".to_string(),
         MessageKey::SprintCompletedFlash => "[fx-sprint-completed]".to_string(),
+        MessageKey::SprintReopenedFlash => "[fx-sprint-reopened]".to_string(),
         MessageKey::SprintDeletedFlash => "[fx-sprint-deleted]".to_string(),
         MessageKey::SprintAssignmentSavedFlash => "[fx-sprint-assignment-saved]".to_string(),
         MessageKey::TeamCreatedFlash => "[fx-team-created]".to_string(),

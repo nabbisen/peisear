@@ -613,6 +613,7 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::SprintUpdatedFlash => "Sprint updated".to_string(),
         MessageKey::SprintStartedFlash => "Sprint started".to_string(),
         MessageKey::SprintCompletedFlash => "Sprint completed".to_string(),
+        MessageKey::SprintReopenedFlash => "Sprint reopened".to_string(),
         MessageKey::SprintDeletedFlash => "Sprint deleted".to_string(),
         MessageKey::SprintAssignmentSavedFlash => "Sprint assignment saved".to_string(),
         MessageKey::TeamCreatedFlash => "Team created".to_string(),

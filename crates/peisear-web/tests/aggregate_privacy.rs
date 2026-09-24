@@ -321,3 +321,257 @@ async fn viewer_role_sees_the_same_behaviour_as_member() {
         "a viewer must see the burndown for a two-contributor sprint, same as a member"
     );
 }
+
+// ─────────────────────────────────────────────────────────────
+// SPRINT-005 (`DEC-054`, RFC 0013) -- the gate reads the record's basis
+// ─────────────────────────────────────────────────────────────
+//
+// After `SPRINT-004` a completed sprint *displays* the record captured at
+// completion, but `distinct_contributors` still asked about *now*: live
+// membership, live status. Whether the captured trajectory is reversible to
+// one person is a property of who contributed to it, and that was fixed at
+// completion. Work finished afterwards could therefore raise the count and
+// open a trajectory nobody decided to disclose -- the disclosure
+// `NFR-PRIV-007` exists to prevent, arriving by itself.
+
+/// A non-`done` issue assigned to `assignee_id`, linked to `sprint_id`.
+async fn insert_open_issue_for(
+    app: &TestApp,
+    project_id: &str,
+    author_id: &str,
+    sprint_id: &str,
+    assignee_id: &str,
+    title: &str,
+) -> String {
+    let id = uuid::Uuid::new_v4().to_string();
+    peisear_storage::issues::insert(
+        &app.db,
+        &id,
+        project_id,
+        author_id,
+        IssueFields {
+            title,
+            description: "Test issue body.",
+            status: IssueStatus::Open,
+            priority: Priority::Medium,
+            effort: Some(2),
+            assignee_id: Some(assignee_id),
+            planned_start_at: None,
+            planned_end_at: None,
+        },
+    )
+    .await
+    .expect("insert open issue");
+    peisear_storage::sprints::add_issue(&app.db, sprint_id, &id)
+        .await
+        .expect("add issue to sprint");
+    id
+}
+
+async fn sprint_page(app: &TestApp, sprint_id: &str) -> String {
+    let resp = app
+        .server
+        .get(&format!("/teams/engineering/sprints/{sprint_id}"))
+        .await;
+    resp.assert_status(StatusCode::OK);
+    resp.text()
+}
+
+/// **The disclosure, demonstrated.** A sprint completes with **one**
+/// contributor among its done issues -- trajectory correctly hidden. Another
+/// member's issue, left in it, is finished afterwards. The captured record
+/// did not change and neither may the gate: the trajectory stays hidden.
+#[tokio::test]
+async fn finishing_work_after_completion_cannot_open_a_hidden_trajectory() {
+    let (app, _team, project_id, sprint_id, alice_id, bob_id) = team_with_active_sprint().await;
+    insert_done_issue(&app, &project_id, &alice_id, &sprint_id, &alice_id, "A").await;
+    let bobs = insert_open_issue_for(&app, &project_id, &alice_id, &sprint_id, &bob_id, "B").await;
+    peisear_storage::sprints::complete(&app.db, &sprint_id)
+        .await
+        .expect("complete");
+
+    assert!(
+        !sprint_page(&app, &sprint_id).await.contains("cumulative"),
+        "one contributor at completion: the trajectory is hidden"
+    );
+
+    sqlx::query("UPDATE issues SET status = 'done' WHERE id = ?1")
+        .bind(&bobs)
+        .execute(&app.db)
+        .await
+        .expect("finish Bob's issue in place");
+
+    assert!(
+        !sprint_page(&app, &sprint_id).await.contains("cumulative"),
+        "work finished after completion must not open a trajectory that was hidden \
+         at completion"
+    );
+}
+
+/// The reverse still works: a sprint completed with two contributors keeps
+/// its trajectory when work is carried out of it afterwards.
+#[tokio::test]
+async fn a_sprint_completed_with_two_contributors_keeps_its_trajectory_when_work_leaves() {
+    let (app, _team, project_id, sprint_id, alice_id, bob_id) = team_with_active_sprint().await;
+    insert_done_issue(&app, &project_id, &alice_id, &sprint_id, &alice_id, "A").await;
+    insert_done_issue(&app, &project_id, &alice_id, &sprint_id, &bob_id, "B").await;
+    peisear_storage::sprints::complete(&app.db, &sprint_id)
+        .await
+        .expect("complete");
+    assert!(sprint_page(&app, &sprint_id).await.contains("cumulative"));
+
+    sqlx::query(
+        "DELETE FROM sprint_issues WHERE issue_id = (SELECT id FROM issues WHERE title = 'B')",
+    )
+    .execute(&app.db)
+    .await
+    .expect("carry Bob's issue out");
+
+    assert!(
+        sprint_page(&app, &sprint_id).await.contains("cumulative"),
+        "two contributors at completion: carrying work out later must not hide the \
+         captured trajectory"
+    );
+}
+
+/// Reopen re-derives the gate from live data; completing recaptures the basis.
+#[tokio::test]
+async fn reopen_makes_the_gate_live_again_and_completing_recaptures_the_basis() {
+    let (app, _team, project_id, sprint_id, alice_id, bob_id) = team_with_active_sprint().await;
+    insert_done_issue(&app, &project_id, &alice_id, &sprint_id, &alice_id, "A").await;
+    let bobs = insert_open_issue_for(&app, &project_id, &alice_id, &sprint_id, &bob_id, "B").await;
+    let basis = |app: &TestApp, sprint: String| {
+        let db = app.db.clone();
+        async move {
+            sqlx::query_as::<_, (i64, i64)>(
+                "SELECT contributor_count, had_unassigned_contributor FROM sprint_records WHERE sprint_id = ?1",
+            )
+            .bind(sprint)
+            .fetch_one(&db)
+            .await
+            .expect("record basis")
+        }
+    };
+
+    peisear_storage::sprints::complete(&app.db, &sprint_id)
+        .await
+        .unwrap();
+    assert_eq!(basis(&app, sprint_id.clone()).await, (1, 0));
+
+    peisear_storage::sprints::reopen(&app.db, &sprint_id)
+        .await
+        .unwrap();
+    assert!(
+        !sprint_page(&app, &sprint_id).await.contains("cumulative"),
+        "live: one contributor"
+    );
+    sqlx::query("UPDATE issues SET status = 'done' WHERE id = ?1")
+        .bind(&bobs)
+        .execute(&app.db)
+        .await
+        .unwrap();
+    assert!(
+        sprint_page(&app, &sprint_id).await.contains("cumulative"),
+        "reopened, the gate is live again: two contributors now"
+    );
+
+    peisear_storage::sprints::complete(&app.db, &sprint_id)
+        .await
+        .unwrap();
+    assert_eq!(basis(&app, sprint_id.clone()).await, (2, 0), "recaptured");
+    assert!(sprint_page(&app, &sprint_id).await.contains("cumulative"));
+}
+
+/// `had_unassigned_contributor` suppresses as the live `unassigned > 0`
+/// does: a completed issue with no assignee could be anyone's.
+#[tokio::test]
+async fn an_unassigned_completed_issue_suppresses_the_captured_trajectory() {
+    let (app, _team, project_id, sprint_id, alice_id, bob_id) = team_with_active_sprint().await;
+    insert_done_issue(&app, &project_id, &alice_id, &sprint_id, &alice_id, "A").await;
+    insert_done_issue(&app, &project_id, &alice_id, &sprint_id, &bob_id, "B").await;
+    insert_unassigned_done_issue(&app, &project_id, &alice_id, &sprint_id, "C").await;
+    peisear_storage::sprints::complete(&app.db, &sprint_id)
+        .await
+        .unwrap();
+
+    let flag: i64 = sqlx::query_scalar(
+        "SELECT had_unassigned_contributor FROM sprint_records WHERE sprint_id = ?1",
+    )
+    .bind(&sprint_id)
+    .fetch_one(&app.db)
+    .await
+    .unwrap();
+    assert_eq!(flag, 1);
+    assert!(
+        !sprint_page(&app, &sprint_id).await.contains("cumulative"),
+        "two known contributors and one unknown: suppressed"
+    );
+}
+
+/// Complete `n` sprints, sprint `i` having exactly the contributors
+/// `by[i]` (each a user id), and return the velocity page body.
+async fn velocity_page_for(by: &[&[&str]]) -> (TestApp, String) {
+    let app = TestApp::spawn().await;
+    let alice = TestUser::new("alice");
+    let alice_id = register_and_login(&app, &alice).await;
+    let team_id = create_team_with_admin(&app.db, &alice_id, "Engineering").await;
+    let project_id = create_team_project(&app.db, &alice_id, &team_id, "Project").await;
+    // three more people, registered through the real flow, addressed by name
+    let mut people = std::collections::HashMap::new();
+    people.insert("alice", alice_id.clone());
+    for name in ["bob", "carol", "dave"] {
+        let u = TestUser::new(name);
+        let id = common::auth::register(&app, &u).await;
+        people.insert(name, id);
+    }
+    common::auth::login(&app, &alice).await;
+    for (i, contributors) in by.iter().enumerate() {
+        let sprint_id = create_planned_sprint(&app.db, &team_id, &format!("Sprint {i}")).await;
+        peisear_storage::sprints::start(&app.db, &sprint_id)
+            .await
+            .unwrap();
+        for who in *contributors {
+            insert_done_issue(
+                &app,
+                &project_id,
+                &alice_id,
+                &sprint_id,
+                &people[who],
+                "work",
+            )
+            .await;
+        }
+        peisear_storage::sprints::complete(&app.db, &sprint_id)
+            .await
+            .unwrap();
+    }
+    let body = app.server.get("/teams/engineering/sprints").await.text();
+    (app, body)
+}
+
+/// **Velocity.** Three completed sprints, each the output of a *single*,
+/// different person. The live union is three people, so today's gate showed
+/// the median line -- but each sprint's number is one person's output, so
+/// the aggregate is reversible per sprint. The conservative reading (the set
+/// passes only if one sprint clears the floor on its own) suppresses it.
+/// In this fixture **three sprints** change visibility.
+#[tokio::test]
+async fn velocity_is_suppressed_when_no_single_sprint_clears_the_floor() {
+    let (_app, body) = velocity_page_for(&[&["alice"], &["bob"], &["carol"]]).await;
+    assert!(body.contains("<rect"), "the bars are unaffected: {body}");
+    assert!(
+        !body.contains("stroke-dasharray"),
+        "three sprints, one contributor each, is not an aggregate: the median line \
+         must be suppressed"
+    );
+}
+
+/// And the median still shows when one sprint clears the floor on its own.
+#[tokio::test]
+async fn velocity_is_shown_when_one_sprint_clears_the_floor_on_its_own() {
+    let (_app, body) = velocity_page_for(&[&["alice"], &["alice", "bob"], &["carol"]]).await;
+    assert!(
+        body.contains("stroke-dasharray"),
+        "one sprint has two contributors on its own: the median line shows"
+    );
+}

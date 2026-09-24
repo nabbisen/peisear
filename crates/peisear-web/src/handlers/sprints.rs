@@ -468,7 +468,12 @@ pub async fn reopen(
             ))
         }
         Ok(peisear_storage::Guarded::Written(())) => {
-            Ok(Redirect::to(&format!("/teams/{slug}/sprints/{sprint_id}")))
+            let flash = super::percent_encode_query(
+                &Locale::English.render(MessageKey::SprintReopenedFlash),
+            );
+            Ok(Redirect::to(&format!(
+                "/teams/{slug}/sprints/{sprint_id}?flash={flash}"
+            )))
         }
         Err(peisear_storage::StorageError::Conflict(msg)) => {
             let encoded = super::percent_encode_query(&t(msg));
