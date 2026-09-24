@@ -2,11 +2,11 @@
 
 **Document type**: External design (basic design)
 **Document status**: Baseline
-**Covers release**: `0.38.0` (implementation through `0.38.0`)
+**Covers release**: `0.39.0` (implementation through `0.39.0`)
 **Supersedes**: [`history/peisear-0.19.1-external-design-en.md`](./history/peisear-0.19.1-external-design-en.md),
 retained unedited as the record of that release
 **Language**: English (normative)
-**Prepared**: 2026-07-27 · **Amended**: 2026-09-24 (0.38.0)
+**Prepared**: 2026-07-27 · **Amended**: 2026-09-25 (0.39.0)
 **Location**: `docs/specification/external-design.md`. **Normative**, English
 only, placed 2026-09-24 (`DEC-020`, closed). See
 [the directory README](./README.md) for how its citations resolve
@@ -1203,6 +1203,19 @@ invite and role controls for admins) · team projects · sprints link ·
 
 **Purpose.** Show one sprint's scope, progress, and lifecycle controls.
 
+**Lifecycle controls.** `planned` → **Start**; `active` → **Complete**;
+`completed` → **Reopen sprint** (0.39.0, `DEC-053`), beside Delete. All three
+are plain forms carrying the sprint's lock value, administrator only, and
+**none has a confirmation interstitial** — each is reversible by its
+counterpart, which is `RFC 010`'s rule rather than an exception to it.
+
+**A completed sprint's two halves are labelled** (0.39.0, `DEC-054`):
+*Summary at completion* over the captured figures, *Issues in this sprint now*
+over the live list. **They disagree by design** — an issue carried out of a
+completed sprint leaves the list while the captured figures still count it —
+and the headings exist so that reads as two statements rather than as a
+contradiction. Neither heading appears on a sprint that is not completed.
+
 **Sections.** Header (name, lifecycle badge, admin actions) · summary
 (committed, completed, in flight, carried over) · burndown · issue
 list.
@@ -2256,7 +2269,8 @@ entries about what is executed by nothing.
 | Version | Change |
 |---|---|
 | GUI v0.1 | Original GUI external specification, based on `0.16.0` |
-| **0.38.0 (this baseline)** | **Six surfaces change the order in which they present their items, and none of them changes what it contains.** The issue list no longer leads with Done issues — it is newest first; each board column reads newest first where it read oldest first; the sprint-plan backlog reads urgent, high, medium, low, where `high` sorted **last, below low**; a sprint's issues read Open, In progress, Done, where Done led; lists of items created in the same second read newest first instead of backwards; and `sort=priority`'s tie order follows the new storage order. **`§17.9` opens and closes in the same release**: this document stated the *contents* of every list and the *order* of none, which is why four wrong orderings were invisible to anyone checking the implementation against it. §6's list-bearing screens now carry an order line. **No screen, route, status code or copy string changed**, and the one behaviour change that is not presentation is the capacity overlap check, which now refuses concurrent overlapping saves rather than storing both |
+| **0.39.0 (this baseline)** | **`SCR-20` gains a third lifecycle control and two headings.** A completed sprint's page offers **Reopen sprint** beside Delete — a plain form, no interstitial, because it is reversible — and labels its two halves: *Summary at completion* over figures that no longer move, and *Issues in this sprint now* over a list that still can. **The pair exists because the two disagree by design**: an issue carried out of a completed sprint leaves the list while the captured figures still count it, and a page showing both without saying which is which would read as a contradiction. **One surface shows less**: the velocity median on `SCR-19` is suppressed unless a single sprint in the window had two contributors, where the union of contributors used to decide it. **No route is removed**; `POST …/sprints/{id}/reopen` is added. The overflow gate reaches **nineteen** pages, a completed sprint's detail page having been added rather than swapped for the planned one, whose plan page carries the backlog and its drag controls |
+| 0.38.0 | **Six surfaces change the order in which they present their items, and none of them changes what it contains.** The issue list no longer leads with Done issues — it is newest first; each board column reads newest first where it read oldest first; the sprint-plan backlog reads urgent, high, medium, low, where `high` sorted **last, below low**; a sprint's issues read Open, In progress, Done, where Done led; lists of items created in the same second read newest first instead of backwards; and `sort=priority`'s tie order follows the new storage order. **`§17.9` opens and closes in the same release**: this document stated the *contents* of every list and the *order* of none, which is why four wrong orderings were invisible to anyone checking the implementation against it. §6's list-bearing screens now carry an order line. **No screen, route, status code or copy string changed**, and the one behaviour change that is not presentation is the capacity overlap check, which now refuses concurrent overlapping saves rather than storing both |
 | 0.37.0 | No externally observable behaviour changed. The status table's cross-user rows, split at 0.36.0 into *named by a user id* (403) and *named by a resource id* (404), are now **asserted** rather than only measured: three tests make the cross-user attempt on the capacity-row mutations and one covers the unauthenticated case for two more endpoints |
 | 0.36.0 | **`SCR-27`/`SCR-28`'s day view gains a drag to reschedule** — one action, one view: the day view is the only one whose vertical axis is time, so a drag distance means a duration. The block's markup becomes a wrapper carrying identity and position around the same `<a>`, which keeps its `href` and its `bg-primary/15` — the latter because that class is the key `touch_target_scan` uses to recognise `DEC-050`'s duration-proportional exclusion. **No new interactive element**, so the exclusion is not extended. A reschedule can conflict, and the page reloads showing the current state rather than overwriting the other writer's change |
 | 0.35.0 | **`SCR-26`'s obligation line changes for the first time since 0.22.0**: button-driven moves *and* drag, rather than "not drag", now that `FR-PLAN-002`'s deferred half has shipped. The screen's responsive row — *"columns stack; move actions remain, drag does not"* — was written before the drag existed and is **correct as written**, which is worth recording: it anticipated the touch limit that RFC 0004 has now made a cross-cutting requirement. Nothing else about the screen's externally observable behaviour changed: the same two endpoints, the same permissions, the same filters in the URL |
