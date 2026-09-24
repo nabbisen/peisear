@@ -793,12 +793,36 @@ screen. *Status*: Implemented (untested). *Priority*: P1.
 
 **FR-SPR-001 — Sprint lifecycle**
 A sprint MUST progress through `planned` → `active` → `completed`, with
-each transition triggered by an explicit administrator action.
-*Source*: `SPEC §9.1`, `SPEC §17.3`. *Status*: Implemented. *Priority*: P1.
+each transition triggered by an explicit administrator action. **A completed
+sprint MAY be returned to `active` by an explicit administrator action
+(*reopen*)**; no other backward transition exists.
+*Source*: `SPEC §9.1`, `SPEC §17.3`. *Status*: Implemented; **reopen added at
+0.39.0** (`DEC-053`). *Priority*: P1.
+*Amendment (0.39.0, `DEC-053`) — why a backward transition exists at all.*
+`SPRINT-001` and `SPRINT-002` close `FR-SPR-004` in all three directions, and
+closing it fully means a sprint completed **by mistake** can never be
+corrected: its figures are wrong and frozen. The owner accepted reopen as the
+answer rather than leaving a completed sprint's membership editable. The
+distinction the decision rests on: **a correction becomes a deliberate,
+visible state change someone performed, instead of a silent edit to a finished
+record.** Reopen therefore does not weaken `FR-SPR-004` — it is what makes
+enforcing it tolerable. `FR-SPR-002` binds it: a reopen is refused while the
+team has another active sprint, on the same rule and the same atomicity as
+`start`.
 
 **FR-SPR-002 — One active sprint per team**
 A team MUST have at most one active sprint at a time.
-*Source*: `GUI §5`. *Status*: Implemented (untested). *Priority*: P2.
+*Source*: `GUI §5`. *Status*: **Met** — enforced atomically and tested since
+0.39.0 (`RACE-001`). *Priority*: P2.
+*Correction (0.39.0)*: this read `Implemented (untested)`, and the second word
+was doing more work than it could carry. The rule was enforced by a read on
+one connection followed by a write on another, with no transaction between
+them, so **twelve simultaneous starts left six active sprints** — measured, not
+inferred. `RACE-001` put the check and the write under one `BEGIN IMMEDIATE`;
+`race_guards` now covers both the concurrent case and the sequential refusal
+naming the active sprint. **`untested` was the accurate half of the old
+status**, and an untested P2 invariant held for four months by a check that
+did not hold it is the argument for `§10.17`'s entry.
 
 **FR-SPR-003 — Carry-over is factual, not failure**
 Work not completed within a sprint MUST be described neutrally
@@ -807,11 +831,31 @@ Work not completed within a sprint MUST be described neutrally
 *Priority*: P1.
 
 **FR-SPR-004 — Completed sprints are immutable**
-A completed sprint's issue membership MUST NOT be editable.
+A completed sprint's issue membership MUST NOT be editable **while it is
+completed**. It may be made editable only by `FR-SPR-001`'s explicit reopen,
+which returns the sprint to `active` and is visible as such.
 *Rationale*: editing a completed sprint rewrites history and corrupts
 trend data.
-*Source*: derived; RFC 0001 requirement 8. *Status*: Specified
-(the planning screen enforcing this is unbuilt). *Priority*: P2.
+*Source*: derived; RFC 0001 requirement 8. *Status*: **Met at 0.39.0**
+(`SPRINT-001`, `SPRINT-002`). *Priority*: P2.
+*Correction (0.39.0) — the old status named the wrong gap.* It read
+*"Specified (the planning screen enforcing this is unbuilt)"*, which located
+the omission in one unbuilt screen. **Three shipped routes violated it**, none
+of them that screen: the issue form's unassign branch, `plan_remove`, and
+`add_issue`'s upsert, which moves a membership and so removes it from whatever
+sprint held it. Measured on the shipped product, a completed sprint recording
+`committed 15 / completed 8 / 3 issues` read `0 / 0 / 0` after three ordinary
+unassigns, and `12 / 2` after one issue was assigned elsewhere. **A requirement
+whose status blames an unbuilt screen is not read as describing routes that
+exist** — the same failure `FR-DM-001` recorded twice, in a second
+requirement. The status now names what was checked rather than what was
+missing.
+*Sequencing note*: `SPRINT-001` closed two of the three routes and the third
+stayed open for one handoff, during which a user was told *"Cannot remove
+issues from a completed sprint"* by one control while another did exactly
+that. **A protection that can be walked around is worse than none**, because
+the message asserts a guarantee the product does not keep; `SPRINT-002` is
+scheduled in the same release for that reason.
 
 ### 4.8 Sprint planning screen — `FR-PLAN`
 
