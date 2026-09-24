@@ -1510,6 +1510,22 @@ exists.
 *Source*: `SPEC Appendix E.2`. *Status*: Implemented. *Priority*: P0.
 
 **NFR-PRIV-007 — Aggregates must not be reversible to individuals**
+*Amendment (0.39.0, `SPRINT-005`) — the floor is evaluated per sprint, on the
+basis captured at completion.* Two changes, both narrowing what is shown.
+**(a)** A completed sprint's trajectory is gated on the contributors it had
+**when it completed**, captured with its record (`DEC-054`), not on current
+membership and status. Before this, work done after completion could raise the
+count and **begin disclosing a per-person trajectory that had been correctly
+hidden** — the disclosure this requirement exists to prevent, arriving with
+nobody deciding it; and work leaving could hide a trajectory that was
+legitimately shown. **(b)** An aggregate over several sprints passes only if
+**at least one of them clears the floor on its own**, rather than on the union
+of their contributors. The union reading showed a median across sprints that
+were each one person's output, which is reversible per sprint; measured on a
+realistic fixture, one team's three-sprint median line is now suppressed and
+nothing else changed. Contributor **identities are deliberately not stored** —
+the captured basis is a count and an unassigned flag, and the two-contributor
+floor stays in code where policy can change.
 Aggregate displays MUST NOT permit reconstruction of individual personal
 data. Where a team is small enough that an aggregate resolves to one
 person, the aggregate SHOULD be suppressed.
@@ -2674,7 +2690,7 @@ to this table.
 
 **Across 0.33.0 it grew by one while nine layout defects were fixed**, and that
 is also the point. `LAYOUT-003` through `LAYOUT-007` added no tests, because the
-layout is now observed by `BROWSER-001`'s gate — eighteen pages at five widths,
+layout is now observed by `BROWSER-001`'s gate — **nineteen** pages at five widths,
 one assertion, a CI job outside this inventory by design (external design
 `§17.8`). A `cargo test` that reads markup cannot see what those fixes changed;
 the gate can, and was watched go red on each of them.
@@ -4003,7 +4019,11 @@ this entry came from:
 
 **What the gate sees is exactly its fixture and its page list.** The fixture now
 carries a 64-character unbroken run in the issue title, project name, team name
-display name, sprint name and sprint goal; the list is eighteen pages.
+display name, sprint name and sprint goal; the list is **nineteen** pages
+(eighteen until 0.39.0, when `SPRINT-005` added a completed sprint's detail
+page so the gate could reach the reopen control and the two record headings —
+a page added, not swapped, since the planned sprint's plan page carries the
+backlog and its drag controls).
 
 **`overflow-wrap: anywhere` was tested as a single universal remedy and
 rejected** (`LAYOUT-007-review.md` §4): with every existing remedy stripped it
