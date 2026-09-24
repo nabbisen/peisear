@@ -29,7 +29,7 @@ use axum::{
 };
 use peisear_core::teams::{TeamRole, slugify};
 use peisear_i18n::{Locale, MessageKey};
-use peisear_storage::{notifications as notif_store, projects, teams, users};
+use peisear_storage::{StorageError, notifications as notif_store, projects, teams, users};
 use serde::Deserialize;
 
 use crate::{AppError, AppResult, AppState, components, components::t, extractors::AuthUser};
@@ -292,21 +292,16 @@ pub async fn update_member_role(
     let new_role = TeamRole::from_storage_str(form.role.trim())
         .ok_or_else(|| AppError::Validation(t(MessageKey::InvalidRoleMessage)))?;
 
-    // Refuse to demote the last admin.
-    if !matches!(new_role, TeamRole::Admin) {
-        let current = teams::role_for(&state.db, &team.id, &target_user_id).await?;
-        if matches!(current, Some(TeamRole::Admin)) {
-            let admins = teams::admin_count(&state.db, &team.id).await?;
-            if admins <= 1 {
-                let encoded = super::percent_encode_query(
-                    &Locale::English.render(MessageKey::LastAdminDemotionError),
-                );
-                return Ok(Redirect::to(&format!("/teams/{slug}?error={encoded}")));
-            }
+    // The last-admin refusal lives in `teams::update_role`, atomically
+    // with the write (`RACE-001`); a check made here would be the race.
+    match teams::update_role(&state.db, &team.id, &target_user_id, new_role).await {
+        Ok(()) => {}
+        Err(StorageError::Conflict(key)) => {
+            let encoded = super::percent_encode_query(&Locale::English.render(key));
+            return Ok(Redirect::to(&format!("/teams/{slug}?error={encoded}")));
         }
+        Err(e) => return Err(e.into()),
     }
-
-    teams::update_role(&state.db, &team.id, &target_user_id, new_role).await?;
     let flash = super::percent_encode_query(&Locale::English.render(MessageKey::RoleUpdatedFlash));
     Ok(Redirect::to(&format!("/teams/{slug}?flash={flash}")))
 }
@@ -333,18 +328,16 @@ pub async fn remove_member(
         return Err(AppError::Forbidden);
     }
 
-    let target_role = teams::role_for(&state.db, &team.id, &target_user_id).await?;
-    if matches!(target_role, Some(TeamRole::Admin)) {
-        let admins = teams::admin_count(&state.db, &team.id).await?;
-        if admins <= 1 {
-            let encoded = super::percent_encode_query(
-                &Locale::English.render(MessageKey::LastAdminRemovalError),
-            );
+    // The last-admin refusal lives in `teams::remove_member`, atomically
+    // with the write (`RACE-001`); a check made here would be the race.
+    match teams::remove_member(&state.db, &team.id, &target_user_id).await {
+        Ok(()) => {}
+        Err(StorageError::Conflict(key)) => {
+            let encoded = super::percent_encode_query(&Locale::English.render(key));
             return Ok(Redirect::to(&format!("/teams/{slug}?error={encoded}")));
         }
+        Err(e) => return Err(e.into()),
     }
-
-    teams::remove_member(&state.db, &team.id, &target_user_id).await?;
 
     if is_self_removal {
         let flash =

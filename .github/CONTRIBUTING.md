@@ -79,7 +79,7 @@ for t in aggregate_privacy assignee_candidates auth_boundary basis_route \
          board_card_lock_value board_keyboard breadcrumb calendar calendar_surfaces \
          capacity_atomicity chart_equivalence \
          confirmation health_explainability inbox_refinements issue_edit_url \
-         optimistic_lock ordering response_outcomes search smoke sprint_plan status_control \
+         optimistic_lock ordering race_guards response_outcomes search smoke sprint_plan status_control \
          status_segment sub_issues today_panel touch_target updated_at_authority \
          view_state workload_privacy; do
   cargo test -p peisear-web --test "$t" -- --test-threads=1

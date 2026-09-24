@@ -177,11 +177,14 @@ pub async fn members_of_team(
 
 /// Look up a single membership row. None if the user is not a
 /// member of this team. Used by access-control helpers.
-pub async fn role_for(
-    pool: &Pool,
+pub async fn role_for<'e, E>(
+    executor: E,
     team_id: &str,
     user_id: &str,
-) -> StorageResult<Option<TeamRole>> {
+) -> StorageResult<Option<TeamRole>>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+{
     let row: Option<(String,)> = sqlx::query_as(
         r#"
         SELECT role FROM team_memberships
@@ -190,7 +193,7 @@ pub async fn role_for(
     )
     .bind(team_id)
     .bind(user_id)
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await?;
     Ok(row.and_then(|(s,)| TeamRole::from_storage_str(&s)))
 }
@@ -340,12 +343,35 @@ pub async fn add_member(
 
 /// Update an existing member's role. Errors with `NotFound` if
 /// the user is not currently a member.
+///
+/// **A team must keep an administrator (`RACE-001`).** Changing an
+/// admin's role to anything else while they are the team's last admin
+/// is refused with [`StorageError::Conflict`]
+/// (`MessageKey::LastAdminDemotionError`). The check and the write are
+/// one `BEGIN IMMEDIATE` transaction, as in `user_capacities::insert`
+/// (`CAP-001`; the reasoning for `IMMEDIATE` over a deferred `BEGIN`
+/// is in that module's docs): when this check ran on the pool ahead of
+/// the write, two admins demoting each other at once both saw two
+/// admins and both proceeded, leaving a team no remaining member could
+/// repair -- appointing an admin requires being one.
 pub async fn update_role(
     pool: &Pool,
     team_id: &str,
     user_id: &str,
     new_role: TeamRole,
 ) -> StorageResult<()> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    if !matches!(new_role, TeamRole::Admin)
+        && matches!(
+            role_for(&mut *tx, team_id, user_id).await?,
+            Some(TeamRole::Admin)
+        )
+        && admin_count(&mut *tx, team_id).await? <= 1
+    {
+        return Err(StorageError::Conflict(
+            peisear_i18n::MessageKey::LastAdminDemotionError,
+        ));
+    }
     let res = sqlx::query(
         r#"
         UPDATE team_memberships SET role = ?3
@@ -355,20 +381,35 @@ pub async fn update_role(
     .bind(team_id)
     .bind(user_id)
     .bind(new_role.as_str())
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
     if res.rows_affected() == 0 {
         return Err(StorageError::NotFound);
     }
+    tx.commit().await?;
     Ok(())
 }
 
 /// Remove a member. Errors with `NotFound` if not a member.
 ///
-/// Removing the last admin would orphan the team — application
-/// layer guards against that. The schema does not (we'd need a
-/// trigger for that and the application check is tractable).
+/// **A team must keep an administrator (`RACE-001`).** Removing the
+/// team's last admin -- including an admin removing themselves -- is
+/// refused with [`StorageError::Conflict`]
+/// (`MessageKey::LastAdminRemovalError`), checked and written in one
+/// `BEGIN IMMEDIATE` transaction; see [`update_role`]. The schema does
+/// not enforce this (it would need a trigger); this function is where
+/// the rule lives, so a caller cannot forget it.
 pub async fn remove_member(pool: &Pool, team_id: &str, user_id: &str) -> StorageResult<()> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    if matches!(
+        role_for(&mut *tx, team_id, user_id).await?,
+        Some(TeamRole::Admin)
+    ) && admin_count(&mut *tx, team_id).await? <= 1
+    {
+        return Err(StorageError::Conflict(
+            peisear_i18n::MessageKey::LastAdminRemovalError,
+        ));
+    }
     let res = sqlx::query(
         r#"
         DELETE FROM team_memberships
@@ -377,18 +418,23 @@ pub async fn remove_member(pool: &Pool, team_id: &str, user_id: &str) -> Storage
     )
     .bind(team_id)
     .bind(user_id)
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
     if res.rows_affected() == 0 {
         return Err(StorageError::NotFound);
     }
+    tx.commit().await?;
     Ok(())
 }
 
-/// Count of admins in a team. Used by `remove_member` /
-/// `update_role` callers to refuse "demote / remove the last
-/// admin" operations before issuing the SQL.
-pub async fn admin_count(pool: &Pool, team_id: &str) -> StorageResult<i64> {
+/// Count of admins in a team. [`update_role`] and [`remove_member`]
+/// use it, inside their transaction, to refuse removing the last
+/// admin; a caller does not need to check first (and must not: a check
+/// made outside the transaction is the race `RACE-001` closed).
+pub async fn admin_count<'e, E>(executor: E, team_id: &str) -> StorageResult<i64>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+{
     let n: i64 = sqlx::query_scalar(
         r#"
         SELECT COUNT(*) FROM team_memberships
@@ -396,7 +442,7 @@ pub async fn admin_count(pool: &Pool, team_id: &str) -> StorageResult<i64> {
         "#,
     )
     .bind(team_id)
-    .fetch_one(pool)
+    .fetch_one(executor)
     .await?;
     Ok(n)
 }
