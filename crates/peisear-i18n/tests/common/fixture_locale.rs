@@ -783,6 +783,9 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::CannotAssignToCompletedSprintMessage => {
             "[fx-cannot-assign-completed-sprint]".to_string()
         }
+        MessageKey::CannotUnassignFromCompletedSprintMessage => {
+            "[fx-cannot-unassign-completed-sprint]".to_string()
+        }
 
         // ---- I18N-005e: handlers/teams.rs ----
         MessageKey::TeamNameRequiredMessage => "[fx-team-name-required]".to_string(),

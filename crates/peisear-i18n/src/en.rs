@@ -1074,6 +1074,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::CannotAssignToCompletedSprintMessage => {
             "Cannot assign issues to a completed sprint.".to_string()
         }
+        MessageKey::CannotUnassignFromCompletedSprintMessage => {
+            "Cannot remove issues from a completed sprint.".to_string()
+        }
 
         // ---- I18N-005e: handlers/teams.rs ----
         MessageKey::TeamNameRequiredMessage => "Team name is required.".to_string(),

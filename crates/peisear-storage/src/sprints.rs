@@ -441,9 +441,64 @@ pub async fn add_issue(pool: &Pool, sprint_id: &str, issue_id: &str) -> StorageR
     Ok(())
 }
 
+/// [`remove_issue`], but only if the sprint the issue is currently in has a
+/// status in `allowed` **at the moment of the delete** (`SPRINT-001`, and
+/// `RACE-003`'s twin of [`add_issue_if_status`]). The caller passes the
+/// refusal it owes, so each route keeps its own message.
+///
+/// Two defects, one function. A **completed** sprint's record -- its
+/// committed figure, its completed figure and its burndown -- is derived
+/// from its `sprint_issues` rows, so removing a row rewrites history; the
+/// assign route already refuses to *add* to a completed sprint for that
+/// reason, and the unassign route did not refuse to *remove*, so one click
+/// changed what a finished sprint said it had done. And a `start` landing
+/// between `plan_remove`'s status read and its delete removed an issue from
+/// a sprint that was no longer plannable. The status read and the delete
+/// share one `BEGIN IMMEDIATE` transaction (see `user_capacities`'s module
+/// docs for why `IMMEDIATE`); [`start_guarded`] and [`complete_guarded`]
+/// take the same lock.
+///
+/// An issue that is in no sprint is still not an error -- nothing to
+/// remove, as [`remove_issue`] always was.
+pub async fn remove_issue_if_status(
+    pool: &Pool,
+    issue_id: &str,
+    allowed: &[SprintStatus],
+    refusal: peisear_i18n::MessageKey,
+) -> StorageResult<()> {
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let status: Option<String> = sqlx::query_scalar(
+        r#"
+        SELECT s.status
+        FROM sprint_issues si
+        JOIN sprints s ON s.id = si.sprint_id
+        WHERE si.issue_id = ?1
+        "#,
+    )
+    .bind(issue_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+    let Some(status) = status else {
+        return Ok(());
+    };
+    if !allowed.contains(&SprintStatus::from_storage_str(&status)) {
+        return Err(StorageError::Conflict(refusal));
+    }
+    sqlx::query(r#"DELETE FROM sprint_issues WHERE issue_id = ?1"#)
+        .bind(issue_id)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
 /// Remove an issue from its sprint. Idempotent — removing an
 /// issue that wasn't in a sprint is not an error (matches the
 /// natural "make sure it isn't" mental model).
+///
+/// **Unconditional: it removes the membership wherever it is, including
+/// from a completed sprint.** The routes use [`remove_issue_if_status`]
+/// instead; this remains for callers that own that decision.
 pub async fn remove_issue(pool: &Pool, issue_id: &str) -> StorageResult<()> {
     sqlx::query(r#"DELETE FROM sprint_issues WHERE issue_id = ?1"#)
         .bind(issue_id)
