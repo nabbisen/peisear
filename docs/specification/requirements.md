@@ -3444,8 +3444,12 @@ inferring coverage from a green gate — the same inference §10.13 punished.
 > | **the no-reload sequence run** — act on the same element twice, then undo, then reload once and confirm the server agrees | `PLAN-002` round 1's marker, above. A run that reloads between actions verifies two first actions, not a round trip |
 > | **the before-and-after rendering check** — computed style for the same data, before and after a markup change | `CAL-003`'s `h-full`, a class never used in this codebase, so the purged stylesheet had never emitted it and a block's height silently collapsed from 59.875 px to 20 px |
 >
-> Both are now written down in `docs/static-js-verification.md`,
-> alongside the rest of the documentation, rather than living in whichever handoff last remembered to ask.
+> Both are now written down in `docs/static-js-verification.md`, alongside
+> the rest of the documentation, rather than living in whichever handoff
+> last remembered to ask. *It lived beside the files it governs until
+> `STATIC-001` (0.38.0): `static/` is served in full, so a document about
+> what the suite does not cover would have been a public URL on every
+> deployment.*
 >
 > *One figure corrected in passing: I said in review that the sequence run had
 > caught a defect "twice". It has caught one. The second catch was the
