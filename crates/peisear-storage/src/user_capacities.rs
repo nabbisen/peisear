@@ -212,7 +212,10 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Capa
 
 /// Find one row by id (scoped to user_id for safety). Returns
 /// `None` when no such row exists for this user.
-pub async fn find(pool: &Pool, user_id: &str, id: &str) -> StorageResult<Option<CapacityRow>> {
+pub async fn find<'e, E>(executor: E, user_id: &str, id: &str) -> StorageResult<Option<CapacityRow>>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+{
     let row = sqlx::query_as::<_, CapacityDbRow>(
         r#"
         SELECT id, user_id, points, period_start, period_end, note, created_at, updated_at
@@ -222,7 +225,7 @@ pub async fn find(pool: &Pool, user_id: &str, id: &str) -> StorageResult<Option<
     )
     .bind(id)
     .bind(user_id)
-    .fetch_optional(pool)
+    .fetch_optional(executor)
     .await?;
     Ok(row.map(CapacityRow::from))
 }
@@ -379,8 +382,25 @@ pub async fn update(
 ) -> StorageResult<()> {
     // Same `BEGIN IMMEDIATE` shape as `insert`.
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    update_in_tx(&mut tx, user_id, id, points, period_start, period_end, note).await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// The overlap check and the write of [`update`], on a transaction the
+/// caller opened with `BEGIN IMMEDIATE` -- so [`close_at`] can put its
+/// own read inside the same one (`RACE-001`).
+async fn update_in_tx(
+    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    user_id: &str,
+    id: &str,
+    points: i64,
+    period_start: Option<NaiveDate>,
+    period_end: Option<NaiveDate>,
+    note: Option<&str>,
+) -> StorageResult<()> {
     if let Some(conflict) =
-        overlaps_existing(&mut *tx, user_id, period_start, period_end, Some(id)).await?
+        overlaps_existing(&mut **tx, user_id, period_start, period_end, Some(id)).await?
     {
         return Err(StorageError::Conflict(
             peisear_i18n::MessageKey::CapacityPeriodOverlapMessage {
@@ -411,13 +431,12 @@ pub async fn update(
     .bind(period_start)
     .bind(period_end)
     .bind(note)
-    .execute(&mut *tx)
+    .execute(&mut **tx)
     .await?;
 
     if res.rows_affected() == 0 {
         return Err(StorageError::NotFound);
     }
-    tx.commit().await?;
     Ok(())
 }
 
@@ -439,17 +458,24 @@ pub async fn delete(pool: &Pool, user_id: &str, id: &str) -> StorageResult<()> {
 /// would conflict with an open-ended existing one. This is just
 /// `update` with a constrained call shape, but having it as a
 /// dedicated method makes the handler code clearer.
+///
+/// **The read is inside the transaction too (`RACE-001`).** This used to
+/// `find` the row on the pool and then `update` it with the `points` and
+/// `note` it had just read, so an edit landing between the two was
+/// overwritten with the stale values. The `find` and the write now share
+/// one `BEGIN IMMEDIATE` transaction (see the module docs).
 pub async fn close_at(
     pool: &Pool,
     user_id: &str,
     id: &str,
     new_period_end: NaiveDate,
 ) -> StorageResult<()> {
-    let row = find(pool, user_id, id)
+    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let row = find(&mut *tx, user_id, id)
         .await?
         .ok_or(StorageError::NotFound)?;
-    update(
-        pool,
+    update_in_tx(
+        &mut tx,
         user_id,
         id,
         row.points,
@@ -457,5 +483,7 @@ pub async fn close_at(
         Some(new_period_end),
         row.note.as_deref(),
     )
-    .await
+    .await?;
+    tx.commit().await?;
+    Ok(())
 }
