@@ -29,7 +29,9 @@ the owner approves, the dev team implements.
 
 Design settled. Implementation may begin.
 
-**Nothing is currently accepted and unbuilt.**
+| ID | Title | Target |
+|----|-------|--------|
+| 013 | [The sprint record](./accepted/013-the-sprint-record.md) — capture what a sprint reported at completion, instead of freezing what it contains. **Accepted 2026-09-24** with `DEC-054`; rewrites `FR-SPR-004`'s mechanism, withdraws `SPRINT-002` and half of `SPRINT-001` | 0.39.0 |
 
 RFC 011 closed at 0.33.0 and RFC 012 at 0.32.0; both moved to `done/`.
 
@@ -39,9 +41,7 @@ RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 Open for review. Design may still change.
 
-| ID | Title | Target |
-|----|-------|--------|
-| 013 | [The sprint record](./proposed/013-the-sprint-record.md) — capture what a sprint reported at completion, instead of freezing what it contains. **Rewrites `FR-SPR-004`'s mechanism**, withdraws `SPRINT-002` and half of `SPRINT-001` | 0.39.0 |
+**Nothing is currently proposed.**
 
 ## Implemented
 
@@ -97,7 +97,8 @@ the RFC number they are keyed to.
 | [`handoffs/020-read-then-write/`](./handoffs/020-read-then-write/README.md) | **Not RFC-governed** — `RACE-001`/`RACE-002`, four more check-then-write races `CAP-001` uncovered, target 0.39.0 |
 | [`handoffs/021-static-is-public/`](./handoffs/021-static-is-public/README.md) | **Not RFC-governed** — `STATIC-001`, a document under the served `static/` directory; **blocks the 0.38.0 tag** |
 | [`handoffs/022-sprint-membership/`](./handoffs/022-sprint-membership/README.md) | **Not RFC-governed** — `SPRINT-001`/`SPRINT-002`, changes that alter a completed sprint's record, target 0.39.0 |
-| [`handoffs/023-sprint-reopen/`](./handoffs/023-sprint-reopen/README.md) | `DEC-053` — `SPRINT-003`, reopening a completed sprint, target 0.39.0 |
+| [`handoffs/023-sprint-reopen/`](./handoffs/023-sprint-reopen/README.md) | `DEC-053` — `SPRINT-003`, reopening a completed sprint; **superseded by `SPRINT-004`**, design still normative |
+| [`handoffs/0013-the-sprint-record/`](./handoffs/0013-the-sprint-record/README.md) | RFC 0013 / `DEC-054` — `SPRINT-004`, capture at completion and discard on reopen, target 0.39.0 |
 | [`handoffs/015-mobile-completion/`](./handoffs/015-mobile-completion/README.md) | **Not RFC-governed** — closing `NFR-A11Y-006`, unverified since Phase E |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |

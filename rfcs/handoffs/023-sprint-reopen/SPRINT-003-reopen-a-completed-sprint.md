@@ -1,5 +1,12 @@
 # SPRINT-003 — reopen a completed sprint
 
+> **Superseded 2026-09-24 by `SPRINT-004`** (RFC 0013). **The design below stands
+> unchanged and is still the specification for reopen** — its eight decisions and
+> their sources are why `SPRINT-004` does not restate them. What changed is that
+> reopen must also *discard the captured record*, which is inseparable from
+> capturing it, so the two ship as one handoff. Its dependency on `SPRINT-002`
+> is void; that handoff is withdrawn.
+
 **Issued by**: Architect
 **Date**: 2026-09-24
 **Target release**: 0.39.0

@@ -1,6 +1,6 @@
 # RFC 0013: The sprint record — capturing what a sprint reported, instead of freezing what it contains
 
-**Status**: Proposed
+**Status**: **Accepted** (2026-09-24) — implementation may begin
 **Target**: 0.39.0
 **Related spec sections**: `SPEC §9.1`, `SPEC §17.3`, `GUI §5`
 **Related requirements**: `FR-SPR-001`, `FR-SPR-003`, **`FR-SPR-004`** (whose
@@ -117,7 +117,24 @@ and the record is stable against all four inputs rather than one.
 **What it costs**: a migration, two tables, a branch in two read paths, writes
 in two lifecycle transitions, and a backfill decision (below).
 
-## Open questions — for the owner at acceptance
+## Decisions taken 2026-09-24
+
+**Accepted with both recommendations.** `DEC-054` is adopted: *the record of a
+completed sprint is captured at completion, not computed.*
+
+1. ~~**Backfill or not?**~~ — **Backfill**, at migration time, from the live
+   computation. It is the best available answer and it is **wrong by exactly
+   the drift that has already happened**; that is stated here, and belongs in
+   the changelog rather than being discovered later. The alternative would
+   leave two classes of completed sprint with nothing distinguishing them to a
+   reader.
+2. ~~**Does the issue list stay live?**~~ — **Yes, and it is labelled.** The
+   list answers *what is in this sprint now*; the figures answer *what it
+   reported*. A carried-over issue therefore leaves the list while the captured
+   count still counts it, and the page says which is which. Capturing the
+   membership list as a third table was the alternative and is not taken.
+
+## Open questions — as put, now settled above
 
 1. **Existing completed sprints have no record.** Backfill them at migration
    time from today's live computation — which is the best available answer and

@@ -830,20 +830,39 @@ Work not completed within a sprint MUST be described neutrally
 *Source*: `SPEC §3` vocabulary table. *Status*: Implemented.
 *Priority*: P1.
 
-**FR-SPR-004 — Completed sprints are immutable**
-A completed sprint's issue membership MUST NOT be editable **while it is
-completed**. It may be made editable only by `FR-SPR-001`'s explicit reopen,
-which returns the sprint to `active` and is visible as such.
+**FR-SPR-004 — A completed sprint's record is fixed**
+**What a sprint reported when it completed MUST NOT change afterwards**: its
+committed and completed totals, its counts, its carried-over figures and its
+burndown series. The record MUST be captured at completion and read from the
+capture thereafter; it MUST NOT be recomputed from current data
+(`DEC-054`, RFC 0013). Only `FR-SPR-001`'s explicit reopen discards it, and a
+reopened sprint captures afresh when completed again.
+**Membership is deliberately not frozen.** An issue may leave a completed
+sprint — that is `FR-SPR-003`'s carry-over, the designed path for unfinished
+work — and the captured record is unaffected by its leaving.
 *Rationale*: editing a completed sprint rewrites history and corrupts
 trend data.
 *Source*: derived; RFC 0001 requirement 8. *Status*: **Met at 0.39.0**
 (`SPRINT-001`, `SPRINT-002`). *Priority*: P2.
-*Correction (0.39.0) — the old status named the wrong gap.* It read
-*"Specified (the planning screen enforcing this is unbuilt)"*, which located
-the omission in one unbuilt screen. **Three shipped routes violated it**, none
+*Correction (0.39.0) — twice, and the second is larger.* The old status read
+*"Specified (the planning screen enforcing this is unbuilt)"*, locating the
+omission in one unbuilt screen when **three shipped routes** reached it, none
 of them that screen: the issue form's unassign branch, `plan_remove`, and
 `add_issue`'s upsert, which moves a membership and so removes it from whatever
-sprint held it. Measured on the shipped product, a completed sprint recording
+sprint held it.
+**Then the requirement itself turned out to be the wrong mechanism.** Its old
+text protected *membership*, which is **one of four inputs** to the figures it
+exists to protect: `summary` computes `completed_points` from each member's
+**current** `status`, and `burndown` from `status`, `effort` and `updated_at`.
+**A completed sprint's record therefore drifted with no membership change at
+all** — carry an issue over, finish it a month later, and the completed
+sprint's completed total rises. Two handoffs written against the old wording
+(`SPRINT-001`, `SPRINT-002`) would have blocked the product's designed
+carry-over flow to buy a guarantee neither could deliver; the dev team stopped
+the second before writing code, having measured the flow it would break. RFC
+0013 replaced the mechanism. **A rationale is worth more than the sentence
+built on it**, and the rationale here — *"editing a completed sprint rewrites
+history and corrupts trend data"* — was right throughout. Measured on the shipped product, a completed sprint recording
 `committed 15 / completed 8 / 3 issues` read `0 / 0 / 0` after three ordinary
 unassigns, and `12 / 2` after one issue was assigned elsewhere. **A requirement
 whose status blames an unbuilt screen is not read as describing routes that

@@ -1,5 +1,14 @@
 # SPRINT-002 — the third route out of a completed sprint
 
+> **WITHDRAWN 2026-09-24, never implemented** (RFC 0013). The dev team stopped
+> before writing code: this would have refused the planning page's primary
+> carry-over flow for issues the same page lists as candidates. Checking further
+> showed why — membership is **one of four inputs** to a completed sprint's
+> figures, so freezing it could not deliver the guarantee this handoff claimed.
+> `SPRINT-004` captures the record instead. **Kept for the reasoning, not as
+> work**; §1's *a protection you can walk around is worse than none* still holds
+> and is why partial enforcement was rejected.
+
 **Issued by**: Architect
 **Date**: 2026-09-24
 **Target release**: 0.39.0
