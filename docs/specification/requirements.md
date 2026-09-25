@@ -4323,6 +4323,31 @@ someone remembering, that a swept page rendered the element it was swept for —
 the shape of `GATE-001`'s fixture throwing when a title is absent, generalised.
 Not designed, not scheduled; recorded so the fifth instance is not a surprise.
 
+**Closing note, 0.40.0 — the campaign stops at `GATE-004`.** Five fixture
+changes shipped in one release, **each one finding the next**: an empty sprint,
+a team with no projects, unassigned issues, two unvisited calendar layouts, an
+empty inbox. That is the pattern this entry warns about being run rather than
+resisted. **After `GATE-004`, an unrendered branch or unvisited layout is
+recorded in `browser-checks/README.md` and not chased** unless a defect turns
+up behind it. Two are already on that list: a second assignee *name* (which
+needs the team project's pages) and the team project's board, list and
+calendar.
+
+**The cost side got two numbers and they change the argument.** `GATE-002`
+measured +3% for five cells, inside the run-to-run spread; `GATE-003` +11% for
+twenty, outside it — about **+0.5% per cell** on a five-second gate. **Run time
+is not what limits this fixture**; the cost of *writing* and reasoning about
+each branch is, which is why the stopping rule above is about attention rather
+than seconds.
+
+**And one thing a green cell here still does not mean.** The gate asserts
+`scrollWidth <= clientWidth` and nothing else. `GATE-003` added the calendar's
+day view — where `CAL-003`'s `h-full` silently collapsed a block from 59.875 px
+to 20 px — and that defect would **still** not be caught: it is vertical. The
+gate now *visits* that layout; it does not *check* it in the sense a reader
+would assume. `§10.15`'s two required evidence runs remain the only thing that
+would.
+
 ## 11. Deferred and future requirements
 
 Accepted in principle, deliberately not scheduled.
