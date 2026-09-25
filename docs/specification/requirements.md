@@ -768,8 +768,8 @@ to a reader of either.
 **FR-SUB-010 — Sub-issue search visibility**
 Sub-issues MUST be discoverable through search. Search results SHOULD
 indicate the parent context.
-*Source*: `SPEC §38.1`. *Status*: Partial — sub-issues are searchable;
-parent breadcrumb in results is Specified (RFC 0003). *Priority*: P2.
+*Source*: `SPEC §38.1`. *Status*: **Met** (recorded Partial — sub-issues are searchable;
+parent breadcrumb in results is Specified (RFC 0003) until 0.40.0; `REQ-001`) — `search_result_shows_parent_for_sub_issue_and_omits_for_top_level`. *Priority*: P2.
 
 ### 4.6 Teams and membership — `FR-TEAM`
 
@@ -786,12 +786,12 @@ increasing restriction on mutation.
 
 **FR-TEAM-003 — Last-admin guard**
 The system MUST prevent a team from losing its last administrator.
-*Source*: `GUI §5`. *Status*: Implemented (untested). *Priority*: P2.
+*Source*: `GUI §5`. *Status*: **Met** (recorded Implemented (untested) until 0.40.0; `REQ-001`) — `race_guards`' four last-admin tests. **Atomic only since 0.39.0** (`RACE-001`); it was false under concurrency before. *Priority*: P2.
 
 **FR-TEAM-004 — Non-member concealment**
 A non-member requesting a team detail screen MUST NOT learn whether the
 team exists.
-*Source*: `GUI §6`. *Status*: Implemented (untested). *Priority*: P1.
+*Source*: `GUI §6`. *Status*: **Met** (recorded Implemented (untested) until 0.40.0; `REQ-001`) — probe: a non-member gets byte-identical 404 bodies for an existing and a nonexistent team, on four routes. **Timing not measured**. *Priority*: P1.
 
 **FR-TEAM-005 — Privacy footnote**
 The team detail screen MUST display, as fixed text, a note stating that
@@ -800,7 +800,7 @@ that personal sustainability data is visible only to the individual, and
 that admin is a management role rather than an oversight role.
 *Source*: `SPEC §11.4`, `SPEC §29.6`. *Acceptance*: the string
 "management role, not an oversight role" appears on the team detail
-screen. *Status*: Implemented (untested). *Priority*: P1.
+screen. *Status*: **Met** (recorded Implemented (untested) until 0.40.0; `REQ-001`) — the footnote renders on a member's team page; the string is byte-pinned in `peisear-i18n`. **No web test asserts it on the screen**. *Priority*: P1.
 
 ### 4.7 Sprints — `FR-SPR`
 
@@ -897,7 +897,7 @@ backlog column and a sprint-items column, allowing issues to be moved
 between them without visiting each issue.
 *Rationale*: `SPEC §17.1` — assigning twenty candidates one at a time
 during a planning session is prohibitive friction.
-*Source*: `SPEC §17`. *Status*: Specified (RFC 0001, target 0.20.0).
+*Source*: `SPEC §17`. *Status*: **Met** (recorded Specified (RFC 0001, target 0 until 0.40.0; `REQ-001`) — `plan_page_renders_two_columns_for_planned_sprint`, `add_to_sprint_via_button_succeeds`.20.0).
 *Priority*: P2.
 
 **FR-PLAN-002 — Button-based moves before drag**
@@ -919,7 +919,7 @@ requirement 10), so the drag reaches a pointer and nothing else.
 **FR-PLAN-003 — Backlog filtering**
 The backlog column MUST be filterable by project, priority, and
 assignee, with filter state reflected in the URL.
-*Source*: `SPEC §17.2`, RFC 0001. *Status*: Specified. *Priority*: P2.
+*Source*: `SPEC §17.2`, RFC 0001. *Status*: **Met** (recorded Specified until 0.40.0; `REQ-001`) — `filter_round_trip_narrows_backlog_and_survives_move`. *Priority*: P2.
 
 **FR-PLAN-004 — Capacity hint is advisory**
 The sprint column MUST show committed effort and MAY show a capacity
@@ -932,7 +932,7 @@ limit would convert planning into a quota.
 **FR-PLAN-005 — Team-scoped backlog**
 The backlog MUST draw only from team-scoped projects, excluding members'
 personal projects.
-*Source*: RFC 0001 open question 1, resolved. *Status*: Specified.
+*Source*: RFC 0001 open question 1, resolved. *Status*: **Met** (recorded Specified until 0.40.0; `REQ-001`) — probe: a personal project's issue is absent from the backlog, a team project's present. **No test pins the exclusion**.
 *Priority*: P2.
 
 ### 4.9 Project health — `FR-HLT`
@@ -1004,7 +1004,7 @@ rendering one, and must not be scheduled behind `§10.15`'s browser question.
 Explanation text MUST be descriptive and MUST NOT contain evaluative
 words or directives.
 *Source*: `SPEC §3`, `NFR-LANG-001`. *Status*: Implemented (untested —
-no automated vocabulary guard exists). *Priority*: P0.
+**corrected 0.40.0 (`REQ-001`): a guard does exist** — `find_violations` runs over every `MessageKey` in `MessageKey::all()`, which includes all seven `IndicatorExplanation*` keys. The old text read *"no automated vocabulary guard exists"*, and it was the **only** finding of that audit in the dangerous direction: a recorded gap that is not there invites someone to build the guard a second time). *Priority*: P0.
 
 **FR-HLT-007 — Indicator basis is traceable**
 Each indicator MUST offer a route to its basis: the underlying issue
@@ -1066,6 +1066,13 @@ value and is invisible to the user; the constraint applies to
 presentation only.
 *Source*: `SPEC §28.6`. *Status*: Partial — the separation holds for
 explanation text but not for the score badge (see `FR-HLT-008`).
+*Correction (0.40.0, `REQ-001`)*: the clause excepting *the score badge*
+contradicted `FR-HLT-008`, which records that badge **retired at 0.20.0** and
+cites `health_presentation_has_no_headline_score`. Both could not be current.
+**`FR-HLT-008` is the accurate one** — the badge is gone — so the exception is
+withdrawn and this requirement holds without it. Two entries disagreeing about
+the same shipped fact is the failure `§10.17` records; a reader resolving it
+either way got a different product.
 *Priority*: P1.
 
 ### 4.10 Personal sustainability — `FR-PER`
@@ -1148,15 +1155,15 @@ history, visually distinguishing unread from read.
 **FR-NTF-005 — Mark all read**
 The inbox MUST offer a prominent action to mark all notifications read,
 hidden when there are none unread.
-*Source*: `SPEC §19.3`. *Status*: Specified (RFC 0003). *Priority*: P2.
+*Source*: `SPEC §19.3`. *Status*: **Met** (recorded Specified (RFC 0003) until 0.40.0; `REQ-001`) — `POST /inbox/mark-all-read`; probe: the control is absent with nothing unread, present with one. **The hidden-when-none limb is untested**. *Priority*: P2.
 
 **FR-NTF-006 — Silence-all and its release affordance**
 The user MUST be able to silence all notifications. When silenced, the
 inbox MUST display a pinned banner offering single-click resume.
 *Rationale*: `SPEC §29.3.2` — a user who silenced notifications months
 ago should not have to remember where the setting lives.
-*Source*: `SPEC §29.3.2`. *Status*: Partial — silence-all exists in
-settings; the pinned inbox banner is Specified (RFC 0003). *Priority*: P2.
+*Source*: `SPEC §29.3.2`. *Status*: **Met** (recorded Partial — silence-all exists in
+settings; the pinned inbox banner is Specified (RFC 0003) until 0.40.0; `REQ-001`) — `banner_absent_by_default_present_after_silence_absent_after_resume`. *Priority*: P2.
 
 **FR-NTF-007 — Deferred email opt-in**
 The email opt-in prompt MUST appear only after the user has received
@@ -1215,13 +1222,13 @@ tests. *Status*: Implemented. *Priority*: P1.
 **FR-CAL-001 — Personal calendar**
 The system MUST provide `/today/calendar`, showing only issues assigned
 to the authenticated user, across all their projects.
-*Source*: `SPEC §16`, `SPEC §10.2`. *Status*: Specified (RFC 0002,
-target 0.21.0). *Priority*: P2.
+*Source*: `SPEC §16`, `SPEC §10.2`. *Status*: **Met** (recorded Specified (RFC 0002,
+target 0 until 0.40.0; `REQ-001`) — `personal_calendar_renders_only_my_issues`.21.0). *Priority*: P2.
 
 **FR-CAL-002 — Project calendar**
 The system MUST provide `/projects/{id}/calendar`, showing the
 project's top-level issues on a time axis.
-*Source*: `SPEC §16`. *Status*: Specified. *Priority*: P2.
+*Source*: `SPEC §16`. *Status*: **Met** (recorded Specified until 0.40.0; `REQ-001`) — `project_calendar_requires_access`, `sub_issues_appear_on_neither_axis`. *Priority*: P2.
 
 **FR-CAL-003 — Planned time attributes**
 Issues MUST carry optional planned start and planned end timestamps to
@@ -1244,14 +1251,14 @@ valid.
 **FR-CAL-004 — Sprint band on project axis only**
 The project calendar MUST overlay a band for active sprints overlapping
 the visible window. The personal calendar MUST NOT show sprint bands.
-*Source*: `SPEC §16.3`, `SPEC §16.4`. *Status*: Specified. *Priority*: P2.
+*Source*: `SPEC §16.3`, `SPEC §16.4`. *Status*: **Met** (recorded Specified until 0.40.0; `REQ-001`) — `sprint_band_only_for_active_sprint`; probe: no band on the personal axis. *Priority*: P2.
 
 **FR-CAL-005 — Empty time is not penalised**
 The calendar MUST NOT fill, highlight, or comment on unscheduled time.
 Crowding MAY be indicated quietly; emptiness MUST NOT be.
 *Rationale*: `SPEC §10.4` — an asymmetric design. Flagging gaps converts
 a planning aid into a pressure instrument.
-*Source*: `SPEC §10.4`, `SPEC §16.3`. *Status*: Specified. *Priority*: P1.
+*Source*: `SPEC §10.4`, `SPEC §16.3`. *Status*: **Met** (recorded Specified until 0.40.0; `REQ-001`) — probe: no *empty*/*free*/*gap* copy on any calendar. **No test asserts an unscheduled day carries no comment**. *Priority*: P1.
 
 **FR-CAL-006 — No team-axis calendar**
 The system MUST NOT provide a team-axis calendar.
@@ -1268,13 +1275,25 @@ of scheduled items is permitted.
 *Rationale*: `SPEC §16.6` lists these explicitly, including the
 seemingly benign "free time: 4 hours", because a positive framing is
 still pressure.
-*Source*: `SPEC §16.6`. *Status*: Specified — RFC 0002 mandates a
-guard test asserting these strings are absent. *Priority*: P0.
+*Source*: `SPEC §16.6`. *Status*: **Met at 0.40.0** (`CAL-004`).
+*Priority*: P0.
+*History*: this read *Specified — RFC 0002 mandates a guard test asserting
+these strings are absent* while **the behaviour already held and the guard
+checked something else**: it asserted no `%`, no `" of "`, no ratio — real, and
+not the named concepts, so *occupancy* or *free hours* could have appeared in
+words carrying no quantity and the P0 guard would have stayed green.
+`CAL-004` added the concept terms (including `SPEC §16.6`'s own
+*"free time: 4 hours"*), each demonstrated by a plant.
+**What the guard covers**: the served HTML of both calendars across three views
+and two anchors, and every English `MessageKey`. **What it does not**: a
+synonym — *"lightly booked"* passes — an unrendered state, a page added later,
+or copy a script writes. Third instance of `§10.28`'s family and the first on a
+P0.
 
 **FR-CAL-008 — Calendar privacy footnote**
 The project calendar MUST display fixed text stating that the view shows
 planned issue work and that personal schedules are not aggregated.
-*Source*: `SPEC §11.4`. *Status*: Specified. *Priority*: P1.
+*Source*: `SPEC §11.4`. *Status*: **Met** (recorded Specified until 0.40.0; `REQ-001`) — `both_footers_render_byte_identically`. *Priority*: P1.
 
 ### 4.14 Settings — `FR-SET`
 
@@ -1335,8 +1354,11 @@ contract.
 `GET /api/users/{user_id}/wip-limit` and
 `GET /api/users/{user_id}/calendar` are specified in `SPEC Appendix E.1`.
 *Status*: Specified — not implemented. The absence of a user-scoped
-endpoint of this shape is why one authorisation test remains disabled
-(see §9.3). *Priority*: P2.
+endpoint of this shape was recorded as the reason one authorisation test
+remained disabled. **Corrected 0.40.0 (`REQ-001`): no `#[ignore]` exists in
+the tests** — 0.37.0's `PRIV-001` withdrew that test and the aside outlived it.
+The status itself is accurate: only `burnout`, `capacity` and `notifications`
+are routed. *Priority*: P2.
 
 ### 4.16 Direct manipulation — `FR-DM`
 
@@ -1347,8 +1369,8 @@ list, kanban column drag, calendar block drag, and sprint-planning drag.
 included *issue list reordering*. That fifth surface is retired — see the
 Status note. The other four are unchanged and all four ship, so the
 amendment closes this requirement rather than narrowing it to stay open.
-*Source*: `SPEC §21.2`, `SPEC §39`. *Acceptance*: `status_control` (12),
-`board_keyboard` (6). *Status*: **Met** — all four surfaces ship. Kanban column
+*Source*: `SPEC §21.2`, `SPEC §39`. *Acceptance*: `status_control` (13),
+`board_keyboard` (7). *Status*: **Met** — all four surfaces ship. Kanban column
 drag has shipped since approximately 0.6.0; status change from the issue
 list and issue detail shipped at 0.25.0 (no-JS path) and 0.26.0 (in-place),
 RFC 004a; sprint-planning drag (D-4) shipped at 0.35.0, RFC 0004c; calendar
@@ -1384,8 +1406,8 @@ Every direct-manipulation action MUST have a keyboard equivalent
 producing the identical effect. A mouse-only action MUST NOT exist.
 *Rationale*: `SPEC §32` treats the keyboard path as the contract and the
 pointer path as an enhancement.
-*Source*: `SPEC §21.3.1`, `SPEC §32`. *Acceptance*: `board_keyboard` (6),
-`status_control` (12). *Status*: **Implemented for both shipped surfaces.**
+*Source*: `SPEC §21.3.1`, `SPEC §32`. *Acceptance*: `board_keyboard` (7),
+`status_control` (13). *Status*: **Implemented for both shipped surfaces.**
 The board's keyboard path landed at 0.20.0. D-1's surfaces shipped their
 no-JavaScript form path **first**, at 0.25.0, and the 0.26.0 enhancement
 was layered over it — so the keyboard path was never the thing being added
@@ -1544,7 +1566,7 @@ data. Where a team is small enough that an aggregate resolves to one
 person, the aggregate SHOULD be suppressed.
 *Rationale*: `SPEC §11.5.3` — a workload chip covering exactly one
 member is that member's personal data wearing an aggregate's clothing.
-*Source*: `SPEC §11.5.3`. *Acceptance*: `aggregate_privacy` (6 tests).
+*Source*: `SPEC §11.5.3`. *Acceptance*: `aggregate_privacy` (12 tests).
 *Status*: **Implemented (`QA-016`, `QA-017`, post-0.27.0)** — the first
 instance of this requirement ever to ship. *Priority*: P2.
 *Scope correction (0.20.0)*: a suppression was added to the workload chips
@@ -2261,7 +2283,19 @@ client-side hydration.
 Frequent access paths — top-level issues by project and status, children
 of a parent — MUST be index-supported.
 *Source*: migration `0015` design. *Status*: Implemented (partial
-indices). *Priority*: P2.
+indices). *Amendment (0.40.0, `PERF-002`)*: "index-supported" holds, but **which index
+depends on whether the install has statistics.** On the linked SQLite (3.46.0),
+a **fresh** database uses the partial `idx_issues_top_level` for the top-level
+issue query; once `PRAGMA optimize` has written sampled statistics — which
+`PERF-002` made happen on connection close — the planner prefers
+`idx_issues_project`, and the read is no slower (paired 3.35 → 2.80 ms). **So
+the partial index is not what a used install ends up using for that read.**
+A related fact worth stating beside it: **without statistics, which plan ships
+depends on which SQLite is linked** — 3.53.4 makes the opposite choice on the
+same database — so a `libsqlite3-sys` bump can change plans with no change in
+this repository. That is the second reason `PERF-002` exists, after the
+WIP-violators query.
+*Priority*: P2.
 
 **NFR-PERF-004 — Analysis is not on the default path**
 Expensive analysis MUST be disabled or simplified by default, and
@@ -2290,7 +2324,7 @@ MUST NOT be introduced.
 **NFR-MNT-004 — File size discipline**
 A source file exceeding 300 effective lines SHOULD be considered for
 splitting; exceeding 500 effective lines, strongly so.
-*Source*: project convention. *Status*: Partial. *Priority*: P3.
+*Source*: project convention. *Status*: Partial — **measured 0.40.0 (`REQ-001`)**: of 85 `src` files, **10 exceed 500 effective lines** (largest `message.rs`, 2,088) and 11 more exceed 300. *Priority*: P3.
 
 **NFR-MNT-005 — Test organisation**
 Tests MUST be separated from implementation files. In-file `#[test]`
@@ -3794,6 +3828,33 @@ with a comment next to it.**
 about the product, and the scope is where the next gap opens — not in the rule.
 
 ---
+
+> **Counts in prose, 0.40.0 (`REQ-001`).** The audit found four acceptance
+> citations carrying stale test counts — `view_state` 5 → 9,
+> `aggregate_privacy` 6 → 12, `status_control` 12 → 13, `board_keyboard` 6 → 7.
+> They are corrected, and the shape is this entry's: **a number in prose goes
+> stale on every release and nothing notices.** The counts are kept rather than
+> removed because they make a citation checkable at a glance, and `REQ-001`'s
+> sweep — which resolves every named target and could be extended to compare
+> counts — is the thing that would keep them honest. Whether that sweep becomes
+> a standing check is not decided.
+
+> **A status that does not say which reading it assumes, 0.40.0 (`REQ-001`).**
+> The audit's more valuable half was six requirements whose text admits two
+> readings, where the recorded status silently took one. **`FR-SPR-004` was in
+> that class and it cost two handoffs** — one shipped to `main` and half
+> reverted, one written and withdrawn unbuilt. The others: `FR-CAL-007`'s
+> *"these strings"* (fixed, `CAL-004`); `NFR-PRIV-005`'s *"Not implemented"*,
+> which takes the stronger reading of *SHOULD additionally accept and verify*
+> while several storage functions do scope by the caller; `FR-PLAN-004`, a
+> **MAY** feature recorded as `Specified`, so an optional thing never built
+> reads as a mandatory thing outstanding; and `NFR-A11Y-002`/`NFR-A11Y-004`,
+> whose bare *"Partial."* states nothing to check against.
+>
+> **The obligation this adds**: where a requirement admits two readings, the
+> status says which one it is recording against. Adding it to the four above is
+> not scheduled — `NFR-A11Y-002` and `-004` need an audit to say anything at
+> all, and that is a larger thing than a wording fix.
 
 ### 10.17 Assertions keep passing while no longer testing what they name — **open**, recorded at 0.31.0
 
