@@ -1461,7 +1461,24 @@ and that the latest state is now shown. They MUST NOT use failure or
 error vocabulary, and MUST NOT use danger colouring.
 *Source*: `SPEC §21.4.6`, `SPEC §21.4.8`. *Status*: **Implemented**
 (0.26.0). All conflict copy now lives in `peisear-i18n`'s message table
-and is subject to `NFR-LANG-001`'s guard. *Priority*: P1.
+and is subject to `NFR-LANG-001`'s guard. *Gap recorded 0.41.0 (`A11Y-003`), not scheduled*: **undo exists only on the
+pointer path.** The board's, sprint plan's and calendar's keyboard routes are
+the per-item move buttons, which are **native form POSTs** — measured, pressing
+one navigates and shows no toast at all. So on those surfaces a keyboard user
+has the action **without** its undo.
+**This is not a `FR-DM-002` violation** and an earlier draft of `A11Y-003`
+claimed it was: the move buttons produce the identical *effect*, and undo is a
+separate affordance. What is missing is undo's **consistency across surfaces**
+— which is `RFC 0004b` open question 3's own argument for building undo at all:
+*the inconsistency is visible to any user who uses both surfaces.*
+**The answer, if it is ever taken, is RFC-sized**: the redirect's flash carries
+an *Undo* form button — no JavaScript, no timer, first in `main`, working with
+scripting off, and **server-rendered, so `§10.15`'s permanent gap would not
+cover it**. It needs a route to reverse a status change and a sprint-membership
+change, something to carry the prior value, lock semantics on a reversal, and
+`JS-003`'s classification for its failure case. `A11Y-003`'s §3 is its first
+page.
+*Priority*: P1.
 *Correction*: the board's three sentences were authored **inside
 `static/board.js`** from before this project had a vocabulary guard, and
 the guard only ever read Rust — so they were never excluded from the check,
