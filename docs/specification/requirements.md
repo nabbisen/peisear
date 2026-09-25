@@ -4329,7 +4329,13 @@ a team with no projects, unassigned issues, two unvisited calendar layouts, an
 empty inbox. That is the pattern this entry warns about being run rather than
 resisted. **After `GATE-004`, an unrendered branch or unvisited layout is
 recorded in `browser-checks/README.md` and not chased** unless a defect turns
-up behind it. Two are already on that list: a second assignee *name* (which
+up behind it. **`GATE-004` was itself the rule's first test and was withdrawn
+under it**: the inbox cannot be populated through any route — its only emitters
+are the snapshot job's burnout detectors, which need an edge between snapshots
+days apart — **and its rows carry no user text at all**, being fixed copy with
+a count. The branch was not merely unreachable; it was worth less than the
+handoff claimed, which was written from what the page sounded like rather than
+from what it renders. Two are already on that list: a second assignee *name* (which
 needs the team project's pages) and the team project's board, list and
 calendar.
 

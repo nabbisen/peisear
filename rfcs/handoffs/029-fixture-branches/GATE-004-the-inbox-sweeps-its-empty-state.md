@@ -1,5 +1,16 @@
 # GATE-004 — the inbox sweeps its empty state
 
+> **WITHDRAWN 2026-09-25, not implemented.** The premise is wrong twice. **No
+> route produces a notification** — the only emitters are the snapshot job's two
+> burnout detectors, which fire on an edge between snapshots across a 14-day
+> threshold, so *time* is missing rather than a second actor. And **the rows do
+> not carry issue or project text**: both emitted kinds are fixed i18n copy with
+> a count, `payload_json` is `None`. So no user-text run can be in an inbox row,
+> and the `§10.25` shape this handoff invoked is not what the page holds.
+>
+> `§10.32`'s stopping rule applies on its first test: recorded, not chased.
+> Kept for the reasoning and for the finding that produced it.
+
 **Issued by**: Architect
 **Date**: 2026-09-25
 **Target release**: 0.40.0
