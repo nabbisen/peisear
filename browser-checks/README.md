@@ -217,9 +217,22 @@ branches that were known, not the ones that are possible. Known and *not*
 covered: a **second assigned account** cannot appear on the personal board (a
 personal project's only assignee candidate is its owner), so the board shows one
 name twice, never two; the team project's board, list, calendar and issue detail
-are not gate pages; the **inbox renders its empty state** (the fixture produces no
-notifications), so notification rows — which carry issue and project text — are
-never swept.
+are not gate pages; the **inbox renders its empty state**, and **cannot be made to
+render rows through the routes** (`GATE-004`): notifications come only from the
+background snapshot job (once at startup, before any user exists, then every six
+hours) and only on an *edge* between two snapshots — a burnout overload or stalled
+streak of fourteen days crossing its threshold — so no action the fixture can take
+produces one inside a run, and the fixture will not insert rows. The rows those two
+kinds produce also carry **fixed copy and a count, not issue or project text**
+(`NotificationBurnout*Title/Body`; `project_trend_decline` has no emitter), so the
+`§10.25` shape — user text in a row — is not what an inbox row holds today. A row's
+layout with a title, a body, a timestamp and a *mark all read* control is unswept.
+
+**Closing note** (`§10.32`): **this is the last branch added reactively.** Four
+fixture changes in one release (`GATE-001`…`GATE-003`, and `LAYOUT-011`'s), each
+finding the next, is the pattern that entry warns about. From here an unrendered
+branch or unvisited layout is **recorded in this list and not chased**, unless a
+defect appears behind it.
 
 `LAYOUT-008` added the three sprint pages and the new-issue form. All
 four were red on the run that added them.
