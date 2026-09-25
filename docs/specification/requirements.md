@@ -4286,6 +4286,43 @@ reader's: a transaction whose first statement is a `SELECT` and whose later
 statement writes must be `IMMEDIATE`. `§17.9`'s lesson in a second place — the
 rule is written down, which is one more than before and fewer than a check.
 
+### 10.32 The gate's fixture does not exercise the branches its pages contain — **open**, recorded at 0.40.0
+
+`BROWSER-001` sweeps nineteen pages at five widths. **A page can only overflow
+on content it is rendering**, and the fixture has three times been found not to
+render the branch a defect was sitting behind:
+
+| found by | the branch the fixture did not reach |
+|---|---|
+| `GATE-001` (0.40.0) | the completed sprint had **no issues**, so its list was swept empty |
+| `LAYOUT-010` (0.40.0) | the team had **no projects**, so the plan page's two `<select>`s held only *All projects* and *Anyone* — 729 px of unbreakable option text on a page the gate had swept since `BROWSER-001` |
+| `LAYOUT-011` (0.40.0) | the issues are **unassigned**, so no assignee badge has ever rendered — 441 px, overflowing a **1280 px desktop** |
+
+And a fourth, found while fixing the third and not yet behind a known defect:
+**no fixture issue has planned dates**, so the calendar pages render **no
+blocks**.
+
+**Each was found by changing the fixture for another reason**, not by looking.
+`LAYOUT-010`'s was the sharpest: the gate had reported 90 then 95 green cells
+on that page for eleven releases, and could not have failed on it.
+
+**This is `§10.27`'s lesson at one remove.** There, a gate could not see a
+property nobody had stated. Here it sees the property and is pointed at data
+that cannot exhibit it — **the check is right and its input is thin**, which
+reads identically from the outside: a green cell.
+
+**Why it stays open.** The remedy is not a rule; it is the discipline of asking
+*what does this page render only sometimes?* for each of nineteen pages, and
+`GATE-002` does that once for the branches now known. **It does not prevent the
+fifth.** Making the fixture exercise every branch of every page is a larger
+thing than the gate is worth, and a fixture that grew without bound would slow
+every run for surfaces nobody has reason to doubt.
+
+**What would close it** is a way to tell, from the artefact rather than from
+someone remembering, that a swept page rendered the element it was swept for —
+the shape of `GATE-001`'s fixture throwing when a title is absent, generalised.
+Not designed, not scheduled; recorded so the fifth instance is not a surprise.
+
 ## 11. Deferred and future requirements
 
 Accepted in principle, deliberately not scheduled.
