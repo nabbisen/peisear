@@ -2,7 +2,7 @@
 
 `BROWSER-001` (RFC 011 step 4, `DEC-048`). This directory holds the
 horizontal-overflow gate: one assertion, `scrollWidth <= clientWidth`, on
-nineteen rendered pages at five widths, driven by a minimal Chrome DevTools
+twenty rendered pages at five widths, driven by a minimal Chrome DevTools
 Protocol harness with no npm dependency.
 
 **This does not run inside `cargo test --workspace` and is not counted in
@@ -40,7 +40,7 @@ attention.
   order and its three known limits (one page at a time, waits on
   `document.readyState` only, no notion of animation completion).
 - `overflow-gate.mjs` — the gate itself: starts a scratch instance,
-  creates fixtures through the real forms, sweeps nineteen pages × five
+  creates fixtures through the real forms, sweeps twenty pages × five
   widths, and exits non-zero if any cell overflows or if any request
   reached a host other than `127.0.0.1`.
 
@@ -135,14 +135,14 @@ exactly its fixture and its page list.
 
 ## Coverage
 
-Nineteen pages: `/today`, `/inbox`, `/today/calendar`, `/projects`, a
+Twenty pages: `/today`, `/inbox`, `/today/calendar`, `/projects`, a
 project detail page (the board — it is the default view), the same
 project's list view, a project calendar, a team detail page, a sprints
 list, a sprint detail page, **the same page for a completed sprint**, a
 sprint plan page, an issue detail page, the new-issue form, `/settings`,
 `/settings/notifications`, `/teams`, `/search`, and a delete confirmation
-interstitial. (19 × 5 widths = 95 cells; it was 18 × 5 = 90 until
-`SPRINT-005`.)
+interstitial. (20 × 5 widths = 100 cells; it was 19 × 5 = 95 until `GATE-002`,
+and 18 × 5 = 90 until `SPRINT-005`.)
 
 `SPRINT-005` added the completed-sprint form of the sprint detail page
 (`§10.27`): a sprint started and completed through the real routes, so it
@@ -188,6 +188,29 @@ long name; the cell count is unchanged (95). **Not covered by that issue:**
 issue detail — the gate's issue-detail page is the older, unassigned issue, so
 its assignee badge is exercised only by the unit test in
 `tests/assignee_candidates.rs` and by hand, not by this gate.
+
+`GATE-002` (`§10.32`) made the fixture **exercise branches its pages have**, and
+assert that it did. The page list gained **`issue_detail_assigned`** (the assigned
+issue's detail page, so its assignee badge is held by the gate; the older issue's
+page is unchanged) — **95 → 100 cells**. The personal project gained one more
+issue, **assigned, in progress and planned for today**, whose title carries the
+run: it is the board's second assigned card, and it puts a block on **both**
+calendars (the personal one lists assigned issues only). It is planned through
+the *edit* route — the create form does not take a planned window — with the
+lock value the edit page renders. `createFixtures` then **fails the run** unless
+it finds: an assignee `badge` holding the display name on issue detail; two such
+badges and a workload-strip chip on the board; and the planned issue's block on
+`/today/calendar` and on the project calendar. **A green cell on a page that
+rendered nothing is the failure this is for**; the assertions are what tell the
+two apart.
+
+**This is not exhaustive, and is not meant to be** (`§10.32`). It closes the
+branches that were known, not the ones that are possible. Known and *not*
+covered: the calendars are swept in the **week view only** (the gate's URLs are
+the default; day and month are not visited); a **second assigned account** cannot
+appear on the personal board (a personal project's only assignee candidate is its
+owner), so the board shows one name twice, never two; the team project's board,
+list, calendar and issue detail are not gate pages.
 
 `LAYOUT-008` added the three sprint pages and the new-issue form. All
 four were red on the run that added them.

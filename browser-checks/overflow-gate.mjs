@@ -97,6 +97,12 @@ const LONG_TEAM_PROJECT_NAME = `Overflow Gate Team Project ${UNBROKEN_RUN}`;
 const WRAPPING_ISSUE_TITLE =
   'A completed sprint issue whose title is made only of ordinary words and is long enough to wrap onto several lines at the narrowest width this gate sweeps, never once needing to break';
 const ORDINARY_TEAM_ISSUE_TITLE = 'An ordinary completed sprint issue';
+// `GATE-002`: an issue that is assigned, in progress **and planned for today**,
+// whose title carries the run. Assigned puts a second card and badge on the
+// board and puts it on the personal calendar (which lists assigned issues
+// only); planned puts a block on both calendars. Until this every calendar
+// swept empty.
+const PLANNED_ISSUE_TITLE = `Planned and assigned ${UNBROKEN_RUN}`;
 // `NFR-PRIV-007` suppresses the burndown below two contributors, counted
 // as distinct assignees of *done* issues in the sprint -- so the second
 // person is a real second account, added to the team through the route.
@@ -253,6 +259,36 @@ async function createFixtures() {
     assignee_id: ownerId,
   });
   if (issue3Res.status !== 303) throw new Error(`create issue 3: expected 303, got ${issue3Res.status}`);
+  const assignedIssueId = issue3Res.headers.get('location').split('/issues/')[1].split(/[/?]/)[0];
+
+  // `GATE-002`: the planned, assigned, long-titled issue. The create form does
+  // not take a planned window (the handler stores none); the edit route does, so
+  // it is created, then planned through the edit route with the lock value the
+  // edit page renders. Today in UTC, the server's own "today".
+  const today = new Date().toISOString().slice(0, 10);
+  const issue4Res = await jar.fetchForm(`${BASE}/projects/${projectId}/issues/new`, {
+    title: PLANNED_ISSUE_TITLE,
+    description: '',
+    status: 'in_progress',
+    priority: 'high',
+    effort: '3',
+    assignee_id: ownerId,
+  });
+  if (issue4Res.status !== 303) throw new Error(`create issue 4: expected 303, got ${issue4Res.status}`);
+  const plannedIssueId = issue4Res.headers.get('location').split('/issues/')[1].split(/[/?]/)[0];
+  const planStamp = await lockStamp(jar, `${BASE}/projects/${projectId}/issues/${plannedIssueId}/edit`, 'plan');
+  const planRes = await jar.fetchForm(`${BASE}/projects/${projectId}/issues/${plannedIssueId}`, {
+    title: PLANNED_ISSUE_TITLE,
+    description: '',
+    status: 'in_progress',
+    priority: 'high',
+    effort: '3',
+    assignee_id: ownerId,
+    planned_start_at: `${today}T09:00`,
+    planned_end_at: `${today}T10:30`,
+    client_updated_at: planStamp,
+  });
+  if (planRes.status !== 303) throw new Error(`plan issue 4: expected 303, got ${planRes.status}`);
 
   // `SPRINT-005` (`§10.27`): a **completed** sprint with a captured record.
   // The sprint above stays planned -- its plan page is the one with the
@@ -357,7 +393,27 @@ async function createFixtures() {
   }
   log(`completed sprint page holds: ${expected.map(m => JSON.stringify(m.length > 40 ? `${m.slice(0, 37)}...` : m)).join(', ')}`);
 
-  return { cookie: jar.header(), projectId, issueId, teamSlug, sprintId, completedSprintId };
+  // `GATE-002` / `§10.32`: **assert each branch rendered.** A green cell on a
+  // page that rendered nothing is the whole subject of that entry, and only an
+  // assertion tells the two apart from outside. Each check names the element it
+  // found; the run fails if it is not there.
+  const fetchPage = async (path) => (await fetch(`${BASE}${path}`, { headers: { cookie: jar.header() } })).text();
+  const nameRe = LONG_DISPLAY_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const badgeCount = (html) => [...html.matchAll(new RegExp(`<span[^>]*\\bbadge\\b[^>]*>\\s*${nameRe}\\s*</span>`, 'g'))].length;
+  const detailHtml = await fetchPage(`/projects/${projectId}/issues/${assignedIssueId}`);
+  if (badgeCount(detailHtml) < 1) throw new Error('issue detail (assigned): no assignee <span class="badge"> holding the display name');
+  const boardHtml = await fetchPage(`/projects/${projectId}`);
+  const boardBadges = badgeCount(boardHtml);
+  const stripChips = [...boardHtml.matchAll(new RegExp(`<span[^>]*text-xs font-medium[^>]*>\\s*${nameRe}\\s*</span>`, 'g'))].length;
+  if (boardBadges < 2) throw new Error(`board: expected two assigned cards (assignee badges), found ${boardBadges}`);
+  if (stripChips < 1) throw new Error('board: no workload-strip chip holding the display name');
+  const personalCal = await fetchPage('/today/calendar');
+  if (!personalCal.includes(PLANNED_ISSUE_TITLE)) throw new Error('personal calendar: no block for the planned, assigned issue');
+  const projectCal = await fetchPage(`/projects/${projectId}/calendar`);
+  if (!projectCal.includes(PLANNED_ISSUE_TITLE)) throw new Error('project calendar: no block for the planned issue');
+  log(`branches rendered: issue-detail assignee badge x${badgeCount(detailHtml)}; board assignee badges x${boardBadges} + workload chip x${stripChips}; calendar block on personal and project axes`);
+
+  return { cookie: jar.header(), projectId, issueId, assignedIssueId, teamSlug, sprintId, completedSprintId };
 }
 
 async function main() {
@@ -384,7 +440,7 @@ async function main() {
     await waitForServer(`${BASE}/login`);
     log('server ready');
 
-    const { cookie, projectId, issueId, teamSlug, sprintId, completedSprintId } = await createFixtures();
+    const { cookie, projectId, issueId, assignedIssueId, teamSlug, sprintId, completedSprintId } = await createFixtures();
     log(`fixtures created: project=${projectId} issue=${issueId}`);
 
     const pages = {
@@ -412,6 +468,9 @@ async function main() {
       sprint_detail_completed: `${BASE}/teams/${teamSlug}/sprints/${completedSprintId}`,
       issue_new: `${BASE}/projects/${projectId}/issues/new`,
       issue_detail: `${BASE}/projects/${projectId}/issues/${issueId}`,
+      // `GATE-002`: the assigned issue's detail page, so its assignee badge is held
+      // by the gate; the older issue above stays unassigned and unchanged.
+      issue_detail_assigned: `${BASE}/projects/${projectId}/issues/${assignedIssueId}`,
       settings: `${BASE}/settings`,
       settings_notifications: `${BASE}/settings/notifications`,
       teams: `${BASE}/teams`,
