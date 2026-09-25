@@ -101,6 +101,8 @@ the RFC number they are keyed to.
 | [`handoffs/0013-the-sprint-record/`](./handoffs/0013-the-sprint-record/README.md) | RFC 0013 / `DEC-054` — `SPRINT-004`, capture at completion and discard on reopen, target 0.39.0 |
 | [`handoffs/024-requirement-status-audit/`](./handoffs/024-requirement-status-audit/README.md) | **Not RFC-governed** — `REQ-001`, what the record claims against what the code does, target 0.40.0 |
 | [`handoffs/025-noticed-and-deferred/`](./handoffs/025-noticed-and-deferred/README.md) | **Not RFC-governed** — `PERF-001` and `GATE-001`, two items found during other work, target 0.40.0 |
+| [`handoffs/026-plan-filter-overflow/`](./handoffs/026-plan-filter-overflow/README.md) | **Not RFC-governed** — `LAYOUT-010`, the plan page's filter selects; **holds a red gate**, target 0.40.0 |
+| [`handoffs/027-p0-guard-and-statistics/`](./handoffs/027-p0-guard-and-statistics/README.md) | **Not RFC-governed** — `CAL-004` and `PERF-002`, from `REQ-001` and `PERF-001`, target 0.40.0 |
 | [`handoffs/015-mobile-completion/`](./handoffs/015-mobile-completion/README.md) | **Not RFC-governed** — closing `NFR-A11Y-006`, unverified since Phase E |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
