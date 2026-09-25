@@ -612,6 +612,193 @@ fn message_table_carries_none_of_the_named_efficiency_concepts() {
     }
 }
 
+// ---------------------------------------------------------------------------
+// `REQ-002` / `FR-CAL-005` -- an unscheduled day is not commented on or filled.
+//
+// The requirement is an **absence**, and an absence pinned to a string is
+// pinned to the wrong thing (*"empty"*, *"free"*, *"gap"* are what someone
+// would think of; the next comment would be another word). So these tests
+// assert what an empty day's cell **may** contain, not what it may not:
+//
+// * its opening tag carries **no fill** -- no `bg-*` class other than the
+//   neutral card surface `bg-base-*`, no colour-state text class, no `title`
+//   tooltip;
+// * its **visible text is the date and nothing else** (tags stripped);
+// * it carries **no badge or chip** (a chip is how a *crowded* day is
+//   flagged; an empty one must not get its mirror image);
+// * its accessible name is exactly the neutral count label the product already
+//   gives every day, rendered from its own message key -- so rewording that
+//   label is free, but a *new* comment on the emptiness is not.
+//
+// A day with a scheduled item is extracted the same way as a control, so the
+// extraction cannot silently be matching nothing. **Scope**: the week and month
+// views of the personal axis; the day view has no per-day empty cell (hours
+// are the axis) and is not covered.
+// ---------------------------------------------------------------------------
+
+/// The element opened by the first tag whose `aria-label` is exactly `label`,
+/// as `(opening tag, whole element)`, closing at the matching `</tag>` (nesting
+/// counted, so a `<div>` inside a `<div>` does not end it early).
+fn element_labelled<'a>(html: &'a str, label: &str) -> Option<(&'a str, &'a str)> {
+    let needle = format!("aria-label=\"{label}\"");
+    let at = html.find(&needle)?;
+    let start = html[..at].rfind('<')?;
+    let tag_end = start + html[start..].find('>')? + 1;
+    let name: String = html[start + 1..]
+        .chars()
+        .take_while(|c| c.is_ascii_alphanumeric())
+        .collect();
+    let (open, close) = (format!("<{name}"), format!("</{name}"));
+    let mut depth = 0usize;
+    let mut i = start;
+    while i < html.len() {
+        let rest = &html[i..];
+        if rest.starts_with(&close) {
+            depth -= 1;
+            if depth == 0 {
+                let end = i + rest.find('>')? + 1;
+                return Some((&html[start..tag_end], &html[start..end]));
+            }
+            i += close.len();
+        } else if rest.starts_with(&open)
+            && rest[open.len()..]
+                .chars()
+                .next()
+                .is_some_and(|c| c == ' ' || c == '>' || c == '/')
+        {
+            depth += 1;
+            i += open.len();
+        } else {
+            i += rest.chars().next().map_or(1, |c| c.len_utf8());
+        }
+    }
+    None
+}
+
+/// Visible text: tags removed, whitespace collapsed.
+fn visible_text(html: &str) -> String {
+    let mut out = String::new();
+    let mut in_tag = false;
+    for c in html.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => {
+                in_tag = false;
+                out.push(' ');
+            }
+            _ if !in_tag => out.push(c),
+            _ => {}
+        }
+    }
+    out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+fn cell_label(date: chrono::NaiveDate, count: i64) -> String {
+    use chrono::Datelike;
+    peisear_i18n::Locale::English.render(peisear_i18n::MessageKey::CalendarCellAriaLabel {
+        month: date.month(),
+        day: date.day(),
+        count,
+    })
+}
+
+fn assert_unscheduled_cell_is_silent(
+    html: &str,
+    date: chrono::NaiveDate,
+    expected_text: &str,
+    view: &str,
+) {
+    let label = cell_label(date, 0);
+    let (open_tag, element) = element_labelled(html, &label).unwrap_or_else(|| {
+        panic!("{view}: no cell labelled {label:?} -- the extraction found nothing to assert on")
+    });
+    // The neutral card surface (`bg-base-*`) is every cell's background, scheduled
+    // or not; any *other* `bg-` colour is a fill.
+    let class = open_tag
+        .split("class=\"")
+        .nth(1)
+        .and_then(|c| c.split('"').next())
+        .unwrap_or("");
+    for token in class.split_whitespace() {
+        assert!(
+            !(token.starts_with("bg-") && !token.starts_with("bg-base-")),
+            "{view}: an unscheduled day's cell must carry no fill ({token}): {open_tag}"
+        );
+    }
+    for forbidden in ["text-error", "text-warning", "text-success", "title="] {
+        assert!(
+            !open_tag.contains(forbidden),
+            "{view}: an unscheduled day's cell must carry no state colour or tooltip ({forbidden}): {open_tag}"
+        );
+    }
+    assert_eq!(
+        visible_text(element),
+        expected_text,
+        "{view}: an unscheduled day shows its date and nothing else: {element}"
+    );
+    assert!(
+        !element.contains("badge"),
+        "{view}: an unscheduled day carries no chip or badge: {element}"
+    );
+}
+
+/// `FR-CAL-005`: see the block comment above.
+#[tokio::test]
+async fn an_unscheduled_day_carries_no_comment_and_no_fill() {
+    use chrono::Datelike;
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Test").await;
+
+    let d = today();
+    insert_planned_issue(
+        &app,
+        &project_id,
+        &user_id,
+        "The one scheduled item",
+        Some(&user_id),
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+
+    // Month view: an empty day in the same month as today.
+    let empty_day =
+        chrono::NaiveDate::from_ymd_opt(d.year(), d.month(), if d.day() == 10 { 11 } else { 10 })
+            .expect("a valid day");
+    let month = app
+        .server
+        .get(&format!("/today/calendar?view=month&date={d}"))
+        .await
+        .text();
+    // The control: today's own cell is found, and carries its block.
+    let (_, today_cell) = element_labelled(&month, &cell_label(d, 1))
+        .expect("the scheduled day's cell must be found, or the extraction proves nothing");
+    assert!(today_cell.contains("The one scheduled item"));
+    assert_unscheduled_cell_is_silent(&month, empty_day, &empty_day.day().to_string(), "month");
+
+    // Week view: an empty day in today's week.
+    let monday = d - chrono::Duration::days(d.weekday().num_days_from_monday() as i64);
+    let empty_weekday = if monday == d {
+        monday + chrono::Duration::days(1)
+    } else {
+        monday
+    };
+    let week = app
+        .server
+        .get(&format!("/today/calendar?view=week&date={d}"))
+        .await
+        .text();
+    assert!(element_labelled(&week, &cell_label(d, 1)).is_some());
+    assert_unscheduled_cell_is_silent(
+        &week,
+        empty_weekday,
+        &empty_weekday.format("%a %-d").to_string(),
+        "week",
+    );
+}
+
 /// Test 9 -- both footers render, byte-identical to their keys.
 #[tokio::test]
 async fn both_footers_render_byte_identically() {

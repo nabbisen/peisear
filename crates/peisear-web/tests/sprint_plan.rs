@@ -17,7 +17,9 @@ mod common;
 
 use axum::http::StatusCode;
 use common::auth::{TestUser, login, register_and_login};
-use common::fixture::{create_planned_sprint, create_team_project, create_team_with_admin};
+use common::fixture::{
+    create_personal_project, create_planned_sprint, create_team_project, create_team_with_admin,
+};
 use common::server::TestApp;
 use peisear_core::teams::TeamRole;
 use peisear_core::{IssueStatus, Priority};
@@ -520,6 +522,63 @@ async fn filter_round_trip_narrows_backlog_and_survives_move() {
     assert!(
         location.contains("priority=high"),
         "the redirect must preserve the active filter, got {location}"
+    );
+}
+
+/// `REQ-002` / `FR-PLAN-005`: the backlog is **team-scoped**. A personal
+/// project's open issue -- same author, same status, same page request -- must
+/// not appear in a team's sprint backlog, and a team project's must. `REQ-001`
+/// moved this requirement to Met on a probe; this is the test the probe stood in
+/// for. It asserts both the page and the storage read behind it, so a change to
+/// either scoping is caught where it is made.
+#[tokio::test]
+async fn a_personal_projects_issue_is_not_in_the_team_backlog() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let team_project = create_team_project(&app.db, &admin_id, &team_id, "Team project").await;
+    let personal_project = create_personal_project(&app.db, &admin_id, "Personal project").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+
+    let team_issue = insert_open_issue(
+        &app,
+        &team_project,
+        &admin_id,
+        "Team backlog item",
+        Priority::Medium,
+        Some(1),
+    )
+    .await;
+    let personal_issue = insert_open_issue(
+        &app,
+        &personal_project,
+        &admin_id,
+        "Personal only item",
+        Priority::Medium,
+        Some(1),
+    )
+    .await;
+
+    let body = app.server.get(&plan_url(&slug, &sprint_id)).await.text();
+    assert!(
+        body.contains("Team backlog item"),
+        "the team project's open issue belongs in the backlog: {body}"
+    );
+    assert!(
+        !body.contains("Personal only item"),
+        "a personal project's issue must not appear in a team backlog: {body}"
+    );
+
+    let rows = sprints::backlog_for_team(&app.db, &team_id, sprints::BacklogFilter::default())
+        .await
+        .expect("backlog");
+    let ids: Vec<&str> = rows.iter().map(|r| r.issue.id.as_str()).collect();
+    assert!(ids.contains(&team_issue.as_str()));
+    assert!(
+        !ids.contains(&personal_issue.as_str()),
+        "the storage read must not return a personal project's issue"
     );
 }
 

@@ -575,3 +575,44 @@ async fn velocity_is_shown_when_one_sprint_clears_the_floor_on_its_own() {
         "one sprint has two contributors on its own: the median line shows"
     );
 }
+
+/// `REQ-002` / `FR-TEAM-005`: the privacy footnote is **on the team detail
+/// screen**, for every role that can see the team. Its wording is byte-pinned in
+/// `peisear-i18n` (`team_privacy_footnote_renders_byte_identically`) -- that is
+/// the string; this is the screen, which `REQ-001` found nothing asserted.
+#[tokio::test]
+async fn the_team_privacy_footnote_renders_on_the_team_screen_for_every_role() {
+    let app = TestApp::spawn().await;
+    let alice = TestUser::new("alice");
+    let alice_id = register_and_login(&app, &alice).await;
+    let bob = TestUser::new("bob");
+    let bob_id = register_and_login(&app, &bob).await;
+    let carol = TestUser::new("carol");
+    let carol_id = register_and_login(&app, &carol).await;
+    common::auth::logout(&app).await;
+
+    let team_id = create_team_with_admin(&app.db, &alice_id, "Engineering").await;
+    peisear_storage::teams::add_member(&app.db, &team_id, &bob_id, TeamRole::Member)
+        .await
+        .expect("add bob");
+    peisear_storage::teams::add_member(&app.db, &team_id, &carol_id, TeamRole::Viewer)
+        .await
+        .expect("add carol");
+    let slug = peisear_storage::teams::find_by_id(&app.db, &team_id)
+        .await
+        .expect("find team")
+        .expect("team exists")
+        .slug;
+    let footnote =
+        peisear_i18n::Locale::English.render(peisear_i18n::MessageKey::TeamPrivacyFootnote);
+
+    for (who, role) in [(&alice, "admin"), (&bob, "member"), (&carol, "viewer")] {
+        common::auth::login(&app, who).await;
+        let body = app.server.get(&format!("/teams/{slug}")).await.text();
+        assert!(
+            body.contains(&footnote),
+            "the {role}'s team screen must carry the privacy footnote: {body}"
+        );
+        common::auth::logout(&app).await;
+    }
+}

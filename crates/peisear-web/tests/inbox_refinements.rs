@@ -368,3 +368,37 @@ async fn search_result_shows_parent_for_sub_issue_and_omits_for_top_level() {
         "top-level result should render without a parent breadcrumb"
     );
 }
+
+/// `REQ-002` / `FR-NTF-005`: *mark all read* is offered **only while something
+/// is unread**. Absent on an empty inbox, present with one unread notification,
+/// absent again once everything is read. The route's redirect and its isolation
+/// between users are tested elsewhere; this is the limb the record said nothing
+/// pinned.
+#[tokio::test]
+async fn mark_all_read_is_offered_only_while_something_is_unread() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let control = "action=\"/inbox/mark-all-read\"";
+
+    let empty = app.server.get("/inbox").await.text();
+    assert!(
+        !empty.contains(control),
+        "an empty inbox must not offer mark-all-read: {empty}"
+    );
+
+    insert_notification(&app, &user_id).await;
+    let unread = app.server.get("/inbox").await.text();
+    assert!(
+        unread.contains(control),
+        "with an unread notification the control must be offered: {unread}"
+    );
+
+    let resp = app.server.post("/inbox/mark-all-read").await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+    let read = app.server.get("/inbox").await.text();
+    assert!(
+        !read.contains(control),
+        "once everything is read the control must be gone again: {read}"
+    );
+}
