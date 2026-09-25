@@ -376,6 +376,242 @@ async fn no_efficiency_metric_and_crowding_chip_carries_no_quantity() {
     );
 }
 
+// ---------------------------------------------------------------------------
+// `CAL-004` -- `FR-CAL-007`'s guard, for the concepts it names.
+//
+// `no_efficiency_metric_and_crowding_chip_carries_no_quantity` (above) asserts
+// a real property -- no `%`, no " of ", no ratio -- and a different one from
+// the one `FR-CAL-007` states. The requirement (P0, `SPEC §16.6`) prohibits
+// *occupancy rate, week-over-week comparison, free-hours totals*, and quotes
+// "free time: 4 hours" as the seemingly benign case: a sentence with no `%`
+// and no " of " in it. These tests assert the concepts. The quantity test stays.
+//
+// WHAT IS SCANNED, and what that leaves uncovered:
+//
+// * `calendar_pages_..._concepts`: the **served HTML of the two calendar
+//   surfaces** -- personal and project axes, each in day, week and month view,
+//   on a populated anchor (a crowded day, scheduled and unscheduled work, an
+//   active sprint band) and on an empty one far from any data (where an
+//   emptiness message would appear). Text is scanned as served, so copy
+//   composed at a call site is seen; **class attributes are dropped first**
+//   (a CSS class is not copy). Not covered: any state or page this fixture does
+//   not render (a calendar page added later, a different anchor's copy), and
+//   anything a script would write into the page after load.
+// * `message_table_..._concepts`: every entry of **`MessageKey::all()` in
+//   English**. It sees copy that no fixture happens to render, and cannot see
+//   copy composed outside the table. The i18n crate's fixture locale is not
+//   scanned from here.
+// * Both look for **the named terms and their ordinary spellings only**
+//   (below). A synonym -- "lightly booked", "spare capacity" -- passes both;
+//   that is a limit of vocabulary guards (`FR-HLT-006`'s human review is the
+//   rest), not something a longer list would close.
+//
+// The finder normalises before matching: lowercase, every run of
+// non-alphanumerics becomes one space (`&nbsp;` counts as a space), phrases are
+// matched on word boundaries. So "Week-over-Week", "week over week" and
+// "WEEK/OVER/WEEK" are one term. Other HTML entities are not decoded.
+// ---------------------------------------------------------------------------
+
+/// The concepts `FR-CAL-007` and `SPEC §16.6` name, with their ordinary
+/// spellings -- as normalised phrases (see above).
+const EFFICIENCY_CONCEPTS: &[&str] = &[
+    "occupancy",
+    "week over week",
+    "week on week",
+    "free hours",
+    "free time",
+];
+
+fn drop_class_attributes(html: &str) -> String {
+    let mut out = String::with_capacity(html.len());
+    let mut rest = html;
+    while let Some(at) = rest.find(" class=\"") {
+        out.push_str(&rest[..at]);
+        let after = &rest[at + " class=\"".len()..];
+        match after.find('"') {
+            Some(end) => rest = &after[end + 1..],
+            None => {
+                rest = "";
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+fn efficiency_concepts_in(text: &str) -> Vec<&'static str> {
+    let mut normalised = String::from(" ");
+    let mut in_gap = true;
+    // A non-breaking space is a space to a reader, in either spelling.
+    let text = text.replace("&nbsp;", " ").replace("&#160;", " ");
+    for c in text.to_lowercase().chars() {
+        if c.is_alphanumeric() {
+            normalised.push(c);
+            in_gap = false;
+        } else if !in_gap {
+            normalised.push(' ');
+            in_gap = true;
+        }
+    }
+    if !in_gap {
+        normalised.push(' ');
+    }
+    EFFICIENCY_CONCEPTS
+        .iter()
+        .copied()
+        .filter(|phrase| normalised.contains(&format!(" {phrase} ")))
+        .collect()
+}
+
+/// The finder itself, one term at a time -- `SPEC §16.6`'s own example
+/// first -- and the near-misses that must stay clean. A guard that has never
+/// been seen to find anything is not evidence.
+#[test]
+fn the_efficiency_concept_finder_finds_each_named_term_and_the_rationales_example() {
+    let positives = [
+        ("Free time: 4 hours", "free time"),
+        ("You have free hours on Thursday", "free hours"),
+        ("Occupancy this week", "occupancy"),
+        ("Occupancy rate", "occupancy"),
+        ("A week-over-week comparison", "week over week"),
+        ("Week over week, up", "week over week"),
+        ("WEEK-ON-WEEK", "week on week"),
+        ("<span>free&nbsp;time</span>", "free time"),
+        ("free-time", "free time"),
+    ];
+    for (text, expected) in positives {
+        assert_eq!(
+            efficiency_concepts_in(text),
+            vec![expected],
+            "the finder must name {expected:?} in {text:?}"
+        );
+    }
+    let negatives = [
+        "Personal schedules are not aggregated here.",
+        "Crowded",
+        "Sprint 1",
+        "Freedom to schedule time for hours of work",
+        "preoccupancy",
+        "weekend over weekdays",
+    ];
+    for text in negatives {
+        assert!(
+            efficiency_concepts_in(text).is_empty(),
+            "no concept in {text:?}"
+        );
+    }
+    // Class attributes are not copy: a CSS class does not fire the guard,
+    // visible text next to it does.
+    let with_class = "<div class=\"free-time occupancy\">Sprint 1</div>";
+    assert!(efficiency_concepts_in(&drop_class_attributes(with_class)).is_empty());
+    let with_text = "<div class=\"x\">free time: 4 hours</div>";
+    assert_eq!(
+        efficiency_concepts_in(&drop_class_attributes(with_text)),
+        vec!["free time"]
+    );
+}
+
+/// `FR-CAL-007` (P0), on the rendered calendars -- see the block comment above
+/// for exactly what this scans.
+#[tokio::test]
+async fn calendar_pages_carry_none_of_the_named_efficiency_concepts() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let personal_id = create_personal_project(&app.db, &admin_id, "Mine").await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+
+    let d = today();
+    // A crowded day (the chip), on both axes' data.
+    for i in 0..5 {
+        insert_planned_issue(
+            &app,
+            &personal_id,
+            &admin_id,
+            &format!("Crowded {i}"),
+            Some(&admin_id),
+            Some(utc_hms(d, 9, 0)),
+            Some(utc_hms(d, 10, 0)),
+        )
+        .await;
+    }
+    insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Team block",
+        Some(&admin_id),
+        Some(utc_hms(d, 13, 0)),
+        Some(utc_hms(d, 15, 0)),
+    )
+    .await;
+    // Work with no planned dates.
+    insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Unscheduled",
+        None,
+        None,
+        None,
+    )
+    .await;
+    // An active sprint band on the project axis.
+    let sprint_id = sprints::insert(
+        &app.db,
+        &team_id,
+        "Sprint 1",
+        None,
+        d - chrono::Duration::days(2),
+        d + chrono::Duration::days(5),
+    )
+    .await
+    .expect("insert sprint");
+    sprints::start(&app.db, &sprint_id)
+        .await
+        .expect("start sprint");
+
+    // Populated anchor (today) and an empty one, far from any data.
+    let empty_anchor = d + chrono::Duration::days(400);
+    let mut checked = 0;
+    for (axis, base) in [
+        ("personal", "/today/calendar".to_string()),
+        ("project", format!("/projects/{project_id}/calendar")),
+    ] {
+        for view in ["day", "week", "month"] {
+            for anchor in [d, empty_anchor] {
+                let url = format!("{base}?view={view}&date={anchor}");
+                let resp = app.server.get(&url).await;
+                resp.assert_status(StatusCode::OK);
+                let text = drop_class_attributes(&resp.text());
+                let found = efficiency_concepts_in(&text);
+                assert!(
+                    found.is_empty(),
+                    "FR-CAL-007 (P0): the {axis} calendar, {view} view, anchor {anchor}, carries {found:?}"
+                );
+                checked += 1;
+            }
+        }
+    }
+    assert_eq!(checked, 12, "two axes x three views x two anchors");
+}
+
+/// `FR-CAL-007` (P0), on the message table -- see the block comment above.
+#[test]
+fn message_table_carries_none_of_the_named_efficiency_concepts() {
+    let keys = peisear_i18n::MessageKey::all();
+    assert!(!keys.is_empty(), "an empty table would prove nothing");
+    for key in keys {
+        let english = peisear_i18n::Locale::English.render(key.clone());
+        let found = efficiency_concepts_in(&english);
+        assert!(
+            found.is_empty(),
+            "FR-CAL-007 (P0): {key:?} carries {found:?} (text: {english:?})"
+        );
+    }
+}
+
 /// Test 9 -- both footers render, byte-identical to their keys.
 #[tokio::test]
 async fn both_footers_render_byte_identically() {
