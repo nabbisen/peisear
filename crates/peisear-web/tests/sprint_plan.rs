@@ -523,6 +523,42 @@ async fn filter_round_trip_narrows_backlog_and_survives_move() {
     );
 }
 
+/// `LAYOUT-010` (`§10.25` shape A, on an input element): a `<select>`
+/// sizes to its longest `<option>`, and the project and assignee options
+/// are user text -- a project name with an unbroken run took the whole
+/// filter row 425px off a 320px screen. What lets the control shrink is
+/// `min-w-0` on the flex item that holds it (measured: on its own it is
+/// enough), so all three filter selects must sit in a label that has it.
+/// This asserts the class on the served markup, which is what a browser
+/// check would otherwise be the only witness of; it does not measure a
+/// box -- `browser-checks/overflow-gate.mjs` does, at five widths.
+#[tokio::test]
+async fn filter_selects_sit_in_labels_that_can_shrink() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let _project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+
+    let body = app.server.get(&plan_url(&slug, &sprint_id)).await.text();
+
+    for name in ["project", "priority", "assignee"] {
+        let select_at = body
+            .find(&format!("<select name=\"{name}\""))
+            .unwrap_or_else(|| panic!("no filter select named {name}: {body}"));
+        let label_at = body[..select_at]
+            .rfind("<label")
+            .unwrap_or_else(|| panic!("the {name} select is not inside a label"));
+        let label_tag = &body[label_at..label_at + body[label_at..].find('>').unwrap()];
+        assert!(
+            label_tag.contains("min-w-0"),
+            "the {name} filter's label needs `min-w-0` or an unbroken option widens the page: {label_tag}"
+        );
+    }
+}
+
 /// Correction (`PLAN-001-review.md` §3.1 / §5.2): `plan_remove`
 /// deletes by `issue_id` alone with no sprint scoping at the storage
 /// layer, so the handler's own check -- the issue must currently be

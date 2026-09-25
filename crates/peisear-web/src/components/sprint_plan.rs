@@ -181,11 +181,18 @@ fn render_filter_form(
     active_priority: String,
     active_assignee: String,
 ) -> impl IntoView + Clone + use<> {
+    // `LAYOUT-010` -- `§10.25` shape A on an input element; see the note on
+    // the list toolbar's assignee filter in `issues.rs` (`LAYOUT-007`). A
+    // `<select>` is as wide as its longest `<option>`, and the project and
+    // assignee options are user text, so each label carries `min-w-0`: that
+    // alone lets the control shrink to the row (measured, 320-414px). The
+    // priority select's options are our own strings; it gets the same class
+    // so a longer translation cannot reopen the defect.
     view! {
         <form method="get" action=action
               class="flex flex-wrap items-end gap-2 mb-4"
               aria-label=t(MessageKey::BacklogFilterAriaLabel)>
-            <label class="form-control">
+            <label class="form-control min-w-0">
                 <div class="label py-0">
                     <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Project })}</span>
                 </div>
@@ -200,7 +207,7 @@ fn render_filter_form(
                 </select>
             </label>
 
-            <label class="form-control">
+            <label class="form-control min-w-0">
                 <div class="label py-0">
                     <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Priority })}</span>
                 </div>
@@ -217,7 +224,7 @@ fn render_filter_form(
                 </select>
             </label>
 
-            <label class="form-control">
+            <label class="form-control min-w-0">
                 <div class="label py-0">
                     <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                 </div>
