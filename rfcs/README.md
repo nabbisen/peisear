@@ -99,6 +99,8 @@ the RFC number they are keyed to.
 | [`handoffs/022-sprint-membership/`](./handoffs/022-sprint-membership/README.md) | **Not RFC-governed** — `SPRINT-001`/`SPRINT-002`, changes that alter a completed sprint's record, target 0.39.0 |
 | [`handoffs/023-sprint-reopen/`](./handoffs/023-sprint-reopen/README.md) | `DEC-053` — `SPRINT-003`, reopening a completed sprint; **superseded by `SPRINT-004`**, design still normative |
 | [`handoffs/0013-the-sprint-record/`](./handoffs/0013-the-sprint-record/README.md) | RFC 0013 / `DEC-054` — `SPRINT-004`, capture at completion and discard on reopen, target 0.39.0 |
+| [`handoffs/024-requirement-status-audit/`](./handoffs/024-requirement-status-audit/README.md) | **Not RFC-governed** — `REQ-001`, what the record claims against what the code does, target 0.40.0 |
+| [`handoffs/025-noticed-and-deferred/`](./handoffs/025-noticed-and-deferred/README.md) | **Not RFC-governed** — `PERF-001` and `GATE-001`, two items found during other work, target 0.40.0 |
 | [`handoffs/015-mobile-completion/`](./handoffs/015-mobile-completion/README.md) | **Not RFC-governed** — closing `NFR-A11Y-006`, unverified since Phase E |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
