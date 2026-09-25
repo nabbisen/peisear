@@ -84,6 +84,24 @@ const LONG_DISPLAY_NAME = `Gate Fixture ${UNBROKEN_RUN}`;
 // and none of the three was in this list until now.
 const LONG_SPRINT_NAME = `Gate Fixture Sprint ${UNBROKEN_RUN}`;
 const LONG_SPRINT_GOAL = `Ship the gate fixture work, digest ${UNBROKEN_RUN}`;
+// `GATE-001`: the completed sprint's own issues. A completed sprint's
+// issue list is user text in a list -- where `§10.25`'s three shapes were
+// all found -- and the fixture's sprint had none, because its project was
+// personal and only a team project's issues can join a sprint. The team
+// project below carries the run in its name (as the personal one does);
+// its three issues are the run in a title, a long title made of words only
+// (which must *wrap*, not break), and an ordinary one.
+const LONG_TEAM_PROJECT_NAME = `Overflow Gate Team Project ${UNBROKEN_RUN}`;
+// 165 characters, spaces at every point: the wrapping shape, as against
+// `LONG_ISSUE_TITLE`'s unbreakable one.
+const WRAPPING_ISSUE_TITLE =
+  'A completed sprint issue whose title is made only of ordinary words and is long enough to wrap onto several lines at the narrowest width this gate sweeps, never once needing to break';
+const ORDINARY_TEAM_ISSUE_TITLE = 'An ordinary completed sprint issue';
+// `NFR-PRIV-007` suppresses the burndown below two contributors, counted
+// as distinct assignees of *done* issues in the sprint -- so the second
+// person is a real second account, added to the team through the route.
+const SECOND_CONTRIBUTOR_NAME = 'Gate Second Contributor';
+const SECOND_CONTRIBUTOR_EMAIL = 'gatesecondcontributor@example.org';
 
 function log(...args) {
   console.log('[overflow-gate]', ...args);
@@ -125,6 +143,27 @@ function makeCookieJar() {
       return cookie;
     },
   };
+}
+
+// The value of the `<option>` whose label contains `labelPart`, from a page
+// the fixture user can see. Ids are not in any redirect, so this is how a
+// script reaches a team's id or a member's, exactly as a person picking from
+// the list would.
+async function optionValue(cookie, url, labelPart) {
+  const html = await (await fetch(url, { headers: { cookie } })).text();
+  for (const m of html.matchAll(/<option[^>]*value="([^"]*)"[^>]*>([^<]*)<\/option>/g)) {
+    if (m[2].includes(labelPart) && m[1]) return m[1];
+  }
+  throw new Error(`no <option> containing "${labelPart}" on ${url}`);
+}
+
+// The optimistic-lock value a page renders for its next write, read the way a
+// browser would submit it.
+async function lockStamp(jar, url, what) {
+  const page = await (await fetch(url, { headers: { cookie: jar.header() } })).text();
+  const stamp = page.match(/name="client_updated_at"\s+value="([^"]+)"/)?.[1];
+  if (!stamp) throw new Error(`no lock value on ${url} before ${what}`);
+  return stamp;
 }
 
 async function createFixtures() {
@@ -215,17 +254,89 @@ async function createFixtures() {
   });
   if (completedRes.status !== 303) throw new Error(`create completed sprint: expected 303, got ${completedRes.status}`);
   const completedSprintId = completedRes.headers.get('location').split('/sprints/')[1].split(/[/?]/)[0];
-  for (const action of ['start', 'complete']) {
-    const page = await (await fetch(`${BASE}/teams/${teamSlug}/sprints/${completedSprintId}`, {
-      headers: { cookie: jar.header() },
-    })).text();
-    const stamp = page.match(/name="client_updated_at"\s+value="([^"]+)"/)?.[1];
-    if (!stamp) throw new Error(`no lock value on the sprint page before ${action}`);
-    const r = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints/${completedSprintId}/${action}`, {
-      client_updated_at: stamp,
+
+  // `GATE-001`: the completed sprint gets members. A second account joins the
+  // team, a team project is created (the personal project above stays as it
+  // is), and three issues are created in it, assigned to the two people,
+  // added to the still-planned sprint through the plan route, and marked done
+  // through the status route -- so `complete` below captures a real record,
+  // with two contributors, from real events.
+  const secondJar = makeCookieJar();
+  const secondRes = await secondJar.fetchForm(`${BASE}/register`, {
+    display_name: SECOND_CONTRIBUTOR_NAME,
+    email: SECOND_CONTRIBUTOR_EMAIL,
+    password: 'password1234',
+  });
+  if (secondRes.status !== 303) throw new Error(`register second contributor: expected 303, got ${secondRes.status}`);
+  const memberRes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/members`, {
+    email: SECOND_CONTRIBUTOR_EMAIL,
+    role: 'member',
+  });
+  if (memberRes.status !== 303) throw new Error(`add team member: expected 303, got ${memberRes.status}`);
+
+  const teamId = await optionValue(jar.header(), `${BASE}/projects/new`, LONG_TEAM_NAME);
+  const teamProjectRes = await jar.fetchForm(`${BASE}/projects`, {
+    name: LONG_TEAM_PROJECT_NAME,
+    description: 'Team fixture project for the GATE-001 completed sprint.',
+    team_id: teamId,
+  });
+  if (teamProjectRes.status !== 303) throw new Error(`create team project: expected 303, got ${teamProjectRes.status}`);
+  const teamProjectId = teamProjectRes.headers.get('location').split('/projects/')[1].split(/[/?]/)[0];
+
+  const newIssueUrl = `${BASE}/projects/${teamProjectId}/issues/new`;
+  const firstId = await optionValue(jar.header(), newIssueUrl, 'Gate Fixture ');
+  const secondId = await optionValue(jar.header(), newIssueUrl, SECOND_CONTRIBUTOR_NAME);
+  const sprintIssues = [
+    { title: LONG_ISSUE_TITLE, assignee: firstId, effort: '5' },
+    { title: WRAPPING_ISSUE_TITLE, assignee: secondId, effort: '3' },
+    { title: ORDINARY_TEAM_ISSUE_TITLE, assignee: secondId, effort: '2' },
+  ];
+  const sprintIssueIds = [];
+  for (const { title, assignee, effort } of sprintIssues) {
+    const r = await jar.fetchForm(newIssueUrl, {
+      title, description: '', status: 'open', priority: 'medium', effort, assignee_id: assignee,
     });
-    if (r.status !== 303) throw new Error(`${action} sprint: expected 303, got ${r.status}`);
+    if (r.status !== 303) throw new Error(`create team issue: expected 303, got ${r.status}`);
+    const id = r.headers.get('location').split('/issues/')[1].split(/[/?]/)[0];
+    sprintIssueIds.push(id);
+    const add = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints/${completedSprintId}/plan/add`, {
+      issue_id: id, project_id: teamProjectId,
+    });
+    if (add.status !== 303) throw new Error(`add issue to sprint: expected 303, got ${add.status}`);
   }
+  const startStamp = await lockStamp(jar, `${BASE}/teams/${teamSlug}/sprints/${completedSprintId}`, 'start');
+  const startRes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints/${completedSprintId}/start`, {
+    client_updated_at: startStamp,
+  });
+  if (startRes.status !== 303) throw new Error(`start sprint: expected 303, got ${startRes.status}`);
+  for (const id of sprintIssueIds) {
+    const stamp = await lockStamp(jar, `${BASE}/projects/${teamProjectId}/issues/${id}`, 'mark done');
+    const r = await jar.fetchForm(`${BASE}/projects/${teamProjectId}/issues/${id}/status/detail`, {
+      status: 'done', client_updated_at: stamp,
+    });
+    if (r.status !== 303) throw new Error(`mark issue done: expected 303, got ${r.status}`);
+  }
+  const completeStamp = await lockStamp(jar, `${BASE}/teams/${teamSlug}/sprints/${completedSprintId}`, 'complete');
+  const completeRes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints/${completedSprintId}/complete`, {
+    client_updated_at: completeStamp,
+  });
+  if (completeRes.status !== 303) throw new Error(`complete sprint: expected 303, got ${completeRes.status}`);
+
+  // The page the gate sweeps must actually hold what this fixture exists to
+  // put on it -- a 200 says nothing about that. Three titles in the issue
+  // list, and the burndown (which two contributors are what let render).
+  const completedPage = await (await fetch(`${BASE}/teams/${teamSlug}/sprints/${completedSprintId}`, {
+    headers: { cookie: jar.header() },
+  })).text();
+  const expected = [
+    'Summary at completion', 'Issues in this sprint now', 'Burndown',
+    LONG_ISSUE_TITLE, WRAPPING_ISSUE_TITLE, ORDINARY_TEAM_ISSUE_TITLE,
+  ];
+  const missing = expected.filter(text => !completedPage.includes(text));
+  if (missing.length) {
+    throw new Error(`completed sprint page lacks fixture content: ${missing.map(m => JSON.stringify(m)).join(', ')}`);
+  }
+  log(`completed sprint page holds: ${expected.map(m => JSON.stringify(m.length > 40 ? `${m.slice(0, 37)}...` : m)).join(', ')}`);
 
   return { cookie: jar.header(), projectId, issueId, teamSlug, sprintId, completedSprintId };
 }

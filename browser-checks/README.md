@@ -2,7 +2,7 @@
 
 `BROWSER-001` (RFC 011 step 4, `DEC-048`). This directory holds the
 horizontal-overflow gate: one assertion, `scrollWidth <= clientWidth`, on
-eighteen rendered pages at five widths, driven by a minimal Chrome DevTools
+nineteen rendered pages at five widths, driven by a minimal Chrome DevTools
 Protocol harness with no npm dependency.
 
 **This does not run inside `cargo test --workspace` and is not counted in
@@ -40,7 +40,7 @@ attention.
   order and its three known limits (one page at a time, waits on
   `document.readyState` only, no notion of animation completion).
 - `overflow-gate.mjs` — the gate itself: starts a scratch instance,
-  creates fixtures through the real forms, sweeps eighteen pages × five
+  creates fixtures through the real forms, sweeps nineteen pages × five
   widths, and exits non-zero if any cell overflows or if any request
   reached a host other than `127.0.0.1`.
 
@@ -149,8 +149,33 @@ interstitial. (19 × 5 widths = 95 cells; it was 18 × 5 = 90 until
 carries a captured record. The page carries the **Reopen sprint** control and
 `SPRINT-004`'s two headings, which no page in the list reached while the
 fixture's only sprint was planned — the gate reported 90/90 about a
-different page. The completed sprint has no members (the fixture's project
-is personal, and only a team project's issues can join a sprint).
+different page.
+
+`GATE-001` gave that sprint members. The completed sprint's issue list is
+user text in a list — where `§10.25`'s three shapes were all found — and the
+sprint had none, because the fixture's project is personal and only a team
+project's issues can join a sprint. So the fixture now also holds **a team
+project** (its name carries the unbroken run) and **a second account**, added
+to the team through the members route. The personal project stays as it was.
+Three issues are created in the team project through the form, added to the
+sprint through the plan route while it is planned, and marked done through the
+status route before the sprint is completed: one whose title carries the
+unbreakable run (`LONG_ISSUE_TITLE`), one long title made only of ordinary
+words (which must *wrap*), and an ordinary one. The two assignees are the
+**two contributors** `NFR-PRIV-007` requires before the burndown renders — a
+sprint with one would leave the chart out of the sweep. `createFixtures`
+fetches the completed sprint's page and **fails the run if the three titles,
+the two headings or the burndown are absent**, so the fixture cannot decay
+into sweeping an empty list again. No page was added: the same 19 × 5 = 95
+cells, one of them now carrying a populated list.
+
+A team project is visible on more than one page. `team_detail` and
+`projects` list it, `search` (`q=fixture`) now matches the long issue title
+in it as well, and the sprint plan page's filter bar lists it and the second
+account — the filter's `<select>`s size to their longest option, so a project
+name or display name with an unbroken run widened the page until `LAYOUT-010`
+fixed it — the fixture's team had no project before, so both lists were empty
+and the gate could not have seen it.
 
 `LAYOUT-008` added the three sprint pages and the new-issue form. All
 four were red on the run that added them.
