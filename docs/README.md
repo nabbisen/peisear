@@ -65,11 +65,20 @@ You want to know what the product is required to do, or what it presents.
   (including `§17`, where design and implementation have diverged). English
   only; amended at every release.
 
+## Development
+
+You're changing peisear and want to know how a release is written down.
+
+- [Changelog, release notes and tags](development/changelog-and-releases.md) —
+  where release notes live, what a release section opens with, the link a tag's
+  message carries, and how older series are archived
+
 ## Elsewhere in the repo
 
 - [README](../README.md) — the elevator pitch and quickstart
 - [ROADMAP](../ROADMAP.md) — what's next and where it will land
-- [CHANGELOG](../CHANGELOG.md) — what has changed and when
+- [CHANGELOG](../CHANGELOG.md) — what has changed and when (the current
+  series; older ones are in [`changelog/`](../changelog/))
 - [TERMS_OF_USE](../TERMS_OF_USE.md) — end-user terms template for
   operators deploying peisear
 - [LICENSE](../LICENSE) — Apache-2.0

@@ -9,6 +9,7 @@ peisear/
 ├── Cargo.lock
 ├── README.md · LICENSE · NOTICE
 ├── CHANGELOG.md · ROADMAP.md · TERMS_OF_USE.md
+├── changelog/                       # Older release notes, one file per series
 ├── .env.example · .gitignore
 │
 ├── .github/                         # Community health files
@@ -21,7 +22,8 @@ peisear/
 │   ├── architecture/
 │   ├── operations/
 │   ├── security/
-│   └── guides/
+│   ├── guides/
+│   └── development/                 # Release notes and tags
 │
 ├── crates/
 │   ├── peisear-core/                # Pure domain types.

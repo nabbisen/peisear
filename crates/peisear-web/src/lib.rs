@@ -17,6 +17,8 @@
 #![recursion_limit = "256"]
 
 pub mod app;
+#[cfg(test)]
+mod changelog_scan;
 pub mod components;
 pub mod config;
 #[cfg(test)]

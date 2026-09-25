@@ -149,6 +149,11 @@ Public API changes require doc updates:
   completes a roadmap item.
 - Breaking change → note it in the `## [Unreleased]` section of
   `CHANGELOG.md`.
+- Cutting a release → how the changelog section, the tag message and the
+  archive of older series work is in
+  [`docs/development/changelog-and-releases.md`](../docs/development/changelog-and-releases.md).
+  The tag's message carries a link to the release notes; nothing checks that
+  one, so it is a step, not a hope.
 
 ### Commit style
 
