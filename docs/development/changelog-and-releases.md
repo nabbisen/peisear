@@ -18,15 +18,21 @@ Work lands under `## [Unreleased]` as it merges. At release the heading is
 renamed to the version and dated (`## [0.41.0] — 2026-10-12`), and the section
 is written up for a reader.
 
-**From 0.41.0 a section opens with `### Highlights`** — before any other `###`
-heading; a short opening paragraph above it is fine. Highlights are about 3 to 7
-bullets, one or two lines each, in the words of the person using peisear, not the
-task, RFC or check that produced the change. If nothing a user can see changed,
-say so in one bullet; do not pad. Below it come the detail sections in
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/) style — `Added`,
-`Changed`, `Fixed`, `Security`, and this project's own `Internal`, listing only
-those that have something in them. Sections before 0.41.0 predate the rule and
-are not rewritten.
+Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) —
+`Added`, `Changed`, `Fixed`, `Security`, and this project's own `Internal`,
+listing only those with something in them.
+
+**There is no required opening heading.** A `### Highlights` rule was written
+here and enforced by the scan; it came from another project's policy, no
+decision here adopted it, and it was removed on 2026-09-25 before it took
+effect. **What a section must do is what every release handoff already asks
+of it**: lead with what a user can see, say plainly when nothing changed
+rather than padding, and name this project's own mistakes rather than fixing
+them quietly. Those are judgements a check cannot make, which is why the scan
+checks the *arrangement* and not the prose.
+
+If a Highlights convention is ever wanted it is one decision and ten lines —
+see the note in `crates/peisear-web/src/changelog_scan.rs`.
 
 ## The tag carries the link
 
@@ -51,10 +57,25 @@ git push origin X.Y.Z
 - **Write the tag after the changelog is final.** The link is only right if the
   tagged commit's `CHANGELOG.md` already holds the section. Tag the release
   commit, not one before it.
-- **Existing tags.** Tags before `0.40.0` carry only `peisear X.Y.Z` and are not
-  rewritten. `0.40.0` was re-tagged once, on the same commit, to add the link.
+- **A tag is written once.** Once a tag is pushed it is a fixed reference:
+  anyone who fetched it holds that object, and rewriting it means two people
+  with the same tag name see different things. **This rule exists because it was
+  broken**: `0.40.0`'s tag was force-pushed after its crates were published, on
+  the same commit, to add the link above. The content was harmless and the act
+  was not. Tags before `0.40.0` carry only `peisear X.Y.Z` and **are not
+  rewritten** — 39 force-pushes to add a link is the same mistake at scale.
+- **If a tag is wrong, the answer is the next version**, not a rewrite. A
+  release whose tag names the wrong commit is a release to supersede.
 
-## Keeping the file a readable size
+## Keeping the file a readable size — `DEC-055`
+
+**Decided 2026-09-25.** The arrangement below was implemented from another
+project's policy before anyone here decided it (see
+`.git-exclude/reviewed/CHANGELOG-POLICY-review.md`). It is kept **on this
+project's own reasoning**: `CHANGELOG.md` had reached 4,154 lines, the move is
+verbatim and reversible, and the scan makes the arrangement checkable rather
+than remembered. What is *not* inherited is anything about how a section reads.
+
 
 `CHANGELOG.md` holds **the current series only**. Older series are **moved**,
 never copied, into one file each under [`changelog/`](../../changelog/), and

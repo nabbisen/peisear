@@ -27,7 +27,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **`CHANGELOG.md` holds the current series only.** Versions 0.1 to 0.39 moved,
   verbatim, into `changelog/`, one file per series of ten minor versions. Their
   stale reference-style link footers, which pointed at GitHub Release pages that
-  never existed, were dropped. A scan under `cargo test` checks the arrangement.
+  never existed, were dropped. A scan under `cargo test` checks the
+  arrangement (`DEC-055`).
 
 ## [0.40.0] — 2026-09-25
 
