@@ -516,7 +516,12 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
             view! {
                 <div class="flex items-center gap-2 px-2 py-1 rounded border border-base-300 bg-base-100"
                      title=title>
-                    <span class="text-xs font-medium">{u.display_name}</span>
+                    // `LAYOUT-011`: the name is user text in a chip that is a flex item
+                    // of a wrapping row. Measured: `min-w-0` on the chip, or
+                    // `break-words` on the name, each change nothing; `wrap-anywhere`
+                    // alone clears it (`§10.25` shape C -- min-content is what is
+                    // too wide, and only `anywhere` counts toward it).
+                    <span class="text-xs font-medium wrap-anywhere">{u.display_name}</span>
                     <span class="badge badge-sm badge-ghost">{label}</span>
                 </div>
             }
@@ -815,7 +820,12 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
     let assignee_node = issue.assignee_id.as_ref().map(|aid| {
         let name = assignee_label(aid, &assignees).to_string();
         view! {
-            <span class="badge badge-sm badge-ghost" title=t(MessageKey::FieldLabel { field: Field::Assignee })>
+            // `LAYOUT-011` shape C (`components.rs`): a badge is `inline-flex`, so it
+            // takes its width from the name's min-content. Measured: `min-w-0` and
+            // `max-w-full` each leave 53px/18px of overflow; `wrap-anywhere` clears
+            // it; and it needs `h-auto` (the badge's fixed 1rem height would let
+            // a wrapped name spill out of the pill); without vertical padding a one-line badge is the same 1rem as before.
+            <span class="badge badge-sm badge-ghost wrap-anywhere h-auto" title=t(MessageKey::FieldLabel { field: Field::Assignee })>
                 {name}
             </span>
         }
@@ -1817,7 +1827,12 @@ fn IssueView(
     let assignee_node = issue.assignee_id.as_ref().map(|aid| {
         let name = assignee_label(aid, &assignees).to_string();
         view! {
-            <span class="badge badge-sm badge-ghost" title=t(MessageKey::FieldLabel { field: Field::Assignee })>
+            // `LAYOUT-011` shape C (`components.rs`): a badge is `inline-flex`, so it
+            // takes its width from the name's min-content. Measured: `min-w-0` and
+            // `max-w-full` each leave 53px/18px of overflow; `wrap-anywhere` clears
+            // it; and it needs `h-auto` (the badge's fixed 1rem height would let
+            // a wrapped name spill out of the pill); without vertical padding a one-line badge is the same 1rem as before.
+            <span class="badge badge-sm badge-ghost wrap-anywhere h-auto" title=t(MessageKey::FieldLabel { field: Field::Assignee })>
                 {name}
             </span>
         }

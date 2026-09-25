@@ -235,6 +235,25 @@ async function createFixtures() {
   const issue2Location = issue2Res.headers.get('location');
   const issueId = issue2Location.split('/issues/')[1].split(/[/?]/)[0];
 
+  // `LAYOUT-011`: an issue **assigned** to a person whose display name carries
+  // the unbroken run, and in progress. Every issue above is unassigned, so no
+  // assignee badge and no workload chip had ever rendered under this gate: the
+  // board and list pages it swept could not show them, and both overflowed
+  // (a 1280px desktop among them, on a page with more cards) while the gate
+  // reported green. It is a **new** issue -- the two above keep the content
+  // they had -- assigned to the project's owner, who is the only candidate a
+  // personal project offers, and who is the account with `LONG_DISPLAY_NAME`.
+  const ownerId = await optionValue(jar.header(), `${BASE}/projects/${projectId}/issues/new`, 'Gate Fixture ');
+  const issue3Res = await jar.fetchForm(`${BASE}/projects/${projectId}/issues/new`, {
+    title: 'An assigned fixture issue',
+    description: '',
+    status: 'in_progress',
+    priority: 'medium',
+    effort: '2',
+    assignee_id: ownerId,
+  });
+  if (issue3Res.status !== 303) throw new Error(`create issue 3: expected 303, got ${issue3Res.status}`);
+
   // `SPRINT-005` (`§10.27`): a **completed** sprint with a captured record.
   // The sprint above stays planned -- its plan page is the one with the
   // backlog and the drag controls -- so the completed-sprint form of the

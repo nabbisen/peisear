@@ -177,6 +177,18 @@ name or display name with an unbroken run widened the page until `LAYOUT-010`
 fixed it — the fixture's team had no project before, so both lists were empty
 and the gate could not have seen it.
 
+`LAYOUT-011` added an **assigned** issue to the personal project — a new one, in
+progress, assigned to the project's owner (the account whose display name carries
+the unbroken run); the two issues that were there are unchanged. Every fixture
+issue was unassigned until then, so no assignee badge and no workload chip had
+ever rendered under the gate, and both overflowed a 320 px phone while it
+reported green (the team project's board also overflowed 768 and 1280). The
+board and list now render a card/row, a badge and the workload strip with the
+long name; the cell count is unchanged (95). **Not covered by that issue:**
+issue detail — the gate's issue-detail page is the older, unassigned issue, so
+its assignee badge is exercised only by the unit test in
+`tests/assignee_candidates.rs` and by hand, not by this gate.
+
 `LAYOUT-008` added the three sprint pages and the new-issue form. All
 four were red on the run that added them.
 

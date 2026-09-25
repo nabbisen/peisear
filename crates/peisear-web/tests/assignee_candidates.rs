@@ -403,3 +403,77 @@ async fn being_a_valid_assignee_grants_no_read_access_to_other_projects() {
         "a valid assignee for team A's project must not be able to read an unrelated project"
     );
 }
+
+/// `LAYOUT-011` (`§10.25` shape C): a display name is user text, and where
+/// it is rendered inside a shrink-to-fit container (a badge, a workload
+/// chip) only `wrap-anywhere` on the element that holds it lets an
+/// unbroken run wrap -- `min-w-0` and `break-words` were measured to change
+/// nothing there. This asserts the class on the served markup of the three
+/// sites (a board card's assignee badge, the workload strip's chip, issue
+/// detail's badge); `browser-checks/overflow-gate.mjs` measures the boxes.
+/// `<option>`s are not asserted: they are controls, a different case.
+#[tokio::test]
+async fn assignee_names_render_in_elements_that_can_wrap() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let name = "Gate-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+    sqlx::query("UPDATE users SET display_name = ?1 WHERE id = ?2")
+        .bind(name)
+        .bind(&user_id)
+        .execute(&app.db)
+        .await
+        .expect("set display name");
+    let project_id = create_personal_project(&app.db, &user_id, "Proj").await;
+    let issue_id = uuid::Uuid::new_v4().to_string();
+    issues::insert(
+        &app.db,
+        &issue_id,
+        &project_id,
+        &user_id,
+        issues::IssueFields {
+            title: "Assigned",
+            description: "",
+            status: peisear_core::IssueStatus::InProgress,
+            priority: peisear_core::Priority::Medium,
+            effort: Some(2),
+            assignee_id: Some(&user_id),
+            planned_start_at: None,
+            planned_end_at: None,
+        },
+    )
+    .await
+    .expect("insert assigned issue");
+
+    let needle = format!(">{name}<");
+    for (page, url, at_least) in [
+        ("board", format!("/projects/{project_id}"), 2),
+        (
+            "issue detail",
+            format!("/projects/{project_id}/issues/{issue_id}"),
+            1,
+        ),
+    ] {
+        let full = app.server.get(&url).await.text();
+        // The navbar's account menu also shows the name (and truncates it, a
+        // different remedy: `LAYOUT-001`); this is about the page's own content.
+        let body = &full[full.find("<main").expect("a main element")..];
+        let mut checked = 0;
+        for (at, _) in body.match_indices(&needle) {
+            let tag_start = body[..at].rfind('<').expect("an opening tag");
+            let tag = &body[tag_start..=at];
+            if tag.starts_with("<option") {
+                continue;
+            }
+            assert!(
+                tag.contains("wrap-anywhere"),
+                "{page}: the display name sits in {tag} without `wrap-anywhere`"
+            );
+            checked += 1;
+        }
+        assert!(
+            checked >= at_least,
+            "{page}: expected at least {at_least} elements holding the name, found {checked}"
+        );
+    }
+}
