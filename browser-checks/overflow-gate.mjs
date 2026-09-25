@@ -413,7 +413,23 @@ async function createFixtures() {
   if (!projectCal.includes(PLANNED_ISSUE_TITLE)) throw new Error('project calendar: no block for the planned issue');
   log(`branches rendered: issue-detail assignee badge x${badgeCount(detailHtml)}; board assignee badges x${boardBadges} + workload chip x${stripChips}; calendar block on personal and project axes`);
 
-  return { cookie: jar.header(), projectId, issueId, assignedIssueId, teamSlug, sprintId, completedSprintId };
+  // `GATE-003`: the day and month layouts, on both axes, anchored **explicitly**
+  // on the day the issue was planned for (`?date=`), not on whatever "today"
+  // the server computes -- the block must be on the page in any month. Each is
+  // asserted to contain it: a month cell that renders nothing is the
+  // green-on-empty case `§10.32` is about.
+  const calendarUrls = {};
+  for (const view of ['day', 'month']) {
+    calendarUrls[`calendar_${view}`] = `/today/calendar?view=${view}&date=${today}`;
+    calendarUrls[`project_calendar_${view}`] = `/projects/${projectId}/calendar?view=${view}&date=${today}`;
+  }
+  for (const [label, path] of Object.entries(calendarUrls)) {
+    const html = await fetchPage(path);
+    if (!html.includes(PLANNED_ISSUE_TITLE)) throw new Error(`${label} (${path}): no block for the planned issue`);
+  }
+  log(`calendar layouts rendered a block: ${Object.keys(calendarUrls).join(', ')}`);
+
+  return { cookie: jar.header(), projectId, issueId, assignedIssueId, teamSlug, sprintId, completedSprintId, calendarUrls };
 }
 
 async function main() {
@@ -440,7 +456,7 @@ async function main() {
     await waitForServer(`${BASE}/login`);
     log('server ready');
 
-    const { cookie, projectId, issueId, assignedIssueId, teamSlug, sprintId, completedSprintId } = await createFixtures();
+    const { cookie, projectId, issueId, assignedIssueId, teamSlug, sprintId, completedSprintId, calendarUrls } = await createFixtures();
     log(`fixtures created: project=${projectId} issue=${issueId}`);
 
     const pages = {
@@ -457,6 +473,8 @@ async function main() {
       // `LAYOUT-005`: both absent from this list until now, which is
       // why the fixture that exposed five sites never saw these two.
       project_calendar: `${BASE}/projects/${projectId}/calendar`,
+      // `GATE-003`: the day and month layouts, both axes (the two above are week).
+      ...Object.fromEntries(Object.entries(calendarUrls).map(([k, v]) => [k, `${BASE}${v}`])),
       team_detail: `${BASE}/teams/${teamSlug}`,
       // `LAYOUT-008`: four more absent pages. Three render the sprint
       // name or goal; `issue_new` renders the workload hint's chips,

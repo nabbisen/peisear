@@ -2,7 +2,7 @@
 
 `BROWSER-001` (RFC 011 step 4, `DEC-048`). This directory holds the
 horizontal-overflow gate: one assertion, `scrollWidth <= clientWidth`, on
-twenty rendered pages at five widths, driven by a minimal Chrome DevTools
+twenty-four rendered pages at five widths, driven by a minimal Chrome DevTools
 Protocol harness with no npm dependency.
 
 **This does not run inside `cargo test --workspace` and is not counted in
@@ -40,7 +40,7 @@ attention.
   order and its three known limits (one page at a time, waits on
   `document.readyState` only, no notion of animation completion).
 - `overflow-gate.mjs` — the gate itself: starts a scratch instance,
-  creates fixtures through the real forms, sweeps twenty pages × five
+  creates fixtures through the real forms, sweeps twenty-four pages × five
   widths, and exits non-zero if any cell overflows or if any request
   reached a host other than `127.0.0.1`.
 
@@ -135,13 +135,13 @@ exactly its fixture and its page list.
 
 ## Coverage
 
-Twenty pages: `/today`, `/inbox`, `/today/calendar`, `/projects`, a
+Twenty-four pages: `/today`, `/inbox`, `/today/calendar`, `/projects`, a
 project detail page (the board — it is the default view), the same
-project's list view, a project calendar, a team detail page, a sprints
+project's list view, a project calendar, **the day and month calendar layouts on both axes**, a team detail page, a sprints
 list, a sprint detail page, **the same page for a completed sprint**, a
 sprint plan page, an issue detail page, the new-issue form, `/settings`,
 `/settings/notifications`, `/teams`, `/search`, and a delete confirmation
-interstitial. (20 × 5 widths = 100 cells; it was 19 × 5 = 95 until `GATE-002`,
+interstitial. (24 × 5 widths = 120 cells; it was 20 × 5 = 100 until `GATE-003`, 19 × 5 = 95 until `GATE-002`,
 and 18 × 5 = 90 until `SPRINT-005`.)
 
 `SPRINT-005` added the completed-sprint form of the sprint detail page
@@ -204,13 +204,22 @@ badges and a workload-strip chip on the board; and the planned issue's block on
 rendered nothing is the failure this is for**; the assertions are what tell the
 two apart.
 
+`GATE-003` added the **day and month** calendar layouts on both axes — four
+more URLs, **100 → 120 cells** — each anchored explicitly on the day the fixture's
+planned issue is planned for (`?date=`, the same UTC date, so it is on the page in
+any month) and each **asserted to contain that issue's block**. The day view is
+where `CAL-003`'s `h-full` once collapsed a block; note that this gate still
+measures **horizontal overflow only**, so it would not see that collapse — the
+layout is now *visited*, not fully *checked*.
+
 **This is not exhaustive, and is not meant to be** (`§10.32`). It closes the
 branches that were known, not the ones that are possible. Known and *not*
-covered: the calendars are swept in the **week view only** (the gate's URLs are
-the default; day and month are not visited); a **second assigned account** cannot
-appear on the personal board (a personal project's only assignee candidate is its
-owner), so the board shows one name twice, never two; the team project's board,
-list, calendar and issue detail are not gate pages.
+covered: a **second assigned account** cannot appear on the personal board (a
+personal project's only assignee candidate is its owner), so the board shows one
+name twice, never two; the team project's board, list, calendar and issue detail
+are not gate pages; the **inbox renders its empty state** (the fixture produces no
+notifications), so notification rows — which carry issue and project text — are
+never swept.
 
 `LAYOUT-008` added the three sprint pages and the new-issue form. All
 four were red on the run that added them.
