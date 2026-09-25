@@ -57,15 +57,28 @@ git push origin X.Y.Z
 - **Write the tag after the changelog is final.** The link is only right if the
   tagged commit's `CHANGELOG.md` already holds the section. Tag the release
   commit, not one before it.
-- **A tag is written once.** Once a tag is pushed it is a fixed reference:
-  anyone who fetched it holds that object, and rewriting it means two people
-  with the same tag name see different things. **This rule exists because it was
-  broken**: `0.40.0`'s tag was force-pushed after its crates were published, on
-  the same commit, to add the link above. The content was harmless and the act
-  was not. Tags before `0.40.0` carry only `peisear X.Y.Z` and **are not
-  rewritten** — 39 force-pushes to add a link is the same mistake at scale.
-- **If a tag is wrong, the answer is the next version**, not a rewrite. A
-  release whose tag names the wrong commit is a release to supersede.
+- **A tag moves only before its crates are published.** That is the whole
+  rule, and **the boundary is publication, not the version number** — 0.x
+  publishes to crates.io exactly as 1.x does, and the registry is immutable
+  either way. A published `.crate` can be yanked but never replaced, so a tag
+  that moves away from the commit it was built from leaves a permanent
+  mismatch: a reader takes the version from crates.io, opens that tag in git,
+  and gets different source.
+  - **Before publishing**: re-make it freely. A pushed tag with nothing on
+    crates.io is a candidate reference, not a release.
+  - **After publishing**: the commit is fixed. **If the tag is wrong, the
+    answer is the next version**, not a rewrite — a release whose tag names
+    the wrong commit is a release to supersede.
+- **Rewriting only a tag's message, after publishing, is the narrow middle
+  case.** The commit correspondence survives, so the registry and the tag still
+  agree; what breaks is smaller — two people with the same tag name holding
+  different objects. **This is where `0.40.0` landed**: its tag was force-pushed
+  after its crates were published, on the same commit, to add the link above.
+  Harmless content, and still not something to do on purpose. It was left as it
+  is because moving a tag twice is worse than the thing it would fix.
+- **Tags before `0.40.0`** carry only `peisear X.Y.Z` and **are not rewritten**:
+  39 force-pushes to add a link is the same mistake at scale, and every one of
+  those releases is published.
 
 ## Keeping the file a readable size — `DEC-055`
 
