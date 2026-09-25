@@ -2045,12 +2045,25 @@ pub mod notifications {
 
         pub const BURNOUT_OVERLOAD: &str = "burnout_overload";
         pub const BURNOUT_STALLED: &str = "burnout_stalled";
+        /// **Declared, labelled and linked, but not emitted** -- nothing builds
+        /// a `DispatchEvent` of this kind, and `ROADMAP.md` lists its detection
+        /// as a deferred Phase 2 candidate. **Deliberately absent from
+        /// [`all_user_facing`]** (`NTF-001`): listing it put a preference row
+        /// on `/settings/notifications` for a notification that can never
+        /// arrive, and made `storage::notifications::all_kinds_silenced` --
+        /// which gates the pinned "silenced" banner (`FR-NTF-006`) -- require
+        /// the user to silence it before the product would say everything was.
+        /// When someone builds the emitter, **add it back to
+        /// `all_user_facing`**, or *Silence all* will not reach it (no
+        /// preference row means the default channels apply).
         pub const PROJECT_TREND_DECLINE: &str = "project_trend_decline";
 
         /// Canonical kinds shown on the preferences page (in
-        /// this order). `GLOBAL` is intentionally absent.
+        /// this order): the kinds that **can arrive**. `GLOBAL` is
+        /// intentionally absent (a sentinel row), and so is
+        /// [`PROJECT_TREND_DECLINE`] (declared, no emitter -- see its doc).
         pub fn all_user_facing() -> &'static [&'static str] {
-            &[BURNOUT_OVERLOAD, BURNOUT_STALLED, PROJECT_TREND_DECLINE]
+            &[BURNOUT_OVERLOAD, BURNOUT_STALLED]
         }
     }
 
@@ -2095,7 +2108,17 @@ pub mod notifications {
         /// `static_js_scan` names `search.js` in its own allowlist —
         /// visible in the code the guard runs, not only in a document
         /// this file doesn't read.
-        const KIND_EXCLUDED_FROM_ALL_USER_FACING: &[&str] = &["GLOBAL"];
+        ///
+        /// `PROJECT_TREND_DECLINE` is excluded for a different reason, and this
+        /// is the same kind of named exclusion (`NTF-001`): it is a **real**
+        /// kind with **no emitter**, so offering a preference for it (and
+        /// requiring it silenced before the "everything is silenced" banner)
+        /// answers a question about a notification that cannot arrive. The
+        /// exclusion is honest only while that is true --
+        /// `peisear-notify`'s `edge::tests::every_emitted_kind_is_user_facing`
+        /// fails the day an emitter is written for it, and this test's own
+        /// second half fails if the kind is listed here *and* offered.
+        const KIND_EXCLUDED_FROM_ALL_USER_FACING: &[&str] = &["GLOBAL", "PROJECT_TREND_DECLINE"];
 
         /// Everything between `source`'s `start_marker` and that
         /// block's matching close brace, brace-depth counted so a
@@ -2228,8 +2251,10 @@ pub mod notifications {
                 assert!(
                     !appears_at_word_boundary(all_user_facing_body, excluded),
                     "{excluded} is listed as excluded from all_user_facing() but appears \
-                     in it -- either the exclusion is stale (remove it here) or a sentinel \
-                     is now rendering as a real notification kind (a live bug)"
+                     in it -- either the exclusion is stale (remove it here: e.g. an emitter \
+                     now exists for PROJECT_TREND_DECLINE, which is the moment it belongs in \
+                     the list) or a sentinel is now rendering as a real notification kind \
+                     (a live bug)"
                 );
             }
         }

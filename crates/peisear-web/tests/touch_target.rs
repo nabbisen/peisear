@@ -102,14 +102,15 @@ async fn wrapped_checkbox_reaches_the_rendered_page() {
     let wrap_count = body.matches(&wrap_marker).count();
     // TT-001 counted 3 checkbox *source sites* (in-app/email/webhook,
     // one Rust line each); each renders once per notification kind at
-    // runtime. `kind::all_user_facing()` is 3 kinds, so the rendered
-    // page carries 3 x 3 = 9 wrapped checkboxes, not 3 -- verified by
+    // runtime. `kind::all_user_facing()` is 2 kinds (the ones that can
+    // arrive; `NTF-001` took the emitter-less third out), so the rendered
+    // page carries 2 x 3 = 6 wrapped checkboxes, not 3 -- verified by
     // rendering rather than assumed from the source count. Checking
-    // for exactly 9, not merely >=1, is the point: a plain `contains`
-    // would still pass with most of the 9 left unwrapped.
+    // for exactly 6, not merely >=1, is the point: a plain `contains`
+    // would still pass with most of the 6 left unwrapped.
     assert_eq!(
-        wrap_count, 9,
-        "expected all 9 rendered notification-preference checkboxes (3 kinds \
+        wrap_count, 6,
+        "expected all 6 rendered notification-preference checkboxes (2 kinds \
          x 3 channels) wrapped in a 44px label, found {wrap_count}; body: {body}"
     );
     assert!(
@@ -152,16 +153,17 @@ async fn wrapped_checkboxes_keep_their_aria_label() {
         checked += 1;
     }
     assert_eq!(
-        checked, 9,
-        "expected to check all 9 rendered checkbox wraps; body: {body}"
+        checked, 6,
+        "expected to check all 6 rendered checkbox wraps; body: {body}"
     );
 
     // Every checkbox still carries its own distinct aria-label (three
-    // channel labels x three kinds = nine, one per rendered checkbox).
+    // channel labels x two kinds = six, one per rendered checkbox --
+    // `NTF-001` took the emitter-less kind out of the list).
     for prefix in ["In-app for", "Email for", "Webhook for"] {
         assert!(
-            body.matches(&format!("aria-label=\"{prefix}")).count() == 3,
-            "expected exactly 3 occurrences of aria-label=\"{prefix}...\" \
+            body.matches(&format!("aria-label=\"{prefix}")).count() == 2,
+            "expected exactly 2 occurrences of aria-label=\"{prefix}...\" \
              (one per notification kind); body: {body}"
         );
     }

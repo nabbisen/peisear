@@ -402,3 +402,109 @@ async fn mark_all_read_is_offered_only_while_something_is_unread() {
         "once everything is read the control must be gone again: {read}"
     );
 }
+
+// ---------------------------------------------------------------------------
+// `NTF-001`: `project_trend_decline` has no emitter, so it must not be offered
+// as a preference -- and must not be required to be silenced before the
+// product will say everything is. `all_kinds_silenced` reads
+// `kind::all_user_facing()`, and it gates the pinned banner (`FR-NTF-006`).
+// ---------------------------------------------------------------------------
+
+/// The defect, asserted first: with **both kinds that can arrive** silenced and
+/// **no row at all** for the one that cannot, the banner must appear. Before
+/// the change it did not, because a phantom kind had to be silenced too.
+#[tokio::test]
+async fn banner_appears_when_the_two_kinds_that_can_arrive_are_silenced() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let resume_button = Locale::English.render(MessageKey::ResumeNotificationsButton);
+
+    for k in [kind::BURNOUT_OVERLOAD, kind::BURNOUT_STALLED] {
+        notif_store::upsert_preference(&app.db, &user_id, k, &[], Severity::Info)
+            .await
+            .expect("silence a real kind");
+    }
+
+    let body = app.server.get("/inbox").await.text();
+    assert!(
+        body.contains(&resume_button),
+        "everything that can arrive is silenced, so the banner must say so: {body}"
+    );
+}
+
+/// A database that already holds a stored preference row for the unlisted kind
+/// -- here one that is **not** silenced -- behaves: the settings page renders,
+/// the banner still answers on the two real kinds, and the row is left alone
+/// (no migration deletes it; it is what the kind needs if it is ever built).
+#[tokio::test]
+async fn a_stored_preference_row_for_the_unlisted_kind_is_harmless() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let resume_button = Locale::English.render(MessageKey::ResumeNotificationsButton);
+
+    notif_store::upsert_preference(
+        &app.db,
+        &user_id,
+        kind::PROJECT_TREND_DECLINE,
+        &["in_app"],
+        Severity::Info,
+    )
+    .await
+    .expect("a row an older build could have saved");
+    for k in [kind::BURNOUT_OVERLOAD, kind::BURNOUT_STALLED] {
+        notif_store::upsert_preference(&app.db, &user_id, k, &[], Severity::Info)
+            .await
+            .expect("silence a real kind");
+    }
+
+    let page = app.server.get("/settings/notifications").await;
+    page.assert_status(StatusCode::OK);
+    let inbox = app.server.get("/inbox").await.text();
+    assert!(
+        inbox.contains(&resume_button),
+        "a stored row for a kind that cannot arrive must not hold the banner back: {inbox}"
+    );
+    assert!(
+        notif_store::preference_for_user_kind(&app.db, &user_id, kind::PROJECT_TREND_DECLINE)
+            .await
+            .expect("query")
+            .is_some(),
+        "the stored row must survive: nothing deletes it"
+    );
+    assert!(
+        notif_store::all_kinds_silenced(&app.db, &user_id)
+            .await
+            .expect("query"),
+        "all_kinds_silenced answers on the two kinds that can arrive"
+    );
+}
+
+/// The preferences page offers exactly the kinds that can arrive, named -- and
+/// not the one that cannot.
+#[tokio::test]
+async fn the_preferences_page_offers_only_notifications_that_can_arrive() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    register_and_login(&app, &user).await;
+
+    let body = app.server.get("/settings/notifications").await.text();
+    for label in [
+        peisear_i18n::NotificationKindLabel::BurnoutOverload,
+        peisear_i18n::NotificationKindLabel::BurnoutStalled,
+    ] {
+        let name = Locale::English.render(MessageKey::NotificationKindName { kind: label });
+        assert!(
+            body.contains(&name),
+            "a preference row for {name:?} is expected: {body}"
+        );
+    }
+    let phantom = Locale::English.render(MessageKey::NotificationKindName {
+        kind: peisear_i18n::NotificationKindLabel::ProjectTrendDecline,
+    });
+    assert!(
+        !body.contains(&phantom),
+        "no preference row for a notification that can never arrive ({phantom:?}): {body}"
+    );
+}
