@@ -1069,9 +1069,11 @@ rankings, or evaluative colour contrast.
 *Rationale*: `SPEC §28.6` — accuracy is the source of the product's
 value and is invisible to the user; the constraint applies to
 presentation only.
-*Source*: `SPEC §28.6`. *Status*: Partial — the separation holds for
-explanation text but not for the score badge (see `FR-HLT-008`).
-*Correction (0.40.0, `REQ-001`)*: the clause excepting *the score badge*
+*Source*: `SPEC §28.6`. *Status*: **Met** —
+`health_presentation_has_no_headline_score`, and the explanation text's
+separation is covered by `FR-HLT-006`'s vocabulary guard.
+*Correction (0.40.0, `REQ-001`)*: this read *Partial — the separation holds for
+explanation text but not for the score badge (see `FR-HLT-008`)*. That clause
 contradicted `FR-HLT-008`, which records that badge **retired at 0.20.0** and
 cites `health_presentation_has_no_headline_score`. Both could not be current.
 **`FR-HLT-008` is the accurate one** — the badge is gone — so the exception is
