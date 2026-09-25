@@ -1016,3 +1016,45 @@ async fn plan_remove_does_not_remove_from_a_sprint_started_under_it() {
          refused with the plan-not-editable validation (400)"
     );
 }
+
+/// `A11Y-002` (`NFR-A11Y-002`): the members table's role control must not commit
+/// on a navigation key. A `<select onchange="this.form.submit()">` fires
+/// `change` on every arrow key, so moving Admin -> Viewer by keyboard submitted
+/// the intermediate demotion to Member first -- a real change to a real person's
+/// access. The control is a select **and an explicit Save button in the same
+/// form**, and **nothing on the page submits on `change`**. The route, the
+/// fields and the last-admin refusal are the tests above and are untouched.
+#[tokio::test]
+async fn the_role_control_commits_only_on_an_explicit_save() {
+    let app = TestApp::spawn().await;
+    let (alice, alice_id) = user(&app, "alice").await;
+    let (_bob, bob_id) = user(&app, "bob").await;
+    let team_id = create_team_with_admin(&app.db, &alice_id, "Team").await;
+    teams::add_member(&app.db, &team_id, &bob_id, TeamRole::Member)
+        .await
+        .expect("add bob");
+    let slug = teams::find_by_id(&app.db, &team_id)
+        .await
+        .unwrap()
+        .unwrap()
+        .slug;
+    login(&app, &alice).await;
+
+    let body = app.server.get(&format!("/teams/{slug}")).await.text();
+    assert!(
+        !body.contains("onchange"),
+        "nothing on the team page may submit on change: {body}"
+    );
+
+    let action = format!("action=\"/teams/{slug}/members/{bob_id}/role\"");
+    let at = body
+        .find(&action)
+        .unwrap_or_else(|| panic!("bob's role form is not on the page: {body}"));
+    let form = &body[at..at + body[at..].find("</form>").expect("form closes")];
+    assert!(form.contains("<select name=\"role\""), "{form}");
+    let save = peisear_i18n::Locale::English.render(MessageKey::SaveButton);
+    assert!(
+        form.contains("<button type=\"submit\"") && form.contains(&save),
+        "the role form needs an explicit submit control labelled {save:?}: {form}"
+    );
+}

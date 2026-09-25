@@ -462,16 +462,24 @@ fn render_member_row(
 
     let role_cell = if is_admin && !is_self {
         // Admins can change others' roles via inline form.
+        //
+        // `A11Y-002` (`NFR-A11Y-002`): **an explicit Save, and no `onchange`.**
+        // This select used to submit on `change`, which fires on every arrow key,
+        // so moving Admin -> Viewer by keyboard committed the intermediate
+        // demotion to Member first. It also never worked without JavaScript --
+        // there was no submit control -- so the button restores the `DEC-021`
+        // path rather than adding one. The same form, route and fields.
         view! {
             <td>
-                <form method="post" action=role_action class="inline-block">
-                    <select name="role" onchange="this.form.submit()"
+                <form method="post" action=role_action class="inline-flex items-center gap-1">
+                    <select name="role"
                             class=grow("select select-bordered select-xs")
                             aria-label=t(MessageKey::ChangeRoleAriaLabel)>
                         <option value="admin" selected=admin_selected>{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Admin })}</option>
                         <option value="member" selected=member_selected>{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Member })}</option>
                         <option value="viewer" selected=viewer_selected>{t(MessageKey::TeamRoleName { label: TeamRoleLabel::Viewer })}</option>
                     </select>
+                    <button type="submit" class=grow("btn btn-ghost btn-xs")>{t(MessageKey::SaveButton)}</button>
                 </form>
             </td>
         }
