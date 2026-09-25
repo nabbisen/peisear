@@ -1548,8 +1548,24 @@ HTTP requests bypass the interface entirely.
 Storage functions handling personal data SHOULD additionally accept the
 requesting user's identity and verify it, so that a handler-layer
 oversight does not become a disclosure.
-*Source*: `SPEC §11.5.4`. *Status*: **Not implemented** — verification
-exists at the handler layer only. See §10.3. *Priority*: P2.
+*Source*: `SPEC §11.5.4`. *Status*: **Partial — 36 of 40**.
+*Correction (0.41.0, `REQ-002`)*: this read *Not implemented — verification
+exists at the handler layer only*, which **`§10.3` had already contradicted at
+`QA-021` (2026-08-26)** by counting the functions that do scope on the
+subject's identity. The register was corrected and this entry was not, so the
+document disagreed with itself for eight releases. **Re-counted 0.41.0**: of 40
+storage functions handling personal data, **36 take an identity and scope on
+it** — `notifications` 14/14, `user_capacities` 13/13, `view_states` 3/3,
+`personal_metrics` 2/2, `user_burnout` 1/1, `user_metrics_snapshots` 2/3,
+`users` 1/4 (the three that do not are the authentication path, where no caller
+identity exists yet, and one job-side aggregate over all users).
+*Which reading this status records*: **accept an identity and scope on it.**
+The stronger reading — *verify the identity is the requester's* — is **0 of 40
+and cannot be otherwise**, because the parameter is a `&str` and storage cannot
+tell a session's id from any other; `§10.3`'s newtype direction is what would
+change that. The old status was written against the stronger reading while the
+code satisfied the weaker, and said neither.
+*Priority*: P2.
 
 **NFR-PRIV-006 — Refusals do not disclose existence**
 Authorisation refusals MUST NOT reveal whether the requested resource
@@ -1841,9 +1857,43 @@ through the header's DaisyUI dropdown, which opens on `:focus-within` and is
 therefore keyboard-reachable — but it is their only path.
 
 **NFR-A11Y-002 — Focus management**
-After a mode change, focus MUST move to a defined, visible location, and
-MUST NOT be sent off-screen.
-*Source*: `SPEC §30.1`. *Status*: Partial. *Priority*: P1.
+After a **change made within the current document** — a control replaced in
+place, an element removed, a region re-rendered without navigating — focus MUST
+be on a named element: the control that was acted on, its replacement, or a
+named recipient stated at the call site. It MUST NOT be on `body` and MUST NOT
+be off-screen.
+*A full-document navigation is not a mode change.* The browser places focus at
+the document on every load; reading navigation in would make this requirement
+unsatisfiable by construction. **What a navigation owes instead is
+`NFR-A11Y-009`.**
+*Source*: `SPEC §30.1`. *Status*: **Partial — audited 0.41.0 (`A11Y-001`),
+4 sites of 8 hold.** *Priority*: P1.
+*What was measured*: D-1's status change (issue detail and list) and the
+calendar drag **keep focus on the acted-on control**; the **board drag**, the
+**sprint-plan drag** and **both ways the undo toast ends** (pressed, and
+expiring while focused) **drop focus to `body`**, because the moved or removed
+node was the focused one. **Nothing is sent off-screen.** The two drags are
+pointer gestures whose keyboard path is the move buttons (`RFC 0004`
+requirement 10); the toast is not — see `A11Y-003`.
+*Correction (0.41.0)*: read `Partial.` and nothing else. A status with no
+statement of what is partial cannot be checked and cannot be wrong, which is
+why this sat unexamined through four releases that added mode changes.
+`§10.17`'s shape, in a P1.
+
+**NFR-A11Y-009 — Where a navigation leaves the reader**
+After a form POST that redirects, the resulting page MUST offer a way to reach
+its main content without traversing the navigation: a skip link, a focused
+`main` landmark, or a focused status region carrying the outcome.
+*Rationale*: separated from `NFR-A11Y-002` at 0.41.0 because the two were being
+argued as one and the argument hid a real problem. `A11Y-001` measured **41
+state-changing routes**, of which every one that is a native POST leaves focus
+on `body` with the page scrolled to the top; reaching the first control in
+`main` then costs **11 Tab presses**, or 10 on a phone board, and **no skip
+link exists**. On a phone this also discards the reader's position — 605 px
+becomes 0 on a 1,697 px page.
+*Source*: derived; `SPEC §30.1`'s intent. *Status*: **Not met** — measured
+0.41.0 (`A11Y-001`). *Priority*: P2 — it is a real cost and it is the same cost
+on every page, which is what makes one remedy enough.
 
 **NFR-A11Y-003 — Screen reader equivalence for charts**
 Every chart MUST provide a one-sentence summary label, a two-to-three
@@ -1871,9 +1921,29 @@ predicate as the thing it accompanies** — the burndown's table lives inside
 second predicate exists to drift.
 
 **NFR-A11Y-004 — Meaning not carried by colour alone**
-State MUST be conveyed by label and icon in addition to colour.
-Colour-blind-safe patterning MUST be used in charts.
-*Source*: `SPEC §30.1`, `SPEC §31.2`. *Status*: Partial. *Priority*: P1.
+**Colour MUST NOT be the only carrier of a state.** A text label satisfies
+this; an icon satisfies it; colour with neither does not.
+In charts, series MUST be separable without relying on hue.
+*Source*: `SPEC §30.1`, `SPEC §31.2`. *Status*: **Partial — audited 0.41.0
+(`A11Y-001`): the first sentence holds everywhere measured; the second does
+not.** *Priority*: P1.
+*Amendment (0.41.0)*: read *"State MUST be conveyed by label **and** icon"*.
+Taken literally, priority, issue status, sprint status and team role all fail
+while carrying a plain English word naming the state — and the codebase had
+quietly taken **both** readings, health chips carrying a glyph because of this
+requirement and nothing else doing so. **Settled toward the rationale in the
+title.** Requiring an icon beside a word that already names the state buys
+nothing a user can name.
+*What was measured*: every state-bearing surface across 21 pages carries a text
+label; only the health chips also carry an icon; the board's column dot is
+colour-only but sits beside the column's own heading, so it is decoration.
+**The charts are the gap**: both are single-hue (240) and separate their two
+series by **lightness alone** — 1.77 : 1 on the burndown, 2.09 : 1 on the
+completed-work bars, with one bar at 1.86 : 1 against its background — and
+carry no patterning but the median's dash. **A tabular equivalent exists for
+both and does not close this**: it satisfies `NFR-A11Y-003` by making the data
+reachable, and does nothing for a reader who can see the chart and cannot
+separate two pale blues.
 
 **NFR-A11Y-005 — Contrast**
 Text and background combinations MUST meet WCAG AA (4.5:1).

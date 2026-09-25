@@ -106,6 +106,7 @@ the RFC number they are keyed to.
 | [`handoffs/028-assignee-badge/`](./handoffs/028-assignee-badge/README.md) | **Not RFC-governed** — `LAYOUT-011`, a display name overflowing a 1280 px desktop, target 0.40.0 |
 | [`handoffs/029-fixture-branches/`](./handoffs/029-fixture-branches/README.md) | **Not RFC-governed** — `GATE-002`, `§10.32`'s known branches, target 0.40.0 |
 | [`handoffs/030-focus-and-colour/`](./handoffs/030-focus-and-colour/README.md) | **Not RFC-governed** — `A11Y-001`, two P1 requirements whose status says nothing, target 0.41.0 |
+| [`handoffs/031-focus-defects/`](./handoffs/031-focus-defects/README.md) | **Not RFC-governed** — `A11Y-002` and `A11Y-003`, defects `A11Y-001` measured, target 0.41.0 |
 | [`handoffs/015-mobile-completion/`](./handoffs/015-mobile-completion/README.md) | **Not RFC-governed** — closing `NFR-A11Y-006`, unverified since Phase E |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
