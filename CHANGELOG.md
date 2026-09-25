@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Internal
 
+- **Four requirement entries in `docs/specification/requirements.md` were
+  malformed in 0.40.0 and are repaired.** A pattern-based amendment matched
+  further than intended: two entries were truncated mid-field and two were
+  spliced, reading as prose that says what neither the old nor the new version
+  says. Not in any published crate — the specification is at the repository
+  root, which `cargo publish` does not package — so `0.40.0`'s crates are
+  unaffected and the tag is not re-cut.
 - **Release tags now link to their release notes.** An annotated tag's message
   carries `Release notes: …/blob/<tag>/CHANGELOG.md`, pinned to the tag; `0.40.0`
   was re-tagged once, on the same commit, to add it. The workflow is written in
@@ -21,7 +28,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   verbatim, into `changelog/`, one file per series of ten minor versions. Their
   stale reference-style link footers, which pointed at GitHub Release pages that
   never existed, were dropped. A scan under `cargo test` checks the arrangement.
-  From 0.41.0 a release section opens with `### Highlights`.
 
 ## [0.40.0] — 2026-09-25
 

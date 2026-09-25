@@ -19,16 +19,21 @@
 //! 5. **No markdown file links to a section that has moved**: a link into
 //!    `CHANGELOG.md` or `changelog/*.md` with a `#fragment` must name a section
 //!    that is in that file.
-//! 6. **The released version has a dated section**, and **from `0.41.0` every
-//!    dated section opens with `### Highlights`** (before any other `###`
-//!    heading). Earlier sections predate the rule and are not rewritten.
+//! 6. **The workspace version has a section in `CHANGELOG.md` and it is
+//!    dated.**
+//!
+//! **Every rule above is about the arrangement being self-consistent**, not
+//! about how a section is written. A rule requiring a section to open with a
+//! particular heading was removed before it took effect -- see the note above
+//! [`violations`] -- because that is a format decision and format decisions are
+//! the owner's.
 //!
 //! **What this does not check**, so nobody reads more into a green run: that an
 //! external URL (including the release-notes link in a tag message) resolves --
 //! nothing here goes to the network; that a tag's message carries the link --
-//! that is the release procedure, done by hand and written in the policy; that
-//! the Highlights are *good*; and links written in anything but inline markdown
-//! form `[text](target)` (reference-style definitions are not read).
+//! that is the release procedure, done by hand; whether a section's *content*
+//! is any good; and links written in anything but inline markdown form
+//! `[text](target)` (reference-style definitions are not read).
 //!
 //! The rules are a pure function of text ([`violations`]) so each can be
 //! **planted** by editing the real files in memory: a rule never seen to fail
@@ -40,8 +45,14 @@ use std::path::{Component, Path, PathBuf};
 
 type Version = (u32, u32, u32);
 
-/// The first version whose section must open with `### Highlights`.
-const HIGHLIGHTS_FROM: Version = (0, 41, 0);
+// The `Highlights` heading mandate was removed 2026-09-25 before it took
+// effect. It came from another project's changelog policy, picked up from a
+// tree in `.git-exclude/tmp/`, and no decision here adopted it -- a scan that
+// fails `cargo test` unless a release section opens with a particular heading
+// is a format rule, and format rules are the owner's. The rest of this module
+// checks that the *arrangement* is self-consistent, which is a property, not a
+// style. If a Highlights convention is ever wanted, it is one decision and ten
+// lines away.
 
 fn parse_version(s: &str) -> Option<Version> {
     let mut parts = s.split('.');
@@ -356,18 +367,6 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         Some(s) if !s.dated => out.push(format!("rule 6: the section for {} has no date", s.label)),
         Some(_) => {}
     }
-    for s in &main_sections {
-        if let Some(v) = s.version
-            && v >= HIGHLIGHTS_FROM
-            && s.dated
-            && s.first_h3.as_deref() != Some("### Highlights")
-        {
-            out.push(format!(
-                "rule 6: the section for {} must open with `### Highlights` (its first ### is {:?})",
-                s.label, s.first_h3
-            ));
-        }
-    }
     out
 }
 
@@ -582,7 +581,7 @@ fn a_link_to_a_moved_section_is_found() {
 }
 
 #[test]
-fn the_released_version_must_be_dated_and_new_sections_open_with_highlights() {
+fn the_released_version_must_have_a_dated_section() {
     let mut r = real();
     r.changelog = r
         .changelog
@@ -590,27 +589,13 @@ fn the_released_version_must_be_dated_and_new_sections_open_with_highlights() {
     let v = only(run(&r), "rule 6");
     assert!(v.iter().any(|m| m.contains("has no date")), "got {v:?}");
 
-    // A 0.41.0 release without Highlights.
+    // A dated 0.41.0 section passes whatever heading it opens with: the
+    // arrangement is what this module checks, not the prose.
     let mut r = real();
     r.version = (0, 41, 0);
     r.changelog = r.changelog.replacen(
         "## [0.40.0]",
         "## [0.41.0] — 2026-10-01\n\n### Added\n\n- something\n\n## [0.40.0]",
-        1,
-    );
-    let v = only(run(&r), "rule 6");
-    assert!(
-        v.iter()
-            .any(|m| m.contains("0.41.0") && m.contains("Highlights")),
-        "got {v:?}"
-    );
-
-    // And with them, it passes.
-    let mut r = real();
-    r.version = (0, 41, 0);
-    r.changelog = r.changelog.replacen(
-        "## [0.40.0]",
-        "## [0.41.0] — 2026-10-01\n\n### Highlights\n\n- something\n\n### Added\n\n- something\n\n## [0.40.0]",
         1,
     );
     assert!(only(run(&r), "rule 6").is_empty());
