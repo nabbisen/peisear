@@ -768,8 +768,10 @@ to a reader of either.
 **FR-SUB-010 — Sub-issue search visibility**
 Sub-issues MUST be discoverable through search. Search results SHOULD
 indicate the parent context.
-*Source*: `SPEC §38.1`. *Status*: **Met** (recorded Partial — sub-issues are searchable;
-parent breadcrumb in results is Specified (RFC 0003) until 0.40.0; `REQ-001`) — `search_result_shows_parent_for_sub_issue_and_omits_for_top_level`. *Priority*: P2.
+*Source*: `SPEC §38.1`. *Status*: **Met** — `search_result_shows_parent_for_sub_issue_and_omits_for_top_level`.
+*Priority*: P2.
+*Correction (0.40.0, `REQ-001`)*: read *Partial — sub-issues are searchable;
+parent breadcrumb in results is Specified (RFC 0003)*. The breadcrumb ships.
 
 ### 4.6 Teams and membership — `FR-TEAM`
 
@@ -897,8 +899,11 @@ backlog column and a sprint-items column, allowing issues to be moved
 between them without visiting each issue.
 *Rationale*: `SPEC §17.1` — assigning twenty candidates one at a time
 during a planning session is prohibitive friction.
-*Source*: `SPEC §17`. *Status*: **Met** (recorded Specified (RFC 0001, target 0 until 0.40.0; `REQ-001`) — `plan_page_renders_two_columns_for_planned_sprint`, `add_to_sprint_via_button_succeeds`.20.0).
+*Source*: `SPEC §17`. *Status*: **Met** —
+`plan_page_renders_two_columns_for_planned_sprint`,
+`add_to_sprint_via_button_succeeds`.
 *Priority*: P2.
+*Correction (0.40.0, `REQ-001`)*: read *Specified (RFC 0001, target 0.20.0)*.
 
 **FR-PLAN-002 — Button-based moves before drag**
 The first implementation MUST provide button-driven moves. Drag and drop
@@ -1162,8 +1167,11 @@ The user MUST be able to silence all notifications. When silenced, the
 inbox MUST display a pinned banner offering single-click resume.
 *Rationale*: `SPEC §29.3.2` — a user who silenced notifications months
 ago should not have to remember where the setting lives.
-*Source*: `SPEC §29.3.2`. *Status*: **Met** (recorded Partial — silence-all exists in
-settings; the pinned inbox banner is Specified (RFC 0003) until 0.40.0; `REQ-001`) — `banner_absent_by_default_present_after_silence_absent_after_resume`. *Priority*: P2.
+*Source*: `SPEC §29.3.2`. *Status*: **Met** —
+`banner_absent_by_default_present_after_silence_absent_after_resume`.
+*Priority*: P2.
+*Correction (0.40.0, `REQ-001`)*: read *Partial — silence-all exists in
+settings; the pinned inbox banner is Specified (RFC 0003)*. The banner ships.
 
 **FR-NTF-007 — Deferred email opt-in**
 The email opt-in prompt MUST appear only after the user has received
@@ -1222,8 +1230,10 @@ tests. *Status*: Implemented. *Priority*: P1.
 **FR-CAL-001 — Personal calendar**
 The system MUST provide `/today/calendar`, showing only issues assigned
 to the authenticated user, across all their projects.
-*Source*: `SPEC §16`, `SPEC §10.2`. *Status*: **Met** (recorded Specified (RFC 0002,
-target 0 until 0.40.0; `REQ-001`) — `personal_calendar_renders_only_my_issues`.21.0). *Priority*: P2.
+*Source*: `SPEC §16`, `SPEC §10.2`. *Status*: **Met** —
+`personal_calendar_renders_only_my_issues`.
+*Priority*: P2.
+*Correction (0.40.0, `REQ-001`)*: read *Specified (RFC 0002, target 0.21.0)*.
 
 **FR-CAL-002 — Project calendar**
 The system MUST provide `/projects/{id}/calendar`, showing the
