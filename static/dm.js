@@ -129,12 +129,48 @@
     }
   }
 
-  function removeToast(form) {
+  // `A11Y-004` (`NFR-A11Y-002`): when a toast ends -- Undo pressed or the
+  // five seconds up -- and focus is *inside it*, focus returns to the control
+  // that was acted on instead of falling to `body`. **Conditional on focus being
+  // inside the toast**: a user who has kept working elsewhere is not touched (an
+  // unconditional restore, or focusing the toast when it appears, would steal
+  // focus, and would make a second Enter on a status button press Undo).
+  function toastOrigin(form) {
+    return form.querySelector('button[aria-pressed="true"]');
+  }
+
+  // If the origin is gone (its element was removed from the page), focus goes to
+  // the first control inside the same holder, and failing that to `<main>` (made
+  // focusable with tabindex -1): always somewhere on the page the user was
+  // working in, never `body`.
+  function restoreFocus(form) {
+    var target = toastOrigin(form);
+    if (!target || !document.contains(target)) {
+      target = document.contains(form) ? form.querySelector('a[href], button:not([disabled])') : null;
+    }
+    if (!target) {
+      var main = document.querySelector("main");
+      if (main) {
+        if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
+        target = main;
+      }
+    }
+    if (target) target.focus();
+  }
+
+  // Returns whether focus was inside the toast. `deferRestore` lets the Undo
+  // click restore focus itself *after* the undo has moved its element back --
+  // the board and plan undos move the card/row synchronously, which would
+  // blur a focus restored before it (measured: focus fell to `body`).
+  function removeToast(form, deferRestore) {
     var toast = form._dmToast;
     if (!toast) return;
     clearTimeout(toast.timer);
+    var hadFocus = toast.el.contains(document.activeElement);
     if (toast.el.parentNode) toast.el.parentNode.removeChild(toast.el);
     form._dmToast = null;
+    if (hadFocus && !deferRestore) restoreFocus(form);
+    return hadFocus;
   }
 
   function showUndoToast(form, message, onUndo) {
@@ -154,14 +190,19 @@
     undoButton.className = "btn btn-xs";
     undoButton.textContent = copy.undoLabel;
     undoButton.addEventListener("click", function () {
-      removeToast(form);
+      var refocus = removeToast(form, true);
       onUndo();
+      if (refocus) restoreFocus(form);
     });
 
     alertBox.appendChild(text);
     alertBox.appendChild(undoButton);
     toast.appendChild(alertBox);
-    document.body.appendChild(toast);
+    // `A11Y-004`: in DOM order right after the acted-on control, so Undo is the
+    // next Tab stop -- not appended to the end of `<body>`. This is a DOM-order
+    // change only: `.toast` is `position: fixed`, so it is still drawn
+    // bottom-right and takes no space in the layout it now sits inside.
+    form.insertAdjacentElement("afterend", toast);
 
     var timer = setTimeout(function () {
       removeToast(form);
