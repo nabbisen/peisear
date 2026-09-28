@@ -10,7 +10,6 @@ dist
 style/tailwindcss/bin
 
 # custom
-/docs/book/
 /.git-exclude/
 
 # local operator configuration (real hosted D1/KV IDs - never commit)

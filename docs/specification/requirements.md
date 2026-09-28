@@ -2506,9 +2506,31 @@ NOT be reproduced in `README.md`.
 **NFR-REL-007 — Documentation structure**
 `README.md` MUST remain concise and follow the ordering: hero, overview,
 why/when, quick start, features or design notes, links to full
-documentation. Full documentation MUST live under `docs/src` in an
-mdbook-compatible structure, organised by reader persona.
-*Source*: project convention. *Status*: Implemented. *Priority*: P2.
+documentation. Full documentation MUST live under `docs/`, organised by
+reader persona, and MUST build as an mdbook site.
+*Source*: project convention. *Status*: **Met at 0.41.0** (`DOCS-001`) —
+`docs/book.toml`, `docs/SUMMARY.md`, and `.github/workflows/docs.yml`
+deploying to Pages from `main` with a link check that fails the build.
+*Priority*: P2.
+*Correction (0.41.0, `DOCS-001`) — this was recorded `Implemented` and neither
+half of it was true.* It required documentation *"under `docs/src` in an
+mdbook-compatible structure"*. Documentation lived under `docs/architecture/`,
+`docs/operations/` and their siblings — **not `docs/src`** — and there was **no
+`book.toml` and no `SUMMARY.md`**, so nothing was mdbook-anything. Only
+*organised by reader persona* held. **The second false `Implemented` in three
+releases**, after `FR-HLT-006`'s claimed-but-existing guard, and the direction
+that costs most: nobody checks a requirement they believe is done.
+*Amended, not merely corrected*: `DEC-057` chose to extend `docs/` in place
+rather than move every page under `docs/src`, so that no existing file moves
+and no inbound link breaks. The requirement now describes the shape that was
+built and the obligation that matters — **it builds as a site** — rather than a
+directory name. The fossil of the old wording is `docs/src/assets/`, which
+holds the logo and is not the book's source.
+*How it survived `REQ-001`*: that audit read the 26 entries whose status claims
+incompleteness, plus a sweep of every acceptance citation. This entry says
+`Implemented` and cites no acceptance target, so it sat among the 89 the sweep
+said nothing about — **the limit `REQ-001` stated in its own words, producing
+its first confirmed instance.**
 
 ### 5.9 Compatibility and portability — `NFR-CMP`
 
