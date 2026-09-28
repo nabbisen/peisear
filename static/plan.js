@@ -261,6 +261,30 @@
     undoButton.type = "button";
     undoButton.className = "btn btn-xs";
     undoButton.textContent = copy.undoLabel;
+    // `A11Y-005`: `row` carries `draggable="true"` when `can_move`
+    // (`components/sprint_plan.rs`), and the toast is now this element's own
+    // child (`A11Y-004`). A mousedown on Undo followed by even a few pixels of
+    // real pointer movement was being read by the browser as the start of the
+    // row's own drag -- the click that activates Undo never fires. Two things
+    // that do NOT stop it, measured rather than assumed: `draggable="false"`
+    // on the toast itself (the browser's drag-source search walks past an
+    // explicit `draggable="false"` descendant to the nearest ancestor's
+    // `draggable="true"` -- the same mechanism that makes the row, not its
+    // `<a>`, the drag source a few lines above this one); and
+    // `preventDefault()`/`stopPropagation()` on the toast's own `dragstart`
+    // (by then the browser has already committed to a drag gesture instead of
+    // a click for this mousedown). What does work: `preventDefault()` on
+    // `mousedown` itself, which is where the browser decides whether this
+    // gesture becomes a drag at all -- confirmed with a real pointer gesture
+    // (not a synthetic click), on this surface and the other two draggable
+    // ones. `preventDefault()` here also suppresses the browser's own default
+    // mousedown-focuses-the-button behaviour, so it is put back explicitly on
+    // the next line -- `A11Y-004`'s restore-on-end contract depends on the
+    // button actually having focus when Undo is pressed.
+    undoButton.addEventListener("mousedown", function (e) {
+      e.preventDefault();
+      undoButton.focus();
+    });
     undoButton.addEventListener("click", function () {
       var refocus = removeToast(row, true);
       // The undo moves the row back only after its request returns, so focus is
