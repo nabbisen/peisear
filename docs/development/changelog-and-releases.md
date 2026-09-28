@@ -4,12 +4,43 @@ This is how release notes are written and found. It is a development workflow,
 not something an operator needs; the operator's view of a release is
 [`CHANGELOG.md`](../../CHANGELOG.md).
 
-## One place
+## One source, two copies
 
-**`CHANGELOG.md` is the only place release notes live.** Nothing is written
-twice: each release has one section, in one file. There is **no GitHub Release
-page** — a release is exactly three steps (tag, push the tag, `cargo publish
---workspace`), and nothing else is created. What a reader follows from a tag is
+**`CHANGELOG.md` is the only place release notes are *written*.** Each release
+has one section, in one file, and everything else is a copy of it — never a
+second draft. Until `DEC-056` there was exactly one copy: a link. There are now
+two, and both are derived from the section rather than written beside it.
+
+**A release is four steps** (`DEC-056`, 2026-09-29): tag · push the tag ·
+`cargo publish --workspace` · create the GitHub Release **with the version's
+changelog section as its body**.
+
+**Why a body and not only a link — and it is not verifiability.** The tag's
+message carries a link pinned to the tag (below), and that link is
+**immutable**: `blob/<tag>/CHANGELOG.md` is frozen at that commit, so archiving
+older series later cannot change what it shows. **A Release body is the weaker
+artefact on that axis** — it is editable at any time by anyone with write
+access. What the body buys is **reach**: the Releases page, watch
+notifications and the Atom feed show the body and never follow the link, and
+anything reading releases programmatically reads the body. So the link is the
+copy that cannot change and the body is the copy people actually see, and the
+section both come from is the one thing anybody edits.
+
+**Order matters.** Publish the crates *before* creating the Release, so the
+Releases page never announces a version whose `cargo publish` failed. The tag
+comes first because `cargo publish` runs from a worktree of it. **If the
+publish fails, there is a tag and no Release** — which is the recoverable
+state, since a tag can be superseded by the next version and a Release page
+cannot be un-announced to a watcher.
+
+**Who.** The architect, on the owner's approval, alongside the tag and the
+publish. The dev team never runs it.
+
+**Existing releases are not back-filled.** 0.1.0–0.40.0 have no Release page
+and do not get one: forty of them, for versions nobody is reading, on the
+`Highlights` precedent — new practice from here, no retrofit.
+
+What a reader follows from a tag is
 a link in the tag's own message, below.
 
 ## Each release's section
