@@ -2,7 +2,8 @@
 
 This is how release notes are written and found. It is a development workflow,
 not something an operator needs; the operator's view of a release is
-[`CHANGELOG.md`](../../CHANGELOG.md).
+[`CHANGELOG.md`](https://github.com/nabbisen/peisear/blob/main/CHANGELOG.md) (on GitHub; outside this
+book).
 
 ## One source, two copies
 
@@ -122,7 +123,8 @@ than remembered. What is *not* inherited is anything about how a section reads.
 
 
 `CHANGELOG.md` holds **the current series only**. Older series are **moved**,
-never copied, into one file each under [`changelog/`](../../changelog/), and
+never copied, into one file each under [`changelog/`](https://github.com/nabbisen/peisear/tree/main/changelog)
+(on GitHub; outside this book), and
 `CHANGELOG.md` ends with links to them.
 
 - **Before 1.0.0 a series is ten minor versions** and their patches: 0.1–0.9,

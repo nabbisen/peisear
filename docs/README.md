@@ -46,7 +46,8 @@ You're running peisear in production (or trying to).
   against by default, and what's left to the operator
 
 For reporting a vulnerability, see the repository's
-[SECURITY.md](../.github/SECURITY.md).
+[SECURITY.md](https://github.com/nabbisen/peisear/blob/main/.github/SECURITY.md)
+(on GitHub, outside this book).
 
 ## Guides
 
@@ -67,19 +68,30 @@ You want to know what the product is required to do, or what it presents.
 
 ## Development
 
-You're changing peisear and want to know how a release is written down.
+You're changing peisear and want to know how a release is written down, or
+are looking into an upstream dependency's own gap.
 
 - [Changelog, release notes and tags](development/changelog-and-releases.md) —
   where release notes live, what a release section opens with, the link a tag's
   message carries, and how older series are archived
+- [wasm-smtp STARTTLS extension request](wasm-smtp-starttls-extension-request.md) —
+  a proposal filed against the `wasm-smtp` crate this project depends on, for
+  the SMTP submission port peisear's own email channel needs
 
 ## Elsewhere in the repo
 
-- [README](../README.md) — the elevator pitch and quickstart
-- [ROADMAP](../ROADMAP.md) — what's next and where it will land
-- [CHANGELOG](../CHANGELOG.md) — what has changed and when (the current
-  series; older ones are in [`changelog/`](../changelog/))
-- [TERMS_OF_USE](../TERMS_OF_USE.md) — end-user terms template for
-  operators deploying peisear
-- [LICENSE](../LICENSE) — Apache-2.0
-- [.github/](../.github/) — community health files
+- [README](https://github.com/nabbisen/peisear/blob/main/README.md) — the
+  elevator pitch and quickstart
+- [ROADMAP](https://github.com/nabbisen/peisear/blob/main/ROADMAP.md) —
+  what's next and where it will land
+- [CHANGELOG](https://github.com/nabbisen/peisear/blob/main/CHANGELOG.md) —
+  what has changed and when (the current series; older ones are in
+  [`changelog/`](https://github.com/nabbisen/peisear/tree/main/changelog))
+- [TERMS_OF_USE](https://github.com/nabbisen/peisear/blob/main/TERMS_OF_USE.md) —
+  end-user terms template for operators deploying peisear
+- [LICENSE](https://github.com/nabbisen/peisear/blob/main/LICENSE) — Apache-2.0
+- [.github/](https://github.com/nabbisen/peisear/tree/main/.github) —
+  community health files
+
+These six are repository files, not pages of this book; the links above
+leave the site and open them on GitHub, pinned to `main`.

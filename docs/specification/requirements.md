@@ -6,9 +6,11 @@ sixteen statuses corrected, a claimed gap that did not exist, and two entries
 that contradicted each other, `REQ-001`; three layout defects including one on
 a 1280 px desktop; the overflow gate 95 → 120 cells and `§10.32` opened;
 implementation through `0.40.0`)
-**Supersedes**: [`history/peisear-0.20.0-requirements-en.md`](./history/peisear-0.20.0-requirements-en.md),
+**Supersedes**: [`history/peisear-0.20.0-requirements-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.20.0-requirements-en.md)
+(on GitHub; excluded from this book, see `docs/README.md`),
 and through it
-[`history/peisear-0.19.1-requirements-en.md`](./history/peisear-0.19.1-requirements-en.md).
+[`history/peisear-0.19.1-requirements-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.19.1-requirements-en.md)
+(on GitHub; excluded from this book, see `docs/README.md`).
 Both retained unedited as the record of their releases
 **Language**: English (normative)
 **Prepared**: 2026-07-27 · **Amended**: 2026-09-25 (0.40.0)

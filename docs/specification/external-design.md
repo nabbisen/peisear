@@ -3,7 +3,8 @@
 **Document type**: External design (basic design)
 **Document status**: Baseline
 **Covers release**: `0.40.0` (implementation through `0.40.0`)
-**Supersedes**: [`history/peisear-0.19.1-external-design-en.md`](./history/peisear-0.19.1-external-design-en.md),
+**Supersedes**: [`history/peisear-0.19.1-external-design-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.19.1-external-design-en.md)
+(on GitHub; excluded from this book, see `docs/README.md`),
 retained unedited as the record of that release
 **Language**: English (normative)
 **Prepared**: 2026-07-27 · **Amended**: 2026-09-25 (0.40.0)

@@ -137,4 +137,5 @@ will own it.
 
 - [Leptos SSR](leptos-ssr.md) — the one layer that sits squarely in
   `peisear-web` but deserves its own explanation
-- [../ROADMAP.md](../../ROADMAP.md) — the items themselves
+- [`ROADMAP.md`](https://github.com/nabbisen/peisear/blob/main/ROADMAP.md) — the items themselves (on
+  GitHub; outside this book)

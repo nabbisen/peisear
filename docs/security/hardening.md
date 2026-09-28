@@ -5,7 +5,8 @@ expected to handle.
 
 This document is about the **architectural and operational security
 posture** of peisear. For reporting a vulnerability in peisear
-itself, see [../../.github/SECURITY.md](../../.github/SECURITY.md).
+itself, see [`.github/SECURITY.md`](https://github.com/nabbisen/peisear/blob/main/.github/SECURITY.md) (on
+GitHub; outside this book).
 
 ## Threat model
 
@@ -167,4 +168,5 @@ Don't forget them. See [../operations/backup.md](../operations/backup.md).
 
 If you find a security issue in peisear, please report it privately
 via the process described in
-[../../.github/SECURITY.md](../../.github/SECURITY.md).
+[`.github/SECURITY.md`](https://github.com/nabbisen/peisear/blob/main/.github/SECURITY.md) (on GitHub;
+outside this book).

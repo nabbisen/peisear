@@ -56,7 +56,8 @@ and that boundary has an explicit error type
 
 - **Not a multi-tenant SaaS.** Access control is per user, and a user
   sees only projects they own. There's no org or team concept yet
-  (that's in the [Roadmap](../../ROADMAP.md)).
+  (that's in the [Roadmap](https://github.com/nabbisen/peisear/blob/main/ROADMAP.md), on GitHub, outside
+  this book).
 - **Not an API server.** There's a single JSON endpoint (kanban status
   change); everything else is classical server-rendered HTML with
   form POSTs.

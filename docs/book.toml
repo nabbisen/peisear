@@ -1,0 +1,56 @@
+# DOCS-001 (DEC-057): this book's root is `docs/` itself, not a `docs/src/`
+# subdirectory — the owner asked to extend the existing tree in place, not
+# restructure it, so every page keeps the path it already had and no inbound
+# link elsewhere in the repository breaks.
+#
+# `docs/src/assets/logo.png` predates this file and is unrelated to mdbook's
+# own `src` convention (it is only ever referenced from the repository root
+# `README.md`, via `docs/src/assets/logo.png`, not from any page of this
+# book). With `src = "."` below, `docs/src/` is just an ordinary
+# subdirectory that happens to be named `src` — ordinary, but now a
+# misleading name for a reader who knows mdbook's usual layout. It has not
+# been moved or renamed: `README.md` points at it and nothing here should
+# make that link go looking for a file that used to be somewhere else.
+
+[book]
+title = "peisear Documentation"
+description = "Self-hostable issue tracker: getting started, operations, security, architecture, development and the normative specification."
+authors = ["peisear contributors"]
+language = "en"
+src = "."
+
+[build]
+# Outside the source tree deliberately: with `src = "."` the default
+# `docs/book/` would sit inside the book's own source directory and mdbook
+# would recurse into its own output on the next build. `target/` is already
+# gitignored workspace-wide, so nothing new needs adding for this path.
+build-dir = "../target/book"
+
+[output.html]
+git-repository-url = "https://github.com/nabbisen/peisear"
+edit-url-template = "https://github.com/nabbisen/peisear/edit/main/docs/{path}"
+site-url = "/peisear/"
+
+[output.linkcheck]
+# `mdbook-linkcheck2` (crates.io), a maintained fork of the original
+# `mdbook-linkcheck` kept compatible with current mdbook releases — see
+# `.github/workflows/docs.yml` for the pinned versions of both. The renderer
+# name mdbook looks for is `mdbook-<output name>`, i.e. `mdbook-linkcheck`;
+# `command` below points it at the binary this fork actually installs.
+command = "mdbook-linkcheck2"
+# Every internal link — to another page, to a heading anchor, to a file
+# copied verbatim into the book (an image, for instance) — is checked and
+# fails the build if it does not resolve. A relative link to a `.md` file
+# that exists on disk but is not listed in `SUMMARY.md` also fails (measured
+# against `docs/specification/history/`, deliberately excluded per its own
+# section of `docs/README.md`) — which is why every such reference in this
+# tree is an absolute GitHub URL instead.
+#
+# `follow-web-links = false`: **external URLs (`https://…`) are read as
+# well-formed and never fetched.** The docs build must not depend on
+# github.com, crates.io or any other external host being reachable or
+# responding within a CI job's timeout; enabling this would make the site's
+# ability to publish itself depend on the network health of sites this
+# project doesn't control. It also means a rotted external URL is not
+# caught by this check — nothing here catches that.
+follow-web-links = false

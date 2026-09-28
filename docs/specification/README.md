@@ -12,8 +12,10 @@
 They are amended **at each release**, not afterwards (`DEC-028`), and the
 release candidate does not tag until they are.
 
-[History](./history/) holds the superseded baselines, retained unedited as the
-record of their own releases rather than rewritten.
+[History](https://github.com/nabbisen/peisear/tree/main/docs/specification/history) (on GitHub;
+excluded from this book, see `docs/README.md`) holds the superseded
+baselines, retained unedited as the record of their own releases rather
+than rewritten.
 
 ## English only, and what that settles
 
@@ -35,7 +37,7 @@ things you can open.
 | Citation | What it is | Can you open it? |
 |---|---|---|
 | `SPEC §11.5.3`, `KICK`, `BRIEF`, `V3`, `GUI §3.4` | **Provenance.** The source material these requirements were derived from, named so a reader can see where a rule came from | **No.** Not published, and not a source of truth — this directory is |
-| `LAYOUT-003`, `PLAN-002`, `TT-004`, `CAL-003` … | Implementation handoffs | **Yes** — [`rfcs/handoffs/`](../../rfcs/handoffs/) |
+| `LAYOUT-003`, `PLAN-002`, `TT-004`, `CAL-003` … | Implementation handoffs | **Yes** — [`rfcs/handoffs/`](https://github.com/nabbisen/peisear/tree/main/rfcs/handoffs) (on GitHub; outside this book) |
 | `…-review.md`, `.git-exclude/…` | The project's private working area: reviews, architect notes, scratch | **No** |
 
 **A citation of the first kind is a label on an explanation, not a substitute

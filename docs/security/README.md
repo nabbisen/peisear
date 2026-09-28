@@ -9,6 +9,6 @@ credentials and data.
   and the decisions left to the operator.
 
 For **reporting a vulnerability**, please see
-[.github/SECURITY.md](../../.github/SECURITY.md) in the repository
-root — that document explains the disclosure process and a contact
-channel.
+[`.github/SECURITY.md`](https://github.com/nabbisen/peisear/blob/main/.github/SECURITY.md) in the
+repository root (on GitHub; outside this book) — that document explains
+the disclosure process and a contact channel.

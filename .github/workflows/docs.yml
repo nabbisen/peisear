@@ -1,0 +1,83 @@
+name: Docs
+
+# DOCS-001 (DEC-057): builds docs/ as an mdbook site and publishes it to
+# GitHub Pages. Deliberately its own workflow, not a job added to test.yml —
+# `dec_007_ci_scan` reads that file's `run:` lines against `.github/CONTRIBUTING.md`'s
+# DEC-007 block, and a docs job in it would be read as (and fail as) a missing
+# DEC-007 entry for a Rust test that doesn't exist.
+#
+# The build runs on every push and pull request, so a broken internal link is
+# caught before it reaches `main`; only a push to `main` deploys.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  # Pinned so the site does not silently reformat on someone else's
+  # unrelated push: both tools are installed at an exact version, not
+  # "latest". Bumping either is a deliberate, reviewable change to these
+  # two lines. Kept beside `docs/book.toml`'s own comment on why the
+  # renderer command differs from the crate name.
+  MDBOOK_VERSION: "0.5.4"
+  MDBOOK_LINKCHECK2_VERSION: "0.13.0"
+
+jobs:
+  build:
+    name: mdbook build (with link check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # `baptiste0928/cargo-install` caches the compiled binary keyed on
+      # crate name + version, so a pinned version only ever compiles once
+      # per runner image rather than on every run.
+      - uses: baptiste0928/cargo-install@v3
+        with:
+          crate: mdbook
+          version: ${{ env.MDBOOK_VERSION }}
+      - uses: baptiste0928/cargo-install@v3
+        with:
+          crate: mdbook-linkcheck2
+          version: ${{ env.MDBOOK_LINKCHECK2_VERSION }}
+
+      # Fails the job on a broken internal link -- a relative link to a
+      # missing page, a missing heading anchor, or (see `docs/book.toml`'s
+      # comment) a relative link to a real file that `SUMMARY.md` doesn't
+      # list. Does NOT check external (`https://…`) URLs: `follow-web-links`
+      # is off in `book.toml`, so this build never depends on another site
+      # being reachable.
+      - name: mdbook build
+        run: mdbook build docs
+
+      - if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: target/book/html
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
