@@ -82,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **A release now has four legs, not three**: tag, publish, then create the
   GitHub Release with the version's own changelog section as its body
   (`DEC-056`). The publish comes before the Release so the page can never
-  announce a version whose crates failed to publish.
+  announce a version whose crates never reached the registry.
 
 ### Internal
 

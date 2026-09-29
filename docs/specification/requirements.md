@@ -1886,13 +1886,24 @@ unsatisfiable by construction. **What a navigation owes instead is
 `NFR-A11Y-009`.**
 *Source*: `SPEC §30.1`. *Status*: **Partial — audited 0.41.0 (`A11Y-001`),
 4 sites of 8 hold.** *Priority*: P1.
-*What was measured*: D-1's status change (issue detail and list) and the
-calendar drag **keep focus on the acted-on control**; the **board drag**, the
-**sprint-plan drag** and **both ways the undo toast ends** (pressed, and
-expiring while focused) **drop focus to `body`**, because the moved or removed
-node was the focused one. **Nothing is sent off-screen.** The two drags are
-pointer gestures whose keyboard path is the move buttons (`RFC 0004`
-requirement 10); the toast is not — see `A11Y-003`.
+*What was measured, and then fixed in the same release*: `A11Y-001` found
+D-1's status change and the calendar drag keeping focus on the acted-on
+control, and the **board drag**, the **sprint-plan drag** and **both ways the
+undo toast ends** dropping focus to **`body`** — the moved or removed node
+being the focused one. **Nothing was ever sent off-screen.**
+**`A11Y-004` and `A11Y-005` closed all four.** The toast now sits beside the
+control it belongs to and returns focus to it when it ends, on either ending,
+**if focus was inside the toast** — an unconditional restore would take focus
+from someone who had moved on. Where the origin is gone, a named ladder
+applies: the origin, then the first control still inside the same holder, then
+`main` with `tabindex="-1"`. **Focus does not land on `body` on any measured
+path.** The one case that cannot be caught is the holder itself being removed
+while focus is in its toast — focus is lost at the removal, before any
+handler runs — and no path in the product does that.
+*Amended 0.41.0*: the paragraph above previously described the four failures
+as current. **They were fixed by two handoffs in the release that recorded
+them**, and this line was not updated with them — the obligation `FR-DM-001`
+states, broken inside a single release by the person who wrote it.
 *Correction (0.41.0)*: read `Partial.` and nothing else. A status with no
 statement of what is partial cannot be checked and cannot be wrong, which is
 why this sat unexamined through four releases that added mode changes.
