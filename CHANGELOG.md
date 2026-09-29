@@ -11,24 +11,135 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.41.0] — 2026-09-29
+
+### Highlights
+
+- **A keyboard user changing a team member's role no longer demotes them on
+  the way.** Moving Admin → Viewer used to commit the intermediate step
+  (Admin → Member) on the first arrow key; the control now has a Save button
+  — the first time this form has worked without JavaScript at all, because it
+  never had a submit control before.
+- **Undo is now three Tab presses away, not fifteen.** The five-second undo
+  toast used to be appended to the end of the page; it now sits next to the
+  control it belongs to, and focus never lands on `body` when it is
+  dismissed or expires.
+- **`/settings/notifications` no longer offers a preference for a
+  notification that can never arrive.** Its presence was also holding back
+  the *"everything is silenced"* banner until a user silenced something that
+  did not exist.
+- **The documentation is now a published site**, and **each release's notes
+  now live on its own GitHub Release page** as well as in this file.
+- No schema migration; no public item removed; no signature changed.
+
+### Fixed
+
+- **The team role `<select>` committed a change on `onchange`, which fires on
+  every arrow key** (`components/teams.rs`). A keyboard user moving a member
+  from Admin to Viewer passed through Member on the way, and the page
+  submitted that intermediate demotion before the arrow keys reached Viewer.
+  The control now shares its form with an explicit *Save* button and
+  `onchange` is gone. **This was also the only way the role could be changed
+  without JavaScript** — the form had no submit control at all until now, so
+  this is a second, independent fix riding along with the first.
+- **The undo toast on the board, the sprint plan and the calendar was not
+  reachable from the keyboard in any realistic sense.** It was appended to
+  the end of `<body>`, five Tab presses away on the sprint plan, thirteen on
+  the board, and **fifteen on the issue list** — inside the toast's own
+  five-second lifetime. It now sits in DOM order immediately after the
+  control it belongs to (still drawn bottom-right; this is a DOM-order change
+  only), and pressing Undo or letting it expire returns focus to that
+  control rather than dropping it to `body`, but only when focus was inside
+  the toast to begin with — a user who has moved on is never interrupted.
+  - **A second, independent defect turned up in the same toast**: on the
+    board, the calendar and the sprint plan, the element the toast now lives
+    inside is `draggable="true"`. A real mouse press-and-drag on Undo — not a
+    plain click — was being read by the browser as the start of that
+    element's own drag: the click that activates Undo never fired, and on the
+    board a stray drag could silently move the card to wherever the toast
+    happened to be drawn. Fixed with a `mousedown` handler on the button
+    itself; a plain click is unaffected, and each surface's own drag still
+    works exactly as before, toast present or not.
+- **A notification kind with no emitter was offered a preference anyway**
+  (`project_trend_decline` — its detection was never built; `ROADMAP.md`
+  still lists it as deferred). `/settings/notifications` rendered a row for
+  it, and *"everything is silenced"* required a user to silence a
+  notification that could never fire before the product would say so. The
+  kind is out of the list that is offered and saved; its constant, label and
+  strings stay in place for whoever builds the emitter.
+
+### Changed
+
+- **The documentation under `docs/` is now published** at
+  `https://nabbisen.github.io/peisear/`, built from `main` by its own
+  workflow and failing that build on a broken internal link (`DOCS-001`,
+  `DEC-057`). No page moved and no inbound link elsewhere in the repository
+  broke; sixteen links that pointed outside `docs/` (and four more into the
+  excluded `docs/specification/history/`) now point at GitHub instead, pinned
+  to `main`. Publishing `docs/static-js-verification.md` here is not a
+  reversal of `STATIC-001` — that decision was about every self-hoster's own
+  deployment serving the file, not about this project's own site carrying it.
+- **A release now has four legs, not three**: tag, publish, then create the
+  GitHub Release with the version's own changelog section as its body
+  (`DEC-056`). The publish comes before the Release so the page can never
+  announce a version whose crates failed to publish.
+
 ### Internal
 
-- **Four requirement entries in `docs/specification/requirements.md` were
-  malformed in 0.40.0 and are repaired.** A pattern-based amendment matched
-  further than intended: two entries were truncated mid-field and two were
-  spliced, reading as prose that says what neither the old nor the new version
-  says. Not in any published crate — the specification is at the repository
-  root, which `cargo publish` does not package — so `0.40.0`'s crates are
-  unaffected and the tag is not re-cut.
-- **Release tags now link to their release notes.** An annotated tag's message
-  carries `Release notes: …/blob/<tag>/CHANGELOG.md`, pinned to the tag; `0.40.0`
-  was re-tagged once, on the same commit, to add it. The workflow is written in
-  `docs/development/changelog-and-releases.md`.
-- **`CHANGELOG.md` holds the current series only.** Versions 0.1 to 0.39 moved,
-  verbatim, into `changelog/`, one file per series of ten minor versions. Their
-  stale reference-style link footers, which pointed at GitHub Release pages that
-  never existed, were dropped. A scan under `cargo test` checks the
-  arrangement (`DEC-055`).
+- **Two P1 requirements stopped being unfalsifiable.** `NFR-A11Y-002` and
+  `NFR-A11Y-004` both read *"Partial."* and nothing else — no statement of
+  what was partial, so nothing about them could be checked and nothing about
+  them could ever be wrong. Auditing them (`A11Y-001`) is what found the two
+  defects above. `NFR-A11Y-002` now governs changes made *within* a
+  document and names where focus must land; what a full-page navigation owes
+  instead is split out as `NFR-A11Y-009`, because arguing the two as one
+  requirement had been hiding a real cost — eleven Tab presses and no skip
+  link after an ordinary form submission, on every page that does one.
+  `NFR-A11Y-004`'s *"label **and** icon"* is settled toward its own title:
+  colour is never the only carrier, and a label alone satisfies it. Its
+  remaining gap, unchanged by this release, is recorded rather than fixed:
+  both charts separate their two series by lightness alone (1.77 : 1 on the
+  burndown), with no patterning.
+- **`NFR-REL-007` was recorded `Implemented`, and neither half of it was
+  true.** It required documentation to live under `docs/src` in an
+  mdbook-compatible structure; this release's own documentation work builds
+  the book from `docs/` itself, not `docs/src/`. The second false
+  `Implemented` in three releases, and the first confirmed instance of the
+  blind spot `REQ-001` named in its own words: that audit's sweep covered
+  every requirement claiming *incompleteness*, and said plainly that it
+  proved nothing about the requirements claiming to be *done*. This is one.
+- **`REQ-002` pinned four requirements `REQ-001` had moved to Met on a probe
+  rather than a test**: a personal project's issue excluded from a team's
+  sprint backlog, *mark all read* offered only while something is unread, an
+  unscheduled calendar day carrying no comment or fill, and the team privacy
+  footnote actually on the team screen (its wording was already pinned
+  elsewhere). Each is now a test, each seen to fail before it existed.
+- **0.40.0's four malformed requirement entries are repaired.** A
+  pattern-based amendment matched further than intended and two entries were
+  truncated, two spliced, reading as prose that says what neither the old
+  nor the new version said. Named rather than fixed quietly, because it was
+  this project's own mistake and it shipped. Not in any published crate — the
+  specification is at the repository root, outside what `cargo publish`
+  packages — so 0.40.0's crates are unaffected and its tag is not re-cut.
+- **Release tags now link to their release notes.** An annotated tag's
+  message carries `Release notes: …/blob/<tag>/CHANGELOG.md`, pinned to the
+  tag; `0.40.0` was re-tagged once, on the same commit, to add it.
+- **`CHANGELOG.md` holds the current series only.** Versions 0.1 to 0.39
+  moved, verbatim, into `changelog/`, one file per series of ten minor
+  versions; a scan under `cargo test` checks the arrangement, including —
+  from this release — that a dated section opens with `### Highlights`
+  (`DEC-055`).
+- **The suite grew from 352 to 369.** No test file is new.
+
+**What a reader should not conclude.** `§10.15`, `§10.17` and `§10.32` remain
+open; `§10.32` is open **by decision**. **Undo is still not on the keyboard
+route on the board, the sprint plan or the calendar** — their keyboard path is
+a native form POST that shows no toast at all, so there is nothing there for
+this release's fix to reach. That is recorded against `FR-DM-005`, a feature
+gap about consistency across surfaces; it is **not** an `FR-DM-002` violation
+— an earlier draft of this section said it was, and that was wrong. The
+charts' colour-only series separation is unchanged. The product still does not
+claim WCAG conformance.
 
 ## [0.40.0] — 2026-09-25
 

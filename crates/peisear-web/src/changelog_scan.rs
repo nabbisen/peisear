@@ -582,27 +582,47 @@ fn a_link_to_a_moved_section_is_found() {
 
 #[test]
 fn the_released_version_must_have_a_dated_section() {
+    // Derived from the live workspace version rather than a hardcoded string,
+    // so this test does not go stale at the next release the way its first
+    // version did: it was written against 0.40.0's own dated heading and
+    // broke silently the moment 0.41.0's bump made 0.40.0 no longer "the
+    // released version" this rule checks.
     let mut r = real();
-    r.changelog = r
+    let (maj, min, pat) = r.version;
+    let heading_prefix = format!("## [{maj}.{min}.{pat}] —");
+    let dated_heading = r
         .changelog
-        .replace("## [0.40.0] — 2026-09-25", "## [0.40.0] — unreleased");
+        .lines()
+        .find(|l| l.starts_with(&heading_prefix))
+        .unwrap_or_else(|| {
+            panic!(
+                "the live CHANGELOG.md has no section for the workspace version {maj}.{min}.{pat}"
+            )
+        })
+        .to_string();
+    let undated_heading = format!("## [{maj}.{min}.{pat}] — unreleased");
+    r.changelog = r.changelog.replacen(&dated_heading, &undated_heading, 1);
     let v = only(run(&r), "rule 6");
     assert!(v.iter().any(|m| m.contains("has no date")), "got {v:?}");
 
-    // A dated 0.41.0 section passes whatever heading it opens with: the
+    // A dated NEXT-version section passes whatever heading it opens with: the
     // arrangement is what this module checks, not the prose.
+    let next = (maj, min, pat + 1);
     let mut r = real();
-    r.version = (0, 41, 0);
+    r.version = next;
     r.changelog = r.changelog.replacen(
-        "## [0.40.0]",
-        "## [0.41.0] — 2026-10-01\n\n### Added\n\n- something\n\n## [0.40.0]",
+        &format!("## [{maj}.{min}.{pat}]"),
+        &format!(
+            "## [{}.{}.{}] — 2099-01-01\n\n### Added\n\n- something\n\n## [{maj}.{min}.{pat}]",
+            next.0, next.1, next.2
+        ),
         1,
     );
     assert!(only(run(&r), "rule 6").is_empty());
 
     // A version bump with no section.
     let mut r = real();
-    r.version = (0, 41, 0);
+    r.version = next;
     assert!(
         only(run(&r), "rule 6")
             .iter()
