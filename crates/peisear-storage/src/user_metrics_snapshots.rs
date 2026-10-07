@@ -56,8 +56,8 @@ pub struct NewUserSnapshot {
 /// background job tick.
 ///
 /// `PRIV-003`: takes [`SubjectId`] — the job's own enumeration
-/// ([`users_with_active_assignments`]) is one of its two legitimate
-/// sources.
+/// ([`crate::subjects::users_with_active_assignments`]) is one of
+/// its two legitimate sources.
 pub async fn insert(
     pool: &Pool,
     user_id: &SubjectId,
