@@ -11,6 +11,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.42.0] — 2026-10-07
+
+### Highlights
+
+- **Eleven Tab presses to reach the content after any ordinary form
+  submission are now one press and an activation.** A skip link, first in
+  the page, hidden until focused — chosen over the requirement's other two
+  remedies because it is the only one that works with scripting off.
+- **Two charts were only readable to someone with full contrast
+  sensitivity.** Not a colour-blindness gap — both charts are single-hue and
+  always were — but two pale blues that were, to a low-contrast-sensitivity
+  reader, one pale blue. Both now separate at 3 : 1 or better.
+- **A focus ring in the account menu was drawn in transparent.** Four
+  links — Today, Teams, Inbox, Settings — now draw the same ring every
+  other link on the page already does.
+- No schema migration; no public item removed; no signature changed.
+
+### Fixed
+
+- **A skip link closes the reach gap `NFR-A11Y-009` named**
+  (`components/layout.rs`). `href="#main"` lands on a new
+  `id="main" tabindex="-1"` on each page shell's own `<main>` — the
+  `tabindex` is load-bearing, since a bare fragment jump moves scroll but
+  not focus. Visually hidden until focused (`sr-only`/`focus:not-sr-only`,
+  never `display:none`, so it stays reachable with scripting off), and
+  measured rather than assumed at every step: Tab presses from a fresh
+  load, eleven (ten on a phone board) before, one press and an activation
+  after, on every page; `document.activeElement` lands on `main` itself,
+  with scripting on or off; the five pages with an `autofocus` form input
+  are unaffected. The hidden element's own box turned out to be 44×44, not
+  1×1 — `min-h-11`/`min-w-11` beat `sr-only`'s own `1px`/`1px` — and a
+  second measurement found it contributes nothing to any page's scroll
+  width and is not clickable: `clip: rect(0,0,0,0)` removes it from
+  hit-testing as well as from painting, checked with a real click at six
+  points inside the box, on two separate builds.
+- **The burndown's two lines and the completed-work bars were 1.77 : 1 and
+  2.09 : 1 apart**, with one bar at 1.86 : 1 against its own background —
+  all short of the 3 : 1 a graphical object needs. Both charts now share
+  one pair of values, still single-hue, reaching 3.40 : 1 between series
+  and 4.22 : 1 / 14.36 : 1 against the page. Every figure measured by two
+  independent colour-space conversions, agreeing to the rendered pixel
+  value.
+- **The account menu's four links drew no visible focus ring** — a
+  vendored selector set it to transparent, overriding the ring every other
+  link on the page draws. Measured first, since the grey row left behind
+  might already have been enough: it reached 1.22 : 1 against its
+  neighbours, well short of 3 : 1, so the four links now reuse the exact
+  ring appearance the other ten stops already draw.
+- **The sprint plan page had two `<main>` landmarks**, one of them a plain
+  layout grid with no landmark intent of its own — invalid regardless, and
+  made load-bearing by the skip link now landing on the first one it
+  finds. Changed to a `<div>`; confirmed the only other site in the tree
+  using the tag this way.
+
+### Changed
+
+- **A new requirement, `NFR-A11Y-010` (non-text contrast)**: WCAG 1.4.11's
+  3 : 1 for graphical objects and interactive-control boundaries, which
+  this project had only for text until now. It exists because last
+  release's rewording of `NFR-A11Y-004` turned out not to cover the finding
+  it had been carrying as a status — a different reader, a different
+  failure, needed its own requirement rather than a borrowed one.
+
+### Internal
+
+- **Two corrections to this document's own editing, recorded rather than
+  quietly applied.** `NFR-A11Y-002`'s status contradicted its own body.
+  `NFR-A11Y-004`'s was written against a finding rather than against the
+  sentence it sat under. The third and fourth instances of one habit —
+  amending an entry by adding a correction and leaving the `*Status*` field
+  as it was.
+- **Test inventory unchanged at 369.** Four handoffs, and this release's
+  own work was measurement, not assertion: six hit-test points, two
+  independent colour conversions, fourteen computed focus styles. One test
+  was rescoped rather than added — a keyboard-reachability assertion that
+  had gone stale the moment the skip link gave the page a second,
+  legitimate reason to carry `tabindex="-1"`. A test pinning the charts'
+  exact contrast ratios was considered and not written, since proving it
+  would mean a third implementation of the same colour-space conversion in
+  the suite.
+- **`static/tailwind.css` was regenerated twice**, additive both times —
+  zero rules removed, same Tailwind version. `style/tailwindcss/README.md`
+  now records why a handful of the added rules correspond to no class
+  anyone wrote: Tailwind extracts candidates from any word in scanned
+  content, including prose in code comments.
+- **The overflow gate stayed at 120 cells**, run for three of the four
+  handoffs; the fourth changed only colour literals, nothing the gate
+  measures, and said so rather than skipping silently.
+
+**What a reader should not conclude.** `§10.15`, `§10.17` and `§10.32`
+remain open; `§10.32` is open **by decision**. Nothing graphical other than
+the two charts has been audited for contrast — `NFR-A11Y-010` says so in
+its own status, and this is not a sweep. Undo is still not on the keyboard
+route on the board, the sprint plan or the calendar (`FR-DM-005`), and the
+scroll position a phone loses after a form submission is still lost — this
+release's skip link reaches the content; it does not restore where the
+reader was. Chrome only; no screen reader has been used. The product still
+does not claim WCAG conformance, and this release is the one where that
+sentence needs the most care, since two of its criteria were just cited by
+number: citing a criterion is not conforming to it.
+
 ## [0.41.0] — 2026-09-29
 
 ### Highlights
