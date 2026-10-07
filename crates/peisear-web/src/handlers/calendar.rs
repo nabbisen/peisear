@@ -22,7 +22,7 @@ use serde::Deserialize;
 use crate::{
     AppResult, AppState,
     components::{self, CalendarDay, CalendarView},
-    extractors::AuthUser,
+    extractors::{AuthUser, Requester},
 };
 
 #[derive(Debug, Deserialize)]
@@ -146,6 +146,7 @@ fn bucket_by_day(
 
 pub async fn personal_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Query(q): Query<CalendarQuery>,
 ) -> AppResult<impl IntoResponse> {
@@ -167,7 +168,7 @@ pub async fn personal_page(
             .into_iter()
             .map(|p| (p.id, p.name))
             .collect();
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
 
     Ok(components::calendar::render_personal(
         user,
@@ -183,6 +184,7 @@ pub async fn personal_page(
 
 pub async fn project_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(project_id): Path<String>,
     Query(q): Query<CalendarQuery>,
@@ -196,7 +198,7 @@ pub async fn project_page(
     let planned = issues::planned_for_project(&state.db, &project_id, from, to).await?;
     let days = bucket_by_day(planned, window_first, window_last);
     let sprint_band = sprints::active_sprints_overlapping(&state.db, &project_id, from, to).await?;
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
 
     Ok(components::calendar::render_project(
         user,

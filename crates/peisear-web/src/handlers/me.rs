@@ -17,7 +17,10 @@ use axum::{
 use peisear_storage::{personal_metrics, user_burnout, user_capacities};
 use serde::Deserialize;
 
-use crate::{AppResult, AppState, components, extractors::AuthUser};
+use crate::{
+    AppResult, AppState, components,
+    extractors::{AuthUser, Requester},
+};
 
 #[derive(Debug, Deserialize)]
 pub struct FlashQuery {
@@ -26,6 +29,7 @@ pub struct FlashQuery {
 
 pub async fn page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Query(q): Query<FlashQuery>,
 ) -> AppResult<impl IntoResponse> {
@@ -47,7 +51,7 @@ pub async fn page(
     // from a period-bounded row, so the Load chip can render a
     // small "(this period)" hint. We pull the row (not just the
     // points) and check whether either bound is set.
-    let capacity_row = user_capacities::effective_row_for_user(&state.db, &user.id).await?;
+    let capacity_row = user_capacities::effective_row_for_user(&state.db, &rid).await?;
     let capacity_is_period_bounded = capacity_row
         .as_ref()
         .map(|r| r.period_start.is_some() || r.period_end.is_some())

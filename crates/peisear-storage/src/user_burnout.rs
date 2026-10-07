@@ -53,6 +53,12 @@ const STREAK_WINDOW_DAYS: i64 = 14;
 /// [`crate::personal_metrics`] semantics). Returns an empty signal
 /// set (zero streaks, no warnings) when the user has no history
 /// — this is correct for fresh users / empty backups.
+///
+/// `PRIV-002`: stays on `&str` — same reason as
+/// [`crate::personal_metrics::for_user_global`]: called by both `/me`
+/// (a session) and the snapshot job (none). It internally calls
+/// [`crate::user_metrics_snapshots::recent_for_user`], which stays on
+/// `&str` to match.
 pub async fn for_user(pool: &Pool, user_id: &str) -> StorageResult<Option<UserBurnoutSignals>> {
     // Confirm the user exists (defensive — callers usually have
     // already done so via auth, but it's cheap to check).

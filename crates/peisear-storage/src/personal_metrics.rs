@@ -130,6 +130,11 @@ fn calendar_time_days(created_at: &str, updated_at: &str) -> Option<f64> {
 /// **0.12.0**: capacity is resolved through
 /// [`crate::user_capacities::effective_for_user`] (period-aware)
 /// rather than read from a static `users.capacity_points` field.
+///
+/// `PRIV-002`: stays on `&str`, matching [`crate::user_capacities::
+/// effective_for_user`], which it calls into. No current caller outside
+/// this crate (checked: unused today), kept consistent with its sibling
+/// below rather than typed ahead of a caller that would decide it.
 pub async fn for_user_in_project(
     pool: &Pool,
     user_id: &str,
@@ -241,6 +246,12 @@ pub async fn for_user_in_project(
 /// The `/me` page uses this to give a global view rather than one
 /// scoped to a single project. Returns `None` if the user does
 /// not exist.
+///
+/// `PRIV-002`: stays on `&str` — called by both a real handler (`/me`,
+/// with a session) and the session-less snapshot job (`jobs.rs`, no
+/// requester at all, just a subject it is iterating). A counter-example
+/// to `DEC-058`'s "requester and subject are the same value everywhere"
+/// in one direction: here there is a subject with no requester.
 pub async fn for_user_global(pool: &Pool, user_id: &str) -> StorageResult<Option<PersonalMetrics>> {
     let user_row: Option<(String, Option<i64>)> = sqlx::query_as(
         r#"

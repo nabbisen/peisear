@@ -10,6 +10,7 @@ authors.workspace       = true
 repository.workspace    = true
 
 [dependencies]
+peisear-auth                 = { workspace = true }
 peisear-core                = { workspace = true }
 peisear-i18n                = { workspace = true }
 

@@ -317,12 +317,13 @@ async fn project_edits_with_one_stamp_leave_one_winner() {
 /// another on overlap.
 async fn capacity_rows(app: &TestApp, user_id: &str) -> Vec<String> {
     let day = |m: u32, d: u32| chrono::NaiveDate::from_ymd_opt(2026, m, d).unwrap();
+    let rid = common::auth::requester_id_for(user_id);
     let mut ids = Vec::new();
     for m in 1..=M as u32 {
         ids.push(
             peisear_storage::user_capacities::insert(
                 &app.db,
-                user_id,
+                &rid,
                 5,
                 Some(day(m, 1)),
                 Some(day(m, 10)),
@@ -762,6 +763,7 @@ async fn a_guarded_write_matches_the_stamp_the_trigger_wrote() {
 async fn a_guarded_write_tells_a_missing_row_from_a_moved_one() {
     use peisear_storage::{Guarded, StorageError, projects, sprints, user_capacities};
     let (app, user_id) = app_with_user().await;
+    let rid = common::auth::requester_id_for(&user_id);
     let now = Utc::now();
 
     // missing
@@ -774,7 +776,7 @@ async fn a_guarded_write_tells_a_missing_row_from_a_moved_one() {
         Err(StorageError::NotFound)
     ));
     assert!(matches!(
-        user_capacities::delete_guarded(&app.db, &user_id, "no-such", Some(now)).await,
+        user_capacities::delete_guarded(&app.db, &rid, "no-such", Some(now)).await,
         Err(StorageError::NotFound)
     ));
     assert!(matches!(
@@ -790,7 +792,7 @@ async fn a_guarded_write_tells_a_missing_row_from_a_moved_one() {
     ));
 
     // present and moved: Stale, with the current stamp, and nothing written
-    let row = user_capacities::insert(&app.db, &user_id, 5, None, None, None)
+    let row = user_capacities::insert(&app.db, &rid, 5, None, None, None)
         .await
         .expect("row");
     let current = {
@@ -804,7 +806,7 @@ async fn a_guarded_write_tells_a_missing_row_from_a_moved_one() {
     };
     let long_ago = current - chrono::Duration::days(1);
     assert_eq!(
-        user_capacities::delete_guarded(&app.db, &user_id, &row, Some(long_ago))
+        user_capacities::delete_guarded(&app.db, &rid, &row, Some(long_ago))
             .await
             .unwrap(),
         Guarded::Stale {
@@ -812,7 +814,7 @@ async fn a_guarded_write_tells_a_missing_row_from_a_moved_one() {
         }
     );
     assert!(
-        user_capacities::find(&app.db, &user_id, &row)
+        user_capacities::find(&app.db, &rid, &row)
             .await
             .unwrap()
             .is_some(),

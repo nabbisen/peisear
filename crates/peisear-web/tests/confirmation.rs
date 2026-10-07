@@ -409,9 +409,16 @@ async fn five_reversible_dialogs_are_untouched() {
         "remove-member dialog should be untouched"
     );
 
-    user_capacities::insert(&app.db, &user_id, 5, None, None, None)
-        .await
-        .expect("insert capacity row");
+    user_capacities::insert(
+        &app.db,
+        &common::auth::requester_id_for(&user_id),
+        5,
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("insert capacity row");
     let resp = app.server.get("/settings").await;
     resp.assert_status(StatusCode::OK);
     assert!(

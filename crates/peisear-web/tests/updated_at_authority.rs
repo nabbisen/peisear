@@ -110,15 +110,25 @@ async fn user_view_states_upsert_advances_updated_at_via_trigger() {
     let user_id = register_and_login(&app, &user).await;
     let view_key = "project_issues:some-project";
 
-    view_states::upsert(&app.db, &user_id, view_key, r#"{"status":"open"}"#)
-        .await
-        .expect("initial upsert");
+    view_states::upsert(
+        &app.db,
+        &common::auth::requester_id_for(&user_id),
+        view_key,
+        r#"{"status":"open"}"#,
+    )
+    .await
+    .expect("initial upsert");
     let before = read_updated_at(&app, "user_view_states", "user_id", &user_id).await;
     ensure_distinct_timestamp().await;
 
-    view_states::upsert(&app.db, &user_id, view_key, r#"{"status":"done"}"#)
-        .await
-        .expect("second upsert");
+    view_states::upsert(
+        &app.db,
+        &common::auth::requester_id_for(&user_id),
+        view_key,
+        r#"{"status":"done"}"#,
+    )
+    .await
+    .expect("second upsert");
 
     let after = read_updated_at(&app, "user_view_states", "user_id", &user_id).await;
     assert!(

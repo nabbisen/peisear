@@ -69,9 +69,16 @@ async fn over_capacity_owner_fixture(app: &TestApp) -> (String, String, String, 
     .expect("add bob to team");
 
     // Bob's capacity: 5pt. Self-only per NFR-PRIV-001.
-    peisear_storage::user_capacities::insert(&app.db, &bob_id, 5, None, None, None)
-        .await
-        .expect("insert bob's capacity");
+    peisear_storage::user_capacities::insert(
+        &app.db,
+        &common::auth::requester_id_for(&bob_id),
+        5,
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("insert bob's capacity");
 
     // A team-scoped project owned by Bob. Alice reaches it via
     // team membership, not ownership.

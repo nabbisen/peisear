@@ -35,6 +35,7 @@
 
 use std::time::Duration;
 
+use peisear_auth::jwt::{self, RequesterId};
 use peisear_core::notifications::{Severity, channel as channel_id, kind as kind_id};
 use peisear_notify::config::{SmtpConfig, TlsMode};
 use peisear_notify::dispatch::DispatchContext;
@@ -89,7 +90,7 @@ async fn create_user_subscribed_to_email(pool: &Pool) -> String {
 
     notif_store::upsert_preference(
         pool,
-        &user_id,
+        &test_requester_id(&user_id),
         kind_id::BURNOUT_OVERLOAD,
         &[channel_id::IN_APP, channel_id::EMAIL],
         Severity::Info,
@@ -98,6 +99,18 @@ async fn create_user_subscribed_to_email(pool: &Pool) -> String {
     .unwrap();
 
     user_id
+}
+
+/// `PRIV-002`: a genuinely verified `RequesterId` for `user_id`, the
+/// same way the real extractor gets one -- mint a token, then verify it.
+/// Not a second constructor; minting and verifying is exactly what the
+/// system requires of anyone, so a test doing it has satisfied the
+/// property rather than side-stepped it.
+const TEST_JWT_SECRET: &str = "test-jwt-secret-must-not-be-used-in-production";
+
+fn test_requester_id(user_id: &str) -> RequesterId {
+    let token = jwt::issue(user_id, "unused@example.test", TEST_JWT_SECRET).unwrap();
+    jwt::verify(&token, TEST_JWT_SECRET).unwrap()
 }
 
 fn spawn_dispatch(ctx: DispatchContext) -> DispatchTx {
@@ -123,7 +136,7 @@ async fn wait_for_notification(
 ) -> peisear_core::notifications::Notification {
     let deadline = std::time::Instant::now() + Duration::from_secs(10);
     loop {
-        let rows = notif_store::recent_for_user(pool, user_id, 10)
+        let rows = notif_store::recent_for_user(pool, &test_requester_id(user_id), 10)
             .await
             .unwrap();
         if let Some(row) = rows.into_iter().next() {
@@ -220,7 +233,7 @@ async fn cooldown_suppresses_second_dispatch_within_window() {
     tx.send(make_event(&user_id)).await.unwrap();
     tokio::time::sleep(Duration::from_millis(200)).await;
 
-    let rows = notif_store::recent_for_user(&pool, &user_id, 10)
+    let rows = notif_store::recent_for_user(&pool, &test_requester_id(&user_id), 10)
         .await
         .unwrap();
     assert_eq!(

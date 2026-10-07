@@ -27,6 +27,7 @@
 //!   preferences page.
 
 use chrono::{DateTime, Utc};
+use peisear_auth::jwt::RequesterId;
 use peisear_core::notifications::{Notification, Preference, Severity};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -48,6 +49,12 @@ pub struct NewNotification<'a> {
 }
 
 /// Persist a new notification row. Returns the new id.
+///
+/// `PRIV-002`: stays on `&str`. The only caller is the dispatch loop
+/// (`peisear-notify`), a background process with no HTTP session to seal
+/// a [`RequesterId`] from — it is dispatching on behalf of an event
+/// another part of the system already authorised, not acting as a
+/// requester itself.
 pub async fn insert(pool: &Pool, user_id: &str, new: NewNotification<'_>) -> StorageResult<String> {
     let id = Uuid::new_v4().to_string();
     let dispatched_str = new.dispatched_via.join(",");
@@ -114,7 +121,7 @@ impl From<NotificationRow> for Notification {
 /// `/notifications` inbox.
 pub async fn recent_for_user(
     pool: &Pool,
-    user_id: &str,
+    user_id: &RequesterId,
     limit: i64,
 ) -> StorageResult<Vec<Notification>> {
     let rows = sqlx::query_as::<_, NotificationRow>(
@@ -127,7 +134,7 @@ pub async fn recent_for_user(
         LIMIT ?2
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(limit)
     .fetch_all(pool)
     .await?;
@@ -136,7 +143,7 @@ pub async fn recent_for_user(
 }
 
 /// Count of unread notifications. Used by the nav badge.
-pub async fn unread_count_for_user(pool: &Pool, user_id: &str) -> StorageResult<i64> {
+pub async fn unread_count_for_user(pool: &Pool, user_id: &RequesterId) -> StorageResult<i64> {
     let n: i64 = sqlx::query_scalar(
         r#"
         SELECT COUNT(*)
@@ -144,7 +151,7 @@ pub async fn unread_count_for_user(pool: &Pool, user_id: &str) -> StorageResult<
         WHERE user_id = ?1 AND read_at IS NULL
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .fetch_one(pool)
     .await?;
     Ok(n)
@@ -153,7 +160,7 @@ pub async fn unread_count_for_user(pool: &Pool, user_id: &str) -> StorageResult<
 /// Mark one notification as read. Idempotent; already-read rows
 /// keep their original `read_at` (the UPDATE filters on `read_at
 /// IS NULL`).
-pub async fn mark_read(pool: &Pool, user_id: &str, id: &str) -> StorageResult<()> {
+pub async fn mark_read(pool: &Pool, user_id: &RequesterId, id: &str) -> StorageResult<()> {
     let res = sqlx::query(
         r#"
         UPDATE notifications
@@ -162,7 +169,7 @@ pub async fn mark_read(pool: &Pool, user_id: &str, id: &str) -> StorageResult<()
         "#,
     )
     .bind(id)
-    .bind(user_id)
+    .bind(user_id.as_str())
     .execute(pool)
     .await?;
     if res.rows_affected() == 0 {
@@ -175,7 +182,7 @@ pub async fn mark_read(pool: &Pool, user_id: &str, id: &str) -> StorageResult<()
             r#"SELECT COUNT(*) FROM notifications WHERE id = ?1 AND user_id = ?2"#,
         )
         .bind(id)
-        .bind(user_id)
+        .bind(user_id.as_str())
         .fetch_one(pool)
         .await?;
         if exists == 0 {
@@ -187,7 +194,7 @@ pub async fn mark_read(pool: &Pool, user_id: &str, id: &str) -> StorageResult<()
 
 /// Mark all of this user's unread notifications as read in one
 /// query. Used by the inbox "mark all read" button.
-pub async fn mark_all_read(pool: &Pool, user_id: &str) -> StorageResult<i64> {
+pub async fn mark_all_read(pool: &Pool, user_id: &RequesterId) -> StorageResult<i64> {
     let res = sqlx::query(
         r#"
         UPDATE notifications
@@ -195,7 +202,7 @@ pub async fn mark_all_read(pool: &Pool, user_id: &str) -> StorageResult<i64> {
         WHERE user_id = ?1 AND read_at IS NULL
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .execute(pool)
     .await?;
     Ok(res.rows_affected() as i64)
@@ -204,6 +211,9 @@ pub async fn mark_all_read(pool: &Pool, user_id: &str) -> StorageResult<i64> {
 /// "When was the last time we sent this kind to this user?"
 /// Used by the cooldown filter at dispatch time. Returns `None`
 /// if the user has never received this kind.
+///
+/// `PRIV-002`: stays on `&str` — the only caller is the dispatch loop
+/// (`peisear-notify`), per [`insert`]'s own note.
 pub async fn last_dispatched_at_for_user_kind(
     pool: &Pool,
     user_id: &str,
@@ -226,7 +236,10 @@ pub async fn last_dispatched_at_for_user_kind(
 
 /// All preference rows for a user. The web layer merges these
 /// with the system defaults to render the full preferences page.
-pub async fn preferences_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Preference>> {
+pub async fn preferences_for_user(
+    pool: &Pool,
+    user_id: &RequesterId,
+) -> StorageResult<Vec<Preference>> {
     let rows: Vec<(String, String, String, String)> = sqlx::query_as(
         r#"
         SELECT user_id, kind, channels, min_severity
@@ -234,7 +247,7 @@ pub async fn preferences_for_user(pool: &Pool, user_id: &str) -> StorageResult<V
         WHERE user_id = ?1
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .fetch_all(pool)
     .await?;
 
@@ -255,6 +268,10 @@ pub async fn preferences_for_user(pool: &Pool, user_id: &str) -> StorageResult<V
 
 /// Find the preference for one (user, kind), or `None` if
 /// absent (caller falls back to defaults).
+///
+/// `PRIV-002`: stays on `&str` — called by both the dispatch loop
+/// (`peisear-notify`, no session) and [`global_preference`] (which also
+/// stays on `&str` to match).
 pub async fn preference_for_user_kind(
     pool: &Pool,
     user_id: &str,
@@ -299,7 +316,7 @@ pub async fn preference_for_user_kind(
 /// anything. That is correct (they are, in fact, no longer
 /// silenced for everything) but surprising, and worth knowing
 /// before it's found in production rather than after.
-pub async fn all_kinds_silenced(pool: &Pool, user_id: &str) -> StorageResult<bool> {
+pub async fn all_kinds_silenced(pool: &Pool, user_id: &RequesterId) -> StorageResult<bool> {
     let prefs = preferences_for_user(pool, user_id).await?;
     Ok(peisear_core::notifications::kind::all_user_facing()
         .iter()
@@ -322,7 +339,10 @@ pub async fn all_kinds_silenced(pool: &Pool, user_id: &str) -> StorageResult<boo
 /// at dispatch time) — deleting rather than writing the default
 /// back keeps that default in one place. A resumed user is
 /// indistinguishable from one who never silenced.
-pub async fn delete_user_facing_preferences(pool: &Pool, user_id: &str) -> StorageResult<()> {
+pub async fn delete_user_facing_preferences(
+    pool: &Pool,
+    user_id: &RequesterId,
+) -> StorageResult<()> {
     for k in peisear_core::notifications::kind::all_user_facing() {
         sqlx::query(
             r#"
@@ -330,7 +350,7 @@ pub async fn delete_user_facing_preferences(pool: &Pool, user_id: &str) -> Stora
             WHERE user_id = ?1 AND kind = ?2
             "#,
         )
-        .bind(user_id)
+        .bind(user_id.as_str())
         .bind(*k)
         .execute(pool)
         .await?;
@@ -342,7 +362,7 @@ pub async fn delete_user_facing_preferences(pool: &Pool, user_id: &str) -> Stora
 /// before persistence (sorted, lowercased, de-duplicated).
 pub async fn upsert_preference(
     pool: &Pool,
-    user_id: &str,
+    user_id: &RequesterId,
     kind: &str,
     channels: &[&str],
     min_severity: Severity,
@@ -365,7 +385,7 @@ pub async fn upsert_preference(
             min_severity = excluded.min_severity
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(kind)
     .bind(&chans_str)
     .bind(min_severity.as_str())
@@ -377,7 +397,7 @@ pub async fn upsert_preference(
 /// "Has this user been prompted for the first-login email
 /// opt-in?" Implemented as a sentinel row with kind = '_global'.
 /// Returns true if the row exists.
-pub async fn global_acknowledged(pool: &Pool, user_id: &str) -> StorageResult<bool> {
+pub async fn global_acknowledged(pool: &Pool, user_id: &RequesterId) -> StorageResult<bool> {
     let n: i64 = sqlx::query_scalar(
         r#"
         SELECT COUNT(*)
@@ -385,7 +405,7 @@ pub async fn global_acknowledged(pool: &Pool, user_id: &str) -> StorageResult<bo
         WHERE user_id = ?1 AND kind = ?2
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(peisear_core::notifications::kind::GLOBAL)
     .fetch_one(pool)
     .await?;
@@ -401,7 +421,7 @@ pub async fn global_acknowledged(pool: &Pool, user_id: &str) -> StorageResult<bo
 /// layer's discretion — the global row is informational.
 pub async fn set_global_acknowledged(
     pool: &Pool,
-    user_id: &str,
+    user_id: &RequesterId,
     email_opt_in: bool,
 ) -> StorageResult<()> {
     let channels = if email_opt_in {
@@ -417,7 +437,7 @@ pub async fn set_global_acknowledged(
             channels = excluded.channels
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(peisear_core::notifications::kind::GLOBAL)
     .bind(channels)
     .execute(pool)
@@ -429,6 +449,11 @@ pub async fn set_global_acknowledged(
 /// globally opted in. If absent, returns `None` (no default
 /// channel application; call `global_acknowledged` first to
 /// decide whether to prompt).
+///
+/// `PRIV-002`: stays on `&str` — called by both a handler
+/// (`notification_preferences.rs`, with a real session) and the dispatch
+/// loop (`peisear-notify`, with none); it forwards straight into
+/// [`preference_for_user_kind`], which has the same constraint.
 pub async fn global_preference(pool: &Pool, user_id: &str) -> StorageResult<Option<Preference>> {
     preference_for_user_kind(pool, user_id, peisear_core::notifications::kind::GLOBAL).await
 }

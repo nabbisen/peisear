@@ -20,7 +20,10 @@ use peisear_i18n::{Locale, MessageKey};
 use peisear_storage::notifications as notif_store;
 use serde::Deserialize;
 
-use crate::{AppResult, AppState, components, extractors::AuthUser};
+use crate::{
+    AppResult, AppState, components,
+    extractors::{AuthUser, Requester},
+};
 
 #[derive(Debug, Deserialize)]
 pub struct FlashQuery {
@@ -42,14 +45,15 @@ pub struct FlashQuery {
 ///   (RFC 003 D2).
 pub async fn page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Query(q): Query<FlashQuery>,
 ) -> AppResult<impl IntoResponse> {
-    let items = notif_store::recent_for_user(&state.db, &user.id, 200).await?;
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
-    let is_silenced = notif_store::all_kinds_silenced(&state.db, &user.id).await?;
+    let items = notif_store::recent_for_user(&state.db, &rid, 200).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
+    let is_silenced = notif_store::all_kinds_silenced(&state.db, &rid).await?;
     let show_email_prompt =
-        !notif_store::global_acknowledged(&state.db, &user.id).await? && !items.is_empty();
+        !notif_store::global_acknowledged(&state.db, &rid).await? && !items.is_empty();
     Ok(components::notifications::render_inbox(
         user,
         items,
@@ -67,10 +71,10 @@ pub async fn page(
 /// [`notif_store::delete_user_facing_preferences`]'s doc comment
 /// for why this deletes rather than writes defaults back.
 pub async fn resume(
-    AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
 ) -> AppResult<Redirect> {
-    notif_store::delete_user_facing_preferences(&state.db, &user.id).await?;
+    notif_store::delete_user_facing_preferences(&state.db, &rid).await?;
     Ok(Redirect::to("/inbox"))
 }
 
@@ -89,32 +93,32 @@ pub struct EmailOptInForm {
 /// one notification, which the settings page had no way to
 /// enforce.
 pub async fn email_opt_in(
-    AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Form(form): Form<EmailOptInForm>,
 ) -> AppResult<Redirect> {
     let opt_in = form.email_opt_in.eq_ignore_ascii_case("yes");
-    notif_store::set_global_acknowledged(&state.db, &user.id, opt_in).await?;
+    notif_store::set_global_acknowledged(&state.db, &rid, opt_in).await?;
     Ok(Redirect::to("/inbox"))
 }
 
 /// Mark one notification as read. Re-clicking a row that's
 /// already read is idempotent.
 pub async fn mark_read(
-    AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> AppResult<Redirect> {
-    notif_store::mark_read(&state.db, &user.id, &id).await?;
+    notif_store::mark_read(&state.db, &rid, &id).await?;
     Ok(Redirect::to("/inbox"))
 }
 
 /// Clear the inbox: mark every unread row as read at once.
 pub async fn mark_all_read(
-    AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
 ) -> AppResult<Redirect> {
-    let n = notif_store::mark_all_read(&state.db, &user.id).await?;
+    let n = notif_store::mark_all_read(&state.db, &rid).await?;
     let flash = super::percent_encode_query(
         &Locale::English.render(MessageKey::MarkedAsReadFlash { count: n }),
     );

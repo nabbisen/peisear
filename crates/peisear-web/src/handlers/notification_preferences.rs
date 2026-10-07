@@ -30,15 +30,19 @@ use peisear_storage::notifications as notif_store;
 use serde::Deserialize;
 use std::collections::HashMap;
 
-use crate::{AppResult, AppState, components, extractors::AuthUser};
+use crate::{
+    AppResult, AppState, components,
+    extractors::{AuthUser, Requester},
+};
 
 pub async fn page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
 ) -> AppResult<impl IntoResponse> {
-    let prefs = notif_store::preferences_for_user(&state.db, &user.id).await?;
+    let prefs = notif_store::preferences_for_user(&state.db, &rid).await?;
     let global = notif_store::global_preference(&state.db, &user.id).await?;
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
 
     let email_globally_on = global
         .as_ref()
@@ -74,7 +78,7 @@ pub struct PreferenceForm {
 }
 
 pub async fn save_preferences(
-    AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Form(form): Form<PreferenceForm>,
 ) -> AppResult<Redirect> {
@@ -103,7 +107,7 @@ pub async fn save_preferences(
     }
 
     for (k, (chans, sev)) in by_kind {
-        notif_store::upsert_preference(&state.db, &user.id, k, &chans, sev).await?;
+        notif_store::upsert_preference(&state.db, &rid, k, &chans, sev).await?;
     }
 
     let flash =
@@ -116,11 +120,11 @@ pub async fn save_preferences(
 /// "Silence all" convenience: set every user-facing kind's
 /// channels to empty.
 pub async fn silence_all(
-    AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
 ) -> AppResult<Redirect> {
     for k in kind::all_user_facing() {
-        notif_store::upsert_preference(&state.db, &user.id, k, &[], Severity::Info).await?;
+        notif_store::upsert_preference(&state.db, &rid, k, &[], Severity::Info).await?;
     }
     // Don't touch the global pref row — that's only the
     // first-login email opt-in record, conceptually different

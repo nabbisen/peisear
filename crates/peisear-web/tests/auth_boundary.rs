@@ -535,12 +535,16 @@ async fn mark_read_does_not_affect_another_users_notification() {
     let resp = app.server.post(&format!("/inbox/{notif_id}/read")).await;
     resp.assert_status(StatusCode::NOT_FOUND);
 
-    let still_unread = peisear_storage::notifications::recent_for_user(&app.db, &owner_id, 10)
-        .await
-        .expect("query alice's notifications")
-        .into_iter()
-        .find(|n| n.id == notif_id)
-        .expect("alice's notification still exists");
+    let still_unread = peisear_storage::notifications::recent_for_user(
+        &app.db,
+        &common::auth::requester_id_for(&owner_id),
+        10,
+    )
+    .await
+    .expect("query alice's notifications")
+    .into_iter()
+    .find(|n| n.id == notif_id)
+    .expect("alice's notification still exists");
     assert!(
         still_unread.read_at.is_none(),
         "bob's POST to /inbox/{{id}}/read must not mark alice's notification read"
@@ -582,10 +586,13 @@ async fn mark_all_read_does_not_affect_another_users_notifications() {
     let resp = app.server.post("/inbox/mark-all-read").await;
     resp.assert_status(StatusCode::SEE_OTHER);
 
-    let alice_notifications =
-        peisear_storage::notifications::recent_for_user(&app.db, &owner_id, 10)
-            .await
-            .expect("query alice's notifications");
+    let alice_notifications = peisear_storage::notifications::recent_for_user(
+        &app.db,
+        &common::auth::requester_id_for(&owner_id),
+        10,
+    )
+    .await
+    .expect("query alice's notifications");
     assert!(
         alice_notifications.iter().all(|n| n.read_at.is_none()),
         "bob's POST to /inbox/mark-all-read must not mark alice's notifications read: {alice_notifications:?}"
@@ -626,10 +633,13 @@ async fn mark_all_read_marks_the_callers_own_unread_notifications_read() {
     let resp = app.server.post("/inbox/mark-all-read").await;
     resp.assert_status(StatusCode::SEE_OTHER);
 
-    let alice_notifications =
-        peisear_storage::notifications::recent_for_user(&app.db, &owner_id, 10)
-            .await
-            .expect("query alice's notifications");
+    let alice_notifications = peisear_storage::notifications::recent_for_user(
+        &app.db,
+        &common::auth::requester_id_for(&owner_id),
+        10,
+    )
+    .await
+    .expect("query alice's notifications");
     assert_eq!(
         alice_notifications.len(),
         2,

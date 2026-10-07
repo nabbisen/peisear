@@ -60,6 +60,7 @@
 //! exclusion constraint.
 
 use chrono::{DateTime, NaiveDate, Utc};
+use peisear_auth::jwt::RequesterId;
 use sqlx::FromRow;
 use uuid::Uuid;
 
@@ -117,6 +118,12 @@ impl From<CapacityDbRow> for CapacityRow {
 /// Find the row whose period covers `today`, returning its
 /// `points` value. `None` means no row covers today (the user
 /// has no capacity set, or all rows are out of range).
+///
+/// `PRIV-002`: stays on `&str`, with [`effective_for_user_on_date`] below
+/// — this is the function `personal_metrics::for_user_global` calls
+/// internally, and that function is itself called from both a real
+/// handler (`me.rs`) and the session-less snapshot job (`jobs.rs`), so it
+/// stays on `&str` and everything it calls has to match.
 pub async fn effective_for_user(pool: &Pool, user_id: &str) -> StorageResult<Option<i64>> {
     let today = chrono::Utc::now().date_naive();
     effective_for_user_on_date(pool, user_id, today).await
@@ -135,7 +142,7 @@ pub async fn effective_for_user(pool: &Pool, user_id: &str) -> StorageResult<Opt
 /// `issues::list_in_project`.
 pub async fn effective_row_for_user(
     pool: &Pool,
-    user_id: &str,
+    user_id: &RequesterId,
 ) -> StorageResult<Option<CapacityRow>> {
     let today = chrono::Utc::now().date_naive();
     let row = sqlx::query_as::<_, CapacityDbRow>(
@@ -149,7 +156,7 @@ pub async fn effective_row_for_user(
         LIMIT 1
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(today)
     .fetch_optional(pool)
     .await?;
@@ -190,7 +197,7 @@ pub async fn effective_for_user_on_date(
 /// All rows for one user, ordered by `period_start` ascending.
 /// `NULL period_start` (the open-beginning default) sorts first.
 /// Used by the `/settings` UI to render the capacity table.
-pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<CapacityRow>> {
+pub async fn list_for_user(pool: &Pool, user_id: &RequesterId) -> StorageResult<Vec<CapacityRow>> {
     let rows = sqlx::query_as::<_, CapacityDbRow>(
         r#"
         SELECT id, user_id, points, period_start, period_end, note, created_at, updated_at
@@ -203,7 +210,7 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Capa
             rowid ASC
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .fetch_all(pool)
     .await?;
 
@@ -212,7 +219,11 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Capa
 
 /// Find one row by id (scoped to user_id for safety). Returns
 /// `None` when no such row exists for this user.
-pub async fn find<'e, E>(executor: E, user_id: &str, id: &str) -> StorageResult<Option<CapacityRow>>
+pub async fn find<'e, E>(
+    executor: E,
+    user_id: &RequesterId,
+    id: &str,
+) -> StorageResult<Option<CapacityRow>>
 where
     E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
 {
@@ -224,7 +235,7 @@ where
         "#,
     )
     .bind(id)
-    .bind(user_id)
+    .bind(user_id.as_str())
     .fetch_optional(executor)
     .await?;
     Ok(row.map(CapacityRow::from))
@@ -263,7 +274,7 @@ pub struct ConflictInfo {
 /// `&Pool` still works for a standalone read.
 pub async fn overlaps_existing<'e, E>(
     executor: E,
-    user_id: &str,
+    user_id: &RequesterId,
     period_start: Option<NaiveDate>,
     period_end: Option<NaiveDate>,
     excluding_id: Option<&str>,
@@ -292,7 +303,7 @@ where
         LIMIT 1
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(exclude_id)
     .bind(period_start)
     .bind(period_end)
@@ -311,7 +322,7 @@ where
 /// if the proposed period overlaps any existing row for this user.
 pub async fn insert(
     pool: &Pool,
-    user_id: &str,
+    user_id: &RequesterId,
     points: i64,
     period_start: Option<NaiveDate>,
     period_end: Option<NaiveDate>,
@@ -358,7 +369,7 @@ pub async fn insert(
         "#,
     )
     .bind(&id)
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(points)
     .bind(period_start)
     .bind(period_end)
@@ -373,7 +384,7 @@ pub async fn insert(
 /// [`insert`], excluding the row being updated.
 pub async fn update(
     pool: &Pool,
-    user_id: &str,
+    user_id: &RequesterId,
     id: &str,
     points: i64,
     period_start: Option<NaiveDate>,
@@ -404,7 +415,7 @@ pub async fn update(
 #[allow(clippy::too_many_arguments)]
 pub async fn update_guarded(
     pool: &Pool,
-    user_id: &str,
+    user_id: &RequesterId,
     id: &str,
     points: i64,
     period_start: Option<NaiveDate>,
@@ -433,7 +444,7 @@ pub async fn update_guarded(
 /// own read inside the same one (`RACE-001`).
 async fn update_in_tx(
     tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
-    user_id: &str,
+    user_id: &RequesterId,
     id: &str,
     points: i64,
     period_start: Option<NaiveDate>,
@@ -467,7 +478,7 @@ async fn update_in_tx(
         "#,
     )
     .bind(id)
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(points)
     .bind(period_start)
     .bind(period_end)
@@ -482,7 +493,7 @@ async fn update_in_tx(
 }
 
 /// Delete one row. Scoped to `user_id` for safety.
-pub async fn delete(pool: &Pool, user_id: &str, id: &str) -> StorageResult<()> {
+pub async fn delete(pool: &Pool, user_id: &RequesterId, id: &str) -> StorageResult<()> {
     delete_guarded(pool, user_id, id, None)
         .await
         .map(Guarded::unguarded)
@@ -492,7 +503,7 @@ pub async fn delete(pool: &Pool, user_id: &str, id: &str) -> StorageResult<()> {
 /// `updated_at` (`RACE-002`) -- a predicate on the one `DELETE`.
 pub async fn delete_guarded(
     pool: &Pool,
-    user_id: &str,
+    user_id: &RequesterId,
     id: &str,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
@@ -504,12 +515,18 @@ pub async fn delete_guarded(
         "#,
     )
     .bind(id)
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(expected)
     .execute(pool)
     .await?;
     if res.rows_affected() == 0 {
-        return zero_rows_outcome(pool, "user_capacities", id, Some(("user_id", user_id))).await;
+        return zero_rows_outcome(
+            pool,
+            "user_capacities",
+            id,
+            Some(("user_id", user_id.as_str())),
+        )
+        .await;
     }
     Ok(Guarded::Written(()))
 }
@@ -527,7 +544,7 @@ pub async fn delete_guarded(
 /// one `BEGIN IMMEDIATE` transaction (see the module docs).
 pub async fn close_at(
     pool: &Pool,
-    user_id: &str,
+    user_id: &RequesterId,
     id: &str,
     new_period_end: NaiveDate,
 ) -> StorageResult<()> {
@@ -541,7 +558,7 @@ pub async fn close_at(
 /// same transaction.
 pub async fn close_at_guarded(
     pool: &Pool,
-    user_id: &str,
+    user_id: &RequesterId,
     id: &str,
     new_period_end: NaiveDate,
     expected: Option<DateTime<Utc>>,

@@ -18,6 +18,7 @@ mod common;
 use chrono::NaiveDate;
 use common::auth::{TestUser, register_and_login};
 use common::server::TestApp;
+use peisear_auth::jwt::RequesterId;
 use peisear_i18n::MessageKey;
 use peisear_storage::{StorageError, user_capacities};
 use std::sync::Arc;
@@ -32,8 +33,9 @@ fn day(y: i32, m: u32, d: u32) -> NaiveDate {
     NaiveDate::from_ymd_opt(y, m, d).expect("valid date")
 }
 
-async fn new_user(app: &TestApp) -> String {
-    register_and_login(app, &TestUser::new("alice")).await
+async fn new_user(app: &TestApp) -> RequesterId {
+    let id = register_and_login(app, &TestUser::new("alice")).await;
+    common::auth::requester_id_for(&id)
 }
 
 /// Run `N` copies of `job(i)` at the same instant and collect results.

@@ -640,9 +640,13 @@ async fn capacity_delete_with_stale_timestamp_returns_409() {
         resp.status_code()
     );
 
-    let still_there = peisear_storage::user_capacities::find(&app.db, &user_id, &row_id)
-        .await
-        .expect("query capacity row");
+    let still_there = peisear_storage::user_capacities::find(
+        &app.db,
+        &common::auth::requester_id_for(&user_id),
+        &row_id,
+    )
+    .await
+    .expect("query capacity row");
     assert!(
         still_there.is_some(),
         "a rejected delete must not remove the capacity row"
@@ -738,10 +742,14 @@ async fn capacity_update_walls_off_another_user() {
         resp.status_code()
     );
 
-    let still_alices = peisear_storage::user_capacities::find(&app.db, &owner_id, &row_id)
-        .await
-        .expect("query capacity row")
-        .expect("row still exists");
+    let still_alices = peisear_storage::user_capacities::find(
+        &app.db,
+        &common::auth::requester_id_for(&owner_id),
+        &row_id,
+    )
+    .await
+    .expect("query capacity row")
+    .expect("row still exists");
     assert_eq!(
         still_alices.points, 10,
         "bob's rejected update must not have changed alice's capacity row -- \
@@ -789,10 +797,14 @@ async fn capacity_close_walls_off_another_user() {
         resp.status_code()
     );
 
-    let still_alices = peisear_storage::user_capacities::find(&app.db, &owner_id, &row_id)
-        .await
-        .expect("query capacity row")
-        .expect("row still exists");
+    let still_alices = peisear_storage::user_capacities::find(
+        &app.db,
+        &common::auth::requester_id_for(&owner_id),
+        &row_id,
+    )
+    .await
+    .expect("query capacity row")
+    .expect("row still exists");
     assert_eq!(
         still_alices.period_end,
         chrono::NaiveDate::from_ymd_opt(2026, 6, 30),
@@ -822,10 +834,14 @@ async fn capacity_delete_walls_off_another_user() {
         .await;
     resp.assert_status(StatusCode::SEE_OTHER);
     assert!(
-        peisear_storage::user_capacities::find(&app.db, &owner_id, &row_a)
-            .await
-            .expect("query capacity row")
-            .is_none(),
+        peisear_storage::user_capacities::find(
+            &app.db,
+            &common::auth::requester_id_for(&owner_id),
+            &row_a
+        )
+        .await
+        .expect("query capacity row")
+        .is_none(),
         "alice's own delete must have removed row A -- the positive half of the pair"
     );
 
@@ -847,9 +863,13 @@ async fn capacity_delete_walls_off_another_user() {
         resp.status_code()
     );
 
-    let still_there = peisear_storage::user_capacities::find(&app.db, &owner_id, &row_b)
-        .await
-        .expect("query capacity row");
+    let still_there = peisear_storage::user_capacities::find(
+        &app.db,
+        &common::auth::requester_id_for(&owner_id),
+        &row_b,
+    )
+    .await
+    .expect("query capacity row");
     assert!(
         still_there.is_some(),
         "bob's rejected delete must not have removed alice's row B"
@@ -1027,9 +1047,16 @@ async fn read_team_slug(app: &TestApp, team_id: &str) -> String {
 /// over the form path because we don't need to exercise form
 /// validation here — just need a row to lock against.
 async fn create_capacity_row(app: &TestApp, user_id: &str, points: i64) -> String {
-    peisear_storage::user_capacities::insert(&app.db, user_id, points, None, None, None)
-        .await
-        .expect("insert capacity row")
+    peisear_storage::user_capacities::insert(
+        &app.db,
+        &common::auth::requester_id_for(user_id),
+        points,
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("insert capacity row")
 }
 
 /// Read a capacity row's `updated_at`, RFC3339-formatted.

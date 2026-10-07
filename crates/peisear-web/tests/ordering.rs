@@ -112,10 +112,13 @@ async fn user_with_capacity_saved_twice() -> (TestApp, String) {
 #[tokio::test]
 async fn capacity_saved_twice_in_one_second_resolves_to_the_later_row() {
     let (app, user_id) = user_with_capacity_saved_twice().await;
-    let row = peisear_storage::user_capacities::effective_row_for_user(&app.db, &user_id)
-        .await
-        .expect("effective row")
-        .expect("a row applies today");
+    let row = peisear_storage::user_capacities::effective_row_for_user(
+        &app.db,
+        &common::auth::requester_id_for(&user_id),
+    )
+    .await
+    .expect("effective row")
+    .expect("a row applies today");
     assert_eq!(row.points, 99, "the superseded 10 won the tie");
 }
 
@@ -156,11 +159,16 @@ async fn workload_capacity_saved_twice_in_one_second_is_the_later_value() {
 #[tokio::test]
 async fn overlap_conflict_names_the_earliest_of_tied_rows() {
     let (app, user_id) = user_with_capacity_saved_twice().await;
-    let conflict =
-        peisear_storage::user_capacities::overlaps_existing(&app.db, &user_id, None, None, None)
-            .await
-            .expect("overlap check")
-            .expect("both open-ended rows overlap");
+    let conflict = peisear_storage::user_capacities::overlaps_existing(
+        &app.db,
+        &common::auth::requester_id_for(&user_id),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("overlap check")
+    .expect("both open-ended rows overlap");
     assert_eq!(
         conflict.points, 10,
         "the first-written row is the one named"
@@ -196,12 +204,16 @@ async fn notifications_from_one_second_list_newest_first() {
         .await
         .expect("tie the burst");
 
-    let got = peisear_storage::notifications::recent_for_user(&app.db, &user_id, 10)
-        .await
-        .expect("recent")
-        .into_iter()
-        .map(|n| n.title)
-        .collect::<Vec<_>>();
+    let got = peisear_storage::notifications::recent_for_user(
+        &app.db,
+        &common::auth::requester_id_for(&user_id),
+        10,
+    )
+    .await
+    .expect("recent")
+    .into_iter()
+    .map(|n| n.title)
+    .collect::<Vec<_>>();
     assert_eq!(
         got,
         ["INBOX-fourth", "INBOX-third", "INBOX-second", "INBOX-first"]

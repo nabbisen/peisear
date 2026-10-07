@@ -108,7 +108,7 @@ fn make_event(user_id: &str) -> DispatchEvent {
 }
 
 async fn count_notifications(app: &TestApp, user_id: &str) -> usize {
-    notif_store::recent_for_user(&app.db, user_id, 10)
+    notif_store::recent_for_user(&app.db, &common::auth::requester_id_for(user_id), 10)
         .await
         .expect("query notifications")
         .len()
@@ -177,7 +177,7 @@ async fn banner_does_not_trigger_on_global_acknowledged_alone() {
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
 
-    notif_store::set_global_acknowledged(&app.db, &user_id, true)
+    notif_store::set_global_acknowledged(&app.db, &common::auth::requester_id_for(&user_id), true)
         .await
         .expect("set global acknowledged");
 
@@ -230,9 +230,15 @@ async fn resumed_user_receives_a_dispatch_a_silenced_user_does_not() {
     let user_id = register_and_login(&app, &user).await;
 
     for k in kind::all_user_facing() {
-        notif_store::upsert_preference(&app.db, &user_id, k, &[], Severity::Info)
-            .await
-            .expect("silence kind");
+        notif_store::upsert_preference(
+            &app.db,
+            &common::auth::requester_id_for(&user_id),
+            k,
+            &[],
+            Severity::Info,
+        )
+        .await
+        .expect("silence kind");
     }
 
     let tx = spawn_dispatch(&app);
@@ -304,7 +310,7 @@ async fn either_email_opt_in_answer_records_it_and_the_prompt_does_not_return() 
         resp.assert_status(StatusCode::SEE_OTHER);
 
         assert!(
-            notif_store::global_acknowledged(&app.db, &user_id)
+            notif_store::global_acknowledged(&app.db, &common::auth::requester_id_for(&user_id))
                 .await
                 .expect("query global_acknowledged"),
             "global_acknowledged should be true after answering '{answer}'"
@@ -418,10 +424,11 @@ async fn banner_appears_when_the_two_kinds_that_can_arrive_are_silenced() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
+    let rid = common::auth::requester_id_for(&user_id);
     let resume_button = Locale::English.render(MessageKey::ResumeNotificationsButton);
 
     for k in [kind::BURNOUT_OVERLOAD, kind::BURNOUT_STALLED] {
-        notif_store::upsert_preference(&app.db, &user_id, k, &[], Severity::Info)
+        notif_store::upsert_preference(&app.db, &rid, k, &[], Severity::Info)
             .await
             .expect("silence a real kind");
     }
@@ -442,11 +449,12 @@ async fn a_stored_preference_row_for_the_unlisted_kind_is_harmless() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
+    let rid = common::auth::requester_id_for(&user_id);
     let resume_button = Locale::English.render(MessageKey::ResumeNotificationsButton);
 
     notif_store::upsert_preference(
         &app.db,
-        &user_id,
+        &rid,
         kind::PROJECT_TREND_DECLINE,
         &["in_app"],
         Severity::Info,
@@ -454,7 +462,7 @@ async fn a_stored_preference_row_for_the_unlisted_kind_is_harmless() {
     .await
     .expect("a row an older build could have saved");
     for k in [kind::BURNOUT_OVERLOAD, kind::BURNOUT_STALLED] {
-        notif_store::upsert_preference(&app.db, &user_id, k, &[], Severity::Info)
+        notif_store::upsert_preference(&app.db, &rid, k, &[], Severity::Info)
             .await
             .expect("silence a real kind");
     }
@@ -474,7 +482,7 @@ async fn a_stored_preference_row_for_the_unlisted_kind_is_harmless() {
         "the stored row must survive: nothing deletes it"
     );
     assert!(
-        notif_store::all_kinds_silenced(&app.db, &user_id)
+        notif_store::all_kinds_silenced(&app.db, &rid)
             .await
             .expect("query"),
         "all_kinds_silenced answers on the two kinds that can arrive"

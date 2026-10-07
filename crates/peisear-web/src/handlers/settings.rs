@@ -27,7 +27,11 @@ use peisear_i18n::{Field, Locale, MessageKey};
 use peisear_storage::{user_capacities, users};
 use serde::Deserialize;
 
-use crate::{AppError, AppResult, AppState, components, components::t, extractors::AuthUser};
+use crate::{
+    AppError, AppResult, AppState, components,
+    components::t,
+    extractors::{AuthUser, Requester},
+};
 
 #[derive(Debug, Deserialize)]
 pub struct FlashQuery {
@@ -40,6 +44,7 @@ pub struct FlashQuery {
 
 pub async fn page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Query(q): Query<FlashQuery>,
 ) -> AppResult<impl IntoResponse> {
@@ -47,7 +52,7 @@ pub async fn page(
         .await?
         .ok_or(AppError::Unauthorized)?;
 
-    let rows = user_capacities::list_for_user(&state.db, &user.id).await?;
+    let rows = user_capacities::list_for_user(&state.db, &rid).await?;
     // Today's effective capacity, surfaced in the page header so
     // the user can see "this is what's in effect right now".
     let effective_today = user_capacities::effective_for_user(&state.db, &user.id).await?;
@@ -141,7 +146,7 @@ pub async fn update_wip_limit(
 
 /// Insert a new capacity row.
 pub async fn insert_capacity(
-    AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Form(form): Form<CapacityForm>,
 ) -> AppResult<Redirect> {
@@ -163,8 +168,7 @@ pub async fn insert_capacity(
         Some(form.note.trim())
     };
 
-    match user_capacities::insert(&state.db, &user.id, points, period_start, period_end, note).await
-    {
+    match user_capacities::insert(&state.db, &rid, points, period_start, period_end, note).await {
         Ok(_) => {
             let flash = super::percent_encode_query(
                 &Locale::English.render(MessageKey::CapacityRowAddedFlash),
@@ -198,7 +202,7 @@ pub struct CapacityUpdateForm {
 
 /// Update an existing capacity row.
 pub async fn update_capacity(
-    AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(row_id): Path<String>,
     Form(form): Form<CapacityUpdateForm>,
@@ -207,7 +211,7 @@ pub async fn update_capacity(
     // Re-read the row to get the canonical `updated_at` —
     // also doubles as a 404 guard if the row was deleted
     // between page render and form submit.
-    let current = user_capacities::find(&state.db, &user.id, &row_id)
+    let current = user_capacities::find(&state.db, &rid, &row_id)
         .await?
         .ok_or(AppError::NotFound)?;
     let stamp = crate::error::check_optimistic_lock(
@@ -237,7 +241,7 @@ pub async fn update_capacity(
 
     match user_capacities::update_guarded(
         &state.db,
-        &user.id,
+        &rid,
         &row_id,
         points,
         period_start,
@@ -274,12 +278,12 @@ pub struct CapacityDeleteForm {
 }
 
 pub async fn delete_capacity(
-    AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(row_id): Path<String>,
     Form(form): Form<CapacityDeleteForm>,
 ) -> AppResult<Redirect> {
-    let current = user_capacities::find(&state.db, &user.id, &row_id)
+    let current = user_capacities::find(&state.db, &rid, &row_id)
         .await?
         .ok_or(AppError::NotFound)?;
     let stamp = crate::error::check_optimistic_lock(
@@ -290,7 +294,7 @@ pub async fn delete_capacity(
     )?;
 
     crate::error::lock_outcome(
-        user_capacities::delete_guarded(&state.db, &user.id, &row_id, Some(stamp)).await?,
+        user_capacities::delete_guarded(&state.db, &rid, &row_id, Some(stamp)).await?,
         peisear_i18n::EntityKind::CapacityPeriod,
         &row_id,
     )?;
@@ -310,12 +314,12 @@ pub struct CloseForm {
 /// specific date. Useful when adding a new period that would
 /// otherwise overlap with an open-ended one.
 pub async fn close_capacity(
-    AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(row_id): Path<String>,
     Form(form): Form<CloseForm>,
 ) -> AppResult<Redirect> {
-    let current = user_capacities::find(&state.db, &user.id, &row_id)
+    let current = user_capacities::find(&state.db, &rid, &row_id)
         .await?
         .ok_or(AppError::NotFound)?;
     let stamp = crate::error::check_optimistic_lock(
@@ -336,7 +340,7 @@ pub async fn close_capacity(
         }))
     })?;
     crate::error::lock_outcome(
-        user_capacities::close_at_guarded(&state.db, &user.id, &row_id, period_end, Some(stamp))
+        user_capacities::close_at_guarded(&state.db, &rid, &row_id, period_end, Some(stamp))
             .await?,
         peisear_i18n::EntityKind::CapacityPeriod,
         &row_id,

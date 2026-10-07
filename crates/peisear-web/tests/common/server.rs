@@ -30,6 +30,11 @@ use peisear_storage::{Pool, pool};
 use peisear_web::{AppState, build_router};
 use tempfile::TempDir;
 
+/// The fixed JWT secret every `TestApp` uses. Exported so
+/// `common::auth::requester_id_for` can mint and verify tokens that are
+/// valid against the same app a test spun up (`PRIV-002`).
+pub const JWT_SECRET: &str = "test-jwt-secret-must-not-be-used-in-production";
+
 /// A running test instance of the peisear application. Holds the
 /// backing `TempDir` so the directory lives exactly as long as the
 /// `TestApp` does and is removed when it drops.
@@ -59,7 +64,7 @@ impl TestApp {
 
         let state = AppState {
             db: db.clone(),
-            jwt_secret: "test-jwt-secret-must-not-be-used-in-production".into(),
+            jwt_secret: JWT_SECRET.into(),
             // cookie_secure=false so the auth cookie is sent over
             // the test server's plain HTTP. Production sets this
             // to true via Config::from_env.

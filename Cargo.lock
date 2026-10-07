@@ -2173,6 +2173,7 @@ version = "0.42.0"
 dependencies = [
  "chrono",
  "mail-builder",
+ "peisear-auth",
  "peisear-core",
  "peisear-i18n",
  "peisear-storage",
@@ -2191,6 +2192,7 @@ name = "peisear-storage"
 version = "0.42.0"
 dependencies = [
  "chrono",
+ "peisear-auth",
  "peisear-core",
  "peisear-i18n",
  "sqlx",

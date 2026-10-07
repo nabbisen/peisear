@@ -6,7 +6,7 @@ use axum::{
     http::request::Parts,
 };
 use axum_extra::extract::CookieJar;
-use peisear_auth::jwt;
+use peisear_auth::jwt::{self, RequesterId};
 use peisear_core::CurrentUser;
 use peisear_storage::users;
 
@@ -14,6 +14,30 @@ use crate::{ApiAppError, AppError, AppState};
 
 /// Name of the auth cookie holding the JWT.
 pub const AUTH_COOKIE: &str = "it_session";
+
+/// Shared by [`AuthUser`] and [`Requester`]: read the session cookie and
+/// return a verified [`RequesterId`] -- the only way either extractor (or
+/// anything else in the workspace) can obtain one, per `jwt`'s own module
+/// doc comment.
+async fn verified_requester_id<S>(parts: &mut Parts, state: &S) -> Result<RequesterId, AppError>
+where
+    S: Send + Sync,
+    AppState: FromRef<S>,
+{
+    let State(app): State<AppState> = State::from_request_parts(parts, state)
+        .await
+        .map_err(|_| AppError::Internal("failed to extract state".into()))?;
+    let jar = CookieJar::from_request_parts(parts, state)
+        .await
+        .map_err(|_| AppError::Internal("failed to extract cookies".into()))?;
+
+    let token = jar
+        .get(AUTH_COOKIE)
+        .ok_or(AppError::Unauthorized)?
+        .value()
+        .to_owned();
+    jwt::verify(&token, &app.jwt_secret).map_err(|_| AppError::Unauthorized)
+}
 
 /// Extractor that requires an authenticated user. Returns
 /// [`AppError::Unauthorized`] (which the error handler turns into a
@@ -28,27 +52,64 @@ where
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let requester_id = verified_requester_id(parts, state).await?;
         let State(app): State<AppState> = State::from_request_parts(parts, state)
             .await
             .map_err(|_| AppError::Internal("failed to extract state".into()))?;
-        let jar = CookieJar::from_request_parts(parts, state)
-            .await
-            .map_err(|_| AppError::Internal("failed to extract cookies".into()))?;
-
-        let token = jar
-            .get(AUTH_COOKIE)
-            .ok_or(AppError::Unauthorized)?
-            .value()
-            .to_owned();
-        let claims = jwt::verify(&token, &app.jwt_secret).map_err(|_| AppError::Unauthorized)?;
 
         // Re-hydrate the user from the DB so deleted or altered accounts
         // are immediately invalidated rather than waiting for the JWT to
         // expire.
-        let user = users::find_by_id(&app.db, &claims.sub)
+        let user = users::find_by_id(&app.db, requester_id.as_str())
             .await?
             .ok_or(AppError::Unauthorized)?;
         Ok(AuthUser(user.into()))
+    }
+}
+
+/// Extractor for handlers that call personal-data storage (`PRIV-002`,
+/// `DEC-058`). Carries only a verified [`RequesterId`] -- no DB
+/// round-trip, unlike [`AuthUser`], since nothing here needs the email or
+/// display name. A handler that also needs those extracts both; the JWT
+/// is decoded twice per such request, which is cheap (no I/O) next to the
+/// guarantee: `RequesterId` cannot be constructed from anything but a
+/// token that just passed signature and expiry verification.
+pub struct Requester(pub RequesterId);
+
+impl<S> FromRequestParts<S> for Requester
+where
+    S: Send + Sync,
+    AppState: FromRef<S>,
+{
+    type Rejection = AppError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        Ok(Requester(verified_requester_id(parts, state).await?))
+    }
+}
+
+/// `/api/*` form of [`Requester`], rejecting with [`ApiAppError`] (JSON)
+/// rather than [`AppError`] (redirect) -- same pairing as
+/// [`ApiAuthUser`]/[`AuthUser`].
+pub struct ApiRequester(pub RequesterId);
+
+impl<S> FromRequestParts<S> for ApiRequester
+where
+    S: Send + Sync,
+    AppState: FromRef<S>,
+{
+    type Rejection = ApiAppError;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        match Requester::from_request_parts(parts, state).await {
+            Ok(Requester(rid)) => Ok(ApiRequester(rid)),
+            Err(AppError::Unauthorized) => Err(ApiAppError::Unauthorized),
+            Err(AppError::Internal(msg)) => Err(ApiAppError::Internal(msg)),
+            Err(other) => {
+                tracing::error!(?other, "unexpected AppError from Requester in ApiRequester");
+                Err(ApiAppError::Internal("unexpected auth error".into()))
+            }
+        }
     }
 }
 

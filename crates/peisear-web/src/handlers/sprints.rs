@@ -20,7 +20,11 @@ use peisear_i18n::{Field, Locale, MessageKey};
 use peisear_storage::{issues, notifications as notif_store, projects, sprints, teams};
 use serde::Deserialize;
 
-use crate::{AppError, AppResult, AppState, components, components::t, extractors::AuthUser};
+use crate::{
+    AppError, AppResult, AppState, components,
+    components::t,
+    extractors::{AuthUser, Requester},
+};
 
 #[derive(Debug, Deserialize)]
 pub struct FlashQuery {
@@ -56,6 +60,7 @@ async fn resolve_team_membership(
 
 pub async fn list_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(slug): Path<String>,
     Query(q): Query<FlashQuery>,
@@ -91,7 +96,7 @@ pub async fn list_page(
         sprints::distinct_contributors(&state.db, &velocity_sprint_ids).await?;
     let show_median = matches!(velocity_contributors, Some(n) if n >= 2);
 
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
 
     Ok(components::sprints::render_list(
         user,
@@ -108,6 +113,7 @@ pub async fn list_page(
 
 pub async fn new_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(slug): Path<String>,
     Query(q): Query<FlashQuery>,
@@ -116,7 +122,7 @@ pub async fn new_page(
     if !role.can_manage_team() {
         return Err(AppError::Forbidden);
     }
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
     Ok(components::sprints::render_new(
         user,
         team,
@@ -192,6 +198,7 @@ pub async fn create(
 
 pub async fn detail(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path((slug, sprint_id)): Path<(String, String)>,
     Query(q): Query<FlashQuery>,
@@ -213,7 +220,7 @@ pub async fn detail(
     let contributors =
         sprints::distinct_contributors(&state.db, std::slice::from_ref(&sprint.id)).await?;
     let show_trajectory = matches!(contributors, Some(n) if n >= 2);
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
 
     Ok(components::sprints::render_detail(
         user,
@@ -232,6 +239,7 @@ pub async fn detail(
 
 pub async fn edit_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path((slug, sprint_id)): Path<(String, String)>,
     Query(q): Query<FlashQuery>,
@@ -246,7 +254,7 @@ pub async fn edit_page(
     if sprint.team_id != team.id {
         return Err(AppError::NotFound);
     }
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
     Ok(components::sprints::render_edit(
         user,
         team,
@@ -502,6 +510,7 @@ pub async fn reopen(
 /// is not equivalent to deleting a planned one.
 pub async fn delete_confirm(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path((slug, sprint_id)): Path<(String, String)>,
 ) -> AppResult<impl IntoResponse> {
@@ -537,7 +546,7 @@ pub async fn delete_confirm(
             ));
         }
     };
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
 
     Ok(components::confirmation::render_delete_confirmation(
         user,
@@ -750,6 +759,7 @@ fn plan_query_string(
 
 pub async fn plan_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path((slug, sprint_id)): Path<(String, String)>,
     Query(q): Query<PlanQuery>,
@@ -819,7 +829,7 @@ pub async fn plan_page(
     }
     assignees.sort_by(|a, b| a.display_name.cmp(&b.display_name));
 
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
 
     Ok(components::sprint_plan::render_plan(
         user,

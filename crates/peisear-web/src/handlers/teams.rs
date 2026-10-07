@@ -32,7 +32,11 @@ use peisear_i18n::{Locale, MessageKey};
 use peisear_storage::{StorageError, notifications as notif_store, projects, teams, users};
 use serde::Deserialize;
 
-use crate::{AppError, AppResult, AppState, components, components::t, extractors::AuthUser};
+use crate::{
+    AppError, AppResult, AppState, components,
+    components::t,
+    extractors::{AuthUser, Requester},
+};
 
 #[derive(Debug, Deserialize)]
 pub struct FlashQuery {
@@ -42,11 +46,12 @@ pub struct FlashQuery {
 
 pub async fn list_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Query(q): Query<FlashQuery>,
 ) -> AppResult<impl IntoResponse> {
     let user_teams = teams::teams_for_user(&state.db, &user.id).await?;
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
     Ok(components::teams::render_list(
         user,
         user_teams,
@@ -58,10 +63,11 @@ pub async fn list_page(
 
 pub async fn new_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Query(q): Query<FlashQuery>,
 ) -> AppResult<impl IntoResponse> {
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
     Ok(components::teams::render_new(user, unread_count, q.error))
 }
 
@@ -122,6 +128,7 @@ pub async fn create(
 
 pub async fn detail(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(slug): Path<String>,
     Query(q): Query<FlashQuery>,
@@ -139,7 +146,7 @@ pub async fn detail(
 
     let members = teams::members_of_team(&state.db, &team.id).await?;
     let team_projects = projects::list_for_team(&state.db, &team.id).await?;
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
 
     Ok(components::teams::render_detail(
         user,
@@ -155,6 +162,7 @@ pub async fn detail(
 
 pub async fn edit_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(slug): Path<String>,
     Query(q): Query<FlashQuery>,
@@ -169,7 +177,7 @@ pub async fn edit_page(
     if !role.can_manage_team() {
         return Err(AppError::Forbidden);
     }
-    let unread_count = notif_store::unread_count_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
     Ok(components::teams::render_edit(
         user,
         team,

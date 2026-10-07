@@ -44,6 +44,12 @@ tracing                     = { workspace = true }
 # (peisear-storage, tokio) are already enough to write
 # integration tests against the dispatch pipeline.
 tokio                       = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+# `PRIV-002`: peisear-storage's identity-scoped functions now take
+# `peisear_auth::jwt::RequesterId`, obtainable only by minting and
+# verifying a real token (`jwt::issue` then `jwt::verify`) -- the same
+# path the extractor uses, not a second constructor. No axum dependency
+# (`peisear-auth`'s own design), so this stays small.
+peisear-auth                 = { workspace = true }
 # QA-001-review.md §3.2: fresh_pool had the identical clock-only
 # temp-directory naming defect peisear-web's TestApp::spawn did.
 # Small and dependency-light -- doesn't reintroduce the

@@ -13,9 +13,21 @@
 //! to spin up a separate `TestApp` per user — each `TestApp` has
 //! its own cookie jar.
 
+use peisear_auth::jwt::{self, RequesterId};
 use peisear_storage::{Pool, users};
 
-use super::server::TestApp;
+use super::server::{JWT_SECRET, TestApp};
+
+/// A genuinely verified [`RequesterId`] for `user_id` (`PRIV-002`) — mint
+/// a token against the same fixed secret every `TestApp` uses, then
+/// verify it, exactly the path the real extractor takes. Not a second
+/// constructor: a direct-storage test call that needs an identity now has
+/// to produce one the same way production does, which is the property
+/// `DEC-058` asks for, not a bypass of it.
+pub fn requester_id_for(user_id: &str) -> RequesterId {
+    let token = jwt::issue(user_id, "unused@example.test", JWT_SECRET).expect("issue a test token");
+    jwt::verify(&token, JWT_SECRET).expect("verify the just-issued test token")
+}
 
 /// Convenience credentials struct so tests can name their users
 /// without re-writing the same struct everywhere.

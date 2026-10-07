@@ -36,7 +36,11 @@ use peisear_i18n::MessageKey;
 use peisear_storage::{notifications, user_burnout, user_capacities};
 use serde::Serialize;
 
-use crate::{ApiAppError, ApiAppResult, AppState, components::t, extractors::ApiAuthUser};
+use crate::{
+    ApiAppError, ApiAppResult, AppState,
+    components::t,
+    extractors::{ApiAuthUser, ApiRequester},
+};
 
 /// Enforce the "self access only" boundary. Returns
 /// `ApiAppError::Forbidden` if the path's `user_id` doesn't
@@ -210,13 +214,14 @@ pub struct CapacityPeriod {
 
 pub async fn capacity(
     ApiAuthUser(user): ApiAuthUser,
+    ApiRequester(rid): ApiRequester,
     State(state): State<AppState>,
     Path(user_id): Path<String>,
 ) -> ApiAppResult<Json<CapacityResponse>> {
     require_self(&user.id, &user_id)?;
 
     let effective_today = user_capacities::effective_for_user(&state.db, &user.id).await?;
-    let rows = user_capacities::list_for_user(&state.db, &user.id).await?;
+    let rows = user_capacities::list_for_user(&state.db, &rid).await?;
 
     let rows = rows
         .into_iter()
@@ -270,13 +275,14 @@ const NOTIFICATIONS_WINDOW: i64 = 50;
 
 pub async fn list_notifications(
     ApiAuthUser(user): ApiAuthUser,
+    ApiRequester(rid): ApiRequester,
     State(state): State<AppState>,
     Path(user_id): Path<String>,
 ) -> ApiAppResult<Json<NotificationsResponse>> {
     require_self(&user.id, &user_id)?;
 
-    let unread_count = notifications::unread_count_for_user(&state.db, &user.id).await?;
-    let recent = notifications::recent_for_user(&state.db, &user.id, NOTIFICATIONS_WINDOW).await?;
+    let unread_count = notifications::unread_count_for_user(&state.db, &rid).await?;
+    let recent = notifications::recent_for_user(&state.db, &rid, NOTIFICATIONS_WINDOW).await?;
 
     let items = recent
         .into_iter()

@@ -48,6 +48,9 @@ pub struct NewUserSnapshot {
 
 /// Insert one user-metrics snapshot row. Called by the
 /// background job tick.
+///
+/// `PRIV-002`: stays on `&str` — no session exists in that context; see
+/// [`crate::personal_metrics::for_user_global`]'s note.
 pub async fn insert(pool: &Pool, user_id: &str, snapshot: NewUserSnapshot) -> StorageResult<()> {
     let id = Uuid::new_v4().to_string();
     sqlx::query(
@@ -106,6 +109,9 @@ impl From<UserSnapshotRow> for UserSnapshot {
 /// by streak detection in [`crate::user_burnout`]. The window is
 /// expressed in days so the query layer doesn't need to know
 /// about clock format details.
+///
+/// `PRIV-002`: stays on `&str`, matching [`crate::user_burnout::for_user`],
+/// its only caller.
 pub async fn recent_for_user(
     pool: &Pool,
     user_id: &str,

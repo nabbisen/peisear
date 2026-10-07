@@ -15,7 +15,7 @@ use validator::Validate;
 use crate::{
     AppError, AppResult, AppState,
     components::{self, Column, t},
-    extractors::AuthUser,
+    extractors::{AuthUser, Requester},
 };
 
 /// Query parameters for the project detail page.
@@ -203,6 +203,7 @@ fn apply_filter_and_sort(
 ///    they navigated via a generic link.
 pub async fn project_detail(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(project_id): Path<String>,
     Query(q): Query<ProjectViewQuery>,
@@ -235,7 +236,7 @@ pub async fn project_detail(
     // Step 3: merge URL with server-saved default.
     let view_key = view_states::project_issues_key(&project_id);
     let url_had_explicit = q.has_explicit_filter_or_sort();
-    let saved = match view_states::get(&state.db, &user.id, &view_key).await? {
+    let saved = match view_states::get(&state.db, &rid, &view_key).await? {
         Some(json) => ProjectViewQuery::from_persisted_json(&json),
         None => ProjectViewQuery::default(),
     };
@@ -246,7 +247,7 @@ pub async fn project_detail(
     // erase their previously chosen default.
     if url_had_explicit {
         let to_save = merged.to_persisted_json();
-        view_states::upsert(&state.db, &user.id, &view_key, &to_save).await?;
+        view_states::upsert(&state.db, &rid, &view_key, &to_save).await?;
     }
 
     let filtered_issues = apply_filter_and_sort(all_issues.clone(), &merged);

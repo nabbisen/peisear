@@ -525,13 +525,14 @@ async fn sprints_of_different_teams_started_at_once_all_start() {
 async fn close_at_does_not_overwrite_a_concurrent_points_edit() {
     let app = TestApp::spawn().await;
     let (_, uid) = user(&app, "alice").await;
+    let rid = common::auth::requester_id_for(&uid);
     let day = |m: u32, d: u32| NaiveDate::from_ymd_opt(2026, m, d).unwrap();
 
     let mut row_ids = Vec::new();
     for m in 1..=N as u32 {
         // Twelve disjoint periods, one per row, so no row conflicts with another.
         let id =
-            user_capacities::insert(&app.db, &uid, 10, Some(day(m, 1)), Some(day(m, 28)), None)
+            user_capacities::insert(&app.db, &rid, 10, Some(day(m, 1)), Some(day(m, 28)), None)
                 .await
                 .expect("seed row");
         row_ids.push(id);
@@ -540,12 +541,12 @@ async fn close_at_does_not_overwrite_a_concurrent_points_edit() {
     let mut jobs = Vec::new();
     for (i, id) in row_ids.iter().enumerate() {
         let m = i as u32 + 1;
-        let (db, uid, id) = (app.db.clone(), uid.clone(), id.clone());
+        let (db, rid, id) = (app.db.clone(), rid.clone(), id.clone());
         // close_at moves the end from the 28th to the 20th
         jobs.push(Box::pin({
-            let (db, uid, id) = (db.clone(), uid.clone(), id.clone());
+            let (db, rid, id) = (db.clone(), rid.clone(), id.clone());
             async move {
-                user_capacities::close_at(&db, &uid, &id, day(m, 20))
+                user_capacities::close_at(&db, &rid, &id, day(m, 20))
                     .await
                     .map(|_| ())
             }
@@ -553,7 +554,7 @@ async fn close_at_does_not_overwrite_a_concurrent_points_edit() {
             as std::pin::Pin<Box<dyn std::future::Future<Output = _> + Send>>);
         // the edit changes points only, keeping the row's period
         jobs.push(Box::pin(async move {
-            user_capacities::update(&db, &uid, &id, 99, Some(day(m, 1)), Some(day(m, 28)), None)
+            user_capacities::update(&db, &rid, &id, 99, Some(day(m, 1)), Some(day(m, 28)), None)
                 .await
         }));
     }
@@ -565,7 +566,7 @@ async fn close_at_does_not_overwrite_a_concurrent_points_edit() {
 
     let mut lost = Vec::new();
     for id in &row_ids {
-        let row = user_capacities::find(&app.db, &uid, id)
+        let row = user_capacities::find(&app.db, &rid, id)
             .await
             .expect("find")
             .expect("row exists");
