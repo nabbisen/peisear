@@ -37,7 +37,7 @@ use peisear_core::user_burnout::{
     EstimationDriftTrend, SWITCHING_MIN_EVENTS, SWITCHING_WINDOW_DAYS, UserBurnoutSignals,
 };
 
-use crate::{Pool, StorageResult, user_metrics_snapshots};
+use crate::{Pool, StorageResult, user_metrics_snapshots, user_metrics_snapshots::SubjectId};
 
 /// Window over which the overload-streak is counted. Two weeks is
 /// long enough to distinguish "had a busy week" from a
@@ -54,16 +54,17 @@ const STREAK_WINDOW_DAYS: i64 = 14;
 /// set (zero streaks, no warnings) when the user has no history
 /// — this is correct for fresh users / empty backups.
 ///
-/// `PRIV-002`: stays on `&str` — same reason as
-/// [`crate::personal_metrics::for_user_global`]: called by both `/me`
-/// (a session) and the snapshot job (none). It internally calls
-/// [`crate::user_metrics_snapshots::recent_for_user`], which stays on
-/// `&str` to match.
-pub async fn for_user(pool: &Pool, user_id: &str) -> StorageResult<Option<UserBurnoutSignals>> {
+/// `PRIV-003`: takes [`SubjectId`] — `/me`'s handler derives one from
+/// its `RequesterId` (`From`), and the snapshot job's comes from
+/// [`crate::user_metrics_snapshots::users_with_active_assignments`].
+pub async fn for_user(
+    pool: &Pool,
+    user_id: &SubjectId,
+) -> StorageResult<Option<UserBurnoutSignals>> {
     // Confirm the user exists (defensive — callers usually have
     // already done so via auth, but it's cheap to check).
     let exists: Option<(String,)> = sqlx::query_as(r#"SELECT id FROM users WHERE id = ?1"#)
-        .bind(user_id)
+        .bind(user_id.as_str())
         .fetch_optional(pool)
         .await?;
     if exists.is_none() {
@@ -91,7 +92,7 @@ pub async fn for_user(pool: &Pool, user_id: &str) -> StorageResult<Option<UserBu
 /// The "consecutive" property is what makes this a streak rather
 /// than a count: 5 separate days over capacity within two weeks
 /// may be normal life; 5 days in a row is a pattern.
-async fn consecutive_overload_days(pool: &Pool, user_id: &str) -> StorageResult<i64> {
+async fn consecutive_overload_days(pool: &Pool, user_id: &SubjectId) -> StorageResult<i64> {
     let snaps = user_metrics_snapshots::recent_for_user(pool, user_id, STREAK_WINDOW_DAYS).await?;
     if snaps.is_empty() {
         return Ok(0);
@@ -115,7 +116,7 @@ async fn consecutive_overload_days(pool: &Pool, user_id: &str) -> StorageResult<
 /// Uses `COALESCE(latest event time, updated_at)` so legacy
 /// (pre-0.8.0) issues don't disappear from the query — same
 /// fallback pattern as `project_health`.
-async fn oldest_assigned_stalled_days(pool: &Pool, user_id: &str) -> StorageResult<i64> {
+async fn oldest_assigned_stalled_days(pool: &Pool, user_id: &SubjectId) -> StorageResult<i64> {
     let row: Option<(Option<f64>,)> = sqlx::query_as(
         r#"
         SELECT MAX(
@@ -134,7 +135,7 @@ async fn oldest_assigned_stalled_days(pool: &Pool, user_id: &str) -> StorageResu
           AND i.status IN ('open', 'in_progress')
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .fetch_optional(pool)
     .await?;
 
@@ -169,7 +170,7 @@ async fn oldest_assigned_stalled_days(pool: &Pool, user_id: &str) -> StorageResu
 /// — outlier issues do not warp the comparison.
 async fn estimation_drift_for_user(
     pool: &Pool,
-    user_id: &str,
+    user_id: &SubjectId,
 ) -> StorageResult<Option<EstimationDriftTrend>> {
     // Pull each candidate issue's id, effort, and the closing
     // timestamp. We compute dwell time per issue using the same
@@ -201,7 +202,7 @@ async fn estimation_drift_for_user(
           AND i.updated_at >= datetime('now', ?2)
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(format!("-{} days", DRIFT_WINDOW_DAYS))
     .fetch_all(pool)
     .await?;
@@ -295,7 +296,7 @@ fn median(xs: &mut [f64]) -> f64 {
 /// number anyway would be more noise than signal.
 async fn cognitive_switching_for_user(
     pool: &Pool,
-    user_id: &str,
+    user_id: &SubjectId,
 ) -> StorageResult<Option<CognitiveSwitchingPattern>> {
     // For each issue currently or formerly assigned to this user,
     // every event whose new_value transitions to in_progress
@@ -319,7 +320,7 @@ async fn cognitive_switching_for_user(
         ORDER BY day ASC
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(format!("-{} days", SWITCHING_WINDOW_DAYS))
     .fetch_all(pool)
     .await?;

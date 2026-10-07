@@ -24,7 +24,7 @@ use axum::{
 };
 use chrono::NaiveDate;
 use peisear_i18n::{Field, Locale, MessageKey};
-use peisear_storage::{user_capacities, users};
+use peisear_storage::{user_capacities, user_metrics_snapshots::SubjectId, users};
 use serde::Deserialize;
 
 use crate::{
@@ -55,7 +55,8 @@ pub async fn page(
     let rows = user_capacities::list_for_user(&state.db, &rid).await?;
     // Today's effective capacity, surfaced in the page header so
     // the user can see "this is what's in effect right now".
-    let effective_today = user_capacities::effective_for_user(&state.db, &user.id).await?;
+    let effective_today =
+        user_capacities::effective_for_user(&state.db, &SubjectId::from(&rid)).await?;
 
     Ok(components::settings::render_settings(
         user,

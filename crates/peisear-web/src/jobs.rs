@@ -196,7 +196,7 @@ async fn capture_all_users(db: &Pool, dispatch_tx: &DispatchTx) {
 /// any state transitions detected against the prior snapshot.
 async fn capture_one_user(
     db: &Pool,
-    user_id: &str,
+    user_id: &peisear_storage::user_metrics_snapshots::SubjectId,
     dispatch_tx: &DispatchTx,
 ) -> Result<(), peisear_storage::StorageError> {
     let Some(metrics) = personal_metrics::for_user_global(db, user_id).await? else {

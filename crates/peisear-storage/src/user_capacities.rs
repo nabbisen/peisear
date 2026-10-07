@@ -61,6 +61,8 @@
 
 use chrono::{DateTime, NaiveDate, Utc};
 use peisear_auth::jwt::RequesterId;
+
+use crate::user_metrics_snapshots::SubjectId;
 use sqlx::FromRow;
 use uuid::Uuid;
 
@@ -119,12 +121,10 @@ impl From<CapacityDbRow> for CapacityRow {
 /// `points` value. `None` means no row covers today (the user
 /// has no capacity set, or all rows are out of range).
 ///
-/// `PRIV-002`: stays on `&str`, with [`effective_for_user_on_date`] below
-/// — this is the function `personal_metrics::for_user_global` calls
-/// internally, and that function is itself called from both a real
-/// handler (`me.rs`) and the session-less snapshot job (`jobs.rs`), so it
-/// stays on `&str` and everything it calls has to match.
-pub async fn effective_for_user(pool: &Pool, user_id: &str) -> StorageResult<Option<i64>> {
+/// `PRIV-003`: takes [`SubjectId`], with [`effective_for_user_on_date`]
+/// below — called by `personal_metrics::for_user_global`/
+/// `for_user_in_project`, both of which now also take `SubjectId`.
+pub async fn effective_for_user(pool: &Pool, user_id: &SubjectId) -> StorageResult<Option<i64>> {
     let today = chrono::Utc::now().date_naive();
     effective_for_user_on_date(pool, user_id, today).await
 }
@@ -173,7 +173,7 @@ pub async fn effective_row_for_user(
 /// to render a number than to fail the page render.
 pub async fn effective_for_user_on_date(
     pool: &Pool,
-    user_id: &str,
+    user_id: &SubjectId,
     on_date: NaiveDate,
 ) -> StorageResult<Option<i64>> {
     let rows: Vec<(i64,)> = sqlx::query_as(
@@ -186,7 +186,7 @@ pub async fn effective_for_user_on_date(
         LIMIT 1
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(on_date)
     .fetch_all(pool)
     .await?;

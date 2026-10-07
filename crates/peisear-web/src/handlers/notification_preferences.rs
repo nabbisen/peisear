@@ -26,7 +26,7 @@ use peisear_core::notifications::{
     kind,
 };
 use peisear_i18n::{Locale, MessageKey};
-use peisear_storage::notifications as notif_store;
+use peisear_storage::{notifications as notif_store, user_metrics_snapshots::SubjectId};
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -41,7 +41,7 @@ pub async fn page(
     State(state): State<AppState>,
 ) -> AppResult<impl IntoResponse> {
     let prefs = notif_store::preferences_for_user(&state.db, &rid).await?;
-    let global = notif_store::global_preference(&state.db, &user.id).await?;
+    let global = notif_store::global_preference(&state.db, &SubjectId::from(&rid)).await?;
     let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
 
     let email_globally_on = global

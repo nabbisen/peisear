@@ -33,7 +33,7 @@ use peisear_core::personal_metrics::{
     DEFAULT_WIP_LIMIT, PERSONAL_ACTIVITY_WINDOW_DAYS, PersonalMetrics,
 };
 
-use crate::{Pool, StorageResult};
+use crate::{Pool, StorageResult, user_metrics_snapshots::SubjectId};
 
 /// Compute the event-aware estimation skew for a user across the
 /// given scope. Walks the user's recently-done issues, computes
@@ -45,7 +45,7 @@ use crate::{Pool, StorageResult};
 /// Returns `None` when no recently-done estimated issues exist.
 async fn active_estimation_skew(
     pool: &Pool,
-    user_id: &str,
+    user_id: &SubjectId,
     project_filter: Option<&str>,
     window_days: i64,
 ) -> StorageResult<Option<f64>> {
@@ -71,7 +71,7 @@ async fn active_estimation_skew(
         "#
     );
     let mut q = sqlx::query_as::<_, (String, i64, String, String)>(&sql)
-        .bind(user_id)
+        .bind(user_id.as_str())
         .bind(format!("-{} days", window_days));
     if let Some(p) = project_filter {
         q = q.bind(p);
@@ -131,13 +131,11 @@ fn calendar_time_days(created_at: &str, updated_at: &str) -> Option<f64> {
 /// [`crate::user_capacities::effective_for_user`] (period-aware)
 /// rather than read from a static `users.capacity_points` field.
 ///
-/// `PRIV-002`: stays on `&str`, matching [`crate::user_capacities::
-/// effective_for_user`], which it calls into. No current caller outside
-/// this crate (checked: unused today), kept consistent with its sibling
-/// below rather than typed ahead of a caller that would decide it.
+/// `PRIV-003`: takes [`SubjectId`]. No current caller outside this crate
+/// (checked: unused today), kept consistent with its sibling below.
 pub async fn for_user_in_project(
     pool: &Pool,
-    user_id: &str,
+    user_id: &SubjectId,
     project_id: &str,
 ) -> StorageResult<Option<PersonalMetrics>> {
     let user_row: Option<(String, Option<i64>)> = sqlx::query_as(
@@ -147,7 +145,7 @@ pub async fn for_user_in_project(
         WHERE u.id = ?1
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .fetch_optional(pool)
     .await?;
 
@@ -207,7 +205,7 @@ pub async fn for_user_in_project(
         WHERE assignee_id = ?1 AND project_id = ?2
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(project_id)
     .bind(format!("-{} days", PERSONAL_ACTIVITY_WINDOW_DAYS))
     .bind(PERSONAL_ACTIVITY_WINDOW_DAYS)
@@ -228,7 +226,7 @@ pub async fn for_user_in_project(
     .await?;
 
     Ok(Some(PersonalMetrics {
-        user_id: user_id.to_string(),
+        user_id: user_id.as_str().to_string(),
         display_name,
         effective_wip_limit,
         current_wip,
@@ -247,12 +245,14 @@ pub async fn for_user_in_project(
 /// scoped to a single project. Returns `None` if the user does
 /// not exist.
 ///
-/// `PRIV-002`: stays on `&str` — called by both a real handler (`/me`,
-/// with a session) and the session-less snapshot job (`jobs.rs`, no
-/// requester at all, just a subject it is iterating). A counter-example
-/// to `DEC-058`'s "requester and subject are the same value everywhere"
-/// in one direction: here there is a subject with no requester.
-pub async fn for_user_global(pool: &Pool, user_id: &str) -> StorageResult<Option<PersonalMetrics>> {
+/// `PRIV-003`: takes [`SubjectId`] — `/me`'s handler derives one from its
+/// `RequesterId` (a requester is always the subject of their own data),
+/// and the snapshot job's comes from `user_metrics_snapshots::
+/// users_with_active_assignments`, the other legitimate source.
+pub async fn for_user_global(
+    pool: &Pool,
+    user_id: &SubjectId,
+) -> StorageResult<Option<PersonalMetrics>> {
     let user_row: Option<(String, Option<i64>)> = sqlx::query_as(
         r#"
         SELECT u.display_name, u.wip_limit
@@ -260,7 +260,7 @@ pub async fn for_user_global(pool: &Pool, user_id: &str) -> StorageResult<Option
         WHERE u.id = ?1
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .fetch_optional(pool)
     .await?;
 
@@ -305,7 +305,7 @@ pub async fn for_user_global(pool: &Pool, user_id: &str) -> StorageResult<Option
         WHERE assignee_id = ?1
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(format!("-{} days", PERSONAL_ACTIVITY_WINDOW_DAYS))
     .bind(PERSONAL_ACTIVITY_WINDOW_DAYS)
     .fetch_one(pool)
@@ -317,7 +317,7 @@ pub async fn for_user_global(pool: &Pool, user_id: &str) -> StorageResult<Option
         active_estimation_skew(pool, user_id, None, PERSONAL_ACTIVITY_WINDOW_DAYS * 4).await?;
 
     Ok(Some(PersonalMetrics {
-        user_id: user_id.to_string(),
+        user_id: user_id.as_str().to_string(),
         display_name,
         effective_wip_limit,
         current_wip,

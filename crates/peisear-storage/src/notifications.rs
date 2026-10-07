@@ -28,6 +28,8 @@
 
 use chrono::{DateTime, Utc};
 use peisear_auth::jwt::RequesterId;
+
+use crate::user_metrics_snapshots::SubjectId;
 use peisear_core::notifications::{Notification, Preference, Severity};
 use sqlx::FromRow;
 use uuid::Uuid;
@@ -50,12 +52,16 @@ pub struct NewNotification<'a> {
 
 /// Persist a new notification row. Returns the new id.
 ///
-/// `PRIV-002`: stays on `&str`. The only caller is the dispatch loop
-/// (`peisear-notify`), a background process with no HTTP session to seal
-/// a [`RequesterId`] from — it is dispatching on behalf of an event
-/// another part of the system already authorised, not acting as a
-/// requester itself.
-pub async fn insert(pool: &Pool, user_id: &str, new: NewNotification<'_>) -> StorageResult<String> {
+/// `PRIV-003`: takes [`SubjectId`]. The only caller is the dispatch loop
+/// (`peisear-notify`), a background process with no HTTP session — its
+/// `DispatchEvent` carries the `SubjectId` through from wherever the
+/// triggering edge was detected, ultimately the snapshot job's own
+/// enumeration.
+pub async fn insert(
+    pool: &Pool,
+    user_id: &SubjectId,
+    new: NewNotification<'_>,
+) -> StorageResult<String> {
     let id = Uuid::new_v4().to_string();
     let dispatched_str = new.dispatched_via.join(",");
 
@@ -67,7 +73,7 @@ pub async fn insert(pool: &Pool, user_id: &str, new: NewNotification<'_>) -> Sto
         "#,
     )
     .bind(&id)
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(new.kind)
     .bind(new.severity.as_str())
     .bind(new.title)
@@ -212,11 +218,11 @@ pub async fn mark_all_read(pool: &Pool, user_id: &RequesterId) -> StorageResult<
 /// Used by the cooldown filter at dispatch time. Returns `None`
 /// if the user has never received this kind.
 ///
-/// `PRIV-002`: stays on `&str` — the only caller is the dispatch loop
+/// `PRIV-003`: takes [`SubjectId`] — the only caller is the dispatch loop
 /// (`peisear-notify`), per [`insert`]'s own note.
 pub async fn last_dispatched_at_for_user_kind(
     pool: &Pool,
-    user_id: &str,
+    user_id: &SubjectId,
     kind: &str,
 ) -> StorageResult<Option<DateTime<Utc>>> {
     let ts: Option<DateTime<Utc>> = sqlx::query_scalar(
@@ -226,7 +232,7 @@ pub async fn last_dispatched_at_for_user_kind(
         WHERE user_id = ?1 AND kind = ?2
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(kind)
     .fetch_optional(pool)
     .await?
@@ -269,12 +275,12 @@ pub async fn preferences_for_user(
 /// Find the preference for one (user, kind), or `None` if
 /// absent (caller falls back to defaults).
 ///
-/// `PRIV-002`: stays on `&str` — called by both the dispatch loop
+/// `PRIV-003`: takes [`SubjectId`] — called by both the dispatch loop
 /// (`peisear-notify`, no session) and [`global_preference`] (which also
-/// stays on `&str` to match).
+/// takes `SubjectId` to match).
 pub async fn preference_for_user_kind(
     pool: &Pool,
-    user_id: &str,
+    user_id: &SubjectId,
     kind: &str,
 ) -> StorageResult<Option<Preference>> {
     let row: Option<(String, String, String, String)> = sqlx::query_as(
@@ -284,7 +290,7 @@ pub async fn preference_for_user_kind(
         WHERE user_id = ?1 AND kind = ?2
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(kind)
     .fetch_optional(pool)
     .await?;
@@ -450,10 +456,13 @@ pub async fn set_global_acknowledged(
 /// channel application; call `global_acknowledged` first to
 /// decide whether to prompt).
 ///
-/// `PRIV-002`: stays on `&str` — called by both a handler
-/// (`notification_preferences.rs`, with a real session) and the dispatch
-/// loop (`peisear-notify`, with none); it forwards straight into
-/// [`preference_for_user_kind`], which has the same constraint.
-pub async fn global_preference(pool: &Pool, user_id: &str) -> StorageResult<Option<Preference>> {
+/// `PRIV-003`: takes [`SubjectId`] — called by both a handler
+/// (`notification_preferences.rs`, deriving one from its `RequesterId`)
+/// and the dispatch loop (`peisear-notify`, from its event's own); it
+/// forwards straight into [`preference_for_user_kind`].
+pub async fn global_preference(
+    pool: &Pool,
+    user_id: &SubjectId,
+) -> StorageResult<Option<Preference>> {
     preference_for_user_kind(pool, user_id, peisear_core::notifications::kind::GLOBAL).await
 }

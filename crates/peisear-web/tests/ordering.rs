@@ -126,10 +126,13 @@ async fn capacity_saved_twice_in_one_second_resolves_to_the_later_row() {
 async fn capacity_on_a_date_saved_twice_in_one_second_resolves_to_the_later_row() {
     let (app, user_id) = user_with_capacity_saved_twice().await;
     let day = chrono::NaiveDate::from_ymd_opt(2026, 3, 1).unwrap();
-    let points =
-        peisear_storage::user_capacities::effective_for_user_on_date(&app.db, &user_id, day)
-            .await
-            .expect("effective on date");
+    let points = peisear_storage::user_capacities::effective_for_user_on_date(
+        &app.db,
+        &common::auth::subject_id_for(&user_id),
+        day,
+    )
+    .await
+    .expect("effective on date");
     assert_eq!(points, Some(99), "the superseded 10 won the tie");
 }
 
@@ -185,7 +188,7 @@ async fn notifications_from_one_second_list_newest_first() {
     for title in ["INBOX-first", "INBOX-second", "INBOX-third", "INBOX-fourth"] {
         peisear_storage::notifications::insert(
             &app.db,
-            &user_id,
+            &common::auth::subject_id_for(&user_id),
             peisear_storage::notifications::NewNotification {
                 kind: "test",
                 severity: peisear_core::notifications::Severity::Info,

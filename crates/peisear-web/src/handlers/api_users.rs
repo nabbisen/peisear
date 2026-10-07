@@ -33,7 +33,9 @@ use axum::{
     extract::{Path, State},
 };
 use peisear_i18n::MessageKey;
-use peisear_storage::{notifications, user_burnout, user_capacities};
+use peisear_storage::{
+    notifications, user_burnout, user_capacities, user_metrics_snapshots::SubjectId,
+};
 use serde::Serialize;
 
 use crate::{
@@ -88,12 +90,13 @@ pub struct BurnoutSignal {
 
 pub async fn burnout(
     ApiAuthUser(user): ApiAuthUser,
+    ApiRequester(rid): ApiRequester,
     State(state): State<AppState>,
     Path(user_id): Path<String>,
 ) -> ApiAppResult<Json<BurnoutResponse>> {
     require_self(&user.id, &user_id)?;
 
-    let signals = user_burnout::for_user(&state.db, &user.id)
+    let signals = user_burnout::for_user(&state.db, &SubjectId::from(&rid))
         .await?
         .ok_or(ApiAppError::NotFound)?;
 
@@ -220,7 +223,8 @@ pub async fn capacity(
 ) -> ApiAppResult<Json<CapacityResponse>> {
     require_self(&user.id, &user_id)?;
 
-    let effective_today = user_capacities::effective_for_user(&state.db, &user.id).await?;
+    let effective_today =
+        user_capacities::effective_for_user(&state.db, &SubjectId::from(&rid)).await?;
     let rows = user_capacities::list_for_user(&state.db, &rid).await?;
 
     let rows = rows

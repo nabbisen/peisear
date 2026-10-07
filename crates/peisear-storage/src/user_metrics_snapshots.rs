@@ -7,11 +7,55 @@
 //! Read API today exposes streak-counting queries used by
 //! [`crate::user_burnout`]. Write API is one function called from
 //! the background job for each user with active assigned work.
+//!
+//! `PRIV-003` (`DEC-058`): [`SubjectId`] is declared here, not in
+//! `peisear-auth` beside [`peisear_auth::jwt::RequesterId`]. Its own
+//! trusted origin is a database enumeration
+//! ([`users_with_active_assignments`]), not a token, and putting it
+//! beside `RequesterId` would need `peisear-auth` to know about rows —
+//! a dependency in the wrong direction for a crate whose own doc
+//! comment states it has none. The field is private to this module, so
+//! nothing outside it — including the rest of `peisear-storage` — can
+//! construct one by struct-literal syntax; the only two paths are
+//! `From<&RequesterId>` below (a requester is always the subject of
+//! their own data) and this module's own enumeration.
 
+use peisear_auth::jwt::RequesterId;
 use sqlx::FromRow;
 use uuid::Uuid;
 
 use crate::{Pool, StorageResult};
+
+/// See the module doc comment for why this lives here and what the two
+/// legitimate construction paths are. No public constructor exists
+/// beyond `From<&RequesterId>` and this module's own enumeration query —
+/// deliberately: a public `SubjectId::new(&str)` would be the `String`
+/// convention again, and would let a handler mint one from a path
+/// parameter and reach every function `PRIV-002`/`PRIV-003` sealed.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct SubjectId(String);
+
+impl SubjectId {
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for SubjectId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.0)
+    }
+}
+
+/// A requester is always the subject of their own data (`DEC-058`
+/// decision 2) — the handler path, and it is total: every handler that
+/// has a `RequesterId` can get a `SubjectId` for it with no fallible
+/// step.
+impl From<&RequesterId> for SubjectId {
+    fn from(rid: &RequesterId) -> Self {
+        SubjectId(rid.as_str().to_string())
+    }
+}
 
 /// Compact view of one snapshot row, used by streak / trend
 /// queries. Mirrors the table columns minus storage metadata.
@@ -49,9 +93,14 @@ pub struct NewUserSnapshot {
 /// Insert one user-metrics snapshot row. Called by the
 /// background job tick.
 ///
-/// `PRIV-002`: stays on `&str` — no session exists in that context; see
-/// [`crate::personal_metrics::for_user_global`]'s note.
-pub async fn insert(pool: &Pool, user_id: &str, snapshot: NewUserSnapshot) -> StorageResult<()> {
+/// `PRIV-003`: takes [`SubjectId`] — the job's own enumeration
+/// ([`users_with_active_assignments`]) is one of its two legitimate
+/// sources.
+pub async fn insert(
+    pool: &Pool,
+    user_id: &SubjectId,
+    snapshot: NewUserSnapshot,
+) -> StorageResult<()> {
     let id = Uuid::new_v4().to_string();
     sqlx::query(
         r#"
@@ -63,7 +112,7 @@ pub async fn insert(pool: &Pool, user_id: &str, snapshot: NewUserSnapshot) -> St
         "#,
     )
     .bind(id)
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(snapshot.current_wip)
     .bind(snapshot.in_flight_points)
     .bind(snapshot.capacity_points)
@@ -110,11 +159,11 @@ impl From<UserSnapshotRow> for UserSnapshot {
 /// expressed in days so the query layer doesn't need to know
 /// about clock format details.
 ///
-/// `PRIV-002`: stays on `&str`, matching [`crate::user_burnout::for_user`],
-/// its only caller.
+/// `PRIV-003`: takes [`SubjectId`], matching
+/// [`crate::user_burnout::for_user`], its only caller.
 pub async fn recent_for_user(
     pool: &Pool,
-    user_id: &str,
+    user_id: &SubjectId,
     window_days: i64,
 ) -> StorageResult<Vec<UserSnapshot>> {
     let rows = sqlx::query_as::<_, UserSnapshotRow>(
@@ -129,7 +178,7 @@ pub async fn recent_for_user(
         ORDER BY captured_at ASC, rowid ASC
         "#,
     )
-    .bind(user_id)
+    .bind(user_id.as_str())
     .bind(format!("-{} days", window_days))
     .fetch_all(pool)
     .await?;
@@ -141,7 +190,7 @@ pub async fn recent_for_user(
 /// background tick to choose which users to snapshot. Idle users
 /// (nothing assigned) have no signal to capture, so we save the
 /// row and the privacy footprint by skipping them.
-pub async fn users_with_active_assignments(pool: &Pool) -> StorageResult<Vec<String>> {
+pub async fn users_with_active_assignments(pool: &Pool) -> StorageResult<Vec<SubjectId>> {
     let rows: Vec<(String,)> = sqlx::query_as(
         r#"
         SELECT DISTINCT assignee_id
@@ -152,5 +201,5 @@ pub async fn users_with_active_assignments(pool: &Pool) -> StorageResult<Vec<Str
     )
     .fetch_all(pool)
     .await?;
-    Ok(rows.into_iter().map(|(id,)| id).collect())
+    Ok(rows.into_iter().map(|(id,)| SubjectId(id)).collect())
 }

@@ -509,7 +509,7 @@ async fn mark_read_does_not_affect_another_users_notification() {
 
     let notif_id = peisear_storage::notifications::insert(
         &app.db,
-        &owner_id,
+        &common::auth::subject_id_for(&owner_id),
         peisear_storage::notifications::NewNotification {
             kind: peisear_core::notifications::kind::BURNOUT_OVERLOAD,
             severity: peisear_core::notifications::Severity::Watch,
@@ -566,7 +566,7 @@ async fn mark_all_read_does_not_affect_another_users_notifications() {
 
     peisear_storage::notifications::insert(
         &app.db,
-        &owner_id,
+        &common::auth::subject_id_for(&owner_id),
         peisear_storage::notifications::NewNotification {
             kind: peisear_core::notifications::kind::BURNOUT_OVERLOAD,
             severity: peisear_core::notifications::Severity::Watch,
@@ -616,7 +616,7 @@ async fn mark_all_read_marks_the_callers_own_unread_notifications_read() {
     for _ in 0..2 {
         peisear_storage::notifications::insert(
             &app.db,
-            &owner_id,
+            &common::auth::subject_id_for(&owner_id),
             peisear_storage::notifications::NewNotification {
                 kind: peisear_core::notifications::kind::BURNOUT_OVERLOAD,
                 severity: peisear_core::notifications::Severity::Watch,

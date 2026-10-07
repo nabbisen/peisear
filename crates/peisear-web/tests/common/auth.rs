@@ -14,7 +14,7 @@
 //! its own cookie jar.
 
 use peisear_auth::jwt::{self, RequesterId};
-use peisear_storage::{Pool, users};
+use peisear_storage::{Pool, user_metrics_snapshots::SubjectId, users};
 
 use super::server::{JWT_SECRET, TestApp};
 
@@ -27,6 +27,13 @@ use super::server::{JWT_SECRET, TestApp};
 pub fn requester_id_for(user_id: &str) -> RequesterId {
     let token = jwt::issue(user_id, "unused@example.test", JWT_SECRET).expect("issue a test token");
     jwt::verify(&token, JWT_SECRET).expect("verify the just-issued test token")
+}
+
+/// `PRIV-003`: a [`SubjectId`] for `user_id`, via `From<&RequesterId>` --
+/// a requester is always the subject of their own data, the same path a
+/// handler takes. Not a second constructor.
+pub fn subject_id_for(user_id: &str) -> SubjectId {
+    SubjectId::from(&requester_id_for(user_id))
 }
 
 /// Convenience credentials struct so tests can name their users

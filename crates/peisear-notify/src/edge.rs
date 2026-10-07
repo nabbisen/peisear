@@ -10,11 +10,12 @@
 
 use peisear_core::notifications::{Severity, kind as kind_id};
 use peisear_i18n::{Locale, MessageKey};
+use peisear_storage::user_metrics_snapshots::SubjectId;
 
 use crate::dispatch::DispatchEvent;
 
 pub fn detect_burnout_overload_edge(
-    user_id: &str,
+    user_id: &SubjectId,
     prior_streak_days: i64,
     current_streak_days: i64,
 ) -> Option<DispatchEvent> {
@@ -25,7 +26,7 @@ pub fn detect_burnout_overload_edge(
         return None;
     }
     Some(DispatchEvent {
-        user_id: user_id.to_string(),
+        user_id: user_id.clone(),
         kind: kind_id::BURNOUT_OVERLOAD.to_string(),
         severity: Severity::Watch,
         title: Locale::English.render(MessageKey::NotificationBurnoutOverloadTitle),
@@ -37,7 +38,7 @@ pub fn detect_burnout_overload_edge(
 }
 
 pub fn detect_burnout_stalled_edge(
-    user_id: &str,
+    user_id: &SubjectId,
     prior_max_days: i64,
     current_max_days: i64,
 ) -> Option<DispatchEvent> {
@@ -48,7 +49,7 @@ pub fn detect_burnout_stalled_edge(
         return None;
     }
     Some(DispatchEvent {
-        user_id: user_id.to_string(),
+        user_id: user_id.clone(),
         kind: kind_id::BURNOUT_STALLED.to_string(),
         severity: Severity::Watch,
         title: Locale::English.render(MessageKey::NotificationBurnoutStalledTitle),

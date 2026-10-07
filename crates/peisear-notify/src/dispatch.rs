@@ -7,7 +7,7 @@
 
 use chrono::Utc;
 use peisear_core::notifications::{Severity, channel as channel_id};
-use peisear_storage::{Pool, notifications as notif_store};
+use peisear_storage::{Pool, notifications as notif_store, user_metrics_snapshots::SubjectId};
 use tokio::sync::mpsc;
 
 use crate::channel::{ChannelSendError, send_via_channel};
@@ -15,9 +15,13 @@ use crate::channel::{ChannelSendError, send_via_channel};
 /// One thing to potentially notify about. Built by callers
 /// (typically a snapshot/jobs loop in `peisear-web`); consumed
 /// by [`dispatch_loop`].
+///
+/// `PRIV-003`: `user_id` is a [`SubjectId`], not a `String` — callers
+/// already have one (the snapshot job's own enumeration), so this
+/// crate never needs to construct one itself.
 #[derive(Debug, Clone)]
 pub struct DispatchEvent {
-    pub user_id: String,
+    pub user_id: SubjectId,
     pub kind: String,
     pub severity: Severity,
     pub title: String,
@@ -150,7 +154,7 @@ async fn process_event(
     // Fetch once if email is in the channel list and we have
     // SMTP config — otherwise we can skip the lookup.
     let user_email = if channels.contains(&channel_id::EMAIL) && ctx.smtp.is_some() {
-        peisear_storage::users::find_by_id(&ctx.db, &event.user_id)
+        peisear_storage::users::find_by_id(&ctx.db, event.user_id.as_str())
             .await?
             .map(|u| u.email)
     } else {

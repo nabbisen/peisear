@@ -67,7 +67,7 @@ async fn insert_sub_issue_via_storage(
 async fn insert_notification(app: &TestApp, user_id: &str) {
     notif_store::insert(
         &app.db,
-        user_id,
+        &common::auth::subject_id_for(user_id),
         notif_store::NewNotification {
             kind: kind::BURNOUT_OVERLOAD,
             severity: Severity::Watch,
@@ -98,7 +98,7 @@ fn spawn_dispatch(app: &TestApp) -> DispatchTx {
 
 fn make_event(user_id: &str) -> DispatchEvent {
     DispatchEvent {
-        user_id: user_id.to_string(),
+        user_id: common::auth::subject_id_for(user_id),
         kind: kind::BURNOUT_OVERLOAD.to_string(),
         severity: Severity::Watch,
         title: "Sustained over-capacity streak".to_string(),
@@ -195,12 +195,13 @@ async fn resume_deletes_the_row_for_every_user_facing_kind() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
+    let sid = common::auth::subject_id_for(&user_id);
 
     let resp = app.server.post("/settings/notifications/silence-all").await;
     resp.assert_status(StatusCode::SEE_OTHER);
 
     for k in kind::all_user_facing() {
-        let pref = notif_store::preference_for_user_kind(&app.db, &user_id, k)
+        let pref = notif_store::preference_for_user_kind(&app.db, &sid, k)
             .await
             .expect("query preference");
         assert!(
@@ -213,7 +214,7 @@ async fn resume_deletes_the_row_for_every_user_facing_kind() {
     resp.assert_status(StatusCode::SEE_OTHER);
 
     for k in kind::all_user_facing() {
-        let pref = notif_store::preference_for_user_kind(&app.db, &user_id, k)
+        let pref = notif_store::preference_for_user_kind(&app.db, &sid, k)
             .await
             .expect("query preference");
         assert!(
@@ -475,10 +476,14 @@ async fn a_stored_preference_row_for_the_unlisted_kind_is_harmless() {
         "a stored row for a kind that cannot arrive must not hold the banner back: {inbox}"
     );
     assert!(
-        notif_store::preference_for_user_kind(&app.db, &user_id, kind::PROJECT_TREND_DECLINE)
-            .await
-            .expect("query")
-            .is_some(),
+        notif_store::preference_for_user_kind(
+            &app.db,
+            &common::auth::subject_id_for(&user_id),
+            kind::PROJECT_TREND_DECLINE,
+        )
+        .await
+        .expect("query")
+        .is_some(),
         "the stored row must survive: nothing deletes it"
     );
     assert!(

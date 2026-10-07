@@ -40,6 +40,7 @@ use peisear_core::notifications::{Severity, channel as channel_id, kind as kind_
 use peisear_notify::config::{SmtpConfig, TlsMode};
 use peisear_notify::dispatch::DispatchContext;
 use peisear_notify::{DispatchEvent, DispatchTx, dispatch_loop};
+use peisear_storage::user_metrics_snapshots::SubjectId;
 use peisear_storage::{Pool, notifications as notif_store, pool, users};
 use tempfile::TempDir;
 use tokio::sync::mpsc;
@@ -113,6 +114,14 @@ fn test_requester_id(user_id: &str) -> RequesterId {
     jwt::verify(&token, TEST_JWT_SECRET).unwrap()
 }
 
+/// `PRIV-003`: `SubjectId` via `From<&RequesterId>` -- a requester is
+/// always the subject of their own data, the same path `DispatchEvent`'s
+/// real producers (the snapshot job's enumeration, by way of a
+/// `RequesterId`-derived `SubjectId` where a handler is involved) take.
+fn test_subject_id(user_id: &str) -> SubjectId {
+    SubjectId::from(&test_requester_id(user_id))
+}
+
 fn spawn_dispatch(ctx: DispatchContext) -> DispatchTx {
     let (tx, rx) = mpsc::channel::<DispatchEvent>(8);
     tokio::spawn(dispatch_loop(ctx, rx));
@@ -121,7 +130,7 @@ fn spawn_dispatch(ctx: DispatchContext) -> DispatchTx {
 
 fn make_event(user_id: &str) -> DispatchEvent {
     DispatchEvent {
-        user_id: user_id.to_string(),
+        user_id: test_subject_id(user_id),
         kind: kind_id::BURNOUT_OVERLOAD.to_string(),
         severity: Severity::Watch,
         title: "Sustained over-capacity streak".to_string(),

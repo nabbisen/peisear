@@ -14,7 +14,9 @@ use axum::{
     extract::{Query, State},
     response::IntoResponse,
 };
-use peisear_storage::{personal_metrics, user_burnout, user_capacities};
+use peisear_storage::{
+    personal_metrics, user_burnout, user_capacities, user_metrics_snapshots::SubjectId,
+};
 use serde::Deserialize;
 
 use crate::{
@@ -37,7 +39,8 @@ pub async fn page(
     // default for /me. A future per-project page (`/projects/{id}/me`)
     // could call `for_user_in_project` instead, but the V2.1 brief
     // does not call for that today.
-    let metrics = personal_metrics::for_user_global(&state.db, &user.id).await?;
+    let sid = SubjectId::from(&rid);
+    let metrics = personal_metrics::for_user_global(&state.db, &sid).await?;
 
     // Phase 2 burnout signals (0.10.0). Returned as
     // `Option<UserBurnoutSignals>` — `None` only if the user
@@ -45,7 +48,7 @@ pub async fn page(
     // extractor already loaded them) but we propagate the option
     // for symmetry. The component decides whether to render the
     // panel based on whether there are any meaningful values.
-    let burnout = user_burnout::for_user(&state.db, &user.id).await?;
+    let burnout = user_burnout::for_user(&state.db, &sid).await?;
 
     // 0.12.0: figure out whether today's effective capacity comes
     // from a period-bounded row, so the Load chip can render a
