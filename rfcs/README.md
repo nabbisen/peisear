@@ -41,7 +41,9 @@ RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 Open for review. Design may still change.
 
-**Nothing is currently proposed.**
+| ID | Title | Target |
+|----|-------|--------|
+| 014 | [The identity newtype](./proposed/014-the-identity-newtype.md) — identity is a `String` and identity-ness lives in a variable's name; a newtype only a session can construct makes `NFR-PRIV-005`'s stronger reading satisfiable. **Not a security fix** — the boundary holds; what changes is that it cannot be broken by inattention | 0.43.0 if accepted |
 
 ## Implemented
 
