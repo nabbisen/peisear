@@ -111,6 +111,7 @@ the RFC number they are keyed to.
 | [`handoffs/033-published-documentation/`](./handoffs/033-published-documentation/README.md) | `DEC-057` — `DOCS-001`, `docs/` as an mdbook site on Pages, target 0.41.0 |
 | [`handoffs/034-reach-after-navigation/`](./handoffs/034-reach-after-navigation/README.md) | **Not RFC-governed** — `A11Y-006`, `NFR-A11Y-009`'s skip link, target 0.42.0 |
 | [`handoffs/035-non-text-contrast/`](./handoffs/035-non-text-contrast/README.md) | **Not RFC-governed** — `A11Y-007`/`A11Y-008`, `NFR-A11Y-010` at 3:1, target 0.42.0 |
+| [`handoffs/036-status-drift/`](./handoffs/036-status-drift/README.md) | **Not RFC-governed** — `REQ-003`, whether a stale requirement status is mechanically detectable, target 0.43.0 |
 | [`handoffs/015-mobile-completion/`](./handoffs/015-mobile-completion/README.md) | **Not RFC-governed** — closing `NFR-A11Y-006`, unverified since Phase E |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |
