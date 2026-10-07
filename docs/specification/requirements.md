@@ -1584,10 +1584,19 @@ tell a session's id from any other; `§10.3`'s newtype direction is what would
 change that. The old status was written against the stronger reading while the
 code satisfied the weaker, and said neither.
 *Priority*: P2.
-*Scheduled 0.43.0 (`DEC-058`, RFC 0014)*: identity becomes a type that only an
-authenticated session can construct, so personal-data storage can refuse
-anything else **at compile time** and the stronger reading above stops being
-impossible. **The boundary this protects already holds** — two independent
+*Partly met 0.43.0 (`DEC-058`, RFC 0014, `PRIV-002`)*: identity is now a type
+only a cryptographically-verified token can construct, so personal-data
+storage refuses anything else **at compile time** — **for 25 of the 36
+functions.** The stronger reading above is satisfied for those and remains
+unsatisfiable for the other eleven, which stay on `&str` because **the
+snapshot job is a subject with no requester**: it iterates users on a
+schedule, so there is no request to seal an identity from. Three of the six
+personal-data modules — `personal_metrics`, `user_burnout`,
+`user_metrics_snapshots` — are entirely in that eleven.
+*`PRIV-003` closes it* with a second sealed type for the subject, which
+`DEC-058` decision 2 provided for (*"one, until a second is needed"*) and
+whose premise — that requester and subject are the same value everywhere —
+the implementation falsified. **The boundary this protects already holds** — two independent
 barriers, measured at `QA-021` and recounted here — so what changes is that it
 cannot be broken by inattention, not that a hole closes.
 
