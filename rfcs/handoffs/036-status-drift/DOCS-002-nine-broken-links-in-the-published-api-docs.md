@@ -28,6 +28,35 @@ their documentation**, so each broken link is live in the API docs of every
 released version. **Nothing has ever looked**: `clippy --all-targets` does not
 check doc links and `cargo doc` is in no gate.
 
+## 1a. Ruled 2026-10-08, after the count came back
+
+**The count was mine and it was wrong twice.** It is **10** unresolved links,
+not nine — `cargo doc` without `--keep-going` aborts before documenting
+`peisear-web`, so my run never saw `AppError::into_response` or
+`active_in_progress_seconds`. And the "23 warnings" included three per-crate
+**summary lines**: the real distinct-issue count is **18** (10 links, 8
+public-links-private).
+
+**The rulings, so §2 reads against them:**
+
+- **§A's seven path corrections: land them.** Sentences already true, links
+  pointing at the wrong path.
+- **§B's three: fix them.** §3 forbids a documentation *rewrite*; it does not
+  forbid correcting a sentence that is **false about the code**, which all
+  three are. **Say what the code does, not whatever makes the link resolve.**
+  `DEFAULT_PREFERENCES` → name `DEFAULT_CHANNELS` and `DEFAULT_MIN_SEVERITY`.
+  `HealthIndicator::badge_class` → say that `DisplayHealthState::clamp` folds
+  it into the type that renders the badge; delete only if accuracy needs more
+  than a sentence. `move_issue_to_sprint` → drop the link and say the move is
+  `add_issue`'s upsert, as `add_issue`'s own doc already does. **If any grows
+  into a paragraph, stop and report.**
+- **§C's eight: leave them**, and `rustdoc::private_intra_doc_links` stays
+  un-denied **permanently**, not pending. Record that in the gate's config.
+- **The gate goes in `test.yml`**, and **its command must carry
+  `--keep-going`** — without it the gate stops at the first failing crate and
+  looks clean for the ones it never reached, which is how the count above went
+  wrong.
+
 ## 2. What to do
 
 **2.1 — Count first, and report before fixing.** Nine is the unresolved-link
