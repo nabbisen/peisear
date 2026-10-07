@@ -228,6 +228,16 @@ fn render_sprint_card(team_slug: String, s: Sprint, sum: SprintSummary) -> impl 
 /// sprint (completed + carried-over), neutral colours, median
 /// reference line. Wraps in a card with a descriptive
 /// caption.
+///
+/// `A11Y-007` (`NFR-A11Y-010`): both fills, and [`render_burndown`]'s two
+/// line strokes, share one pair of values — `oklch(27% 0.14 240)` /
+/// `oklch(58% 0.10 240)`, single-hue (240, matching `NFR-A11Y-004`'s own
+/// finding that hue carries nothing here) — chosen so every pairing reaches
+/// `NFR-A11Y-010`'s 3:1: series-to-series **3.4:1** (was 2.09:1), each
+/// series to the white card background (`--b1:100% 0 0`) **4.2:1**/**14.4:1**
+/// (was 3.88:1/1.86:1). Measured via two independent OKLCH→linear-sRGB
+/// conversions (a fused matrix and the textbook OKLab→XYZ→sRGB chain),
+/// agreeing to the rendered 8-bit value; see this handoff's evidence.
 fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) -> impl IntoView {
     // Layout constants. Tuned for a card body ~700px wide.
     let chart_w: i32 = 680;
@@ -293,9 +303,9 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) 
             view! {
                 <g aria-label=aria>
                     <rect x=x0 y=completed_y width=bar_w height=completed_h
-                          fill="oklch(60% 0.12 240)" rx="2"/>
+                          fill="oklch(27% 0.14 240)" rx="2"/>
                     <rect x=x0 + bar_w + gap y=carried_y width=bar_w height=carried_h
-                          fill="oklch(80% 0.04 240)" rx="2"/>
+                          fill="oklch(58% 0.10 240)" rx="2"/>
                     <text x=x0 + bar_w + gap / 2 y=label_y
                           font-size="10" fill="currentColor"
                           opacity="0.6" text-anchor="middle">
@@ -945,23 +955,23 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
                         </text>
                         // Committed line.
                         <path d=committed_path fill="none"
-                              stroke="oklch(70% 0.04 240)"
+                              stroke="oklch(58% 0.10 240)"
                               stroke-width="2"/>
                         // Completed line.
                         <path d=completed_path fill="none"
-                              stroke="oklch(55% 0.14 240)"
+                              stroke="oklch(27% 0.14 240)"
                               stroke-width="2"/>
                     </svg>
                 </div>
                 <div class="text-xs text-base-content/70 flex gap-4 mt-2">
                     <span>
                         <span class="inline-block w-3 h-0.5 mr-1"
-                              style="background: oklch(70% 0.04 240)"></span>
+                              style="background: oklch(58% 0.10 240)"></span>
                         {t(MessageKey::BurndownLegendCommitted)}
                     </span>
                     <span>
                         <span class="inline-block w-3 h-0.5 mr-1"
-                              style="background: oklch(55% 0.14 240)"></span>
+                              style="background: oklch(27% 0.14 240)"></span>
                         {t(MessageKey::BurndownLegendCompleted)}
                     </span>
                 </div>
