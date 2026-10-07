@@ -1584,6 +1584,12 @@ tell a session's id from any other; `§10.3`'s newtype direction is what would
 change that. The old status was written against the stronger reading while the
 code satisfied the weaker, and said neither.
 *Priority*: P2.
+*Scheduled 0.43.0 (`DEC-058`, RFC 0014)*: identity becomes a type that only an
+authenticated session can construct, so personal-data storage can refuse
+anything else **at compile time** and the stronger reading above stops being
+impossible. **The boundary this protects already holds** — two independent
+barriers, measured at `QA-021` and recounted here — so what changes is that it
+cannot be broken by inattention, not that a hole closes.
 
 **NFR-PRIV-006 — Refusals do not disclose existence**
 Authorisation refusals MUST NOT reveal whether the requested resource

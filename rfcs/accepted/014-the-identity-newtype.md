@@ -1,6 +1,6 @@
 # RFC 0014: The identity newtype — a convention held by a variable's name, made a type
 
-**Status**: Proposed
+**Status**: **Accepted** (2026-10-07) — implementation may begin
 **Target**: 0.43.0 if accepted; the work is one substep and does not need
 splitting
 **Related spec sections**: `SPEC §11.5.4`, `SPEC Appendix E.2`
@@ -112,7 +112,24 @@ every release since 0.19.1 — the same error `§10.15`'s 0.37.0 entry had to
 avoid, and the same one `A11Y-007` avoided by naming which reader it was
 failing.
 
-## Open questions — for the owner at acceptance
+## Decisions taken 2026-10-07
+
+**Accepted, with all three recommendations and none varied.** `DEC-058`:
+*identity is a type that only an authenticated session can construct, and
+personal-data storage accepts nothing else.*
+
+1. ~~**Where does it live, what can construct it?**~~ — **`peisear-auth`,
+   constructible only from the authenticated session.** A type in `core` that
+   anything can build is the `String` again.
+2. ~~**One type or two?**~~ — **One**, named for the requester. `SubjectId`
+   and `RequesterId` are the same value at every current call site;
+   distinguishing them would catch an administrator-acting-on-another case
+   that does not exist.
+3. ~~**Is the churn acceptable with no user-visible change?**~~ — **Yes.** The
+   answer to *what does a user get* remains **nothing**, and the changelog
+   must say so rather than implying a hole was closed.
+
+## Open questions — as put, now settled above
 
 1. **Where does the type live, and what can construct it?** `peisear-auth`
    beside the session, or `peisear-core` beside the domain types. The

@@ -31,7 +31,7 @@ Design settled. Implementation may begin.
 
 | ID | Title | Target |
 |----|-------|--------|
-| 013 | [The sprint record](./accepted/013-the-sprint-record.md) — capture what a sprint reported at completion, instead of freezing what it contains. **Accepted 2026-09-24** with `DEC-054`; rewrites `FR-SPR-004`'s mechanism, withdraws `SPRINT-002` and half of `SPRINT-001` | 0.39.0 |
+| 014 | [The identity newtype](./accepted/014-the-identity-newtype.md) — **accepted 2026-10-07**, `DEC-058`. Identity is a `String` and identity-ness lives in a variable's name; a type only a session can construct makes `NFR-PRIV-005`'s stronger reading satisfiable. **Not a security fix** — the boundary holds; what changes is that it cannot be broken by inattention | 0.43.0 |
 
 RFC 011 closed at 0.33.0 and RFC 012 at 0.32.0; both moved to `done/`.
 
@@ -41,14 +41,13 @@ RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 Open for review. Design may still change.
 
-| ID | Title | Target |
-|----|-------|--------|
-| 014 | [The identity newtype](./proposed/014-the-identity-newtype.md) — identity is a `String` and identity-ness lives in a variable's name; a newtype only a session can construct makes `NFR-PRIV-005`'s stronger reading satisfiable. **Not a security fix** — the boundary holds; what changes is that it cannot be broken by inattention | 0.43.0 if accepted |
+**Nothing is currently proposed.**
 
 ## Implemented
 
 | ID | Title | Shipped in |
 |----|-------|------------|
+| 013 | [The sprint record](./done/013-the-sprint-record.md) — *has handoffs*; `FR-SPR-004` protected **one of four inputs** to the figures it existed to protect, so a completed sprint drifted when a carried-over issue was finished later. The record is captured at completion (`DEC-054`) and reopen discards it (`DEC-053`) | 0.39.0 |
 | 004 | [Direct manipulation](./done/004-direct-manipulation.md) — umbrella, **closed 2026-09-24**. Four of its five substeps shipped; **D-5 (issue list reorder) is retired by owner decision** rather than built — the sprint is the product's better answer to *what is next*, and requirement 10 makes the drag desktop-only. `ORD-001` removes the column it would have used | 0.25.0–0.36.0, closed 0.38.0 |
 | 004d | [Direct manipulation — the calendar (D-3)](./done/004d-direct-manipulation-calendar.md) — *has handoffs*; the lock applies in full. Accepted carrying **one of the sketch's three actions** | 0.36.0 |
 | 004c | [Direct manipulation — the sprint plan (D-4)](./done/004c-direct-manipulation-sprint-plan.md) — *has handoffs*; **the first substep with no optimistic lock to carry**; the sketch's keyboard binding withdrawn | 0.35.0 |

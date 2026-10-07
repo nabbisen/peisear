@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-09-25
 **Target release**: 0.39.0
-**Governing RFC**: [0013](../../accepted/013-the-sprint-record.md), `DEC-054`.
+**Governing RFC**: [0013](../../done/013-the-sprint-record.md), `DEC-054`.
 **Related requirement**: **`NFR-PRIV-007`** — *aggregates must not be
 reversible to individuals*.
 **Source**: found by the dev team in `SPRINT-004`'s review request §6, reported

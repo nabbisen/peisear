@@ -1,6 +1,9 @@
 # RFC 0013: The sprint record — capturing what a sprint reported, instead of freezing what it contains
 
-**Status**: **Accepted** (2026-09-24) — implementation may begin
+**Status**: **Done** — shipped at 0.39.0 (`SPRINT-004`, `SPRINT-005`).
+(Accepted 2026-09-24; moved to `done/` 2026-10-07, having sat in `accepted/`
+for three releases after shipping — the same lifecycle lag `004c`/`004d` had,
+and the second time.)
 **Target**: 0.39.0
 **Related spec sections**: `SPEC §9.1`, `SPEC §17.3`, `GUI §5`
 **Related requirements**: `FR-SPR-001`, `FR-SPR-003`, **`FR-SPR-004`** (whose

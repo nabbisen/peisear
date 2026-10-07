@@ -1,6 +1,6 @@
 # Handoffs — the sprint record
 
-**RFC [0013](../../accepted/013-the-sprint-record.md)**, accepted 2026-09-24,
+**RFC [0013](../../done/013-the-sprint-record.md)**, accepted 2026-09-24,
 `DEC-054`. Capturing what a sprint reported at completion, instead of freezing
 what it contains.
 

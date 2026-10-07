@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-09-24
 **Target release**: 0.39.0
-**Governing RFC**: [0013](../../accepted/013-the-sprint-record.md), accepted
+**Governing RFC**: [0013](../../done/013-the-sprint-record.md), accepted
 2026-09-24, `DEC-054`. **Read it first** — the reasoning for capturing rather
 than freezing is there and is not repeated here.
 **Supersedes**: `SPRINT-003` (reopen, `DEC-053`), folded in below.
