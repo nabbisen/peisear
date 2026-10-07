@@ -1965,9 +1965,25 @@ second predicate exists to drift.
 **Colour MUST NOT be the only carrier of a state.** A text label satisfies
 this; an icon satisfies it; colour with neither does not.
 In charts, series MUST be separable without relying on hue.
-*Source*: `SPEC §30.1`, `SPEC §31.2`. *Status*: **Partial — audited 0.41.0
-(`A11Y-001`): the first sentence holds everywhere measured; the second does
-not.** *Priority*: P1.
+*Source*: `SPEC §30.1`, `SPEC §31.2`. *Status*: **Met at 0.41.0** — audited
+`A11Y-001`: every state-bearing surface across 21 pages carries a text label,
+and **both charts are single-hue (240), so neither relies on hue at all.**
+*Priority*: P1.
+*Correction (0.42.0) — I recorded this as Partial against a sentence I had just
+written, which the product satisfies.* The 0.41.0 amendment replaced
+*"colour-blind-safe patterning MUST be used in charts"* with *"series MUST be
+separable without relying on hue"*, and then carried `A11Y-001`'s finding — the
+series are separated by **lightness** at 1.77 : 1 — into the status as a
+failure. **Lightness is not hue**, so the finding does not bear on this
+sentence; the charts cannot confuse a colour-blind reader, which is what this
+requirement is for.
+**The finding is real and belongs elsewhere.** A 1.77 : 1 separation between
+two series, with one bar at 1.86 : 1 against its background, is a **contrast**
+problem — and `NFR-A11Y-005` covers **text only**, which is why `A11Y-001`
+reported that *"contrast between chart series is not required by anything in
+the record."* It is now `NFR-A11Y-010`. **Fourth instance of one editing habit
+of mine**: a status written against the finding rather than against the
+sentence it sits under.
 *Amendment (0.41.0)*: read *"State MUST be conveyed by label **and** icon"*.
 Taken literally, priority, issue status, sprint status and team role all fail
 while carrying a plain English word naming the state — and the codebase had
@@ -1985,6 +2001,29 @@ carry no patterning but the median's dash. **A tabular equivalent exists for
 both and does not close this**: it satisfies `NFR-A11Y-003` by making the data
 reachable, and does nothing for a reader who can see the chart and cannot
 separate two pale blues.
+
+**NFR-A11Y-010 — Non-text contrast**
+Graphical objects needed to understand a view, and the boundaries of
+interactive controls, MUST reach **3:1** against what they are distinguished
+from — an adjacent series, a neighbouring element, or their own background.
+*Rationale*: WCAG 2.2 SC 1.4.11 is a separate criterion from 1.4.3 (text,
+4.5 : 1), and this project had only the latter. `NFR-A11Y-004` asks whether
+meaning survives the loss of **hue**; this asks whether it survives low
+**contrast**, which is a different reader and a different failure.
+*Source*: derived; added 0.42.0 after `A11Y-001` measured the gap and
+`NFR-A11Y-004`'s 0.41.0 wording was found not to cover it.
+*Status*: **Not met** — measured `A11Y-001`: the burndown's two series are
+**1.77 : 1** apart and the completed-work bars **2.09 : 1**, with the
+carried-over bar at **1.86 : 1** against white. `A11Y-007` addresses them.
+*Priority*: P1 — same reader `NFR-A11Y-005` protects, and the same product
+decision: a chart nobody can read is a chart that is not there.
+*Scope, stated so this is checkable*: it covers chart series, the median
+reference line, and any element whose shape or position carries meaning. It
+does **not** restate `NFR-A11Y-005` for text, and `contrast_scan`'s
+`text-base-content/{10..60}` rule is that requirement's, not this one's.
+*What is not claimed*: no audit of every graphical element has been done. Two
+charts were measured; the figure for anything else is unknown, and a status
+that said otherwise would be the shape `§10.17` records.
 
 **NFR-A11Y-005 — Contrast**
 Text and background combinations MUST meet WCAG AA (4.5:1).
