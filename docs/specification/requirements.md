@@ -1884,8 +1884,20 @@ be off-screen.
 the document on every load; reading navigation in would make this requirement
 unsatisfiable by construction. **What a navigation owes instead is
 `NFR-A11Y-009`.**
-*Source*: `SPEC §30.1`. *Status*: **Partial — audited 0.41.0 (`A11Y-001`),
-4 sites of 8 hold.** *Priority*: P1.
+*Source*: `SPEC §30.1`. *Status*: **Met at 0.41.0** — all eight in-document
+sites `A11Y-001` measured now hold, four of them having been fixed by
+`A11Y-004` and `A11Y-005` in that same release. **Scope of the claim**: the
+eight are D-1's status change on issue detail and on the list, the calendar
+drag, the board drag, the sprint-plan drag, and the undo toast's two endings
+on each of those surfaces. **Not measured**: a validation error re-render,
+which is a full-document response and therefore `NFR-A11Y-009`'s; any browser
+other than Chrome; and a real screen reader. *Priority*: P1.
+*Editing note (0.41.0)*: this status read **Partial — 4 sites of 8 hold** two
+lines above a paragraph saying all four were closed. **Third instance of one
+habit of mine**: amending an entry by adding a correction while leaving the
+`*Status*` field as it was — after `FR-HLT-009` and this entry's own measured
+paragraph. The fix is not a check; it is to treat the status field as part of
+the correction rather than its neighbour.
 *What was measured, and then fixed in the same release*: `A11Y-001` found
 D-1's status change and the calendar drag keeping focus on the acted-on
 control, and the **board drag**, the **sprint-plan drag** and **both ways the
