@@ -121,6 +121,21 @@ personal-data storage accepts nothing else.*
 1. ~~**Where does it live, what can construct it?**~~ — **`peisear-auth`,
    constructible only from the authenticated session.** A type in `core` that
    anything can build is the `String` again.
+   **Corrected 2026-10-07 from `PRIV-002`'s investigation.** This decision, and
+   the summary above it, described *"a private field plus a `From<&Session>`"*.
+   **There is no `Session` type**, and what `jwt::verify` returns is `Claims`,
+   **whose fields are all `pub` and must be for `serde::Deserialize`** — so a
+   `From<&Claims>` would have added no guarantee whatever. The mechanism was
+   specified against a type nobody had looked up.
+   **What is achievable is stronger**: a struct's private field is private to
+   its **module**, not its crate, so declaring the type inside
+   `peisear_auth::jwt` with `verify` as the only function that can see the
+   field makes *only a cryptographically-verified token produces one* a
+   compiler-checked property. **Proven by plant** — a downstream crate's
+   struct-literal attempt fails to compile (`E0423`), the legitimate path
+   works, and a wrong-signature token yields nothing.
+   **And `peisear-storage` does not depend on `peisear-auth`**; that edge is a
+   first step, which this RFC did not say.
 2. ~~**One type or two?**~~ — **One**, named for the requester. `SubjectId`
    and `RequesterId` are the same value at every current call site;
    distinguishing them would catch an administrator-acting-on-another case
@@ -145,6 +160,22 @@ personal-data storage accepts nothing else.*
 3. **Is the churn acceptable in a release with no user-visible change?**
    This is the question I would most like answered, because the honest answer
    to *"what does a user get"* is **nothing**.
+
+## How tests obtain one — settled 2026-10-07, and there is no hole
+
+`PRIV-002`'s investigation counted **40 direct storage call sites in tests
+against 29 in production**, and proposed routing some through HTTP and
+bounding the rest behind a scanned constructor.
+
+**Neither is needed.** `jwt::issue` and `jwt::verify` are both `pub` and the
+test harness fixes the secret, so a test mints and verifies its own token in
+two lines and holds a **genuinely verified** identity — no HTTP, full timing
+control for the atomicity tests, and **no constructor that bypasses
+verification**.
+
+**This is not a loophole.** The guarantee is *only a verified token produces
+one*; a test that mints and verifies has satisfied it rather than side-stepped
+it. **No feature flag, no test-only constructor, no scan.**
 
 ## Schedule
 
