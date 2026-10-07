@@ -62,6 +62,29 @@ relative to it, not to this directory):
 
 Commit the regenerated `static/tailwind.css`.
 
+## Reading the diff — three rules will look unexplained
+
+**Tailwind extracts class candidates from any word in the files it scans,
+including prose inside comments.** So a regeneration emits utilities nobody
+wrote as classes, and they appear in the diff with no corresponding markup.
+
+Measured at 0.42.0: `A11Y-006` and `A11Y-008` between them added **23 rules,
+three of which are spurious** — `.blur` and `.invert`, because that release's
+code comments describe a node that *blurs*; and `.ring`, because they discuss
+a focus *ring*. About 100 bytes of unused CSS.
+
+**This is expected and is not drift.** What to check in a regeneration diff:
+
+- **Rules removed: should be zero.** A removal means the content scan stopped
+  seeing a class that is still in use, which is the dangerous direction.
+- **The version banner unchanged**, unless you meant to upgrade.
+- **Additions accounted for** — each either a class you added, or a word you
+  wrote. If one is neither, that is worth chasing.
+
+**A `blocklist` is deliberately not used** to suppress the spurious three: it
+would grow with every word anyone writes, and the cost it saves is a hundred
+bytes.
+
 ## The trap this whole setup exists to avoid
 
 **The Play CDN this replaced never purged — it scanned the live DOM and
