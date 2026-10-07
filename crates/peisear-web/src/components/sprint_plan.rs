@@ -154,10 +154,18 @@ pub fn SprintPlanPage(
                 // shares `show_backlog`'s gate rather than its own.
                 {show_backlog.then_some(filter_form)}
 
-                <main class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                // `A11Y-009`: was `<main>` -- a second landmark on a page
+                // `AppShell` already gives one, invalid ARIA, and no
+                // landmark intent of its own (pure grid layout, confirmed
+                // against this file's own content, not assumed). `A11Y-006`'s
+                // skip link happens to land on the right one regardless
+                // (`AppShell`'s is first), which made the duplicate
+                // something the product depended on rather than merely
+                // ought to have fixed.
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {show_backlog.then_some(backlog_section)}
                     {sprint_items_section}
-                </main>
+                </div>
 
                 // `PLAN-002` §4.3/§4.5: the copy island and
                 // `plan.js`'s own tag, gated on `can_move` (§6: "the

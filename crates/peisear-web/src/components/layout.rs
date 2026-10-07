@@ -120,6 +120,22 @@ pub fn PublicShell(#[prop(into)] title: String, children: Children) -> impl Into
 /// interactive element in `components/` — measured by `A11Y-006`'s own
 /// package that `min-h-11`/`min-w-11` do not reintroduce scroll width
 /// while the link sits hidden.
+///
+/// **`A11Y-009` §1 — the hidden 44×44 box is not clickable, measured, not
+/// assumed.** `grow()`'s unconditional `min-h-11`/`min-w-11` does make the
+/// hidden (unfocused) box 44×44 at the viewport's top-left corner
+/// (`A11Y-006`'s own finding), but `clip: rect(0,0,0,0)` (from `sr-only`)
+/// removes it from hit-testing as well as painting: a real
+/// `Input.dispatchMouseEvent` at six points spanning the box — including
+/// `(0,0)`, `(1,1)`, `(5,3)`, `(42,5)` — never returns this element from
+/// `elementFromPoint`, and a click at each activates nothing (the `<header>`
+/// background, or the brand link where it geometrically overlaps, exactly
+/// as if the skip link were not there). No invisible target exists on any
+/// page. The touch-target floor therefore stays unconditional here —
+/// `DEC-050`'s ruling (`A11Y-009` §1) was to scope it to the focused state
+/// only *if* the hidden box turned out to be clickable; it is not, so that
+/// branch does not apply, and this comment is the record so the next
+/// reader does not re-ask.
 #[component]
 fn SkipLink() -> impl IntoView {
     view! {
