@@ -130,6 +130,15 @@ fn SkipLink() -> impl IntoView {
     }
 }
 
+/// `A11Y-008`: the ring every plain link on the page draws at
+/// `:focus-visible` (`a:focus-visible{outline:2px solid currentColor;
+/// outline-offset:2px}`, `static/daisyui.min.css`), reapplied with
+/// `!important` on the four account-menu links the vendored `.menu`
+/// selector otherwise overrides to transparent. `focus-visible:`, not
+/// `focus:` — a mouse click on these links must not draw it, matching
+/// every other stop's own rule.
+const MENU_FOCUS_RING: &str = "focus-visible:!outline focus-visible:!outline-2 focus-visible:!outline-offset-2 focus-visible:!outline-current";
+
 #[component]
 fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
     // Pre-bound: selecting the right variant needs the conditional
@@ -267,10 +276,27 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                         // `align-items: center`, so the target grows without
                         // needing an explicit flex wrapper -- verified by
                         // measurement, not assumed (`TT-004` §2's own trap).
-                        <li><a href="/today" class=grow("")>{t(MessageKey::NavLinkToday)}</a></li>
-                        <li><a href="/teams" class=grow("")>{t(MessageKey::NavLinkTeams)}</a></li>
-                        <li><a href="/inbox" class=grow("")>{t(MessageKey::NavLinkInbox)}</a></li>
-                        <li><a href="/settings" class=grow("")>{t(MessageKey::NavLinkSettings)}</a></li>
+                        // `A11Y-008` (`NFR-A11Y-010`): the vendored `.menu`
+                        // selector (`static/daisyui.min.css`, `DEC-051` --
+                        // not edited) draws `outline: 2px solid transparent`
+                        // on these four direct `<li>` children at
+                        // `:focus-visible`, overriding the plain
+                        // `a:focus-visible{outline:2px solid currentColor}`
+                        // every other link on the page draws, by selector
+                        // specificity alone. Measured: the grey row
+                        // background that remains (`oklch(var(--bc)/.1)`
+                        // over white) is 1.22:1 against its neighbours, far
+                        // under the 3:1 floor -- not "unconventional but
+                        // conforming." `MENU_FOCUS_RING` reuses the exact
+                        // appearance the other ten stops already draw
+                        // rather than inventing a second style, with `!`
+                        // (Tailwind's `!important`) because nothing lower
+                        // specificity reaches through the vendored rule
+                        // without editing it.
+                        <li><a href="/today" class=grow(MENU_FOCUS_RING)>{t(MessageKey::NavLinkToday)}</a></li>
+                        <li><a href="/teams" class=grow(MENU_FOCUS_RING)>{t(MessageKey::NavLinkTeams)}</a></li>
+                        <li><a href="/inbox" class=grow(MENU_FOCUS_RING)>{t(MessageKey::NavLinkInbox)}</a></li>
+                        <li><a href="/settings" class=grow(MENU_FOCUS_RING)>{t(MessageKey::NavLinkSettings)}</a></li>
                         <li>
                             <form method="post" action="/logout">
                                 // The DaisyUI menu-item grid/padding lands on
