@@ -1,0 +1,9 @@
+# Handoffs — reach after navigation
+
+**Not RFC-governed.** `NFR-A11Y-009`, split out of `NFR-A11Y-002` at 0.41.0 and
+recorded **Not met**: every native form POST leaves focus on `body`, and
+reaching the content costs eleven Tab presses with no skip link.
+
+| ID | Link | What | Release |
+|---|---|---|---|
+| A11Y-006 | [A11Y-006](./A11Y-006-eleven-tab-presses-to-the-content.md) | A skip link — **the only one of the requirement's three options that works without JavaScript**, which a remedy for reaching content must. One element in the layout, `<main id="main" tabindex="-1">`, and the `tabindex` measured rather than trusted. Expect the overflow gate to be the thing that catches a bad visually-hidden style. | 0.42.0 |
