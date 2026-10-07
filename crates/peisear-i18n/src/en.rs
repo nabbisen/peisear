@@ -210,6 +210,7 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::NavSearchPlaceholder => "Search...".to_string(),
         MessageKey::NavSearchQueryLabel => "Search query".to_string(),
         MessageKey::NavSearchSuggestionsLabel => "Search suggestions".to_string(),
+        MessageKey::SkipToMainContent => "Skip to main content".to_string(),
         MessageKey::NavLinkToday => "Today".to_string(),
         MessageKey::NavLinkTeams => "Teams".to_string(),
         MessageKey::NavLinkInbox => "Inbox".to_string(),

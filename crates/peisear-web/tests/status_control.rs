@@ -262,9 +262,24 @@ async fn detail_segments_are_keyboard_reachable() {
         .await;
     resp.assert_status(StatusCode::OK);
     let body = resp.text();
+    // `A11Y-006` gave the page's own `<main>` a legitimate
+    // `tabindex="-1"` (the skip link's landing target), so a
+    // whole-body substring check is no longer specific to the status
+    // segments this test is named for. Scoped to the segment group's
+    // own markup instead -- the same fragment `aria_pressed_marks_the_
+    // current_status_on_the_detail_segment` above already isolates by
+    // its `role="group" aria-label="Issue status"` marker.
+    let segment_start = body
+        .find(r#"role="group" aria-label="Issue status""#)
+        .expect("status segment group not found in detail page body");
+    let segment_end = body[segment_start..]
+        .find("</div>")
+        .map(|i| segment_start + i)
+        .expect("status segment group has no closing </div>");
+    let segment_html = &body[segment_start..segment_end];
     assert!(
-        !body.contains(r#"tabindex="-1""#),
-        "the status segments must be keyboard-reachable now, not skipped: {body}"
+        !segment_html.contains(r#"tabindex="-1""#),
+        "the status segments must be keyboard-reachable now, not skipped: {segment_html}"
     );
 }
 

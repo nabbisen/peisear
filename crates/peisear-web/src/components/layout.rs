@@ -75,8 +75,9 @@ pub fn AppShell(
 ) -> impl IntoView {
     view! {
         <Base title=title>
+            <SkipLink/>
             <Navbar user=user unread_count=unread_count/>
-            <main class="container mx-auto px-4 py-6 max-w-6xl">
+            <main id="main" tabindex="-1" class="container mx-auto px-4 py-6 max-w-6xl">
                 <FlashBar flash=flash/>
                 {children()}
             </main>
@@ -97,10 +98,35 @@ pub fn AppShell(
 pub fn PublicShell(#[prop(into)] title: String, children: Children) -> impl IntoView {
     view! {
         <Base title=title>
-            <main class="container mx-auto px-4 py-6 max-w-6xl">
+            <SkipLink/>
+            <main id="main" tabindex="-1" class="container mx-auto px-4 py-6 max-w-6xl">
                 {children()}
             </main>
         </Base>
+    }
+}
+
+/// `A11Y-006` (`NFR-A11Y-009`): one link, first in the DOM of both
+/// shells, before the navbar where one exists. `href="#main"` pairs
+/// with `id="main" tabindex="-1"` on each shell's own `<main>` —
+/// the `tabindex` is load-bearing, since a bare fragment jump moves
+/// scroll but not focus, and focus is the thing this fixes.
+///
+/// Visually hidden until focused (`sr-only focus:not-sr-only`), never
+/// `display:none` (`DEC-021`'s posture: this must work with
+/// scripting off, so it must stay a real, focusable, tabbable link,
+/// not something a script reveals). `grow(...)` composes `TOUCH_TARGET`
+/// so the touch-target coverage guard sees it the same as every other
+/// interactive element in `components/` — measured by `A11Y-006`'s own
+/// package that `min-h-11`/`min-w-11` do not reintroduce scroll width
+/// while the link sits hidden.
+#[component]
+fn SkipLink() -> impl IntoView {
+    view! {
+        <a href="#main"
+           class=grow("sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:flex focus:items-center focus:bg-base-100 focus:text-base-content focus:px-4 focus:rounded-md focus:shadow-lg focus:border focus:border-base-300 focus:outline focus:outline-2 focus:outline-offset-2")>
+            {t(MessageKey::SkipToMainContent)}
+        </a>
     }
 }
 

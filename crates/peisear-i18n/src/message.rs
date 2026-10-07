@@ -656,6 +656,11 @@ pub enum MessageKey {
     NavSearchPlaceholder,
     NavSearchQueryLabel,
     NavSearchSuggestionsLabel,
+    /// `A11Y-006`: the layout's skip link, before the navbar in the
+    /// DOM, `href="#main"`. Visually hidden until focused —
+    /// `NFR-A11Y-009`'s remedy, the only one of its three options
+    /// that works without scripting.
+    SkipToMainContent,
     /// Standalone nav-link words, each reused at more than one call
     /// site (navbar dropdown item; `NavLinkToday` is also
     /// `render_breadcrumb`'s hard-coded leading entry). Flat
@@ -2496,6 +2501,7 @@ impl MessageKey {
             MessageKey::NavSearchPlaceholder,
             MessageKey::NavSearchQueryLabel,
             MessageKey::NavSearchSuggestionsLabel,
+            MessageKey::SkipToMainContent,
             MessageKey::NavLinkToday,
             MessageKey::NavLinkTeams,
             MessageKey::NavLinkInbox,

@@ -136,6 +136,7 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::NavSearchPlaceholder => "[fx-search-placeholder]".to_string(),
         MessageKey::NavSearchQueryLabel => "[fx-search-query]".to_string(),
         MessageKey::NavSearchSuggestionsLabel => "[fx-search-suggestions]".to_string(),
+        MessageKey::SkipToMainContent => "[fx-skip-to-main]".to_string(),
         MessageKey::NavLinkToday => "[fx-today]".to_string(),
         MessageKey::NavLinkTeams => "[fx-teams]".to_string(),
         MessageKey::NavLinkInbox => "[fx-inbox]".to_string(),
