@@ -1932,9 +1932,15 @@ on `body` with the page scrolled to the top; reaching the first control in
 `main` then costs **11 Tab presses**, or 10 on a phone board, and **no skip
 link exists**. On a phone this also discards the reader's position — 605 px
 becomes 0 on a 1,697 px page.
-*Source*: derived; `SPEC §30.1`'s intent. *Status*: **Not met** — measured
-0.41.0 (`A11Y-001`). *Priority*: P2 — it is a real cost and it is the same cost
-on every page, which is what makes one remedy enough.
+*Source*: derived; `SPEC §30.1`'s intent. *Status*: **Met at 0.42.0**
+(`A11Y-006`) — a skip link, first in the DOM of both shells, hidden until
+focused, landing on `<main id="main" tabindex="-1">`. **Eleven Tab presses
+became one press and an activation**, measured on every page the audit had
+measured at eleven, and **identical with scripting disabled**, which is why a
+skip link was chosen over focusing `main` on load. *Priority*: P2.
+*What is still not met and belongs to no requirement*: the reader's scroll
+position is still discarded by a POST — 605 px becomes 0 on a phone. The same
+mechanism, a different remedy, and `A11Y-006` was told not to attempt it.
 
 **NFR-A11Y-003 — Screen reader equivalence for charts**
 Every chart MUST provide a one-sentence summary label, a two-to-three
@@ -2012,9 +2018,12 @@ meaning survives the loss of **hue**; this asks whether it survives low
 **contrast**, which is a different reader and a different failure.
 *Source*: derived; added 0.42.0 after `A11Y-001` measured the gap and
 `NFR-A11Y-004`'s 0.41.0 wording was found not to cover it.
-*Status*: **Not met** — measured `A11Y-001`: the burndown's two series are
-**1.77 : 1** apart and the completed-work bars **2.09 : 1**, with the
-carried-over bar at **1.86 : 1** against white. `A11Y-007` addresses them.
+*Status*: **Met at 0.42.0** (`A11Y-007`) — both charts now separate their
+series at **3.40 : 1** and the worst series-to-background pairing at
+**4.22 : 1**, where they were 2.09 / 1.77 and 1.86. One pair of single-hue
+values is shared by both charts where four were tuned separately, and every
+figure was produced by **two independent OKLab→sRGB conversions agreeing to
+the 8-bit value**.
 *Priority*: P1 — same reader `NFR-A11Y-005` protects, and the same product
 decision: a chart nobody can read is a chart that is not there.
 *Scope, stated so this is checkable*: it covers chart series, the median
