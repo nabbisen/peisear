@@ -110,7 +110,7 @@ the RFC number they are keyed to.
 | [`handoffs/031-focus-defects/`](./handoffs/031-focus-defects/README.md) | **Not RFC-governed** — `A11Y-002` and `A11Y-003`, defects `A11Y-001` measured, target 0.41.0 |
 | [`handoffs/032-a-notification-that-cannot-fire/`](./handoffs/032-a-notification-that-cannot-fire/README.md) | **Not RFC-governed** — `NTF-001`, a preference row for a notification with no emitter, target 0.41.0 |
 | [`handoffs/033-published-documentation/`](./handoffs/033-published-documentation/README.md) | `DEC-057` — `DOCS-001`, `docs/` as an mdbook site on Pages, target 0.41.0 |
-| [`handoffs/034-reach-after-navigation/`](./handoffs/034-reach-after-navigation/README.md) | **Not RFC-governed** — `A11Y-006`, `NFR-A11Y-009`'s skip link, target 0.42.0 |
+| [`handoffs/034-reach-after-navigation/`](./handoffs/034-reach-after-navigation/README.md) | **Not RFC-governed** — `A11Y-006`, `NFR-A11Y-011`'s skip link, target 0.42.0 |
 | [`handoffs/035-non-text-contrast/`](./handoffs/035-non-text-contrast/README.md) | **Not RFC-governed** — `A11Y-007`/`A11Y-008`, `NFR-A11Y-010` at 3:1, target 0.42.0 |
 | [`handoffs/036-status-drift/`](./handoffs/036-status-drift/README.md) | **Not RFC-governed** — `REQ-003`, whether a stale requirement status is mechanically detectable, target 0.43.0 |
 | [`handoffs/0014-the-identity-newtype/`](./handoffs/0014-the-identity-newtype/README.md) | RFC 0014 / `DEC-058` — `PRIV-002`, identity becomes a type, target 0.43.0 |

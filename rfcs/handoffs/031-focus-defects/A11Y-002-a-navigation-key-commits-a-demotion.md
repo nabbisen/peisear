@@ -51,7 +51,7 @@ to the same route with the same message keys.
   `Tab` to the button and `Enter`, and confirm the role changes once, to the
   chosen value. **Report both, with the values.**
 - **Focus after the commit**: it is a native POST, so `body` is expected —
-  `NFR-A11Y-009`, not this handoff. **Say where it lands**; do not fix it here.
+  `NFR-A11Y-011`, not this handoff. **Say where it lands**; do not fix it here.
 - Scripting off: the form still submits and refuses the last admin.
 - The touch-target floor holds on the new control.
 - `DEC-007`: report the new count, last recorded **364**. A rendered test that

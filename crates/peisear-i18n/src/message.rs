@@ -658,7 +658,7 @@ pub enum MessageKey {
     NavSearchSuggestionsLabel,
     /// `A11Y-006`: the layout's skip link, before the navbar in the
     /// DOM, `href="#main"`. Visually hidden until focused —
-    /// `NFR-A11Y-009`'s remedy, the only one of its three options
+    /// `NFR-A11Y-011`'s remedy, the only one of its three options
     /// that works without scripting.
     SkipToMainContent,
     /// Standalone nav-link words, each reused at more than one call

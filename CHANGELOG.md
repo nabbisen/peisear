@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Internal
+
+- **A requirement identifier was used twice.** `NFR-A11Y-009` was added at
+  0.41.0 for *Where a navigation leaves the reader* while already belonging to
+  *Keyboard shortcuts*, a P3 item dating to the 0.19.1 baseline. The newer
+  entry is renumbered **`NFR-A11Y-011`**; the older keeps the number, because
+  it is cited in two superseded baselines that are retained unedited as the
+  record of their own releases. **The 0.41.0 and 0.42.0 sections below still
+  say `NFR-A11Y-009`** and are left as written: a release section records what
+  was said at the time, and the published release notes carry the same text.
+  Found by `REQ-003` while parsing the document for something else.
+
 ## [0.42.0] — 2026-10-07
 
 ### Highlights

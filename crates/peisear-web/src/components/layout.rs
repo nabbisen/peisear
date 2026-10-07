@@ -106,7 +106,7 @@ pub fn PublicShell(#[prop(into)] title: String, children: Children) -> impl Into
     }
 }
 
-/// `A11Y-006` (`NFR-A11Y-009`): one link, first in the DOM of both
+/// `A11Y-006` (`NFR-A11Y-011`): one link, first in the DOM of both
 /// shells, before the navbar where one exists. `href="#main"` pairs
 /// with `id="main" tabindex="-1"` on each shell's own `<main>` —
 /// the `tabindex` is load-bearing, since a bare fragment jump moves

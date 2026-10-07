@@ -23,7 +23,7 @@ A requirement's `*Status*` field says one thing and the release says another.
 | 2 | `FR-SPR-004` | `Specified`, blaming an unbuilt screen | three shipped routes reached it — **and this one cost two handoffs**, one shipped to `main` and half reverted, one written and withdrawn unbuilt |
 | 3 | `FR-HLT-009` | `Partial`, with an exception its own correction had withdrawn | — |
 | 4 | `NFR-A11Y-004` | `Partial`, against a finding that did not bear on its own sentence | — |
-| 5 | `NFR-A11Y-009` | **Not met** | met by `A11Y-006` **in the release that shipped saying so** |
+| 5 | `NFR-A11Y-011` | **Not met** | met by `A11Y-006` **in the release that shipped saying so** |
 | 6 | `NFR-A11Y-010` | **Not met** | met by `A11Y-007`, same release |
 
 **`REQ-001` corrected sixteen more of the same shape** in 0.40.0, and

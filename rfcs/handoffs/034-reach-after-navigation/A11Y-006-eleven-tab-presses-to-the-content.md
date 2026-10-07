@@ -3,7 +3,7 @@
 **Issued by**: Architect
 **Date**: 2026-10-07
 **Target release**: 0.42.0
-**Related requirement**: **`NFR-A11Y-009` — Not met**, measured `A11Y-001`.
+**Related requirement**: **`NFR-A11Y-011` — Not met**, measured `A11Y-001`.
 **Depends on**: nothing. **First of the three.**
 
 ---
@@ -23,7 +23,7 @@ one route differ**, which is why one remedy fixes all of them.
 
 ## 2. The remedy — decided, and the reason is `DEC-021`
 
-`NFR-A11Y-009` names three: a skip link, a focused `main` landmark, or a
+`NFR-A11Y-011` names three: a skip link, a focused `main` landmark, or a
 focused status region. **Take the skip link.**
 
 **It is the only one that works without JavaScript**, and a requirement about
@@ -50,14 +50,14 @@ for some users and not others.
 scripting.
 
 **Does not fix**: focus still begins on `body` after a navigation. **That is
-correct and `NFR-A11Y-009` is written to allow it** — the browser places focus
+correct and `NFR-A11Y-011` is written to allow it** — the browser places focus
 at the document on every load, and `NFR-A11Y-002` explicitly excludes
 navigation. **Do not add a script that focuses `main` on load**; it would take
 focus from a reader who has already started moving, for a benefit the skip
 link already provides.
 
 **Also not in scope**: the lost scroll position on a phone. It is the same
-mechanism and a different remedy, and `NFR-A11Y-009` does not require it.
+mechanism and a different remedy, and `NFR-A11Y-011` does not require it.
 **If you see a cheap way to preserve it, report it rather than doing it.**
 
 ## 4. Verification

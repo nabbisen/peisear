@@ -1,6 +1,6 @@
 # Handoffs — reach after navigation
 
-**Not RFC-governed.** `NFR-A11Y-009`, split out of `NFR-A11Y-002` at 0.41.0 and
+**Not RFC-governed.** `NFR-A11Y-011`, split out of `NFR-A11Y-002` at 0.41.0 and
 recorded **Not met**: every native form POST leaves focus on `body`, and
 reaching the content costs eleven Tab presses with no skip link.
 
