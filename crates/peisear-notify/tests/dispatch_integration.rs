@@ -40,7 +40,7 @@ use peisear_core::notifications::{Severity, channel as channel_id, kind as kind_
 use peisear_notify::config::{SmtpConfig, TlsMode};
 use peisear_notify::dispatch::DispatchContext;
 use peisear_notify::{DispatchEvent, DispatchTx, dispatch_loop};
-use peisear_storage::user_metrics_snapshots::SubjectId;
+use peisear_storage::subjects::SubjectId;
 use peisear_storage::{Pool, notifications as notif_store, pool, users};
 use tempfile::TempDir;
 use tokio::sync::mpsc;

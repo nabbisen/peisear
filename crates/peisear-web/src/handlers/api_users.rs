@@ -33,9 +33,7 @@ use axum::{
     extract::{Path, State},
 };
 use peisear_i18n::MessageKey;
-use peisear_storage::{
-    notifications, user_burnout, user_capacities, user_metrics_snapshots::SubjectId,
-};
+use peisear_storage::{notifications, subjects::SubjectId, user_burnout, user_capacities};
 use serde::Serialize;
 
 use crate::{

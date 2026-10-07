@@ -14,9 +14,7 @@ use axum::{
     extract::{Query, State},
     response::IntoResponse,
 };
-use peisear_storage::{
-    personal_metrics, user_burnout, user_capacities, user_metrics_snapshots::SubjectId,
-};
+use peisear_storage::{personal_metrics, subjects::SubjectId, user_burnout, user_capacities};
 use serde::Deserialize;
 
 use crate::{

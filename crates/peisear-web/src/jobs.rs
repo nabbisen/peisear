@@ -39,7 +39,8 @@ use peisear_notify::{
     detect_burnout_stalled_edge, dispatch_loop,
 };
 use peisear_storage::{
-    Pool, metrics_snapshots, personal_metrics, project_health, user_burnout, user_metrics_snapshots,
+    Pool, metrics_snapshots, personal_metrics, project_health, subjects, user_burnout,
+    user_metrics_snapshots,
 };
 use tokio::sync::{mpsc, oneshot};
 
@@ -163,7 +164,7 @@ async fn capture_one(db: &Pool, project_id: &str) -> Result<(), peisear_storage:
 /// assigned issue. Idle users are skipped — no signal to capture
 /// and no streak to track.
 async fn capture_all_users(db: &Pool, dispatch_tx: &DispatchTx) {
-    let user_ids = match user_metrics_snapshots::users_with_active_assignments(db).await {
+    let user_ids = match subjects::users_with_active_assignments(db).await {
         Ok(ids) => ids,
         Err(err) => {
             tracing::error!(error = %err, "snapshot_loop: failed to list active users");
@@ -196,7 +197,7 @@ async fn capture_all_users(db: &Pool, dispatch_tx: &DispatchTx) {
 /// any state transitions detected against the prior snapshot.
 async fn capture_one_user(
     db: &Pool,
-    user_id: &peisear_storage::user_metrics_snapshots::SubjectId,
+    user_id: &peisear_storage::subjects::SubjectId,
     dispatch_tx: &DispatchTx,
 ) -> Result<(), peisear_storage::StorageError> {
     let Some(metrics) = personal_metrics::for_user_global(db, user_id).await? else {

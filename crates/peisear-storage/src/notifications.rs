@@ -29,7 +29,7 @@
 use chrono::{DateTime, Utc};
 use peisear_auth::jwt::RequesterId;
 
-use crate::user_metrics_snapshots::SubjectId;
+use crate::subjects::SubjectId;
 use peisear_core::notifications::{Notification, Preference, Severity};
 use sqlx::FromRow;
 use uuid::Uuid;

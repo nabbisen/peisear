@@ -14,7 +14,7 @@
 //! its own cookie jar.
 
 use peisear_auth::jwt::{self, RequesterId};
-use peisear_storage::{Pool, user_metrics_snapshots::SubjectId, users};
+use peisear_storage::{Pool, subjects::SubjectId, users};
 
 use super::server::{JWT_SECRET, TestApp};
 

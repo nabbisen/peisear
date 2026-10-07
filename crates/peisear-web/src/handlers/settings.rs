@@ -24,7 +24,7 @@ use axum::{
 };
 use chrono::NaiveDate;
 use peisear_i18n::{Field, Locale, MessageKey};
-use peisear_storage::{user_capacities, user_metrics_snapshots::SubjectId, users};
+use peisear_storage::{subjects::SubjectId, user_capacities, users};
 use serde::Deserialize;
 
 use crate::{

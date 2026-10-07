@@ -37,7 +37,7 @@ use peisear_core::user_burnout::{
     EstimationDriftTrend, SWITCHING_MIN_EVENTS, SWITCHING_WINDOW_DAYS, UserBurnoutSignals,
 };
 
-use crate::{Pool, StorageResult, user_metrics_snapshots, user_metrics_snapshots::SubjectId};
+use crate::{Pool, StorageResult, subjects::SubjectId, user_metrics_snapshots};
 
 /// Window over which the overload-streak is counted. Two weeks is
 /// long enough to distinguish "had a busy week" from a
@@ -56,7 +56,7 @@ const STREAK_WINDOW_DAYS: i64 = 14;
 ///
 /// `PRIV-003`: takes [`SubjectId`] — `/me`'s handler derives one from
 /// its `RequesterId` (`From`), and the snapshot job's comes from
-/// [`crate::user_metrics_snapshots::users_with_active_assignments`].
+/// [`crate::subjects::users_with_active_assignments`].
 pub async fn for_user(
     pool: &Pool,
     user_id: &SubjectId,

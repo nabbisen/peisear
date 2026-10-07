@@ -8,54 +8,16 @@
 //! [`crate::user_burnout`]. Write API is one function called from
 //! the background job for each user with active assigned work.
 //!
-//! `PRIV-003` (`DEC-058`): [`SubjectId`] is declared here, not in
-//! `peisear-auth` beside [`peisear_auth::jwt::RequesterId`]. Its own
-//! trusted origin is a database enumeration
-//! ([`users_with_active_assignments`]), not a token, and putting it
-//! beside `RequesterId` would need `peisear-auth` to know about rows —
-//! a dependency in the wrong direction for a crate whose own doc
-//! comment states it has none. The field is private to this module, so
-//! nothing outside it — including the rest of `peisear-storage` — can
-//! construct one by struct-literal syntax; the only two paths are
-//! `From<&RequesterId>` below (a requester is always the subject of
-//! their own data) and this module's own enumeration.
+//! `PRIV-004`: the identity type these take, `SubjectId`, and the
+//! enumeration that mints it moved to [`crate::subjects`] — a module
+//! named for what it holds rather than for this one, which it happened
+//! to live beside first. See that module's own doc comment for the
+//! seal.
 
-use peisear_auth::jwt::RequesterId;
 use sqlx::FromRow;
 use uuid::Uuid;
 
-use crate::{Pool, StorageResult};
-
-/// See the module doc comment for why this lives here and what the two
-/// legitimate construction paths are. No public constructor exists
-/// beyond `From<&RequesterId>` and this module's own enumeration query —
-/// deliberately: a public `SubjectId::new(&str)` would be the `String`
-/// convention again, and would let a handler mint one from a path
-/// parameter and reach every function `PRIV-002`/`PRIV-003` sealed.
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct SubjectId(String);
-
-impl SubjectId {
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
-
-impl std::fmt::Display for SubjectId {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.0)
-    }
-}
-
-/// A requester is always the subject of their own data (`DEC-058`
-/// decision 2) — the handler path, and it is total: every handler that
-/// has a `RequesterId` can get a `SubjectId` for it with no fallible
-/// step.
-impl From<&RequesterId> for SubjectId {
-    fn from(rid: &RequesterId) -> Self {
-        SubjectId(rid.as_str().to_string())
-    }
-}
+use crate::{Pool, StorageResult, subjects::SubjectId};
 
 /// Compact view of one snapshot row, used by streak / trend
 /// queries. Mirrors the table columns minus storage metadata.
@@ -184,22 +146,4 @@ pub async fn recent_for_user(
     .await?;
 
     Ok(rows.into_iter().map(UserSnapshot::from).collect())
-}
-
-/// Users with at least one in-flight assigned issue, used by the
-/// background tick to choose which users to snapshot. Idle users
-/// (nothing assigned) have no signal to capture, so we save the
-/// row and the privacy footprint by skipping them.
-pub async fn users_with_active_assignments(pool: &Pool) -> StorageResult<Vec<SubjectId>> {
-    let rows: Vec<(String,)> = sqlx::query_as(
-        r#"
-        SELECT DISTINCT assignee_id
-        FROM issues
-        WHERE assignee_id IS NOT NULL
-          AND status IN ('open', 'in_progress')
-        "#,
-    )
-    .fetch_all(pool)
-    .await?;
-    Ok(rows.into_iter().map(|(id,)| SubjectId(id)).collect())
 }

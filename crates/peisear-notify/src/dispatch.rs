@@ -7,7 +7,7 @@
 
 use chrono::Utc;
 use peisear_core::notifications::{Severity, channel as channel_id};
-use peisear_storage::{Pool, notifications as notif_store, user_metrics_snapshots::SubjectId};
+use peisear_storage::{Pool, notifications as notif_store, subjects::SubjectId};
 use tokio::sync::mpsc;
 
 use crate::channel::{ChannelSendError, send_via_channel};

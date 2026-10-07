@@ -62,7 +62,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use peisear_auth::jwt::RequesterId;
 
-use crate::user_metrics_snapshots::SubjectId;
+use crate::subjects::SubjectId;
 use sqlx::FromRow;
 use uuid::Uuid;
 

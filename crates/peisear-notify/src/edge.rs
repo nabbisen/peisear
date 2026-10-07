@@ -10,7 +10,7 @@
 
 use peisear_core::notifications::{Severity, kind as kind_id};
 use peisear_i18n::{Locale, MessageKey};
-use peisear_storage::user_metrics_snapshots::SubjectId;
+use peisear_storage::subjects::SubjectId;
 
 use crate::dispatch::DispatchEvent;
 

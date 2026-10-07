@@ -26,7 +26,7 @@ use peisear_core::notifications::{
     kind,
 };
 use peisear_i18n::{Locale, MessageKey};
-use peisear_storage::{notifications as notif_store, user_metrics_snapshots::SubjectId};
+use peisear_storage::{notifications as notif_store, subjects::SubjectId};
 use serde::Deserialize;
 use std::collections::HashMap;
 

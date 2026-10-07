@@ -33,7 +33,7 @@ use peisear_core::personal_metrics::{
     DEFAULT_WIP_LIMIT, PERSONAL_ACTIVITY_WINDOW_DAYS, PersonalMetrics,
 };
 
-use crate::{Pool, StorageResult, user_metrics_snapshots::SubjectId};
+use crate::{Pool, StorageResult, subjects::SubjectId};
 
 /// Compute the event-aware estimation skew for a user across the
 /// given scope. Walks the user's recently-done issues, computes
