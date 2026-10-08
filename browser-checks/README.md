@@ -1,4 +1,4 @@
-# Browser checks — a gate, not a test
+# Browser checks — gates, not tests
 
 `BROWSER-001` (RFC 011 step 4, `DEC-048`). This directory holds the
 horizontal-overflow gate: one assertion, `scrollWidth <= clientWidth`, on
@@ -43,19 +43,39 @@ attention.
   creates fixtures through the real forms, sweeps twenty-four pages × five
   widths, and exits non-zero if any cell overflows or if any request
   reached a host other than `127.0.0.1`.
+- `undo-mousedown-trap.mjs` — **a second gate, not a second assertion on the
+  first** (`DM-TEST-001` item 6, wired by `DM-TEST-002` §2). Dispatches real
+  `Input.dispatchMouseEvent` sequences — a `mousedown` plus a small
+  movement — on the undo toast's button across the three **draggable**
+  surfaces, and fails if the browser reads the gesture as a drag-start
+  instead of a click. This is `A11Y-005`'s defect, and it is the one property
+  no source scan can observe, because what is being checked is **the
+  browser's own drag-versus-click decision**. `dm.js` is excluded on purpose:
+  its target has no `draggable` ancestor, so there is no trap to guard
+  against.
 
-## Running it locally
+## Running them locally
 
 ```bash
 cargo build -p peisear
 node browser-checks/overflow-gate.mjs
+node browser-checks/undo-mousedown-trap.mjs
 ```
 
 Needs a Chrome-family browser on `$PATH` (`google-chrome-stable`,
 `google-chrome`, `chromium`, or `chromium-browser`) or `CDP_BROWSER_BIN`
 pointing at one. `PEISEAR_BIN` overrides the binary path (default
-`target/debug/peisear`); `PEISEAR_PORT` overrides the scratch port
-(default `4173`).
+`target/debug/peisear`); `PEISEAR_PORT` overrides the scratch port.
+
+**The two scripts default to different ports — `4173` and `4174` — and each
+starts and tears down its own server and scratch database.** That is why they
+share one CI job safely. **But `PEISEAR_PORT` is read by both**, so setting it
+gives them the *same* port. Sequentially that is harmless, since each script's
+`finally` block kills its server before the next starts. **In parallel it is a
+silent collision**, and `PEISEAR_PORT` is the reason: if these are ever run
+concurrently, give each its own port rather than assuming the defaults still
+apply. Recorded here because the defaults make the hazard invisible until
+someone parallelises the job to save a minute.
 
 ## `DEC-048`, condition by condition
 

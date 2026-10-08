@@ -1577,8 +1577,10 @@ blind spot: it does not catch a single word standing alone.
 **FR-DM-006 — Undo window**
 A completed direct manipulation SHOULD offer a brief undo affordance
 (approximately five seconds).
-*Source*: `SPEC §39.2`. *Status*: **Met at 0.44.0** — a 5-second toast on
-**all four** direct-manipulation surfaces.
+*Source*: `SPEC §39.2`. *Acceptance*: `undo_toast_attachment_scan` (4) — a
+source scan, plus `browser-checks/undo-mousedown-trap.mjs` for the runtime
+half; neither walks the Tab order, see below. *Status*: **Met at 0.44.0** — a
+5-second toast on **all four** direct-manipulation surfaces.
 *Corrected twice, and the second correction reverses the first.*
 Until 0.43.0 this read **"Implemented for both shipped surfaces"** and then
 named **three** places in the same sentence, contradicting itself in nine
@@ -1591,6 +1593,28 @@ four reachable by Tab as the acted-on element's own next sibling, none
 `disabled` or `tabindex="-1"`. The `mousedown` guard that `A11Y-005` made
 necessary is present on exactly the three draggable surfaces and absent on
 the one with no drag source to guard against.
+*What pins this status, and what it does not pin* (`DM-TEST-001`,
+`DM-TEST-002`, 0.44.0). Two instruments, and the split between them matters:
+**`undo_toast_attachment_scan`** (4 tests) reads `static/*.js` and asserts
+that `showUndoToast` still appends the button into `alertBox`, `alertBox` into
+`toast`, and `toast` onto the element the function was **given** — bound to
+the function's own first parameter, so a rename cannot slip past it. **It is a
+source scan and nothing more**: it pins what the four scripts are *written* to
+do, not what a browser does. If that chain were correct and something else
+detached the toast afterwards, all four would still pass.
+**`browser-checks/undo-mousedown-trap.mjs`** pins the one runtime property a
+scan cannot see — that a real `mousedown` plus a small movement on the undo
+button is read as a click and not a drag-start, which is `A11Y-005`'s defect
+— across the three draggable surfaces. **Neither instrument walks the Tab
+order in a browser**, so *"Undo is the next Tab stop"* remains an inference
+from DOM attachment rather than a measurement. That is `§10.15`'s class, named
+here rather than left for a later reader to discover behind a `Met`.
+*The scan was renamed before this entry cited it.* It shipped as
+`undo_dom_order.rs` with tests named *"…undo lands right after…"* — a runtime
+claim over three substring checks, while the file's own doc comment stated the
+limit correctly. The names were the thing a failure report shows alone, and
+`§10.28` is the precedent for treating a documentation-versus-mechanism
+mismatch as worth fixing rather than explaining.
 *Why the first correction was wrong, which is the part worth keeping.* The
 architect corrected this entry **because it was stale**, counted the three
 places the entry's own text named, saw that four surfaces ship, and wrote
