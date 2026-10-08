@@ -2,8 +2,8 @@
 
 **Status**: **Proposed** (2026-10-08) — open for review; implementer should
 not start
-**Target**: not yet scheduled; the owner asked for it to be scheduled, which
-is what this RFC is for
+**Target**: **the clause at 0.44.0, the control at 0.45.0** — see §7.1 for
+why the split is the optimisation rather than a delay
 **Related spec sections**: `SPEC §21.2`, `SPEC §32`, `SPEC §39`;
 external design `SCR-20`
 **Related requirements**: **`FR-DM-002`** (P0 — Partial, three of four
@@ -33,9 +33,20 @@ block is roughly 2% of a 24-hour column, and in the month view a cell is
 a 44 × 44 px control per block, and `NFR-A11Y-007` is not negotiable.
 
 So the question this RFC exists to answer is **not "which control" but
-"where does the control live when it cannot live in the block"** — and the
-answer bears on a clause I proposed one day earlier, which the geometry
-contradicts.
+"where does the control live when it cannot live in the block"**. The answer
+is **§4's Option A**: the block's link leads to a control whose only job is
+moving that block, with the server computing both timestamps so the duration
+survives and the stored effect matches a drag by construction.
+
+**Two things in this RFC are corrections of my own work, and both are kept
+visible rather than tidied away.** §4 reverses my first recommendation — a
+list below the grid — which renders every scheduled issue twice on one screen
+and was never cheaper to reach by keyboard, two things I asserted without
+checking. §5 is the **third** draft of a one-sentence clause for
+`FR-DM-002`: the first two both measured *distance*, and distance is the
+symptom. **The defect is that the user has to reconstruct the effect** — the
+drag shifts both ends by one delta, the edit form makes the user compute the
+second one.
 
 ## 1. Background — what is true today, measured
 
@@ -164,55 +175,119 @@ nobody has reported this.
   any sense a user would recognise, and an amendment written to make the
   record green is the failure `§10.34` is about.
 
-## 4. Recommendation
+## 4. Recommendation — **Option A**, revised
 
-**Option B, with Option A's control**, in that order of preference — and the
-two are not exclusive: B's per-row control is A's control, rendered on the
-calendar page instead of on its own.
+**This section replaced an earlier recommendation of Option B.** The owner
+asked me to re-read my own reasoning against the project's philosophy, and it
+does not survive it. The reversal and its reason are kept rather than
+overwritten, because the reason is the useful part.
 
-The reasoning, in the owner's order:
+### What I recommended, and the one thing holding it up
 
-1. **The interface first.** B puts the keyboard path on the surface that
-   offers the pointer affordance, which is what the other three surfaces do
-   and the only reason this requirement reads `Partial`.
-2. **It is the familiar shape, not a new one.** A list of rows with a control
-   each is the sprint plan, the board's per-card form, and RFC 0004's own
-   phone answer. A user who has used any other surface already knows it.
-3. **Duration is preserved by construction**, because the server computes
-   both timestamps. That removes the one genuine difference in *effect*
-   between the two paths, which no amount of form-field polish on the issue
-   page would.
-4. **Maintenance cost is a component and a handler**, with no new route, no
-   JavaScript, and no state carried across a request. The continuous cost the
-   owner cares about is close to zero; the initial cost is a day.
+I recommended **Option B** — a list below the grid — and the argument rested
+on a single property: it is *"genuinely on-surface"*, which satisfied the
+clause I had drafted the day before. **That is a rule selecting a design.**
+The owner's instruction is explicit that it should run the other way: *"the
+UI/UX must be familiar with users and be what users can understand easily.
+Rules should follow it as next with revision or update added instead of the
+top priority."* My own §5 had already caught the clause as too strong and I
+went on recommending the design the clause demanded.
 
-**The D-5 objection must be answered, not waved at.** D-5 was retired because
-a manual order would have been *a second answer to the same question with no
-name in the UI*. This is not that: the list below the grid answers a
-**different** question — *how do I move this without a pointer* — and it has
-a name, because it carries a heading saying so. If the owner reads it as the
-same objection, that is a reason to prefer A and I will not argue it as
-settled.
+### And one claim in it was never measured
 
-## 5. The clause I proposed, and the geometry that contradicts it
+I presented B as the cheaper path for a keyboard user without counting it.
+**It is not cheaper.** The measurement gives **21 Tab stops** from day-view
+load to a given block's link, and those stops *are* the grid's block links. A
+list rendered **below the grid** sits after every one of them in DOM order, so
+reaching it costs **at least the same 21** — and then the row and its
+control. B is cheaper only if a skip link is added to jump to it, which is
+more machinery for a path that is supposed to be the simple one.
 
-One day before this RFC I ruled that `FR-DM-002` should gain one clause: *the
+### Option A against the four words
+
+- **Clean.** One control, one place, nothing duplicated. The grid stays
+  exactly what it is. **B renders every scheduled issue twice on one
+  screen** — once spatially, once as a row — and that *is* the D-5
+  objection, which I waved at by saying the list "answers a different
+  question". It does not. The *control* answers a different question; the
+  **list** answers the same one the grid answers.
+- **Not confused or misunderstood.** A is the pattern the rest of this
+  product already uses: activate the thing, act on the thing. B asks a user
+  to understand that the rows beneath the calendar are the same issues as the
+  blocks above, and that the select's options change meaning when the view
+  changes. On a month view with forty scheduled issues, B is forty rows and a
+  wall of options under the grid — worse on a phone, which `RFC 0004`'s
+  requirement 10 exists to protect.
+- **Robust.** A is one rendering and one handler. **B is two renderings of
+  the same data that must stay in agreement forever** — precisely the
+  continuous maintenance cost the owner says to weigh over initial cost.
+- **Sophisticated.** The sophisticated part was never B's: it is the control
+  computing both timestamps **server-side** so the stored duration is
+  preserved and the effect is identical to a drag by construction. That
+  property belongs to A's control unchanged.
+- **Safe and secure.** Identical in both: same endpoint, same lock, same
+  `client_updated_at`.
+
+**So: Option A.** The block's link leads to a `GET`-able reschedule control
+for that issue, whose only job is to move it: a `<select>` of targets labelled
+in words, each carrying server-computed `planned_start_at`/`planned_end_at`
+that preserve the stored duration, a hidden `client_updated_at`, and an
+explicit Save. No JavaScript, no arithmetic, no second rendering of the
+calendar.
+
+**Option B stays recorded, not deleted.** If a user ever asks to move several
+blocks in one sitting, B's list is the right answer to *that* request and this
+section is where its design already is. That is a different request from the
+one `FR-DM-002` is about.
+
+## 5. The clause I proposed, twice, and what it should say
+
+One day before this RFC I ruled that `FR-DM-002` should gain the clause *the
 keyboard equivalent MUST be reachable from the surface that offers the pointer
-affordance, **without navigating to another screen.*** I wrote that before
-measuring the block geometry.
+affordance, **without navigating to another screen.*** The block geometry
+(§2) makes that admit exactly one design. **Then I proposed a replacement —
+*"from the surface, in one step, by a control whose purpose is that action"* —
+and that one is still not right.** Two faults:
 
-**§2 shows the grid cannot hold a control**, so the clause as drafted leaves
-exactly one compliant design — Option B — and forbids Option A on a point of
-wording rather than of substance. A clause that selects the design is a rule
-doing the architecture's job.
+- **"in one step" is ambiguous**, and the owner's standing preference is for
+  rules that are simple *and* clean. One keypress? One page load? One
+  activation? A clause that invites that argument will get it.
+- **"from the surface" is the wrong anchor.** A surface is a screen; the
+  thing a pointer user acts on is an **element**. Anchoring to the element is
+  concrete and checkable by inspection, and it is what the board and the
+  sprint plan actually do — the form is a sibling of the card, in the card.
 
-So §7.2 asks for the clause in a weaker, truer form: the equivalent must be
-reachable **from the surface, in one step, by a control whose purpose is that
-action** — which admits both A and B, excludes today's three-page route, and
-says what the board and the sprint plan actually do. **I am proposing the
-revision of my own ruling, one day old, because the measurement came after
-it.** Recording it rather than quietly re-drafting, since `§10.34` is about
-exactly the gap between what a record says and what was checked.
+**And both drafts missed the fault that matters most.** Today's route fails
+`FR-DM-002` not mainly because it is far away but because **the user has to
+reconstruct the effect**: the drag shifts both ends by one delta, and the
+issue edit form makes the user compute the new end time by hand. A clause
+about distance would be satisfied by a purpose-built control three screens
+deep and violated by a perfect control two activations away. Distance is the
+symptom. **Reconstruction is the defect.**
+
+### §7.2's proposal, in its final form
+
+> The keyboard equivalent MUST be offered **by the element that carries the
+> pointer affordance** — on it, or one activation away — and MUST **perform
+> the same action rather than require the user to reconstruct its effect**.
+
+Checked against what exists, by inspection and nothing else:
+
+| | On the element? | Same action? | Verdict |
+|---|---|---|---|
+| Board card | the form is a sibling **in** the card | per-status buttons | **passes** |
+| Issue list / detail | in place | status control | **passes** |
+| Sprint plan row | the move button is **in** the row | add / remove | **passes** |
+| Calendar today | three activations away | **two absolute fields; the user computes the end** | **fails both halves** |
+| Option A | the block's link, **one activation** | a move control; the server computes both ends | **passes** |
+| Option B | a row in a list below the grid | same control | **passes** |
+
+It admits both options, so it has stopped doing the architecture's job. It
+excludes today's route on the substance rather than on a technicality. And
+**"rather than require the user to reconstruct its effect"** is the sentence
+that earns its place: it is what makes a two-field edit form not an
+equivalent for a move, and it generalises past the calendar to every future
+surface, which is the only reason to put a clause in a requirement at all.
 
 ## 6. What this RFC is not
 
@@ -227,15 +302,61 @@ exactly the gap between what a record says and what was checked.
 
 ## 7. Decisions requested
 
-1. **Option A, B, or B-with-A's-control** — or D, if the owner reads 77
-   keystrokes as acceptable for a v0. The recommendation is **B with A's
-   control**; §4's third paragraph is the argument most likely to be wrong.
-2. **`FR-DM-002`'s clause, in the weaker form** of §5 rather than as I first
-   drafted it: *reachable from the surface, in one step, by a control whose
-   purpose is that action.* This is the decision that matters beyond the
-   calendar, because it is the test every future surface is held to.
-3. **Scheduling.** The work is one component, one handler and a test, and it
-   does not need splitting. It does not block anything and nothing blocks it.
+1. **Option A** (§4), revised from an earlier recommendation of B. The
+   argument most likely to be wrong is the D-5 one: I now read B's list as a
+   second rendering of the grid's own content, and if the owner reads it as a
+   genuinely different question, B returns.
+2. **The clause, in §5's final form**: *offered by the element that carries
+   the pointer affordance — on it, or one activation away — and performs the
+   same action rather than requiring the user to reconstruct its effect.*
+   This is the decision that outlives the calendar; it is the test every
+   future direct-manipulation surface is held to.
+3. **The schedule in §7.1 below.**
+
+### 7.1 Schedule — the rule at 0.44.0, the control at 0.45.0
+
+**Split across two releases, deliberately, and the split is the optimisation.**
+
+**0.44.0 — the clause only.** One sentence into `FR-DM-002`, no code. It
+costs nothing, it lands with `DEC-028`'s amendment that is happening anyway,
+and it converts `FR-DM-002`'s `Partial` from *a judgement the architect is
+making* into *a requirement the calendar measurably fails*. A P0 whose status
+is a judgement is worth less than a P0 whose status is a measurement, and
+until the clause exists the status rests on my reading alone.
+
+**0.45.0 — the control.** One handler, one component, one test. Not 0.44.0,
+for a reason that is about sequencing rather than capacity:
+
+- **`DM-TEST-001` is in flight in 0.44.0 and it pins the current behaviour of
+  all four surfaces** — including item 4, the undo control's DOM position on
+  the calendar. Landing a new control on that surface mid-handoff makes those
+  assertions a moving target and invites the dev team to write a test against
+  markup that is about to change. **Tests that pin today's behaviour must
+  settle before the behaviour moves.**
+- **The clause will have been in force for a release** by the time the
+  implementation starts, so the handoff can cite a requirement rather than an
+  RFC recommendation. That is the difference between building to a rule and
+  building to a proposal.
+
+**What rides with it at 0.45.0, because it is the same code path and not
+because a release wants filling:** §8's landing-and-scroll question is the
+**lost phone scroll position after a POST**, already on the backlog
+unscheduled. This control is a POST that returns the user to the calendar, so
+it either answers that question or makes it worse on the one surface where
+the user's place on the page is the information they came for. **Answering it
+inside this work is cheaper than answering it twice**, and it is in scope here
+without widening anything — §8 already owns it.
+
+**What does not ride with it**, said so it is not assumed: `FR-DM-005`'s
+keyboard undo is also a keyboard-path item on these surfaces and is **RFC-sized
+on its own**. Folding it in would make 0.45.0 two designs in one release,
+which is the shape the owner has asked me not to produce.
+
+**If the owner wants it sooner**, the honest option is 0.44.0 for both halves
+with `DM-TEST-001` **withdrawn and reissued after** the control lands — not
+run in parallel with it. I do not recommend that: it discards a handoff that
+is already with the dev team in order to save two weeks on a condition that
+has held since 0.36.0.
 
 ## 8. Open questions for the implementer, once accepted
 
