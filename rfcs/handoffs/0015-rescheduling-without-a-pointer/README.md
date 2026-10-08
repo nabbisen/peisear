@@ -3,13 +3,20 @@
 RFC: [0015](../../accepted/015-rescheduling-without-a-pointer.md) — accepted
 2026-10-08, **`DEC-059`**.
 
-**There is deliberately no handoff here yet, and this file exists so that is
-a state rather than an oversight.**
+**The handoff is written** (`CAL-004`). This file kept the start condition
+while it was deliberately unwritten; the condition — `DM-TEST-001` reviewed
+and closed — was met at 0.44.0.
+
+**One variation on `DEC-059` is flagged in `CAL-004` §0 and is the owner's to
+confirm**: the RFC wrote Option A as a reschedule *page* reached from the
+block; the handoff puts the control on the **issue detail page** instead,
+because a second affordance in the block hits §2's geometry and retargeting
+the block's link would take the pointer user's route to the issue away.
 
 | Part | Where it lives | Release |
 |---|---|---|
 | The clause | **landed** — `FR-DM-002`'s normative text, `DEC-059` | 0.44.0 |
-| The control | **not yet written** — see the condition below | 0.45.0 |
+| The control | [`CAL-004`](./CAL-004-a-move-control-for-the-keyboard.md) — **written**; the condition below is met (`DM-TEST-001`/`-002` closed at 0.44.0) | 0.45.0 |
 
 ## Why the control's handoff is not written yet
 
