@@ -1441,6 +1441,7 @@ pub fn IssueDetailPage(
     parent_issue: Option<Issue>,
     flash: Option<String>,
     editing: bool,
+    move_context: ScheduleMoveContext,
 ) -> impl IntoView {
     let title = t(MessageKey::IssueDetailPageTitle {
         issue_title: issue.title.clone(),
@@ -1489,6 +1490,54 @@ pub fn IssueDetailPage(
         }
         .into_any()
     };
+
+    // `CAL-004`: the move control, one activation from the calendar
+    // block that landed here — only when the issue has something to
+    // move. Visually distinct from `IssueEditForm`'s two absolute
+    // `datetime-local` fields above (edit mode only): that form
+    // *sets* two timestamps; this *moves* the existing span, keeping
+    // its length, and says so (§2.3).
+    let move_action = format!("/projects/{}/issues/{}/schedule/move", project.id, issue.id);
+    let move_client_updated_at = issue.updated_at.to_rfc3339();
+    let move_card = issue.planned_start_at.map(|_| {
+        let options = move_context
+            .day_options
+            .iter()
+            .map(|d| {
+                let value = d.format("%Y-%m-%d").to_string();
+                let label = d.format("%a, %b %-d").to_string();
+                view! { <option value=value>{label}</option> }
+            })
+            .collect_view();
+        view! {
+            <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
+                     aria-label=t(MessageKey::ScheduleMoveHeading)>
+                <div class="card-body py-3">
+                    <h2 class="text-sm font-medium">{t(MessageKey::ScheduleMoveHeading)}</h2>
+                    <p class="text-xs text-base-content/70 mt-0.5 mb-2">
+                        {t(MessageKey::ScheduleMoveHelperText)}
+                    </p>
+                    <form method="post" action=move_action
+                          class="flex items-center gap-2 flex-wrap">
+                        <input type="hidden" name="client_updated_at" value=move_client_updated_at/>
+                        <input type="hidden" name="from_view" value=move_context.return_view.clone()/>
+                        <input type="hidden" name="from_date" value=move_context.return_date.clone()/>
+                        <input type="hidden" name="from_surface" value=move_context.return_surface.clone()/>
+                        <label class="text-sm font-medium" for="move-target-date">
+                            {t(MessageKey::FieldLabel { field: Field::MoveTargetDate })}
+                        </label>
+                        <select id="move-target-date" name="target_date"
+                                class=grow("select select-bordered select-sm min-w-[10rem]")>
+                            {options}
+                        </select>
+                        <button type="submit" class=grow("btn btn-ghost btn-sm")>
+                            {t(MessageKey::ScheduleMoveButton)}
+                        </button>
+                    </form>
+                </div>
+            </section>
+        }
+    });
 
     let has_sprint_options = !sprint_options.is_empty();
     let sprint_action = format!("/projects/{}/issues/{}/sprint", project.id, issue.id);
@@ -1646,6 +1695,7 @@ pub fn IssueDetailPage(
                     project_href_for_breadcrumb,
                 )}
                 {body}
+                {move_card}
                 {sub_issues_card}
                 {sprint_card}
             </div>
@@ -2155,6 +2205,29 @@ pub(crate) struct IssueDetailView {
     pub parent_issue: Option<Issue>,
     pub flash: Option<String>,
     pub editing: bool,
+    /// `CAL-004`: the move control's day options and the calendar
+    /// state a Move returns to. Built by the handler (the same
+    /// "shape data before handing it to a renderer" split
+    /// `handlers::calendar` already follows) so this component only
+    /// lays out what it's given.
+    pub move_context: ScheduleMoveContext,
+}
+
+/// See `IssueDetailView::move_context`.
+pub struct ScheduleMoveContext {
+    /// The days the move control's `<select>` offers — the calendar
+    /// window (day/week/month) the user came from, or a default
+    /// `Week` anchored on today for a direct visit.
+    pub day_options: Vec<chrono::NaiveDate>,
+    /// Normalised `CalendarView::as_str()` value, carried as a hidden
+    /// field so the POST rebuilds the exact return URL (`FR-NAV-005`)
+    /// rather than accepting one as input.
+    pub return_view: String,
+    /// Normalised `YYYY-MM-DD` anchor, same reason.
+    pub return_date: String,
+    /// `"personal"` or `"project"` — which calendar surface to
+    /// return to.
+    pub return_surface: String,
 }
 
 pub(crate) fn render_issue_detail(view: IssueDetailView) -> Html<String> {
@@ -2174,6 +2247,7 @@ pub(crate) fn render_issue_detail(view: IssueDetailView) -> Html<String> {
                 parent_issue=view.parent_issue
                 flash=view.flash
                 editing=view.editing
+                move_context=view.move_context
             />
         }
     })

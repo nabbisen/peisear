@@ -34,7 +34,7 @@ pub struct CalendarQuery {
 /// Unknown/missing → `Week` (RFC 002 must-have 3's default, and
 /// `CAL-002` §5 test 3: "an unknown value falls back to week rather
 /// than erroring").
-fn parse_view(raw: Option<&str>) -> CalendarView {
+pub(crate) fn parse_view(raw: Option<&str>) -> CalendarView {
     match raw {
         Some("day") => CalendarView::Day,
         Some("month") => CalendarView::Month,
@@ -42,7 +42,7 @@ fn parse_view(raw: Option<&str>) -> CalendarView {
     }
 }
 
-fn parse_anchor(raw: Option<&str>) -> NaiveDate {
+pub(crate) fn parse_anchor(raw: Option<&str>) -> NaiveDate {
     raw.and_then(|s| NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
         .unwrap_or_else(|| Utc::now().date_naive())
 }
@@ -65,7 +65,7 @@ fn last_of_month(d: NaiveDate) -> NaiveDate {
 }
 
 /// The visible window's first and last day, inclusive.
-fn window_days(view: CalendarView, anchor: NaiveDate) -> (NaiveDate, NaiveDate) {
+pub(crate) fn window_days(view: CalendarView, anchor: NaiveDate) -> (NaiveDate, NaiveDate) {
     match view {
         CalendarView::Day => (anchor, anchor),
         CalendarView::Week => {

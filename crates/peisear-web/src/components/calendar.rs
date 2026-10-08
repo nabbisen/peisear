@@ -88,8 +88,22 @@ fn crowding_chip(count: usize) -> Option<impl IntoView> {
 /// 6, corrected: **not the assignee**, on either axis, in this
 /// component — there is simply no assignee-rendering code path here
 /// at all).
-fn render_block(issue: &Issue, project_badge: Option<String>) -> impl IntoView + use<> {
-    let href = format!("/projects/{}/issues/{}", issue.project_id, issue.id);
+///
+/// `CAL-004`: `return_qs` is this view's own `?from_view=…&from_date=…
+/// &from_surface=…` query string, carried onto the block's `href` so
+/// the issue page's move control (`FR-DM-002`'s clause) knows which
+/// calendar window to offer days from and which surface a Move
+/// should return to (`FR-NAV-005`) — computed once per page, not per
+/// block.
+fn render_block(
+    issue: &Issue,
+    project_badge: Option<String>,
+    return_qs: String,
+) -> impl IntoView + use<> {
+    let href = format!(
+        "/projects/{}/issues/{}{return_qs}",
+        issue.project_id, issue.id
+    );
     let title = issue.title.clone();
     let time = time_label_for(issue.planned_start_at, issue.planned_end_at);
     let badge = project_badge
@@ -138,6 +152,7 @@ fn plan_datetime_attr(dt: Option<chrono::DateTime<chrono::Utc>>) -> String {
 fn render_day_view(
     day: &CalendarDay,
     project_badge_for: impl Fn(&Issue) -> Option<String>,
+    return_qs: String,
 ) -> impl IntoView {
     let day_start_secs = 0.0_f64;
     let total_secs = 24.0 * 3600.0;
@@ -162,7 +177,10 @@ fn render_day_view(
                 * 100.0)
                 .max(1.5);
             let style = format!("top:{top}%;height:{height}%;");
-            let href = format!("/projects/{}/issues/{}", issue.project_id, issue.id);
+            let href = format!(
+                "/projects/{}/issues/{}{return_qs}",
+                issue.project_id, issue.id
+            );
             let title = issue.title.clone();
             let time = time_label_for(issue.planned_start_at, issue.planned_end_at);
             let badge = project_badge_for(issue).map(|name| {
@@ -226,6 +244,7 @@ fn render_day_view(
 fn render_week_view(
     days: &[CalendarDay],
     project_badge_for: impl Fn(&Issue) -> Option<String>,
+    return_qs: String,
 ) -> impl IntoView {
     let cols = days
         .iter()
@@ -236,7 +255,7 @@ fn render_week_view(
             let blocks = day
                 .blocks
                 .iter()
-                .map(|issue| render_block(issue, project_badge_for(issue)))
+                .map(|issue| render_block(issue, project_badge_for(issue), return_qs.clone()))
                 .collect_view();
             view! {
                 <div class="flex-1 min-w-0 border border-base-300 rounded p-1.5 bg-base-100"
@@ -260,6 +279,7 @@ fn render_week_view(
 fn render_month_view(
     days: &[CalendarDay],
     project_badge_for: impl Fn(&Issue) -> Option<String>,
+    return_qs: String,
 ) -> impl IntoView {
     let Some(first) = days.first() else {
         return view! { <table class="table table-fixed w-full"></table> }.into_any();
@@ -283,7 +303,7 @@ fn render_month_view(
             .blocks
             .iter()
             .take(3)
-            .map(|issue| render_block(issue, project_badge_for(issue)))
+            .map(|issue| render_block(issue, project_badge_for(issue), return_qs.clone()))
             .collect_view();
         let more = (day.blocks.len() > 3).then(|| {
             let label = t(MessageKey::CalendarMoreIssuesLabel {
@@ -388,18 +408,19 @@ fn render_grid(
     view: CalendarView,
     days: Vec<CalendarDay>,
     project_badge_for: impl Fn(&Issue) -> Option<String>,
+    return_qs: String,
 ) -> impl IntoView {
     let is_empty = days.iter().all(|d| d.blocks.is_empty());
     let grid = match view {
         CalendarView::Day => {
             let day = days.into_iter().next();
             match day {
-                Some(day) => render_day_view(&day, project_badge_for).into_any(),
+                Some(day) => render_day_view(&day, project_badge_for, return_qs).into_any(),
                 None => view! { <div></div> }.into_any(),
             }
         }
-        CalendarView::Week => render_week_view(&days, project_badge_for).into_any(),
-        CalendarView::Month => render_month_view(&days, project_badge_for).into_any(),
+        CalendarView::Week => render_week_view(&days, project_badge_for, return_qs).into_any(),
+        CalendarView::Month => render_month_view(&days, project_badge_for, return_qs).into_any(),
     };
     view! {
         {is_empty.then(|| view! {
@@ -497,9 +518,20 @@ pub fn PersonalCalendarPage(
         prev_date,
         next_date,
     );
-    let grid = render_grid(view, days, move |issue: &Issue| {
-        project_names.get(&issue.project_id).cloned()
-    });
+    // `CAL-004`: carried onto every block's `href` so the issue page
+    // knows which calendar window and surface a Move should return
+    // to (`FR-NAV-005`) — computed once, not per block.
+    let return_qs = format!(
+        "?from_view={}&from_date={}&from_surface=personal",
+        view.as_str(),
+        anchor.format("%Y-%m-%d")
+    );
+    let grid = render_grid(
+        view,
+        days,
+        move |issue: &Issue| project_names.get(&issue.project_id).cloned(),
+        return_qs,
+    );
     view! {
         <AppShell title=t(MessageKey::PersonalCalendarPageTitle)
                   user=user flash={None::<String>} unread_count=unread_count>
@@ -545,9 +577,18 @@ pub fn ProjectCalendarPage(
     let project_href = format!("/projects/{}", project.id);
     let nav = render_nav(base_href.clone(), view, anchor, prev_date, next_date);
     let band = sprint.map(render_sprint_band);
+    // `CAL-004`: same shape as the personal page's own `return_qs`,
+    // `from_surface=project` — the issue's own `project_id` is
+    // already in its own URL, so nothing else needs to travel for
+    // the return trip to land back on this project's calendar.
+    let return_qs = format!(
+        "?from_view={}&from_date={}&from_surface=project",
+        view.as_str(),
+        anchor.format("%Y-%m-%d")
+    );
     // Project axis: no per-block badge at all (single project; no
     // assignee, no other label — RFC 002 must-have 6 corrected).
-    let grid = render_grid(view, days, |_issue: &Issue| None);
+    let grid = render_grid(view, days, |_issue: &Issue| None, return_qs);
     view! {
         <AppShell title=t(MessageKey::ProjectCalendarPageTitle { project_name: project_name.clone() })
                   user=user flash={None::<String>} unread_count=unread_count>

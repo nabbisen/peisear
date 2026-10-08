@@ -181,8 +181,13 @@ async fn issue_planned_dates_only_edit_with_stale_timestamp_returns_409() {
 /// statuses *against each other*, not just against a hardcoded `409`
 /// twice — the shape that actually catches the two drifting apart if
 /// either call site's status mapping is ever changed on its own.
+///
+/// `CAL-004` §3: extended rather than given a third copy —
+/// `change_schedule_move` (the keyboard move control's own form)
+/// calls the identical `apply_schedule_change` the other two already
+/// agree through, so the same stale `t0` is asserted against it too.
 #[tokio::test]
-async fn update_and_change_schedule_agree_on_a_stale_locks_status() {
+async fn update_change_schedule_and_schedule_move_agree_on_a_stale_locks_status() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
@@ -229,6 +234,14 @@ async fn update_and_change_schedule_agree_on_a_stale_locks_status() {
             .await
             .status_code();
 
+    // The keyboard move control's own form — the issue already has a
+    // `planned_start_at` from the first, successful reschedule above,
+    // so the move handler's defensive "no scheduled start" check
+    // never fires here.
+    let move_status = post_schedule_move(&app, &project_id, &issue_id, &t0, "2026-09-04")
+        .await
+        .status_code();
+
     assert_eq!(
         schedule_status,
         StatusCode::CONFLICT,
@@ -240,6 +253,12 @@ async fn update_and_change_schedule_agree_on_a_stale_locks_status() {
          drag's endpoint returns for the same stale lock -- today they agree \
          only because both call the same check_optimistic_lock, not because \
          one calls the other (FR-DM-002-measurement-review.md §2)"
+    );
+    assert_eq!(
+        move_status, schedule_status,
+        "the move control's form must return the identical conflict status \
+         too -- it calls the same apply_schedule_change the drag endpoint \
+         does, not a copy of the lock check"
     );
 }
 
@@ -1107,6 +1126,27 @@ async fn post_schedule_change(
             "planned_end_at": planned_end_at,
             "client_updated_at": client_updated_at,
         }))
+        .await
+}
+
+/// `CAL-004`: POST the keyboard move control's own form,
+/// `/schedule/move`. Parallel to `post_schedule_change` above;
+/// requires the issue to already carry a `planned_start_at` (the
+/// move handler's own defensive check).
+async fn post_schedule_move(
+    app: &TestApp,
+    project_id: &str,
+    issue_id: &str,
+    client_updated_at: &str,
+    target_date: &str,
+) -> axum_test::TestResponse {
+    let url = format!("/projects/{project_id}/issues/{issue_id}/schedule/move");
+    app.server
+        .post(&url)
+        .form(&[
+            ("target_date", target_date),
+            ("client_updated_at", client_updated_at),
+        ])
         .await
 }
 

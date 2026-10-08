@@ -240,11 +240,17 @@ pub fn build_router(state: AppState) -> Router {
         )
         // `CAL-003` (RFC 004d D-3): the day view's drag-to-reschedule
         // endpoint, modelled on `/status` above — same shape, a lock
-        // instead of none. No form sibling; see `change_schedule`'s
-        // own doc comment for why.
+        // instead of none.
         .route(
             "/projects/{id}/issues/{issue_id}/schedule",
             post(issues::change_schedule),
+        )
+        // `CAL-004` (RFC 0015, `DEC-059`): the form sibling, on the
+        // issue page rather than the day view — see
+        // `change_schedule`'s own doc comment for why not the latter.
+        .route(
+            "/projects/{id}/issues/{issue_id}/schedule/move",
+            post(issues::change_schedule_move),
         )
         // Static assets served from the directory named "static" in the
         // working directory of the running binary. For typical

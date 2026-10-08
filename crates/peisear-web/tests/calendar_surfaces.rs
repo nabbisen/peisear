@@ -1228,3 +1228,515 @@ async fn calendar_js_is_referenced_only_on_day_view() {
         "the personal axis's day view must also reference calendar.js: {personal_day_body}"
     );
 }
+
+// ──────────────────────────────────────────────────────────────
+// `CAL-004` (RFC 0015, `DEC-059`): the move control. The acceptance
+// `FR-DM-002`'s clause actually rests on — a Move must produce the
+// identical stored row a drag of the same intent would, with the
+// duration preserved and the lock enforced.
+// ──────────────────────────────────────────────────────────────
+
+/// The move form, scoped to its own `<form method="post"
+/// action="...schedule/move">...</form>` — the same collision-proof
+/// scoping `sprint_plan.rs`'s `scoped_form` uses, generalised here
+/// rather than imported (a different test binary; `tests/*.rs` files
+/// don't share code except through `tests/common`).
+fn scoped_move_form(body: &str) -> &str {
+    let marker = "<form method=\"post\" action=\"";
+    let mut search_from = 0;
+    loop {
+        let rel = body[search_from..]
+            .find(marker)
+            .unwrap_or_else(|| panic!("no <form method=\"post\"> found: {body}"));
+        let form_start = search_from + rel;
+        let action_val_start = form_start + marker.len();
+        let action_val_end = body[action_val_start..]
+            .find('"')
+            .map(|i| i + action_val_start)
+            .expect("action attribute has a closing quote");
+        let action_val = &body[action_val_start..action_val_end];
+        if action_val.ends_with("/schedule/move") {
+            let rest = &body[form_start..];
+            let form_end = rest.find("</form>").expect("form has a closing tag");
+            return &rest[..form_end];
+        }
+        search_from = action_val_end;
+    }
+}
+
+/// The move control is reachable from the issue page — present when
+/// the issue has a `planned_start_at`, offering exactly the day the
+/// `from_view=day` context names (one option, the handoff's own
+/// smallest case).
+#[tokio::test]
+async fn move_control_renders_with_exactly_the_day_views_one_day() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    let issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Move me",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+
+    let body = app
+        .server
+        .get(&format!(
+            "/projects/{project_id}/issues/{issue_id}?from_view=day&from_date={}&from_surface=project",
+            d.format("%Y-%m-%d")
+        ))
+        .await
+        .text();
+    let form = scoped_move_form(&body);
+    assert_eq!(
+        form.matches("<option").count(),
+        1,
+        "a day-view context must offer exactly one day: {form}"
+    );
+    assert!(
+        form.contains(r#"name="target_date""#),
+        "the move form must carry the target_date select: {form}"
+    );
+    assert!(
+        form.contains(r#"name="from_surface" value="project""#),
+        "the move form must echo the surface it was reached from: {form}"
+    );
+}
+
+/// The week view's own window — exactly 7 days, the same
+/// `window_days` the calendar itself computes for `Week`.
+#[tokio::test]
+async fn move_control_renders_the_week_views_seven_days() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    let issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Move me (week)",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+
+    let body = app
+        .server
+        .get(&format!(
+            "/projects/{project_id}/issues/{issue_id}?from_view=week&from_date={}&from_surface=project",
+            d.format("%Y-%m-%d")
+        ))
+        .await
+        .text();
+    let form = scoped_move_form(&body);
+    assert_eq!(
+        form.matches("<option").count(),
+        7,
+        "a week-view context must offer exactly seven days: {form}"
+    );
+}
+
+/// The month view's own window — the queried month's real days
+/// only (28–31, depending on the month), **not** the rendering
+/// grid's own leading/trailing padding cells (which pad to whole
+/// weeks for layout and can reach 35, `components::calendar::
+/// render_month_view`). The move control's `window_days` call is the
+/// same one the calendar's own data query uses, which returns only
+/// the month's own days — this is reported precisely rather than
+/// assumed to match the grid's display count, per the handoff's
+/// §2.2.
+#[tokio::test]
+async fn move_control_renders_the_months_own_days_not_the_grids_padding() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    let issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Move me (month)",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+
+    let body = app
+        .server
+        .get(&format!(
+            "/projects/{project_id}/issues/{issue_id}?from_view=month&from_date={}&from_surface=project",
+            d.format("%Y-%m-%d")
+        ))
+        .await
+        .text();
+    let form = scoped_move_form(&body);
+    let count = form.matches("<option").count();
+    let days_in_this_month = {
+        use chrono::Datelike;
+        let (y, m) = (d.year(), d.month());
+        let (ny, nm) = if m == 12 { (y + 1, 1) } else { (y, m + 1) };
+        let first = chrono::NaiveDate::from_ymd_opt(y, m, 1).unwrap();
+        let next_first = chrono::NaiveDate::from_ymd_opt(ny, nm, 1).unwrap();
+        (next_first - first).num_days()
+    };
+    assert_eq!(
+        count as i64, days_in_this_month,
+        "a month view's window must offer exactly this month's own day count \
+         (28-31, never the grid's padded-to-35 display count): got {count}, \
+         month has {days_in_this_month}: {form}"
+    );
+    assert!(
+        (28..=31).contains(&count),
+        "sanity: a calendar month always has 28-31 days, got {count}"
+    );
+}
+
+/// The acceptance this handoff is for: a Move produces the identical
+/// stored row a drag of the same intent would, duration preserved,
+/// measured by comparing two issues started from the same values.
+#[tokio::test]
+async fn move_produces_the_identical_stored_row_as_the_equivalent_drag() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    let tomorrow = d + chrono::Duration::days(1);
+
+    let move_issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Move path",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+    let drag_issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Drag path",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+
+    let move_lock = issues::find(&app.db, &move_issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .updated_at;
+    let move_resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{move_issue_id}/schedule/move"
+        ))
+        .form(&[
+            ("target_date", tomorrow.format("%Y-%m-%d").to_string()),
+            ("client_updated_at", move_lock.to_rfc3339()),
+        ])
+        .await;
+    move_resp.assert_status(StatusCode::SEE_OTHER);
+
+    let drag_lock = issues::find(&app.db, &drag_issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .updated_at;
+    let drag_resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{drag_issue_id}/schedule"
+        ))
+        .json(&serde_json::json!({
+            "planned_start_at": format!("{}T09:00", tomorrow.format("%Y-%m-%d")),
+            "planned_end_at": format!("{}T10:00", tomorrow.format("%Y-%m-%d")),
+            "client_updated_at": drag_lock.to_rfc3339(),
+        }))
+        .await;
+    drag_resp.assert_status(StatusCode::OK);
+
+    let moved = issues::find(&app.db, &move_issue_id, &project_id)
+        .await
+        .expect("find issue");
+    let dragged = issues::find(&app.db, &drag_issue_id, &project_id)
+        .await
+        .expect("find issue");
+    assert_eq!(
+        moved.planned_start_at, dragged.planned_start_at,
+        "a Move and the equivalent drag must land on the identical planned_start_at"
+    );
+    assert_eq!(
+        moved.planned_end_at, dragged.planned_end_at,
+        "and the identical planned_end_at -- duration preserved, by construction"
+    );
+    assert_eq!(moved.planned_start_at, Some(utc_hms(tomorrow, 9, 0)));
+    assert_eq!(moved.planned_end_at, Some(utc_hms(tomorrow, 10, 0)));
+}
+
+/// §2.2's named edge case: a half-open issue (`planned_end_at` is
+/// `NULL`). Shifting a null end is a no-op -- `Option::map` on `None`
+/// stays `None` -- so only the start moves and the end stays unset.
+#[tokio::test]
+async fn move_on_a_half_open_issue_shifts_only_the_start() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    let tomorrow = d + chrono::Duration::days(1);
+    let issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Half-open",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        None,
+    )
+    .await;
+
+    let lock = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .updated_at;
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{issue_id}/schedule/move"
+        ))
+        .form(&[
+            ("target_date", tomorrow.format("%Y-%m-%d").to_string()),
+            ("client_updated_at", lock.to_rfc3339()),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let after = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue");
+    assert_eq!(after.planned_start_at, Some(utc_hms(tomorrow, 9, 0)));
+    assert_eq!(
+        after.planned_end_at, None,
+        "a null end must stay null after a move -- there is nothing to shift"
+    );
+}
+
+/// A stale `client_updated_at` through the move form conflicts the
+/// same way the drag's own JSON endpoint does -- the move handler
+/// calls the identical `apply_schedule_change`.
+#[tokio::test]
+async fn move_rejects_a_stale_lock() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    let issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Stale move",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{issue_id}/schedule/move"
+        ))
+        .form(&[
+            (
+                "target_date",
+                (d + chrono::Duration::days(1))
+                    .format("%Y-%m-%d")
+                    .to_string(),
+            ),
+            ("client_updated_at", "1970-01-01T00:00:00Z".to_string()),
+        ])
+        .await;
+    resp.assert_status(StatusCode::CONFLICT);
+
+    let unchanged = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .planned_start_at
+        .expect("still planned");
+    assert_eq!(
+        unchanged,
+        utc_hms(d, 9, 0),
+        "a rejected move must not have moved the issue"
+    );
+}
+
+/// Defensive: an issue with no `planned_start_at` at all has nothing
+/// for the move handler to shift from. Not reachable through the
+/// rendered page — the control only renders when the issue has one
+/// (`components::issues`'s own `move_card`) — but a hand-built
+/// request can still reach the route.
+#[tokio::test]
+async fn move_rejects_an_issue_with_no_scheduled_start() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Never scheduled",
+        None,
+        None,
+        None,
+    )
+    .await;
+    let lock = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .updated_at;
+
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{issue_id}/schedule/move"
+        ))
+        .form(&[
+            ("target_date", today().format("%Y-%m-%d").to_string()),
+            ("client_updated_at", lock.to_rfc3339()),
+        ])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::BAD_REQUEST,
+        "moving an issue with no planned_start_at must be rejected, not silently \
+         accepted: {}",
+        resp.status_code()
+    );
+}
+
+/// Defensive: a malformed `target_date` (not `YYYY-MM-DD`) fails
+/// validation rather than panicking or silently no-op-ing.
+#[tokio::test]
+async fn move_rejects_a_malformed_target_date() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    let issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Malformed target",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+    let lock = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .updated_at;
+
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{issue_id}/schedule/move"
+        ))
+        .form(&[
+            ("target_date", "not-a-date".to_string()),
+            ("client_updated_at", lock.to_rfc3339()),
+        ])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::BAD_REQUEST,
+        "a malformed target_date must be rejected: {}",
+        resp.status_code()
+    );
+
+    let unchanged = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .planned_start_at;
+    assert_eq!(
+        unchanged,
+        Some(utc_hms(d, 9, 0)),
+        "a rejected move must not have touched the issue"
+    );
+}
+
+/// `FR-NAV-005`: the redirect returns to the calendar surface/view/date
+/// the move form's hidden fields named, not a hardcoded default.
+#[tokio::test]
+async fn move_redirects_to_the_surface_view_and_date_it_came_from() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    let issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Return context",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+    let lock = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .updated_at;
+
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{issue_id}/schedule/move"
+        ))
+        .form(&[
+            (
+                "target_date",
+                (d + chrono::Duration::days(1))
+                    .format("%Y-%m-%d")
+                    .to_string(),
+            ),
+            ("client_updated_at", lock.to_rfc3339()),
+            ("from_view", "month".to_string()),
+            ("from_date", d.format("%Y-%m-%d").to_string()),
+            ("from_surface", "project".to_string()),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+    let location = resp
+        .headers()
+        .get("location")
+        .expect("redirect must carry a Location header")
+        .to_str()
+        .unwrap();
+    assert_eq!(
+        location,
+        format!(
+            "/projects/{project_id}/calendar?view=month&date={}",
+            d.format("%Y-%m-%d")
+        ),
+        "the redirect must rebuild the exact surface/view/date the form named"
+    );
+}

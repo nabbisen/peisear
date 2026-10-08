@@ -1016,6 +1016,10 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::CalendarRescheduleConflictMessage => "[fx-cal-conflict]".to_string(),
         MessageKey::CalendarRescheduleUnavailableMessage => "[fx-cal-unavailable]".to_string(),
         MessageKey::CalendarRescheduleUnconfirmedMessage => "[fx-cal-unconfirmed]".to_string(),
+        MessageKey::ScheduleMoveHeading => "[fx-schedule-move-heading]".to_string(),
+        MessageKey::ScheduleMoveHelperText => "[fx-schedule-move-helper]".to_string(),
+        MessageKey::ScheduleMoveButton => "[fx-schedule-move-button]".to_string(),
+        MessageKey::IssueHasNoScheduledStartMessage => "[fx-issue-no-scheduled-start]".to_string(),
     }
 }
 
@@ -1049,6 +1053,7 @@ fn field_label(field: Field) -> &'static str {
         Field::Project => "[fx-project]",
         Field::PlannedStartDate => "[fx-planned-start-date]",
         Field::PlannedEndDate => "[fx-planned-end-date]",
+        Field::MoveTargetDate => "[fx-move-target-date]",
     }
 }
 

@@ -1409,6 +1409,14 @@ pub(crate) fn render(key: MessageKey) -> String {
              show the current state."
                 .to_string()
         }
+        MessageKey::ScheduleMoveHeading => "Move".to_string(),
+        MessageKey::ScheduleMoveHelperText => {
+            "Move this to a different day. The length stays the same.".to_string()
+        }
+        MessageKey::ScheduleMoveButton => "Move".to_string(),
+        MessageKey::IssueHasNoScheduledStartMessage => {
+            "This issue has no planned start date to move from.".to_string()
+        }
         MessageKey::ConfirmDeleteSprintPlannedNote => {
             "Issues currently linked to it will be unlinked.".to_string()
         }
@@ -1554,6 +1562,7 @@ fn field_label(field: Field) -> &'static str {
         Field::Project => "Project",
         Field::PlannedStartDate => "Planned start date",
         Field::PlannedEndDate => "Planned end date",
+        Field::MoveTargetDate => "New day",
     }
 }
 

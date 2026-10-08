@@ -596,6 +596,22 @@ pub struct DetailQuery {
     /// the edit form.
     pub edit: Option<u8>,
     pub flash: Option<String>,
+    /// `CAL-004`: present when this page was reached from a calendar
+    /// block (`components::calendar::render_block`'s own
+    /// `return_qs`). Threads the calendar's view/date/surface into
+    /// the move control, both to size its day `<select>` from the
+    /// same window the calendar itself is showing and to carry the
+    /// return trip (`FR-NAV-005`) in the move form's hidden fields.
+    /// All three default sensibly (see
+    /// `crate::handlers::calendar::parse_view`/`parse_anchor`) when
+    /// absent — a direct visit to the issue page, not through the
+    /// calendar.
+    #[serde(default)]
+    pub from_view: Option<String>,
+    #[serde(default)]
+    pub from_date: Option<String>,
+    #[serde(default)]
+    pub from_surface: Option<String>,
 }
 
 /// Read-only issue detail page (Phase B PR3 / B-3 split).
@@ -627,9 +643,18 @@ pub async fn detail_page(
             .into_response());
     }
 
-    Ok(render_detail_or_edit(user, state, path, q.flash, false)
-        .await?
-        .into_response())
+    Ok(render_detail_or_edit(
+        user,
+        state,
+        path,
+        q.flash,
+        q.from_view,
+        q.from_date,
+        q.from_surface,
+        false,
+    )
+    .await?
+    .into_response())
 }
 
 /// Edit-mode issue detail page (Phase B PR3 / B-3).
@@ -649,21 +674,59 @@ pub async fn edit_page(
     // ignore it here. (No reason for it to appear, but graceful
     // is better than 400.)
     let _ = q.edit;
-    render_detail_or_edit(user, state, path, q.flash, true).await
+    render_detail_or_edit(
+        user,
+        state,
+        path,
+        q.flash,
+        q.from_view,
+        q.from_date,
+        q.from_surface,
+        true,
+    )
+    .await
 }
 
 /// Shared rendering path for view and edit modes. Both endpoints
 /// load the same data; the only difference is the
 /// `is_edit_mode` flag passed to the renderer.
+#[allow(clippy::too_many_arguments)]
 async fn render_detail_or_edit(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
     Path((project_id, issue_id)): Path<(String, String)>,
     flash: Option<String>,
+    from_view: Option<String>,
+    from_date: Option<String>,
+    from_surface: Option<String>,
     is_edit_mode: bool,
 ) -> AppResult<axum::response::Html<String>> {
     let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
     let issue = issues::find(&state.db, &issue_id, &project_id).await?;
+
+    // `CAL-004`: the same view/anchor parsing the calendar itself
+    // uses, so the move control's day options are exactly the days
+    // the calendar window the user came from is showing — one day
+    // for a day-view visit, up to 35 for month. Absent context (a
+    // direct visit, not through a calendar block) defaults to the
+    // same `Week`-anchored-on-today shape `handlers::calendar`'s own
+    // pages default to, for the same reason: a visible, bounded
+    // window rather than an arbitrary date picker.
+    let move_calendar_view = crate::handlers::calendar::parse_view(from_view.as_deref());
+    let move_calendar_anchor = crate::handlers::calendar::parse_anchor(from_date.as_deref());
+    let (move_window_first, move_window_last) =
+        crate::handlers::calendar::window_days(move_calendar_view, move_calendar_anchor);
+    let mut move_day_options = Vec::new();
+    let mut d = move_window_first;
+    while d <= move_window_last {
+        move_day_options.push(d);
+        d += chrono::Duration::days(1);
+    }
+    let move_return_surface = if from_surface.as_deref() == Some("project") {
+        "project".to_string()
+    } else {
+        "personal".to_string()
+    };
     let assignees = issues::list_assignee_candidates(&state.db, &project_id).await?;
     let workload = issues::project_workload(&state.db, &project_id).await?;
 
@@ -720,6 +783,12 @@ async fn render_detail_or_edit(
             parent_issue,
             flash,
             editing: is_edit_mode,
+            move_context: components::issues::ScheduleMoveContext {
+                day_options: move_day_options,
+                return_view: move_calendar_view.as_str().to_string(),
+                return_date: move_calendar_anchor.format("%Y-%m-%d").to_string(),
+                return_surface: move_return_surface,
+            },
         },
     ))
 }
@@ -1216,9 +1285,13 @@ pub struct ScheduleChangeResponse {
 }
 
 /// `POST /projects/{project_id}/issues/{issue_id}/schedule` —
-/// `calendar.js`'s drag-and-drop entry point. No form sibling: the
-/// day view has no plain control to fall back to (§2f), so unlike
-/// `/status` this endpoint has no `StatusChangeForm`-shaped twin.
+/// `calendar.js`'s drag-and-drop entry point. `CAL-004` gives this a
+/// form sibling after all — [`change_schedule_move`], on the issue
+/// page rather than the day view itself (RFC 0015 §0): the day view
+/// still has no plain control of its own to fall back to, but the
+/// keyboard equivalent `FR-DM-002`'s clause asks for doesn't have to
+/// live on the same screen as the pointer affordance, only one
+/// activation from it.
 pub async fn change_schedule(
     AuthUser(user): AuthUser,
     State(state): State<AppState>,
@@ -1240,4 +1313,113 @@ pub async fn change_schedule(
         time_label,
         announcement,
     }))
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ScheduleMoveForm {
+    /// `YYYY-MM-DD`, one of the `<select>` options the issue page
+    /// rendered — a day, never a timestamp (RFC 0015 §5's clause:
+    /// nothing for a keyboard user to reconstruct). The server below
+    /// computes both new timestamps from it and the issue's current
+    /// ones.
+    pub target_date: String,
+    /// Same field, same validation, as [`StatusChangeForm::client_updated_at`]
+    /// — see that doc comment.
+    #[serde(default)]
+    pub client_updated_at: String,
+    /// `FR-NAV-005`: the calendar state to return to, echoed back
+    /// from the hidden fields the issue page rendered from its own
+    /// query parameters (`handlers::issues::DetailQuery`). Typed
+    /// fields, not a caller-supplied URL — `change_status_form_list`'s
+    /// own pattern, restated for the calendar's two surfaces instead
+    /// of the list's filter/sort state.
+    #[serde(default)]
+    pub from_view: Option<String>,
+    #[serde(default)]
+    pub from_date: Option<String>,
+    #[serde(default)]
+    pub from_surface: Option<String>,
+}
+
+/// `POST /projects/{project_id}/issues/{issue_id}/schedule/move` —
+/// the keyboard-operable move control `CAL-004` adds to the issue
+/// page. Computes the target day's timestamps server-side (the whole
+/// point: nothing for the client to reconstruct) and calls
+/// `apply_schedule_change`, the exact function the day view's own
+/// drag already shares its lock and parsing with — so a Move
+/// produces the identical stored row a drag of the same intent would
+/// (`FR-DM-002`'s clause, the acceptance this handoff is for).
+pub async fn change_schedule_move(
+    AuthUser(user): AuthUser,
+    State(state): State<AppState>,
+    Path((project_id, issue_id)): Path<(String, String)>,
+    Form(body): Form<ScheduleMoveForm>,
+) -> AppResult<Redirect> {
+    // Authorisation precedes reading anything about the issue — the
+    // same order `apply_status_change`/`apply_schedule_change` use,
+    // and the reason it has to happen here too rather than only
+    // inside `apply_schedule_change` below: that call happens after
+    // this handler has already read `issue_now` for the current
+    // start/end to compute the target from.
+    let _project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    let issue_now = issues::find(&state.db, &issue_id, &project_id).await?;
+    let current_start = issue_now
+        .planned_start_at
+        .ok_or_else(|| AppError::Validation(t(MessageKey::IssueHasNoScheduledStartMessage)))?;
+
+    let target =
+        chrono::NaiveDate::parse_from_str(&body.target_date, "%Y-%m-%d").map_err(|_| {
+            AppError::Validation(t(MessageKey::FieldMustBeDateFormat {
+                field: peisear_i18n::Field::MoveTargetDate,
+            }))
+        })?;
+    // Whole-day delta, applied to both ends identically — this is
+    // the duration-preservation the clause asks for, not a side
+    // effect of it: a pair of absolute `datetime-local` fields (the
+    // edit form) cannot carry "preserve the length", because setting
+    // two absolute values has no length to preserve from
+    // (`FR-DM-002-measurement-review.md` §5's ruling). A day delta
+    // can, because it is the same delta applied to both ends.
+    //
+    // A `None` end shifts to `None` — `Option::map` is a no-op on
+    // `None` by construction, which is this handoff's answer to
+    // §2.2's edge case: there is nothing to reconstruct for an issue
+    // whose block has no visible end, because nothing about the end
+    // changes at all.
+    let delta_days = target
+        .signed_duration_since(current_start.date_naive())
+        .num_days();
+    let new_start = current_start + chrono::Duration::days(delta_days);
+    let new_end = issue_now
+        .planned_end_at
+        .map(|e| e + chrono::Duration::days(delta_days));
+
+    apply_schedule_change(
+        &state,
+        &user.id,
+        &project_id,
+        &issue_id,
+        &new_start.format("%Y-%m-%dT%H:%M").to_string(),
+        &new_end
+            .map(|e| e.format("%Y-%m-%dT%H:%M").to_string())
+            .unwrap_or_default(),
+        &body.client_updated_at,
+    )
+    .await?;
+
+    // `FR-NAV-005`: rebuilt server-side from typed fields, never a
+    // caller-supplied URL (`CONF-001` §3.3's concern, restated in
+    // `CAL-004` §2.4).
+    let view = crate::handlers::calendar::parse_view(body.from_view.as_deref());
+    let anchor = crate::handlers::calendar::parse_anchor(body.from_date.as_deref());
+    let base = if body.from_surface.as_deref() == Some("project") {
+        format!("/projects/{project_id}/calendar")
+    } else {
+        "/today/calendar".to_string()
+    };
+    Ok(Redirect::to(&format!(
+        "{base}?view={}&date={}",
+        view.as_str(),
+        anchor.format("%Y-%m-%d")
+    )))
 }

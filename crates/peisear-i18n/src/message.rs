@@ -88,10 +88,15 @@ pub enum Field {
     /// related to them.
     PlannedStartDate,
     PlannedEndDate,
+    /// `CAL-004`: the move control's day `<select>` — distinct from
+    /// `PlannedStartDate` because this field never carries a time, only
+    /// a day; the server computes both new timestamps from it (RFC
+    /// 0015 §5's clause: nothing for a keyboard user to reconstruct).
+    MoveTargetDate,
 }
 
 impl Field {
-    pub fn all() -> [Field; 17] {
+    pub fn all() -> [Field; 18] {
         [
             Field::EffortPoints,
             Field::CapacityPoints,
@@ -110,6 +115,7 @@ impl Field {
             Field::Project,
             Field::PlannedStartDate,
             Field::PlannedEndDate,
+            Field::MoveTargetDate,
         ]
     }
 }
@@ -2407,6 +2413,30 @@ pub enum MessageKey {
     /// [`MessageKey::StatusChangeUndoUnconfirmedMessage`]
     /// (`NFR-LANG-002`, `FR-HLT-005`/`006`).
     CalendarRescheduleUnconfirmedMessage,
+
+    // ---- CAL-004: a move control for the keyboard (RFC 0015, `DEC-059`) ----
+    /// The move control's own heading on the issue page — kept
+    /// distinct from the edit form's "Planned start/end date" labels
+    /// (`Field::PlannedStartDate`/`PlannedEndDate`) because the two
+    /// controls answer different questions: the edit form *sets* two
+    /// absolute timestamps, this *moves* the existing span to a
+    /// different day. Labelling it for what it preserves (handoff
+    /// §2.3) is what keeps the two from reading as two answers to one
+    /// question.
+    ScheduleMoveHeading,
+    /// One sentence under the heading, naming what a Move keeps —
+    /// the length of the scheduled span — so a reader does not have
+    /// to infer it from the day `<select>` alone.
+    ScheduleMoveHelperText,
+    /// The move control's submit button.
+    ScheduleMoveButton,
+    /// Defensive: the move route reached for an issue with no
+    /// `planned_start_at` to shift from. Not reachable through the
+    /// rendered page — the control only renders when the issue has
+    /// one — but a hand-built request can still reach the handler,
+    /// which must fail with its own honest message rather than a
+    /// generic one.
+    IssueHasNoScheduledStartMessage,
 }
 
 impl MessageKey {
@@ -3238,6 +3268,10 @@ impl MessageKey {
             MessageKey::CalendarRescheduleConflictMessage,
             MessageKey::CalendarRescheduleUnavailableMessage,
             MessageKey::CalendarRescheduleUnconfirmedMessage,
+            MessageKey::ScheduleMoveHeading,
+            MessageKey::ScheduleMoveHelperText,
+            MessageKey::ScheduleMoveButton,
+            MessageKey::IssueHasNoScheduledStartMessage,
         ];
         keys.extend(
             CalendarViewLabel::all()
