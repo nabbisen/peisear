@@ -53,6 +53,21 @@ Clippy must pass clean. We treat `-D warnings` as the baseline; if
 your patch produces warnings, either fix them or justify the
 exception in the PR description.
 
+### Doc links
+
+```bash
+RUSTDOCFLAGS="-D rustdoc::broken_intra_doc_links" cargo doc --workspace --no-deps --keep-going
+```
+
+Seven of these crates go to crates.io and docs.rs builds their
+documentation, so an unresolved intra-doc link is live in the published
+API docs of every released version. `--keep-going` is not optional:
+without it, the run stops scheduling crates after the first failure and
+can report clean without ever reaching `peisear-web`. `rustdoc::private_intra_doc_links`
+is deliberately **not** denied — several public doc comments
+cross-reference private implementation detail on purpose, and nobody
+should add that lint here expecting it to pass.
+
 ### Build
 
 ```bash

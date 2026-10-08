@@ -53,7 +53,7 @@ jobs:
   # validation/parse helpers, the i18n `t` helper) purely for a reader
   # already in the source. None should become public API on its own.
   # Denying this lint would make the build red on purpose for all
-  # eight — see `DOCS-002`'s review for the ruling.
+  # eight.
   rustdoc-links:
     name: cargo doc (broken link check)
     runs-on: ubuntu-latest
