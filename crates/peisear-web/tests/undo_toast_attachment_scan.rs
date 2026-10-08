@@ -7,7 +7,7 @@
 //! child, so Undo is the next Tab stop."* This is what keeps that
 //! reading pinned.
 //!
-//! **A DOM-order assertion, not a Tab-walk** (`§10.17`): the toast
+//! **A source scan, not a DOM assertion and not a Tab-walk** (`§10.17`): the toast
 //! these four scripts build does not exist until the script runs, so
 //! there is no server-rendered HTML a Rust integration test could
 //! inspect for it (`§10.15`'s own class — nothing executes these
@@ -113,24 +113,24 @@ fn assert_undo_is_appended_after_the_acted_on_element(file: &str) {
 /// appending it inside the form the other three use for their
 /// (non-form) card/row/block.
 #[test]
-fn dm_js_undo_lands_right_after_the_status_form() {
+fn dm_js_appends_the_undo_toast_after_the_status_form() {
     assert_undo_is_appended_after_the_acted_on_element("dm.js");
 }
 
 /// `board.js` — the kanban card.
 #[test]
-fn board_js_undo_lands_right_after_the_dragged_card() {
+fn board_js_appends_the_undo_toast_after_the_dragged_card() {
     assert_undo_is_appended_after_the_acted_on_element("board.js");
 }
 
 /// `plan.js` — the sprint-plan row.
 #[test]
-fn plan_js_undo_lands_right_after_the_dragged_row() {
+fn plan_js_appends_the_undo_toast_after_the_dragged_row() {
     assert_undo_is_appended_after_the_acted_on_element("plan.js");
 }
 
 /// `calendar.js` — the day-view block.
 #[test]
-fn calendar_js_undo_lands_right_after_the_dragged_block() {
+fn calendar_js_appends_the_undo_toast_after_the_dragged_block() {
     assert_undo_is_appended_after_the_acted_on_element("calendar.js");
 }

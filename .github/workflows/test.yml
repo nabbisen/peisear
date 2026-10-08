@@ -77,8 +77,19 @@ jobs:
   # own quarantine policy if this job ever needs one. No retry step
   # here, and none should be added without an issue link in that
   # README first.
+  #
+  # `DM-TEST-002` §2: this job also runs `undo-mousedown-trap.mjs`
+  # (`DM-TEST-001` item 6), reusing this job's own `cargo build -p
+  # peisear` and its already-present Chromium rather than paying for
+  # both again in a second job. **One job may hold two gates; one gate
+  # holds one assertion** -- `DEC-048` condition 3's "one assertion
+  # only, do not widen this gate" governs `overflow-gate.mjs`'s own
+  # assertion set, not what else runs in this job. Keeping the trap
+  # script unwired was rejected: a script sitting unrun beside a gated
+  # one reads as coverage, which is `§10.15`'s class arriving as a test
+  # executed by nothing.
   browser-overflow-gate:
-    name: browser overflow gate
+    name: browser checks (overflow gate + undo mousedown trap)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -86,6 +97,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo build -p peisear
       - run: node browser-checks/overflow-gate.mjs
+      - run: node browser-checks/undo-mousedown-trap.mjs
 
   # Build and test each test target individually rather than running
   # `cargo test --workspace` in one go. The combined build links many
@@ -381,17 +393,18 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test touch_target -- --test-threads=1
 
-  # `DM-TEST-001` item 4: a text scan over `static/*.js`, not a
-  # browser -- no server to spawn, so unlike every other job on this
-  # list it carries no `cargo build` or app startup cost.
-  test-peisear-web-undo-dom-order:
-    name: peisear-web / undo_dom_order
+  # `DM-TEST-001`/`DM-TEST-002` item 4: a source scan over
+  # `static/*.js`, not a browser and not a DOM assertion -- no server
+  # to spawn, so unlike every other job on this list it carries no
+  # `cargo build` or app startup cost.
+  test-peisear-web-undo-toast-attachment-scan:
+    name: peisear-web / undo_toast_attachment_scan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo test -p peisear-web --test undo_dom_order -- --test-threads=1
+      - run: cargo test -p peisear-web --test undo_toast_attachment_scan -- --test-threads=1
 
   # `QA-005`: every structural guard this project has built --
   # prose_scan, static_js_scan, test_harness_scan, dec_007_scan --
