@@ -922,7 +922,7 @@ pub async fn list_assignee_candidates(
 
 /// Per-user workload report for a project.
 ///
-/// Returns one [`UserLoad`] per assignee candidate ([`CANDIDATE_SET_CTE`]),
+/// Returns one [`peisear_core::UserLoad`] per assignee candidate ([`CANDIDATE_SET_CTE`]),
 /// **plus** any user holding an in-flight issue in the project even if
 /// they are no longer a candidate (RFC 009 §D3, settled: a user
 /// removed from a team keeps issues already assigned to them, so the
@@ -939,7 +939,7 @@ pub async fn list_assignee_candidates(
 /// addition that takes the same shape with `project_id = NULL`.
 ///
 /// When period support lands, this query gains a period filter on
-/// the issue side without changing the [`UserLoad`] result shape.
+/// the issue side without changing the [`peisear_core::UserLoad`] result shape.
 pub async fn project_workload(
     pool: &Pool,
     project_id: &str,

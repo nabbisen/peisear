@@ -22,8 +22,9 @@
 //! Writes:
 //! - [`insert`] / [`update`] / [`delete`]
 //! - [`start`] / [`complete`] — lifecycle transitions
-//! - [`add_issue`] / [`remove_issue`] / [`move_issue_to_sprint`]
-//!   — issue ↔ sprint membership
+//! - [`add_issue`] / [`remove_issue`] — issue ↔ sprint membership;
+//!   moving an issue to a different sprint is [`add_issue`]'s own
+//!   upsert behaviour, not a separate function
 //!
 //! ## What's *not* here
 //!

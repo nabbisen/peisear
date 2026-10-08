@@ -7,10 +7,11 @@
 //!    existing transaction. Callers are mutating helpers in
 //!    [`crate::issues`] which already own a `&mut Transaction`.
 //! 2. **Read helpers** for querying the log:
-//!    [`latest_status_change`] (most-recent status_changed event
-//!    per in-flight issue, used by long-stale detection) and
-//!    [`active_in_progress_seconds`] (sum of in_progress dwell
-//!    time for one issue, used by personal estimation skew).
+//!    [`days_since_last_status_change_per_in_flight_issue`]
+//!    (most-recent status_changed event per in-flight issue, used
+//!    by long-stale detection) and [`in_progress_seconds_for_issue`]
+//!    (sum of in_progress dwell time for one issue, used by
+//!    personal estimation skew).
 //!
 //! All event writes go through this module so the schema stays in
 //! one place. Read queries can be added freely; writes shouldn't be.

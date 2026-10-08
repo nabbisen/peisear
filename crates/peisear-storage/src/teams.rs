@@ -7,7 +7,7 @@
 //! - [`teams_for_user`] — "what teams am I in?"
 //! - [`members_of_team`] — "who's in this team?"
 //! - [`role_for`] — "what's my role in this team?" (None if not a member)
-//! - [`projects_in_team`] — projects with `team_id = ?`
+//! - [`crate::projects::list_for_team`] — projects with `team_id = ?`
 //!
 //! Writes:
 //! - [`insert`] — create a new team. The first member is

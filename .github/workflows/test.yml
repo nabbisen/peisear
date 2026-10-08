@@ -38,6 +38,33 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace --all-targets -- -D warnings
 
+  # DOCS-002: the published API docs (seven crates go to crates.io;
+  # docs.rs builds this). `clippy` above doesn't check doc links and
+  # nothing else did either, which is how this backlog went unnoticed.
+  #
+  # `--keep-going` is required, not optional: without it cargo stops
+  # scheduling crates after the first failure, so a run can silently
+  # never reach `peisear-web` and report a false clean. That is
+  # exactly how this gate's own pre-fix count came in short.
+  #
+  # `rustdoc::private_intra_doc_links` stays un-denied, permanently,
+  # not pending: eight public doc comments deliberately cross-reference
+  # private implementation-detail items (a SQL CTE constant, private
+  # validation/parse helpers, the i18n `t` helper) purely for a reader
+  # already in the source. None should become public API on its own.
+  # Denying this lint would make the build red on purpose for all
+  # eight — see `DOCS-002`'s review for the ruling.
+  rustdoc-links:
+    name: cargo doc (broken link check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc --workspace --no-deps --keep-going
+        env:
+          RUSTDOCFLAGS: -D rustdoc::broken_intra_doc_links
+
   # BROWSER-001 (RFC 011 step 4): the horizontal-overflow gate. One
   # assertion -- scrollWidth <= clientWidth -- on eighteen rendered
   # pages at five widths (LAYOUT-005, BROWSER-002, LAYOUT-008), driven by

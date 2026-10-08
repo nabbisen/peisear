@@ -1,4 +1,4 @@
-//! Error page rendered from [`AppError::into_response`].
+//! Error page rendered from `AppError::into_response`.
 
 use axum::response::Html;
 use leptos::prelude::*;

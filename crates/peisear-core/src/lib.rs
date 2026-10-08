@@ -444,8 +444,9 @@ impl From<User> for CurrentUser {
 /// Coarse-grained classification used across the health / burnout
 /// indicator family. The same three-step palette applies whether the
 /// subject is a project, a user, or (in the future) a team —
-/// callers reuse this enum and its [`HealthIndicator::badge_class`]
-/// method instead of inventing parallel ones.
+/// callers fold this enum down to [`DisplayHealthState`] via
+/// [`DisplayHealthState::clamp`] and reuse its `badge_class` method
+/// instead of inventing parallel ones.
 ///
 /// The semantics are deliberately fuzzy: "Watch" means "worth a
 /// glance, may or may not be a problem"; "Concern" means "human
@@ -1669,8 +1670,8 @@ pub mod personal_metrics {
 ///
 /// Future indicators (estimation drift trend, cognitive switching)
 /// will land additively as new fields on
-/// [`UserBurnoutSignals`] and new chips in the dashboard. The
-/// shape is uniform across all signals so adding one is a
+/// [`user_burnout::UserBurnoutSignals`] and new chips in the
+/// dashboard. The shape is uniform across all signals so adding one is a
 /// localised change.
 pub mod user_burnout {
     use super::HealthIndicator;
@@ -2325,7 +2326,7 @@ pub mod notifications {
     }
 
     /// One per-user, per-kind preference row. Absent rows fall
-    /// back to [`DEFAULT_PREFERENCES`].
+    /// back to [`DEFAULT_CHANNELS`] and [`DEFAULT_MIN_SEVERITY`].
     #[derive(Debug, Clone)]
     pub struct Preference {
         pub user_id: String,
