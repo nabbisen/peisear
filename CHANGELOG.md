@@ -73,8 +73,8 @@ correction to the project's own record. No file under `crates/*/src/` or
   pin sprint-plan field parity, calendar lock parity between the issue
   edit form and the drag's JSON endpoint, and the undo toast's attachment
   to its acted-on element across all four scripts.
-- **One of the nine is a source scan, not a test of running code**
-  (`undo_toast_attachment_scan`, four of the nine): it pins what
+- **Four of the nine are a source scan, not a test of running code**
+  (`undo_toast_attachment_scan`, one new file): they pin what
   `static/*.js` is *written* to do, not what a running page does. Renamed
   from its first name (`undo_dom_order`) before this document cited it,
   because the original name claimed a runtime fact the mechanism — a
