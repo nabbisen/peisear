@@ -168,6 +168,81 @@ async fn issue_planned_dates_only_edit_with_stale_timestamp_returns_409() {
     );
 }
 
+/// `DM-TEST-001` item 3 — calendar lock parity. `update` (the issue
+/// edit form, `issues.rs:752`) and `change_schedule` (the day view
+/// drag's JSON endpoint, via `apply_schedule_change`, `issues.rs:1144`)
+/// call the exact same `check_optimistic_lock` against the same
+/// `client_updated_at`, so a stale stamp must produce the identical
+/// conflict status on both — an agreement that holds today only
+/// because both call sites happen to call the same function
+/// (`FR-DM-002-measurement-review.md` §2: *"two independently-written
+/// call sites that agree because two authors made the same
+/// choice"*), not because one calls the other. This asserts the two
+/// statuses *against each other*, not just against a hardcoded `409`
+/// twice — the shape that actually catches the two drifting apart if
+/// either call site's status mapping is ever changed on its own.
+#[tokio::test]
+async fn update_and_change_schedule_agree_on_a_stale_locks_status() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Test").await;
+    let issue_id = create_issue(&app.db, &project_id, &user_id, "Reschedule me").await;
+
+    let t0 = read_issue_updated_at(&app, &issue_id).await;
+
+    // A real reschedule through the drag's own JSON endpoint advances
+    // `updated_at`, making `t0` stale for everything that follows.
+    ensure_distinct_timestamp().await;
+    let resp = post_schedule_change(
+        &app,
+        &project_id,
+        &issue_id,
+        &t0,
+        "2026-09-01T09:00",
+        "2026-09-01T10:00",
+    )
+    .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::OK,
+        "the first reschedule should succeed, got {}",
+        resp.status_code()
+    );
+
+    // The drag's own endpoint, retried with the now-stale `t0`.
+    let schedule_status = post_schedule_change(
+        &app,
+        &project_id,
+        &issue_id,
+        &t0,
+        "2026-09-02T09:00",
+        "2026-09-02T10:00",
+    )
+    .await
+    .status_code();
+
+    // The issue edit form, with the identical stale `t0` against the
+    // identical issue.
+    let form_status =
+        post_issue_planned_dates_update(&app, &project_id, &issue_id, &t0, "2026-09-03T09:00")
+            .await
+            .status_code();
+
+    assert_eq!(
+        schedule_status,
+        StatusCode::CONFLICT,
+        "the drag's own endpoint must reject a stale lock, got {schedule_status}"
+    );
+    assert_eq!(
+        form_status, schedule_status,
+        "the issue edit form must return the identical conflict status the \
+         drag's endpoint returns for the same stale lock -- today they agree \
+         only because both call the same check_optimistic_lock, not because \
+         one calls the other (FR-DM-002-measurement-review.md §2)"
+    );
+}
+
 #[tokio::test]
 async fn issue_update_with_missing_client_updated_at_is_rejected() {
     // Submitting without any client_updated_at must not silently
@@ -1008,6 +1083,28 @@ async fn post_status_change(
         .post(&url)
         .json(&serde_json::json!({
             "status": new_status,
+            "client_updated_at": client_updated_at,
+        }))
+        .await
+}
+
+/// POST the day view drag's own JSON endpoint,
+/// `/projects/{project_id}/issues/{issue_id}/schedule`, with a given
+/// `client_updated_at`. Parallel to `post_status_change` above.
+async fn post_schedule_change(
+    app: &TestApp,
+    project_id: &str,
+    issue_id: &str,
+    client_updated_at: &str,
+    planned_start_at: &str,
+    planned_end_at: &str,
+) -> axum_test::TestResponse {
+    let url = format!("/projects/{project_id}/issues/{issue_id}/schedule");
+    app.server
+        .post(&url)
+        .json(&serde_json::json!({
+            "planned_start_at": planned_start_at,
+            "planned_end_at": planned_end_at,
             "client_updated_at": client_updated_at,
         }))
         .await

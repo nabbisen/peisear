@@ -381,6 +381,18 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test touch_target -- --test-threads=1
 
+  # `DM-TEST-001` item 4: a text scan over `static/*.js`, not a
+  # browser -- no server to spawn, so unlike every other job on this
+  # list it carries no `cargo build` or app startup cost.
+  test-peisear-web-undo-dom-order:
+    name: peisear-web / undo_dom_order
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test undo_dom_order -- --test-threads=1
+
   # `QA-005`: every structural guard this project has built --
   # prose_scan, static_js_scan, test_harness_scan, dec_007_scan --
   # lives in this one target, and nothing above runs it. Named for

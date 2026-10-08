@@ -1421,3 +1421,299 @@ async fn backlog_reads_a_same_second_burst_newest_first() {
         "a same-second burst must read newest first: {offsets:?}"
     );
 }
+
+// ──────────────────────────────────────────────────────────────
+// `DM-TEST-001` items 1, 2, 5 — the sprint-planning half of the
+// `FR-DM-002` measurement (`FR-DM-002-measurement-review.md`), pinned
+// as tests. `plan.js:453`'s `new URLSearchParams(new FormData(form))`
+// reads the dragged row's own `<form>` verbatim — so the field set a
+// row's form renders *is* the field set a drag sends, and a
+// stored-row comparison against the row-button path is a comparison
+// against the drag path too, by construction, not by a second
+// measurement of the drag itself.
+// ──────────────────────────────────────────────────────────────
+
+/// Scope a markup assertion to one `<form method="post" action="...">
+/// ...</form>` whose `action` *ends with* `action_suffix` (e.g.
+/// `"/plan/add"`) — not a bare substring search, which collides with
+/// the backlog/sprint column's own `data-plan-url` attribute: that
+/// attribute holds the *opposite* column's move URL verbatim (a
+/// backlog row's undo-an-add posts a `remove`, so the backlog
+/// column's own `data-plan-url` is a `remove` URL), so a plain
+/// `body.find("/plan/remove")` can match that `data-` attribute
+/// instead of the row's own `<form>` if the column markup happens to
+/// precede it. Walking every real `<form method="post" action="...">`
+/// and checking the *value*, not just scanning for the substring
+/// anywhere in the page, is what the same scoping discipline
+/// `remove_form_markup_carries_the_same_filter_fields_as_add` above
+/// already applies, generalised and made collision-proof here.
+fn scoped_form<'a>(body: &'a str, action_suffix: &str) -> &'a str {
+    let marker = "<form method=\"post\" action=\"";
+    let mut search_from = 0;
+    loop {
+        let rel = body[search_from..].find(marker).unwrap_or_else(|| {
+            panic!("no <form method=\"post\"> whose action ends with {action_suffix:?}: {body}")
+        });
+        let form_start = search_from + rel;
+        let action_val_start = form_start + marker.len();
+        let action_val_end = body[action_val_start..]
+            .find('"')
+            .map(|i| i + action_val_start)
+            .expect("action attribute has a closing quote");
+        let action_val = &body[action_val_start..action_val_end];
+        if action_val.ends_with(action_suffix) {
+            let rest = &body[form_start..];
+            let form_end = rest
+                .find("</form>")
+                .unwrap_or_else(|| panic!("form has no closing tag: {rest}"));
+            return &rest[..form_end];
+        }
+        search_from = action_val_end;
+    }
+}
+
+/// Every `name="..."` attribute inside `form_slice`, asserted as the
+/// *exact* set `expected` — not "contains", which would pass with
+/// extra fields the drag's `FormData(form)` read would then also send
+/// unexpectedly, or with a typo'd field name sitting alongside the
+/// real one.
+fn assert_field_names_exactly(form_slice: &str, expected: &[&str]) {
+    let mut found: Vec<&str> = Vec::new();
+    let mut rest = form_slice;
+    while let Some(pos) = rest.find(r#"name=""#) {
+        let after = &rest[pos + 6..];
+        let end = after
+            .find('"')
+            .expect("a name=\" attribute has a closing quote");
+        found.push(&after[..end]);
+        rest = &after[end + 1..];
+    }
+    found.sort_unstable();
+    let mut expected: Vec<&str> = expected.to_vec();
+    expected.sort_unstable();
+    assert_eq!(
+        found, expected,
+        "row form's field set does not match exactly (scoped to one <form>...</form>): {form_slice}"
+    );
+}
+
+/// Item 1, add direction — the backlog row's move form carries exactly
+/// five named fields: `issue_id`, `project_id`, `project`, `priority`,
+/// `assignee`. This is the drag's own request body (see the module
+/// comment above), so this is also the field-by-field comparison §1.2
+/// asked for: there is no field the drag sends that this form does
+/// not, and vice versa, because they are the same `FormData` read.
+#[tokio::test]
+async fn backlog_row_form_carries_exactly_five_named_fields() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Row under test (add)",
+        Priority::Medium,
+        Some(3),
+    )
+    .await;
+
+    let body = app.server.get(&plan_url(&slug, &sprint_id)).await.text();
+    let form_slice = scoped_form(&body, "/plan/add");
+    assert_field_names_exactly(
+        form_slice,
+        &["issue_id", "project_id", "project", "priority", "assignee"],
+    );
+}
+
+/// Item 1, remove direction — the sprint-item row's move form carries
+/// exactly four named fields, `project_id` correctly absent:
+/// `PlanRemoveForm` does not declare it, so a drag reading this form's
+/// `FormData` cannot send it either.
+#[tokio::test]
+async fn sprint_item_row_form_carries_exactly_four_named_fields_no_project_id() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let issue_id = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Row under test (remove)",
+        Priority::Medium,
+        Some(3),
+    )
+    .await;
+    sprints::add_issue(&app.db, &sprint_id, &issue_id)
+        .await
+        .expect("add issue to sprint");
+
+    let body = app.server.get(&plan_url(&slug, &sprint_id)).await.text();
+    let form_slice = scoped_form(&body, "/plan/remove");
+    assert_field_names_exactly(form_slice, &["issue_id", "project", "priority", "assignee"]);
+}
+
+/// Item 2 — stored-row equivalence. POSTs exactly the fields each
+/// row's own form renders (not a minimal convenience subset), and
+/// asserts both the `sprint_issues` membership and that `issues.updated_at`
+/// is untouched by either direction: membership lives in the join
+/// row's own `assigned_at`, and the issue row itself is never written
+/// by a plan move. Since this is the drag's own request body
+/// (`plan.js:453`), it is the drag's stored effect being measured, not
+/// a proxy for it.
+#[tokio::test]
+async fn plan_add_then_remove_leave_issues_updated_at_untouched() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let issue_id = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Equivalence subject",
+        Priority::Medium,
+        Some(3),
+    )
+    .await;
+
+    let before = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .updated_at;
+
+    // Exactly the add form's five fields (item 1 above pins this set).
+    let resp = app
+        .server
+        .post(&format!("{}/add", plan_url(&slug, &sprint_id)))
+        .form(&[
+            ("issue_id", issue_id.as_str()),
+            ("project_id", project_id.as_str()),
+            ("project", ""),
+            ("priority", ""),
+            ("assignee", ""),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let after_add = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue");
+    assert_eq!(
+        sprints::sprint_for_issue(&app.db, &issue_id)
+            .await
+            .expect("query sprint_for_issue")
+            .as_deref(),
+        Some(sprint_id.as_str()),
+        "add must create sprint_issues membership"
+    );
+    assert_eq!(
+        after_add.updated_at, before,
+        "a plan add must not touch issues.updated_at — membership lives in \
+         sprint_issues.assigned_at, not on the issue row"
+    );
+
+    // Exactly the remove form's four fields (no project_id — item 1
+    // above pins this set too).
+    let resp = app
+        .server
+        .post(&format!("{}/remove", plan_url(&slug, &sprint_id)))
+        .form(&[
+            ("issue_id", issue_id.as_str()),
+            ("project", ""),
+            ("priority", ""),
+            ("assignee", ""),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let after_remove = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue");
+    assert_eq!(
+        sprints::sprint_for_issue(&app.db, &issue_id)
+            .await
+            .expect("query sprint_for_issue"),
+        None,
+        "remove must delete the sprint_issues membership row"
+    );
+    assert_eq!(
+        after_remove.updated_at, before,
+        "a plan remove must not touch issues.updated_at either"
+    );
+}
+
+/// Item 5 — on a row that cannot move (`can_move = false`, the three
+/// existing `drag_markers_absent_*` scenarios above), neither the drag
+/// affordance nor the button-driven move form is offered. Extends
+/// `assert_no_drag_markers`'s own needle list with `draggable=` and
+/// the two move URLs — closing a real gap: the prior needle list
+/// checked `data-plan-move` (the `<li>`'s own marker) but never the
+/// `draggable` attribute itself, nor the literal move-form action
+/// URLs, even though `FR-DM-002-measurement` found all three gated by
+/// the *same* `can_move.then(...)` call in `render_backlog`/
+/// `render_sprint_items`. One shared gate; this is what asserts the
+/// three cannot drift apart from each other.
+///
+/// Plant-verified (not left to assertion alone): temporarily removed
+/// `render_backlog`'s `can_move.then_some("true")` gate on `draggable`
+/// (hardcoded `Some("true")`), ran this test, and it failed exactly as
+/// expected:
+///
+/// ```text
+/// drag must not be attached here -- found "draggable=": ...
+/// ```
+///
+/// Reverted; `git diff` on `components/sprint_plan.rs` showed zero
+/// output before this test was reported passing.
+#[tokio::test]
+async fn can_move_false_offers_neither_drag_nor_move_form() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Immovable backlog item",
+        Priority::Medium,
+        Some(3),
+    )
+    .await;
+
+    // A viewer cannot move anything — `can_move = false` for the whole
+    // page, the same shape `drag_markers_absent_for_viewer_on_planned_sprint`
+    // above already covers for the narrower needle list.
+    let viewer = TestUser::new("vic");
+    let viewer_id = register_and_login(&app, &viewer).await;
+    peisear_storage::teams::add_member(&app.db, &team_id, &viewer_id, TeamRole::Viewer)
+        .await
+        .expect("add viewer");
+
+    let resp = app.server.get(&plan_url(&slug, &sprint_id)).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+    assert_no_drag_markers(&body);
+    for needle in ["draggable=", "/plan/add", "/plan/remove"] {
+        assert!(
+            !body.contains(needle),
+            "a row that cannot move must offer neither the drag affordance \
+             nor the button-driven move form -- found {needle:?}: {body}"
+        );
+    }
+}
