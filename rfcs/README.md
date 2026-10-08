@@ -25,6 +25,14 @@ projects where "the maintainer signed off" is a distinct event from
 "the implementer finished" — which holds here: the architect designs,
 the owner approves, the dev team implements.
 
+## Proposed
+
+Open for review. The implementer should not start.
+
+| ID | Title | Target |
+|----|-------|--------|
+| 015 | [Rescheduling without a pointer](./proposed/015-rescheduling-without-a-pointer.md) — the calendar is the **one** direct-manipulation surface whose keyboard path leaves the screen: **77 Tab and Enter keystrokes across three pages**, plus hand arithmetic, against one drag. **The obvious fix does not fit** — a block's height *is* its duration, so there is no room for a 44 × 44 px control in the grid. Asks where the control lives instead, and asks for the revision of a clause the architect drafted one day earlier that the geometry contradicts | unscheduled; decision requested |
+
 ## Accepted
 
 Design settled. Implementation may begin.
