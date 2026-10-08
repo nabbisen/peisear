@@ -1,0 +1,12 @@
+# Handoffs — keyboard parity and the undo window
+
+**Not RFC-governed.** `FR-DM-001` was amended at 0.38.0 from five
+direct-manipulation surfaces to four and reached Met. Two requirements that
+govern those surfaces were not touched, and for five releases described
+**two** of them: `FR-DM-002` (keyboard parity, **P0**) and `FR-DM-006` (the
+undo window). 0.43.0 corrected both to `Partial` **without establishing what
+is true** — which is the honest status and not yet an answer.
+
+| ID | Link | What | Release |
+|---|---|---|---|
+| FR-DM-002 / FR-DM-006 | [two surfaces nobody checked](./FR-DM-002-two-surfaces-nobody-checked.md) | **A measurement, not a build.** The sprint-planning drag (0.35.0) and the calendar block drag (0.36.0) have no keyboard test between them and `calendar.rs` has no form, button or select at all. Establish whether the keyboard path produces the **identical stored effect**, whether the optimistic lock sits on both calendar paths or only the drag, and the keystroke count for a keyboard-only reschedule. **Two of the architect's three preliminary readings point the other way from 0.43.0's correction**: the sprint plan looks met by construction, and `FR-DM-006` looks Met on all four — a 5-second toast with a real button exists in `calendar.js` too. One design question is the architect's: whether an equivalent that lives on *another page* satisfies `FR-DM-002`. | 0.44.0 |
