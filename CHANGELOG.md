@@ -11,6 +11,110 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.44.0] — 2026-10-08
+
+**This release ships no behaviour, and that is the honest summary rather
+than one dressed up.** It is a rule, a lockfile bump, nine tests and a
+correction to the project's own record. No file under `crates/*/src/` or
+`static/` differs from 0.43.0.
+
+### Changed
+
+- **`FR-DM-002` (a `P0`) gains a clause, so the calendar fails a written
+  test instead of an opinion.** The requirement now reads: a keyboard
+  equivalent MUST be offered **by the element that carries the pointer
+  affordance** — on it, or one activation away — and MUST **perform the
+  same action, not require the user to reconstruct its effect**. Measured
+  against it: the board, the issue list/detail, and the sprint plan pass.
+  The calendar fails both halves — reaching a reschedule costs **77 Tab
+  and Enter keystrokes across three pages**, not one activation on the day
+  view itself, and the issue edit form's two independent `datetime-local`
+  fields make a keyboard user compute the new end time by hand, where a
+  drag shifts both ends by the same delta. **The surfaces are not
+  inaccessible** — the effect is reachable on every one of them, and both
+  write paths (the form, the drag's own JSON endpoint) carry the identical
+  optimistic lock. What is wrong is the cost and the shape, not the
+  presence, of the calendar's keyboard path. **The remedy is scheduled,
+  not pending**: RFC 0015 Option A — a purpose-built move control one
+  activation from the block, the server computing both timestamps so
+  duration survives a keyboard move — at **0.45.0**.
+
+### Fixed
+
+- **`FR-DM-006` (the undo window) reaches Met on all four
+  direct-manipulation surfaces — reversing a correction this document made
+  one release earlier.** 0.43.0 corrected it to `Partial — three of four`,
+  because the status's own words named three places, a fourth surface was
+  known to ship, and nobody opened `calendar.js` to check the fourth before
+  writing the correction. It does have the identical real button, the
+  identical 5-second window, and the identical keyboard reachability the
+  other three have. Recorded plainly, including why it happened: **the
+  procedure now reads amend from the code, never from the entry's own
+  words** — this is the sweep's own first finding, corrected by its second
+  pass.
+- **Two yanked dependencies, moved past.** `spin 0.9.8` (shipped, pulled in
+  via `sqlx-sqlite`) and `chacha20 0.10.0` (test-only, via `axum-test`)
+  were both withdrawn upstream. Both moved to the next non-yanked version
+  within the same minor (`0.9.9`, `0.10.2`) — a lockfile-only change, four
+  lines. **Neither is known to be vulnerable**: *yanked* means the
+  publisher withdrew the version, which can be a security withdrawal or a
+  mistaken publish, and which one it was is not established here. Found by
+  the release procedure's own `cargo publish --dry-run` — the system
+  working as intended, not a defect that shipped.
+
+### Internal
+
+- **Nine new tests, pinning the measurement that found the above.** The
+  one worth a sentence on its own:
+  `plan_add_then_remove_leave_issues_updated_at_untouched` — a plan move
+  that began writing `issues.updated_at` would silently invalidate every
+  open browser tab's optimistic-lock stamp for that issue, on every drag
+  or button move, with no error anywhere to notice it by. The other eight
+  pin sprint-plan field parity, calendar lock parity between the issue
+  edit form and the drag's JSON endpoint, and the undo toast's attachment
+  to its acted-on element across all four scripts.
+- **One of the nine is a source scan, not a test of running code**
+  (`undo_toast_attachment_scan`, four of the nine): it pins what
+  `static/*.js` is *written* to do, not what a running page does. Renamed
+  from its first name (`undo_dom_order`) before this document cited it,
+  because the original name claimed a runtime fact the mechanism — a
+  substring check over source text — cannot reach.
+- **One check added is not a Rust test at all.** `undo-mousedown-trap.mjs`
+  is a browser gate, wired into the existing `browser-overflow-gate` CI
+  job as a second step rather than a new job (no second build, no second
+  Chromium install), and it is outside the 376 figure below. It executes
+  `board.js`, `plan.js` and `calendar.js` in a real headless browser and
+  asserts a real mousedown-plus-movement on Undo still fires a click
+  rather than starting a drag — the exact regression `A11Y-005` found and
+  fixed, now held in place by something that runs instead of only being
+  read.
+- **`§10.15`'s title changes after eighteen releases** — from *no test*
+  to *almost no test*: one gate now executes the shipped scripts for one
+  property, on three of the five files and one property out of many.
+  **`RFC 011`'s refusal to buy a JavaScript test harness is unchanged** —
+  this is one gate on one real regression class, not a reversal of that
+  decision, and a reader should not conclude otherwise from the residue
+  count (1,909 lines in five files) shrinking in significance.
+- **Test inventory: 376, up from 367.** Three consecutive runs, extracted
+  fresh from `.github/CONTRIBUTING.md`'s own command block each time —
+  the block changed twice this release (`DM-TEST-001`, `DM-TEST-002`), and
+  a stale saved copy undercounts by exactly the tests the most recent
+  change added, which is how this release's own review first measured 372
+  before catching it.
+- **No schema migration** — `0020` remains the most recent, the fifth
+  release running. The overflow gate stayed at 120 cells, unexercised:
+  nothing here renders a page or changes a component's markup.
+
+**What a reader should not conclude.** `FR-DM-002` reading `Partial` with
+a named clause is not a newer or worse defect than last release's
+unqualified `Partial` — it is the same gap, now checkable by inspection
+instead of resting on judgement, with its remedy dated. The 376 figure
+mixes a source scan (four tests) with assertions against running code
+(five tests); neither the published count nor `undo_toast_attachment_scan`'s
+own green result should be read as end-to-end runtime coverage of the
+undo gesture — only the browser gate, for the one property it checks, is
+that.
+
 ## [0.43.0] — 2026-10-08
 
 This release has two halves, and they pull in opposite directions. One closes
