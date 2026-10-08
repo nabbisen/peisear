@@ -11,17 +11,115 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.43.0] — 2026-10-08
+
+This release has two halves, and they pull in opposite directions. One closes
+a long privacy thread: identity moving from a loose convention to something
+the compiler now enforces. The other reports that the project's own record of
+itself was wrong about a `P0`.
+
+### Changed
+
+- **Personal-data storage now refuses anything but a cryptographically-verified
+  identity, at compile time.** `NFR-PRIV-005` reaches **Met**: across all 36
+  storage functions that can take an identity, `user_id: &str` now returns
+  **zero results** in all six personal-data modules — it was 11 of 36 still
+  on `&str` after the first pass (`PRIV-002`), and a second sealed type
+  (`SubjectId`, `PRIV-003`) closed the gap for the one caller with no
+  requester: a background job that iterates users on a schedule rather than
+  answering a request. **The boundary this protects already held** — two
+  independent measurements, a release apart, found the same 36 functions
+  already scoping correctly on identity. What changes is that the boundary
+  can no longer be broken by inattention, because the parameter type itself
+  refuses anything that was not minted from a verified JWT or derived from
+  one — not that a hole closed. The four functions that remain on `&str`
+  cannot take a sealed identity and are not a shortfall: three are the
+  authentication path, where no caller identity exists yet because
+  establishing one is what the call does, and one is the same background
+  job's own user enumeration.
+- **A new requirement, `NFR-REL-008` (published API documentation)**: the
+  seven published crates' API documentation MUST build with no unresolved
+  intra-doc links, enforced by an automated gate. It exists because this
+  project publishes one artefact it does not author — `docs.rs` builds these
+  crates on every release — and nothing was checking it (see Fixed, below).
+
+### Fixed
+
+- **Ten broken links in the published API documentation** (`DOCS-002`).
+  `docs.rs` builds these seven crates, so each unresolved link was live in
+  the API documentation of every released version since it was introduced.
+  The honest framing is that **nothing had ever looked**: `clippy
+  --all-targets` does not check doc links and `cargo doc` was in no gate.
+  Seven were path corrections to sentences already true about the code —
+  two functions renamed without the module documentation describing them,
+  a type used fully-qualified in code and linked bare, a function described
+  from a module it does not live in. Three named a shape the code no longer
+  has — a constant since split into two, a method an enum never carried,
+  and a function whose work had been folded into a sibling's upsert — and
+  are corrected to say what the code does rather than retargeted to clear
+  the warning. A new CI job, `rustdoc-links`, denies unresolved links on
+  every push; its local command is documented in `.github/CONTRIBUTING.md`
+  beside Formatting and Linting, so the checklist and CI cannot drift apart.
+  (The initial count of nine, and a separate count of 23 "issues," were both
+  short — the counting run aborted before reaching `peisear-web`, and the
+  23 included three summary lines rather than individual issues. The real
+  count was ten links and eight further warnings, left as deliberate
+  cross-references to implementation detail.)
+
 ### Internal
 
+- **A `P0` requirement, `FR-DM-002` (keyboard parity), was recorded complete
+  over half of what it governs.** Its status read "Implemented for both
+  shipped surfaces" while **four** direct-manipulation surfaces ship: the
+  sprint-planning drag (0.35.0) and the calendar block drag (0.36.0) have no
+  keyboard test, and `calendar.rs` has no form, button or select at all.
+  `FR-DM-006` (the undo window) was in the same position. **Both are now
+  recorded as `Partial`.** This is not a newly-discovered accessibility gap
+  — the surfaces may well be fine. What is established is that nobody
+  checked, and the status said otherwise for five releases.
+- **The sweep that found it, and `REQ-003`'s answer to the question behind
+  it.** Four candidate text rules for catching a stale requirement status
+  were tested against six known historical instances, measuring false
+  positives over all 162 register entries; none reached the bar. The best
+  scored 4 of 6 and was argued down by the dev team that built it, because
+  its zero false positives were measured on zero opportunities — no live
+  entry had both a stale-shaped status and the sibling citation the rule
+  looked for, so it had never had the chance to be wrong. The remedy is
+  procedural: a four-pass review, by hand, of both specifications at every
+  release candidate, now recorded in
+  `docs/development/changelog-and-releases.md`. Its first run, this release,
+  found six things — three stale entries (`FR-DM-002`, `FR-DM-006`,
+  `NFR-PRIV-005`) and three stale summary rows in the requirements
+  appendix.
+- **Test inventory: 367, two fewer than 0.42.0's 369, and that drop is
+  deliberate.** `PRIV-002` deleted `untrusted_id_scan.rs` and its two
+  assertions (`path_extracted_user_id_only_reaches_require_self`,
+  `every_path_extraction_binds_the_name_user_id`) — a 212-line text-pattern
+  guard approximating a property the type system now holds everywhere,
+  rather than only where the scan happened to look.
 - **A requirement identifier was used twice.** `NFR-A11Y-009` was added at
-  0.41.0 for *Where a navigation leaves the reader* while already belonging to
-  *Keyboard shortcuts*, a P3 item dating to the 0.19.1 baseline. The newer
+  0.41.0 for *Where a navigation leaves the reader* while already belonging
+  to *Keyboard shortcuts*, a P3 item dating to the 0.19.1 baseline. The newer
   entry is renumbered **`NFR-A11Y-011`**; the older keeps the number, because
   it is cited in two superseded baselines that are retained unedited as the
   record of their own releases. **The 0.41.0 and 0.42.0 sections below still
   say `NFR-A11Y-009`** and are left as written: a release section records what
   was said at the time, and the published release notes carry the same text.
   Found by `REQ-003` while parsing the document for something else.
+- **No schema migration** — `0020` remains the most recent, the fourth
+  release running. The overflow gate stayed at 120 cells, untouched by every
+  change in this release and not exercised by any of them.
+
+**What a reader should not conclude.** `FR-DM-002` and `FR-DM-006` reading
+`Partial` is not a report that the sprint-planning or calendar drag is
+inaccessible — it is a report that nobody has checked, which the architect's
+own recommendation is to ship rather than hold the release for, since the
+condition has held unnoticed since 0.36.0 and a release correcting the record
+is the right place for the correction to appear. `§10.17`, `§10.30` and
+`§10.34` remain open; `§10.34` is open **by decision** — it closes after two
+consecutive releases sweep clean, not on this one's result. The eight
+remaining public-doc-comment references to private implementation detail
+(`DOCS-002`, §C) are left as-is on purpose, not as a residual defect.
 
 ## [0.42.0] — 2026-10-07
 
