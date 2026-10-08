@@ -1,7 +1,8 @@
 # RFC 0015: Rescheduling without a pointer — the one surface whose keyboard path leaves the screen
 
-**Status**: **Proposed** (2026-10-08) — open for review; implementer should
-not start
+**Status**: **Accepted** (2026-10-08) — owner-approved, all recommendations
+taken and none varied. **The clause (§5) is in force from 0.44.0; the control
+(§4) is 0.45.0 work and §7.1 says why the implementer does not start it yet.**
 **Target**: **the clause at 0.44.0, the control at 0.45.0** — see §7.1 for
 why the split is the optimisation rather than a delay
 **Related spec sections**: `SPEC §21.2`, `SPEC §32`, `SPEC §39`;
@@ -10,7 +11,7 @@ external design `SCR-20`
 on-surface), `FR-DM-001` (Met, four surfaces), `FR-DM-006` (Met),
 `NFR-A11Y-007` (touch targets), `NFR-A11Y-001`
 **Related register entries**: `§10.34`, `§10.15`
-**Governing decisions**: none yet; §7 requests two
+**Governing decisions**: establishes **`DEC-059`**
 **Last updated**: 2026-10-08 — written from `FR-DM-002`'s measurement
 (`.git-exclude/reviewed/FR-DM-002-measurement-review.md`) and from the block
 geometry in `components/calendar.rs`, both measured rather than described
@@ -300,18 +301,42 @@ surface, which is the only reason to put a clause in a requirement at all.
   both write paths are locked. What is wrong is the cost and the shape, and
   `FR-DM-002`'s `Partial` already says so.
 
-## 7. Decisions requested
+## 6a. `DEC-059`, as taken
 
-1. **Option A** (§4), revised from an earlier recommendation of B. The
-   argument most likely to be wrong is the D-5 one: I now read B's list as a
-   second rendering of the grid's own content, and if the owner reads it as a
-   genuinely different question, B returns.
-2. **The clause, in §5's final form**: *offered by the element that carries
-   the pointer affordance — on it, or one activation away — and performs the
-   same action rather than requiring the user to reconstruct its effect.*
-   This is the decision that outlives the calendar; it is the test every
-   future direct-manipulation surface is held to.
-3. **The schedule in §7.1 below.**
+**Accepted 2026-10-08, with all three recommendations and none varied.**
+
+> **`DEC-059`**: *a keyboard equivalent is judged by the element it is offered
+> from and by whether it performs the action — not by how far away it is.*
+
+Three parts, in the form they were taken:
+
+1. **Option A.** The block's link leads to a control whose only job is moving
+   that block; the server computes both timestamps so the stored duration
+   survives and the effect matches a drag by construction. **Option B is
+   recorded, not rejected** — it is the answer to *move several blocks in one
+   sitting*, which nobody has asked for.
+2. **`FR-DM-002` gains §5's clause**, in its third and final drafting:
+   *offered by the element that carries the pointer affordance — on it, or one
+   activation away — and performs the same action rather than requiring the
+   user to reconstruct its effect.* **This is the half of `DEC-059` that
+   outlives the calendar**, and it is a test applied by inspection, needing no
+   instrumentation.
+3. **The clause at 0.44.0, the control at 0.45.0** (§7.1). The clause is
+   free, rides an amendment already happening, and converts `FR-DM-002`'s
+   `Partial` from the architect's judgement into a measurable failure.
+
+**What `DEC-059` does not decide**, so nobody reads it as having done so: the
+target granularity, how many `<select>` options are too many, and where the
+user lands after Save. Those are §8's, for the handoff, and the third of them
+is the backlog's lost-scroll-position item arriving in scope.
+
+## 7. Decisions taken
+
+All three accepted as recommended — **Option A**, **§5's clause**, and
+**§7.1's split schedule** — and recorded as `DEC-059` in §6a above. The
+argument that was most likely to be wrong, and was not challenged, is the
+D-5 one: that B's list is a second rendering of the grid's own content rather
+than an answer to a different question.
 
 ### 7.1 Schedule — the rule at 0.44.0, the control at 0.45.0
 

@@ -1419,12 +1419,16 @@ surface amends this line in the same change.**
 **FR-DM-002 — Keyboard parity**
 Every direct-manipulation action MUST have a keyboard equivalent
 producing the identical effect. A mouse-only action MUST NOT exist.
+**The equivalent MUST be offered by the element that carries the pointer
+affordance — on it, or one activation away — and MUST perform the same action
+rather than require the user to reconstruct its effect.**
+*Clause added 2026-10-08 by `DEC-059` (RFC 0015), in force from 0.44.0.*
 *Rationale*: `SPEC §32` treats the keyboard path as the contract and the
 pointer path as an enhancement.
 *Source*: `SPEC §21.3.1`, `SPEC §32`. *Acceptance*: `board_keyboard` (7),
-`status_control` (13). *Status*: **Partial — three of the four surfaces carry
-their keyboard path on the surface itself; the calendar's does not**
-(measured 0.44.0).
+`status_control` (13). *Status*: **Partial — the calendar fails the clause
+above on both halves** (measured 0.44.0). The board, the issue list and
+detail, and the sprint plan each pass it by inspection.
 The board's keyboard path landed at 0.20.0. D-1's surfaces shipped their
 no-JavaScript form path **first**, at 0.25.0, and the 0.26.0 enhancement
 was layered over it — so the keyboard path was never the thing being added
@@ -1479,15 +1483,27 @@ reading would make this requirement unable to fail**: any field editable on
 any screen would satisfy it. The other three surfaces put the keyboard path
 where the pointer affordance is, and nobody argued for an off-surface
 equivalent until one existed by default.
-*`RFC 0015` carries the remedy and one amendment to this entry's own words.*
-The clause that would make the distinction explicit — the equivalent must be
-reachable from the surface offering the pointer affordance — was first
-drafted as *"without navigating to another screen"*, and the block geometry
-contradicts it: **a block's height is its duration**, so no 44 × 44 px
-control fits in the grid, and the clause as drafted would select one design
-and forbid another on wording rather than substance. The RFC proposes the
-weaker, truer form and the decision is the owner's; **this entry is not
-amended until it is taken.**
+*The clause, and why it took three drafts (`DEC-059`, RFC 0015).* The first
+two both measured **distance** — *"without navigating to another screen"*,
+then *"from the surface, in one step"*. The first admitted exactly one design,
+because **a block's height is its duration** and no 44 × 44 px control fits
+in the grid; the second was ambiguous on *step* and anchored to a screen when
+the thing a pointer user acts on is an **element**. Both missed the fault that
+decides this entry: **the user has to reconstruct the effect.** The drag
+shifts both ends of a block by one delta; the issue edit form presents two
+independent absolute fields and leaves the user to compute the second. A
+clause about distance would pass a purpose-built control three screens deep
+and fail a perfect one two activations away. **Distance is the symptom.**
+*How the calendar fails it, by inspection and nothing else.* Its reschedule
+equivalent is **three activations** from the block, not one — block link,
+then the issue's Edit link, then the form — and the form **requires
+reconstruction**. Either half alone would be enough.
+*The remedy is scheduled, not pending.* `DEC-059` takes RFC 0015's Option A:
+the block's link leads to a control whose only job is moving that block, with
+the server computing both timestamps so the duration survives and the stored
+effect matches a drag **by construction**. **0.45.0**, after `DM-TEST-001`
+settles the tests that pin this surface's current behaviour. This entry
+reaches Met there, with a test, or it says why not.
 *Correction*: recorded `Deferred` at 0.19.1. A deferred requirement cannot
 be violated — but because `FR-DM-001`'s drag surface had shipped, this one
 was in force and unmet: the board's status change had no keyboard path at
