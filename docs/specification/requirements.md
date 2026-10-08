@@ -1422,8 +1422,9 @@ producing the identical effect. A mouse-only action MUST NOT exist.
 *Rationale*: `SPEC §32` treats the keyboard path as the contract and the
 pointer path as an enhancement.
 *Source*: `SPEC §21.3.1`, `SPEC §32`. *Acceptance*: `board_keyboard` (7),
-`status_control` (13). *Status*: **Partial — established for two of the four
-shipped surfaces** (`REQ-003`'s sweep, 0.43.0).
+`status_control` (13). *Status*: **Partial — three of the four surfaces carry
+their keyboard path on the surface itself; the calendar's does not**
+(measured 0.44.0).
 The board's keyboard path landed at 0.20.0. D-1's surfaces shipped their
 no-JavaScript form path **first**, at 0.25.0, and the 0.26.0 enhancement
 was layered over it — so the keyboard path was never the thing being added
@@ -1448,10 +1449,45 @@ and a field that sets a start time is not self-evidently equivalent to a drag
 that may set start and end together. And **no test covers either surface**:
 the suite holds exactly one keyboard test, `board_keyboard`, and the
 acceptance line above names only it and `status_control`.
-Until the two newer surfaces are measured the honest status is `Partial`.
-**This is not a finding that those surfaces are inaccessible.** It is a
-finding that a P0 was recorded as done over surfaces nobody checked — the same
-failure this entry's `Correction` below already records once, at 0.19.1.
+*Measured at 0.44.0, and both 0.43.0 guesses were wrong in opposite
+directions.*
+**The sprint plan reaches parity by construction**, not by inspection:
+`plan.js:453` builds its request body as
+`new URLSearchParams(new FormData(form))` — **the drag's body *is* the row
+form's body**, so no field one path sends is a field the other omits, and the
+move button is a real `<button type="submit">` whose submit the drag's
+listener never intercepts. `can_move` gates the drag attachment and the
+button through **one** call in one function, so the negative case cannot
+disagree either. (The two do not always post the same *URL*: `plan.js:474`
+posts the destination column's server-rendered URL rather than
+`form.action`, because a confirmed move leaves the row's own form stale until
+`syncRowForm` catches it up. Identical effect therefore holds **because
+`syncRowForm` exists** — worth stating, because a keyboard user with no
+JavaScript always submits a server-rendered action that was never stale.)
+**The calendar's equivalent exists, is locked, and is not on the surface.**
+Both write paths call `check_optimistic_lock` against the same
+`client_updated_at` — `update` at `issues.rs:752` and `apply_schedule_change`
+at `:1130` — so the asymmetry suspected at 0.43.0 **does not exist**. What
+does exist is the cost: **77 Tab and Enter keystrokes across three pages** to
+reach the point of submission, landing on a fourth, *plus* typing two
+absolute timestamps and **computing the second by hand**, because the drag
+shifts both ends by one delta (`calendar.js:313-319`) and the form edits two
+independent values. `calendar.rs` renders no form, button or select at all.
+*Why this is `Partial` and not `Met`.* The literal reading is satisfied — the
+effect is reachable and no action is mouse-only. **Recording `Met` on that
+reading would make this requirement unable to fail**: any field editable on
+any screen would satisfy it. The other three surfaces put the keyboard path
+where the pointer affordance is, and nobody argued for an off-surface
+equivalent until one existed by default.
+*`RFC 0015` carries the remedy and one amendment to this entry's own words.*
+The clause that would make the distinction explicit — the equivalent must be
+reachable from the surface offering the pointer affordance — was first
+drafted as *"without navigating to another screen"*, and the block geometry
+contradicts it: **a block's height is its duration**, so no 44 × 44 px
+control fits in the grid, and the clause as drafted would select one design
+and forbid another on wording rather than substance. The RFC proposes the
+weaker, truer form and the decision is the owner's; **this entry is not
+amended until it is taken.**
 *Correction*: recorded `Deferred` at 0.19.1. A deferred requirement cannot
 be violated — but because `FR-DM-001`'s drag surface had shipped, this one
 was in force and unmet: the board's status change had no keyboard path at
@@ -1463,20 +1499,28 @@ release pair to execute that ordering deliberately.**
 Direct manipulation SHOULD apply the change to the interface
 immediately and reconcile with the server afterward, reverting the
 interface if the server rejects the change.
-*Source*: `SPEC §21.3.2`. *Status*: **Implemented for both shipped
-surfaces** (0.26.0) — `board.js` for the drag, `dm.js` for the issue list
-and issue detail. **Not executed by any test** (`§10.15`): the endpoints,
-the response shape and the fallback path are asserted; the scripts are not
-run. *Priority*: P2.
+*Source*: `SPEC §21.3.2`. *Status*: **Implemented on all four surfaces**
+(`board.js`, `dm.js`, `plan.js`, `calendar.js`), measured 0.44.0.
+**Not executed by any test** (`§10.15`): the endpoints, the response shape
+and the fallback path are asserted; the scripts are not run. *Priority*: P2.
 
 **FR-DM-004 — Conflict handling on 409**
 On a conflict the interface MUST revert the optimistic change, notify
 the user in neutral language, refetch the entity, and re-render the
 current state. It MUST NOT retry automatically.
-*Source*: `SPEC §21.4.5`. *Status*: **Implemented for both shipped
-surfaces** (0.26.0). The `409` path is asserted at the endpoint
-(`optimistic_lock`, `status_control`); the client's revert-and-reload is
-subject to `§10.15`. *Priority*: P1.
+*Source*: `SPEC §21.4.5`. *Status*: **Implemented on the three surfaces
+that can conflict; the fourth has no `409` to handle** — measured 0.44.0.
+`board.js`, `dm.js` and `calendar.js` each read the conflict status and
+apply the revert-and-notify outcome. **The sprint plan does not, and
+correctly so**: `plan_add`/`plan_remove` carry **no** `client_updated_at`
+(`PlanAddForm`, `handlers/sprints.rs:853`) and call no lock, because
+membership is a join-table row whose presence or absence is the whole state
+— `issues.updated_at` is not written by either direction. `plan.js:454-466`
+says so where it decides what a success looks like: the endpoints return a
+**303**, so *"there is no lock value to hand back, unlike `/status`"*, and
+anything that is not an opaque redirect reaches `fallback()`.
+The `409` path is asserted at the endpoint (`optimistic_lock`,
+`status_control`); the client's revert-and-reload is subject to `§10.15`. *Priority*: P1.
 *Note*: `STATUS-002`'s review added cross-cutting requirement 2a to RFC 004
 — falling back to a native form submit is correct **before** the server has
 applied the change and wrong after. A blanket fail-open would have re-sent
@@ -1517,14 +1561,27 @@ blind spot: it does not catch a single word standing alone.
 **FR-DM-006 — Undo window**
 A completed direct manipulation SHOULD offer a brief undo affordance
 (approximately five seconds).
-*Source*: `SPEC §39.2`. *Status*: **Partial — three of four surfaces**
-(0.26.0) — a 5-second toast on the board, the issue list and issue detail.
-*Corrected 0.43.0 (`REQ-003`'s sweep)*: this read **"Implemented for both
-shipped surfaces"** and then named **three** places in the same sentence, so
-it contradicted itself in nine words. It also predates `FR-DM-001`'s 0.38.0
-amendment to four surfaces: **whether the sprint-planning and calendar drags
-offer an undo window is unestablished**, and a `SHOULD` at P2 is the right
-place to say so rather than to assume either way.
+*Source*: `SPEC §39.2`. *Status*: **Met at 0.44.0** — a 5-second toast on
+**all four** direct-manipulation surfaces.
+*Corrected twice, and the second correction reverses the first.*
+Until 0.43.0 this read **"Implemented for both shipped surfaces"** and then
+named **three** places in the same sentence, contradicting itself in nine
+words, while `FR-DM-001` had said **four** since 0.38.0. 0.43.0's sweep
+caught the contradiction and recorded `Partial — three of four`.
+**That was wrong too.** Measured at 0.44.0, every surface carries a real
+`<button type="button">` with the undo label and a `setTimeout(…, 5000)`
+window — `dm.js:209`, `calendar.js:244`, `plan.js:309`, `board.js:187` — all
+four reachable by Tab as the acted-on element's own next sibling, none
+`disabled` or `tabindex="-1"`. The `mousedown` guard that `A11Y-005` made
+necessary is present on exactly the three draggable surfaces and absent on
+the one with no drag source to guard against.
+*Why the first correction was wrong, which is the part worth keeping.* The
+architect corrected this entry **because it was stale**, counted the three
+places the entry's own text named, saw that four surfaces ship, and wrote
+`Partial — three of four`. **`calendar.js` was never opened.** The sweep's
+first run reproduced the exact failure the sweep exists to catch: the status
+of an entry already being edited was updated **from the entry's text rather
+than from the code**. Recorded as `§10.34`'s eighth instance.
 Undo's own failure modes are split: a `409` inside the window says another
 member changed the issue; any other failure says the change could not be
 completed. Conflating them told users someone else had changed the issue
@@ -4816,6 +4873,37 @@ candidate handoff. Rule (e)'s shape survives as one line of it, by hand rather
 than as a scan: *does this stale-looking status cite a sibling requirement that
 is already clean?*
 
+**The eighth instance is the procedure's own first run, and it is the most
+useful one.** `FR-DM-006` was corrected at 0.43.0 *because the sweep found it
+stale* — and the correction was wrong. The architect read the entry's own
+text (*"the board, the issue list and issue detail"*), counted three, knew
+four surfaces ship, and wrote `Partial — three of four`. **`calendar.js` was
+never opened**; it holds a real undo button and the same five-second window as
+the other three, so the entry was Met and is recorded so at 0.44.0.
+*What this says about the remedy.* The procedure's weakness is **not
+coverage** — the sweep looked in the right place and found the right entry.
+It is that **correcting a status invites reading the status**, and the record
+is the one source a status must not be derived from. Pass 1 of the procedure
+is therefore amended: *amend from the code, never from the entry's own
+words* — the entry's text is the thing under suspicion. `FR-DM-002`'s
+measurement at 0.44.0 found the same thing in the other direction: 0.43.0
+guessed the sprint plan unverified when it is parity **by construction**, and
+guessed a lock asymmetry on the calendar that **does not exist**.
+
+**The second run found what the first run walked past.** At 0.44.0, pass 4 —
+*anything that counts or summarises statuses* — re-derived Appendix A's
+direct-manipulation row and so had to read all seven `FR-DM` statuses.
+**`FR-DM-003` and `FR-DM-004` still carried the same stale phrase**,
+*"Implemented for both shipped surfaces"*, from the same 0.38.0 amendment
+that stranded `FR-DM-002` and `FR-DM-006`. **All four siblings were stale and
+the first run corrected two of them**, because pass 1 reaches the entries a
+release touched and nothing in 0.43.0 touched `-003` or `-004`. Measured from
+the code: `-003`'s optimistic rollback is on all four surfaces, and `-004`'s
+`409` handling is on the three that can conflict — the sprint plan carries no
+lock at all, by design, because membership is a join-table row and nothing
+writes `issues.updated_at`. **Ten entries have now been stale in this
+document, nine of them the architect's.**
+
 **The entry stays open, and the first run of the procedure is why.** Sweeping
 0.43.0 found **three more stale entries and three stale appendix rows** —
 `FR-DM-002` (P0), `FR-DM-006`, `NFR-PRIV-005`, and the Accessibility, Release
@@ -4867,8 +4955,8 @@ Accepted in principle, deliberately not scheduled.
 | Calendar | 8 | 1 | — | 7 | — | — |
 | Settings | 3 | 3 | — | — | — | — |
 | API | 6 | 5 | — | 1 | — | — |
-| Direct manipulation | 7 | 5 | 2 | — | — | — |
-| **Functional total** | **99** | **75** | **6** | **16** | **0** | **2** |
+| Direct manipulation | 7 | 6 | 1 | — | — | — |
+| **Functional total** | **99** | **76** | **5** | **16** | **0** | **2** |
 | Privacy | 8 | 6 | — | — | — | 2 unimplemented |
 | Concurrency | 7 | 7 | — | — | — | — |
 | Accessibility | 11 | 8 | — | — | 1 | 2 unverified |
@@ -4890,10 +4978,15 @@ eight are Met or Implemented — `NFR-A11Y-010` and `-011` were added and
 Privacy carried a `Partial` that `PRIV-003` closed. A hand-maintained count of
 statuses is a second record of the same facts, and a second record drifts —
 which is this document's own `REQ-003` problem reproduced in an appendix.
-**What was re-derived, and what was not.** The four rows above
-(Accessibility, Release, Privacy, and the non-functional total) were counted
-from the `*Status*` line of every entry in those areas on 2026-10-08. The
-**other seventeen rows were not re-derived** and may carry the same drift;
+**What was re-derived, and what was not.** Six rows: Accessibility, Release,
+Privacy and the non-functional total at 0.43.0, then **Direct manipulation
+and the functional total at 0.44.0** — each counted from the `*Status*` line
+of every entry in its area. Re-deriving the direct-manipulation row is what
+found `FR-DM-003` and `FR-DM-004` still carrying *"Implemented for both
+shipped surfaces"*, **two entries the 0.43.0 sweep looked at this very table
+and missed**, which is the argument for pass 4 being a pass of its own rather
+than a tidy-up after pass 1. The **other fifteen rows were not re-derived**
+and may carry the same drift;
 they are left as they stood rather than re-stated with more confidence than
 they have earned. `Met` is counted as `Implemented`; `NFR-A11Y-001`
 (*Audited*) and `-007` (verified by inspection pending `§10.15`) are the two

@@ -184,6 +184,12 @@ Four passes, in this order, over `requirements.md` and `external-design.md`:
 
 1. **Every entry the release touched.** The easy half, and the only half that
    has reliably been done. Amend the status, and date the amendment.
+   **Amend from the code, never from the entry's own words.** The first run of
+   this procedure corrected `FR-DM-006` by reading the three places its own
+   status named, counting them, and writing `Partial — three of four`; the
+   file that would have shown it Met on all four was never opened. The entry's
+   text is the thing under suspicion, so it is the one source the new status
+   cannot come from (`§10.34`, eighth instance).
 2. **Every entry whose status cites a scope that the release changed.** The
    failure mode in full: `FR-DM-001` was amended from five surfaces to four
    and reached Met, and `FR-DM-002` — a **P0**, one screen below it — kept a
