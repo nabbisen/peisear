@@ -355,7 +355,10 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         }
     }
 
-    // Rule 6: the released version is dated; from HIGHLIGHTS_FROM, sections open with Highlights.
+    // Rule 6: the released version has a section and that section is dated.
+    // The Highlights half of this rule was removed with the mandate above, and
+    // `HIGHLIGHTS_FROM` went with it -- this comment named it for two releases
+    // after it stopped existing.
     match main_sections
         .iter()
         .find(|s| s.version == Some(input.workspace_version))

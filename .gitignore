@@ -32,5 +32,4 @@ wrangler.local.toml
 *.db-wal
 
 # Custom
-/.git-exclude/
 *.local.json

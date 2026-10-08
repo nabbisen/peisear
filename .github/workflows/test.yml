@@ -66,8 +66,9 @@ jobs:
           RUSTDOCFLAGS: -D rustdoc::broken_intra_doc_links
 
   # BROWSER-001 (RFC 011 step 4): the horizontal-overflow gate. One
-  # assertion -- scrollWidth <= clientWidth -- on eighteen rendered
-  # pages at five widths (LAYOUT-005, BROWSER-002, LAYOUT-008), driven by
+  # assertion -- scrollWidth <= clientWidth -- on twenty-four rendered
+  # pages at five widths (LAYOUT-005, BROWSER-002, LAYOUT-008, GATE-002,
+  # GATE-003, SPRINT-005), driven by
   # browser-checks/cdp.mjs (no npm dependency; Chromium is already
   # present on ubuntu-latest). This is a gate on the same footing as
   # fmt/clippy above, deliberately

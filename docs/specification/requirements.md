@@ -1,10 +1,12 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.42.0` (**the accessibility thread closes** —
-`NFR-A11Y-011` met by a skip link, `NFR-A11Y-010` added for non-text contrast
-and met on both charts, `NFR-A11Y-002` and `NFR-A11Y-004` reaching Met;
-implementation through `0.42.0`)
+**Covers release**: `0.43.0` (**identity becomes a type, and the first
+specification sweep finds what the releases left behind** — `NFR-PRIV-005`
+reaches Met under `DEC-058`, `NFR-REL-008` is added for the published API
+documentation, `§10.33` and `§10.34` open the register, and `FR-DM-002` — a
+P0 — and `FR-DM-006` are corrected from a status five releases out of date;
+implementation through `0.43.0`)
 **Supersedes**: [`history/peisear-0.20.0-requirements-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.20.0-requirements-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 and through it
@@ -1420,12 +1422,36 @@ producing the identical effect. A mouse-only action MUST NOT exist.
 *Rationale*: `SPEC §32` treats the keyboard path as the contract and the
 pointer path as an enhancement.
 *Source*: `SPEC §21.3.1`, `SPEC §32`. *Acceptance*: `board_keyboard` (7),
-`status_control` (13). *Status*: **Implemented for both shipped surfaces.**
+`status_control` (13). *Status*: **Partial — established for two of the four
+shipped surfaces** (`REQ-003`'s sweep, 0.43.0).
 The board's keyboard path landed at 0.20.0. D-1's surfaces shipped their
 no-JavaScript form path **first**, at 0.25.0, and the 0.26.0 enhancement
 was layered over it — so the keyboard path was never the thing being added
 afterward. In force and unmet for any future surface until that surface
 ships its keyboard path first. *Priority*: P0.
+*Corrected 0.43.0 — the seventh instance of the architect's status drift, and
+the first found by a sweep rather than by the dev team.* This read
+**"Implemented for both shipped surfaces"**, written when two surfaces shipped.
+`FR-DM-001` was amended at 0.38.0 to four surfaces and reached **Met — all
+four surfaces ship**; this entry was not touched, so for five releases a **P0**
+claimed completeness over half of what it governs while its own sibling, one
+screen above it, said four. **That is precisely the shape `REQ-003` concluded
+no mechanical rule catches**: a stale status whose sibling is already clean.
+*What is established and what is not.* `sprint_plan.rs` carries post forms and
+button controls beside its drag affordances, so a keyboard path plausibly
+exists. `calendar.rs` carries **no form, button or select at all**, and its
+equivalent appears to be the issue detail's `planned_start_at`
+`datetime-local` field — `calendar.rs`'s own doc comment says the drag shares
+that field's parse helper and its empty-means-unset convention. **That is
+evidence, not verification.** *Identical effect* is this requirement's word,
+and a field that sets a start time is not self-evidently equivalent to a drag
+that may set start and end together. And **no test covers either surface**:
+the suite holds exactly one keyboard test, `board_keyboard`, and the
+acceptance line above names only it and `status_control`.
+Until the two newer surfaces are measured the honest status is `Partial`.
+**This is not a finding that those surfaces are inaccessible.** It is a
+finding that a P0 was recorded as done over surfaces nobody checked — the same
+failure this entry's `Correction` below already records once, at 0.19.1.
 *Correction*: recorded `Deferred` at 0.19.1. A deferred requirement cannot
 be violated — but because `FR-DM-001`'s drag surface had shipped, this one
 was in force and unmet: the board's status change had no keyboard path at
@@ -1491,8 +1517,14 @@ blind spot: it does not catch a single word standing alone.
 **FR-DM-006 — Undo window**
 A completed direct manipulation SHOULD offer a brief undo affordance
 (approximately five seconds).
-*Source*: `SPEC §39.2`. *Status*: **Implemented for both shipped surfaces**
+*Source*: `SPEC §39.2`. *Status*: **Partial — three of four surfaces**
 (0.26.0) — a 5-second toast on the board, the issue list and issue detail.
+*Corrected 0.43.0 (`REQ-003`'s sweep)*: this read **"Implemented for both
+shipped surfaces"** and then named **three** places in the same sentence, so
+it contradicted itself in nine words. It also predates `FR-DM-001`'s 0.38.0
+amendment to four surfaces: **whether the sprint-planning and calendar drags
+offer an undo window is unestablished**, and a `SHOULD` at P2 is the right
+place to say so rather than to assume either way.
 Undo's own failure modes are split: a `409` inside the window says another
 member changed the issue; any other failure says the change could not be
 completed. Conflating them told users someone else had changed the issue
@@ -1566,7 +1598,8 @@ HTTP requests bypass the interface entirely.
 Storage functions handling personal data SHOULD additionally accept the
 requesting user's identity and verify it, so that a handler-layer
 oversight does not become a disclosure.
-*Source*: `SPEC §11.5.4`. *Status*: **Partial — 36 of 40**.
+*Source*: `SPEC §11.5.4`. *Status*: **Met at 0.43.0** (`PRIV-002`, `PRIV-003`)
+— 36 of 40, and the remaining four cannot take an identity.
 *Correction (0.41.0, `REQ-002`)*: this read *Not implemented — verification
 exists at the handler layer only*, which **`§10.3` had already contradicted at
 `QA-021` (2026-08-26)** by counting the functions that do scope on the
@@ -1599,6 +1632,25 @@ whose premise — that requester and subject are the same value everywhere —
 the implementation falsified. **The boundary this protects already holds** — two independent
 barriers, measured at `QA-021` and recounted here — so what changes is that it
 cannot be broken by inattention, not that a hole closes.
+*Met at 0.43.0, and what the status now means.* `PRIV-003` landed the subject
+type, and **`user_id: &str` returns zero results across all six personal-data
+modules** — re-measured against the tree at `219cbca` rather than carried over
+from the review that first reported it. So all 36 functions that take an
+identity take a **sealed** one, and the stronger reading above — *verify the
+identity is the requester's* — holds for all 36 rather than for 25.
+**The four that remain are not a shortfall and will not close**: three are the
+authentication path, where no caller identity exists yet because establishing
+one is what the call does, and one is a job-side aggregate over all users.
+A requirement that cannot reach 40 of 40 is Met at 36 of 36. Recording
+`Partial` of it would be the mirror of the false `Implemented` this entry was
+corrected for — a status that misdirects attention, in the direction that
+wastes it rather than the direction that hides a hole.
+*What this does not claim.* Five modules outside the six — `users`, `issues`,
+`search`, `projects`, `teams` — still take `user_id: &str` in **ten** places.
+They sit outside this requirement because `NFR-PRIV-001`'s inventory puts them
+outside *personal data*, **not because they were measured and found safe.**
+Whether that boundary is still right is a separate question, and this entry
+does not answer it.
 
 **NFR-PRIV-006 — Refusals do not disclose existence**
 Authorisation refusals MUST NOT reveal whether the requested resource
@@ -2625,6 +2677,49 @@ incompleteness, plus a sweep of every acceptance citation. This entry says
 `Implemented` and cites no acceptance target, so it sat among the 89 the sweep
 said nothing about — **the limit `REQ-001` stated in its own words, producing
 its first confirmed instance.**
+
+**NFR-REL-008 — Published API documentation**
+The seven published crates' API documentation MUST build with no
+unresolved intra-doc links, and that MUST be enforced by an automated
+gate that documents every workspace member in one run.
+*Source*: `DOCS-002`. *Status*: **Met at 0.43.0** (`DOCS-002`) —
+`.github/workflows/test.yml`'s `rustdoc-links` job runs
+`cargo doc --workspace --no-deps --keep-going` under
+`-D rustdoc::broken_intra_doc_links`, and the local command is documented
+in `.github/CONTRIBUTING.md`'s pre-pull-request checklist beside
+Formatting and Linting. *Priority*: P2.
+
+*Why this requirement exists rather than being folded into `NFR-REL-007`.*
+That requirement governs the mdbook site, which is prose we write for
+readers we chose. This governs an artefact **nobody here writes and
+nobody here was reading**: `docs.rs` builds these crates on publication,
+so every unresolved link has been live in the API documentation of every
+released version since it was introduced. `DOCS-002` found **ten**, two
+of them functions renamed without the module documentation that names
+them, and they had accumulated across the project's whole life because
+`clippy --all-targets` does not check doc links and `cargo doc` was in no
+gate. The requirement is phrased as *the published documentation builds
+clean*, not *the links are correct*, because the first is checkable and
+the second is a judgement.
+
+**Two clauses carry the cost of the mistakes made finding this.**
+*"in one run"* is `--keep-going`: without it `cargo doc` stops scheduling
+crates at the first failure, and the architect's own first count was taken
+from a run that aborted before reaching `peisear-web` — reported as nine
+links when there were ten, and as 23 issues when 18 were distinct, three
+of the 23 being per-crate summary lines. *"every workspace member"* is
+why the gate cannot be a per-crate job. A gate whose scope is narrower
+than the artefact it claims to cover reports clean about what it never
+looked at, which is `§10.16`'s shape in a different artefact.
+
+**`rustdoc::private_intra_doc_links` is deliberately not denied**, and
+this is a decision rather than a deferral. Eight public doc comments
+cross-reference private implementation detail — a SQL CTE constant,
+private validation and parse helpers, the i18n `t` helper — for a reader
+who is already in the source. None of the eight should become public API
+to satisfy a lint, and denying it would make the build red on purpose.
+The exemption is recorded in the job's own comment, where the lint is
+configured, rather than in a review the repository does not contain.
 
 ### 5.9 Compatibility and portability — `NFR-CMP`
 
@@ -4632,6 +4727,105 @@ gate now *visits* that layout; it does not *check* it in the sense a reader
 would assume. `§10.15`'s two required evidence runs remain the only thing that
 would.
 
+### 10.33 A doc comment named an item that does not exist — **closed**, `DOCS-002`, 0.43.0; found 2026-10-07
+
+Ten intra-doc links in the published API documentation resolved to nothing.
+Seven named a path that was never valid from where the comment sat — a type
+used fully-qualified in code and linked bare, a function described from a
+module it does not live in. Two named functions that had been **renamed**
+while the module documentation describing them was not. Three described a
+shape the code no longer has: a constant that had been split into two, a
+method on an enum that never carried one, and a function whose work had been
+folded into a sibling's upsert.
+
+**This class is not `§10.30`.** That entry is a comment asserting a guarantee
+the code did not provide — a claim about behaviour, which only a reader who
+knows the subsystem can falsify. These were **mechanically checkable for the
+project's whole life and never checked**: one `cargo doc` invocation finds all
+ten in seconds. The defect is therefore not in the comments. It is that
+`clippy --all-targets` does not check doc links, `cargo doc` was in no gate,
+and nobody had looked — so the only artefact the project publishes without
+writing it accumulated ten defects with no mechanism that could have
+complained. `NFR-REL-008` now requires the gate; `DOCS-002`'s round 2 put the
+same command in `.github/CONTRIBUTING.md`, because a gate that exists only in
+CI teaches a contributor about itself by turning red.
+
+**Why this is worth a register entry when the remedy was one CI job.** The
+detection was the whole difficulty and the fix was trivial, which is the
+inverse of most entries here, and the shape recurs: an artefact the project
+emits rather than authors, with no gate because nobody reads it. The register
+already holds `§10.16` (a gate narrower than what it claims to cover) and
+`§10.15` (code executed by no test). This is the third form — **an output
+nobody reads and nothing checks** — and the question it leaves behind is which
+other published artefacts are in that state.
+
+**The technique this produced, which transfers.** The tenth link,
+`AppError::into_response`, is not fixable as a path: rustdoc's `Type::method`
+syntax searches inherent items and enum variants, not trait impls, and
+`<Type as Trait>::method` is unsupported (rust-lang/rust#74563). Importing the
+trait for rustdoc's benefit resolves the link and then fails
+`clippy -D warnings` as an unused import, correctly. **The answer is to link
+the type and name the trait in prose** — `[`crate::AppError`]`'s
+`IntoResponse` impl — which resolves, renders as a real anchor, and still says
+what the code does. Two further sites were found in the same shape while
+reviewing (`DisplayHealthState`'s `From` impl); one was left naming the
+inherent `clamp` it delegates to, as a recorded decision rather than a defect.
+The general rule: **when the link cannot name the method, link the type.**
+Never add an import to satisfy a documentation tool.
+
+### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; seven instances
+
+Seven times the architect recorded a status that the shipped code contradicted.
+Every one **understated** what ships or overstated what is complete within a
+scope that had since changed; none hid a defect from a user. The cost is where
+attention goes: *nobody checks a requirement they believe is done*, which is
+how `NFR-REL-007` and `FR-HLT-006` each carried a false `Implemented` for
+several releases.
+
+The characterisation that survived testing is narrow: **the architect updates
+the statuses of the entries being edited and misses the ones the work actually
+closed.** `FR-DM-002` is the clearest instance — `FR-DM-001` was amended one
+screen above it and reached Met, and this entry, a **P0**, kept a status
+written when half as many surfaces shipped.
+
+**`REQ-003` asked whether a machine can catch this, and the answer is no.**
+Four candidate text rules were run against the six historical instances with
+their false-positive counts over all 162 entries. The investigation is worth
+more than the scan would have been, and three of its findings are why:
+
+- **`Not met` contains the word `met`.** A closure-word search counts a
+  status's own staleness as evidence of its freshness — two of six first-pass
+  hits were spurious for that reason alone, found by *running* the rule and
+  reading its hits rather than by reasoning about the regex.
+- **The best rule scored 4 of 6 and was argued down by the dev team that wrote
+  it.** Its zero false positives were *on zero opportunities*: no live entry
+  has both a stale-shaped status and a sibling citation, so the rule had never
+  had the chance to be wrong. A zero without its denominator reads as
+  precision.
+- **Two instances are outside what any text rule reaches.** One needs source
+  code cross-referenced against a prose claim about which screen enforces
+  something; the other needs to know that **lightness is not hue** — a fact
+  about colour, not a string shape.
+
+**The remedy is procedural, and the evidence for it is in how the instances
+were caught.** Four of seven were found by a person reading the specification
+against what had just shipped — which is exactly what assembling a release
+candidate is. The procedure is recorded in
+`docs/development/changelog-and-releases.md` and is a `§3` gate item of every
+candidate handoff. Rule (e)'s shape survives as one line of it, by hand rather
+than as a scan: *does this stale-looking status cite a sibling requirement that
+is already clean?*
+
+**The entry stays open, and the first run of the procedure is why.** Sweeping
+0.43.0 found **three more stale entries and three stale appendix rows** —
+`FR-DM-002` (P0), `FR-DM-006`, `NFR-PRIV-005`, and the Accessibility, Release
+and Privacy counts in Appendix A, which had drifted by two entries, one entry
+and a closed `Partial` respectively. A procedure that finds six things on its
+first run has not yet shown what its steady-state rate is, and closing this
+entry now would be recording a remedy as proven on one trial. **It closes when
+two consecutive releases sweep clean**, which is a stopping rule and not a
+deferral.
+
 ## 11. Deferred and future requirements
 
 Accepted in principle, deliberately not scheduled.
@@ -4675,19 +4869,38 @@ Accepted in principle, deliberately not scheduled.
 | API | 6 | 5 | — | 1 | — | — |
 | Direct manipulation | 7 | 5 | 2 | — | — | — |
 | **Functional total** | **99** | **75** | **6** | **16** | **0** | **2** |
-| Privacy | 8 | 5 | 1 | — | — | 2 unimplemented |
+| Privacy | 8 | 6 | — | — | — | 2 unimplemented |
 | Concurrency | 7 | 7 | — | — | — | — |
-| Accessibility | 9 | — | 3 | — | 1 | 5 unverified |
+| Accessibility | 11 | 8 | — | — | 1 | 2 unverified |
 | Language | 5 | 1 | 2 | — | 1 | 1 |
 | Security | 7 | 7 | — | — | — | — |
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
-| Release | 7 | 5 | 1 | — | — | 1 undefined |
+| Release | 8 | 6 | 1 | — | — | 1 undefined |
 | Compatibility | 6 | 5 | 1 | — | — | — |
-| **Non-functional total** | **63** | **43** | **9** | **0** | **2** | **9** |
+| **Non-functional total** | **66** | **53** | **5** | **0** | **2** | **6** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.
+
+**Three rows of this table were stale at 0.43.0, and the table is why.**
+Accessibility read 9 entries with **none** Implemented, when eleven exist and
+eight are Met or Implemented — `NFR-A11Y-010` and `-011` were added and
+`-002`, `-004` reached Met without the row being touched. Release read 7.
+Privacy carried a `Partial` that `PRIV-003` closed. A hand-maintained count of
+statuses is a second record of the same facts, and a second record drifts —
+which is this document's own `REQ-003` problem reproduced in an appendix.
+**What was re-derived, and what was not.** The four rows above
+(Accessibility, Release, Privacy, and the non-functional total) were counted
+from the `*Status*` line of every entry in those areas on 2026-10-08. The
+**other seventeen rows were not re-derived** and may carry the same drift;
+they are left as they stood rather than re-stated with more confidence than
+they have earned. `Met` is counted as `Implemented`; `NFR-A11Y-001`
+(*Audited*) and `-007` (verified by inspection pending `§10.15`) are the two
+in Accessibility's last column, and `NFR-A11Y-009` is the Deferred one.
+**Whether this table should be kept, derived from the entries by a scan, or
+dropped is the owner's decision** — it is recorded as an open question in the
+0.43.0 candidate rather than settled here.
 
 **`FR-DM` at 0.26.0 needs its row read carefully.** Five Implemented and two
 Partial does **not** mean five of seven behaviours work everywhere. It means
@@ -4696,6 +4909,16 @@ the kanban board, and status change from the issue list and issue detail.
 `FR-DM-001`'s five surfaces are two shipped and three unwritten; `FR-DM-002`
 is in force and unmet the moment a fourth surface adds a pointer affordance
 before its keyboard path.
+
+*The paragraph above describes 0.26.0 and is kept as written, because it is
+labelled as a reading of that release's row.* **It is no longer the current
+state**, and saying so here is cheaper than rewriting a dated note into
+something undated. As of 0.43.0: `FR-DM-001` is **four** surfaces, not five,
+and all four ship (amended 0.38.0, D-5 retired). The warning it gives has
+since come true twice over — the third and fourth surfaces shipped at 0.35.0
+and 0.36.0, and `FR-DM-002`'s keyboard parity and `FR-DM-006`'s undo window
+are established for neither. Both statuses were corrected to `Partial` at
+0.43.0; see those entries.
 
 Reading `FR-DM`'s status as global is not a hypothetical misreading — it is
 the specific one recorded at 0.19.1, where `Deferred` on a shipped surface

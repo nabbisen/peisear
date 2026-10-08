@@ -155,10 +155,63 @@ in CI's `peisear-web --lib` step). Each rule has a test that breaks it.
 | Every archive is linked from `CHANGELOG.md`, and every relative link there resolves | same | in place |
 | No markdown file links to a changelog section that is not in the file it names | same | in place |
 | The workspace version has a dated section | same | in place |
-| From 0.41.0, a dated section opens with `### Highlights` | same | in place |
+| ~~From 0.41.0, a dated section opens with `### Highlights`~~ | **nothing — withdrawn 2026-09-25 before it took effect** | **not a rule** |
 | **The tag's message carries the release-notes link** | **nobody — the release procedure above, by hand** | **not checked** |
 | An external URL (the tag's link) resolves | nobody — nothing here uses the network | not checked |
-| The Highlights are good | a reader | not checkable |
+| The section is worth reading | a reader | not checkable |
 
 A green `changelog_scan` says the files are arranged as this document says. It
 does not say the tag has its link.
+
+## The specification sweep — `REQ-003`, `§10.34`
+
+**Every release candidate sweeps the two specifications before it tags.**
+`DEC-028` already requires that both are amended *at each release, not
+afterwards*, and that the candidate does not tag until they are. This is the
+part of that work which has repeatedly been skipped: not amending the entries
+the release *touched*, but finding the ones it **closed without being
+touched**.
+
+Seven times a requirement's status has said one thing while the shipped code
+said another — all seven the architect's. `REQ-003` tested four text rules
+against six of them and **none reached the bar**; the full result is `§10.34`.
+So this is a procedure, by hand, and the reason to trust it over a scan is
+that **four of the seven were caught exactly this way**: by a person reading
+the specification against what had just shipped, which is what assembling a
+candidate is.
+
+Four passes, in this order, over `requirements.md` and `external-design.md`:
+
+1. **Every entry the release touched.** The easy half, and the only half that
+   has reliably been done. Amend the status, and date the amendment.
+2. **Every entry whose status cites a scope that the release changed.** The
+   failure mode in full: `FR-DM-001` was amended from five surfaces to four
+   and reached Met, and `FR-DM-002` — a **P0**, one screen below it — kept a
+   status written when two surfaces shipped, for five releases. Nothing in
+   `FR-DM-002`'s own text was wrong. Its *subject* had changed.
+3. **Rule (e), by hand**, which is what survives of `REQ-003`'s best scan:
+   *does this stale-looking status cite a sibling requirement that is already
+   clean?* It scored 4 of 6 and was rejected as a scan because its zero false
+   positives were measured **on zero opportunities** — but by hand, on the
+   handful of entries a release actually puts in play, it is a minute's work
+   and it catches a real class.
+4. **Anything that counts or summarises statuses.** A second record of the
+   same facts drifts, and three of Appendix A's rows were stale at 0.43.0 —
+   Accessibility by two whole entries. If a count cannot be re-derived, say in
+   the document that it was not re-derived rather than leave it reading as
+   current.
+
+**Two things this procedure must not become.** It is not a re-audit of all 162
+entries — `REQ-001` did that once and it is not a per-release cost. And a
+sweep that finds nothing is reported as *swept, nothing found*, never left
+silent: a pass with no output is indistinguishable from a pass not run, which
+is the shape this whole class comes from.
+
+**It is a `§3` gate item of every release-candidate handoff**, with its
+findings named in the candidate report. `§10.34` closes when two consecutive
+releases sweep clean; the first run, at 0.43.0, found **six** things — three
+stale entries and three stale appendix rows — which is why it is not closed
+on one trial.
+
+**Nothing checks this.** It is a procedure, it is the architect's, and it is
+recorded here so that skipping it is visible.
