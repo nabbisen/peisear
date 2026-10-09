@@ -1,8 +1,8 @@
 # CAL-006 — a Move that says so
 
 **Review:** `.git-exclude/reviewed/REL-0.45.0-candidate-review.md` (§2)
-**The candidate is held pending this**, on the architect's recommendation;
-the owner's call. Written now so it is not waiting on the decision.
+**The candidate is held pending this — the owner has decided: hold and fix.**
+`e2efafd` stays on `main`, untagged and unpublished, until this lands.
 
 **The gap is mine before it is yours.** `CAL-004` §2.4 specified *where the
 user lands* and never asked *what the user sees*. Your behavioural check
@@ -105,5 +105,8 @@ overflow gate still 120; `DEC-007` three times at the new figure; and the
 behavioural check re-run with the message confirmed.
 
 **Then 0.45.0's candidate is re-cut** — the changelog gains one sentence,
-which is mine. The architect's own `CAL-004` handoff is the reason this round
+which is mine. **Check its date when you re-cut**: the held section reads
+`2026-10-09`, and if this round lands on a later day that line is stale. A
+release section carries the date it shipped, not the date its first candidate
+was built. The architect's own `CAL-004` handoff is the reason this round
 exists, and that is recorded in the review rather than left implicit.
