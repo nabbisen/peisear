@@ -543,7 +543,18 @@ routes are inaccessible with the prior credentials.
 **FR-AUTH-004 — Unauthenticated HTML access**
 Unauthenticated requests to protected HTML routes MUST redirect to the
 login page (HTTP 303), not return an error page.
-*Source*: `GUI §6`. *Acceptance*: `unauthenticated_projects_redirects_to_login`.
+*Source*: `GUI §6`. *Acceptance*: `unauthenticated_projects_redirects_to_login`
+and `auth_boundary`'s `/today` equivalent — **two routes as a deliberate
+sample, not as the population.** Redirection is enforced by the shared
+`AuthUser` extractor (`extractors.rs`), a `FromRequestParts` implementation
+every protected HTML route goes through, so this is **one structural
+property** rather than per-route logic repeated and separately fallible.
+*Citation clarified 0.47.0 (`REQ-005`, `§10.35`)*: the field named one route
+against a text saying *"protected HTML routes"*, which reads as a gap of
+dozens. **It is a sample of a structural guarantee** — and saying so is the
+difference between a citation a reader can trust and one they have to
+re-derive. `§10.35` records the general form: *a population-to-citation ratio
+overstates risk when the mechanism is structural.*
 *Status*: Implemented. *Priority*: P1.
 
 **FR-AUTH-005 — Unauthenticated API access**
@@ -552,8 +563,17 @@ body. They MUST NOT return an HTML redirect.
 *Rationale*: a JSON client receiving HTML markup cannot parse the
 response and cannot distinguish authentication failure from corruption.
 *Source*: `SPEC §11.5.1`, `SPEC Appendix E.2`. *Acceptance*:
-`unauthed_api_users_returns_401_not_redirect`. *Status*: Implemented.
-*Priority*: P0.
+`unauthed_api_users_returns_401_not_redirect`, plus
+`capacity_and_notifications_endpoints_unauthenticated_return_401` and
+`search`'s own 401 test — **four `/api/*` routes across three tests.**
+*Status*: Implemented. *Priority*: P0.
+*Citation corrected 0.47.0 (`REQ-005`, `§10.35`)*: the field named **one**
+test against a text whose population is an explicit wildcard, `/api/*`. The
+dev team's finding, in its own words: **"the code covers the population, the
+citation doesn't."** Nothing was uncovered; the field simply under-reported
+what it had. **The reason to fix a citation that under-reports** is that the
+next reader audits the gap rather than the requirement — which is what
+happened here, twice, before it was read correctly.
 
 ### 4.2 Navigation and information architecture — `FR-NAV`
 
@@ -578,7 +598,13 @@ externally-issued POST is not silently downgraded to GET.
 **FR-NAV-003 — Breadcrumb and back affordance**
 Detail screens MUST provide a breadcrumb trail and a back link to the
 parent context.
-*Source*: `SPEC §4.4`. *Acceptance*: `breadcrumb` test crate.
+*Source*: `SPEC §4.4`. *Acceptance*: `breadcrumb` test crate — **project
+detail and issue detail only, 2 of the 4 detail screens.** *Status note added
+0.47.0 (`REQ-005`, `§10.35`)*: **team detail and sprint detail render
+breadcrumbs and neither is asserted anywhere.** Confirmed in `teams.rs` and
+`sprints.rs`. Unlike `FR-AUTH-004` above, this is **not** a structural
+sample — each screen builds its own trail, so two untested screens are two
+untested behaviours. **A coverage gap, scheduled, not a citation one.**
 *Status*: Implemented. *Priority*: P2.
 
 **FR-NAV-004 — Parent-aware breadcrumb for sub-issues**
@@ -647,9 +673,27 @@ An issue MUST carry: title, description, status
 (`open` / `in_progress` / `done`), priority, position, effort
 (optional), assignee (optional), timestamps, and parent reference
 (optional).
-*Source*: `SPEC §8.1`. *Acceptance*: title 1–200 characters,
-description ≤ 10,000 characters (`GUI §5`); effort, when present, is a
-positive integer. *Status*: Implemented. *Priority*: P0.
+*Source*: `SPEC §8.1`. *Acceptance*: **3 of the 9 attributes carry an
+asserted constraint** — title 1–200 characters, description ≤ 10,000
+characters (`GUI §5`), and effort, when present, a positive integer. **The
+other six are schema-shaped**: `status` by its column and the vocabulary
+guard, `assignee` by a foreign key *and separately by `FR-ISS-003`'s own
+acceptance*, `timestamps` by migration `0017`'s trigger, `parent reference`
+by `0015`'s triggers *(whose own coverage is `FR-SUB-002`/`-003`'s gap)*, and
+`position` — **which no longer exists**, removed by `ORD-001` at 0.38.0
+(migration `0018`). *Status*: Implemented. *Priority*: P0.
+*Citation clarified 0.47.0 (`REQ-005`, `§10.35`)*: the field listed three
+length-and-type checks under a text naming **nine** attributes, without
+saying which three or what holds the rest. **It now says both** — and saying
+*schema-shaped* is a claim about where the constraint lives, not a claim that
+something tests it.
+**And the normative sentence is stale in its own right**: it still requires an
+issue to carry **`position`**, a column `ORD-001` deleted seven releases ago
+along with `Issue.position` from `peisear-core`'s public API. **Amending a
+P0's normative text is the owner's**, so it is flagged here and not changed:
+the attribute list should lose `position`. *Found while correcting the
+acceptance — which is `§10.34`'s own argument for reading an entry's text
+against the code rather than its neighbours.*
 
 **FR-ISS-003 — Unassigned is a normal state**
 An issue without an assignee MUST be a valid, unremarkable state, and
@@ -1350,8 +1394,21 @@ user's burnout signals, capacity, and notifications, under
 **FR-API-002 — Self-only authorisation**
 These endpoints MUST return data only when the path `user_id` equals the
 authenticated user's id.
-*Source*: `SPEC §11.5.1`. *Acceptance*: `self_can_read_own_*` return
-200. *Status*: Implemented. *Priority*: P0.
+*Source*: `SPEC §11.5.1`. *Acceptance*: **the refusal** —
+`auth_boundary`'s `burnout_endpoint_walls_off_other_users` (`:123`),
+`capacity_endpoint_walls_off_other_users` (`:155`) and
+`notifications_endpoint_walls_off_other_users` (`:172`), each registering a
+second user, requesting the first user's data and asserting **403**; plus
+`self_can_read_own_*` returning 200 for the permitted case. *Status*:
+Implemented. *Priority*: P0.
+*Citation corrected 0.47.0 (`REQ-005`, `§10.35`).* This cited **only**
+`self_can_read_own_*` — the **positive** case — for a requirement whose force
+is a **prohibition**: *return data only when the path `user_id` equals the
+authenticated user's*. **A test that self can read its own data does not test
+that another cannot.** All three refusals were present and uncited, so the
+defect was the citation and never the coverage — but on a **P0** the
+distinction is worth stating: the field now names the half that carries the
+MUST.
 
 **FR-API-003 — Cross-user requests return 403**
 A request for another user's personal data MUST return 403, including
@@ -5176,12 +5233,40 @@ are the architect's to correct. **Three are real coverage gaps** —
 `FR-SUB-002`/`-003`'s three trigger conditions, `FR-PER-007`'s third clause,
 and `NFR-A11Y-008`'s three untested live-region surfaces.
 
-**This entry closes when those are scheduled and the four unresolved entries
-have had a second pass**, `NFR-PRIV-002` first — a privacy requirement citing
-a four-test crate against a six-category normative list should not be left at
-*plausible under-coverage, not confirmed*. **Screening the 117 entries that
-cite no mechanism at all is a third question** (`NFR-REL-007`'s) and is
-deliberately not folded in here.
+**`REQ-005` resolved the four at 0.47.0, and all four are `Narrower`.** So the
+class's full extent is **twelve entries and zero live compliance defects** —
+**five citation defects**, corrected in this release (`FR-API-002`,
+`FR-AUTH-004`, `FR-AUTH-005`, `FR-ISS-002`, and half of `FR-NAV-003`), and
+**seven coverage gaps**, of which `NFR-A11Y-008` is deferred by decision.
+
+*`NFR-PRIV-002`'s category count is five, not six.* Settled from the text's
+own punctuation: semicolons separate categories, `and` and `/` join sub-parts
+within one, and reading six requires treating the single `and` differently
+from every `/` with nothing in the text to justify it.
+
+**Two method findings worth more than the table, both about reading a label
+instead of the thing it labels:**
+
+- **A test named in the plural covering one case.**
+  `linked_indicators_render_distinguishing_basis_links` exercises
+  **Throughput and nothing else** — verified by extracting every indicator
+  slug in its body. `FR-HLT-007` therefore reads like a legitimate sample and
+  is **2 of 5**; the architect's own handoff predicted it would be a sample,
+  on the strength of that name. This is `§10.34`'s eighth-instance mechanism
+  in a **test name** rather than a status field, and it is why `REQ-004`'s
+  method insists on reading the mechanism's *code*.
+- **A test *helper* narrower than what it is trusted for.**
+  `NFR-PRIV-002` names four prohibited vectors; three are asserted, one
+  (glyph) has **no implementation to test**, and the tooltip is compliant by
+  inspection but **structurally invisible** to `assert_no_capacity_leak`,
+  which scans body text — and a `title=` attribute is not body text. The
+  helper **cannot** catch a regression there even by accident. That is this
+  entry's own class, one level down, inside a helper rather than a
+  requirement.
+
+**Screening the 117 entries that cite no mechanism at all is a third
+question** (`NFR-REL-007`'s) and is deliberately not folded in here.
+**This entry closes when the seven coverage gaps are scheduled.**
 
 ## 11. Deferred and future requirements
 
