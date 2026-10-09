@@ -138,6 +138,63 @@ async fn today_renders_no_callout_for_fresh_user() {
     );
 }
 
+/// `PER-001` (`FR-PER-006`, `§10.35`). The precedence chain itself
+/// (`compute_read_first`, `components/me.rs`) is unit-tested directly
+/// -- see `read_first_tests` in that module for the four conditions,
+/// three tie-breaks and two boundaries. A pure-function test proves
+/// nothing about rendering, so this is the one HTTP case: WIP over the
+/// user's limit, the cheapest signal to fixture honestly (no capacity
+/// row, no burnout history, no timestamp back-dating -- just four
+/// in-progress issues assigned to self, which pushes `current_wip` (4)
+/// past `DEFAULT_WIP_LIMIT` (3)). Asserts the *count* of callouts, not
+/// merely the presence of the expected one -- "at most one" is the
+/// requirement's own clause, and a count of 1 is the only assertion
+/// that could fail against a page rendering more than the chain's
+/// single `Option` allows.
+#[tokio::test]
+async fn today_renders_exactly_one_callout_when_wip_is_over_the_limit() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = common::fixture::create_personal_project(&app.db, &user_id, "Proj").await;
+
+    for i in 0..4 {
+        peisear_storage::issues::insert(
+            &app.db,
+            &uuid::Uuid::new_v4().to_string(),
+            &project_id,
+            &user_id,
+            peisear_storage::issues::IssueFields {
+                title: &format!("In-progress {i}"),
+                description: "",
+                status: peisear_core::IssueStatus::InProgress,
+                priority: peisear_core::Priority::Medium,
+                effort: None,
+                assignee_id: Some(&user_id),
+                planned_start_at: None,
+                planned_end_at: None,
+            },
+        )
+        .await
+        .expect("insert issue");
+    }
+
+    let resp = app.server.get("/today").await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    let occurrences = body.matches(r#"aria-label="What to read first""#).count();
+    assert_eq!(
+        occurrences, 1,
+        "expected exactly one 'what to read first' callout once WIP is over \
+         the limit, found {occurrences}; body: {body}"
+    );
+    assert!(
+        body.contains("WIP is over your limit."),
+        "expected the WIP callout's own title to be the one rendered; body: {body}"
+    );
+}
+
 /// `COV-001` §3 (`FR-PER-007` clause 3, `§10.35`). The sustainability
 /// panel's `<details open=any_watch>` (`me.rs:507`) is real,
 /// deliberate code — untested in either state before this. Both tests
