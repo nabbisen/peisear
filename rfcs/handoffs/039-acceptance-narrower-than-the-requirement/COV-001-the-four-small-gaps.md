@@ -2,12 +2,12 @@
 
 **`§10.35`'s coverage work, the half that is just tests.** Seven tests across
 four requirements, all small, all independent of each other. **Target**:
-0.47.0.
+0.46.0.
 
 The other three gaps (`FR-PER-006`'s chain, `FR-HLT-007`'s three indicators,
 `NFR-A11Y-008`'s live regions) are **deliberately not here** — each needs a
 judgement about *what a test should assert* rather than just writing one, and
-they go together at 0.48.0.
+they go together at 0.47.0.
 
 **Read first**: `.git-exclude/reviewed/REQ-005-review.md` §3 — **it carries a
 correction to your own report that changes one of the four below.**
@@ -127,5 +127,5 @@ Seven tests, each seen to fail before it passed; `DEC-007` three times at
 **391**; no component touched; and for §1, the positive-assertion shape
 **named** so I can correct `NFR-PRIV-002`'s acceptance to cite it.
 
-**`§10.35` closes when this lands and 0.48.0's three are handed off** — the
+**`§10.35` closes when this lands and 0.47.0's three are handed off** — the
 three that need a judgement, not a test.

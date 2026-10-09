@@ -9,7 +9,7 @@ failed against a defect.
 **Requirement**: `FR-NAV-003` — *"Detail screens MUST provide a breadcrumb
 trail **and a back link** to the parent context."* **Register**: `§10.35` —
 and this is the **one live compliance defect** in that entry's twelve, now
-recorded as such. **Target**: 0.47.0.
+recorded as such. **Target**: 0.46.0.
 
 ---
 
@@ -104,4 +104,4 @@ current page** — the overflow gate still 120, and `DEC-007` three times at
 392.
 
 **`FR-NAV-003` reaches Met on this**, which is mine to record. **`§10.35`
-closes when this lands and 0.48.0's three are handed off.**
+closes when this lands and 0.47.0's three are handed off.**

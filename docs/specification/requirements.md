@@ -1,11 +1,12 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.45.0` (**the P0 closes** — `FR-DM-002` reaches Met on
-all four direct-manipulation surfaces, the calendar last, against the clause
-`DEC-059` added one release earlier to make it falsifiable; RFC 0015 closes
-with two of its own design choices varied in implementation; implementation
-through `0.45.0`)
+**Covers release**: `0.46.0` (**a new defect class, audited end to end** —
+`§10.35` opens because a requirement cited as its acceptance a guard covering
+three of six relevant tag names; `REQ-004` and `REQ-005` then audited all 48
+entries carrying an `*Acceptance*` and found **seven more**, one of which
+turned out to be a compliance defect and is closed; implementation through
+`0.46.0`)
 **Supersedes**: [`history/peisear-0.20.0-requirements-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.20.0-requirements-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 and through it
@@ -549,7 +550,7 @@ sample, not as the population.** Redirection is enforced by the shared
 `AuthUser` extractor (`extractors.rs`), a `FromRequestParts` implementation
 every protected HTML route goes through, so this is **one structural
 property** rather than per-route logic repeated and separately fallible.
-*Citation clarified 0.47.0 (`REQ-005`, `§10.35`)*: the field named one route
+*Citation clarified 0.46.0 (`REQ-005`, `§10.35`)*: the field named one route
 against a text saying *"protected HTML routes"*, which reads as a gap of
 dozens. **It is a sample of a structural guarantee** — and saying so is the
 difference between a citation a reader can trust and one they have to
@@ -567,7 +568,7 @@ response and cannot distinguish authentication failure from corruption.
 `capacity_and_notifications_endpoints_unauthenticated_return_401` and
 `search`'s own 401 test — **four `/api/*` routes across three tests.**
 *Status*: Implemented. *Priority*: P0.
-*Citation corrected 0.47.0 (`REQ-005`, `§10.35`)*: the field named **one**
+*Citation corrected 0.46.0 (`REQ-005`, `§10.35`)*: the field named **one**
 test against a text whose population is an explicit wildcard, `/api/*`. The
 dev team's finding, in its own words: **"the code covers the population, the
 citation doesn't."** Nothing was uncovered; the field simply under-reported
@@ -605,13 +606,15 @@ parent context.
 `team_detail_breadcrumb_full_chain`. **All four detail screens**, each
 asserting the `/today` root, `aria-current="page"` on the current node, and
 the back link.
-*Status*: **Met at 0.47.0** (`COV-001`, `NAV-001`).
-*Corrected twice, and the second correction found a defect the first had
-framed as missing proof.* At 0.47.0 this entry was amended to say *"team
-detail and sprint detail render breadcrumbs and neither is asserted
-anywhere — a coverage gap, not a citation one."* **The clause was not false
-and the framing was**, and it was written from `REQ-004`'s summary without
-opening `teams.rs`.
+*Status*: **Met at 0.46.0** (`COV-001`, `NAV-001`).
+*Corrected twice **within this release**, and the second correction found a
+defect the first had framed as missing proof.* `REQ-005`'s amendment first
+made this entry read *"team detail and sprint detail render breadcrumbs and
+neither is asserted anywhere — a coverage gap, not a citation one."* **The
+clause was not false and the framing was**, and it was written from
+`REQ-004`'s summary without opening `teams.rs`. **Nothing wrong ever
+shipped** — `COV-001` found the defect before this release was cut, which is
+the argument for amending as the work closes rather than at the tag.
 **`TeamDetailPage` (`teams.rs:205`–`379`) renders no back link at all.** It
 hand-rolls `<div class="breadcrumbs">` with two items — `/teams` and the
 team's name (`:306`) — and calls **neither** `render_breadcrumb` **nor**
@@ -621,7 +624,7 @@ trail **and** a back link* — and that screen satisfies the first only.
 **So this was the requirement unmet on one screen, not a test that was never
 written**, and it was found by writing the test meant to prove coverage: *a
 test asserting the current markup would have passed while proving nothing.*
-**`NAV-001` closed it at 0.47.0**, routing the page through both helpers and
+**`NAV-001` closed it at 0.46.0**, routing the page through both helpers and
 deleting the hand-rolled markup rather than adding a back link beside it. The
 test was **written first and seen to fail against the unmodified page** — on
 `aria-label="Breadcrumb" present`, because there was no `<nav>` there at all.
@@ -711,7 +714,7 @@ acceptance*, `timestamps` by migration `0017`'s trigger, `parent reference`
 by `0015`'s triggers *(whose own coverage is `FR-SUB-002`/`-003`'s gap)*, and
 `position` — **which no longer exists**, removed by `ORD-001` at 0.38.0
 (migration `0018`). *Status*: Implemented. *Priority*: P0.
-*Citation clarified 0.47.0 (`REQ-005`, `§10.35`)*: the field listed three
+*Citation clarified 0.46.0 (`REQ-005`, `§10.35`)*: the field listed three
 length-and-type checks under a text naming **nine** attributes, without
 saying which three or what holds the rest. **It now says both** — and saying
 *schema-shaped* is a claim about where the constraint lives, not a claim that
@@ -796,7 +799,7 @@ A sub-issue MUST belong to the same project as its parent.
 (`sub_issues`), asserting the typed
 `StorageError::Validation(MessageKey)` that `translate_trigger_error`
 produces from migration `0015`'s `RAISE`.
-*Citation corrected 0.47.0 (`COV-001`, `§10.35`)*: this read **"trigger-
+*Citation corrected 0.46.0 (`COV-001`, `§10.35`)*: this read **"trigger-
 enforced"**, which names a mechanism **class** and no artefact — and
 `REQ-004` found that **nothing in the suite had ever fired this condition**.
 The trigger was real throughout; what did not exist was any executed
@@ -815,7 +818,7 @@ chain); its children must be promoted first.
 `demoting_an_issue_to_be_its_own_parent_is_rejected` and
 `demoting_an_issue_that_has_its_own_children_is_rejected` (`sub_issues`), both
 asserting the typed `StorageError::Validation(MessageKey)`.
-*Citation corrected 0.47.0 (`COV-001`, `§10.35`)*: as `FR-SUB-002` above —
+*Citation corrected 0.46.0 (`COV-001`, `§10.35`)*: as `FR-SUB-002` above —
 **"trigger-enforced" named no artefact and nothing had fired either
 condition**, while the sibling clause in the same file, same migration and
 same trigger pair was correctly tested. That adjacency is what let the gap
@@ -1454,7 +1457,7 @@ authenticated user's id.
 second user, requesting the first user's data and asserting **403**; plus
 `self_can_read_own_*` returning 200 for the permitted case. *Status*:
 Implemented. *Priority*: P0.
-*Citation corrected 0.47.0 (`REQ-005`, `§10.35`).* This cited **only**
+*Citation corrected 0.46.0 (`REQ-005`, `§10.35`).* This cited **only**
 `self_can_read_own_*` — the **positive** case — for a requirement whose force
 is a **prohibition**: *return data only when the path `user_id` equals the
 authenticated user's*. **A test that self can read its own data does not test
@@ -1809,7 +1812,7 @@ permission.
 *Source*: `SPEC §11.2`; scope clarified by `DEC-019`. *Acceptance*:
 `workload_privacy` test crate — four negative checks on the response body
 (capacity denominator, *over capacity*, *strained*, `badge-error`) **plus,
-from 0.47.0, a positive assertion on the workload strip's `title=`**: it
+from 0.46.0, a positive assertion on the workload strip's `title=`**: it
 renders the permitted name-and-in-flight-count shape and nothing else.
 *Added by `COV-001` (`§10.35`), and the reason it is positive rather than a
 fifth negative.* The prohibition names four vectors; three are covered by
@@ -4552,7 +4555,7 @@ weighs at the time.
 
 ---
 
-**An expectation built by the function under test — `COV-001`, 0.47.0.** The
+**An expectation built by the function under test — `COV-001`, 0.46.0.** The
 sharpest instance of this class so far, and it never shipped: a test for
 `NFR-PRIV-002`'s tooltip asserted the rendered `title=` against
 `Locale::English.render(MessageKey::WorkloadTitle { … })`. **A capacity leak
@@ -5184,6 +5187,28 @@ measurement at 0.44.0 found the same thing in the other direction: 0.43.0
 guessed the sprint plan unverified when it is parity **by construction**, and
 guessed a lock asymmetry on the calendar that **does not exist**.
 
+**The fourth run found nothing new, which is the first time that has
+happened.** 0.46.0's sweep: pass 1's entries were all amended as the work
+closed; **pass 2 found that every entry citing a mechanism this release
+changed had already been amended by that work** — `touch_target_scan` by
+`NFR-A11Y-007`, `workload_privacy` by `NFR-PRIV-002`, `NavSection` by
+`FR-NAV-003`; pass 3 found no stale status citing a clean sibling beyond
+`FR-SUB-002`/`-003`, already handled; and **pass 4 found no Appendix A row to
+change**, because this release moved *acceptances and tests* rather than
+statuses — `FR-NAV-003` went `Implemented` → `Partial` → `Met` inside the
+release and ends where the row already had it.
+*Reported as swept-and-clean rather than left silent*, per the procedure's own
+rule that a pass with no output is indistinguishable from a pass not run.
+*One method artefact worth recording, because it nearly produced a finding.*
+Pass 2's search for *which entries cite this mechanism* attributed
+`touch_target_scan`, `workload_privacy` and `today_panel` to **`NFR-CMP-006`**
+— the **Licence** entry. The architect's heading-to-heading split gives the
+**last entry before the document's non-entry sections** everything that
+follows it, so `NFR-CMP-006` absorbs §6's tables and §9.1's test inventory.
+**Caught by reading the result rather than trusting it**, and the fourth
+measurement of the architect's to fail in this thread by the same family of
+error.
+
 **The third run, and the first that found nothing of its own class.** 0.45.0's
 sweep found **four** things and **none was a stale requirement status**:
 `NFR-CONC-001`'s acceptance citing **16** `optimistic_lock` tests when the
@@ -5292,7 +5317,7 @@ their text, **4 are narrower and disclose it in their own prose**, 1 is out of
 force, 4 could not be resolved in the time available — named as *unresolved*
 rather than scored — and **7 are narrower and had never disclosed it**.
 **The audit judged none of the seven a compliance finding**, on inspection of
-each. **One of them was**, and `COV-001` found it at 0.47.0 by writing the
+each. **One of them was**, and `COV-001` found it at 0.46.0 by writing the
 test meant to prove the coverage: `FR-NAV-003`'s team detail renders **no back
 link at all**, which the requirement's own sentence requires in its second
 conjunct. *The architect's own citation fix had framed that entry as a
@@ -5300,7 +5325,7 @@ coverage gap, from `REQ-004`'s summary, without opening `teams.rs`.*
 **So the honest tally is twelve entries and one live compliance defect** —
 corrected here rather than left at *zero*, because the defect is an argument
 **for** the audit and burying it would waste the finding. **`NAV-001` closed
-it at 0.47.0** and `FR-NAV-003` is Met; the defect stays recorded, because
+it at 0.46.0** and `FR-NAV-003` is Met; the defect stays recorded, because
 *an audit of coverage that turned up a compliance defect* is the strongest
 thing this entry has to say about why the audit was worth commissioning. `NFR-A11Y-007`
 remains the instance where the **narrow-acceptance shape itself** mattered in
@@ -5324,7 +5349,7 @@ are the architect's to correct. **Three are real coverage gaps** —
 `FR-SUB-002`/`-003`'s three trigger conditions, `FR-PER-007`'s third clause,
 and `NFR-A11Y-008`'s three untested live-region surfaces.
 
-**`REQ-005` resolved the four at 0.47.0, and all four are `Narrower`.** So the
+**`REQ-005` resolved the four at 0.46.0, and all four are `Narrower`.** So the
 class's full extent is **twelve entries and zero live compliance defects** —
 **five citation defects**, corrected in this release (`FR-API-002`,
 `FR-AUTH-004`, `FR-AUTH-005`, `FR-ISS-002`, and half of `FR-NAV-003`), and
@@ -5489,7 +5514,8 @@ let `FR-DM-002` be violated for four releases without anyone checking.
 | V3 (`V3`) | Reconciliation with implemented state through 0.19.0 |
 | 0.19.1 baseline | Consolidation into English normative requirements; identifiers assigned; §10 compliance gaps recorded |
 | 0.20.0 | Compliance pass. Nine recorded statuses corrected — five of them P0 or P1 requirements annotated as satisfied while the code did the opposite. `NFR-PRIV-002` scoped (`DEC-019`); `NFR-CMP-001` extended with the toolchain/MSRV distinction (`DEC-044`/`DEC-045`); `NFR-LANG-005` rescheduled to 0.21.0 (`DEC-022`). §10 gains a state table and six new entries, five of which close in this release. Test inventory 65 → 82 active, 0 disabled. `RSK-001` closed |
-| **0.45.0 (this baseline)** | **The `P0` closes, on a clause written one release earlier to make it closable.** `FR-DM-002` reaches **Met** on all four direct-manipulation surfaces, the calendar last. The control is a **move** affordance on the issue detail page, one activation from a calendar block: the user supplies **a day, never a timestamp**, and the handler applies the **identical whole-day delta to both ends**, so the duration survives and **there is nothing to reconstruct** — the half of the clause the issue edit form fails and will keep failing, correctly, because two absolute fields have no length to preserve from. It calls the same `apply_schedule_change` the drag's JSON endpoint calls, so the stored row is identical **by construction, not by agreement**, which the acceptance test shows by moving one issue through the form and dragging another to the same day. **RFC 0015 closes with two of its own choices varied**, both recorded in its `§9`: the control is **not on the calendar block**, because no 44 × 44 px control fits in a grid where a block's height *is* its duration and retargeting the block's link would have taken the pointer user's route to the issue away; and the target is **not a windowed `<select>`**, because in a day-view context that window held **exactly one option — the current day — so a Move was a no-op**. The dev team measured that and escalated rather than inventing a wider window for one of three views. **Replacing the window with a date input dissolved an open question instead of answering it** and removed 100 net lines. **The sweep's third run found four things and none was a stale status** — a test count citing 16 where 21 exist, a sentence counting *both* of *three*, a guard population excluding the `<input>` this release added, and a requirement applied beyond its letter. **No migration. Test inventory 376 → 385 → 383**, the fall deliberate: three day-count tests were **deleted rather than adapted** when their subject stopped existing |
+| **0.46.0 (this baseline)** | **A defect class opens and is audited end to end in one release.** `NFR-A11Y-007` says *every interactive element* presents a 44 × 44 px touch target and cited as its acceptance a guard reading **three tag names of the six that matter** — **146 elements in its population, 102 outside, two of every five.** The requirement read `Met`, the guard was green, and both were true. `§10.35` opens for the class: **a requirement's cited acceptance narrower than the requirement**, which is none of `§10.15` (the code runs), `§10.16` (the job exists) or `§10.17` (the assertions pass for exactly the right reason over exactly the elements they name). **`TT-007` widened the guard** — `type="hidden"` excluded by reading the attribute rather than by a 32-entry exception list, the nine newly-covered `<textarea>`s measured at **222 × 106** minimum on a 320 px phone and given a declaration anyway, *because a measurement true of today's tree is not a rule about the tag*. **Then `REQ-004` asked whether one instance was a class.** It is: of 165 entries, **48 cite a mechanism**; 32 cover their text, 4 disclose their own narrowness, 4 were named **unresolved rather than scored**, and **seven were narrower and had never said so**. `REQ-005` resolved the four. **The finding behind the findings**: a population-to-citation ratio **overstates** risk when the mechanism is structural — `FR-AUTH-004` cites one route for a shared `FromRequestParts` extractor, which is a *sample* — and **understates** it when the citation names no artefact, as `FR-SUB-002`'s *"trigger-enforced"* did while **three of its four trigger conditions had zero executed assertions** beside a correctly-tested sibling. **Five citation defects corrected, six coverage gaps closed by test, and one turned out to be a compliance defect**: writing the test meant to prove `FR-NAV-003`'s coverage found team detail with **no back link at all**, which its second conjunct requires — an audit of coverage that found a live defect, which is the strongest argument for having run it. **Three gaps are deliberately deferred** (`FR-PER-006`, `FR-HLT-007`, `NFR-A11Y-008`): each needs a judgement about *what* a test should assert, and `NFR-A11Y-008`'s regions are script-updated, so a Rust test asserting a region *exists* would build `§10.35`'s own defect one release after recording it. **No migration. Test inventory 383 → 392** |
+| 0.45.0 | **The `P0` closes, on a clause written one release earlier to make it closable.** `FR-DM-002` reaches **Met** on all four direct-manipulation surfaces, the calendar last. The control is a **move** affordance on the issue detail page, one activation from a calendar block: the user supplies **a day, never a timestamp**, and the handler applies the **identical whole-day delta to both ends**, so the duration survives and **there is nothing to reconstruct** — the half of the clause the issue edit form fails and will keep failing, correctly, because two absolute fields have no length to preserve from. It calls the same `apply_schedule_change` the drag's JSON endpoint calls, so the stored row is identical **by construction, not by agreement**, which the acceptance test shows by moving one issue through the form and dragging another to the same day. **RFC 0015 closes with two of its own choices varied**, both recorded in its `§9`: the control is **not on the calendar block**, because no 44 × 44 px control fits in a grid where a block's height *is* its duration and retargeting the block's link would have taken the pointer user's route to the issue away; and the target is **not a windowed `<select>`**, because in a day-view context that window held **exactly one option — the current day — so a Move was a no-op**. The dev team measured that and escalated rather than inventing a wider window for one of three views. **Replacing the window with a date input dissolved an open question instead of answering it** and removed 100 net lines. **The sweep's third run found four things and none was a stale status** — a test count citing 16 where 21 exist, a sentence counting *both* of *three*, a guard population excluding the `<input>` this release added, and a requirement applied beyond its letter. **No migration. Test inventory 376 → 385 → 383**, the fall deliberate: three day-count tests were **deleted rather than adapted** when their subject stopped existing |
 | 0.44.0 | **The release where a P0 stopped resting on the architect's judgement.** `FR-DM-002` read `Partial` because the architect said so; `DEC-059` (RFC 0015) gives it a clause — the equivalent must be **offered by the element carrying the pointer affordance** and must **not require the user to reconstruct its effect** — and the calendar now fails a written test rather than an opinion. **The clause took three drafts and the first two measured the wrong thing**: both bounded *distance*, and distance is the symptom; reconstruction is the defect. The second draft also admitted exactly one design, because **a calendar block's height is its duration** and no 44 × 44 px control fits in the grid — a rule doing the architecture's job, which the owner's philosophy forbids. **`FR-DM-006` reaches Met on all four surfaces, reversing a correction made one release earlier.** That correction was the sweep's own first run: the entry was corrected *because* it was stale, its three named places were counted, four surfaces were known to ship, and `Partial — three of four` was written — **`calendar.js` was never opened.** Pass 1 of the procedure is amended for it: **amend from the code, never from the entry's own words.** **Pass 4 then caught two the first run walked past**: `FR-DM-003` and `-004` carried the same stale phrase from the same 0.38.0 amendment, so all four `FR-DM` siblings were stale and the first run corrected two — the argument for pass 4 being a pass of its own. **Ten entries have now been stale in this document, nine of them the architect's.** **`§10.15`'s title changes after eighteen releases**: `undo-mousedown-trap.mjs` executes the shipped scripts in a real browser for **one property on three surfaces**, out of 1,909 lines in five files — *almost* no test, not no test, and RFC 011's refusal to buy a harness is unchanged. Nine new tests, **367 → 376**, and the one named `undo_dom_order` was renamed before the requirement cited it, because its name claimed a runtime fact over three substring checks. **No migration; no screen, route, state or copy changed** |
 | 0.43.0 | **Identity becomes a type, and the sweep that found what the releases left behind runs for the first time.** `NFR-PRIV-005` reaches **Met** under `DEC-058`/RFC 0014: `user_id: &str` returns **zero results across all six personal-data modules**, so all 36 functions that can take an identity take a **sealed** one and the stronger reading holds for all 36 rather than 25. **The four that remain cannot close** — three are the authentication path, where establishing an identity *is* the call, and one is a job-side aggregate. **The boundary already held**, measured twice; what changed is that it cannot be broken by inattention. **`DOCS-002` closes ten broken links in the published API documentation** — `docs.rs` builds these seven crates, so each was live in every released version, and **nothing had ever looked**: `clippy --all-targets` does not check doc links and `cargo doc` was in no gate. The architect's own counts were wrong twice, from a run that **aborted before reaching `peisear-web`**. **`NFR-REL-008` is new**, because no requirement governed the one artefact this project publishes without authoring. **`§10.33`** records the class; **`§10.34`** records the status-drift class and `REQ-003`'s answer that **no text rule detects it** — four rules against six historical instances, the best scoring 4 of 6 and argued down by the dev team that built it, because its zero false positives were measured **on zero opportunities**. The remedy is a four-pass procedure run by hand at every candidate, and **its first run found six things**. **No migration. Test inventory 369 → 367** — two fewer, deliberately: `PRIV-002` deleted a 212-line text-pattern guard whose property the type system now holds everywhere. *This row was added at 0.44.0; 0.43.0 shipped without one, found by the sweep's pass 4.* |
 | 0.42.0 | **The release that finished what the audit started.** `A11Y-001` had turned two unfalsifiable P1 statuses into statements and left three measured gaps; all three close here. **`NFR-A11Y-011` is met by a skip link** — eleven Tab presses to reach the content on every page becomes one press and an activation, and the skip link was chosen over the requirement's other two options because **it is the only one that works without JavaScript**, which a remedy for *reaching content* must. **`NFR-A11Y-010` is new**: WCAG 1.4.11's 3 : 1 for graphical objects, which this project had only for text — added because `NFR-A11Y-004`'s own 0.41.0 rewording turned out not to cover the finding it had been given as a status. Both charts now separate at **3.40 : 1** where they were 1.77 and 2.09, within a single hue so `NFR-A11Y-004` stays Met, every figure measured by **two independent colour conversions** agreeing to the 8-bit value. The account menu's focus ring was **drawn in transparent** and measured at **1.22 : 1**; it now reuses the appearance the other ten stops on that page already draw. **Two corrections to this document's own editing** are recorded in the entries rather than quietly applied: `NFR-A11Y-002`'s status contradicted its own body, and `NFR-A11Y-004`'s was written against a finding rather than against the sentence it sat under — **the third and fourth instances of one habit**, amending an entry by adding a correction and leaving the `*Status*` field as it was. **No migration. Test inventory unchanged at 369** — four handoffs, and the only new assertions are ones that replaced a check that had gone stale |

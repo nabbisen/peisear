@@ -7,7 +7,7 @@ them as *unresolved* rather than scoring them `Covers`. **That paragraph is
 why this handoff exists**, and it was the most valuable thing in that report.
 
 **Register**: `§10.35`, which does not close until these four are resolved and
-`REQ-004`'s findings are scheduled. **Target**: 0.47.0, and **first** in it.
+`REQ-004`'s findings are scheduled. **Target**: 0.46.0, and **first** in it.
 
 **Why first rather than after the citation fixes.** Two reasons, both
 ordering-relevant: anything you find here **joins the same specification
@@ -162,7 +162,7 @@ established either way** — escalated the same day if it turns out no test
 asserts the refusal.
 
 **`§10.35` closes when this lands and `REQ-004`'s three coverage gaps are
-scheduled.** `NFR-A11Y-008` is deliberately **not** among them for 0.47.0:
+scheduled.** `NFR-A11Y-008` is deliberately **not** among them for 0.46.0:
 asserting a script-updated region's *existence* in a Rust test and calling
 the requirement covered would build the very defect `§10.35` names, one
 release after recording it. It is going with the deferred drag-gesture test,
