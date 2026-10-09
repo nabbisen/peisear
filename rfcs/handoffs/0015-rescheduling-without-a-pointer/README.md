@@ -55,7 +55,8 @@ so the test is *does the equivalent sit on the element, and does it avoid
 reconstruction* — both checkable, neither a judgement.
 | The control, round 2 | [`CAL-005`](./CAL-005-the-window-becomes-a-date.md) | Round 1 accepted (`fa9d2ab`), 385 green. The dev team's escalation was right: in a **day-view** context the move control offered **exactly one option — the current day — so a Move was a no-op**, and the day view is the most natural path to a specific block. **The answer is to stop having a window, not to widen one**: a native `<input type="date">`, which the handler already accepts verbatim, so nothing server-side changes. It also dissolves RFC 0015 §8's *how many options* question and removes the overflow risk a date-labelled `<select>` carried. | 0.45.0 |
 
-| The release | [`REL-0.45.0`](./REL-0.45.0-release-candidate.md) | the candidate | 0.45.0 |
+| The release | [`REL-0.45.0`](./REL-0.45.0-release-candidate.md) | the candidate — **held pending `CAL-006`** | 0.45.0 |
+| The confirmation | [`CAL-006`](./CAL-006-a-move-that-says-so.md) | **A successful Move says nothing.** The redirect target is right — the user returns to the window they came from — but in the **day view** that window is one day, so every Move makes its subject vanish from the page the user lands on, silently. `CAL-004` §2.4 specified where the user lands and never asked what they see; the gap is the architect's. The fix is a flash, and both halves already exist: `AppShell` renders one and the calendar already passes the slot as `None`. | 0.45.0 |
 
 ---
 **Closed.** The RFC is in `done/` and its `§9` records what implementation
