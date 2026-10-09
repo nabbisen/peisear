@@ -21,6 +21,8 @@ therefore understated.
 
 | NAV-001 | [team detail has no back link](./NAV-001-team-detail-has-no-back-link.md) | **The one live compliance defect in `§10.35`'s twelve**, found by `COV-001` while writing the test meant to prove coverage. `TeamDetailPage` hand-rolls its trail and calls **neither** shared helper — no `/today` root, no `aria-current`, and **no back link at all**, which `FR-NAV-003`'s second conjunct requires. The architect's own citation fix had framed it as missing proof, written from a summary without opening `teams.rs`. **Write the test first and watch it fail** — the defect supplies its own demonstration. | 0.46.0 |
 
+| REL-0.46.0 | [candidate](./REL-0.46.0-release-candidate.md) | **The release — and it is 0.46.0, not 0.47.0.** `0.46.0` was never cut: the last tag is `0.45.0` and this whole thread is one unreleased body of work, while the architect had been labelling amendments for two releases that do not exist. Relabelled at `f260b8b`. Expect **392** from 383 — nine net, with `TT-007` adding **none** because it widened a test in place. | 0.46.0 |
+
 **Why these two together.** `TT-007` closes the instance; `REQ-004` asks
 whether the instance is a class. Fixing one guard and declaring the question
 answered is how `§10.34` happened — a correction made from the record rather
