@@ -1129,7 +1129,30 @@ words or directives.
 Each indicator MUST offer a route to its basis: the underlying issue
 list, the calculation, and recent history — not only a tooltip.
 *Source*: `SPEC §28.3`, Definition of Done `§41.3`. *Acceptance*:
-`basis_route` (5 tests). *Status*: **Partially implemented (`HLT-001`,
+`basis_route` — **a basis test for each of the five non-excepted indicators**
+(`throughput`, `staleness`, `activity`, `bus-factor`, `long-stale`), each
+asserting its basis set **exactly**; plus the excepted indicator's own
+absence test and a 404 edge case.
+*Acceptance corrected 0.47.0 (`HLT-003`, `§10.35`)*: this cited *"5 tests"*
+against a population of five non-excepted indicators, and **two were
+covered**. `linked_indicators_render_distinguishing_basis_links` — **plural**
+— exercised Throughput alone, which is why this entry read like a legitimate
+sample for six releases; it is now widened to all five. *The shared
+`health_indicator_basis` handler is **not** a reason to sample one and trust
+the rest*: `basis_for` forks per kind, returning a different field for each,
+so three untested kinds were three untested computations.
+*Two traps recorded, because either would have produced tests that pass and
+prove nothing.* **`basis_for` returns `Some(&[])` for an empty set** on the
+five, and `None` only for the excepted one — so these routes answer **200
+with nothing listed, never 404**, and a 404 assertion would pass against a
+slug typo. And **the slugs are hyphenated** (`bus-factor`, `long-stale`): an
+earlier pass reported two of them untested after grepping the underscored
+forms, which was the right answer from the wrong needle.
+*And widening the plural test found a rule nobody had written down*: a
+non-empty basis is **not** sufficient for a basis link to render, because
+`human_explanation` returns `None` for `Good` and `Insufficient`, and a basis
+link only exists on an explanation row. **Found by running the test and
+reading the failure**, not by reasoning about it. *Status*: **Partially implemented (`HLT-001`,
 post-0.28.0) — two of three limbs.** Basis and calculation ship; **history is
 deferred.** *Priority*: P2.
 
@@ -1233,8 +1256,29 @@ then long-stale assigned work. If none applies, no callout is rendered.
 *Rationale*: `SPEC §12` and the Minimal-by-Default pillar — two
 simultaneous callouts dilute both; a manufactured callout in a healthy
 state is noise that trains the user to ignore the slot.
-*Source*: `SPEC §12.2`, `BRIEF §0.3`. *Acceptance*:
-`today_renders_no_callout_for_fresh_user`. *Status*: Implemented.
+*Source*: `SPEC §12.2`, `BRIEF §0.3`. *Acceptance*: `me.rs`'s
+`read_first_tests` module — **four conditions in isolation, three tie-breaks,
+and both boundaries** — plus `today_panel`'s
+`today_renders_exactly_one_callout_when_wip_is_over_the_limit`, which asserts
+the rendered **count**, and `today_renders_no_callout_for_fresh_user` for the
+empty case. *Status*: Implemented.
+*Acceptance corrected 0.47.0 (`PER-001`, `§10.35`)*: this cited **only**
+`today_renders_no_callout_for_fresh_user` — **the case where nothing applies**
+— for a requirement whose content is a **precedence chain**. Nothing exercised
+the chain.
+**The code has four conditions, not the three the sentence above names**:
+burnout is two (`overload_streak_days`, then `stalled_assigned_max_days`),
+then WIP, then long-stale. **And two boundaries its own comments call
+deliberate**: WIP uses strict `>`, because *being exactly at the limit is the
+limit, not over it*, and `long_stale_count >= 1` is permissive on purpose. A
+test using *well over* passes equally against `>=`, so the boundary is the
+only assertion that pins the stated meaning.
+*Why the tie-breaks are the requirement and not an extra.* **A chain is only
+a chain where two conditions compete**; four isolated tests would exercise
+four independent conditions. Each tie-break test was verified by **inverting
+the corresponding pair of arms** and confirming it catches the inversion.
+*The at-most-one clause is asserted as a count*, not as the presence of the
+expected callout — which would pass against a page rendering all four.
 *Priority*: P1.
 
 **FR-PER-007 — Secondary panels collapsed by default**
@@ -2667,8 +2711,33 @@ prevent.
 Dynamic changes MUST be announced through an appropriate live region;
 conflict notifications MUST use an assertive region.
 *Source*: `SPEC §21.4.8`. *Acceptance*:
-`status_control::both_surfaces_render_a_polite_and_an_assertive_status_region`.
-*Status*: **Implemented (`QA-011`, post-0.27.0)**. *Priority*: P1.
+`status_control::both_surfaces_render_a_polite_and_an_assertive_status_region`
+— **which asserts the regions are *present*, and nothing about what reaches
+them.** *Status*: **Implemented (`QA-011`, post-0.27.0)**. *Priority*: P1.
+*The acceptance's limit, stated 0.47.0 (`GATE-005`, `§10.35`, `§10.15`).*
+Four scripts write into exactly **two** region pairs: `issues.rs`'s, reached
+by `dm.js` (`:76`, `:81`) and `board.js` (`:52`, `:57`) and **covered** by the
+test above; and `calendar.rs`'s and `sprint_plan.rs`'s, reached by
+`calendar.js` (`:78`, `:83`) and `plan.js` (`:81`, `:86`) and **covered by
+nothing**. The regions are empty in the server-rendered HTML — the text
+arrives from a running script — so **no Rust test can assert that an
+announcement happened**, only that the element exists. `GATE-006` closes it
+with a browser gate; until then this entry's mechanism is **narrower than its
+text**, which is `§10.35`'s own class, named here rather than left for an
+audit to find.
+*A population figure corrected twice before it was right.* `REQ-004` counted
+**five** live-region files; the architect carried that forward as *three
+untested surfaces*; `GATE-005` measured **two**. `notifications.rs`'s
+`role="status"` sections are **not** in this requirement's scope at all —
+they are server-rendered `<section>`s gated on booleans the handler already
+computed (`:54-57`, `:71-74`), present or absent at initial render, and **a
+Rust test can cover them**. Each step had carried the previous count forward
+without re-deriving it.
+*What a gate here can and cannot do, so the next reader does not over-ask.*
+`cdp.mjs` **can** observe that a region received text — `eval` reading
+`textContent` before and after an action, on primitives already in use. It
+**cannot** observe that a screen reader announced it; that needs the
+accessibility tree or a real assistive technology, and is **not** proposed.
 *Correction*: this read "Deferred with Phase D" while D-1 and D-2 had shipped
 at 0.25.0 and 0.26.0 — so it was in force and unmet, the same shape as
 `FR-DM-002` at 0.19.1: a requirement believed dormant is not checked. Both
@@ -4193,6 +4262,19 @@ recorded in the guarding test's own doc comment rather than built for.
 > drag-versus-click decision. The distinction to keep: *a gate for a named
 > property a scan cannot reach* is not *a harness for the scripts*.
 >
+> **The named remainder, recorded 0.47.0 (`GATE-005`) so it is not
+> re-proposed.** A **real, OS-level drag gesture** — native
+> `dragstart`/`dragover`/`drop` produced by low-level pointer input rather
+> than an in-page synthetic `DragEvent` — **needs a CDP domain `cdp.mjs` does
+> not wrap**: `Input.setInterceptDrags`/`Input.dispatchDragEvent`, confirmed
+> absent. Building it is **adding a capability**, not writing a script against
+> existing ones. **Declined, not deferred by silence**: a gate on the drop's
+> *stored effect*, using the synthetic-`DragEvent` technique
+> `undo-mousedown-trap.mjs` already relies on for its own setup, closes most
+> of what it would at a fraction of the cost — and the residue, native
+> drag-detection fidelity, has **no known instance of mattering in this
+> project**. **If it is ever wanted, that is the owner's capability decision.**
+>
 > **And the companion instrument is a scan, not an execution.**
 > `undo_toast_attachment_scan` (4 tests) reads `static/*.js` and pins what
 > `showUndoToast` is **written** to do. It is in this entry's class, not out
@@ -5388,7 +5470,27 @@ instead of the thing it labels:**
 
 **Screening the 117 entries that cite no mechanism at all is a third
 question** (`NFR-REL-007`'s) and is deliberately not folded in here.
-**This entry closes when the seven coverage gaps are scheduled.**
+
+**All seven coverage gaps are now closed or carried, at 0.47.0.** Four were
+closed by test at 0.46.0 (`COV-001`), one was the compliance defect
+(`NAV-001`), and the last three — held back because **each needed a decision
+about what a test should assert** — resolve here: `FR-PER-006`'s chain
+(`PER-001`, ten tests), `FR-HLT-007`'s three indicators (`HLT-003`, and the
+plural-named test widened), and `NFR-A11Y-008` — which **cannot** be closed
+by a Rust test and whose acceptance now **states its own limit** pending
+`GATE-006`'s browser gate. **Holding those three was the right call**: written
+against current behaviour they would have produced three tests that pass and
+prove little, and for `NFR-A11Y-008` a region-exists assertion cited as
+acceptance would have rebuilt this entry's own defect one release after
+naming it.
+*The audit's own population figures were corrected three times across this
+thread*, each by the next reader measuring rather than carrying forward: the
+guard's element counts (a raw grep counted elements named inside comments),
+the `<textarea>` exposure (17 → 9), and the live-region surfaces
+(five files → three untested → **two**). **The class this entry names is a
+mechanism narrower than a requirement; the discipline it taught is that a
+count narrower than its own definition behaves the same way.**
+**This entry closes when `GATE-006` lands.**
 
 ## 11. Deferred and future requirements
 
