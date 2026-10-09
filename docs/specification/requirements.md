@@ -2712,19 +2712,29 @@ Dynamic changes MUST be announced through an appropriate live region;
 conflict notifications MUST use an assertive region.
 *Source*: `SPEC §21.4.8`. *Acceptance*:
 `status_control::both_surfaces_render_a_polite_and_an_assertive_status_region`
-— **which asserts the regions are *present*, and nothing about what reaches
-them.** *Status*: **Implemented (`QA-011`, post-0.27.0)**. *Priority*: P1.
-*The acceptance's limit, stated 0.47.0 (`GATE-005`, `§10.35`, `§10.15`).*
+ for the regions' **presence**, plus
+**`browser-checks/drag-outcome-gate.mjs`** for their **content** on the two
+surfaces a Rust test cannot reach. *Status*: **Implemented (`QA-011`,
+post-0.27.0); acceptance completed 0.47.0 (`GATE-006`)**. *Priority*: P1.
+*Why this needed a browser gate at all — `§10.35`, `§10.15`.*
 Four scripts write into exactly **two** region pairs: `issues.rs`'s, reached
 by `dm.js` (`:76`, `:81`) and `board.js` (`:52`, `:57`) and **covered** by the
 test above; and `calendar.rs`'s and `sprint_plan.rs`'s, reached by
 `calendar.js` (`:78`, `:83`) and `plan.js` (`:81`, `:86`) and **covered by
 nothing**. The regions are empty in the server-rendered HTML — the text
 arrives from a running script — so **no Rust test can assert that an
-announcement happened**, only that the element exists. `GATE-006` closes it
-with a browser gate; until then this entry's mechanism is **narrower than its
-text**, which is `§10.35`'s own class, named here rather than left for an
-audit to find.
+announcement happened**, only that the element exists. **`GATE-006` closed
+that at 0.47.0**: one script, port `4175`, wired as the browser job's third
+step, asserting on each surface **the drop's stored effect, then the region's
+outcome text, then the undo toast's Tab order**. For roughly ten months this
+entry's mechanism was **narrower than its text** — `§10.35`'s own class — and
+it is recorded here rather than left for the next audit.
+*The assertions' precision is calibrated rather than maximal*: the plan
+surface's text is asserted **exactly**, because its fixture makes the
+direction deterministic; the calendar's as a **prefix**, because the full
+string embeds a server-computed time label the gate does not reproduce.
+**Asserting the stable part of a value you do not control** is the opposite of
+building an expectation from the code under test (`§10.17`).
 *A population figure corrected twice before it was right.* `REQ-004` counted
 **five** live-region files; the architect carried that forward as *three
 untested surfaces*; `GATE-005` measured **two**. `notifications.rs`'s
@@ -4238,6 +4248,17 @@ recorded in the guarding test's own doc comment rather than built for.
 
 ### 10.15 The shipped JavaScript is executed by almost no test — **open; the gap is permanent, its size is not**
 
+> **Three gates now, 0.47.0 (`GATE-006`).** `drag-outcome-gate.mjs` joins the
+> overflow gate and the mousedown trap in the same CI job, on port `4175`,
+> and it is the first to assert **what the scripts do** rather than how the
+> browser treats them: on `calendar.js` and `plan.js`, that a drop's stored
+> effect lands, that the live region **receives** its outcome text, and that
+> the undo toast is the next Tab stop. **Three properties across two of the
+> five files**, against 1,909 lines — so *almost* still holds, and the entry
+> stays open. **What changed is that the residue is now named rather than
+> uncounted**: the remainder is this entry's own paragraph below, and a real
+> OS-level drag gesture, declined with its capability gap recorded.
+
 > **Amended 2026-10-08 (0.44.0), and the title changed with it.** This read
 > *"executed by no test"* for eighteen releases and that is no longer true.
 > **`browser-checks/undo-mousedown-trap.mjs` executes the shipped scripts in
@@ -4650,6 +4671,21 @@ strings.
 test. A test whose expectation shares a source with its subject cannot fail
 for the reason it names, and no amount of planting into the *subject* reveals
 that. Found by the dev team in its own draft, before review.
+
+**An instrument that read past its own subject — `GATE-006`, 0.47.0.** A
+browser gate's stored-effect check reported a drop as having failed when it
+had succeeded. The cause was in the check:
+`after.split('id="backlog-heading"')[1].slice(0, 2000)` took a **fixed
+2000-character window**, which against an *empty* backlog's short "no issues"
+copy **ran past `</section>` and read the next section's content as the
+backlog's own**. Bounded to `</section>` instead of a character count, and the
+drop had been working throughout.
+**This is the class's inverse and belongs beside it.** `§10.17`'s usual shape
+is an assertion that cannot fail; this is one that **failed for a reason
+outside its subject** — a false positive rather than a false negative, and the
+more dangerous direction in a gate, because it accuses the product. **Caught
+by reading what the check actually scraped**, and reported as the gate's bug
+rather than escalated as the product's.
 
 ### 10.18 Authenticated pages scroll horizontally when the signed-in email is long — **closed** by `LAYOUT-001`, 0.32.0
 
@@ -5339,7 +5375,7 @@ entry now would be recording a remedy as proven on one trial. **It closes when
 two consecutive releases sweep clean**, which is a stopping rule and not a
 deferral.
 
-### 10.35 A requirement's cited acceptance is narrower than the requirement — **open**, recorded at 0.46.0; found 2026-10-09
+### 10.35 A requirement's cited acceptance is narrower than the requirement — **closed**, `TT-007`/`REQ-004`/`REQ-005`/`COV-001`/`NAV-001`/`PER-001`/`HLT-003`/`GATE-005`/`GATE-006`, 0.46.0–0.47.0; found 2026-10-09
 
 `NFR-A11Y-007` says **every interactive element** presents a 44 × 44 px touch
 target — the named limit was removed at `DEC-050` *"because it was measured and
@@ -5490,7 +5526,35 @@ the `<textarea>` exposure (17 → 9), and the live-region surfaces
 (five files → three untested → **two**). **The class this entry names is a
 mechanism narrower than a requirement; the discipline it taught is that a
 count narrower than its own definition behaves the same way.**
-**This entry closes when `GATE-006` lands.**
+**Closed at 0.47.0.** `GATE-006` built the one mechanism no Rust test could
+be: a browser gate asserting that `calendar.rs`'s and `sprint_plan.rs`'s live
+regions **receive** their outcome text, alongside the drop's stored effect and
+the undo toast's Tab order — the last of which replaces a standing inference
+`COV-001` had written down and nothing had scheduled against.
+
+**What the class cost to close, for the next reader deciding whether such an
+audit is worth commissioning**: two releases, nine work items, **twelve
+register entries** examined, five citations corrected, seven coverage gaps
+shut, **one live compliance defect** found and fixed — and **zero** of the
+defects were in product behaviour that users were meeting, except that one.
+*An audit whose yield is mostly documentation is not a wasted audit*: the one
+compliance defect was found **by writing a test to prove coverage**, which is
+the only route that would ever have found it.
+
+**And one closing observation about instruments, which outlived the class.**
+Every figure in this thread that mattered was wrong at least once, and each
+was wrong the same way — **the instrument's scope did not match what it
+claimed to measure**: a `grep` counting elements named inside comments; an
+entry split that truncated long entries and undercounted 48 as 45; a
+live-region population carried from five files to three surfaces to **two**; a
+slug grepped with underscores where the code uses hyphens; a fixed
+2000-character window over HTML that **ran past `</section>` and read the next
+section as its subject**, reporting a product defect that did not exist. **The
+class this entry names is a mechanism narrower than its requirement. The
+habit it exposed is that a measurement narrower, or wider, than its own
+definition fails in exactly the same way** — and the only reliable remedy
+found was the one every item here eventually used: **measure it a second way,
+and state what was checked.**
 
 ## 11. Deferred and future requirements
 
