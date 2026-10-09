@@ -600,9 +600,12 @@ Detail screens MUST provide a breadcrumb trail and a back link to the
 parent context.
 *Source*: `SPEC §4.4`. *Acceptance*: `breadcrumb` test crate —
 `project_detail_breadcrumb_starts_with_today`,
-`issue_detail_breadcrumb_full_chain` and, from 0.47.0,
-`sprint_detail_breadcrumb_full_chain`. **3 of the 4 detail screens.**
-*Status*: **Partial — unmet on team detail** (`COV-001`, 0.47.0).
+`issue_detail_breadcrumb_full_chain`,
+`sprint_detail_breadcrumb_full_chain` and
+`team_detail_breadcrumb_full_chain`. **All four detail screens**, each
+asserting the `/today` root, `aria-current="page"` on the current node, and
+the back link.
+*Status*: **Met at 0.47.0** (`COV-001`, `NAV-001`).
 *Corrected twice, and the second correction found a defect the first had
 framed as missing proof.* At 0.47.0 this entry was amended to say *"team
 detail and sprint detail render breadcrumbs and neither is asserted
@@ -615,10 +618,19 @@ team's name (`:306`) — and calls **neither** `render_breadcrumb` **nor**
 `render_back_link`, so it carries no `/today` root and no `aria-current="page"`
 either. This requirement's sentence has **two conjuncts** — *a breadcrumb
 trail **and** a back link* — and that screen satisfies the first only.
-**So this is the requirement unmet on one screen, not a test that was never
+**So this was the requirement unmet on one screen, not a test that was never
 written**, and it was found by writing the test meant to prove coverage: *a
 test asserting the current markup would have passed while proving nothing.*
-`NAV-001` closes it by routing that page through the two shared helpers.
+**`NAV-001` closed it at 0.47.0**, routing the page through both helpers and
+deleting the hand-rolled markup rather than adding a back link beside it. The
+test was **written first and seen to fail against the unmodified page** — on
+`aria-label="Breadcrumb" present`, because there was no `<nav>` there at all.
+`render_back_link` needed a fourth `NavSection` variant, and the second
+exhaustive match over that enum was **found by the compiler**, not by a
+search.
+*The `Partial` status above lasted two days* — the shortest-lived in this
+document, and the right outcome for a defect found by its own coverage
+test.
 *Why it is not a structural sample like `FR-AUTH-004`*: each detail screen
 builds its own trail, so an untested screen is an unverified behaviour — and
 on this one, an unmet one.
@@ -5287,7 +5299,10 @@ conjunct. *The architect's own citation fix had framed that entry as a
 coverage gap, from `REQ-004`'s summary, without opening `teams.rs`.*
 **So the honest tally is twelve entries and one live compliance defect** —
 corrected here rather than left at *zero*, because the defect is an argument
-**for** the audit and burying it would waste the finding. `NFR-A11Y-007`
+**for** the audit and burying it would waste the finding. **`NAV-001` closed
+it at 0.47.0** and `FR-NAV-003` is Met; the defect stays recorded, because
+*an audit of coverage that turned up a compliance defect* is the strongest
+thing this entry has to say about why the audit was worth commissioning. `NFR-A11Y-007`
 remains the instance where the **narrow-acceptance shape itself** mattered in
 practice.
 
