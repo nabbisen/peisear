@@ -87,6 +87,14 @@ edges, and closed except for three gaps left deliberately open.
   that only asserts a script-updated region *exists* would reproduce
   this release's own defect shape one release after naming it. Moved
   to 0.47.0.
+- **Test inventory: 383 → 392**, and the composition is worth more than the
+  total: six tests for the small coverage gaps, one for the team detail
+  breadcrumb, and **none** for the guard widening — that one extended an
+  existing test's population in place rather than adding a second test
+  asserting the same property over different elements. **No schema
+  migration** — `0020` remains the most recent, the seventh release running.
+  The horizontal-overflow gate stayed at **120 cells** with the new trail and
+  the nine declarations present.
 - **A labelling correction.** Specification amendments in this body of
   work were being written as `0.46.0` and `0.47.0` for two releases
   that had never been cut — the last tag is `0.45.0`, and everything
