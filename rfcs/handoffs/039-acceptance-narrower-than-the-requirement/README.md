@@ -17,6 +17,8 @@ therefore understated.
 
 | REQ-005 | [the four left unresolved](./REQ-005-the-four-left-unresolved.md) | **`REQ-004`'s own named limit, closed.** It resolved 44 of 48 entries and named **four** it triaged by text and test *name* only, without opening the code — as *unresolved*, not as `Covers`. **First in 0.47.0**, for two ordering reasons: anything found joins the same specification amendment (amending twice is `§10.34`'s churn), and **`NFR-PRIV-002` is a P1 privacy requirement at *plausible under-coverage, not confirmed***. **`FR-API-002` is the one to watch**: a **P0** prohibition whose cited acceptance is the *positive* case — *self can read own, 200*. | 0.47.0 |
 
+| COV-001 | [the four small gaps](./COV-001-the-four-small-gaps.md) | **Seven tests, four requirements, no judgement calls.** `NFR-PRIV-002`'s tooltip, `FR-SUB-002`/`-003`'s three untested trigger conditions, `FR-PER-007`'s self-expanding panel, and `FR-NAV-003`'s two unasserted detail screens. **Carries a correction to `REQ-005`'s own reasoning**: `assert_no_capacity_leak` scans **raw HTML**, attributes included, so the tooltip was never invisible to it — the gap is its **finite vocabulary**, and the fix is a **positive** assertion rather than a fifth negative that would add nothing. | 0.47.0 |
+
 **Why these two together.** `TT-007` closes the instance; `REQ-004` asks
 whether the instance is a class. Fixing one guard and declaring the question
 answered is how `§10.34` happened — a correction made from the record rather

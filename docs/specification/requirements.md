@@ -5255,14 +5255,20 @@ instead of the thing it labels:**
   on the strength of that name. This is `§10.34`'s eighth-instance mechanism
   in a **test name** rather than a status field, and it is why `REQ-004`'s
   method insists on reading the mechanism's *code*.
-- **A test *helper* narrower than what it is trusted for.**
-  `NFR-PRIV-002` names four prohibited vectors; three are asserted, one
-  (glyph) has **no implementation to test**, and the tooltip is compliant by
-  inspection but **structurally invisible** to `assert_no_capacity_leak`,
-  which scans body text — and a `title=` attribute is not body text. The
-  helper **cannot** catch a regression there even by accident. That is this
-  entry's own class, one level down, inside a helper rather than a
-  requirement.
+- **A guard with a finite vocabulary, mistaken twice for a blind one.**
+  `NFR-PRIV-002` names four prohibited vectors; three are asserted and one
+  (glyph) has **no implementation to test**. The tooltip is compliant by
+  inspection and **not asserted**. *Both the audit and the architect's review
+  of it first recorded the reason as “`assert_no_capacity_leak` scans body
+  text, and an attribute is not body text” — which is false.* That helper
+  takes `resp.text()`, the **raw HTML**, and substring-matches over all of it,
+  attribute values included; a tooltip rendering any of its four banned
+  strings would fail today. **The real gap is that its vocabulary is finite
+  and nothing pins what the tooltip *does* contain**, so capacity-derived
+  text in new wording would pass. The fix is therefore a **positive**
+  assertion about the tooltip's shape, not a fifth negative over the same
+  strings. **Recorded because the wrong reason survived two readings and
+  would have produced a test that added nothing.**
 
 **Screening the 117 entries that cite no mechanism at all is a third
 question** (`NFR-REL-007`'s) and is deliberately not folded in here.
