@@ -1426,9 +1426,9 @@ rather than require the user to reconstruct its effect.**
 *Rationale*: `SPEC §32` treats the keyboard path as the contract and the
 pointer path as an enhancement.
 *Source*: `SPEC §21.3.1`, `SPEC §32`. *Acceptance*: `board_keyboard` (7),
-`status_control` (13). *Status*: **Partial — the calendar fails the clause
-above on both halves** (measured 0.44.0). The board, the issue list and
-detail, and the sprint plan each pass it by inspection.
+`status_control` (13), **`move_produces_the_identical_stored_row_as_the_equivalent_drag`**
+(`calendar_surfaces`). *Status*: **Met at 0.45.0** (`CAL-004`, `CAL-005`,
+`DEC-059`) — all four surfaces pass the clause, the calendar last.
 The board's keyboard path landed at 0.20.0. D-1's surfaces shipped their
 no-JavaScript form path **first**, at 0.25.0, and the 0.26.0 enhancement
 was layered over it — so the keyboard path was never the thing being added
@@ -1498,12 +1498,34 @@ and fail a perfect one two activations away. **Distance is the symptom.**
 equivalent is **three activations** from the block, not one — block link,
 then the issue's Edit link, then the form — and the form **requires
 reconstruction**. Either half alone would be enough.
-*The remedy is scheduled, not pending.* `DEC-059` takes RFC 0015's Option A:
-the block's link leads to a control whose only job is moving that block, with
-the server computing both timestamps so the duration survives and the stored
-effect matches a drag **by construction**. **0.45.0**, after `DM-TEST-001`
-settles the tests that pin this surface's current behaviour. This entry
-reaches Met there, with a test, or it says why not.
+*Met at 0.45.0, and how the clause is satisfied.* `CAL-004` puts a **move
+control on the issue detail page**, one activation from the calendar block,
+and `CAL-005` made its target a native **date input**. The user supplies **a
+day, never a timestamp**: the handler computes a whole-day delta from the
+issue's current start and applies **the identical delta to both ends**
+(`change_schedule_move`, `handlers/issues.rs`), so the duration survives and
+**there is nothing to reconstruct** — the half of the clause the issue edit
+form fails and will keep failing, correctly, because two absolute fields have
+no length to preserve from. It calls `apply_schedule_change`, the same
+function the drag's JSON endpoint calls, so the stored row is identical **by
+construction and not by agreement**: the acceptance test above starts two
+issues from the same values, moves one by form and drags the other to the
+same day, and compares the stored timestamps.
+*Two design points worth keeping, because both were decided against the
+obvious answer.* **The control is not on the calendar block**, where RFC
+0015's Option A first put it: no 44 × 44 px control fits in the grid
+(`§2` of that RFC), and retargeting the block's existing link would have
+served the keyboard path by **taking the pointer user's route to the issue
+away**. One activation to the issue page is what the clause asks for, and it
+costs no one anything. **And the target is not a windowed `<select>`** of the
+days the calendar was showing, which is what the RFC sketched: in a day-view
+context that window held **exactly one option — the current day — so a Move
+was a no-op**, and the day view is the likeliest way a user reaches a
+specific block. The window was an artefact of where the user happened to
+click rather than a constraint they chose. Replacing it with a date input
+dissolved RFC 0015 §8's *how many options* question instead of answering it,
+removed the control's coupling to the calendar's own windowing, and removed
+the overflow risk a date-labelled `<select>` carried.
 *Correction*: recorded `Deferred` at 0.19.1. A deferred requirement cannot
 be violated — but because `FR-DM-001`'s drag surface had shipped, this one
 was in force and unmet: the board's status change had no keyboard path at
@@ -5035,8 +5057,8 @@ Accepted in principle, deliberately not scheduled.
 | Calendar | 8 | 1 | — | 7 | — | — |
 | Settings | 3 | 3 | — | — | — | — |
 | API | 6 | 5 | — | 1 | — | — |
-| Direct manipulation | 7 | 6 | 1 | — | — | — |
-| **Functional total** | **99** | **76** | **5** | **16** | **0** | **2** |
+| Direct manipulation | 7 | 7 | — | — | — | — |
+| **Functional total** | **99** | **77** | **4** | **16** | **0** | **2** |
 | Privacy | 8 | 6 | — | — | — | 2 unimplemented |
 | Concurrency | 7 | 7 | — | — | — | — |
 | Accessibility | 11 | 8 | — | — | 1 | 2 unverified |

@@ -1,10 +1,10 @@
 # RFC 0015: Rescheduling without a pointer — the one surface whose keyboard path leaves the screen
 
-**Status**: **Accepted** (2026-10-08) — owner-approved, all recommendations
-taken and none varied. **The clause (§5) is in force from 0.44.0; the control
-(§4) is 0.45.0 work and §7.1 says why the implementer does not start it yet.**
-**Target**: **the clause at 0.44.0, the control at 0.45.0** — see §7.1 for
-why the split is the optimisation rather than a delay
+**Status**: **Done** (2026-10-09) — the clause in force from 0.44.0, the
+control shipped at 0.45.0 (`CAL-004`, `CAL-005`). **`FR-DM-002` is Met.**
+**Two things were varied in implementation and §9 records both.**
+**Target**: **the clause at 0.44.0, the control at 0.45.0** — §7.1 for why
+the split was the optimisation; both landed as scheduled
 **Related spec sections**: `SPEC §21.2`, `SPEC §32`, `SPEC §39`;
 external design `SCR-20`
 **Related requirements**: **`FR-DM-002`** (P0 — Partial, three of four
@@ -398,3 +398,70 @@ Not decisions — things the handoff must answer rather than assume:
   backlog and this must not make it worse.
 - **`NFR-A11Y-007`** on the new control, and the overflow gate at five
   widths with the list present.
+
+## 9. What the implementation varied, and what it proved
+
+**Two departures from §3/§4 as written.** Both were taken by the architect
+during implementation, both are recorded here rather than folded back into
+the sections above, and `DEC-059` is unchanged by either — it decided *a
+purpose-built move control, one activation away, with the server computing
+both timestamps*, and both variations keep all three.
+
+### 9.1 The control is not on the calendar block (`CAL-004` §0)
+
+§3 wrote Option A as *"the block gains a second link (or its existing link's
+target changes) to a `GET`-able reschedule page"*. **Neither survived contact
+with the code:**
+
+- A **second affordance in the block** is §2's geometry again. `NFR-A11Y-007`
+  permits an expanded hit area, but it must participate in layout and must
+  not overlap a neighbour, and there is room for neither.
+- **Retargeting the block's link** would have served the keyboard path by
+  **removing the pointer user's route to the issue**. Trading one user's
+  journey for another's is not what `DEC-059` bought.
+
+So the control went on the **issue detail page**, which is the *one
+activation* the clause asks for — the clause says one activation, not a page
+of its own. **The objection that the issue page then offers two ways to
+change dates is answered by what the product already teaches**: the calendar
+distinguishes *drag = move* from *open and edit = set*, and this mirrors it,
+with the move control labelled for what it preserves.
+
+### 9.2 The target is a date input, not a windowed `<select>` (`CAL-005`)
+
+§4 specified *"a `<select>` of targets drawn from the view the user came
+from"*. **The dev team built it, measured it, and escalated**: in a **day-view
+context that window holds exactly one option — the current day — so a Move is
+a no-op**, and the day view is the likeliest way a user reaches a specific
+block, being the only one with hour precision. They declined to invent a
+wider window for one of three views, which was the right refusal.
+
+**The ruling was to stop having a window.** A native `<input type="date">`,
+which `change_schedule_move` already accepted verbatim — it parses
+`%Y-%m-%d`, which is what `type="date"` submits — so **the handler, the delta
+arithmetic, the lock, the redirect and every test stood unchanged**. The
+substitution removed **100 net lines**.
+
+**The argument it had to answer** was the dev team's own, written into the
+code: *a visible, bounded window rather than an arbitrary date picker.* The
+answer: **the window is the arbitrary thing.** It was bounded by where the
+user happened to click, not by anything they chose, and a user on the day
+view who wanted next Tuesday was blocked by an accident of navigation.
+
+**What it bought beyond fixing the escalation:** `§8`'s open question — *how
+many options before the control stops being usable* — is **dissolved rather
+than answered**; the control's coupling to `window_days` is gone, proven by
+that function returning to private; and the overflow risk a date-labelled
+`<select>` carried is gone by construction.
+
+### 9.3 What the RFC got right, for the record
+
+**The clause.** It took three drafts and the first two measured distance; the
+one that shipped measures **reconstruction**, and that is the half both
+variations above were steered by. §9.1 kept *one activation* because the
+clause asked for it. §9.2 replaced the widget because a window the user did
+not choose is not a constraint — but a **date is never reconstruction**,
+which is why the substitution was safe to make without re-deciding anything.
+
+**And `§2`.** Establishing the geometry *before* choosing a design is what
+made §9.1 a five-minute decision instead of a round of rework.

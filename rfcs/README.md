@@ -29,17 +29,15 @@ the owner approves, the dev team implements.
 
 Design settled. Implementation may begin.
 
-**One exception, stated rather than left to the folder**: RFC 0015 is accepted
-and its **clause is implementable now** (0.44.0), but its **control is 0.45.0
-work and the implementer should not start it** until `DM-TEST-001` closes —
-those tests pin the current behaviour of the surface the control changes. The
-reason is `§7.1` of the RFC; this note exists because *accepted* otherwise
-means *start*.
-
 | ID | Title | Target |
 |----|-------|--------|
-| 015 | [Rescheduling without a pointer](./accepted/015-rescheduling-without-a-pointer.md) — the calendar is the **one** direct-manipulation surface whose keyboard path leaves the screen: **77 Tab and Enter keystrokes across three pages**, plus hand arithmetic, against one drag. **The obvious fix does not fit** — a block's height *is* its duration, so there is no room for a 44 × 44 px control in the grid. Asks where the control lives instead, and **recommends Option A, reversing the architect's own first recommendation** once it was re-read against the project's philosophy — the list it preferred renders every scheduled issue twice on one screen, and was never cheaper to reach by keyboard. Also asks for a clause the architect has now drafted twice and got wrong twice: distance is the symptom, **reconstruction is the defect** | clause 0.44.0, control 0.45.0 |
 | 014 | [The identity newtype](./accepted/014-the-identity-newtype.md) — **accepted 2026-10-07**, `DEC-058`. Identity is a `String` and identity-ness lives in a variable's name; a type only a session can construct makes `NFR-PRIV-005`'s stronger reading satisfiable. **Not a security fix** — the boundary holds; what changes is that it cannot be broken by inattention | 0.43.0 |
+
+RFC 015 closed at 0.45.0 and moved to `done/`: the clause landed at
+0.44.0 and the control at 0.45.0, **`FR-DM-002` Met**. Its `§9` records the
+two things implementation varied — the control sits on the issue page rather
+than the calendar block, and its target is a date input rather than the
+windowed `<select>` the RFC sketched.
 
 RFC 011 closed at 0.33.0 and RFC 012 at 0.32.0; both moved to `done/`.
 

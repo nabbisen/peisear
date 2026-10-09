@@ -16,7 +16,7 @@ the block's link would take the pointer user's route to the issue away.
 | Part | Where it lives | Release |
 |---|---|---|
 | The clause | **landed** — `FR-DM-002`'s normative text, `DEC-059` | 0.44.0 |
-| The control | [`CAL-004`](./CAL-004-a-move-control-for-the-keyboard.md) — **written**; the condition below is met (`DM-TEST-001`/`-002` closed at 0.44.0) | 0.45.0 |
+| The control | [`CAL-004`](./CAL-004-a-move-control-for-the-keyboard.md) + [`CAL-005`](./CAL-005-the-window-becomes-a-date.md) — **shipped**, `fa9d2ab` / `d9796b4`. **`FR-DM-002` Met.** | 0.45.0 |
 
 ## Why the control's handoff is not written yet
 
@@ -54,3 +54,14 @@ handoff says why not. The clause it must satisfy is now in the requirement,
 so the test is *does the equivalent sit on the element, and does it avoid
 reconstruction* — both checkable, neither a judgement.
 | The control, round 2 | [`CAL-005`](./CAL-005-the-window-becomes-a-date.md) | Round 1 accepted (`fa9d2ab`), 385 green. The dev team's escalation was right: in a **day-view** context the move control offered **exactly one option — the current day — so a Move was a no-op**, and the day view is the most natural path to a specific block. **The answer is to stop having a window, not to widen one**: a native `<input type="date">`, which the handler already accepts verbatim, so nothing server-side changes. It also dissolves RFC 0015 §8's *how many options* question and removes the overflow risk a date-labelled `<select>` carried. | 0.45.0 |
+
+---
+**Closed.** The RFC is in `done/` and its `§9` records what implementation
+varied. Nothing here is outstanding.
+
+**The one item this work named and did not carry**: the calendar's POST
+lands the user at the top of the page, which is the ordinary
+Post/Redirect/Get behaviour **every** mutation path in this product already
+has — measured during `CAL-004`, not introduced by it. It returns to the
+backlog as a measured, whole-path item rather than the vague *"lost phone
+scroll position after a POST"* it was before, and it is the architect's.
