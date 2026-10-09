@@ -19,6 +19,8 @@ therefore understated.
 
 | COV-001 | [the four small gaps](./COV-001-the-four-small-gaps.md) | **Seven tests, four requirements, no judgement calls.** `NFR-PRIV-002`'s tooltip, `FR-SUB-002`/`-003`'s three untested trigger conditions, `FR-PER-007`'s self-expanding panel, and `FR-NAV-003`'s two unasserted detail screens. **Carries a correction to `REQ-005`'s own reasoning**: `assert_no_capacity_leak` scans **raw HTML**, attributes included, so the tooltip was never invisible to it — the gap is its **finite vocabulary**, and the fix is a **positive** assertion rather than a fifth negative that would add nothing. | 0.47.0 |
 
+| NAV-001 | [team detail has no back link](./NAV-001-team-detail-has-no-back-link.md) | **The one live compliance defect in `§10.35`'s twelve**, found by `COV-001` while writing the test meant to prove coverage. `TeamDetailPage` hand-rolls its trail and calls **neither** shared helper — no `/today` root, no `aria-current`, and **no back link at all**, which `FR-NAV-003`'s second conjunct requires. The architect's own citation fix had framed it as missing proof, written from a summary without opening `teams.rs`. **Write the test first and watch it fail** — the defect supplies its own demonstration. | 0.47.0 |
+
 **Why these two together.** `TT-007` closes the instance; `REQ-004` asks
 whether the instance is a class. Fixing one guard and declaring the question
 answered is how `§10.34` happened — a correction made from the record rather

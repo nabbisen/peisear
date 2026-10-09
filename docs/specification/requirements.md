@@ -598,13 +598,30 @@ externally-issued POST is not silently downgraded to GET.
 **FR-NAV-003 — Breadcrumb and back affordance**
 Detail screens MUST provide a breadcrumb trail and a back link to the
 parent context.
-*Source*: `SPEC §4.4`. *Acceptance*: `breadcrumb` test crate — **project
-detail and issue detail only, 2 of the 4 detail screens.** *Status note added
-0.47.0 (`REQ-005`, `§10.35`)*: **team detail and sprint detail render
-breadcrumbs and neither is asserted anywhere.** Confirmed in `teams.rs` and
-`sprints.rs`. Unlike `FR-AUTH-004` above, this is **not** a structural
-sample — each screen builds its own trail, so two untested screens are two
-untested behaviours. **A coverage gap, scheduled, not a citation one.**
+*Source*: `SPEC §4.4`. *Acceptance*: `breadcrumb` test crate —
+`project_detail_breadcrumb_starts_with_today`,
+`issue_detail_breadcrumb_full_chain` and, from 0.47.0,
+`sprint_detail_breadcrumb_full_chain`. **3 of the 4 detail screens.**
+*Status*: **Partial — unmet on team detail** (`COV-001`, 0.47.0).
+*Corrected twice, and the second correction found a defect the first had
+framed as missing proof.* At 0.47.0 this entry was amended to say *"team
+detail and sprint detail render breadcrumbs and neither is asserted
+anywhere — a coverage gap, not a citation one."* **The clause was not false
+and the framing was**, and it was written from `REQ-004`'s summary without
+opening `teams.rs`.
+**`TeamDetailPage` (`teams.rs:205`–`379`) renders no back link at all.** It
+hand-rolls `<div class="breadcrumbs">` with two items — `/teams` and the
+team's name (`:306`) — and calls **neither** `render_breadcrumb` **nor**
+`render_back_link`, so it carries no `/today` root and no `aria-current="page"`
+either. This requirement's sentence has **two conjuncts** — *a breadcrumb
+trail **and** a back link* — and that screen satisfies the first only.
+**So this is the requirement unmet on one screen, not a test that was never
+written**, and it was found by writing the test meant to prove coverage: *a
+test asserting the current markup would have passed while proving nothing.*
+`NAV-001` closes it by routing that page through the two shared helpers.
+*Why it is not a structural sample like `FR-AUTH-004`*: each detail screen
+builds its own trail, so an untested screen is an unverified behaviour — and
+on this one, an unmet one.
 *Status*: Implemented. *Priority*: P2.
 
 **FR-NAV-004 — Parent-aware breadcrumb for sub-issues**
@@ -762,14 +779,38 @@ triggers reject nesting on both INSERT and UPDATE;
 
 **FR-SUB-002 — Same-project constraint**
 A sub-issue MUST belong to the same project as its parent.
-*Source*: `SPEC §8.3`. *Acceptance*: trigger-enforced.
+*Source*: `SPEC §8.3`. *Acceptance*:
+`creating_a_sub_issue_under_a_different_projects_issue_is_rejected`
+(`sub_issues`), asserting the typed
+`StorageError::Validation(MessageKey)` that `translate_trigger_error`
+produces from migration `0015`'s `RAISE`.
+*Citation corrected 0.47.0 (`COV-001`, `§10.35`)*: this read **"trigger-
+enforced"**, which names a mechanism **class** and no artefact — and
+`REQ-004` found that **nothing in the suite had ever fired this condition**.
+The trigger was real throughout; what did not exist was any executed
+assertion. **There is no HTTP route that reaches it**: `create_sub_issue`
+scopes `issues::find` to the URL's own `project_id`, so a cross-project parent
+**404s before the trigger runs**. The test therefore asserts at the storage
+boundary, one hop past the raw `RAISE` string, where the value a route *would*
+render is produced.
 *Status*: Implemented. *Priority*: P1.
 
 **FR-SUB-003 — No self-parenting and no demotion with children**
 An issue MUST NOT be its own parent. An issue that already has children
 MUST NOT be demoted into a sub-issue (which would create a two-level
 chain); its children must be promoted first.
-*Source*: derived from `FR-SUB-001`. *Acceptance*: trigger-enforced.
+*Source*: derived from `FR-SUB-001`. *Acceptance*:
+`demoting_an_issue_to_be_its_own_parent_is_rejected` and
+`demoting_an_issue_that_has_its_own_children_is_rejected` (`sub_issues`), both
+asserting the typed `StorageError::Validation(MessageKey)`.
+*Citation corrected 0.47.0 (`COV-001`, `§10.35`)*: as `FR-SUB-002` above —
+**"trigger-enforced" named no artefact and nothing had fired either
+condition**, while the sibling clause in the same file, same migration and
+same trigger pair was correctly tested. That adjacency is what let the gap
+read as covered. **Neither condition is reachable by any route**:
+`demote_to_sub_issue` and `promote_to_top_level` have **no handler** —
+`IssueForm` carries no `parent_issue_id` field — so the storage boundary is
+where the assertion belongs until one exists.
 *Status*: Implemented. *Priority*: P1.
 
 **FR-SUB-004 — Independent attributes**
@@ -1754,7 +1795,20 @@ annotation. Where this inventory and `NFR-PRIV-001` appear to overlap,
 **`NFR-PRIV-001` governs**: an explicit P0 inventory beats a general P1
 permission.
 *Source*: `SPEC §11.2`; scope clarified by `DEC-019`. *Acceptance*:
-`workload_privacy` test crate (4 tests). *Status*: Implemented (0.20.0).
+`workload_privacy` test crate — four negative checks on the response body
+(capacity denominator, *over capacity*, *strained*, `badge-error`) **plus,
+from 0.47.0, a positive assertion on the workload strip's `title=`**: it
+renders the permitted name-and-in-flight-count shape and nothing else.
+*Added by `COV-001` (`§10.35`), and the reason it is positive rather than a
+fifth negative.* The prohibition names four vectors; three are covered by
+those negatives, one (**glyph**) has **no implementation to test**, and the
+**tooltip** was compliant and unasserted. Both the audit and its review first
+recorded the cause as *"the helper scans body text and an attribute is not
+body text"* — **false**: the helper takes `resp.text()`, the raw HTML, and
+sees attribute values. The actual gap was its **finite vocabulary**, so
+capacity-derived text in new wording would pass. **Demonstrated, not argued**:
+a literal `"(5/5 pt)"` planted in the tooltip failed *both* checks; a
+vocabulary-evading `"nearing their limit"` failed **only** the new one. *Status*: Implemented (0.20.0).
 *Priority*: P1.
 *Correction*: the unclarified wording was resolved in the code's favour
 without a decision — the project detail screen and both issue forms
@@ -4486,6 +4540,20 @@ weighs at the time.
 
 ---
 
+**An expectation built by the function under test — `COV-001`, 0.47.0.** The
+sharpest instance of this class so far, and it never shipped: a test for
+`NFR-PRIV-002`'s tooltip asserted the rendered `title=` against
+`Locale::English.render(MessageKey::WorkloadTitle { … })`. **A capacity leak
+planted inside that same arm left the test green**, because both sides of the
+comparison were produced by the code being checked. Rewritten to a literal —
+the choice `assert_no_capacity_leak` already makes for its four banned
+strings.
+**The instrument that caught it is worth more than the fix**: planting into
+**the thing the expectation is derived from**, rather than into the code under
+test. A test whose expectation shares a source with its subject cannot fail
+for the reason it names, and no amount of planting into the *subject* reveals
+that. Found by the dev team in its own draft, before review.
+
 ### 10.18 Authenticated pages scroll horizontally when the signed-in email is long — **closed** by `LAYOUT-001`, 0.32.0
 
 **Horizontal overflow on every authenticated page, at every viewport width** —
@@ -5211,9 +5279,17 @@ entries, **48 carry an `*Acceptance*`** and 117 do not. Of the 48: 32 cover
 their text, **4 are narrower and disclose it in their own prose**, 1 is out of
 force, 4 could not be resolved in the time available — named as *unresolved*
 rather than scored — and **7 are narrower and had never disclosed it**.
-**None of the seven is a compliance finding**, which the audit states itself:
-the behaviour is corroborated by inspection in every case. `NFR-A11Y-007`
-remains the one instance where the same shape **mattered in practice**.
+**The audit judged none of the seven a compliance finding**, on inspection of
+each. **One of them was**, and `COV-001` found it at 0.47.0 by writing the
+test meant to prove the coverage: `FR-NAV-003`'s team detail renders **no back
+link at all**, which the requirement's own sentence requires in its second
+conjunct. *The architect's own citation fix had framed that entry as a
+coverage gap, from `REQ-004`'s summary, without opening `teams.rs`.*
+**So the honest tally is twelve entries and one live compliance defect** —
+corrected here rather than left at *zero*, because the defect is an argument
+**for** the audit and burying it would waste the finding. `NFR-A11Y-007`
+remains the instance where the **narrow-acceptance shape itself** mattered in
+practice.
 
 *The finding behind the findings, and why a ratio is not a defect count.* **A
 population-to-citation ratio overstates risk when the mechanism is structural
