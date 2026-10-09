@@ -11,6 +11,82 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.45.0] — 2026-10-09
+
+This is the release where a `P0` closes, and the closing is the story —
+not the control itself, but the fact that the gap it closes could be
+*checked* at all.
+
+### Added
+
+- **A calendar block can now be rescheduled without a pointer, from the
+  issue page, by picking a day — and the length stays the same.** The
+  issue detail page gains a **Move** card: a label, a native date
+  input, and a Move button, beside the edit form's two absolute
+  date/time fields but doing a different job — the calendar already
+  teaches *drag = move* against *open and edit = set*, and this
+  mirrors that distinction rather than duplicating either. The server
+  applies one whole-day delta to both the start and the end, so a Move
+  and the equivalent drag land on the identical stored row — **by
+  construction, not by agreement**: both call the same function, and a
+  test moves one issue through the form while dragging another to the
+  same day to compare. A calendar block's link now carries the view and
+  date it came from, so a Move returns the reader to the window they
+  were looking at, never to a default.
+
+### Changed
+
+- **`FR-DM-002` (a `P0`) reaches Met, on all four direct-manipulation
+  surfaces.** Before this release the only keyboard route to a
+  reschedule was the issue edit form's two absolute fields, which meant
+  computing the new end time by hand — 77 Tab and Enter keystrokes
+  across three pages, against one drag. **Without the clause 0.44.0
+  gave this requirement, that would have read Met for five releases**,
+  because the effect was always technically reachable; the clause —
+  offered by the element carrying the pointer affordance, and
+  performing the same action rather than requiring the user to
+  reconstruct its effect — is what made the gap falsifiable, and every
+  future direct-manipulation surface is now held to it.
+- **Two design choices went the other way from the originating RFC
+  (0015), and both are worth knowing about:**
+  - **Not a control on the calendar block itself.** A block's height is
+    its duration, so a 44 × 44 px control cannot fit one; and
+    retargeting the block's existing link would have served the
+    keyboard path by taking the pointer path to the issue away from
+    pointer users.
+  - **Not a dropdown of the days currently in view.** In the day view
+    that list held exactly one option — today — so a Move did nothing;
+    the window was an artefact of where the user had clicked, not a
+    choice they made. A native date input removed the window entirely,
+    dissolving the question of how many options is too many rather
+    than answering it, and removing 100 net lines in the process.
+
+### Internal
+
+- **The specification sweep's third run found four things, and none
+  was a stale status** — a test count citing 16 where 21 exist, a
+  sentence counting "both" of three, a guard population that read
+  `<a>`/`<button>`/`<summary>` and not the `<input>` this release
+  added, and a requirement applied beyond its own letter. Three of
+  four are counts or populations, which is the sweep's fourth pass
+  doing its job — the first sign that *amend from the code, never from
+  a count's own prior value* is holding past its first test.
+- **Test inventory: 376 → 385 → 383, and the fall is deliberate, not a
+  loss of coverage.** Three tests asserting a day-view/week/month
+  option count were deleted — not adapted — when the `<select>` they
+  were pinned to stopped existing; one new test replaced them for the
+  date input's own shape. `§10.17`'s own lesson: an assertion kept
+  alive past its subject is worse than no assertion.
+- **`NFR-A11Y-007` is satisfied by measurement, not by the existing
+  touch-target guard.** The guard's own source-level population does
+  not reach a plain `<input>`; the new control's 44×44px minimum and
+  clearance were confirmed in a real browser instead, named. Widening
+  the guard to cover this class is not scheduled by this release, and
+  this entry should not be read as implying it already does.
+- No schema migration — `0020` remains the most recent, the sixth
+  release running. The overflow gate stayed at 120 cells, re-measured
+  with the new control present rather than assumed unaffected.
+
 ## [0.44.0] — 2026-10-08
 
 **This release ships no behaviour, and that is the honest summary rather
