@@ -53,3 +53,4 @@ And the acceptance: `FR-DM-002` reaches **Met** at 0.45.0 with a test, or the
 handoff says why not. The clause it must satisfy is now in the requirement,
 so the test is *does the equivalent sit on the element, and does it avoid
 reconstruction* — both checkable, neither a judgement.
+| The control, round 2 | [`CAL-005`](./CAL-005-the-window-becomes-a-date.md) | Round 1 accepted (`fa9d2ab`), 385 green. The dev team's escalation was right: in a **day-view** context the move control offered **exactly one option — the current day — so a Move was a no-op**, and the day view is the most natural path to a specific block. **The answer is to stop having a window, not to widen one**: a native `<input type="date">`, which the handler already accepts verbatim, so nothing server-side changes. It also dissolves RFC 0015 §8's *how many options* question and removes the overflow risk a date-labelled `<select>` carried. | 0.45.0 |
