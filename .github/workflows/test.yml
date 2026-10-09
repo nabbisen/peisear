@@ -88,8 +88,18 @@ jobs:
   # script unwired was rejected: a script sitting unrun beside a gated
   # one reads as coverage, which is `§10.15`'s class arriving as a test
   # executed by nothing.
+  #
+  # `GATE-006` (`NFR-A11Y-008`, `§10.35`): a third gate, same reasoning
+  # -- `drag-outcome-gate.mjs` is its own script, not a widening of
+  # either of the other two, even though `DEC-048` condition 3's letter
+  # names only `overflow-gate.mjs`. Three properties on the two
+  # surfaces `GATE-005` measured as actually untested (`calendar.js`,
+  # `plan.js`): the live region receives the outcome text, the undo
+  # toast's Tab order, and the drop's stored effect read back over
+  # HTTP. Port `4175`, its own scratch server and database, independent
+  # of the other two.
   browser-overflow-gate:
-    name: browser checks (overflow gate + undo mousedown trap)
+    name: browser checks (overflow gate + undo mousedown trap + drag outcome)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -98,6 +108,7 @@ jobs:
       - run: cargo build -p peisear
       - run: node browser-checks/overflow-gate.mjs
       - run: node browser-checks/undo-mousedown-trap.mjs
+      - run: node browser-checks/drag-outcome-gate.mjs
 
   # Build and test each test target individually rather than running
   # `cargo test --workspace` in one go. The combined build links many

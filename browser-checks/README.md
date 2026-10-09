@@ -53,6 +53,20 @@ attention.
   browser's own drag-versus-click decision**. `dm.js` is excluded on purpose:
   its target has no `draggable` ancestor, so there is no trap to guard
   against.
+- `drag-outcome-gate.mjs` — **a third gate** (`GATE-005`/`GATE-006`,
+  `NFR-A11Y-008`, `§10.35`). Three properties, from one synthetic drop per
+  surface, on the two surfaces measured as actually untested —
+  `calendar.js` and `plan.js` (`board.js`'s pair is already covered by a
+  Rust test asserting the regions' presence; `dm.js` has no drag source):
+  the live region actually receives the outcome text, not merely that the
+  element exists; the undo toast's own Tab order, measured rather than
+  inferred; and the drop's stored effect, read back over HTTP, independent
+  of the page's own optimistic DOM state. Reuses
+  `undo-mousedown-trap.mjs`'s own synthetic-`DragEvent` scaffolding to
+  reach `drop`, which is not the gesture under test — a true native-gesture
+  drag needs `Input.dispatchDragEvent`/`Input.setInterceptDrags`, a CDP
+  domain `cdp.mjs` does not wrap, and that question (`GATE-005` candidate
+  4) is declined on the record, not built here.
 
 ## Running them locally
 
@@ -60,6 +74,7 @@ attention.
 cargo build -p peisear
 node browser-checks/overflow-gate.mjs
 node browser-checks/undo-mousedown-trap.mjs
+node browser-checks/drag-outcome-gate.mjs
 ```
 
 Needs a Chrome-family browser on `$PATH` (`google-chrome-stable`,
@@ -67,12 +82,13 @@ Needs a Chrome-family browser on `$PATH` (`google-chrome-stable`,
 pointing at one. `PEISEAR_BIN` overrides the binary path (default
 `target/debug/peisear`); `PEISEAR_PORT` overrides the scratch port.
 
-**The two scripts default to different ports — `4173` and `4174` — and each
-starts and tears down its own server and scratch database.** That is why they
-share one CI job safely. **But `PEISEAR_PORT` is read by both**, so setting it
-gives them the *same* port. Sequentially that is harmless, since each script's
-`finally` block kills its server before the next starts. **In parallel it is a
-silent collision**, and `PEISEAR_PORT` is the reason: if these are ever run
+**The three scripts default to different ports — `4173`, `4174` and
+`4175` — and each starts and tears down its own server and scratch
+database.** That is why they share one CI job safely. **But `PEISEAR_PORT`
+is read by all three**, so setting it gives them the *same* port.
+Sequentially that is harmless, since each script's `finally` block kills
+its server before the next starts. **In parallel it is a silent
+collision**, and `PEISEAR_PORT` is the reason: if these are ever run
 concurrently, give each its own port rather than assuming the defaults still
 apply. Recorded here because the defaults make the hazard invisible until
 someone parallelises the job to save a minute.
