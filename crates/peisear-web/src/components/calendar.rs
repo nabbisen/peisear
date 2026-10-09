@@ -510,6 +510,11 @@ pub fn PersonalCalendarPage(
     /// (`NFR-A11Y-004`) rather than a hash-derived hue.
     project_names: std::collections::HashMap<String, String>,
     unread_count: i64,
+    /// `CAL-006`: a one-shot message from `CalendarQuery::flash` — the
+    /// `change_schedule_move` redirect's own confirmation that a Move
+    /// is not silent even when its subject leaves the window the user
+    /// lands back on.
+    flash: Option<String>,
 ) -> impl IntoView {
     let nav = render_nav(
         "/today/calendar".to_string(),
@@ -534,7 +539,7 @@ pub fn PersonalCalendarPage(
     );
     view! {
         <AppShell title=t(MessageKey::PersonalCalendarPageTitle)
-                  user=user flash={None::<String>} unread_count=unread_count>
+                  user=user flash=flash unread_count=unread_count>
             <div class="max-w-5xl mx-auto">
                 {super::breadcrumb::render_breadcrumb(vec![
                     super::breadcrumb::BreadcrumbItem::current(t(MessageKey::CalendarBreadcrumbWord)),
@@ -571,6 +576,8 @@ pub fn ProjectCalendarPage(
     days: Vec<CalendarDay>,
     sprint: Option<Sprint>,
     unread_count: i64,
+    /// See `PersonalCalendarPage`'s own `flash`.
+    flash: Option<String>,
 ) -> impl IntoView {
     let base_href = format!("/projects/{}/calendar", project.id);
     let project_name = project.name.clone();
@@ -591,7 +598,7 @@ pub fn ProjectCalendarPage(
     let grid = render_grid(view, days, |_issue: &Issue| None, return_qs);
     view! {
         <AppShell title=t(MessageKey::ProjectCalendarPageTitle { project_name: project_name.clone() })
-                  user=user flash={None::<String>} unread_count=unread_count>
+                  user=user flash=flash unread_count=unread_count>
             <div class="max-w-5xl mx-auto">
                 {super::breadcrumb::render_breadcrumb(vec![
                     super::breadcrumb::BreadcrumbItem::link(t(MessageKey::ProjectsSectionName), "/projects"),
@@ -629,12 +636,13 @@ pub fn render_personal(
     days: Vec<CalendarDay>,
     project_names: std::collections::HashMap<String, String>,
     unread_count: i64,
+    flash: Option<String>,
 ) -> Html<String> {
     super::render_to_html(move || {
         view! {
             <PersonalCalendarPage
                 user=user view=view anchor=anchor prev_date=prev_date next_date=next_date
-                days=days project_names=project_names unread_count=unread_count
+                days=days project_names=project_names unread_count=unread_count flash=flash
             />
         }
     })
@@ -651,12 +659,13 @@ pub fn render_project(
     days: Vec<CalendarDay>,
     sprint: Option<Sprint>,
     unread_count: i64,
+    flash: Option<String>,
 ) -> Html<String> {
     super::render_to_html(move || {
         view! {
             <ProjectCalendarPage
                 user=user project=project view=view anchor=anchor prev_date=prev_date
-                next_date=next_date days=days sprint=sprint unread_count=unread_count
+                next_date=next_date days=days sprint=sprint unread_count=unread_count flash=flash
             />
         }
     })

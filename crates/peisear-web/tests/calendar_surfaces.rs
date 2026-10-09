@@ -1644,12 +1644,98 @@ async fn move_redirects_to_the_surface_view_and_date_it_came_from() {
         .expect("redirect must carry a Location header")
         .to_str()
         .unwrap();
-    assert_eq!(
-        location,
-        format!(
+    assert!(
+        location.starts_with(&format!(
             "/projects/{project_id}/calendar?view=month&date={}",
             d.format("%Y-%m-%d")
-        ),
-        "the redirect must rebuild the exact surface/view/date the form named"
+        )),
+        "the redirect must rebuild the exact surface/view/date the form named: {location}"
+    );
+    // `CAL-006`: the one-shot flash is appended after the view/date
+    // the form named, not in place of it -- scoped separately here
+    // because this test's own subject is the return path, not the
+    // message (see `move_lands_with_a_rendered_message_naming_the_target_day`
+    // for that).
+    assert!(
+        location.contains("&flash="),
+        "the redirect must also carry the one-shot confirmation flash: {location}"
+    );
+}
+
+/// `CAL-006`: the fix for the review's F-1 (a successful Move could
+/// take its subject out of the window the user lands back on
+/// entirely, silently, reading as a deletion). Asserts on the
+/// **rendered** message, not the URL parameter alone — a `flash=`
+/// query value that no page renders is exactly the shape this handoff
+/// exists to fix, and a test on the parameter would pass against it.
+#[tokio::test]
+async fn move_lands_with_a_rendered_message_naming_the_target_day() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
+    let d = today();
+    let tomorrow = d + chrono::Duration::days(1);
+    let issue_id = insert_planned_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Confirm the move",
+        None,
+        Some(utc_hms(d, 9, 0)),
+        Some(utc_hms(d, 10, 0)),
+    )
+    .await;
+    let lock = issues::find(&app.db, &issue_id, &project_id)
+        .await
+        .expect("find issue")
+        .updated_at;
+
+    let resp = app
+        .server
+        .post(&format!(
+            "/projects/{project_id}/issues/{issue_id}/schedule/move"
+        ))
+        .form(&[
+            ("target_date", tomorrow.format("%Y-%m-%d").to_string()),
+            ("client_updated_at", lock.to_rfc3339()),
+            ("from_view", "day".to_string()),
+            ("from_date", d.format("%Y-%m-%d").to_string()),
+            ("from_surface", "project".to_string()),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+    let location = resp
+        .headers()
+        .get("location")
+        .expect("redirect must carry a Location header")
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    // Follow the redirect for real, the way a browser would -- this
+    // is the page the user actually lands on, in the day view, where
+    // the moved block is no longer present (CAL-005/§2's own finding:
+    // the day view's window is one day).
+    let landing = app.server.get(&location).await;
+    landing.assert_status(StatusCode::OK);
+    let body = landing.text();
+    let expected_label = tomorrow.format("%A, %B %-d").to_string();
+    // Scoped to the alert banner itself, not "appears somewhere on
+    // the page" -- the same discipline `scoped_move_form` already
+    // applies to the move form, extended here to `FlashBar`'s own
+    // `<div role="alert">...</div>`.
+    let alert_start = body
+        .find(r#"<div role="alert""#)
+        .unwrap_or_else(|| panic!("no alert banner rendered on the landing page: {body}"));
+    let alert_rest = &body[alert_start..];
+    let alert_end = alert_rest
+        .find("</div>")
+        .expect("alert banner has a closing tag");
+    let alert = &alert_rest[..alert_end];
+    assert!(
+        alert.contains(&expected_label),
+        "the alert banner must name the target day the issue moved to, not \
+         just confirm something happened: {alert}"
     );
 }

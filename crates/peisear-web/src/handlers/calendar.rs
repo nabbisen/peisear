@@ -29,6 +29,15 @@ use crate::{
 pub struct CalendarQuery {
     pub view: Option<String>,
     pub date: Option<String>,
+    /// `CAL-006`: a one-shot UI message, the same treatment
+    /// `ProjectViewQuery::merge_with_saved` already documents for the
+    /// issue list's own `flash` — not a user preference, so it has no
+    /// saved default to inherit from and nothing here carries it
+    /// forward into `render_nav`'s prev/next/view links, which build
+    /// their own `view=`/`date=` query strings independently of this
+    /// struct.
+    #[serde(default)]
+    pub flash: Option<String>,
 }
 
 /// Unknown/missing → `Week` (RFC 002 must-have 3's default, and
@@ -179,6 +188,7 @@ pub async fn personal_page(
         days,
         project_names,
         unread_count,
+        q.flash,
     ))
 }
 
@@ -210,5 +220,6 @@ pub async fn project_page(
         days,
         sprint_band.into_iter().next(),
         unread_count,
+        q.flash,
     ))
 }

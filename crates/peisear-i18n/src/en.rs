@@ -1417,6 +1417,7 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::IssueHasNoScheduledStartMessage => {
             "This issue has no planned start date to move from.".to_string()
         }
+        MessageKey::CalendarMovedToFlash { date_label } => format!("Moved to {date_label}."),
         MessageKey::ConfirmDeleteSprintPlannedNote => {
             "Issues currently linked to it will be unlinked.".to_string()
         }

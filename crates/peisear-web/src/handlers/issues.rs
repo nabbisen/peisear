@@ -1401,7 +1401,9 @@ pub async fn change_schedule_move(
 
     // `FR-NAV-005`: rebuilt server-side from typed fields, never a
     // caller-supplied URL (`CONF-001` §3.3's concern, restated in
-    // `CAL-004` §2.4).
+    // `CAL-004` §2.4). The redirect target itself is unchanged by
+    // `CAL-006` — returning the user where they came from is correct;
+    // what was missing is the message, added below.
     let view = crate::handlers::calendar::parse_view(body.from_view.as_deref());
     let anchor = crate::handlers::calendar::parse_anchor(body.from_date.as_deref());
     let base = if body.from_surface.as_deref() == Some("project") {
@@ -1409,8 +1411,21 @@ pub async fn change_schedule_move(
     } else {
         "/today/calendar".to_string()
     };
+    // `CAL-006`: a day view's own window is one day, so a successful
+    // Move can take its subject out of the page the user lands back
+    // on entirely — without this, that reads as a deletion. One-shot,
+    // the same treatment `ProjectViewQuery::merge_with_saved` already
+    // documents for `flash`: never inherited, never carried forward by
+    // `render_nav`'s own prev/next/view links. Names the day the issue
+    // moved to, not that the length was kept — the user asked for a
+    // move, and the length not changing is the control's own promise,
+    // not news.
+    let flash =
+        super::percent_encode_query(&Locale::English.render(MessageKey::CalendarMovedToFlash {
+            date_label: new_start.format("%A, %B %-d").to_string(),
+        }));
     Ok(Redirect::to(&format!(
-        "{base}?view={}&date={}",
+        "{base}?view={}&date={}&flash={flash}",
         view.as_str(),
         anchor.format("%Y-%m-%d")
     )))

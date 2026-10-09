@@ -1020,6 +1020,9 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::ScheduleMoveHelperText => "[fx-schedule-move-helper]".to_string(),
         MessageKey::ScheduleMoveButton => "[fx-schedule-move-button]".to_string(),
         MessageKey::IssueHasNoScheduledStartMessage => "[fx-issue-no-scheduled-start]".to_string(),
+        MessageKey::CalendarMovedToFlash { date_label } => {
+            format!("[fx-calendar-moved-to] {date_label}")
+        }
     }
 }
 

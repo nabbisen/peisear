@@ -2437,6 +2437,18 @@ pub enum MessageKey {
     /// which must fail with its own honest message rather than a
     /// generic one.
     IssueHasNoScheduledStartMessage,
+    /// `CAL-006`: the Move control's own confirmation, carried as a
+    /// one-shot calendar flash. A successful Move can take its
+    /// subject out of the window the user lands back on entirely (the
+    /// day view's window is one day), so the redirect must say what
+    /// happened rather than let the block's disappearance read as a
+    /// deletion. Names **the day it moved to**, not that the length
+    /// was kept — the user asked for a move, and the length not
+    /// changing is the control's own promise, not news worth a
+    /// second clause.
+    CalendarMovedToFlash {
+        date_label: String,
+    },
 }
 
 impl MessageKey {
@@ -3272,6 +3284,9 @@ impl MessageKey {
             MessageKey::ScheduleMoveHelperText,
             MessageKey::ScheduleMoveButton,
             MessageKey::IssueHasNoScheduledStartMessage,
+            MessageKey::CalendarMovedToFlash {
+                date_label: "Friday, October 10".to_string(),
+            },
         ];
         keys.extend(
             CalendarViewLabel::all()
