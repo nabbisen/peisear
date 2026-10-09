@@ -2364,8 +2364,19 @@ links at 20 px, the navbar brand at 28 px, and **`FR-HLT-007`'s own indicator
 basis links at 17 px**. A limit that size is a hole.
 
 **Verification rests on two things and the guard is only one of them.**
-*The guard's population is narrower than this requirement — `§10.35`,
-measured 0.46.0.* `touch_target_scan` reads `<a>`, `<button>` and
+*The guard's population was narrower than this requirement — `§10.35`,
+closed for this entry by `TT-007` at 0.46.0.* **The guard now reads all six
+tag names** — `<a>`, `<button>`, `<summary>`, `<input>` other than
+`type="hidden"`, `<select>`, `<textarea>` — and **every site on the tree is
+in one of three states**: it declares a target through `grow()`, it is a
+`type="hidden"` input excluded by reading the attribute, or it is a bare
+control inside a wrapping `<label>` that declares one. **No element is
+uncounted**, and the one named exception is still the one site it was. The
+nine `<textarea>`s, which the widened population newly covered, were measured
+in Chromium at 320 px — smallest **222 × 106** — and cleared 44 × 44 before
+any declaration; they carry one anyway, so a future `rows="1"` sibling cannot
+pass on this tree's good luck.
+*What the original gap was.* `touch_target_scan` reads `<a>`, `<button>` and
 `<summary>`: **161 elements in `components/`. It does not read `<input>`
 (70), `<select>` (28) or `<textarea>` (9) — 107 more, two of every five.**
 This requirement says *every interactive element*, and cites that guard.
@@ -2374,11 +2385,11 @@ satisfies the requirement **on a browser measurement rather than on the
 guard**; the size of it was not measured then and so was understated.
 **Exposure is 17 visible elements with no declared target** — 3 inputs, 5
 selects and all nine `<textarea>`s — since 32 of the 107 are `type="hidden"`
-and 58 declare one through `grow()` anyway. `TT-007` widens the population and
-resolves the 17; `REQ-004` asks the question this instance raises, which is
-whether any **other** requirement's acceptance is narrower than its own text.
-**This entry's `Met` is suspended on neither** — it reads Met on a counted
-population and the count was simply the wrong population.
+and 58 declare one through `grow()` anyway. **This entry's `Met` was never suspended** — it read
+Met on a counted population, and the count was simply the wrong population.
+`REQ-004` then asked whether any **other** entry's acceptance is narrower than
+its own text: **seven more, none a compliance finding**, with this one the
+only instance so far where the shape mattered in practice.
 
 `touch_target_scan` proves a **declaration is present** in the source. It cannot
 prove the declaration **works**: `min-h-11` on an inline element does nothing,
@@ -5096,8 +5107,16 @@ Measured in `components/`, 2026-10-09:
 
 | | in the guard's population | outside it |
 |---|---|---|
-| `<a>` 104, `<button>` 45, `<summary>` 12 | **161** | |
-| `<input>` 70, `<select>` 28, `<textarea>` 9 | | **107** |
+| `<a>` 91, `<button>` 43, `<summary>` 12 | **146** | |
+| `<input>` 70, `<select>` 23, `<textarea>` 9 | | **102** |
+
+*Figures corrected by `TT-007`, which was told not to trust them.* The
+architect's first count came from a raw `grep` and **included elements
+mentioned inside `//` comments** — five `<select>`s that are prose about the
+element (`sprint_plan.rs:194`, `projects.rs:90`, `issues.rs:941/971/976`),
+and thirteen `<a>`/`<button>` likewise. **The token was matched, not the
+meaning.** The proportion survived — **41% outside** — and was right by luck
+rather than arithmetic.
 
 **Two of every five interactive elements in this product are outside the
 population of the guard its requirement names as acceptance**, and the
@@ -5106,14 +5125,21 @@ adding an `<input>` which satisfies the requirement **on a browser
 measurement** rather than on the guard — recorded in that entry at the time,
 with the size of the gap unmeasured and therefore understated.
 
-**Exposure is smaller than the population, and both numbers matter.** Of the
-107, **32 are `type="hidden"`** and are not touch targets at all; **58 declare
-a target anyway** through `grow()`; **17 are visible interactive elements with
-no declared target** — 3 inputs, 5 selects, and **all nine `<textarea>`s**.
-*That last figure is a heuristic* — `grow(` or `TOUCH_TARGET` appearing inside
-the element's opening tag — so it bounds the candidates rather than naming
-failures; a tall `<textarea>` may well pass on measurement. `TT-007` resolves
-each one.
+**Exposure was smaller than the population, and both numbers mattered.** Of
+the 102: **32 are `type="hidden"`** and are not touch targets at all; **58
+declare a target anyway** through `grow()`. The architect's heuristic put the
+remainder at 17; **on measurement it was 9.** The three `<input>`s it flagged
+are bare checkboxes inside `<label class=grow(…)>` — the wrap this guard's
+**sizing** clause already required and its **coverage** clause had never seen.
+**Closed by `TT-007` at 0.46.0**: the guard reads all six tags,
+`type="hidden"` is excluded **by reading the attribute** rather than by an
+exception list of 32 entries, the pre-existing wrapping-label check was reused
+rather than reinvented, and the nine `<textarea>`s — measured in Chromium at
+320 px, smallest **222 × 106** — all cleared 44 × 44 before any declaration.
+**They were given `grow()` anyway**, because the measurement is true of *those
+nine today* and says nothing about a tenth with `rows="1"`; exempting the tag
+would promote a fact about this tree into a rule about the tag, which is
+`§10.19`'s own lesson.
 
 **Why this is not `§10.15`, `§10.16` or `§10.17`.** The code is not unexecuted
 (`§10.15`): the guard runs. There is no missing CI job (`§10.16`): it has one.
@@ -5123,14 +5149,39 @@ that a requirement cites as its acceptance a mechanism narrower than its own
 normative text**, and nothing in this document cross-checks the two. A reader
 sees `Met`, follows the acceptance, finds a green guard, and stops.
 
-**The open question, which is why this is a class and not a defect.**
-`REQ-001` audited every requirement whose *status* was a claim and found
-sixteen stale. **Nothing has ever audited an *acceptance* against the
-requirement it sits under.** `REQ-004` is commissioned to do that: for every
-entry citing a mechanism, does the mechanism cover what the requirement says?
-This entry closes when that audit reports and its findings are scheduled —
-**not when `NFR-A11Y-007`'s own instance is fixed**, because one instance
-found by accident says nothing about the rest.
+**`REQ-004` answered the open question at 0.46.0: this is a class.** Of 165
+entries, **48 carry an `*Acceptance*`** and 117 do not. Of the 48: 32 cover
+their text, **4 are narrower and disclose it in their own prose**, 1 is out of
+force, 4 could not be resolved in the time available — named as *unresolved*
+rather than scored — and **7 are narrower and had never disclosed it**.
+**None of the seven is a compliance finding**, which the audit states itself:
+the behaviour is corroborated by inspection in every case. `NFR-A11Y-007`
+remains the one instance where the same shape **mattered in practice**.
+
+*The finding behind the findings, and why a ratio is not a defect count.* **A
+population-to-citation ratio overstates risk when the mechanism is structural
+and understates it when the citation names no artefact at all.** `FR-AUTH-004`
+cites one route for a property enforced by a shared `FromRequestParts`
+extractor — two routes are a legitimate *sample*, not a gap repeated per
+route. `FR-SUB-002`'s `*Acceptance*: trigger-enforced` names a mechanism
+**class**, and **three of its four trigger conditions correspond to zero
+executed assertions anywhere**, while the fourth — same file, same migration,
+same trigger pair — is correctly tested. That is the shape which makes a
+reader assume coverage by association.
+
+**Four of the seven are citation defects rather than coverage defects**
+(`FR-AUTH-004`, `FR-AUTH-005`, `FR-ISS-002`, and half of `FR-NAV-003`): the
+code covers the population and the field does not say what covers it. Those
+are the architect's to correct. **Three are real coverage gaps** —
+`FR-SUB-002`/`-003`'s three trigger conditions, `FR-PER-007`'s third clause,
+and `NFR-A11Y-008`'s three untested live-region surfaces.
+
+**This entry closes when those are scheduled and the four unresolved entries
+have had a second pass**, `NFR-PRIV-002` first — a privacy requirement citing
+a four-test crate against a six-category normative list should not be left at
+*plausible under-coverage, not confirmed*. **Screening the 117 entries that
+cite no mechanism at all is a third question** (`NFR-REL-007`'s) and is
+deliberately not folded in here.
 
 ## 11. Deferred and future requirements
 
