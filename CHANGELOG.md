@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 **This release closes `§10.35` and ships no behaviour, and both halves
 need saying plainly.** No file under `crates/*/src/` or `static/`
-differs from 0.46.0 except one new `#[cfg(test)]` module. It is twelve
+differs from 0.46.0 except one new `#[cfg(test)]` module. It is thirteen
 tests, one new browser gate, and the acceptance fields for three
 requirements whose citations were narrower than their own text.
 
