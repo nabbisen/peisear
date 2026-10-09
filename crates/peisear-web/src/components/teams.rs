@@ -185,7 +185,7 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                             </div>
                             <textarea name="description" rows="3" maxlength="500"
                                       placeholder=t(MessageKey::TeamDescriptionPlaceholder)
-                                      class="textarea textarea-bordered textarea-sm w-full"></textarea>
+                                      class=grow("textarea textarea-bordered textarea-sm w-full")></textarea>
                         </label>
                         <p class="text-xs text-base-content/70">
                             {t(MessageKey::NewTeamIntro)}
@@ -587,7 +587,7 @@ pub fn TeamEditPage(
                                 <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span>
                             </div>
                             <textarea name="description" rows="3" maxlength="500"
-                                      class="textarea textarea-bordered textarea-sm w-full">
+                                      class=grow("textarea textarea-bordered textarea-sm w-full")>
                                 {team_description}
                             </textarea>
                         </label>

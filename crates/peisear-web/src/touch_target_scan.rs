@@ -158,6 +158,48 @@
 //! already bans the one that mattered, and `checkbox-sm` (`20px`) has
 //! no legitimate use in this tree today per this module's own opening
 //! note.
+//!
+//! **`TT-007` (`§10.35`) — the coverage clause's own population was
+//! three tag names of six.** [`interactive_tag_spans`] read `<a`,
+//! `<button`, `<summary` only; `<input`, `<select` and `<textarea`
+//! were interactive and uncounted. Measured on this tree: 70
+//! `<input>`, 23 `<select>` (not 28 -- `TT-007`'s own handoff counted
+//! five `<select>` mentions that turned out to sit inside `//`
+//! comments; [`strip_line_comments`] already removes those from every
+//! other count this module takes and must from this one too), 9
+//! `<textarea>`.
+//!
+//! No new named escalation exclusion. The three resolutions:
+//!
+//! - **32 `type="hidden"` inputs are not interactive elements.**
+//!   [`is_hidden_input`] excludes them by reading the attribute inside
+//!   the tag's own span -- not a 32-entry list, which is what this
+//!   module's own `§10.28` history warns an exception list for a
+//!   static, checkable property turns into.
+//! - **Three bare checkboxes** (`notification_preferences.rs`) sit
+//!   inside a `<label class=grow(...)>` -- the same wrap
+//!   [`every_bare_checkbox_is_label_wrapped_with_grow`] already
+//!   requires for the sizing-class clause. [`is_label_wrapped_with_grow`]
+//!   is reused rather than duplicated: its only input is a position to
+//!   search backward from, and a tag's own start serves that exactly
+//!   as a `class="checkbox"` literal's quote position already did.
+//! - **All nine `<textarea>`s measured 222x106px or larger at a 320px
+//!   viewport** (`chromium`, `TT-007` package evidence) -- multi-line
+//!   plus `w-full` clears both axes with room to spare, so none were a
+//!   genuine coverage gap. They now carry `class=grow(...)` anyway
+//!   (`issues.rs`, `projects.rs`, `sprints.rs`, `teams.rs`): the
+//!   measurement says the declaration is not load-bearing for these
+//!   nine today, but exempting a whole tag because this tree's current
+//!   controls happen to pass is the shape `§10.19`'s `join` lesson
+//!   warns about, and the declaration costs these nine nothing to
+//!   carry.
+//!
+//! [`interactive_tag_spans`]'s own span-finding needed no change for
+//! self-closing tags: the scan already stops at the first unquoted
+//! `>`, and a `<input ... />`'s own `>` is exactly that, named `/>` or
+//! not. Verified empirically against this tree's actual `<input>`/
+//! `<select>`/`<textarea>` markup, the same standard `TT-004` held the
+//! original three tags to.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -401,19 +443,26 @@ fn is_class_attribute_value(source: &str, quote_pos: usize) -> bool {
     source[..quote_pos].trim_end().ends_with("class=")
 }
 
-/// True if the bare `class="checkbox"` literal whose opening quote
-/// sits at `quote_pos` in `source` is enclosed by a
-/// `<label class=grow(...)>` wrapper — the sanctioned `Expand`
-/// pattern (`DEC-049` as amended, `TT-002` §4): the box stays at its
-/// native 24px, the label reaches 44px and participates in layout.
+/// True if the position `pos` in `source` — a `class="checkbox"`
+/// literal's opening quote, or (since `TT-007`) an interactive tag's
+/// own start — is enclosed by a `<label class=grow(...)>` wrapper —
+/// the sanctioned `Expand` pattern (`DEC-049` as amended, `TT-002`
+/// §4): the box stays at its native size, the label reaches 44px and
+/// participates in layout.
 ///
-/// Finds the nearest `<label` before `quote_pos`, then requires two
-/// things: that `<label` must not already be closed by a `</label>`
-/// before reaching the checkbox (otherwise it is some earlier,
-/// unrelated label and the checkbox is not actually inside it), and
-/// that label's own opening tag must contain `class=grow(`.
-fn is_label_wrapped_with_grow(source: &str, quote_pos: usize) -> bool {
-    let before = &source[..quote_pos];
+/// Takes a plain search-backward position rather than anything about
+/// a checkbox specifically, which is why `TT-007` could reuse this
+/// unchanged for the three bare `<input type="checkbox">` sites that
+/// newly entered [`interactive_tag_spans`]'s population instead of
+/// writing a second version.
+///
+/// Finds the nearest `<label` before `pos`, then requires two things:
+/// that `<label` must not already be closed by a `</label>` before
+/// reaching `pos` (otherwise it is some earlier, unrelated label and
+/// the element is not actually inside it), and that label's own
+/// opening tag must contain `class=grow(`.
+fn is_label_wrapped_with_grow(source: &str, pos: usize) -> bool {
+    let before = &source[..pos];
     let Some(label_start) = before.rfind("<label") else {
         return false;
     };
@@ -632,21 +681,30 @@ fn class_value_identifier_binding_calls_grow(source: &str, tag_start: usize, tag
     }
 }
 
-/// Every `<a`, `<button`, or `<summary` tag's span in `source` --
-/// `(tag_start, span_end)`, `span_end` being the position of the
-/// first `>` that is not inside a quoted string, scanned forward
-/// from the tag's own start. Requires the character right after the
-/// tag name to be whitespace or `>`, so `<a` doesn't also match some
-/// future `<article`.
+/// Every `<a`, `<button`, `<summary`, `<input`, `<select`, or
+/// `<textarea` tag's span in `source` -- `(tag_start, span_end)`,
+/// `span_end` being the position of the first `>` that is not inside
+/// a quoted string, scanned forward from the tag's own start.
+/// Requires the character right after the tag name to be whitespace
+/// or `>`, so `<a` doesn't also match some future `<article`, and
+/// (since `TT-007`) `<input` doesn't match some future `<inputgroup`.
 ///
 /// **A named limit, not a parser** -- the same boundary
 /// [`quoted_string_spans`] states for itself: a bare (unquoted) `>`
 /// inside a `{ }` Rust expression between a tag's own start and its
 /// closing `>` (a comparison operator, say) would end the span
 /// early. Verified empirically against this crate's actual tree
-/// (`TT-004`): no interactive tag's opening carries one today.
+/// (`TT-004`, re-verified for the three tags `TT-007` added): no
+/// interactive tag's opening carries one today.
+///
+/// **Self-closing and void tags need no separate handling.** `<input
+/// .../>`'s own closing `>` is still the first unquoted `>` scanned
+/// from the tag's start -- the preceding `/` is just another byte to
+/// this scan, not a different terminator to recognise. `TT-007` §2
+/// point 2 raised this as a question to verify, not a defect to fix;
+/// it was verified, not fixed.
 fn interactive_tag_spans(source: &str) -> Vec<(usize, usize)> {
-    const TAG_NAMES: [&str; 3] = ["a", "button", "summary"];
+    const TAG_NAMES: [&str; 6] = ["a", "button", "summary", "input", "select", "textarea"];
     let bytes = source.as_bytes();
     let mut spans = Vec::new();
     let mut i = 0;
@@ -681,6 +739,21 @@ fn interactive_tag_spans(source: &str) -> Vec<(usize, usize)> {
     spans
 }
 
+/// True if `tag` -- an `<input ...>` span from [`interactive_tag_spans`]
+/// -- carries `type="hidden"`. `TT-007`: a hidden input is not an
+/// interactive element at all and so is not part of
+/// `NFR-A11Y-007`'s population, excluded by reading the attribute
+/// rather than by a 32-entry list of the sites that happen to carry
+/// it today (`§10.28`'s own lesson about what an exception list does
+/// to a static, checkable property). Scoped to `tag`'s own span, the
+/// same reasoning [`is_class_attribute_value`] uses to tell `<input
+/// type="checkbox" class="checkbox">`'s two identical literals apart
+/// -- a `type="hidden"` elsewhere in the file cannot reach in and
+/// exempt a different tag.
+fn is_hidden_input(tag: &str) -> bool {
+    tag.starts_with("<input") && tag.contains("type=\"hidden\"")
+}
+
 #[test]
 fn every_interactive_element_declares_a_touch_target() {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
@@ -700,10 +773,14 @@ fn every_interactive_element_declares_a_touch_target() {
         let stripped = strip_line_comments(&source);
         for (start, end) in interactive_tag_spans(&stripped) {
             let tag = &stripped[start..end];
+            if is_hidden_input(tag) {
+                continue;
+            }
             let declares_target = tag.contains("class=grow(")
                 || tag.contains("data-inline-text-link")
                 || class_value_identifier_binding_calls_grow(&stripped, start, tag)
-                || is_named_escalation_exclusion(tag);
+                || is_named_escalation_exclusion(tag)
+                || is_label_wrapped_with_grow(&stripped, start);
             if !declares_target {
                 let line = stripped[..start].matches('\n').count() + 1;
                 let snippet: String = tag.chars().take(80).collect();
@@ -714,13 +791,15 @@ fn every_interactive_element_declares_a_touch_target() {
 
     assert!(
         offenders.is_empty(),
-        "every interactive element (<a>, <button>, <summary>) must declare a \
-         44x44 touch target via components::grow(...), or carry \
+        "every interactive element (<a>, <button>, <summary>, <input> other \
+         than type=\"hidden\", <select>, <textarea>) must declare a 44x44 \
+         touch target via components::grow(...), carry \
          data-inline-text-link if it is a link inside a block of running \
-         text (NFR-A11Y-007, DEC-050) -- TT-004 brought every site this scan \
-         found on the tree it shipped against into one of those two states, \
-         so a new offender means either a new control shipped without a \
-         declaration or an existing one lost it:\n{}",
+         text, or sit inside a <label class=grow(...)> that provides the \
+         hit area (NFR-A11Y-007, DEC-050) -- TT-004 and TT-007 brought every \
+         site this scan found on the tree they shipped against into one of \
+         those states, so a new offender means either a new control shipped \
+         without a declaration or an existing one lost it:\n{}",
         offenders
             .iter()
             .map(|o| format!("  {o}"))

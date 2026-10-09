@@ -529,7 +529,7 @@ pub fn SprintNewPage(
                             </div>
                             <textarea name="goal" rows="3" maxlength="500"
                                       placeholder=t(MessageKey::GoalFieldPlaceholder)
-                                      class="textarea textarea-bordered textarea-sm w-full"></textarea>
+                                      class=grow("textarea textarea-bordered textarea-sm w-full")></textarea>
                         </label>
                         <p class="text-xs text-base-content/70">
                             {t(MessageKey::SprintPlannedNoticeLead)} <strong>{t(MessageKey::CaptionWordPlanned)}</strong>
@@ -1157,7 +1157,7 @@ pub fn SprintEditPage(
                                 <span class="label-text-alt text-xs opacity-70">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="goal" rows="3" maxlength="500"
-                                      class="textarea textarea-bordered textarea-sm w-full">
+                                      class=grow("textarea textarea-bordered textarea-sm w-full")>
                                 {sprint_goal}
                             </textarea>
                         </label>

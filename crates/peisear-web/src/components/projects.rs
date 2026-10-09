@@ -128,7 +128,7 @@ pub fn ProjectNewPage(
                         <label class="form-control w-full">
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span></div>
                             <textarea name="description" rows="4" maxlength="4000"
-                                      class="textarea textarea-bordered textarea-sm w-full"
+                                      class=grow("textarea textarea-bordered textarea-sm w-full")
                                       placeholder=t(MessageKey::ProjectDescriptionPlaceholder)></textarea>
                         </label>
                         {has_teams.then(|| view! {
@@ -209,7 +209,7 @@ pub fn ProjectEditPage(
                         <label class="form-control w-full">
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span></div>
                             <textarea name="description" rows="4" maxlength="4000"
-                                      class="textarea textarea-bordered textarea-sm w-full">
+                                      class=grow("textarea textarea-bordered textarea-sm w-full")>
                                 {project.description.clone()}
                             </textarea>
                         </label>

@@ -1191,7 +1191,7 @@ pub fn IssueNewPage(
                         <label class="form-control w-full">
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span></div>
                             <textarea name="description" rows="6" maxlength="10000"
-                                      class="textarea textarea-bordered textarea-sm w-full font-mono text-xs"
+                                      class=grow("textarea textarea-bordered textarea-sm w-full font-mono text-xs")
                                       placeholder=t(MessageKey::NewIssueDescriptionPlaceholder)></textarea>
                         </label>
 
@@ -1337,7 +1337,7 @@ pub fn SubIssueNewPage(
                                 <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span>
                             </div>
                             <textarea name="description" rows="6" maxlength="10000"
-                                      class="textarea textarea-bordered textarea-sm w-full font-mono text-xs"
+                                      class=grow("textarea textarea-bordered textarea-sm w-full font-mono text-xs")
                                       placeholder=t(MessageKey::NewSubIssueDescriptionPlaceholder)></textarea>
                         </label>
 
@@ -1750,7 +1750,7 @@ fn IssueEditForm(
                 <label class="form-control w-full">
                     <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span></div>
                     <textarea name="description" rows="8" maxlength="10000"
-                              class="textarea textarea-bordered textarea-sm w-full font-mono text-xs">
+                              class=grow("textarea textarea-bordered textarea-sm w-full font-mono text-xs")>
                         {description}
                     </textarea>
                 </label>
