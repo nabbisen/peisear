@@ -14,6 +14,8 @@ which is the defect class `§10.35` names.
 
 | GATE-006 | [one script, three properties](./GATE-006-one-script-three-properties.md) | **`GATE-005`'s proposal, accepted.** Candidates 1–3 as one script at port `4175`; **candidate 4 declined on the record**, with its CDP capability gap now in `§10.15` as the named remainder. The answer to `GATE-005`'s question was **yes** — a CDP gate *can* see that a live region received text — so `NFR-A11Y-008` gets a mechanism rather than a permanent limit. **The risk the investigation named is now the handoff's**: the synthetic-drop technique has only ever driven `dm.js` and `board.js`, so the drop's effect is asserted **before** the region's text, making a setup failure legible instead of looking like a defect. | 0.47.0 |
 
+| REL-0.47.0 | [candidate](./REL-0.47.0-release-candidate.md) | **The release, and `§10.35` closes with it.** Expect **405** from 392, and the composition needs saying: `PER-001` +10, `HLT-003` +3, **`GATE-006` +0** — a browser gate is outside `DEC-007`'s inventory, so a reader would otherwise think it is in the 405. One production file changed, `me.rs`'s `#[cfg(test)]` module. **The new gate is run three times, not once**: it is new, it drives real input, and flakiness found now beats flakiness found in CI. | 0.47.0 |
+
 **Why `GATE-005` is an investigation and the other two are not.** `PER-001`
 and `HLT-003` know what they must assert once someone decides at which level;
 `GATE-005` does not know whether its property is observable at all. Asking a
