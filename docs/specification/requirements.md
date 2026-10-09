@@ -1,12 +1,11 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.44.0` (**the sweep's second run, and a clause that
-makes a P0 measurable** — `DEC-059` gives `FR-DM-002` the test it was
-missing, `FR-DM-006` reaches Met on all four surfaces after a correction in
-the wrong direction, `FR-DM-003` and `-004` are amended from the code, and
-`§10.15`'s title changes because the shipped JavaScript is no longer executed
-by *no* test; implementation through `0.44.0`)
+**Covers release**: `0.45.0` (**the P0 closes** — `FR-DM-002` reaches Met on
+all four direct-manipulation surfaces, the calendar last, against the clause
+`DEC-059` added one release earlier to make it falsifiable; RFC 0015 closes
+with two of its own design choices varied in implementation; implementation
+through `0.45.0`)
 **Supersedes**: [`history/peisear-0.20.0-requirements-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.20.0-requirements-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 and through it
@@ -598,6 +597,18 @@ has forgotten its filter breaks the user's train of thought.
 including that an explicit filter becomes the user's default and that a
 URL parameter overrides the saved default. *Status*: Implemented.
 *Priority*: P2.
+*Applied beyond its letter at 0.45.0, and the distinction kept.* `CAL-004`'s
+move control carries the calendar's `view` and `date` through the issue page
+and rebuilds the calendar URL on redirect, so a keyboard move returns the user
+to the window they came from. **That follows this requirement's principle —
+the URL is the primary carrier, and returning to a screen that has forgotten
+its state breaks the user's train of thought — but not its letter**, which
+governs *list filter and sort*. A calendar's view and anchor date are
+navigation state, not a filter. **The requirement is not widened here**: it is
+recorded so the application is not later claimed as coverage, and so the
+calendar's return trip has a stated owner if it breaks. *The context is
+carried as typed fields rebuilt server-side, never as a caller-supplied
+redirect target.*
 
 ### 4.3 Projects — `FR-PROJ`
 
@@ -1905,9 +1916,12 @@ routes. `PRIV-001` corrects it.
 Every mutation of an entity owned by a single record MUST carry the
 client's observed `updated_at` and MUST be rejected with 409 if it does
 not match the stored value.
-*Source*: `SPEC §21.4.2`. *Acceptance*: `optimistic_lock` test crate (**16**
+*Source*: `SPEC §21.4.2`. *Acceptance*: `optimistic_lock` test crate (**21**
 tests), `optimistic_lock_atomicity` (**14**), `board_keyboard`,
-`confirmation`. *Status*: Implemented (0.20.0); **extended to all four
+`confirmation`. *Count corrected 0.45.0*: this read **16**, the figure at
+0.20.0, and drifted as `DM-TEST-001` and `CAL-004` each added a path-agreement
+test. All four counts re-measured by running the crates; the other three were
+right. *Status*: Implemented (0.20.0); **extended to all four
 destructive deletes at 0.27.0**; **made atomic at 0.39.0** (`RACE-002`).
 *Priority*: P0.
 *Extension (0.39.0, `RACE-002`) — the comparison happens inside the write.*
@@ -1921,6 +1935,13 @@ locking paths now compare atomically: six as a `WHERE` predicate on the single
 statement, seven — those with a state check, an overlap check or an event diff
 to keep consistent — by holding the write lock from the stamp's read to the
 commit.
+*Still thirteen at 0.45.0, and checked rather than assumed.* `CAL-004` added a
+locking **route** (`change_schedule_move`), which calls
+`apply_schedule_change` — **already one of the thirteen**, as the calendar
+drag's own entry point. A path here is a locking *write site*, which is what
+the six-and-seven split above describes; a new caller of an existing site adds
+a route, not a path. Recorded because the next reader counting routes will get
+fourteen.
 *Limit of the stamp, stated because this requirement states a guarantee.*
 `updated_at` has **one-second resolution**, and `0017`'s trigger sets it to
 `CURRENT_TIMESTAMP`, which within the same second equals the value it replaces.
@@ -2343,6 +2364,16 @@ links at 20 px, the navbar brand at 28 px, and **`FR-HLT-007`'s own indicator
 basis links at 17 px**. A limit that size is a hole.
 
 **Verification rests on two things and the guard is only one of them.**
+*The guard's population, stated because this release walked past its edge.*
+`touch_target_scan` reads `<a>`, `<button>` and `<summary>`. **It does not read
+`<input>`** — and `CAL-004` added one, the move control's date field, which
+measured **152 × 44** in a browser and so satisfies this requirement on the
+evidence rather than on the guard. **The guard would not have caught it had it
+failed.** Recorded rather than fixed: widening the population is a change to a
+guard that currently has a named, counted exception list, and doing it as a
+side effect of a calendar handoff is how exception lists stop being counted.
+It is the architect's, unscheduled.
+
 `touch_target_scan` proves a **declaration is present** in the source. It cannot
 prove the declaration **works**: `min-h-11` on an inline element does nothing,
 and a source scan would pass it while the rendered target stayed 20 px.
@@ -2355,8 +2386,9 @@ was missing five live `aria-label` variants the P0 guard had never read.
 the one declared exception — **one site**, the notifications footer link that
 completes a sentence.
 
-**Three call sites are excluded, both by design, and both named in the guard as
-well as here:**
+**Three call sites are excluded, by design, and all three named in the guard as
+well as here** (*this read "three … both by design, and both named" until
+0.45.0 — the list grew to three and the sentence counting it did not*):
 
 - **The calendar's event chips** (`calendar.rs`, two sites). The day view's block
   height is `top:{}%;height:{}%`, proportional to the appointment's real
@@ -4984,6 +5016,22 @@ measurement at 0.44.0 found the same thing in the other direction: 0.43.0
 guessed the sprint plan unverified when it is parity **by construction**, and
 guessed a lock asymmetry on the calendar that **does not exist**.
 
+**The third run, and the first that found nothing of its own class.** 0.45.0's
+sweep found **four** things and **none was a stale requirement status**:
+`NFR-CONC-001`'s acceptance citing **16** `optimistic_lock` tests when the
+crate holds **21**; `NFR-A11Y-007` saying *"three call sites are excluded,
+**both** by design, and **both** named"*, a list that grew while the sentence
+counting it did not; that guard's population excluding `<input>`, which this
+release added one of; and `FR-NAV-005` being relied on by the calendar's
+return trip though its letter governs *list filter and sort*. **Three of the
+four are counts or populations rather than statuses** — which is what pass 4
+is for, and the first evidence that pass 1's amendment-from-the-code rule is
+holding, since no entry this release touched was left stale.
+*One thing the sweep checked and left alone, recorded so it is not
+re-litigated*: `NFR-CONC-001`'s *"thirteen locking paths"*. `CAL-004` added a
+locking **route**, not a path — it calls a write site already among the
+thirteen. A reader counting routes will get fourteen and be wrong.
+
 **The second run's own tally, recorded because the first run's was.** 0.44.0's
 sweep found **four** things: `§10.15`'s title and its state-table row (pass 2
 — the release changed that entry's scope and touched nothing in it),
@@ -5140,7 +5188,8 @@ let `FR-DM-002` be violated for four releases without anyone checking.
 | V3 (`V3`) | Reconciliation with implemented state through 0.19.0 |
 | 0.19.1 baseline | Consolidation into English normative requirements; identifiers assigned; §10 compliance gaps recorded |
 | 0.20.0 | Compliance pass. Nine recorded statuses corrected — five of them P0 or P1 requirements annotated as satisfied while the code did the opposite. `NFR-PRIV-002` scoped (`DEC-019`); `NFR-CMP-001` extended with the toolchain/MSRV distinction (`DEC-044`/`DEC-045`); `NFR-LANG-005` rescheduled to 0.21.0 (`DEC-022`). §10 gains a state table and six new entries, five of which close in this release. Test inventory 65 → 82 active, 0 disabled. `RSK-001` closed |
-| **0.44.0 (this baseline)** | **The release where a P0 stopped resting on the architect's judgement.** `FR-DM-002` read `Partial` because the architect said so; `DEC-059` (RFC 0015) gives it a clause — the equivalent must be **offered by the element carrying the pointer affordance** and must **not require the user to reconstruct its effect** — and the calendar now fails a written test rather than an opinion. **The clause took three drafts and the first two measured the wrong thing**: both bounded *distance*, and distance is the symptom; reconstruction is the defect. The second draft also admitted exactly one design, because **a calendar block's height is its duration** and no 44 × 44 px control fits in the grid — a rule doing the architecture's job, which the owner's philosophy forbids. **`FR-DM-006` reaches Met on all four surfaces, reversing a correction made one release earlier.** That correction was the sweep's own first run: the entry was corrected *because* it was stale, its three named places were counted, four surfaces were known to ship, and `Partial — three of four` was written — **`calendar.js` was never opened.** Pass 1 of the procedure is amended for it: **amend from the code, never from the entry's own words.** **Pass 4 then caught two the first run walked past**: `FR-DM-003` and `-004` carried the same stale phrase from the same 0.38.0 amendment, so all four `FR-DM` siblings were stale and the first run corrected two — the argument for pass 4 being a pass of its own. **Ten entries have now been stale in this document, nine of them the architect's.** **`§10.15`'s title changes after eighteen releases**: `undo-mousedown-trap.mjs` executes the shipped scripts in a real browser for **one property on three surfaces**, out of 1,909 lines in five files — *almost* no test, not no test, and RFC 011's refusal to buy a harness is unchanged. Nine new tests, **367 → 376**, and the one named `undo_dom_order` was renamed before the requirement cited it, because its name claimed a runtime fact over three substring checks. **No migration; no screen, route, state or copy changed** |
+| **0.45.0 (this baseline)** | **The `P0` closes, on a clause written one release earlier to make it closable.** `FR-DM-002` reaches **Met** on all four direct-manipulation surfaces, the calendar last. The control is a **move** affordance on the issue detail page, one activation from a calendar block: the user supplies **a day, never a timestamp**, and the handler applies the **identical whole-day delta to both ends**, so the duration survives and **there is nothing to reconstruct** — the half of the clause the issue edit form fails and will keep failing, correctly, because two absolute fields have no length to preserve from. It calls the same `apply_schedule_change` the drag's JSON endpoint calls, so the stored row is identical **by construction, not by agreement**, which the acceptance test shows by moving one issue through the form and dragging another to the same day. **RFC 0015 closes with two of its own choices varied**, both recorded in its `§9`: the control is **not on the calendar block**, because no 44 × 44 px control fits in a grid where a block's height *is* its duration and retargeting the block's link would have taken the pointer user's route to the issue away; and the target is **not a windowed `<select>`**, because in a day-view context that window held **exactly one option — the current day — so a Move was a no-op**. The dev team measured that and escalated rather than inventing a wider window for one of three views. **Replacing the window with a date input dissolved an open question instead of answering it** and removed 100 net lines. **The sweep's third run found four things and none was a stale status** — a test count citing 16 where 21 exist, a sentence counting *both* of *three*, a guard population excluding the `<input>` this release added, and a requirement applied beyond its letter. **No migration. Test inventory 376 → 385 → 383**, the fall deliberate: three day-count tests were **deleted rather than adapted** when their subject stopped existing |
+| 0.44.0 | **The release where a P0 stopped resting on the architect's judgement.** `FR-DM-002` read `Partial` because the architect said so; `DEC-059` (RFC 0015) gives it a clause — the equivalent must be **offered by the element carrying the pointer affordance** and must **not require the user to reconstruct its effect** — and the calendar now fails a written test rather than an opinion. **The clause took three drafts and the first two measured the wrong thing**: both bounded *distance*, and distance is the symptom; reconstruction is the defect. The second draft also admitted exactly one design, because **a calendar block's height is its duration** and no 44 × 44 px control fits in the grid — a rule doing the architecture's job, which the owner's philosophy forbids. **`FR-DM-006` reaches Met on all four surfaces, reversing a correction made one release earlier.** That correction was the sweep's own first run: the entry was corrected *because* it was stale, its three named places were counted, four surfaces were known to ship, and `Partial — three of four` was written — **`calendar.js` was never opened.** Pass 1 of the procedure is amended for it: **amend from the code, never from the entry's own words.** **Pass 4 then caught two the first run walked past**: `FR-DM-003` and `-004` carried the same stale phrase from the same 0.38.0 amendment, so all four `FR-DM` siblings were stale and the first run corrected two — the argument for pass 4 being a pass of its own. **Ten entries have now been stale in this document, nine of them the architect's.** **`§10.15`'s title changes after eighteen releases**: `undo-mousedown-trap.mjs` executes the shipped scripts in a real browser for **one property on three surfaces**, out of 1,909 lines in five files — *almost* no test, not no test, and RFC 011's refusal to buy a harness is unchanged. Nine new tests, **367 → 376**, and the one named `undo_dom_order` was renamed before the requirement cited it, because its name claimed a runtime fact over three substring checks. **No migration; no screen, route, state or copy changed** |
 | 0.43.0 | **Identity becomes a type, and the sweep that found what the releases left behind runs for the first time.** `NFR-PRIV-005` reaches **Met** under `DEC-058`/RFC 0014: `user_id: &str` returns **zero results across all six personal-data modules**, so all 36 functions that can take an identity take a **sealed** one and the stronger reading holds for all 36 rather than 25. **The four that remain cannot close** — three are the authentication path, where establishing an identity *is* the call, and one is a job-side aggregate. **The boundary already held**, measured twice; what changed is that it cannot be broken by inattention. **`DOCS-002` closes ten broken links in the published API documentation** — `docs.rs` builds these seven crates, so each was live in every released version, and **nothing had ever looked**: `clippy --all-targets` does not check doc links and `cargo doc` was in no gate. The architect's own counts were wrong twice, from a run that **aborted before reaching `peisear-web`**. **`NFR-REL-008` is new**, because no requirement governed the one artefact this project publishes without authoring. **`§10.33`** records the class; **`§10.34`** records the status-drift class and `REQ-003`'s answer that **no text rule detects it** — four rules against six historical instances, the best scoring 4 of 6 and argued down by the dev team that built it, because its zero false positives were measured **on zero opportunities**. The remedy is a four-pass procedure run by hand at every candidate, and **its first run found six things**. **No migration. Test inventory 369 → 367** — two fewer, deliberately: `PRIV-002` deleted a 212-line text-pattern guard whose property the type system now holds everywhere. *This row was added at 0.44.0; 0.43.0 shipped without one, found by the sweep's pass 4.* |
 | 0.42.0 | **The release that finished what the audit started.** `A11Y-001` had turned two unfalsifiable P1 statuses into statements and left three measured gaps; all three close here. **`NFR-A11Y-011` is met by a skip link** — eleven Tab presses to reach the content on every page becomes one press and an activation, and the skip link was chosen over the requirement's other two options because **it is the only one that works without JavaScript**, which a remedy for *reaching content* must. **`NFR-A11Y-010` is new**: WCAG 1.4.11's 3 : 1 for graphical objects, which this project had only for text — added because `NFR-A11Y-004`'s own 0.41.0 rewording turned out not to cover the finding it had been given as a status. Both charts now separate at **3.40 : 1** where they were 1.77 and 2.09, within a single hue so `NFR-A11Y-004` stays Met, every figure measured by **two independent colour conversions** agreeing to the 8-bit value. The account menu's focus ring was **drawn in transparent** and measured at **1.22 : 1**; it now reuses the appearance the other ten stops on that page already draw. **Two corrections to this document's own editing** are recorded in the entries rather than quietly applied: `NFR-A11Y-002`'s status contradicted its own body, and `NFR-A11Y-004`'s was written against a finding rather than against the sentence it sat under — **the third and fourth instances of one habit**, amending an entry by adding a correction and leaving the `*Status*` field as it was. **No migration. Test inventory unchanged at 369** — four handoffs, and the only new assertions are ones that replaced a check that had gone stale |
 | 0.41.0 | **The release where two P1 requirements stopped being unfalsifiable.** `NFR-A11Y-002` and `NFR-A11Y-004` both recorded `Partial.` and nothing else — no statement of what was partial, so nothing could be checked and nothing could ever be wrong. `A11Y-001` audited both and **found two defects behind them**: the team role `<select>` committed on `onchange`, so **a keyboard user moving Admin → Viewer demoted the member to Member on the way** and landed on `body`; and **undo was not on the keyboard path at all** — 15 Tab presses to reach it on the issue list inside a five-second window. Both closed. `NFR-A11Y-002` now governs changes *within a document* and names what focus must be on; **`NFR-A11Y-011` is split out of it** for what a navigation owes, which is where `body` plus eleven Tab presses and no skip link actually lives. `NFR-A11Y-004`'s *"label **and** icon"* is settled toward its own title — **colour is never the only carrier** — with the charts recorded as the remaining gap: single-hue, separated by lightness at 1.77 : 1, and a tabular equivalent that answers a *different* requirement. **`NFR-REL-007` was a false `Implemented`** — it required documentation under `docs/src` in an mdbook structure and neither half was true — the second in three releases, and **the first confirmed instance of the blind spot `REQ-001` stated in its own words.** `DEC-057` publishes `docs/` as a site; `DEC-056` puts the changelog section on each GitHub Release; `DEC-055` keeps the changelog archive. **A notification kind that can never fire stopped being offered a preference row** — and stopped holding back the *everything is silenced* banner. **No migration. Test inventory 352 → 369** |
