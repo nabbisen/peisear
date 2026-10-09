@@ -11,6 +11,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.46.0] — 2026-10-09
+
+This is the release where a defect class got a name, was audited to its
+edges, and closed except for three gaps left deliberately open.
+
+### Fixed
+
+- **A team's detail page now has a breadcrumb trail starting at Today
+  and a working back link — neither existed before.** Found while
+  writing the test meant to prove the opposite: `FR-NAV-003` requires a
+  breadcrumb trail *and* a back link to the parent context, and team
+  detail's hand-rolled markup provided neither the trail's `/today`
+  root nor any back affordance at all, on a page every team's members
+  and admins reach. The test was written against what the requirement
+  needs and failed against the page as it stood — no `<nav>` present —
+  before the fix existed. The page now routes through the same
+  breadcrumb component project, issue and sprint detail already use;
+  the trail reads Today → Teams → the team.
+
+### Internal
+
+- **A requirement can read `Met`, its guard can be green, and both can
+  be true while the guard covers less than the requirement claims.**
+  `NFR-A11Y-007` says *every interactive element* presents a 44 × 44 px
+  touch target and names a source-scanning guard as its acceptance.
+  That guard read three tag names of six — `<a>`, `<button>`,
+  `<summary>`, and not `<input>`, `<select>`, `<textarea>` — covering
+  146 elements and missing 102. Nothing was broken: the code runs, the
+  scan exists, and its assertions were true for exactly the elements
+  they named. The gap was never checked at all, which is a different
+  failure from a test that fails for the wrong reason or one that
+  merely claims to exist. Named `§10.35`: *a requirement's cited
+  acceptance narrower than the requirement.*
+- **Widened the guard to all six tag names** and measured the real
+  population rather than trusting a first-pass estimate, which was
+  itself wrong twice (`<select>`'s raw count included five mentions
+  sitting inside comments; three `<input>`s read as uncovered were
+  already satisfied by an existing wrapping-`<label>` pattern the scan
+  had simply never been told to look for). The real gap was nine
+  `<textarea>`s. **Measured in a real browser at a 320px width, they
+  already clear 44 × 44 on their own** — this release does not claim
+  the guard is now a complete proof of rendered size, only that its
+  population matches what the requirement names; a declaration was
+  added to all nine anyway, so the rule stays uniform rather than
+  carving out an exception for one tag.
+- **Audited whether any other requirement's cited acceptance is
+  narrower than its own text** — the question this one instance
+  raised, since it was found by accident. Of 165 requirement entries,
+  48 cite a mechanism. Seven of those were narrower than their own
+  text and had never said so; four more were reported as genuinely
+  *unresolved* rather than guessed at, and a second pass resolved all
+  four. **The transferable finding**: a population-to-citation ratio
+  overstates risk when the mechanism is structural (one shared code
+  path serving several call sites needs no per-site test to be
+  trustworthy) and understates it when the citation names no artefact
+  at all — one entry's acceptance read `trigger-enforced` naming no
+  test, and three of the four conditions it covered had zero executed
+  assertions anywhere in the suite, sitting next to a sibling condition
+  that was correctly tested the whole time. That is how a gap reads as
+  covered.
+- **The audit found one compliance defect, not several** — the team
+  detail breadcrumb above — and found the other eleven narrower-than-
+  claimed entries correct on inspection: real behaviour, just missing
+  the test or the citation that would have proven it. Recorded as one,
+  plainly, rather than left to read as more.
+- **Three findings are deliberately not closed this release**: whether
+  the "what to read first" callout's three-tier precedence chain is
+  tested beyond its own empty case, whether three of a project's six
+  health indicators have their basis route exercised at all, and
+  whether three of five live-announcement regions outside the board
+  and issue-detail status control are tested. Each needs a judgement
+  about *what* a test should assert, not just a test written against
+  current behaviour — and for the live-region gap specifically, a test
+  that only asserts a script-updated region *exists* would reproduce
+  this release's own defect shape one release after naming it. Moved
+  to 0.47.0.
+- **A labelling correction.** Specification amendments in this body of
+  work were being written as `0.46.0` and `0.47.0` for two releases
+  that had never been cut — the last tag is `0.45.0`, and everything
+  since is this one release. Both specifications now read `0.46.0`,
+  and the three deferred findings above are relabelled `0.47.0`, the
+  next one.
+
 ## [0.45.0] — 2026-10-09
 
 This is the release where a `P0` closes, and the closing is the story —
