@@ -176,21 +176,46 @@ async fn sprint_detail_breadcrumb_full_chain() {
     );
 }
 
-// `COV-001` §4 (`FR-NAV-003`, `§10.35`), the other half -- and it is a
-// finding, not a test. **Team detail renders a trail, but not this
-// one.** `TeamDetailPage` (`components/teams.rs:205`) builds its own
-// bare `<ul><li><a href="/teams">Teams</a></li><li>{team_name}</li></ul>`
-// (`:306`), never calling `super::breadcrumb::render_breadcrumb` the
-// way sprint detail does above. Checked the whole function body: no
-// `/today` link, no `aria-current="page"`, no `Back to ...` link
-// anywhere on the page. This is not the two-of-four coverage gap
-// `REQ-004`/`COV-001` described -- it is `FR-NAV-003` itself unmet on
-// this one screen, found while writing the test that was supposed to
-// prove it covered. Per `COV-001` §6's own escalation trigger ("if
-// `FR-NAV-003`'s two screens render a trail that is wrong rather than
-// untested"), no test is written here and no component is touched --
-// a test that asserted the current markup would pass while proving
-// nothing, and a test asserting the markup `FR-NAV-003` actually
-// requires would fail against a page that isn't the bug here, it's
-// the reason this round stops one test short. See the review
-// package's write-up for the full account.
+/// `NAV-001` (`FR-NAV-003`, `§10.35`). `COV-001` found team detail's
+/// trail hand-rolled (`components/teams.rs:306`, before this handoff's
+/// fix): no `/today` root, no `aria-current`, and -- the actual
+/// defect, not just an uncovered one -- no back link anywhere on the
+/// page. Written against what the requirement needs, the same way the
+/// sprint detail test above is, not against what the page emitted
+/// before the fix.
+#[tokio::test]
+async fn team_detail_breadcrumb_full_chain() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("dana");
+    let user_id = register_and_login(&app, &user).await;
+    let team_id = common::fixture::create_team_with_admin(&app.db, &user_id, "Design").await;
+    let team = peisear_storage::teams::find_by_id(&app.db, &team_id)
+        .await
+        .expect("find team")
+        .expect("team exists");
+
+    let url = format!("/teams/{}", team.slug);
+    let resp = app.server.get(&url).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    let breadcrumb = breadcrumb_nav(&body);
+    assert!(
+        breadcrumb.contains(r#"href="/today""#),
+        "team detail breadcrumb missing /today entry-point link: {breadcrumb}"
+    );
+    assert!(
+        breadcrumb.contains(r#"href="/teams""#),
+        "team detail breadcrumb missing Teams ancestor link: {breadcrumb}"
+    );
+    assert!(
+        body.contains(r#"aria-current="page""#),
+        "team detail breadcrumb missing aria-current=\"page\" on terminal node"
+    );
+    // The conjunct that was actually missing: a back link, present
+    // and targeting the parent context (the teams list).
+    assert!(
+        body.contains(r#"href="/teams""#) && body.contains("Back to teams"),
+        "team detail page missing a 'Back to teams' affordance"
+    );
+}

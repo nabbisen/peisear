@@ -1460,6 +1460,7 @@ fn nav_section(section: NavSection) -> &'static str {
         NavSection::Projects => "projects",
         NavSection::Issues => "issues",
         NavSection::Sprints => "sprints",
+        NavSection::Teams => "teams",
     }
 }
 

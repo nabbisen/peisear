@@ -9,7 +9,7 @@
 use axum::response::Html;
 use chrono::{DateTime, Utc};
 use leptos::prelude::*;
-use peisear_i18n::{Field, MessageKey, TeamRoleLabel};
+use peisear_i18n::{Field, MessageKey, NavSection, TeamRoleLabel};
 
 use peisear_core::{
     CurrentUser, Project,
@@ -303,10 +303,11 @@ pub fn TeamDetailPage(
                   flash=flash
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
-                <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams" class=grow("")>{t(MessageKey::NavLinkTeams)}</a></li>
-                    <li>{team_name.clone()}</li>
-                </ul></div>
+                {super::breadcrumb::render_breadcrumb(vec![
+                    super::breadcrumb::BreadcrumbItem::link(t(MessageKey::NavLinkTeams), "/teams"),
+                    super::breadcrumb::BreadcrumbItem::current(team_name.clone()),
+                ])}
+                {super::breadcrumb::render_back_link(NavSection::Teams, "/teams")}
 
                 // `LAYOUT-009` round 2 (`§10.27`): the third header of
                 // this shape, and the last. Same row, same remedy as

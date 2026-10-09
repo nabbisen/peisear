@@ -172,14 +172,16 @@ pub enum NavSection {
     Projects,
     Issues,
     Sprints,
+    Teams,
 }
 
 impl NavSection {
-    pub fn all() -> [NavSection; 3] {
+    pub fn all() -> [NavSection; 4] {
         [
             NavSection::Projects,
             NavSection::Issues,
             NavSection::Sprints,
+            NavSection::Teams,
         ]
     }
 }
