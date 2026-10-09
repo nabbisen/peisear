@@ -11,6 +11,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.47.0] — 2026-10-10
+
+**This release closes `§10.35` and ships no behaviour, and both halves
+need saying plainly.** No file under `crates/*/src/` or `static/`
+differs from 0.46.0 except one new `#[cfg(test)]` module. It is twelve
+tests, one new browser gate, and the acceptance fields for three
+requirements whose citations were narrower than their own text.
+
+### Internal
+
+- **A drag's outcome announcement is now measured, not merely
+  present, on the calendar day view and the sprint plan.** A new
+  browser gate (`drag-outcome-gate.mjs`, the CI job's third script)
+  drives a real drop on each surface and reads the live region's own
+  text afterward — not that the element exists, but that something
+  was put in it. This is a guarantee about an existing feature, not a
+  new one: **nothing moved on screen**, and a user who has been
+  relying on an announcement after a drag now has that behaviour
+  pinned on both surfaces for the first time.
+- **`FR-PER-006`'s acceptance cited one test, and that test covered
+  only the case where nothing applies.** The precedence chain itself —
+  sustained burnout, then WIP over limit, then long-stale work — had
+  never been exercised. The code has **four** early-return conditions
+  where the requirement's own sentence names three, because burnout
+  is two separate conditions, not one; and **a chain is only a chain
+  where two conditions compete**, so four isolated tests would have
+  tested four independent conditions, not a precedence. Each tie-break
+  was verified by **inverting the corresponding pair of arms** and
+  confirming the test catches it, not by asserting a single ordering
+  and trusting it.
+- **`FR-HLT-007`'s acceptance covered two of five non-excepted health
+  indicators**, and a **plural-named** test made the entry read like a
+  legitimate sample for six releases — it exercised one indicator
+  despite its name promising several. Widening it, rather than
+  renaming it, found a rule nobody had written down: a non-empty
+  basis set is not sufficient for a basis link to render, because an
+  indicator sitting at `Good` contributes no explanation row at all,
+  and the link lives on that row. **Found by running the first
+  fixture draft and reading why it failed**, not by reasoning about
+  the rendering code in advance.
+- **`NFR-A11Y-008` could not be closed by a Rust test at all, and
+  that is the useful fact.** Its live regions are empty in the
+  server-rendered HTML; the text only exists once a script writes it
+  in a running browser. The question *"can a browser gate observe
+  this?"* was asked and answered — **yes** — before anything was
+  built, with the primitives already in hand. A further question, a
+  **real OS-level drag gesture** rather than the synthetic one this
+  release's gate uses, was **declined on the record**: it needs a CDP
+  capability (`Input.dispatchDragEvent`/`Input.setInterceptDrags`) the
+  project's own harness does not wrap, and nothing found so far makes
+  that fidelity worth its cost. Named so the next reader does not
+  re-propose it as if it were free.
+- **Two instrument failures, recorded rather than quietly fixed.** A
+  gate's own fixed-width scrape of a rendered page ran past the
+  section boundary it meant to stay inside and, for a moment,
+  accused a working feature of a defect it did not have — the bug was
+  in the check, not the product, and is recorded as such. Separately,
+  a risk recorded as a structural gap in the prior release's own
+  write-up — that an existing technique might not reach two of three
+  surfaces — turned out to already be false once the script in
+  question was read in full rather than partially; the correction is
+  recorded in place of the risk, not folded in silently. **This
+  release's whole subject is instruments whose claimed scope did not
+  match what they actually measured**, so these two belong in the
+  same place as the defect class they are instances of.
+
+**What this release does not claim.** No user-visible behaviour
+changed. The test count (**405**, unchanged from 0.46.0) does not
+include the new browser gate — a gate is not inside `DEC-007`'s
+inventory, the same separation `BROWSER-001` already established.
+And **`§10.15` is not closed**: the shipped JavaScript is still
+executed by almost no test, 1,909 lines across five files against
+one property on three surfaces plus this release's three more on two
+— *almost* is still the load-bearing word in that entry's own title.
+
 ## [0.46.0] — 2026-10-09
 
 This is the release where a defect class got a name, was audited to its
