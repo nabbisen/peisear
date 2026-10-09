@@ -137,3 +137,126 @@ async fn today_renders_no_callout_for_fresh_user() {
         "fresh user should not see a 'what to read first' callout"
     );
 }
+
+/// `COV-001` §3 (`FR-PER-007` clause 3, `§10.35`). The sustainability
+/// panel's `<details open=any_watch>` (`me.rs:507`) is real,
+/// deliberate code — untested in either state before this. Both tests
+/// below use the same signal (`stalled_assigned_max_days`, the
+/// "stalled-assigned streak" burnout indicator, `user_burnout.rs`),
+/// which falls back to an issue's own `updated_at` when it carries no
+/// `status_changed` event — the only one of the two streak signals
+/// reachable without the periodic snapshot job. `updated_at` is
+/// trigger-maintained (`NFR-CONC-003`) and the maintaining trigger
+/// (`0017_updated_at_single_authority.sql`) only fires `WHEN
+/// OLD.updated_at = NEW.updated_at` — i.e. only when an UPDATE left it
+/// untouched — so an UPDATE that sets it explicitly, as these tests do
+/// directly against the pool, is not immediately overwritten; this is
+/// the same backdoor the trigger's own design leaves open for a
+/// migration backfill, used here for a fixture instead.
+///
+/// Finds the Sustainability `<section aria-label="Sustainability">`'s
+/// own `<details` tag, the same scoping discipline
+/// `today_folds_rhythm_panel_by_default` already uses for the Rhythm
+/// section above — walking from a unique anchor to the tag's own `>`
+/// rather than a bare substring search of the whole page.
+fn sustainability_details_opening_tag(body: &str) -> &str {
+    let section_marker = body
+        .find(r#"aria-label="Sustainability""#)
+        .expect("Sustainability section present");
+    let rest = &body[section_marker..];
+    let details_start = rest
+        .find("<details")
+        .expect("details tag after the Sustainability heading");
+    let tag_end = rest[details_start..]
+        .find('>')
+        .map(|n| details_start + n)
+        .expect("details tag should close");
+    &rest[details_start..tag_end]
+}
+
+/// Insert an issue assigned to `user_id`, then back-date its
+/// `updated_at` by `days_ago` days -- directly against the pool,
+/// bypassing every storage function, since none of them may write
+/// this column (`NFR-CONC-003`).
+async fn insert_issue_stalled_for_days(
+    app: &TestApp,
+    project_id: &str,
+    user_id: &str,
+    title: &str,
+    days_ago: i64,
+) -> String {
+    let id = uuid::Uuid::new_v4().to_string();
+    peisear_storage::issues::insert(
+        &app.db,
+        &id,
+        project_id,
+        user_id,
+        peisear_storage::issues::IssueFields {
+            title,
+            description: "Test issue body.",
+            status: peisear_core::IssueStatus::InProgress,
+            priority: peisear_core::Priority::Medium,
+            effort: None,
+            assignee_id: Some(user_id),
+            planned_start_at: None,
+            planned_end_at: None,
+        },
+    )
+    .await
+    .expect("insert issue");
+
+    let stale_at = chrono::Utc::now() - chrono::Duration::days(days_ago);
+    sqlx::query("UPDATE issues SET updated_at = ?1 WHERE id = ?2")
+        .bind(stale_at)
+        .bind(&id)
+        .execute(&app.db)
+        .await
+        .expect("back-date updated_at");
+
+    id
+}
+
+#[tokio::test]
+async fn sustainability_panel_self_expands_at_the_watch_threshold() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = common::fixture::create_personal_project(&app.db, &user_id, "Proj").await;
+
+    // STALLED_WATCH_DAYS is 14; 20 clears it.
+    insert_issue_stalled_for_days(&app, &project_id, &user_id, "Old one", 20).await;
+
+    let resp = app.server.get("/today").await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    let tag = sustainability_details_opening_tag(&body);
+    assert!(
+        tag.contains(" open"),
+        "sustainability panel should self-expand once the stalled-assigned \
+         streak reaches its watch threshold; opening tag: {tag:?}"
+    );
+}
+
+#[tokio::test]
+async fn sustainability_panel_stays_closed_below_the_watch_threshold() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = common::fixture::create_personal_project(&app.db, &user_id, "Proj").await;
+
+    // Below STALLED_WATCH_DAYS (14): the panel renders (there is a
+    // streak to report) but must not have self-expanded.
+    insert_issue_stalled_for_days(&app, &project_id, &user_id, "Recent one", 3).await;
+
+    let resp = app.server.get("/today").await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    let tag = sustainability_details_opening_tag(&body);
+    assert!(
+        !tag.contains(" open"),
+        "sustainability panel must stay closed while the stalled-assigned \
+         streak is below its watch threshold; opening tag: {tag:?}"
+    );
+}

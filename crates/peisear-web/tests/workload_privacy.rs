@@ -167,6 +167,44 @@ async fn project_detail_does_not_disclose_owners_capacity() {
     let _ = bob_id;
 }
 
+/// `COV-001` §1 (`NFR-PRIV-002`, `§10.35`). `assert_no_capacity_leak`
+/// is a negative check over a finite vocabulary (`"5/5 pt"`, `"over
+/// capacity"`, `"strained"`, `"badge-error"`) and already scans the
+/// whole response body, `title=` attributes included — confirmed in
+/// review, so this is not a fifth string added to that list. **The
+/// gap it leaves is that nothing pins what the tooltip *does* say**:
+/// `WorkloadStrip`'s `title=` (`components/issues.rs:517`) renders
+/// `MessageKey::WorkloadTitle`, and a future change wording a capacity
+/// leak differently from all four banned strings would pass every
+/// existing check.
+///
+/// **The expected string is a literal here, deliberately, not
+/// `Locale::English.render(MessageKey::WorkloadTitle { .. })`.**
+/// Rendering it live ties the test's expectation to the exact code
+/// under test: a plant that adds a capacity suffix inside that same
+/// `MessageKey` arm would leak into both sides of the comparison and
+/// the test would stay green. Caught by planting before trusting
+/// this test (see the review package) — `assert_no_capacity_leak`
+/// above already makes the same choice, for the same reason, with its
+/// four banned literals.
+#[tokio::test]
+async fn project_detail_workload_tooltip_names_only_the_in_flight_count() {
+    let app = TestApp::spawn().await;
+    let (project_id, _issue_id, _bob_id, _bob) = over_capacity_owner_fixture(&app).await;
+
+    let url = format!("/projects/{project_id}");
+    let resp = app.server.get(&url).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    assert!(
+        body.contains(r#"title="bob — 1 in-flight issues""#),
+        "Bob's workload chip tooltip must be exactly the permitted \
+         name-and-in-flight-count shape, with nothing appended or \
+         substituted; body: {body}"
+    );
+}
+
 #[tokio::test]
 async fn issue_create_form_does_not_disclose_owners_capacity() {
     let app = TestApp::spawn().await;

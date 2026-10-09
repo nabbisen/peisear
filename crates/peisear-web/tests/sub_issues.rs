@@ -229,6 +229,126 @@ async fn cannot_create_sub_issue_under_a_sub_issue() {
     );
 }
 
+// -------------------------------------------------------------------
+// `COV-001` §2 (`FR-SUB-002`/`FR-SUB-003`, `§10.35`). The three tests
+// below exercise `0015_sub_issues.sql`'s other three `RAISE` branches
+// -- same-project, self-parent, demote-with-children -- which
+// `cannot_create_sub_issue_under_a_sub_issue` above does not touch.
+//
+// **No HTTP route reaches any of the three.** `create_sub_issue`
+// scopes its own parent lookup to the URL's `project_id`
+// (`issues::find(&db, &parent_issue_id, &project_id)`), so a
+// cross-project parent 404s before the INSERT trigger ever runs.
+// `demote_to_sub_issue`/`promote_to_top_level` (`issues.rs`) have no
+// handler at all -- `IssueForm` carries no `parent_issue_id` field, so
+// nothing in the running product can change an issue's parent once
+// created. These three conditions are reachable only through a direct
+// storage call, the same way this file's own `insert_sub_issue_via_storage`
+// bypasses HTTP for fixture setup. Each test therefore asserts the
+// `StorageError::Validation(MessageKey)` the storage layer returns --
+// one hop past the raw `RAISE` string, at the exact point
+// `translate_trigger_error` produces the value a route would render if
+// one existed -- rather than asserting rendered HTML there is no page
+// to render.
+#[tokio::test]
+async fn creating_a_sub_issue_under_a_different_projects_issue_is_rejected() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_a = create_personal_project(&app.db, &user_id, "Proj A").await;
+    let project_b = create_personal_project(&app.db, &user_id, "Proj B").await;
+    let parent_in_a = create_issue(&app.db, &project_a, &user_id, "Parent in A").await;
+
+    let id = uuid::Uuid::new_v4().to_string();
+    let result = peisear_storage::issues::insert_sub_issue(
+        &app.db,
+        &id,
+        &project_b,
+        &parent_in_a,
+        &user_id,
+        "Cross-project sub",
+        "",
+        peisear_core::IssueStatus::Open,
+        peisear_core::Priority::Medium,
+        None,
+        None,
+    )
+    .await;
+
+    match result {
+        Err(peisear_storage::StorageError::Validation(key)) => {
+            assert_eq!(
+                key,
+                peisear_i18n::MessageKey::SubIssueMustShareProjectMessage,
+                "wrong message key for a cross-project sub-issue; got {key:?}"
+            );
+        }
+        other => panic!("expected Validation(SubIssueMustShareProjectMessage), got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn demoting_an_issue_to_be_its_own_parent_is_rejected() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Proj").await;
+    let issue_id = create_issue(&app.db, &project_id, &user_id, "Solo").await;
+
+    let result =
+        peisear_storage::issues::demote_to_sub_issue(&app.db, &issue_id, &project_id, &issue_id)
+            .await;
+
+    match result {
+        Err(peisear_storage::StorageError::Validation(key)) => {
+            assert_eq!(
+                key,
+                peisear_i18n::MessageKey::IssueCannotBeOwnParentMessage,
+                "wrong message key for self-parenting; got {key:?}"
+            );
+        }
+        other => panic!("expected Validation(IssueCannotBeOwnParentMessage), got {other:?}"),
+    }
+}
+
+#[tokio::test]
+async fn demoting_an_issue_that_has_its_own_children_is_rejected() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Proj").await;
+    let parent_with_children = create_issue(&app.db, &project_id, &user_id, "Has children").await;
+    let _child =
+        insert_sub_issue_via_storage(&app, &project_id, &parent_with_children, &user_id, "Child")
+            .await;
+    let other_top_level = create_issue(&app.db, &project_id, &user_id, "Other top level").await;
+
+    // Try to demote `parent_with_children` -- which already has a
+    // child -- under `other_top_level`. The 1-level/self-parent/
+    // same-project checks all pass; only the demote-with-children
+    // branch should fire.
+    let result = peisear_storage::issues::demote_to_sub_issue(
+        &app.db,
+        &parent_with_children,
+        &project_id,
+        &other_top_level,
+    )
+    .await;
+
+    match result {
+        Err(peisear_storage::StorageError::Validation(key)) => {
+            assert_eq!(
+                key,
+                peisear_i18n::MessageKey::CannotDemoteIssueWithSubIssuesMessage,
+                "wrong message key for demoting an issue with children; got {key:?}"
+            );
+        }
+        other => {
+            panic!("expected Validation(CannotDemoteIssueWithSubIssuesMessage), got {other:?}")
+        }
+    }
+}
+
 #[tokio::test]
 async fn sub_issue_inherits_parent_sprint() {
     // Parent in sprint S → sub-issue's `sprint_for_issue`
