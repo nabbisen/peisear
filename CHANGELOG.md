@@ -32,7 +32,13 @@ not the control itself, but the fact that the gap it closes could be
   test moves one issue through the form while dragging another to the
   same day to compare. A calendar block's link now carries the view and
   date it came from, so a Move returns the reader to the window they
-  were looking at, never to a default.
+  were looking at, never to a default — **and the Move says where the
+  issue went**, naming the day in a banner on the page it returns you
+  to. That sentence exists because the first build of this control did
+  not: returning the reader to the window they came from is right, but
+  in the **day view** that window is one day, so a successful Move took
+  its subject out of the page entirely and said nothing. Found in
+  review, before release, and fixed rather than noted.
 
 ### Changed
 
