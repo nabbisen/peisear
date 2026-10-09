@@ -78,7 +78,7 @@ requirements whose citations were narrower than their own text.
   same place as the defect class they are instances of.
 
 **What this release does not claim.** No user-visible behaviour
-changed. The test count (**405**, unchanged from 0.46.0) does not
+changed. The test count (**392 → 405**, the thirteen above) does not
 include the new browser gate — a gate is not inside `DEC-007`'s
 inventory, the same separation `BROWSER-001` already established.
 And **`§10.15` is not closed**: the shipped JavaScript is still
