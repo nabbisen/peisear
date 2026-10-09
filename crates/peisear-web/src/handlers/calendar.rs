@@ -65,7 +65,7 @@ fn last_of_month(d: NaiveDate) -> NaiveDate {
 }
 
 /// The visible window's first and last day, inclusive.
-pub(crate) fn window_days(view: CalendarView, anchor: NaiveDate) -> (NaiveDate, NaiveDate) {
+fn window_days(view: CalendarView, anchor: NaiveDate) -> (NaiveDate, NaiveDate) {
     match view {
         CalendarView::Day => (anchor, anchor),
         CalendarView::Week => {

@@ -1264,12 +1264,14 @@ fn scoped_move_form(body: &str) -> &str {
     }
 }
 
-/// The move control is reachable from the issue page — present when
-/// the issue has a `planned_start_at`, offering exactly the day the
-/// `from_view=day` context names (one option, the handoff's own
-/// smallest case).
+/// `CAL-005`: the move control is reachable from the issue page and
+/// renders a native date input, not a windowed `<select>` — there is
+/// no longer a day count to be bounded by any calendar view
+/// (`CAL-004`'s §5: a day-view visit offered exactly one option,
+/// making a Move from it a no-op; `CAL-005` removes the window
+/// instead of widening it). Defaults to the issue's own current day.
 #[tokio::test]
-async fn move_control_renders_with_exactly_the_day_views_one_day() {
+async fn move_control_renders_a_date_input_defaulted_to_the_current_day() {
     let app = TestApp::spawn().await;
     let admin = TestUser::new("alice");
     let admin_id = register_and_login(&app, &admin).await;
@@ -1295,111 +1297,22 @@ async fn move_control_renders_with_exactly_the_day_views_one_day() {
         .await
         .text();
     let form = scoped_move_form(&body);
-    assert_eq!(
-        form.matches("<option").count(),
-        1,
-        "a day-view context must offer exactly one day: {form}"
+    assert!(
+        !form.contains("<option"),
+        "the move control must no longer render a windowed <select>: {form}"
     );
     assert!(
-        form.contains(r#"name="target_date""#),
-        "the move form must carry the target_date select: {form}"
+        form.contains(&format!(
+            r#"<input type="date" id="move-target-date" name="target_date" value="{}""#,
+            d.format("%Y-%m-%d")
+        )),
+        "the move control must be a date input defaulted to the issue's own \
+         current day: {form}"
     );
     assert!(
         form.contains(r#"name="from_surface" value="project""#),
-        "the move form must echo the surface it was reached from: {form}"
-    );
-}
-
-/// The week view's own window — exactly 7 days, the same
-/// `window_days` the calendar itself computes for `Week`.
-#[tokio::test]
-async fn move_control_renders_the_week_views_seven_days() {
-    let app = TestApp::spawn().await;
-    let admin = TestUser::new("alice");
-    let admin_id = register_and_login(&app, &admin).await;
-    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
-    let d = today();
-    let issue_id = insert_planned_issue(
-        &app,
-        &project_id,
-        &admin_id,
-        "Move me (week)",
-        None,
-        Some(utc_hms(d, 9, 0)),
-        Some(utc_hms(d, 10, 0)),
-    )
-    .await;
-
-    let body = app
-        .server
-        .get(&format!(
-            "/projects/{project_id}/issues/{issue_id}?from_view=week&from_date={}&from_surface=project",
-            d.format("%Y-%m-%d")
-        ))
-        .await
-        .text();
-    let form = scoped_move_form(&body);
-    assert_eq!(
-        form.matches("<option").count(),
-        7,
-        "a week-view context must offer exactly seven days: {form}"
-    );
-}
-
-/// The month view's own window — the queried month's real days
-/// only (28–31, depending on the month), **not** the rendering
-/// grid's own leading/trailing padding cells (which pad to whole
-/// weeks for layout and can reach 35, `components::calendar::
-/// render_month_view`). The move control's `window_days` call is the
-/// same one the calendar's own data query uses, which returns only
-/// the month's own days — this is reported precisely rather than
-/// assumed to match the grid's display count, per the handoff's
-/// §2.2.
-#[tokio::test]
-async fn move_control_renders_the_months_own_days_not_the_grids_padding() {
-    let app = TestApp::spawn().await;
-    let admin = TestUser::new("alice");
-    let admin_id = register_and_login(&app, &admin).await;
-    let project_id = create_personal_project(&app.db, &admin_id, "P").await;
-    let d = today();
-    let issue_id = insert_planned_issue(
-        &app,
-        &project_id,
-        &admin_id,
-        "Move me (month)",
-        None,
-        Some(utc_hms(d, 9, 0)),
-        Some(utc_hms(d, 10, 0)),
-    )
-    .await;
-
-    let body = app
-        .server
-        .get(&format!(
-            "/projects/{project_id}/issues/{issue_id}?from_view=month&from_date={}&from_surface=project",
-            d.format("%Y-%m-%d")
-        ))
-        .await
-        .text();
-    let form = scoped_move_form(&body);
-    let count = form.matches("<option").count();
-    let days_in_this_month = {
-        use chrono::Datelike;
-        let (y, m) = (d.year(), d.month());
-        let (ny, nm) = if m == 12 { (y + 1, 1) } else { (y, m + 1) };
-        let first = chrono::NaiveDate::from_ymd_opt(y, m, 1).unwrap();
-        let next_first = chrono::NaiveDate::from_ymd_opt(ny, nm, 1).unwrap();
-        (next_first - first).num_days()
-    };
-    assert_eq!(
-        count as i64, days_in_this_month,
-        "a month view's window must offer exactly this month's own day count \
-         (28-31, never the grid's padded-to-35 display count): got {count}, \
-         month has {days_in_this_month}: {form}"
-    );
-    assert!(
-        (28..=31).contains(&count),
-        "sanity: a calendar month always has 28-31 days, got {count}"
+        "the move form must still echo the surface it was reached from \
+         (FR-NAV-005's return trip survives §1's substitution): {form}"
     );
 }
 

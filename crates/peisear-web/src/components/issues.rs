@@ -1499,16 +1499,13 @@ pub fn IssueDetailPage(
     // its length, and says so (§2.3).
     let move_action = format!("/projects/{}/issues/{}/schedule/move", project.id, issue.id);
     let move_client_updated_at = issue.updated_at.to_rfc3339();
-    let move_card = issue.planned_start_at.map(|_| {
-        let options = move_context
-            .day_options
-            .iter()
-            .map(|d| {
-                let value = d.format("%Y-%m-%d").to_string();
-                let label = d.format("%a, %b %-d").to_string();
-                view! { <option value=value>{label}</option> }
-            })
-            .collect_view();
+    let move_card = issue.planned_start_at.map(|current_start| {
+        // `CAL-005`: the issue's current day is the sensible default
+        // — it shows where the block is now, so a user changing the
+        // field sees what they are changing from, the same reasoning
+        // `IssueEditForm`'s own `datetime-local` defaults already
+        // follow.
+        let default_value = current_start.format("%Y-%m-%d").to_string();
         view! {
             <section class="card bg-base-100 border border-base-300 shadow-sm mt-4"
                      aria-label=t(MessageKey::ScheduleMoveHeading)>
@@ -1526,10 +1523,9 @@ pub fn IssueDetailPage(
                         <label class="text-sm font-medium" for="move-target-date">
                             {t(MessageKey::FieldLabel { field: Field::MoveTargetDate })}
                         </label>
-                        <select id="move-target-date" name="target_date"
-                                class=grow("select select-bordered select-sm min-w-[10rem]")>
-                            {options}
-                        </select>
+                        <input type="date" id="move-target-date" name="target_date"
+                               value=default_value
+                               class=grow("input input-bordered input-sm w-auto")/>
                         <button type="submit" class=grow("btn btn-ghost btn-sm")>
                             {t(MessageKey::ScheduleMoveButton)}
                         </button>
@@ -2213,12 +2209,11 @@ pub(crate) struct IssueDetailView {
     pub move_context: ScheduleMoveContext,
 }
 
-/// See `IssueDetailView::move_context`.
+/// See `IssueDetailView::move_context`. `CAL-005`: the target day is
+/// a native date input, not bounded to any window — this struct now
+/// carries only the return trip's own state (`FR-NAV-005`), the one
+/// job this context always had that survives.
 pub struct ScheduleMoveContext {
-    /// The days the move control's `<select>` offers — the calendar
-    /// window (day/week/month) the user came from, or a default
-    /// `Week` anchored on today for a direct visit.
-    pub day_options: Vec<chrono::NaiveDate>,
     /// Normalised `CalendarView::as_str()` value, carried as a hidden
     /// field so the POST rebuilds the exact return URL (`FR-NAV-005`)
     /// rather than accepting one as input.

@@ -704,24 +704,17 @@ async fn render_detail_or_edit(
     let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
     let issue = issues::find(&state.db, &issue_id, &project_id).await?;
 
-    // `CAL-004`: the same view/anchor parsing the calendar itself
-    // uses, so the move control's day options are exactly the days
-    // the calendar window the user came from is showing — one day
-    // for a day-view visit, up to 35 for month. Absent context (a
-    // direct visit, not through a calendar block) defaults to the
-    // same `Week`-anchored-on-today shape `handlers::calendar`'s own
-    // pages default to, for the same reason: a visible, bounded
-    // window rather than an arbitrary date picker.
+    // `CAL-005`: the target is any day, chosen through a native date
+    // input — not a `<select>` bounded by a window, per `CAL-004`'s
+    // own §5 (a day-view visit offered exactly one option, making a
+    // Move from it a no-op). `from_view`/`from_date` are still parsed
+    // here, but only to normalise the return trip's hidden fields
+    // (`FR-NAV-005`); nothing downstream uses them to size anything.
+    // Absent context (a direct visit, not through a calendar block)
+    // defaults to the same `Week`-anchored-on-today shape
+    // `handlers::calendar`'s own pages already default to.
     let move_calendar_view = crate::handlers::calendar::parse_view(from_view.as_deref());
     let move_calendar_anchor = crate::handlers::calendar::parse_anchor(from_date.as_deref());
-    let (move_window_first, move_window_last) =
-        crate::handlers::calendar::window_days(move_calendar_view, move_calendar_anchor);
-    let mut move_day_options = Vec::new();
-    let mut d = move_window_first;
-    while d <= move_window_last {
-        move_day_options.push(d);
-        d += chrono::Duration::days(1);
-    }
     let move_return_surface = if from_surface.as_deref() == Some("project") {
         "project".to_string()
     } else {
@@ -784,7 +777,6 @@ async fn render_detail_or_edit(
             flash,
             editing: is_edit_mode,
             move_context: components::issues::ScheduleMoveContext {
-                day_options: move_day_options,
                 return_view: move_calendar_view.as_str().to_string(),
                 return_date: move_calendar_anchor.format("%Y-%m-%d").to_string(),
                 return_surface: move_return_surface,
