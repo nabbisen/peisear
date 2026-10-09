@@ -2364,15 +2364,21 @@ links at 20 px, the navbar brand at 28 px, and **`FR-HLT-007`'s own indicator
 basis links at 17 px**. A limit that size is a hole.
 
 **Verification rests on two things and the guard is only one of them.**
-*The guard's population, stated because this release walked past its edge.*
-`touch_target_scan` reads `<a>`, `<button>` and `<summary>`. **It does not read
-`<input>`** — and `CAL-004` added one, the move control's date field, which
-measured **152 × 44** in a browser and so satisfies this requirement on the
-evidence rather than on the guard. **The guard would not have caught it had it
-failed.** Recorded rather than fixed: widening the population is a change to a
-guard that currently has a named, counted exception list, and doing it as a
-side effect of a calendar handoff is how exception lists stop being counted.
-It is the architect's, unscheduled.
+*The guard's population is narrower than this requirement — `§10.35`,
+measured 0.46.0.* `touch_target_scan` reads `<a>`, `<button>` and
+`<summary>`: **161 elements in `components/`. It does not read `<input>`
+(70), `<select>` (28) or `<textarea>` (9) — 107 more, two of every five.**
+This requirement says *every interactive element*, and cites that guard.
+0.45.0 recorded the gap at the one `<input>` `CAL-004` had just added, which
+satisfies the requirement **on a browser measurement rather than on the
+guard**; the size of it was not measured then and so was understated.
+**Exposure is 17 visible elements with no declared target** — 3 inputs, 5
+selects and all nine `<textarea>`s — since 32 of the 107 are `type="hidden"`
+and 58 declare one through `grow()` anyway. `TT-007` widens the population and
+resolves the 17; `REQ-004` asks the question this instance raises, which is
+whether any **other** requirement's acceptance is narrower than its own text.
+**This entry's `Met` is suspended on neither** — it reads Met on a counted
+population and the count was simply the wrong population.
 
 `touch_target_scan` proves a **declaration is present** in the source. It cannot
 prove the declaration **works**: `min-h-11` on an inline element does nothing,
@@ -2722,7 +2728,21 @@ MUST NOT be introduced.
 **NFR-MNT-004 — File size discipline**
 A source file exceeding 300 effective lines SHOULD be considered for
 splitting; exceeding 500 effective lines, strongly so.
-*Source*: project convention. *Status*: Partial — **measured 0.40.0 (`REQ-001`)**: of 85 `src` files, **10 exceed 500 effective lines** (largest `message.rs`, 2,088) and 11 more exceed 300. *Priority*: P3.
+*Source*: project convention. *Status*: Partial — **re-measured 0.46.0**: of
+**86** `src` files, **11 exceed 500 effective lines** (largest `message.rs`,
+**2,106**) and **11** more exceed 300. *Priority*: P3.
+*Was: measured 0.40.0 (`REQ-001`) — 85 files, 10 over 500, largest 2,088, 11
+more over 300.*
+**The figure barely moved in six releases, and that is the finding.** One file
+added, one crossed 500, the largest grew by 18 effective lines. **This entry
+stays P3 and unscheduled on the strength of its own re-measurement** rather
+than on the assumption that a deferred item is getting worse.
+*A measurement trap worth recording, because the architect fell into it before
+re-measuring.* A raw `wc -l` over the same files gives **18** over 500, not
+11 — this entry counts **effective** lines (non-blank, not comment-only), and
+`§10.15`-adjacent files like `touch_target_scan.rs` are heavily commented.
+Comparing a raw count to this entry's figure reads as drift from 10 to 18 and
+is simply a different measurement. **The definition is part of the number.**
 
 **NFR-MNT-005 — Test organisation**
 Tests MUST be separated from implementation files. In-file `#[test]`
@@ -5063,6 +5083,54 @@ first run has not yet shown what its steady-state rate is, and closing this
 entry now would be recording a remedy as proven on one trial. **It closes when
 two consecutive releases sweep clean**, which is a stopping rule and not a
 deferral.
+
+### 10.35 A requirement's cited acceptance is narrower than the requirement — **open**, recorded at 0.46.0; found 2026-10-09
+
+`NFR-A11Y-007` says **every interactive element** presents a 44 × 44 px touch
+target — the named limit was removed at `DEC-050` *"because it was measured and
+it was not narrow"*. It cites `touch_target_scan` as the mechanism. **That
+guard reads three tag names**: `TAG_NAMES: [&str; 3] = ["a", "button",
+"summary"]` (`touch_target_scan.rs:649`).
+
+Measured in `components/`, 2026-10-09:
+
+| | in the guard's population | outside it |
+|---|---|---|
+| `<a>` 104, `<button>` 45, `<summary>` 12 | **161** | |
+| `<input>` 70, `<select>` 28, `<textarea>` 9 | | **107** |
+
+**Two of every five interactive elements in this product are outside the
+population of the guard its requirement names as acceptance**, and the
+requirement reads `Met`. `CAL-004` walked past the edge of it at 0.45.0 by
+adding an `<input>` which satisfies the requirement **on a browser
+measurement** rather than on the guard — recorded in that entry at the time,
+with the size of the gap unmeasured and therefore understated.
+
+**Exposure is smaller than the population, and both numbers matter.** Of the
+107, **32 are `type="hidden"`** and are not touch targets at all; **58 declare
+a target anyway** through `grow()`; **17 are visible interactive elements with
+no declared target** — 3 inputs, 5 selects, and **all nine `<textarea>`s**.
+*That last figure is a heuristic* — `grow(` or `TOUCH_TARGET` appearing inside
+the element's opening tag — so it bounds the candidates rather than naming
+failures; a tall `<textarea>` may well pass on measurement. `TT-007` resolves
+each one.
+
+**Why this is not `§10.15`, `§10.16` or `§10.17`.** The code is not unexecuted
+(`§10.15`): the guard runs. There is no missing CI job (`§10.16`): it has one.
+The assertions do not pass for the wrong reason (`§10.17`): they pass for
+exactly the right reason, over exactly the elements they name. **The defect is
+that a requirement cites as its acceptance a mechanism narrower than its own
+normative text**, and nothing in this document cross-checks the two. A reader
+sees `Met`, follows the acceptance, finds a green guard, and stops.
+
+**The open question, which is why this is a class and not a defect.**
+`REQ-001` audited every requirement whose *status* was a claim and found
+sixteen stale. **Nothing has ever audited an *acceptance* against the
+requirement it sits under.** `REQ-004` is commissioned to do that: for every
+entry citing a mechanism, does the mechanism cover what the requirement says?
+This entry closes when that audit reports and its findings are scheduled —
+**not when `NFR-A11Y-007`'s own instance is fixed**, because one instance
+found by accident says nothing about the rest.
 
 ## 11. Deferred and future requirements
 
