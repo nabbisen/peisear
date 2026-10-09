@@ -1,12 +1,12 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.46.0` (**a new defect class, audited end to end** —
-`§10.35` opens because a requirement cited as its acceptance a guard covering
-three of six relevant tag names; `REQ-004` and `REQ-005` then audited all 48
-entries carrying an `*Acceptance*` and found **seven more**, one of which
-turned out to be a compliance defect and is closed; implementation through
-`0.46.0`)
+**Covers release**: `0.47.0` (**the class closes** — `§10.35`'s last three
+gaps needed a decision about *what* a test should assert, not a test written
+against current behaviour; `FR-PER-006` gains the precedence chain its one
+cited test never exercised, `FR-HLT-007` reaches five of five non-excepted
+indicators, and `NFR-A11Y-008` gets the browser gate that is the only
+mechanism matching its text; implementation through `0.47.0`)
 **Supersedes**: [`history/peisear-0.20.0-requirements-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.20.0-requirements-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 and through it
@@ -1768,8 +1768,10 @@ blind spot: it does not catch a single word standing alone.
 A completed direct manipulation SHOULD offer a brief undo affordance
 (approximately five seconds).
 *Source*: `SPEC §39.2`. *Acceptance*: `undo_toast_attachment_scan` (4) — a
-source scan, plus `browser-checks/undo-mousedown-trap.mjs` for the runtime
-half; neither walks the Tab order, see below. *Status*: **Met at 0.44.0** — a
+source scan — plus `browser-checks/undo-mousedown-trap.mjs` for the
+click-not-drag property and, from 0.47.0,
+`browser-checks/drag-outcome-gate.mjs` for the **Tab order on two of the four
+surfaces**; see below for which two and why. *Status*: **Met at 0.44.0** — a
 5-second toast on **all four** direct-manipulation surfaces.
 *Corrected twice, and the second correction reverses the first.*
 Until 0.43.0 this read **"Implemented for both shipped surfaces"** and then
@@ -1795,10 +1797,28 @@ detached the toast afterwards, all four would still pass.
 **`browser-checks/undo-mousedown-trap.mjs`** pins the one runtime property a
 scan cannot see — that a real `mousedown` plus a small movement on the undo
 button is read as a click and not a drag-start, which is `A11Y-005`'s defect
-— across the three draggable surfaces. **Neither instrument walks the Tab
-order in a browser**, so *"Undo is the next Tab stop"* remains an inference
-from DOM attachment rather than a measurement. That is `§10.15`'s class, named
-here rather than left for a later reader to discover behind a `Met`.
+— across the three draggable surfaces.
+*Updated 0.47.0 (`GATE-006`): the Tab order is now measured on two surfaces of
+four.* Until then **no instrument walked the Tab order in a browser**, so
+*"Undo is the next Tab stop"* was an inference from DOM attachment — recorded
+here as `§10.15`'s class rather than left behind a `Met`, and **scheduled off
+the strength of that record**: `GATE-005` ranked it second of four candidates
+precisely because it closed a gap this document had already written down and
+nothing had acted on.
+**`drag-outcome-gate.mjs` now dispatches a real `Input.dispatchKeyEvent` Tab
+from the acted-on control and reads `document.activeElement`**, on
+`calendar.rs` and `sprint_plan.rs`. **The board and the issue list/detail
+remain inference**, and that is the honest remainder.
+*One structural fact the measurement exposed, which no scan could have.* The
+anchor differs by surface: a calendar block has **one** focusable descendant,
+so Tab from it reaches Undo — but a plan row has **two**, the title link and
+its own keyboard move button, so Undo follows the **button**.
+`toastOrigin`'s `row.querySelector("button, a")` returns the **link**, because
+a comma-separated selector matches in **document order** rather than in the
+order its parts are written. That is correct for `toastOrigin`'s actual job —
+returning focus to *something* in the row when the toast closes — and **is
+not a claim about Tab order from that element**, which is exactly the kind of
+distinction a DOM-order scan cannot make.
 *The scan was renamed before this entry cited it.* It shipped as
 `undo_dom_order.rs` with tests named *"…undo lands right after…"* — a runtime
 claim over three substring checks, while the file's own doc comment stated the
@@ -5305,6 +5325,24 @@ measurement at 0.44.0 found the same thing in the other direction: 0.43.0
 guessed the sprint plan unverified when it is parity **by construction**, and
 guessed a lock asymmetry on the calendar that **does not exist**.
 
+**The fifth run found one thing, and the release itself had falsified it.**
+0.47.0's pass 2 — *entries whose status cites a scope the release changed* —
+found `FR-DM-006` claiming, twice, that **no instrument walks the Tab order in
+a browser**, so *"Undo is the next Tab stop"* was an inference. **`GATE-006`
+measures it** on two of the four surfaces. The entry is amended to say which
+two and to keep the remainder honest.
+*Worth noting because it is the first time this has run forwards.* That
+inference was recorded as `§10.15`'s class **rather than hidden behind a
+`Met`**, and `GATE-005` then ranked closing it **second of four candidates
+precisely because the document already said it was missing**. A limit written
+down became a scheduled fix; the sweep's job here was only to notice the
+sentence had gone stale once it was.
+*Pass 4 found no Appendix A row to change* — no status moved this release,
+only acceptances. *And pass 2's one false lead was recognised rather than
+re-derived*: `browser-checks` appeared to be cited by **`NFR-CMP-006`**, the
+Licence entry, which is the same heading-to-heading split artefact recorded at
+0.46.0.
+
 **The fourth run found nothing new, which is the first time that has
 happened.** 0.46.0's sweep: pass 1's entries were all amended as the work
 closed; **pass 2 found that every entry citing a mechanism this release
@@ -5680,7 +5718,8 @@ let `FR-DM-002` be violated for four releases without anyone checking.
 | V3 (`V3`) | Reconciliation with implemented state through 0.19.0 |
 | 0.19.1 baseline | Consolidation into English normative requirements; identifiers assigned; §10 compliance gaps recorded |
 | 0.20.0 | Compliance pass. Nine recorded statuses corrected — five of them P0 or P1 requirements annotated as satisfied while the code did the opposite. `NFR-PRIV-002` scoped (`DEC-019`); `NFR-CMP-001` extended with the toolchain/MSRV distinction (`DEC-044`/`DEC-045`); `NFR-LANG-005` rescheduled to 0.21.0 (`DEC-022`). §10 gains a state table and six new entries, five of which close in this release. Test inventory 65 → 82 active, 0 disabled. `RSK-001` closed |
-| **0.46.0 (this baseline)** | **A defect class opens and is audited end to end in one release.** `NFR-A11Y-007` says *every interactive element* presents a 44 × 44 px touch target and cited as its acceptance a guard reading **three tag names of the six that matter** — **146 elements in its population, 102 outside, two of every five.** The requirement read `Met`, the guard was green, and both were true. `§10.35` opens for the class: **a requirement's cited acceptance narrower than the requirement**, which is none of `§10.15` (the code runs), `§10.16` (the job exists) or `§10.17` (the assertions pass for exactly the right reason over exactly the elements they name). **`TT-007` widened the guard** — `type="hidden"` excluded by reading the attribute rather than by a 32-entry exception list, the nine newly-covered `<textarea>`s measured at **222 × 106** minimum on a 320 px phone and given a declaration anyway, *because a measurement true of today's tree is not a rule about the tag*. **Then `REQ-004` asked whether one instance was a class.** It is: of 165 entries, **48 cite a mechanism**; 32 cover their text, 4 disclose their own narrowness, 4 were named **unresolved rather than scored**, and **seven were narrower and had never said so**. `REQ-005` resolved the four. **The finding behind the findings**: a population-to-citation ratio **overstates** risk when the mechanism is structural — `FR-AUTH-004` cites one route for a shared `FromRequestParts` extractor, which is a *sample* — and **understates** it when the citation names no artefact, as `FR-SUB-002`'s *"trigger-enforced"* did while **three of its four trigger conditions had zero executed assertions** beside a correctly-tested sibling. **Five citation defects corrected, six coverage gaps closed by test, and one turned out to be a compliance defect**: writing the test meant to prove `FR-NAV-003`'s coverage found team detail with **no back link at all**, which its second conjunct requires — an audit of coverage that found a live defect, which is the strongest argument for having run it. **Three gaps are deliberately deferred** (`FR-PER-006`, `FR-HLT-007`, `NFR-A11Y-008`): each needs a judgement about *what* a test should assert, and `NFR-A11Y-008`'s regions are script-updated, so a Rust test asserting a region *exists* would build `§10.35`'s own defect one release after recording it. **No migration. Test inventory 383 → 392** |
+| **0.47.0 (this baseline)** | **The three gaps that needed a judgement, not a test — and `§10.35` closes.** Held back from 0.46.0 on purpose: written against current behaviour they would have produced three tests that pass and prove little, which is the class's own defect. **`FR-PER-006` cited one test — the case where *nothing* applies — for a requirement whose content is a precedence chain.** The code has **four** conditions, not the three its sentence names (burnout is two), and two boundaries its comments call deliberate: strict `>` on WIP, *because being exactly at the limit is the limit*, and `long_stale_count >= 1`. **A chain is only a chain where two conditions compete**, so each tie-break was verified by **inverting the corresponding pair of arms**, and the at-most-one clause is asserted as a rendered **count** rather than as the presence of the expected callout. **`FR-HLT-007` reaches five of five non-excepted indicators**; the test whose plural name made it read like a sample for six releases is widened, and widening it **found a rule nobody had written down** — a non-empty basis is not sufficient for a basis link, because `human_explanation` returns `None` for `Good`, learned by running the test and reading the failure. **`NFR-A11Y-008` gets a browser gate**, the only mechanism matching its text: its regions are empty in server-rendered HTML, so no Rust test can assert an announcement happened. `GATE-005` asked whether one could be built and answered **yes** — correcting the architect's population from three surfaces to **two** on the way, `notifications.rs`'s regions being server-rendered and out of scope. `GATE-006` built it: one script, port `4175`, the browser job's **third** gate, asserting the drop's stored effect, the region's text, and the **undo toast's Tab order** — which closes a standing inference this document had written down and nothing had acted on. **A real OS-level drag gesture is declined on the record**, with its CDP capability gap named so nobody re-proposes it. **Two instrument failures are recorded rather than quietly fixed**: a gate's fixed 2000-character window over HTML that **ran past `</section>` and accused the product of a defect it did not have**, and a risk the architect made structural that **the dev team found already false** in a script they re-read in full. **No migration. Test inventory unchanged at 405** — the gate is not a Rust test |
+| 0.46.0 | **A defect class opens and is audited end to end in one release.** `NFR-A11Y-007` says *every interactive element* presents a 44 × 44 px touch target and cited as its acceptance a guard reading **three tag names of the six that matter** — **146 elements in its population, 102 outside, two of every five.** The requirement read `Met`, the guard was green, and both were true. `§10.35` opens for the class: **a requirement's cited acceptance narrower than the requirement**, which is none of `§10.15` (the code runs), `§10.16` (the job exists) or `§10.17` (the assertions pass for exactly the right reason over exactly the elements they name). **`TT-007` widened the guard** — `type="hidden"` excluded by reading the attribute rather than by a 32-entry exception list, the nine newly-covered `<textarea>`s measured at **222 × 106** minimum on a 320 px phone and given a declaration anyway, *because a measurement true of today's tree is not a rule about the tag*. **Then `REQ-004` asked whether one instance was a class.** It is: of 165 entries, **48 cite a mechanism**; 32 cover their text, 4 disclose their own narrowness, 4 were named **unresolved rather than scored**, and **seven were narrower and had never said so**. `REQ-005` resolved the four. **The finding behind the findings**: a population-to-citation ratio **overstates** risk when the mechanism is structural — `FR-AUTH-004` cites one route for a shared `FromRequestParts` extractor, which is a *sample* — and **understates** it when the citation names no artefact, as `FR-SUB-002`'s *"trigger-enforced"* did while **three of its four trigger conditions had zero executed assertions** beside a correctly-tested sibling. **Five citation defects corrected, six coverage gaps closed by test, and one turned out to be a compliance defect**: writing the test meant to prove `FR-NAV-003`'s coverage found team detail with **no back link at all**, which its second conjunct requires — an audit of coverage that found a live defect, which is the strongest argument for having run it. **Three gaps are deliberately deferred** (`FR-PER-006`, `FR-HLT-007`, `NFR-A11Y-008`): each needs a judgement about *what* a test should assert, and `NFR-A11Y-008`'s regions are script-updated, so a Rust test asserting a region *exists* would build `§10.35`'s own defect one release after recording it. **No migration. Test inventory 383 → 392** |
 | 0.45.0 | **The `P0` closes, on a clause written one release earlier to make it closable.** `FR-DM-002` reaches **Met** on all four direct-manipulation surfaces, the calendar last. The control is a **move** affordance on the issue detail page, one activation from a calendar block: the user supplies **a day, never a timestamp**, and the handler applies the **identical whole-day delta to both ends**, so the duration survives and **there is nothing to reconstruct** — the half of the clause the issue edit form fails and will keep failing, correctly, because two absolute fields have no length to preserve from. It calls the same `apply_schedule_change` the drag's JSON endpoint calls, so the stored row is identical **by construction, not by agreement**, which the acceptance test shows by moving one issue through the form and dragging another to the same day. **RFC 0015 closes with two of its own choices varied**, both recorded in its `§9`: the control is **not on the calendar block**, because no 44 × 44 px control fits in a grid where a block's height *is* its duration and retargeting the block's link would have taken the pointer user's route to the issue away; and the target is **not a windowed `<select>`**, because in a day-view context that window held **exactly one option — the current day — so a Move was a no-op**. The dev team measured that and escalated rather than inventing a wider window for one of three views. **Replacing the window with a date input dissolved an open question instead of answering it** and removed 100 net lines. **The sweep's third run found four things and none was a stale status** — a test count citing 16 where 21 exist, a sentence counting *both* of *three*, a guard population excluding the `<input>` this release added, and a requirement applied beyond its letter. **No migration. Test inventory 376 → 385 → 383**, the fall deliberate: three day-count tests were **deleted rather than adapted** when their subject stopped existing |
 | 0.44.0 | **The release where a P0 stopped resting on the architect's judgement.** `FR-DM-002` read `Partial` because the architect said so; `DEC-059` (RFC 0015) gives it a clause — the equivalent must be **offered by the element carrying the pointer affordance** and must **not require the user to reconstruct its effect** — and the calendar now fails a written test rather than an opinion. **The clause took three drafts and the first two measured the wrong thing**: both bounded *distance*, and distance is the symptom; reconstruction is the defect. The second draft also admitted exactly one design, because **a calendar block's height is its duration** and no 44 × 44 px control fits in the grid — a rule doing the architecture's job, which the owner's philosophy forbids. **`FR-DM-006` reaches Met on all four surfaces, reversing a correction made one release earlier.** That correction was the sweep's own first run: the entry was corrected *because* it was stale, its three named places were counted, four surfaces were known to ship, and `Partial — three of four` was written — **`calendar.js` was never opened.** Pass 1 of the procedure is amended for it: **amend from the code, never from the entry's own words.** **Pass 4 then caught two the first run walked past**: `FR-DM-003` and `-004` carried the same stale phrase from the same 0.38.0 amendment, so all four `FR-DM` siblings were stale and the first run corrected two — the argument for pass 4 being a pass of its own. **Ten entries have now been stale in this document, nine of them the architect's.** **`§10.15`'s title changes after eighteen releases**: `undo-mousedown-trap.mjs` executes the shipped scripts in a real browser for **one property on three surfaces**, out of 1,909 lines in five files — *almost* no test, not no test, and RFC 011's refusal to buy a harness is unchanged. Nine new tests, **367 → 376**, and the one named `undo_dom_order` was renamed before the requirement cited it, because its name claimed a runtime fact over three substring checks. **No migration; no screen, route, state or copy changed** |
 | 0.43.0 | **Identity becomes a type, and the sweep that found what the releases left behind runs for the first time.** `NFR-PRIV-005` reaches **Met** under `DEC-058`/RFC 0014: `user_id: &str` returns **zero results across all six personal-data modules**, so all 36 functions that can take an identity take a **sealed** one and the stronger reading holds for all 36 rather than 25. **The four that remain cannot close** — three are the authentication path, where establishing an identity *is* the call, and one is a job-side aggregate. **The boundary already held**, measured twice; what changed is that it cannot be broken by inattention. **`DOCS-002` closes ten broken links in the published API documentation** — `docs.rs` builds these seven crates, so each was live in every released version, and **nothing had ever looked**: `clippy --all-targets` does not check doc links and `cargo doc` was in no gate. The architect's own counts were wrong twice, from a run that **aborted before reaching `peisear-web`**. **`NFR-REL-008` is new**, because no requirement governed the one artefact this project publishes without authoring. **`§10.33`** records the class; **`§10.34`** records the status-drift class and `REQ-003`'s answer that **no text rule detects it** — four rules against six historical instances, the best scoring 4 of 6 and argued down by the dev team that built it, because its zero false positives were measured **on zero opportunities**. The remedy is a four-pass procedure run by hand at every candidate, and **its first run found six things**. **No migration. Test inventory 369 → 367** — two fewer, deliberately: `PRIV-002` deleted a 212-line text-pattern guard whose property the type system now holds everywhere. *This row was added at 0.44.0; 0.43.0 shipped without one, found by the sweep's pass 4.* |
