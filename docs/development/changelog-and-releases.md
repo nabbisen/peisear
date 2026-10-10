@@ -34,6 +34,28 @@ publish fails, there is a tag and no Release** — which is the recoverable
 state, since a tag can be superseded by the next version and a Release page
 cannot be un-announced to a watcher.
 
+**The Release's title is the bare version — `X.Y.Z`, nothing else.**
+*Owner decision, 2026-10-10.* So:
+
+```sh
+gh release create X.Y.Z --title X.Y.Z --notes-file <the section> --verify-tag
+```
+
+**Why bare.** On a Release page the repository name is already in the
+breadcrumb and the tag sits beside the title, so `peisear X.Y.Z` prints the
+project name a reader has and the version twice. **The tag message is where
+the name belongs** — a tag object travels alone (`git tag -n`, a bare clone),
+and a Release page never does.
+
+**This was unwritten until 0.48.0, and that is the part worth recording.**
+`DEC-056` specified the body and said nothing about the title, so the
+architect typed `peisear X.Y.Z` from habit for **seven releases**
+(0.41.0–0.47.0) and the owner noticed it on the page rather than in a
+document. **All seven were retitled** — editing a Release title touches no
+tag, no commit and no published crate, so unlike the `0.40.0` tag force-push
+it costs nothing and leaves nothing mismatched. **An unwritten convention is
+one that drifts**, which is why the format is here and not only in a habit.
+
 **Who.** The architect, on the owner's approval, alongside the tag and the
 publish. The dev team never runs it.
 
@@ -157,6 +179,7 @@ in CI's `peisear-web --lib` step). Each rule has a test that breaks it.
 | The workspace version has a dated section | same | in place |
 | ~~From 0.41.0, a dated section opens with `### Highlights`~~ | **nothing — withdrawn 2026-09-25 before it took effect** | **not a rule** |
 | **The tag's message carries the release-notes link** | **nobody — the release procedure above, by hand** | **not checked** |
+| **The Release's title is the bare `X.Y.Z`** | **nobody — by hand, and it drifted for seven releases before anyone wrote it down** | **not checked** |
 | An external URL (the tag's link) resolves | nobody — nothing here uses the network | not checked |
 | The section is worth reading | a reader | not checkable |
 
