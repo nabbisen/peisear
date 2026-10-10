@@ -11,6 +11,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.48.0] — 2026-10-10
+
+**This release has an unusually honest shape: its subject is the
+project's own record-keeping, and the one user-facing fix came out of
+noticing that record was wrong.** A phone-width scroll loss, measured
+and fixed on one surface; the roadmap document that had been eleven
+releases out of date with how work actually gets chosen; and a Release
+title format that had drifted unwritten for seven releases before the
+owner found it on the page rather than in a document.
+
+### Fixed
+
+- **Moving an issue between the sprint plan's backlog and sprint
+  columns used to return the reader to the top of a page they were
+  partway down.** Measured at a 390 × 844 phone width: **1292 px of
+  3078** discarded, with a second row the reader had been reading
+  ending up **1990 px below the fold**. The move redirects now name
+  the acted-on row's own element as a URL fragment, so the row you
+  just moved is in view, in whichever column it landed in. **The
+  previous scroll position is not restored, deliberately** — after a
+  move the row sits in the *other* column, and restoring the old
+  position would land the reader where the row no longer is. The
+  promise this keeps is *the row you acted on is on screen*, not
+  *your scroll position is preserved*, and the two are not the same
+  claim.
+- **The fix splits, and the half it does not cover matters more than
+  the half it does.** On the calendar, a moved block can leave the
+  day being viewed entirely, so a fragment has nothing to point at —
+  the existing *"Moved to …"* banner is that surface's own remedy, not
+  this one. A uniform "put a fragment on every redirect" change would
+  have looked like it solved this and done nothing for the case that
+  raised the question in the first place.
+
+### Internal
+
+- **`ROADMAP.md` asserted a current plan that had ended twenty minor
+  releases before `0.47.0` shipped**, at `0.27.0`, while work had for a long time
+  actually been chosen by handoffs, the `§10.x` defect register, and
+  the per-release specification sweep — the document never moved with
+  the change. The superseded Milestones and Release sequence sections
+  are now marked historical in place, and an **Unscheduled work**
+  table is added for quality gaps on already-shipped work that neither
+  the register nor the deferred-features list (`§11`) was ever the
+  right home for. The symptom worth recording: the list had been kept
+  in one person's head, and one item on it named a keyboard-undo
+  requirement that does not exist — the requirement it was carried
+  under covers something else entirely, and the actual keyboard-undo
+  path was settled at `0.41.0`.
+- **A Release title is now specified as the bare `X.Y.Z`**, written
+  down rather than typed from habit, and the seven existing Release
+  pages (`0.41.0`–`0.47.0`) were retitled to match. Retitling a
+  published Release touches no tag, no commit, and no published
+  crate, so — unlike the `0.40.0` tag rewrite — nothing ends up
+  mismatched by it.
+
+**What this release does not claim.** That the previous scroll
+position on the sprint plan is restored — it is not, and beat one says
+why that is correct rather than a shortfall. And that the calendar
+Move's scroll loss is fixed — it is explicitly not; the residual sits
+in `ROADMAP.md`'s Unscheduled work table as the owner's call. **No
+migration. Test inventory 405 → 407** — two tests, both asserting the
+redirect's `Location` header and the landing page's rendered id, with
+each test's own doc comment stating that neither it nor any Rust test
+can assert that a browser actually scrolls.
+
 ## [0.47.0] — 2026-10-10
 
 **This release closes `§10.35` and ships no behaviour, and both halves
