@@ -203,7 +203,10 @@ that **four of the seven were caught exactly this way**: by a person reading
 the specification against what had just shipped, which is what assembling a
 candidate is.
 
-Four passes, in this order, over `requirements.md` and `external-design.md`:
+**Five passes, in this order.** Passes 1–4 are over `requirements.md` and
+`external-design.md`; **pass 5 is over the documents a reader outside this
+repository meets**, added at 0.49.0 after four audits found what its absence
+had cost:
 
 1. **Every entry the release touched.** The easy half, and the only half that
    has reliably been done. Amend the status, and date the amendment.
@@ -229,6 +232,27 @@ Four passes, in this order, over `requirements.md` and `external-design.md`:
    Accessibility by two whole entries. If a count cannot be re-derived, say in
    the document that it was not re-derived rather than leave it reading as
    current.
+
+5. **The documents a reader outside this repository meets.** `README.md`,
+   `docs/getting-started/`, `docs/operations/`, `docs/security/`,
+   `docs/architecture/`, `.github/CONTRIBUTING.md`. **Passes 1–4 cover the two
+   specifications and nothing else**, and four audits on 2026-10-11 found what
+   that costs: a Quick Start whose first command cannot be run, an
+   installation guide naming a toolchain that **cannot build the workspace**,
+   a crate missing from the workspace diagram for **twenty-seven releases**,
+   a deployment manifest listing two of eight files, and — worst — the
+   **security** document claiming a default bind of loopback when the default
+   binds every interface, in the same section that delegates TLS to a proxy
+   the error makes bypassable.
+   *The question for this pass is narrow on purpose*: **not** *is this
+   document good*, but **does it still describe the code?** Every one of those
+   findings was a correction that landed in a specification and never
+   travelled.
+   **Much of it is mechanisable and should not be done by eye.** A scan can
+   compare a crate set, an MSRV, a file manifest and a config default against
+   their sources — `DOCS-005` builds it. **What a scan cannot check is
+   whether prose still describes a behaviour**, which is why this pass exists
+   beside it rather than instead of it.
 
 **Two things this procedure must not become.** It is not a re-audit of all 162
 entries — `REQ-001` did that once and it is not a per-release cost. And a
