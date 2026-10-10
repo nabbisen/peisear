@@ -1,9 +1,11 @@
 # Installation
 
 peisear needs a Rust toolchain with Edition 2024 support — that is,
-`rustc` **1.85 or later**. Everything else (sqlite, daisyUI, Tailwind)
-is either vendored as a Cargo dependency or loaded from a CDN on first
-page load, so no separate package installation is required.
+`rustc` **1.88 or later** (`Cargo.toml`'s `rust-version`; the
+dependency tree has drifted past Edition 2024's own 1.85 floor, so
+1.85 itself cannot build the workspace). Everything else — sqlite,
+daisyUI, Tailwind — is vendored as a Cargo dependency or under
+`static/`, so no separate package installation is required.
 
 ## Option A: rustup (recommended)
 
@@ -34,10 +36,10 @@ the SSR build doesn't need any, but hydration work later does.
 
 ```bash
 rustc --version
-# rustc 1.85.x ...   (or newer)
+# rustc 1.88.x ...   (or newer)
 
 cargo --version
-# cargo 1.85.x ...   (or newer)
+# cargo 1.88.x ...   (or newer)
 ```
 
 ## Next

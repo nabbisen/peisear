@@ -49,9 +49,12 @@ starts accepting connections.
 2. You land on the project detail page in **Board** view. Click
    **New issue** to create one.
 3. Drag issue cards between the *Open* / *In Progress* / *Done*
-   columns to change their status. The drag-and-drop uses a JSON POST
-   to `/projects/{id}/issues/{issue_id}/status`; the server persists
-   and the page reloads to show the confirmed state.
+   columns to change their status. The card moves immediately — the
+   drag-and-drop uses a JSON POST to
+   `/projects/{id}/issues/{issue_id}/status` in the background — and
+   an undo affordance appears for five seconds in case you dragged the
+   wrong card. The page only reloads if the server reports a conflict
+   (someone else moved the same card first) or is unreachable.
 4. Click **List** in the view toggle for a dense tabular view of every
    issue in the project.
 

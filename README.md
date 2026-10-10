@@ -9,7 +9,7 @@ Sophisticated. Solid. Really easy. Good UI.
 [![Dependency Status](https://deps.rs/crate/peisear/latest/status.svg)](https://deps.rs/crate/peisear)
 [![License](https://img.shields.io/github/license/nabbisen/peisear)](https://github.com/nabbisen/peisear/blob/main/LICENSE)
 
-![logo](docs/src/assets/logo.png)
+![logo](https://github.com/nabbisen/peisear/raw/main/docs/src/assets/logo.png)
 
 ---
 
@@ -34,8 +34,20 @@ codebase in an afternoon and own your own instance over a weekend.
 
 ## Quick Start
 
+**To run it:**
+
 ```bash
-tar xzf peisear.tar.gz && cd peisear
+cargo install peisear
+echo "JWT_SECRET=$(openssl rand -base64 48)" > .env
+
+peisear
+#   → http://localhost:3000
+```
+
+**To read or change it:**
+
+```bash
+git clone https://github.com/nabbisen/peisear.git && cd peisear
 cp .env.example .env
 echo "JWT_SECRET=$(openssl rand -base64 48)" >> .env
 
@@ -44,7 +56,7 @@ cargo run --release -p peisear
 ```
 
 Register an account, create a project, drag cards across the board.
-The full guide is in [`docs/getting-started/`](docs/getting-started/README.md).
+The full guide is in [`docs/getting-started/`](https://github.com/nabbisen/peisear/blob/main/docs/getting-started/README.md).
 
 ## Features
 
@@ -58,9 +70,9 @@ The full guide is in [`docs/getting-started/`](docs/getting-started/README.md).
 - **One binary deploy.** Migrations embedded at compile time,
   templates compiled into the binary. Ship one executable plus
   `static/` and you're live.
-- **Workspace-first architecture.** Six crates — `core`, `auth`,
-  `storage`, `notify`, `web`, and a thin `peisear` facade — with
-  deliberately thin waists, so swapping SQLite for Postgres or
+- **Workspace-first architecture.** Seven crates — `i18n`, `core`,
+  `auth`, `storage`, `notify`, `web`, and a thin `peisear` facade —
+  with deliberately thin waists, so swapping SQLite for Postgres or
   adding OIDC is a localised change.
 
 ## Design Notes
@@ -89,18 +101,18 @@ Three ideas shape every choice in this repo:
 For architecture deep-dives, operations guides, and security notes,
 see the full documentation:
 
-- 📘 [**Documentation index**](docs/README.md)
-- 🚀 [Getting started](docs/getting-started/README.md) — installation,
+- 📘 [**Documentation index**](https://github.com/nabbisen/peisear/blob/main/docs/README.md)
+- 🚀 [Getting started](https://github.com/nabbisen/peisear/blob/main/docs/getting-started/README.md) — installation,
   configuration, first run
-- 🏗️ [Architecture](docs/architecture/README.md) — workspace layout,
+- 🏗️ [Architecture](https://github.com/nabbisen/peisear/blob/main/docs/architecture/README.md) — workspace layout,
   crate boundaries, Leptos SSR rationale
-- 🛠️ [Operations](docs/operations/README.md) — deployment, backup,
+- 🛠️ [Operations](https://github.com/nabbisen/peisear/blob/main/docs/operations/README.md) — deployment, backup,
   Tailwind self-hosting
-- 🔒 [Security](docs/security/README.md) — what we do, what you do
-- 🧭 [Roadmap](ROADMAP.md) · 📝 [Changelog](CHANGELOG.md)
+- 🔒 [Security](https://github.com/nabbisen/peisear/blob/main/docs/security/README.md) — what we do, what you do
+- 🧭 [Roadmap](https://github.com/nabbisen/peisear/blob/main/ROADMAP.md) · 📝 [Changelog](https://github.com/nabbisen/peisear/blob/main/CHANGELOG.md)
 
 ---
 
-Built with care, under the [Apache-2.0](LICENSE) license. Contributions
-welcome — see [CONTRIBUTING](.github/CONTRIBUTING.md). If peisear makes
+Built with care, under the [Apache-2.0](https://github.com/nabbisen/peisear/blob/main/LICENSE) license. Contributions
+welcome — see [CONTRIBUTING](https://github.com/nabbisen/peisear/blob/main/.github/CONTRIBUTING.md). If peisear makes
 your team's day a little calmer, that's the whole point.
