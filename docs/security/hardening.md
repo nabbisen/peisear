@@ -23,7 +23,15 @@ seriously:
 Threats it does **not** try to handle on its own:
 
 - **TLS termination.** Put a reverse proxy in front of peisear in
-  production. `BIND_ADDR=127.0.0.1:3000` is the default-safe choice.
+  production — **and set `BIND_ADDR=127.0.0.1:3000` when you do.**
+  **The default is `0.0.0.0:3000`, which binds every interface**
+  (`peisear-web/src/config.rs`), so a proxy in front of an otherwise
+  untouched instance leaves port 3000 reachable directly — **bypassing
+  the proxy, and with it the TLS termination and rate limiting this
+  section delegates to it.** Loopback is the safe choice; it is not the
+  default. *Corrected 2026-10-11: this sentence read "`BIND_ADDR=127.0.0.1:3000`
+  is the default-safe choice", which `docs/getting-started/configuration.md`
+  has always contradicted correctly.*
 - **Rate limiting.** Configure at the proxy (`limit_req_zone` in
   nginx, equivalents in HAProxy / Envoy / Caddy).
 - **DDoS absorption.** Not peisear's job.
