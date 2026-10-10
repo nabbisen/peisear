@@ -23,7 +23,11 @@ import { launch } from './cdp.mjs';
 const REPO_ROOT = new URL('..', import.meta.url).pathname;
 const BIN_PATH = process.env.PEISEAR_BIN || join(REPO_ROOT, 'target/debug/peisear');
 const PORT = process.env.PEISEAR_PORT || '4173';
-const BASE = `http://127.0.0.1:${PORT}`;
+// Exported so a caller of `createFixtures` (doc-screenshots.mjs, so far)
+// can start its own server on the same port `createFixtures`'s own
+// `fetch` calls are hardcoded to -- `PEISEAR_PORT` is read once, at
+// module load, not re-read per call.
+export const BASE = `http://127.0.0.1:${PORT}`;
 // `BROWSER-002` round 2. 320 was held back once: it turned every page
 // red by 24px, which was `LAYOUT-006`'s navbar defect rather than
 // anything per-page, and `DEC-048` condition 3 forbids landing a red
@@ -172,7 +176,7 @@ async function lockStamp(jar, url, what) {
   return stamp;
 }
 
-async function createFixtures() {
+export async function createFixtures() {
   const jar = makeCookieJar();
 
   const registerRes = await jar.fetchForm(`${BASE}/register`, {
@@ -557,4 +561,10 @@ async function main() {
   process.exit(exitCode);
 }
 
-main();
+// Only run the gate when this file is executed directly (`node
+// overflow-gate.mjs`) -- `doc-screenshots.mjs` imports `createFixtures`
+// and `BASE` from this module and must not trigger a second scratch
+// server and sweep as a side effect of that import.
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

@@ -67,6 +67,30 @@ attention.
   drag needs `Input.dispatchDragEvent`/`Input.setInterceptDrags`, a CDP
   domain `cdp.mjs` does not wrap, and that question (`GATE-005` candidate
   4) is declined on the record, not built here.
+- `doc-screenshots.mjs` — **not a gate** (`DOCS-004`, owner request). Starts
+  its own scratch instance on its own port (`4176` by default) and reuses
+  `overflow-gate.mjs`'s own `createFixtures` (exported for this purpose)
+  rather than building a second copy of the registration/team/sprint/
+  project/issue flow, then captures five pages at one desktop width for
+  `README.md` and `docs/getting-started/first-run.md`. Asserts nothing,
+  exits 0 whenever the pages render, and **must not be added to the
+  `browser-overflow-gate` CI job** — this directory's title is *gates, not
+  tests*, and a script that isn't one needs saying so here. Run it with
+  `node browser-checks/doc-screenshots.mjs` after `cargo build -p peisear`;
+  `DOC_SCREENSHOT_DIR` overrides the output directory (default
+  `docs/src/assets/screenshots/`).
+
+  **Currently blocked on a fixture-quality question, not a harness one.**
+  `overflow-gate.mjs`'s fixture data is deliberately adversarial — display
+  name, project name and two of four issue titles carry a 64-character
+  SHA-256 run (`BROWSER-002`) — and the signed-in display name renders in
+  every page's navbar via `AppShell`, so every screenshot this script
+  produces today shows `Gate Fixture e3b0c442...` top-right, and the board
+  additionally shows it as a project name and in two card titles. This is
+  `DOCS-004` §6's own anticipated case — "if the fixtures do not produce a
+  screen worth showing... that is a fixture question I would rather decide
+  than have improvised" — so no screenshots are committed yet; see the
+  review package for the decision this is waiting on.
 
 ## Running them locally
 
