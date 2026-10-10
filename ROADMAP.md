@@ -6,10 +6,18 @@ each roadmap item lands in one well-defined crate — see
 [docs/architecture/crate-boundaries.md](docs/architecture/crate-boundaries.md)
 for the mapping.
 
-**The current plan is the Milestones, Release sequence, and Release
-cycle sections below**, agreed 2026-08-01. The phase narrative that
-follows immediately is retained as history: its structure still
-describes what shipped, but its target versions are superseded.
+**How work is chosen today**: a handoff under `rfcs/handoffs/`, an
+entry closing in the `§10.x` defect-class register, or the
+specification sweep that reads every requirement's status and
+acceptance each release. The owner schedules from these, not from a
+release sequence fixed in advance. The Milestones and Release sequence
+sections below were that fixed sequence, agreed 2026-08-01 and current
+through `0.27.0` (shipped) — they are retained as history, like the
+phase narrative that follows them immediately, and are superseded for
+everything after. The Release cycle section's entry/exit criteria are
+unaffected by this and remain how a release is cut today. See
+**Unscheduled work**, below, for the kind of work this plan never had
+a place for.
 
 ## Near-term
 
@@ -91,12 +99,14 @@ out across five phases, one per minor release:
   for the four key flows, language consistency.
   Detailed design: [`rfcs/005-quality-consolidation.md`](./rfcs/done/005-quality-consolidation.md).
 
-*Phase target versions above are historical. The current plan is
-the milestone and release tables below, agreed 2026-08-01.*
+*Phase target versions above are historical. The milestone and release
+tables below were the plan from 2026-08-01 through `0.27.0` and are
+retained as history too — see the note at the top of this document
+for how work is chosen now.*
 
 ---
 
-## Milestones
+## Milestones (historical — superseded at `0.27.0`)
 
 Releases are the unit of delivery; milestones are the unit of goal.
 
@@ -112,7 +122,7 @@ M1 comes first because every later milestone adds surfaces that
 M1's mechanisms then police — the vocabulary guard in particular.
 Building M2 first would mean auditing it twice.
 
-## Release sequence
+## Release sequence (historical — superseded at `0.27.0`)
 
 | Version | Content | RFC | Milestone |
 |---|---|---|---|
@@ -160,6 +170,24 @@ decision, not a side effect.
 
 Criterion 2 is the one that has historically failed. It is a gate,
 not an aspiration.
+
+## Unscheduled work
+
+Known rough edges on things already shipped — not a handoff yet, and
+not a deferred future feature (`§11` of the requirements specification
+covers those: features accepted in principle but not built, a
+different thing from a known imperfection in what already ships).
+Each line: what, why it isn't scheduled yet, and whose call it is.
+
+| What | Why not now | Whose call |
+|---|---|---|
+| **POST landing on long pages.** A mutation that redirects back to a long page the reader was partway down (the sprint plan, a long issue list) lands them at the top, discarding where they were. Measured during `CAL-004`; confirmed product-wide by construction (`Redirect::to` at 51 call sites across six handler files). `POST-001` (0.48.0) measures three representative cases on a phone width and names a fix shape. | Fix shape undecided until `POST-001` reports — candidates range from a cheap fragment anchor to something RFC-sized if it needs script across all 51 sites. | Owner, once `POST-001` reports. |
+| **117 requirement entries citing no mechanism at all.** `REQ-004` (0.46.0) audited the 48 of 165 entries that cite a mechanism; the other 117 were its denominator, not its subject. Whether any of the 117 hide a `§10.35`-shaped gap — acceptance narrower than the requirement — is unaudited, not cleared. | Deliberately not commissioned: `REQ-004` was scoped to the entries it could audit without a second investigation's worth of work. | Owner, to decide whether and when to commission the audit. |
+
+Add a line here when a quality gap on already-shipped work surfaces
+and has nowhere else to live. Not everything belongs in this table —
+a gap that already has a clear fix should become a handoff instead of
+waiting here.
 
 ---
 
