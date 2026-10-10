@@ -43,6 +43,16 @@ use peisear_storage::sprints::BacklogRow;
 
 use super::{grow, t};
 
+/// `NAV-002`: the DOM `id` a plan row's own redirect fragment targets.
+/// Derived from the same issue id both render functions already carry
+/// as `data-plan-issue-id`, so the fragment resolves after a move in
+/// either direction — the row keeps this id whichever column it lands
+/// in. Prefixed: a bare issue id is a collision waiting on a page that
+/// may render other elements keyed by the same id elsewhere.
+pub fn plan_row_dom_id(issue_id: &str) -> String {
+    format!("plan-row-{issue_id}")
+}
+
 #[component]
 #[allow(clippy::too_many_arguments)]
 pub fn SprintPlanPage(
@@ -390,7 +400,8 @@ fn render_backlog(
             let plan_move = can_move.then_some("add");
 
             view! {
-                <li class="py-2 flex items-center justify-between gap-3" aria-label=aria
+                <li id=plan_row_dom_id(&issue.id)
+                    class="py-2 flex items-center justify-between gap-3" aria-label=aria
                     draggable=draggable
                     data-plan-issue-id=plan_issue_id
                     data-plan-project-id=plan_project_id
@@ -492,7 +503,8 @@ fn render_sprint_items(
             let plan_move = can_move.then_some("remove");
 
             view! {
-                <li class="py-2 flex items-center justify-between gap-3" aria-label=aria
+                <li id=plan_row_dom_id(&issue_id)
+                    class="py-2 flex items-center justify-between gap-3" aria-label=aria
                     draggable=draggable
                     data-plan-issue-id=plan_issue_id
                     data-plan-project-id=plan_project_id

@@ -240,6 +240,146 @@ async fn remove_from_sprint_via_button_succeeds() {
     );
 }
 
+/// `NAV-002`: both move redirects carry a fragment targeting the
+/// acted-on row's own DOM id, so landing on the plan page does not
+/// discard the reader's place the way a bare redirect does
+/// (`POST-001`'s measurement: 1292 px of 3078 lost on a phone).
+///
+/// **What this asserts, and what it cannot.** Two server-side facts:
+/// the `Location` header carries the fragment, and the landing page's
+/// body renders an element with that exact id. **It does not and
+/// cannot assert that a browser actually scrolls to that element** --
+/// that is client behaviour this test has no way to observe, and
+/// asserting the `Location` header as if it covered the scroll would
+/// be `§10.35`'s own trap one release after closing it. `POST-001`'s
+/// own browser harness (`measure-post-landing.mjs`, kept in that
+/// investigation's review package) could re-measure the scroll
+/// directly; whether that is worth wiring into a standing gate is a
+/// `GATE-00x` decision, not this handoff's.
+#[tokio::test]
+async fn move_redirects_carry_a_fragment_to_the_acted_on_row() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let issue_id = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Fragment target",
+        Priority::Medium,
+        Some(3),
+    )
+    .await;
+
+    let expected_fragment = format!("#plan-row-{issue_id}");
+
+    let add_resp = app
+        .server
+        .post(&format!("{}/add", plan_url(&slug, &sprint_id)))
+        .form(&[
+            ("issue_id", issue_id.as_str()),
+            ("project_id", project_id.as_str()),
+        ])
+        .await;
+    add_resp.assert_status(StatusCode::SEE_OTHER);
+    let add_location = add_resp
+        .headers()
+        .get("location")
+        .expect("redirect must carry a Location header")
+        .to_str()
+        .expect("location header is valid utf-8");
+    assert!(
+        add_location.ends_with(&expected_fragment),
+        "expected the add redirect to end with {expected_fragment}, got {add_location}"
+    );
+
+    let after_add = app.server.get(&plan_url(&slug, &sprint_id)).await;
+    let after_add_body = after_add.text();
+    assert!(
+        after_add_body.contains(&format!("id=\"plan-row-{issue_id}\"")),
+        "landing page after add must render the fragment's own target id: {after_add_body}"
+    );
+
+    let remove_resp = app
+        .server
+        .post(&format!("{}/remove", plan_url(&slug, &sprint_id)))
+        .form(&[("issue_id", issue_id.as_str())])
+        .await;
+    remove_resp.assert_status(StatusCode::SEE_OTHER);
+    let remove_location = remove_resp
+        .headers()
+        .get("location")
+        .expect("redirect must carry a Location header")
+        .to_str()
+        .expect("location header is valid utf-8");
+    assert!(
+        remove_location.ends_with(&expected_fragment),
+        "expected the remove redirect to end with {expected_fragment}, got {remove_location}"
+    );
+
+    let after_remove = app.server.get(&plan_url(&slug, &sprint_id)).await;
+    let after_remove_body = after_remove.text();
+    assert!(
+        after_remove_body.contains(&format!("id=\"plan-row-{issue_id}\"")),
+        "landing page after remove must render the fragment's own target id -- \
+         the same id in the backlog column this time: {after_remove_body}"
+    );
+}
+
+/// `NAV-002`: the fragment goes after the query string, never instead
+/// of it -- a filtered backlog's redirect must still carry both.
+/// `filter_round_trip_narrows_backlog_and_survives_move` already pins
+/// the query string surviving a move; this pins the fragment sitting
+/// after it specifically, since `plan_query_string`'s own `?`-prefixed
+/// output and a `#`-prefixed fragment concatenated in the wrong order
+/// would silently produce a fragment that swallows the query instead.
+#[tokio::test]
+async fn move_redirect_fragment_follows_the_preserved_query_string() {
+    let app = TestApp::spawn().await;
+    let admin = TestUser::new("alice");
+    let admin_id = register_and_login(&app, &admin).await;
+    let team_id = create_team_with_admin(&app.db, &admin_id, "Team").await;
+    let slug = slug_for(&app, &team_id).await;
+    let project_id = create_team_project(&app.db, &admin_id, &team_id, "Proj").await;
+    let sprint_id = create_planned_sprint(&app.db, &team_id, "Sprint 1").await;
+    let issue_id = insert_open_issue(
+        &app,
+        &project_id,
+        &admin_id,
+        "Filtered fragment target",
+        Priority::High,
+        Some(3),
+    )
+    .await;
+
+    let resp = app
+        .server
+        .post(&format!("{}/add", plan_url(&slug, &sprint_id)))
+        .form(&[
+            ("issue_id", issue_id.as_str()),
+            ("project_id", project_id.as_str()),
+            ("priority", "high"),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+    let location = resp
+        .headers()
+        .get("location")
+        .expect("redirect must carry a Location header")
+        .to_str()
+        .expect("location header is valid utf-8");
+
+    let expected = format!("priority=high#plan-row-{issue_id}");
+    assert!(
+        location.ends_with(&expected),
+        "expected the query string immediately followed by the fragment, got {location}"
+    );
+}
+
 /// Test 4 -- sub-issues never appear in either column.
 #[tokio::test]
 async fn sub_issues_do_not_appear_in_either_column() {

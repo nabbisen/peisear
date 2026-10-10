@@ -922,9 +922,15 @@ pub async fn plan_add(
     )
     .await
     .map_err(refusal_as_validation)?;
+    // `NAV-002`: the fragment goes after the query string, never
+    // instead of it -- `qs` already carries the backlog's filter
+    // fields and `FR-NAV-005` is why. The row keeps this id in the
+    // sprint column too (`render_sprint_items` renders the same
+    // `plan_row_dom_id`), so the fragment resolves after this move.
     let qs = plan_query_string(&form.project, &form.priority, &form.assignee);
+    let fragment = components::sprint_plan::plan_row_dom_id(&issue.id);
     Ok(Redirect::to(&format!(
-        "/teams/{slug}/sprints/{sprint_id}/plan{qs}"
+        "/teams/{slug}/sprints/{sprint_id}/plan{qs}#{fragment}"
     )))
 }
 
@@ -985,8 +991,13 @@ pub async fn plan_remove(
     )
     .await
     .map_err(refusal_as_validation)?;
+    // `NAV-002`: see `plan_add`'s matching comment -- the fragment
+    // targets the same id in the backlog column this remove lands
+    // the row back on (`render_backlog` renders the same
+    // `plan_row_dom_id`).
     let qs = plan_query_string(&form.project, &form.priority, &form.assignee);
+    let fragment = components::sprint_plan::plan_row_dom_id(&form.issue_id);
     Ok(Redirect::to(&format!(
-        "/teams/{slug}/sprints/{sprint_id}/plan{qs}"
+        "/teams/{slug}/sprints/{sprint_id}/plan{qs}#{fragment}"
     )))
 }
