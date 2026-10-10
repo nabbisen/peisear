@@ -11,6 +11,8 @@ items were wrong in different ways.
 
 | NAV-002 | [a fragment for the row you acted on](./NAV-002-a-fragment-for-the-row-you-acted-on.md) | **`POST-001`'s case 1, commissioned.** A fragment anchor on the sprint-plan row's own id, so a move stops discarding **1292 px of 3078** on a phone. No script, no `FR-NAV-005` collision. **Scoped to redirects landing on a page the row still appears on** — the other 49 `Redirect::to` sites are untouched, and the handoff's first section is the reason: a uniform fix would read as solved while doing nothing for the calendar case that raised this. | 0.48.0 |
 
+| REL-0.48.0 | [candidate](./REL-0.48.0-release-candidate.md) | **The release.** Expect **407** from 405 — `NAV-002`'s two tests. Two production files changed. The notes lead with the phone fix and must say plainly what it does **not** promise (scroll position is not restored, deliberately) and that the **calendar case is explicitly not fixed**. A behavioural check is asked for: move a row on a long backlog at phone width and confirm **that row is in view**. | 0.48.0 |
+
 ## The two recited items that were wrong
 
 **One did not exist.** *"`FR-DM-005`'s keyboard undo (RFC-sized)"* was carried
