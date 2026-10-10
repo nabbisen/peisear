@@ -31,6 +31,8 @@ mod dec_007_fs_scan;
 mod dec_007_scan;
 #[cfg(test)]
 mod dm_fallback_boundary_scan;
+#[cfg(test)]
+mod docs_scan;
 pub mod error;
 pub mod extractors;
 pub mod handlers;
