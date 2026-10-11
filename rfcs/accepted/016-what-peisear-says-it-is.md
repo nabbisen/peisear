@@ -215,9 +215,17 @@ half that is missing, each one shipped and verifiable:
   next regeneration — including the crates.io hero image for 0.49.0. **The
   brand string is one file and no test asserts it; folding it into `DOCS-008`
   costs one more capture run and gets it right the first time.**
-- **Surfaces outside the repository.** The GitHub repository description and
-  the crates.io summary carry the same one-line claim and are the owner's to
-  edit; this RFC cannot reach them. Named so they are not forgotten.
+- **Surfaces outside the repository.** The crates.io summary comes from
+  `Cargo.toml` and is covered by §9. The **GitHub repository description** is
+  the owner's to edit — and, measured on 2026-10-11, it says something
+  different again: *"Accompanying assistant to promote project
+  collaboration."* It is **not wrong in the README's direction** (it never
+  says *issue tracker*), but it is a third distinct self-description, so the
+  product now introduces itself three different ways depending on where it is
+  met. **0.50.0's copy pass should produce one line and use it in all five
+  places** — README hero, both `Cargo.toml` descriptions, the `//!` line,
+  `book.toml`, and the GitHub description — rather than five lines that each
+  sound reasonable alone.
 - **No functional risk.** Neither proposal changes behaviour, routes, data or
   permissions.
 
