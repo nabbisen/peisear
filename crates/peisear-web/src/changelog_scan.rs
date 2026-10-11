@@ -492,19 +492,30 @@ fn the_repository_satisfies_the_changelog_policy() {
 
 #[test]
 fn a_version_in_two_files_is_found() {
+    // Derived from the live workspace version, not a hardcoded string --
+    // `REG-001`'s own sibling test in this file was written against
+    // `0.40.0` and broke silently the moment `0.50.0`'s series rollover
+    // moved that version out of `CHANGELOG.md` and into an archive
+    // (`§10.36`'s own shape, found running this exact test at that
+    // release). This duplicates the *current* release's own section into
+    // an archive -- the realistic defect shape at any point in time.
     let mut r = real();
+    let (maj, min, pat) = r.version;
+    let heading_prefix = format!("## [{maj}.{min}.{pat}]");
     let older = r.archives[0].1.clone();
     let dup: String = r
         .changelog
         .lines()
-        .skip_while(|l| !l.starts_with("## [0.40.0]"))
+        .skip_while(|l| !l.starts_with(&heading_prefix))
         .take(2)
         .map(|l| format!("{l}\n"))
         .collect();
     r.archives[0].1 = format!("{older}\n{dup}");
     let v = run(&r);
     assert!(
-        only(v, "rule 1").iter().any(|m| m.contains("0.40.0")),
+        only(v, "rule 1")
+            .iter()
+            .any(|m| m.contains(&format!("{maj}.{min}.{pat}"))),
         "a duplicated version must be reported"
     );
 }
@@ -573,12 +584,22 @@ fn a_link_to_a_moved_section_is_found() {
     );
 
     // The same link into the archive that now holds it is fine, and so is a
-    // link to a section that is still in CHANGELOG.md.
+    // link to a section that is still in CHANGELOG.md -- the live workspace
+    // version's own heading, derived rather than hardcoded, for the same
+    // reason as the sibling test above: `0400--2026-09-25` was that section
+    // once and stopped being the moment 0.40.0 moved to an archive.
+    let (maj, min, pat) = r.version;
+    let heading_prefix = format!("## [{maj}.{min}.{pat}]");
+    let live_slug = r
+        .changelog
+        .lines()
+        .find(|l| l.starts_with(&heading_prefix))
+        .map(|l| slug(l.trim_start_matches('#').trim()))
+        .expect("the live version has a section in CHANGELOG.md");
     let mut r = real();
     r.docs.push((
         "docs/x.md".into(),
-        "[a](../changelog/0.30-0.39.md#0390--2026-09-25) [b](../CHANGELOG.md#0400--2026-09-25)"
-            .into(),
+        format!("[a](../changelog/0.30-0.39.md#0390--2026-09-25) [b](../CHANGELOG.md#{live_slug})"),
     ));
     assert!(only(run(&r), "rule 5").is_empty());
 }
