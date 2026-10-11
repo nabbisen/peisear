@@ -113,6 +113,11 @@ backend documentation will say.
   the workspace. Harmless while it is a file path; **a credential in journald
   the day `RFC 0018` P3 lands**. One line and a test, worth doing now.
 
+**Added 2026-10-12 from `REL-0.50.0`'s own sweep:** `first-run.md`'s sample
+log line shows the tracing target `peisear_web` where the code's own target
+is `peisear`. Named by pass 5 and deliberately not picked up there — a
+documentation release is next and that is where it belongs.
+
 **Two decisions are the owner's**, recorded here so they are not lost:
 
 1. **Do reviews become committed artefacts?** `.git-exclude/reviewed` is cited
