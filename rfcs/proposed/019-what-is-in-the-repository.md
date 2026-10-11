@@ -1,7 +1,8 @@
 # RFC 0019: What is in the repository — key information, and where handoffs live
 
-**Status**: **Proposed** (2026-10-12) — one decision is the owner's (§7)
-**Target**: 0.51.0, replacing `DOC-002`'s sketch
+**Status**: **Proposed** (2026-10-12) — **§6's original proposal withdrawn
+on the owner's instruction; §5 answers the question actually asked**
+**Target**: none yet. Held for consideration
 **Raised by**: the owner, 2026-10-12 — *"In my mental model, handoffs and
 RFCs are also published and shared. To my understanding, it is the issue on
 documentation. Key information should not be in `.git-exclude/`."*
@@ -115,49 +116,80 @@ differ**: `.git-exclude/rules/000-rfc-lifecycle-policy.md` records *"the
 5-folder variant is adopted"* in its Status line; `rfcs/done/`'s copy says
 only *"Implemented"*. **The authoritative sentence is in the private copy.**
 
-## §5 — Proposal
+## §5 — Finding E: why the documentation was not updated — the measurement
 
-**One principle, stated once**: *a published document may defer only to
-another published document.*
+*The owner's actual question, 2026-10-12. Answered with numbers rather than
+with a remedy, because the remedy is not the part that was missing.*
 
-1. **`.git-exclude/reviewed/` → `reviews/`** in the repository, prose only.
-   ~60 documents, a few hundred KB. The citations become resolvable links.
-2. **The cited architect derivations → `docs/specification/derivations/`**,
-   or the citations go. A normative requirement may not defer to a file
-   nobody can open.
-3. **`.git-exclude/rules/` → `docs/development/project-rules.md`**, as the
-   project's own standards, with `CONTRIBUTING.md` linking to it. **And the
-   two copies of the lifecycle policy become one.**
-4. **Review-request READMEs → committed with the round's handoff**; evidence
-   logs stay out. The README is the account; the logs are its working.
-5. **Handoffs: resolve §2 deliberately.** Either the project's copy of the
-   policy gains a *round handoff* alongside the RFC companion, or
-   non-RFC handoffs move out of `rfcs/` to a sibling `handoffs/`.
-   **Recommend the former** — the directories are cited from 83 files and
-   the policy is ours to amend, where the citations are not ours to break
-   cheaply.
-6. **Then rule 5 stands exactly as written**, no carve-out: no committed
-   file cites a gitignored path, because nothing key is gitignored. What
-   remains behind it is scratch, evidence and the owner's private inputs.
+**There is no document that owns a decision.** Measured across every
+committed file:
 
-**Sequencing**: 1–4 are mechanical and independent; 5 is a policy amendment;
-6 is one `#[ignore]` removed and should land last, as the proof the rest
-worked.
+| | |
+|---|---|
+| Decision numbers assigned (`DEC-001`…`DEC-059`) | **59** |
+| Cited anywhere in the repository | **35** |
+| **Appearing in no committed file at all** | **24** — `DEC-002`, `-003`, `-005`, `-006`, `-009`, `-012`, `-014`, `-016`, `-017`, `-024`, `-026`, `-027`, `-029`, `-031`, `-033`…`-042` |
+| Cited but appearing in no `docs/` file | **6** — `DEC-011`, `-018`, `-023`, `-025`, `-032`, `-043` |
+| Files that **define** a decision rather than cite one | **0** |
 
-## §6 — what this costs, stated plainly
+**Nothing in this repository states what any of these decisions is.** They
+are cited — *"per `DEC-049`"*, *"`DEC-013`'s own rule"* — and defined
+nowhere. The definitions are in reviews and architect notes, which are
+private, which is why the citations point there.
 
-- **Every review becomes public**, including my criticisms of the dev team's
-  work and my own reversals. **That is the point of the change and also its
-  price**, and it is the owner's to accept.
-- **Repository size** grows by a few hundred KB of prose. Evidence stays
-  out, which is where the bulk is.
-- **~137 citations get rewritten** once, mechanically.
+**Four causes, and they compound:**
 
-## §7 — decision required
+1. **A ruling has no home.** `requirements.md` owns *what must be true*,
+   `external-design.md` owns *what is presented*, `CHANGELOG.md` owns *what
+   changed*. **A decision — "we parameterise rather than add an env var,
+   because a lever that can silently disable a gate is the shape this
+   project keeps finding" — belongs to none of them**, so it stays where it
+   was made.
+2. **The release check asks the wrong question.** The standing rule is
+   *"verify all docs match changed requirements / design / specs"*, and the
+   sweep's five passes implement it as *"is this document still true?"*
+   **Absence is invisible to a check for contradiction.** A decision never
+   written down makes no document wrong — it makes them incomplete, and
+   nothing looks for incompleteness. **This is `§10.36` at the process
+   level**: the sweep cannot tell *nothing wrong* from *nothing recorded*.
+3. **Citing was cheaper than absorbing, and nothing charged for it.** One
+   line to name a review; a paragraph and a judgement to decide which
+   committed document owns the substance and write it there. **137
+   citations is the accumulated bill.**
+4. **The rule that would have caught it was itself private** (§4). It binds
+   the architect and the dev team cannot check it was followed.
 
-**Does the project's working record become part of the repository?** The
-owner's own sentence — *key information should not be in `.git-exclude/`* —
-answers it in principle; §5 is what it costs in practice, and §6 is the one
-consequence worth saying out loud before it is irreversible.
+## §6 — the earlier proposal, withdrawn
 
-Everything else in §5 follows from a yes and is mine to schedule.
+**This RFC first proposed moving `.git-exclude/reviewed/` into the
+repository. Withdrawn on the owner's instruction, 2026-10-12**: *"What is
+important is not to store review result as-is. Respect my privacy and secret
+in local environment."*
+
+**That is right, and it sharpens §5.** A review is **working material** — it
+carries local paths, machine details, and candid assessment of a round. It
+is not a record. **The record is what gets extracted from it**, and the
+reason the citations exist is that the extraction step was never
+anybody's job.
+
+## §7 — direction, held for consideration rather than scheduled
+
+**Not a plan. The owner asked for consideration first, and §5 is the part
+that had to be measured before anything is proposed.**
+
+The shape the measurement points at:
+
+- **Reviews stay private.** Unchanged.
+- **The direction of reference inverts.** A committed document never defers
+  to a private one. A private review may cite committed documents freely.
+- **Decisions get a home** — a committed register where each `DEC-nnn` is a
+  few distilled lines, not the review's prose. **That is the gap the 24
+  invisible numbers measure.**
+- **The sweep gains the absence question**: *what did this release decide,
+  and which committed document now says it?* — distinct from all five
+  existing passes, which ask only whether what is written is still true.
+- **Rule 5 then becomes achievable as written**, as a consequence rather
+  than as the goal.
+
+**Nothing above is scheduled.** `DOC-002` stays blocked and the other four
+0.51.0 rounds are unaffected.
