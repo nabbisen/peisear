@@ -6,6 +6,65 @@ one small addition.
 
 **Review**: `.git-exclude/reviewed/DOCS-007-review.md`. **Target**: 0.49.0.
 
+**Amended 2026-10-11, after the round was written**: `RFC 0016` was raised by
+the owner, accepted the same day, and puts **one change ahead of the
+captures** — §0 below. Read it first; it changes what the images must show.
+
+---
+
+## §0 — before you capture anything: the product's own name
+
+**`RFC 0016` (accepted, owner decision): the interface brand string becomes
+`peisear`.** Today it is **"Issue Tracker"** — in the navbar of every
+authenticated page and in seven page titles — so the product never says its
+own name, and `DOCS-007`'s committed screenshots publish the wrong one.
+
+**Do this before `node browser-checks/doc-screenshots.mjs` runs**, or the
+images are captured twice.
+
+In `crates/peisear-i18n/src/en.rs`, eight string literals:
+
+| Line | Now | Becomes |
+|---|---|---|
+| `:205` | `AppBrandName => "Issue Tracker"` | `"peisear"` |
+| `:221` | `"Error — Issue Tracker"` | `"Error — peisear"` |
+| `:273` | `"{project_name} — Issue Tracker"` | `"{project_name} — peisear"` |
+| `:327` | `"Projects — Issue Tracker"` | `"Projects — peisear"` |
+| `:333` | `"New project — Issue Tracker"` | `"New project — peisear"` |
+| `:345` | `"Edit {project_name} — Issue Tracker"` | `"Edit {project_name} — peisear"` |
+| `:1040` | `"Sign in — Issue Tracker"` | `"Sign in — peisear"` |
+| `:1041` | `"Create account — Issue Tracker"` | `"Create account — peisear"` |
+
+**Lowercase `peisear`**, matching the crate, the command, the documentation
+prose and the specifications. Not *Peisear*; the logo's wordmark is not the
+interface's.
+
+**My search for anything that asserts the old text was bounded**:
+`git grep -F 'Issue Tracker'` over tracked files returns the eight above plus
+`RFC 0016`'s own quotations — **no test, fixture or document asserts it**
+(`fixture_locale.rs:131` uses `[fx-brand]`, so the i18n guard is unaffected).
+**Re-run that search yourself before trusting it**, and say what you found.
+
+## §0.1 — and the same claim in four published one-liners
+
+`RFC 0016 §9`. Each is **published by the 0.49.0 release itself**, so leaving
+them would pair a corrected hero image with an uncorrected crates.io card:
+
+- `crates/peisear/Cargo.toml:3` — the **crates.io description**.
+- `crates/peisear/src/lib.rs:1` — the `//!` line, the **docs.rs front page**.
+- `crates/peisear-web/Cargo.toml:3` — "…for peisear (issue tracker)".
+- `docs/book.toml:17` — the book's own description.
+
+**Take the wording from `RFC 0016`'s hero draft**, not from a fresh
+invention, so one phrasing governs: *project and issue tracking that also
+shows how the project — and the people in it — are holding up*. Keep the
+owner's own adjectives where they still fit. **These are provisional** —
+0.50.0's `README.md` pass owns the final phrasing and these lines follow it.
+
+**Do not touch `README.md`'s prose in this round.** The repositioning is
+0.50.0's, deliberately, and starting it here would mix a careful copy pass
+into a release-closing round. The hero *image* is still this round's.
+
 ---
 
 ## §1 — the fixture language still in two committed images
@@ -106,9 +165,14 @@ measured.
   and §4 adds at least one. **Say the number and what it is.**
 - **`overflow-gate.mjs` at 120 cells**, since §1 touches its string set
   again. The other two gates if anything they read changes; say so either way.
-- **The three images regenerated**, byte cost reported, and **§4.1's
-  per-image privacy confirmations repeated for the new captures** — they are
-  new files, so the old confirmations do not carry over.
+- **The three images regenerated after §0**, byte cost reported, and
+  **§4.1's per-image privacy confirmations repeated for the new captures** —
+  they are new files, so the old confirmations do not carry over. **The
+  navbar in all three must read `peisear`**; if it does not, the capture ran
+  against a stale binary.
+- **`DEC-028`**: check whether either specification records the old brand or
+  the old one-line description. I searched and found none, but that search
+  was mine and the rule is yours to satisfy.
 - **`mdbook build` with linkcheck**, `fmt`, `clippy -D warnings`,
   `rustdoc-links` (seven crates, eight private-link warnings, zero broken).
 
@@ -124,8 +188,10 @@ measured.
 
 ## §8 — exit condition
 
-Three images in which **nothing reads as a fixture and nothing contradicts
-the prose beside it**; the per-image privacy check repeated and reported; the
+The interface saying **`peisear`** and the four published one-liners no longer
+calling the product an issue tracker; three images, captured after that, in
+which **nothing reads as a fixture and nothing contradicts the prose beside
+it**; the per-image privacy check repeated and reported; the
 exclusion proved by a positive assertion; rule 6 written or declined with a
 reason; `DEC-007` stated and explained; the gate at 120; `mdbook build`
 clean.

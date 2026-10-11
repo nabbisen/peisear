@@ -31,6 +31,7 @@ Design settled. Implementation may begin.
 
 | ID | Title | Target |
 |----|-------|--------|
+| 016 | [What peisear says it is](./accepted/016-what-peisear-says-it-is.md) — **accepted 2026-10-11**, owner-raised. The requirements call the distinguishing purpose keeping *"a project — and the people in it — sustainable"*; `README.md` says *"issue tracking"*, and the interface's own brand string is **"Issue Tracker"**, so the product never says its name. `README.md` mentions health, sustainability, privacy, `/today`, WIP and sprints **zero times each** — all shipped, two of them visible in the hero screenshot the README carries. The logo is a hearth with people around it; only the words disagree | 0.49.0 (brand + published one-liners), 0.50.0 (README) |
 | 014 | [The identity newtype](./accepted/014-the-identity-newtype.md) — **accepted 2026-10-07**, `DEC-058`. Identity is a `String` and identity-ness lives in a variable's name; a type only a session can construct makes `NFR-PRIV-005`'s stronger reading satisfiable. **Not a security fix** — the boundary holds; what changes is that it cannot be broken by inattention | 0.43.0 |
 
 RFC 015 closed at 0.45.0 and moved to `done/`: the clause landed at

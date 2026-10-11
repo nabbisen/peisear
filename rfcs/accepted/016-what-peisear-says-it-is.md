@@ -1,8 +1,10 @@
 # RFC 0016: What peisear is called, and what it says it is
 
-**Status**: **Proposed** (2026-10-11) — two decisions are the owner's
-**Target**: the brand string in 0.49.0 (one file, eight strings); the
-`README.md` repositioning in 0.50.0 if accepted
+**Status**: **Accepted** (2026-10-11) — both decisions taken by the owner;
+implementation may begin
+**Target**: the brand string and the published one-line descriptions in
+**0.49.0** (inside `DOCS-008`, before the screenshots are captured); the
+`README.md` repositioning in **0.50.0**
 **Raised by**: the owner, 2026-10-11 — *"`README.md` said about themselves at
 the top, 'Issue tracking' and 'issue management system'. However, this project
 is not just an issue tracker."*
@@ -219,10 +221,33 @@ half that is missing, each one shipped and verifiable:
 - **No functional risk.** Neither proposal changes behaviour, routes, data or
   permissions.
 
-## Decisions required
+## Decisions taken (owner, 2026-10-11)
 
-1. **The interface brand string** — `peisear` as proposed, or otherwise.
-2. **Scheduling** — the recommendation is the brand string in **0.49.0**
-   (inside `DOCS-008`, before the screenshots are captured) and the README
-   repositioning in **0.50.0** as its own round, because the copy deserves a
-   careful pass and 0.49.0 is otherwise complete.
+1. **The interface brand string is `peisear`** — bare, lowercase, in the
+   navbar and in all seven title suffixes.
+2. **The brand string lands in 0.49.0**, inside `DOCS-008` and **before the
+   screenshots are captured**, so the crates.io hero image for 0.49.0 carries
+   the real name. **The `README.md` repositioning lands in 0.50.0** as its own
+   round, with `DOCS-006`.
+
+## §9 — found while scoping the decision: the same claim is in published metadata
+
+Three further one-line descriptions say *issue tracker*, and all three are
+**published by the 0.49.0 release itself**:
+
+| File | Text | Published to |
+|---|---|---|
+| `crates/peisear/Cargo.toml:3` | "A minimal, sophisticated, solid, and easy issue tracker." | **the crates.io card** |
+| `crates/peisear/src/lib.rs:1` | `//! peisear — a minimal, sophisticated, solid, and easy issue tracker.` | **the docs.rs front page** |
+| `crates/peisear-web/Cargo.toml:3` | "…for peisear (issue tracker)." | the crates.io card for that crate |
+| `docs/book.toml:17` | "Self-hostable issue tracker: …" | the book's metadata |
+
+These are the same defect as the brand string, not the same work as the README
+pass: one line each, mechanical, and **published at the next `cargo publish`**.
+Leaving them would mean 0.49.0 ships a corrected hero image beside an
+uncorrected crates.io description, which is a worse state than either.
+
+**So they move with the brand string, into `DOCS-008`**, with the wording
+taken from this RFC's own hero draft rather than invented separately — and
+marked provisional, because 0.50.0's README pass owns the final phrasing and
+these lines follow it.
