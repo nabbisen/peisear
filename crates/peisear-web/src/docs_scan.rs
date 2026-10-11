@@ -587,6 +587,15 @@ fn the_helpers_do_what_the_rules_assume() {
         ),
         vec!["docs/a.png".to_string(), "docs/b.png".to_string()]
     );
+    // `DOCS-008` review, F-1: rule 6 passes vacuously if `RAW_URL_PREFIX`
+    // ever stops matching anything in README.md (a renamed repository, a
+    // host change) -- the plant test can't catch that, since it builds
+    // its own URL from the same literal. This is the guard: the real
+    // README.md must still contain at least one URL the prefix matches.
+    assert!(
+        !raw_url_paths(&real().readme).is_empty(),
+        "README.md has no raw_url_paths() match -- rule 6 would pass by matching nothing"
+    );
 }
 
 // ---------- rule 5: committed citations of a gitignored path ----------
