@@ -30,6 +30,18 @@ nowhere, `peisear-i18n` missing from both architecture documents that
 enumerate crates, and generated contents lists for two specifications totalling
 **504 KB with no table of contents between them**.
 
+**Added 2026-10-11, from `DOCS-007`'s review (§6):** the overflow gate's own
+`sprint_plan` page sweeps **empty**. `createFixtures` moves every
+team-project issue it creates into the *completed* sprint
+(`sprint_issues`' single-sprint-per-issue invariant), so the still-planned
+sprint's plan page has an empty Backlog and empty Sprint Items at all five
+widths — **five of the 120 cells measure a page with no list in it**, which
+is `GATE-001` and `GATE-002` repeating. The fix is one or two more
+team-project issues left out of the completed sprint; **the fourth
+documentation screenshot falls out of it for free**. Held out of 0.49.0
+deliberately: populating a never-swept surface can turn the gate red, and
+that does not belong inside a release candidate.
+
 **Two decisions are the owner's**, recorded here so they are not lost:
 
 1. **Do reviews become committed artefacts?** `.git-exclude/reviewed` is cited
