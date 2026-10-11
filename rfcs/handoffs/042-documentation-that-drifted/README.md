@@ -42,6 +42,17 @@ documentation screenshot falls out of it for free**. Held out of 0.49.0
 deliberately: populating a never-swept surface can turn the gate red, and
 that does not belong inside a release candidate.
 
+**Added 2026-10-11, owner-raised, `RFC 0016` (accepted):** `README.md`'s
+hero, overview, "Why peisear?" and feature list describe a self-hosted issue
+tracker. The in-repo normative requirements (§1.1) describe a service whose
+distinguishing purpose is keeping *"a project — and the people in it —
+sustainable"*, and the README mentions health, sustainability, privacy,
+`/today`, WIP, capacity and sprints **zero times each** — all shipped, two of
+them visible in the hero screenshot the README now carries. **The
+repositioning is 0.50.0's**, beside `DOCS-006`; the brand string and the four
+published one-line descriptions went into 0.49.0 with `DOCS-008`, because the
+release publishes them.
+
 **Two decisions are the owner's**, recorded here so they are not lost:
 
 1. **Do reviews become committed artefacts?** `.git-exclude/reviewed` is cited
