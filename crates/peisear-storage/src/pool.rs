@@ -23,7 +23,22 @@ pub async fn connect(url: &str) -> StorageResult<Pool> {
     let opts = SqliteConnectOptions::from_str(url)?
         .create_if_missing(true)
         .journal_mode(SqliteJournalMode::Wal)
-        .synchronous(SqliteSynchronous::Normal)
+        // `STORE-002` (`RFC 0018` P0b), measured 2026-10-11 on an AMD Ryzen 9
+        // 9950X (NVMe-backed, LUKS-encrypted filesystem): `NORMAL` can lose
+        // recently committed transactions on a power cut or an OS crash;
+        // `WAL`+`NORMAL` only fsyncs at checkpoint, where `FULL` fsyncs the
+        // WAL on every commit. The write-heavy path `browser-checks/`'s own
+        // fixture builder exercises (a registration, a team, a sprint, a
+        // project, several issues, through the real forms) was timed under
+        // both, ten rounds each, order randomised per round to cancel out
+        // drift over the run: 443.9 ms mean under `NORMAL`, 441.9 ms under
+        // `FULL` -- a 2 ms difference on a ~440 ms base, inside the ~10 ms
+        // round-to-round noise either setting shows on this machine. `FULL`'s
+        // extra fsync is not a measurable cost here, which settles this in
+        // the direction self-hosting already implies: 5-30 users on one
+        // node, human-paced writes, and durability that is part of why
+        // someone self-hosts in the first place.
+        .synchronous(SqliteSynchronous::Full)
         .foreign_keys(true)
         .busy_timeout(Duration::from_secs(5))
         // `PERF-002`: let each install's own data choose its plans. Nothing

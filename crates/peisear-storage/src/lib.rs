@@ -20,6 +20,8 @@ pub mod project_health;
 pub mod projects;
 pub mod search;
 pub mod sprints;
+#[cfg(test)]
+mod store002_guards;
 pub mod subjects;
 pub mod teams;
 pub mod user_burnout;
