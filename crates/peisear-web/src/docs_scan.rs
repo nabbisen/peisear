@@ -619,13 +619,38 @@ fn the_helpers_do_what_the_rules_assume() {
 /// banning its own existence.
 const SELF_PATH: &str = "crates/peisear-web/src/docs_scan.rs";
 
+/// `repo_root()` has no `.git` of its own -- which `git -C <dir>
+/// ls-files` does not require to answer *something*: git walks upward
+/// and happily resolves against an *enclosing* repository if `dir` is a
+/// subdirectory of one. That is exactly what a `git archive` extraction
+/// under `.git-exclude/tmp/` triggers during release-candidate
+/// verification: `.git-exclude/` is itself gitignored and nested inside
+/// this very checkout, so `git -C <extracted-tree> ls-files` silently
+/// answers against *this* repository and correctly reports nothing
+/// tracked under a gitignored path -- which reads as "zero citations"
+/// rather than "no git information is available here." Checked via
+/// `.git`'s own presence (a file in a worktree, a directory in an
+/// ordinary checkout; `.exists()` covers both) rather than shelling out
+/// again, since the question is only "does this directory have its own
+/// git metadata," not anything git itself needs to answer.
+fn in_own_git_repo() -> bool {
+    repo_root().join(".git").exists()
+}
+
 /// Every path `git` considers tracked, unfiltered -- the raw list
 /// [`tracked_files`] filters `SELF_PATH` out of. Kept separate so a test
 /// can assert against the *un*filtered list too (`DOCS-008` §3): a test
 /// that only checks `SELF_PATH` is absent from the filtered output
 /// passes vacuously if `SELF_PATH` is stale (the file renamed or moved),
 /// since an absent path is trivially "not found" either way.
-fn git_tracked_paths() -> Vec<String> {
+///
+/// `None` when [`in_own_git_repo`] is false -- callers must not read an
+/// empty `Vec` as "git ran and found nothing," because that is exactly
+/// the silent-wrong-answer shape this function exists to avoid.
+fn git_tracked_paths() -> Option<Vec<String>> {
+    if !in_own_git_repo() {
+        return None;
+    }
     let root = repo_root();
     let output = std::process::Command::new("git")
         .arg("-C")
@@ -634,17 +659,19 @@ fn git_tracked_paths() -> Vec<String> {
         .arg("-z")
         .output()
         .expect("git ls-files");
-    String::from_utf8_lossy(&output.stdout)
-        .split('\0')
-        .filter(|s| !s.is_empty())
-        .map(|s| s.to_string())
-        .collect()
+    Some(
+        String::from_utf8_lossy(&output.stdout)
+            .split('\0')
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect(),
+    )
 }
 
-fn tracked_files() -> Vec<(String, String)> {
+fn tracked_files() -> Option<Vec<(String, String)>> {
     let root = repo_root();
     let mut out = Vec::new();
-    for rel in git_tracked_paths() {
+    for rel in git_tracked_paths()? {
         if rel == SELF_PATH {
             continue;
         }
@@ -652,7 +679,7 @@ fn tracked_files() -> Vec<(String, String)> {
             out.push((rel, text));
         }
     }
-    out
+    Some(out)
 }
 
 /// Occurrences, not distinct paths -- matching `git grep -o '.git-exclude'`.
@@ -666,9 +693,21 @@ fn git_exclude_citations(files: &[(String, String)]) -> usize {
 /// Always runs, never fails: surfaces the count so a reader of `cargo test
 /// -p peisear-web --lib -- --nocapture` sees it without the live suite
 /// going red over a gap `DOCS-006` (0.50.0) is what's expected to close.
+/// Reports plainly, rather than a false `0`, when run somewhere with no
+/// git information for this repository (`REL-0.49.0`'s own extracted-tree
+/// verification found this the hard way: an absent count silently read
+/// as a zero count).
 #[test]
 fn git_exclude_citation_count_is_reported() {
-    let count = git_exclude_citations(&tracked_files());
+    let Some(files) = tracked_files() else {
+        println!(
+            "docs_scan rule 5: no git information available for this repository here \
+             (no `.git` at {:?} -- e.g. a `git archive` extraction) -- count not measured",
+            repo_root()
+        );
+        return;
+    };
+    let count = git_exclude_citations(&files);
     println!(
         "docs_scan rule 5: {count} citations to `.git-exclude` in tracked files, \
          excluding this module's own ({SELF_PATH}) -- 130 at last measurement \
@@ -702,16 +741,29 @@ fn a_planted_git_exclude_citation_is_counted() {
 /// first: `SELF_PATH` must be present in git's own *unfiltered* tracked
 /// list, which fails loudly, naming the path, the moment a rename makes
 /// `SELF_PATH` stale -- then the filtered list must exclude it.
+///
+/// Skips, rather than fails, when [`in_own_git_repo`] is false: this
+/// test's own subject is git's tracked/untracked distinction, and
+/// nothing can be proved about it without git information for this
+/// repository to check against. Found during `REL-0.49.0`'s own
+/// extracted-tree verification -- exactly the context this guard exists
+/// for, not a hypothetical one.
 #[test]
 fn the_scan_does_not_count_its_own_file() {
-    let tracked = git_tracked_paths();
+    let Some(tracked) = git_tracked_paths() else {
+        println!(
+            "docs_scan: no git information available for this repository here -- \
+             skipping (cannot prove the exclusion without it)"
+        );
+        return;
+    };
     assert!(
         tracked.iter().any(|p| p == SELF_PATH),
         "{SELF_PATH} is not a tracked file -- if docs_scan.rs was renamed \
          or moved, update SELF_PATH to match, or this test cannot prove \
          the exclusion it exists to prove"
     );
-    let files = tracked_files();
+    let files = tracked_files().expect("git_tracked_paths() just succeeded above");
     assert!(
         !files.iter().any(|(path, _)| path == SELF_PATH),
         "tracked_files() must exclude {SELF_PATH}, or rule 5 can never pass"
@@ -730,7 +782,9 @@ fn the_scan_does_not_count_its_own_file() {
             130 at last measurement (2026-10-11, this module's own excluded) -- \
             see docs_scan's rule 5 and this module's own doc comment"]
 fn no_committed_file_cites_git_exclude() {
-    let count = git_exclude_citations(&tracked_files());
+    let files = tracked_files()
+        .expect("run this inside the repository's own git working tree, not an extracted one");
+    let count = git_exclude_citations(&files);
     assert_eq!(
         count, 0,
         "{count} committed citations to .git-exclude/ remain"
