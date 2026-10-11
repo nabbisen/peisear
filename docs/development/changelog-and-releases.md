@@ -252,7 +252,11 @@ had cost:
    compare a crate set, an MSRV, a file manifest and a config default against
    their sources — `DOCS-005` builds it. **What a scan cannot check is
    whether prose still describes a behaviour**, which is why this pass exists
-   beside it rather than instead of it.
+   beside it rather than instead of it. **The screenshots under
+   `docs/src/assets/screenshots/` are regenerated and looked at here too**
+   (`node browser-checks/doc-screenshots.mjs`, `DOCS-004`/`DOCS-007`) — a
+   stale screenshot looks authoritative in exactly the way a stale sentence
+   does, and nothing else in this procedure reads pixels.
 
 **Two things this procedure must not become.** It is not a re-audit of all 162
 entries — `REQ-001` did that once and it is not a per-release cost. And a

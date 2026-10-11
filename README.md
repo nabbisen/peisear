@@ -19,6 +19,8 @@ peisear is a self-hostable issue management system — projects, issues,
 a kanban board, and a handful of thoughtful edges. One Rust binary,
 one SQLite file, no Node toolchain, no external services.
 
+![The kanban board: issue cards in Open, In Progress and Done columns](https://github.com/nabbisen/peisear/raw/main/docs/src/assets/screenshots/board.png)
+
 ## Why peisear?
 
 Most issue trackers either bloat into swiss-army platforms or thin

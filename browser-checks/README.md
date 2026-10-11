@@ -67,30 +67,40 @@ attention.
   drag needs `Input.dispatchDragEvent`/`Input.setInterceptDrags`, a CDP
   domain `cdp.mjs` does not wrap, and that question (`GATE-005` candidate
   4) is declined on the record, not built here.
-- `doc-screenshots.mjs` — **not a gate** (`DOCS-004`, owner request). Starts
-  its own scratch instance on its own port (`4176` by default) and reuses
-  `overflow-gate.mjs`'s own `createFixtures` (exported for this purpose)
-  rather than building a second copy of the registration/team/sprint/
-  project/issue flow, then captures five pages at one desktop width for
-  `README.md` and `docs/getting-started/first-run.md`. Asserts nothing,
-  exits 0 whenever the pages render, and **must not be added to the
-  `browser-overflow-gate` CI job** — this directory's title is *gates, not
-  tests*, and a script that isn't one needs saying so here. Run it with
-  `node browser-checks/doc-screenshots.mjs` after `cargo build -p peisear`;
-  `DOC_SCREENSHOT_DIR` overrides the output directory (default
-  `docs/src/assets/screenshots/`).
+- `doc-screenshots.mjs` — **not a gate** (`DOCS-004`, owner request;
+  `DOCS-007` closed its own escalation). Starts its own scratch instance on
+  its own port (`4176` by default) and reuses `overflow-gate.mjs`'s own
+  `createFixtures` (exported for this purpose, and now **parameterised**:
+  it takes the eight fields that render on the captured pages as an
+  argument, so the gate passes its adversarial set explicitly at its own
+  call site and this script passes a plain one, rather than a second
+  fixture function existing) to capture three pages — the board, the list
+  view, and an issue detail — at one desktop width, **1×** (not
+  `cdp.mjs`'s evidence-log 3×), for `README.md` and
+  `docs/getting-started/first-run.md`. Asserts nothing, exits 0 whenever
+  the pages render, and **must not be added to the `browser-overflow-gate`
+  CI job** — this directory's title is *gates, not tests*, and a script
+  that isn't one needs saying so here.
 
-  **Currently blocked on a fixture-quality question, not a harness one.**
-  `overflow-gate.mjs`'s fixture data is deliberately adversarial — display
-  name, project name and two of four issue titles carry a 64-character
-  SHA-256 run (`BROWSER-002`) — and the signed-in display name renders in
-  every page's navbar via `AppShell`, so every screenshot this script
-  produces today shows `Gate Fixture e3b0c442...` top-right, and the board
-  additionally shows it as a project name and in two card titles. This is
-  `DOCS-004` §6's own anticipated case — "if the fixtures do not produce a
-  screen worth showing... that is a fixture question I would rather decide
-  than have improvised" — so no screenshots are committed yet; see the
-  review package for the decision this is waiting on.
+  **Builds its own throwaway database every run and must never be pointed
+  at a real one.** `DATABASE_URL` is pinned in the spawned server's own
+  environment (`doc-screenshots.mjs`'s own comment explains why the pin
+  is load-bearing against `dotenvy`'s non-overriding `dotenv()`); there is
+  no flag or env var that redirects a capture at a running instance's
+  database, and none should be added.
+
+  Run it with `node browser-checks/doc-screenshots.mjs` after `cargo build
+  -p peisear`; `DOC_SCREENSHOT_DIR` overrides the output directory
+  (default `docs/src/assets/screenshots/`), `PEISEAR_BIN` the binary path.
+
+  **A fourth page, the sprint plan, is not captured.** `overflow-gate.mjs`'s
+  fixture adds every team-project issue it creates to a *completed*
+  sprint (`sprint_issues`'s single-sprint-per-issue invariant moves an
+  issue there, it doesn't duplicate it), so the still-*planned* sprint
+  this script could otherwise visit has an empty Backlog and an empty
+  Sprint Items panel regardless of how plain the strings are — a
+  fixture-*population* question, not the string one this round answered.
+  Not committed; see `DOCS-007`'s review package.
 
 ## Running them locally
 

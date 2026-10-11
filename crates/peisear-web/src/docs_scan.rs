@@ -540,6 +540,17 @@ fn the_helpers_do_what_the_rules_assume() {
 // `other_markdown`), because none of them needs git's own tracked/ignored
 // distinction -- this rule's whole subject *is* that distinction.
 
+/// This module's own path, repo-root-relative -- excluded by
+/// [`tracked_files`] (`DOCS-005` review, finding F-1). The rule explains
+/// itself in its own doc comment and test expectations, which
+/// necessarily contain the string `.git-exclude` -- without this
+/// exclusion, the rule could never reach zero, because landing the file
+/// that reports the count raises the count. `DOCS-006` is left to decide
+/// what *else* may legitimately cite the path (a handoff discussing this
+/// problem does, more than once); this exclusion only stops the rule
+/// banning its own existence.
+const SELF_PATH: &str = "crates/peisear-web/src/docs_scan.rs";
+
 fn tracked_files() -> Vec<(String, String)> {
     let root = repo_root();
     let output = std::process::Command::new("git")
@@ -551,7 +562,7 @@ fn tracked_files() -> Vec<(String, String)> {
         .expect("git ls-files");
     let mut out = Vec::new();
     for rel in String::from_utf8_lossy(&output.stdout).split('\0') {
-        if rel.is_empty() {
+        if rel.is_empty() || rel == SELF_PATH {
             continue;
         }
         if let Ok(text) = fs::read_to_string(root.join(rel)) {
@@ -576,10 +587,12 @@ fn git_exclude_citations(files: &[(String, String)]) -> usize {
 fn git_exclude_citation_count_is_reported() {
     let count = git_exclude_citations(&tracked_files());
     println!(
-        "docs_scan rule 5: {count} citations to `.git-exclude` in tracked files \
-         (handoff's own count was 126, taken the same way -- git grep -o is a count \
-         of occurrences, not distinct paths, which is why it moves release to release; \
-         DOCS-006 (0.50.0) is expected to remove them)"
+        "docs_scan rule 5: {count} citations to `.git-exclude` in tracked files, \
+         excluding this module's own ({SELF_PATH}) -- 130 at last measurement \
+         (2026-10-11, DOCS-005 review's own count, after subtracting the 9 this \
+         file necessarily carries), taken as a count of occurrences, not distinct \
+         paths, which is why it moves release to release; DOCS-006 (0.50.0) is \
+         expected to remove them"
     );
 }
 
@@ -592,6 +605,21 @@ fn a_planted_git_exclude_citation_is_counted() {
     assert_eq!(git_exclude_citations(&files), 2);
 }
 
+/// `DOCS-005` review, finding F-1: `tracked_files()` used to count this
+/// module's own file, which cites `.git-exclude` nine times in its doc
+/// comments and test expectations -- so the rule below could never reach
+/// zero, even after `DOCS-006` closes the real gap. Proven directly
+/// (not just asserted by the exclusion's own existence): this module's
+/// own path is absent from what `tracked_files()` returns.
+#[test]
+fn the_scan_does_not_count_its_own_file() {
+    let files = tracked_files();
+    assert!(
+        !files.iter().any(|(path, _)| path == SELF_PATH),
+        "tracked_files() must exclude {SELF_PATH}, or rule 5 can never pass"
+    );
+}
+
 /// Deferred to `DOCS-006` (0.50.0), the same way rule 5's own handoff text
 /// proposes for itself (§1): "write it, and report its current count
 /// rather than landing it failing... write it as a `#[ignore]`d test with
@@ -601,7 +629,7 @@ fn a_planted_git_exclude_citation_is_counted() {
 /// be its own small drift.
 #[test]
 #[ignore = "DOCS-006 (0.50.0) removes committed citations of `.git-exclude/`; \
-            130 at last measurement (2026-10-11, git grep -o '.git-exclude' | wc -l) -- \
+            130 at last measurement (2026-10-11, this module's own excluded) -- \
             see docs_scan's rule 5 and this module's own doc comment"]
 fn no_committed_file_cites_git_exclude() {
     let count = git_exclude_citations(&tracked_files());

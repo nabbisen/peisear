@@ -44,6 +44,19 @@ const WIDTHS = [
   [1280, 900, false], [1920, 1080, false],
 ];
 
+// `DOCS-007` §1: the eight fields below render on the four pages
+// `doc-screenshots.mjs` captures, so `createFixtures` takes them as a
+// parameter rather than closing over them -- the gate passes this
+// object explicitly (`main`, below); `doc-screenshots.mjs` passes its
+// own plain set. No default parameter value on `createFixtures`
+// itself: a caller that forgets to pass one gets a crash, not a
+// silent, accidentally-non-adversarial gate run (`DOCS-007` §7's own
+// concern). Every other fixture field below (the completed sprint's
+// own issues, the second contributor, the team project) never renders
+// on those four pages and stays a plain module constant -- `DOCS-007`
+// §1: "do not plainify what the gate needs and the screenshots never
+// show."
+//
 // A long-enough, unbreakable local part -- `LAYOUT-001` was
 // conditional on exactly this shape (no hyphen for the browser's
 // default word-wrap to break at), so the fixture must be too, or the
@@ -113,6 +126,20 @@ const PLANNED_ISSUE_TITLE = `Planned and assigned ${UNBROKEN_RUN}`;
 const SECOND_CONTRIBUTOR_NAME = 'Gate Second Contributor';
 const SECOND_CONTRIBUTOR_EMAIL = 'gatesecondcontributor@example.org';
 
+// The gate's own call site passes this, explicitly (`main`, below) --
+// see the comment above `LONG_EMAIL` for why these eight fields, and
+// only these, are parameters rather than module constants.
+export const ADVERSARIAL_STRINGS = {
+  displayName: LONG_DISPLAY_NAME,
+  email: LONG_EMAIL,
+  teamName: LONG_TEAM_NAME,
+  projectName: LONG_PROJECT_NAME,
+  sprintName: LONG_SPRINT_NAME,
+  sprintGoal: LONG_SPRINT_GOAL,
+  secondIssueTitle: LONG_ISSUE_TITLE,
+  plannedIssueTitle: PLANNED_ISSUE_TITLE,
+};
+
 function log(...args) {
   console.log('[overflow-gate]', ...args);
 }
@@ -176,12 +203,12 @@ async function lockStamp(jar, url, what) {
   return stamp;
 }
 
-export async function createFixtures() {
+export async function createFixtures(strings) {
   const jar = makeCookieJar();
 
   const registerRes = await jar.fetchForm(`${BASE}/register`, {
-    display_name: LONG_DISPLAY_NAME,
-    email: LONG_EMAIL,
+    display_name: strings.displayName,
+    email: strings.email,
     password: 'password1234',
   });
   if (registerRes.status !== 303) {
@@ -189,7 +216,7 @@ export async function createFixtures() {
   }
 
   const teamRes = await jar.fetchForm(`${BASE}/teams`, {
-    name: LONG_TEAM_NAME,
+    name: strings.teamName,
     slug: '',
     description: '',
   });
@@ -203,8 +230,8 @@ export async function createFixtures() {
   // here. Its name and goal carry the run; the sprints list, the sprint
   // detail page and the plan page all render one or both.
   const sprintRes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints`, {
-    name: LONG_SPRINT_NAME,
-    goal: LONG_SPRINT_GOAL,
+    name: strings.sprintName,
+    goal: strings.sprintGoal,
     starts_on: '2026-09-01',
     ends_on: '2026-09-14',
   });
@@ -212,7 +239,7 @@ export async function createFixtures() {
   const sprintId = sprintRes.headers.get('location').split('/sprints/')[1].split(/[/?]/)[0];
 
   const projectRes = await jar.fetchForm(`${BASE}/projects`, {
-    name: LONG_PROJECT_NAME,
+    name: strings.projectName,
     description: 'Fixture project for the BROWSER-001 overflow gate.',
     team_id: '',
   });
@@ -234,7 +261,7 @@ export async function createFixtures() {
   if (issue1Res.status !== 303) throw new Error(`create issue 1: expected 303, got ${issue1Res.status}`);
 
   const issue2Res = await jar.fetchForm(`${BASE}/projects/${projectId}/issues/new`, {
-    title: LONG_ISSUE_TITLE,
+    title: strings.secondIssueTitle,
     description: '',
     status: 'in_progress',
     priority: 'high',
@@ -252,8 +279,8 @@ export async function createFixtures() {
   // (a 1280px desktop among them, on a page with more cards) while the gate
   // reported green. It is a **new** issue -- the two above keep the content
   // they had -- assigned to the project's owner, who is the only candidate a
-  // personal project offers, and who is the account with `LONG_DISPLAY_NAME`.
-  const ownerId = await optionValue(jar.header(), `${BASE}/projects/${projectId}/issues/new`, 'Gate Fixture ');
+  // personal project offers, and who is the account named `strings.displayName`.
+  const ownerId = await optionValue(jar.header(), `${BASE}/projects/${projectId}/issues/new`, strings.displayName);
   const issue3Res = await jar.fetchForm(`${BASE}/projects/${projectId}/issues/new`, {
     title: 'An assigned fixture issue',
     description: '',
@@ -271,7 +298,7 @@ export async function createFixtures() {
   // edit page renders. Today in UTC, the server's own "today".
   const today = new Date().toISOString().slice(0, 10);
   const issue4Res = await jar.fetchForm(`${BASE}/projects/${projectId}/issues/new`, {
-    title: PLANNED_ISSUE_TITLE,
+    title: strings.plannedIssueTitle,
     description: '',
     status: 'in_progress',
     priority: 'high',
@@ -282,7 +309,7 @@ export async function createFixtures() {
   const plannedIssueId = issue4Res.headers.get('location').split('/issues/')[1].split(/[/?]/)[0];
   const planStamp = await lockStamp(jar, `${BASE}/projects/${projectId}/issues/${plannedIssueId}/edit`, 'plan');
   const planRes = await jar.fetchForm(`${BASE}/projects/${projectId}/issues/${plannedIssueId}`, {
-    title: PLANNED_ISSUE_TITLE,
+    title: strings.plannedIssueTitle,
     description: '',
     status: 'in_progress',
     priority: 'high',
@@ -333,7 +360,7 @@ export async function createFixtures() {
   });
   if (memberRes.status !== 303) throw new Error(`add team member: expected 303, got ${memberRes.status}`);
 
-  const teamId = await optionValue(jar.header(), `${BASE}/projects/new`, LONG_TEAM_NAME);
+  const teamId = await optionValue(jar.header(), `${BASE}/projects/new`, strings.teamName);
   const teamProjectRes = await jar.fetchForm(`${BASE}/projects`, {
     name: LONG_TEAM_PROJECT_NAME,
     description: 'Team fixture project for the GATE-001 completed sprint.',
@@ -343,7 +370,7 @@ export async function createFixtures() {
   const teamProjectId = teamProjectRes.headers.get('location').split('/projects/')[1].split(/[/?]/)[0];
 
   const newIssueUrl = `${BASE}/projects/${teamProjectId}/issues/new`;
-  const firstId = await optionValue(jar.header(), newIssueUrl, 'Gate Fixture ');
+  const firstId = await optionValue(jar.header(), newIssueUrl, strings.displayName);
   const secondId = await optionValue(jar.header(), newIssueUrl, SECOND_CONTRIBUTOR_NAME);
   const sprintIssues = [
     { title: LONG_ISSUE_TITLE, assignee: firstId, effort: '5' },
@@ -402,7 +429,7 @@ export async function createFixtures() {
   // assertion tells the two apart from outside. Each check names the element it
   // found; the run fails if it is not there.
   const fetchPage = async (path) => (await fetch(`${BASE}${path}`, { headers: { cookie: jar.header() } })).text();
-  const nameRe = LONG_DISPLAY_NAME.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const nameRe = strings.displayName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const badgeCount = (html) => [...html.matchAll(new RegExp(`<span[^>]*\\bbadge\\b[^>]*>\\s*${nameRe}\\s*</span>`, 'g'))].length;
   const detailHtml = await fetchPage(`/projects/${projectId}/issues/${assignedIssueId}`);
   if (badgeCount(detailHtml) < 1) throw new Error('issue detail (assigned): no assignee <span class="badge"> holding the display name');
@@ -412,9 +439,9 @@ export async function createFixtures() {
   if (boardBadges < 2) throw new Error(`board: expected two assigned cards (assignee badges), found ${boardBadges}`);
   if (stripChips < 1) throw new Error('board: no workload-strip chip holding the display name');
   const personalCal = await fetchPage('/today/calendar');
-  if (!personalCal.includes(PLANNED_ISSUE_TITLE)) throw new Error('personal calendar: no block for the planned, assigned issue');
+  if (!personalCal.includes(strings.plannedIssueTitle)) throw new Error('personal calendar: no block for the planned, assigned issue');
   const projectCal = await fetchPage(`/projects/${projectId}/calendar`);
-  if (!projectCal.includes(PLANNED_ISSUE_TITLE)) throw new Error('project calendar: no block for the planned issue');
+  if (!projectCal.includes(strings.plannedIssueTitle)) throw new Error('project calendar: no block for the planned issue');
   log(`branches rendered: issue-detail assignee badge x${badgeCount(detailHtml)}; board assignee badges x${boardBadges} + workload chip x${stripChips}; calendar block on personal and project axes`);
 
   // `GATE-003`: the day and month layouts, on both axes, anchored **explicitly**
@@ -429,7 +456,7 @@ export async function createFixtures() {
   }
   for (const [label, path] of Object.entries(calendarUrls)) {
     const html = await fetchPage(path);
-    if (!html.includes(PLANNED_ISSUE_TITLE)) throw new Error(`${label} (${path}): no block for the planned issue`);
+    if (!html.includes(strings.plannedIssueTitle)) throw new Error(`${label} (${path}): no block for the planned issue`);
   }
   log(`calendar layouts rendered a block: ${Object.keys(calendarUrls).join(', ')}`);
 
@@ -460,7 +487,7 @@ async function main() {
     await waitForServer(`${BASE}/login`);
     log('server ready');
 
-    const { cookie, projectId, issueId, assignedIssueId, teamSlug, sprintId, completedSprintId, calendarUrls } = await createFixtures();
+    const { cookie, projectId, issueId, assignedIssueId, teamSlug, sprintId, completedSprintId, calendarUrls } = await createFixtures(ADVERSARIAL_STRINGS);
     log(`fixtures created: project=${projectId} issue=${issueId}`);
 
     const pages = {

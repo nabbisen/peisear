@@ -48,15 +48,25 @@ starts accepting connections.
    it, submit.
 2. You land on the project detail page in **Board** view. Click
    **New issue** to create one.
-3. Drag issue cards between the *Open* / *In Progress* / *Done*
-   columns to change their status. The card moves immediately — the
-   drag-and-drop uses a JSON POST to
+
+   ![A project's board view: issue cards grouped into Open, In Progress and Done columns](../src/assets/screenshots/board.png)
+3. Submitting **New issue** takes you straight to that issue's own
+   detail page — title, status, priority, effort, a description, and a
+   place for sub-issues.
+
+   ![An issue's detail page: status control, priority and effort, description, and sub-issues](../src/assets/screenshots/issue_detail.png)
+4. Back on the board, drag issue cards between the *Open* /
+   *In Progress* / *Done* columns to change their status. The card
+   moves immediately — the drag-and-drop uses a JSON POST to
    `/projects/{id}/issues/{issue_id}/status` in the background — and
    an undo affordance appears for five seconds in case you dragged the
    wrong card. The page only reloads if the server reports a conflict
    (someone else moved the same card first) or is unreachable.
-4. Click **List** in the view toggle for a dense tabular view of every
-   issue in the project.
+5. Click **List** in the view toggle for a dense tabular view of every
+   issue in the project, with filters for status, assignee, and sort
+   order.
+
+   ![The same project in list view: a filterable, sortable table of every issue](../src/assets/screenshots/list.png)
 
 ## Health check
 

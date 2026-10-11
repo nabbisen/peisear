@@ -4,6 +4,9 @@
 // nothing, exits 0 whenever the pages it visits render at all, and must
 // not be added to the `browser-overflow-gate` CI job. `browser-checks/`'s
 // own README explains why that distinction matters for this directory.
+// `DOCS-007` closed `DOCS-004`'s own escalation (the fixture's
+// adversarial strings made every capture unusable) -- see that handoff
+// for the ruling this file now implements.
 //
 // **Reuses `overflow-gate.mjs`'s `createFixtures` rather than building a
 // second copy of the registration/team/sprint/project/issue flow** --
@@ -20,7 +23,7 @@
 // this file would load that module (and fix its port) before this
 // file's own first line runs, so there would be no point at which
 // setting the env var here could still reach it.
-
+//
 import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -32,6 +35,29 @@ const BIN_PATH = process.env.PEISEAR_BIN || join(REPO_ROOT, 'target/debug/peisea
 const PORT = process.env.PEISEAR_PORT || '4176';
 process.env.PEISEAR_PORT = PORT;
 const OUT_DIR = process.env.DOC_SCREENSHOT_DIR || join(REPO_ROOT, 'docs/src/assets/screenshots');
+
+// `DOCS-007` §1: `createFixtures` now takes the eight fields that render
+// on these four pages as a parameter -- the gate passes its own
+// adversarial set (`overflow-gate.mjs`'s own `ADVERSARIAL_STRINGS`,
+// explicitly, at its own call site); this script passes `PLAIN_STRINGS`
+// below instead of building a second fixture function. `DOCS-007` §4.1
+// (owner instruction, 2026-10-11: nothing committed as an image may
+// carry anything private or local): every value below is invented, not
+// a real person, organisation or address -- the email stays on
+// `example.com`, a reserved domain, and the display name reads as a
+// fixture ("Demo Account") rather than as a plausible real person, per
+// that instruction's own preference for the former over a plain name
+// that merely *looks* real.
+const PLAIN_STRINGS = {
+  displayName: 'Demo Account',
+  email: 'demo@example.com',
+  teamName: 'Product Team',
+  projectName: 'Website Launch',
+  sprintName: 'Sprint 12',
+  sprintGoal: 'Ship the new checkout flow',
+  secondIssueTitle: 'Checkout page times out on mobile Safari',
+  plannedIssueTitle: 'Fix pagination on the activity feed',
+};
 
 // One width: a desktop width for the README and `first-run.md`, not the
 // five the overflow gate sweeps -- that gate's widths exist to find
@@ -58,6 +84,14 @@ async function waitForServer(url, timeoutMs = 20000) {
 async function main() {
   const { createFixtures, BASE } = await import('./overflow-gate.mjs');
 
+  // `DOCS-007` §4.1: a fresh, throwaway database every run, and
+  // `DATABASE_URL` below is explicit in the child's own `env` object --
+  // placed after `...process.env` so it always wins regardless of what
+  // the invoking shell has set. That pin is load-bearing:
+  // `Config::from_env` calls `dotenvy::dotenv()`, and dotenvy 0.15's
+  // `dotenv()` does not override an already-set variable, so a
+  // developer's own `.env` cannot redirect a capture at a real
+  // database. Do not add a `DATABASE_URL` passthrough here.
   const dbDir = mkdtempSync(join(tmpdir(), 'doc-screenshots-db-'));
   const dbPath = join(dbDir, 'app.db');
 
@@ -81,20 +115,18 @@ async function main() {
     await waitForServer(`${BASE}/login`);
     log('server ready');
 
-    const { cookie, projectId, issueId, teamSlug, sprintId } = await createFixtures();
+    const { cookie, projectId, issueId } = await createFixtures(PLAIN_STRINGS);
     log(`fixtures created: project=${projectId} issue=${issueId}`);
 
-    // Five pages, matching `DOCS-004` §1's table: the board (the
-    // product's signature screen), the list view (the dense
-    // alternative), an issue detail (where most time is spent), /today
-    // (the personal dashboard, which nothing else illustrates), and the
-    // sprint plan (one planning surface).
+    // Three pages (`DOCS-007` §3 dropped `/today`; this round drops the
+    // sprint plan for the same class of reason -- see the review
+    // package's own finding): the board (the product's signature
+    // screen), the list view (the dense alternative), and an issue
+    // detail (where most time is spent).
     const pages = {
       board: `${BASE}/projects/${projectId}`,
       list: `${BASE}/projects/${projectId}?view=list`,
       issue_detail: `${BASE}/projects/${projectId}/issues/${issueId}`,
-      today: `${BASE}/today`,
-      sprint_plan: `${BASE}/teams/${teamSlug}/sprints/${sprintId}/plan`,
     };
 
     mkdirSync(OUT_DIR, { recursive: true });
@@ -111,7 +143,12 @@ async function main() {
       await browser.goto(url);
       await browser.waitForSelector('header.navbar', 5000);
       const path = join(OUT_DIR, `${label}.png`);
-      await browser.screenshot(path, { x: 0, y: 0, width: VIEWPORT.width, height: VIEWPORT.height });
+      // `DOCS-007` §2: no `clip` argument -- `cdp.mjs`'s `screenshot()`
+      // only applies its `scale: 3` (sized for evidence-log clarity)
+      // when a `clip` is given. Without one, `Page.captureScreenshot`
+      // captures the viewport at its natural 1x, which is both smaller
+      // and the right resolution for a README or book image.
+      await browser.screenshot(path);
       const bytes = statSync(path).size;
       written.push({ label, path, bytes });
       log(`captured ${label} -> ${path} (${bytes} bytes)`);
