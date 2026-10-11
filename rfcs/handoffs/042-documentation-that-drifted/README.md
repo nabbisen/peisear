@@ -70,6 +70,23 @@ release publishes them.
   `NFR-CONC-003` and `FR-SUB-001..003`, and **8 `RAISE(ABORT)`** messages
   string-matched by `translate_trigger_error`.
 
+**Added 2026-10-11, found while clearing scratch space:**
+
+- **`.github/CONTRIBUTING.md:21` still says "Install Rust 1.85+".**
+  `Cargo.toml` and `installation.md` say **1.88**, and `NFR-CMP-001` records
+  that 1.85 cannot build the workspace. `DOCS-003` fixed `installation.md`
+  and `docs_scan`'s **rule 2 reads that file only** — so the scan built to
+  catch MSRV drift has the drift one document over. **Fix the number and
+  extend rule 2 to `CONTRIBUTING.md`**; the rule already knows how to read a
+  version claim, it is reading one file too few.
+- **A scratch-hygiene convention, written down.** Every round builds under
+  `.git-exclude/tmp/<round>-target` via `CARGO_TARGET_DIR` and nothing ever
+  removed them: **65 of them, 808 GB apparent**, back to `rel38`, cleared
+  2026-10-11 on the owner's instruction. **Add one line to the handoff exit
+  conditions and to `CONTRIBUTING.md`'s development setup**: a round's target
+  directory is removed when the round closes. Both files are scanned, so the
+  edit belongs in a round that runs the gates, not in a drive-by.
+
 **Two decisions are the owner's**, recorded here so they are not lost:
 
 1. **Do reviews become committed artefacts?** `.git-exclude/reviewed` is cited

@@ -1,9 +1,7 @@
 # RFC 0018: The PostgreSQL backend — and the lock defect found while scoping it
 
-**Status**: **Proposed** (2026-10-11) — the owner asked for the RFC and a
-schedule; **one decision is theirs** (§2), and **§3 is a defect in the
-shipped product that is not about PostgreSQL at all**
-**Target**: prerequisites at **0.50.0/0.51.0**; the backend across
+**Status**: **Accepted** (2026-10-11) — implementation may begin at P0
+**Target**: **P0 at 0.50.0**, **P1 at 0.51.0**, the backend across
 **0.52.0 – 0.54.0**, after `RFC 0017`
 **Raised by**: the owner, 2026-10-11 — *"Is there any actual plan or schedule
 to extend peisear-storage for postgresql?"* then *"Make the schedule and
@@ -188,10 +186,28 @@ and the reader meets the README, not `ROADMAP.md:582`'s own correction of the
 same claim. Already recorded for `RFC 0016`'s repositioning round
 (`rfcs/handoffs/042-documentation-that-drifted/README.md`).
 
-## §8 — decisions required
+## §8 — decisions taken
 
-1. **§2: the reason.** Operator preference (recommended, no requirement
-   change) or scale (amend `NFR-PERF-001` first).
-2. **Whether P0 and P1 land at 0.50.0 or 0.51.0** — 0.50.0 is already
-   carrying `DOCS-006`, `RFC 0016`'s repositioning, the sprint-plan fixture,
-   the `grow()` alignment defect and `§10.36`.
+1. **The reason is operator preference** (owner, 2026-10-11, accepting this
+   RFC with its recommendation). **No requirement is amended**: `NFR-PERF-001`
+   keeps its 5–30 users on a single node and its exclusion of horizontal
+   scaling, and `§1.4`'s non-intended users stand. PostgreSQL is a deployment
+   choice at the same scale, for an operator who already runs one.
+   **SQLite stays the default and loses nothing** — that is a condition of
+   this acceptance, not an aspiration, and every phase gate below enforces it.
+2. **P0 lands at 0.50.0; P1 at 0.51.0** (architect, recorded here rather than
+   returned to the owner, since the RFC left the choice open between them).
+   **P0 is a correctness defect against a P0 requirement**, so it does not
+   wait behind a documentation release; it is also small — a migration
+   rewriting eleven triggers and the column defaults, plus the demonstration
+   that must fail first. **P1 is a refactor with no live defect behind it**
+   and is P2's own prerequisite, so it sits with `RFC 0017`'s round at 0.51.0
+   and still lands a release ahead of the seam.
+
+**One implementation hazard, named so it is measured and not discovered**:
+P0 changes the stored format from `YYYY-MM-DD HH:MM:SS` to one carrying
+milliseconds. **Check how the row decoding handles the fractional part before
+writing the migration** — `sqlx`'s SQLite `DATETIME` decoding accepts several
+shapes, and existing rows keep the old one until their next write, so both
+must parse. A demonstration that passes on fresh rows and fails on
+pre-migration rows is the failure mode to rule out.
