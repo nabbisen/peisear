@@ -272,6 +272,43 @@ mod tests {
              request within the same wall-clock second depends on"
         );
 
+        // `REG-001` §2: the two checks above do not guard the decode. A
+        // decoder that truncates the fraction passes both -- `contains('.')`
+        // only reads the trigger's own text, and `round_trip(updated) ==
+        // updated` compares two equally-truncated values. Plant a known
+        // fraction instead of relying on the clock: this `UPDATE` sets
+        // `updated_at` to a literal that differs from its current value, so
+        // the trigger's `WHEN OLD.updated_at = NEW.updated_at` guard is
+        // false and it does not fire -- confirmed below by reading the raw
+        // text back, rather than assumed.
+        sqlx::query("UPDATE issues SET updated_at = '2026-01-01 00:00:23.414' WHERE id = 'i'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let (planted_raw,): (String,) =
+            sqlx::query_as("SELECT updated_at FROM issues WHERE id = 'i'")
+                .fetch_one(&pool)
+                .await
+                .expect("read the planted value as raw text");
+        assert_eq!(
+            planted_raw, "2026-01-01 00:00:23.414",
+            "the trigger must not have fired on an UPDATE that itself changed \
+             updated_at -- if it did, the WHEN guard no longer means what \
+             0021's comment says it means"
+        );
+        let (planted,): (DateTime<Utc>,) =
+            sqlx::query_as("SELECT updated_at FROM issues WHERE id = 'i'")
+                .fetch_one(&pool)
+                .await
+                .expect("decode the planted value");
+        assert_eq!(
+            planted.timestamp_subsec_millis(),
+            414,
+            "the decoder must preserve the fraction exactly -- this is the \
+             assertion a truncating decoder fails and the text-only check \
+             above cannot catch"
+        );
+
         pool.close().await;
         for ext in ["", "-wal", "-shm"] {
             let _ = std::fs::remove_file(format!("{}{ext}", path.display()));

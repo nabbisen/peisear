@@ -83,13 +83,12 @@ cache — the trade is different; the guarantee is the same, the latency
 it costs is not.
 
 **This is not configurable.** There is deliberately no environment
-variable for it: a knob that can silently trade away a durability
-guarantee is the same shape `doc-screenshots.mjs`'s own fixture
-override was declined for in `DOCS-007`'s review — a lever that makes a
-safety property optional is worse than not having the property
-documented at all. If you need `synchronous = NORMAL`'s write-amplification
-profile for a workload this product's size doesn't anticipate, that is
-a question for an issue, not an environment variable.
+variable for it: a lever that makes a safety property optional is
+worse than not having the property documented at all — a knob here
+could silently trade away a durability guarantee. If you need
+`synchronous = NORMAL`'s fewer-fsync profile for a workload this
+product's size doesn't anticipate, that is a question for an issue,
+not an environment variable.
 
 ## What's NOT in the backup
 

@@ -95,14 +95,32 @@ async fn issue_edited_twice_in_the_same_second_with_the_same_token_must_409() {
     // 1. Read T0.
     let t0 = read_issue_updated_at(&app, &issue_id).await;
 
-    // 2. First edit, carrying T0. Succeeds; the trigger fires.
-    let resp = post_issue_update(&app, &project_id, &issue_id, &t0, "First edit").await;
-    assert_eq!(
-        resp.status_code(),
-        StatusCode::SEE_OTHER,
-        "first edit should succeed, got {}",
-        resp.status_code()
-    );
+    // 2. First edit, carrying T0. Succeeds; the trigger fires. Retried
+    // (bounded, `REG-001` §3, the same fix `optimistic_lock_guards.rs`
+    // uses): the trigger's own millisecond can coincidentally land on
+    // exactly `.000`, in which case the post-edit token equals T0 and
+    // there is nothing stale about T0 left to demonstrate. Each retry is
+    // itself a legitimate edit against the freshly-read current token, so
+    // it cannot change what this test checks, only how many tries it
+    // took to get a token to check it against.
+    let mut current = t0.clone();
+    for attempt in 0.. {
+        assert!(
+            attempt < 20,
+            "the trigger never produced a token distinct from t0"
+        );
+        let resp = post_issue_update(&app, &project_id, &issue_id, &current, "First edit").await;
+        assert_eq!(
+            resp.status_code(),
+            StatusCode::SEE_OTHER,
+            "first edit should succeed, got {}",
+            resp.status_code()
+        );
+        current = read_issue_updated_at(&app, &issue_id).await;
+        if current != t0 {
+            break;
+        }
+    }
 
     // 3. Second, different edit, carrying T0 again — no sleep. If the
     // trigger's token did not move inside this same second, this spends

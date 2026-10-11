@@ -5657,6 +5657,28 @@ definition fails in exactly the same way** — and the only reliable remedy
 found was the one every item here eventually used: **measure it a second way,
 and state what was checked.**
 
+### 10.36 A check that cannot tell *nothing wrong* from *nothing examined* — **open; a question to ask of every green check**, `REG-001`, 0.50.0; found 2026-10-11
+
+**Adjacent to `§10.17` and not the same.** There, an assertion is wrong. Here,
+the assertion is right and **its input is empty for a reason it never asks
+about**, so it reports success having looked at nothing.
+
+Five instances, all measured, all from the last two releases:
+
+| # | Instance | How it ended |
+|---|---|---|
+| 1 | Rule 5 read "no git here" as "no citations" — `git -C <dir> ls-files` answers against an *enclosing* repository, so every extracted tree under a gitignored path returned zero | Found by running the release gate (`9dd7900`) |
+| 2 | Rule 6 passed by matching nothing — a hardcoded URL prefix that would stop matching if the repository ever moved | Fixed at `11f7704` |
+| 3 | The self-path test passed vacuously after a rename — an absent path is trivially absent | Fixed in `DOCS-008` §3 |
+| 4 | A redactor exercised only on input with nothing to redact | Avoided in `SEC-001` §1, by instruction |
+| 5 | The round-trip test stopped catching truncation while a flake was being fixed — both sides of the comparison lost the same digits | `REG-001` §2, **introduced after this class was named** |
+
+**Instance 5 is the one worth stating plainly.** The class was already written
+down and under review when a careful round reintroduced it anyway, while
+fixing something else. The rule is not "remember this"; it is a question to
+ask of a green check: **what did it examine, and how would I know if the
+answer were nothing?**
+
 ## 11. Deferred and future requirements
 
 Accepted in principle, deliberately not scheduled.
