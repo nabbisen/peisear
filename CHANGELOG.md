@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.50.0] — 2026-10-11
+## [0.50.0] — 2026-10-12
 
 **This release's subject is the storage contract: what a committed write
 means, and what leaves the process.** A P0 concurrency requirement had a
