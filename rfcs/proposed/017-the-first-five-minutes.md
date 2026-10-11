@@ -154,6 +154,76 @@ remedy, not a silent correction. **`docs/security/hardening.md` was corrected
 at `61e7366` to say the default is `0.0.0.0`** — that correction stays true
 until this lands, and must be revised with it.
 
+## Decision — §4 and §5 (security review, 2026-10-11)
+
+**Both approved as proposed, with three implementation notes carried
+into whatever handoff schedules this work.**
+
+**§4, the generated-and-persisted `JWT_SECRET`.** Verified against the
+current source rather than the RFC's own paraphrase:
+`crates/peisear-web/src/config.rs:21-27` is exactly as described — the
+fallback is the literal `"dev-only-insecure-change-me"`, published in
+every copy of the source, with only a `warn!` standing between a
+newcomer and session forgery. The proposed replacement (generate once,
+persist beside the database, env var still wins, hard failure if the
+file can't be written) is the right shape: it removes a published
+secret without introducing a new silent behaviour, and "never fall
+back to a constant" is the same discipline this project already
+applies to `DEC-028`'s own prose corrections — stated once, never
+quietly re-derived.
+
+Three things the implementing handoff should get right, none of them
+reasons to hold the design back:
+
+1. **Atomic write.** `data/jwt_secret` should be written to a temp
+   file and renamed into place, not written in place — two processes
+   starting concurrently (a restart loop, a crashed first boot) must
+   not be able to read a partially-written key.
+2. **A corrupt or wrong-length file must fail loudly, not regenerate
+   silently.** The RFC's own standard for an *absent* secret
+   ("never fall back to a constant") should apply equally to a
+   *damaged* one — silently regenerating on read failure invalidates
+   every session without the visible event this RFC exists to
+   guarantee.
+3. **`mode 0600` is POSIX-only.** Proposal 1 ships a Windows binary;
+   Rust's `std::fs` permission bits don't restrict access on Windows
+   the way they do on Unix. Document this as a known platform
+   difference (or use the Windows ACL equivalent) rather than let the
+   claim "mode 0600" silently mean nothing on one of the five shipped
+   targets.
+
+**Requirements consequence, not a reason to defer**: `NFR-SEC-004`
+currently reads *"Deployment secrets are supplied by the environment"*
+and *Status: Implemented*. This proposal makes "generated and
+persisted locally, with the environment variable taking precedence
+when set" a second, equally valid path — the requirement's own text
+needs a `DEC-028` amendment when this lands, or it will describe a
+narrower contract than the code satisfies.
+
+**§5, the default bind.** `127.0.0.1:3000` as the default, with the
+container image setting `0.0.0.0:3000` explicitly, is the conventional
+safe-by-default shape and is **already the project's own documented
+production posture** — `docs/operations/deployment.md`'s systemd
+example sets `BIND_ADDR=127.0.0.1:3000` today, so a deployment
+following the existing guide is unaffected by this change; only a bare
+`cargo install`/binary run relying on the *implicit* default to reach
+the instance from another machine on the network would need to add the
+env var explicitly. For the newcomer this RFC's own summary targets —
+someone on their own laptop, opening `http://localhost:3000` in the
+same browser — loopback is the correct default, not merely the
+cautious one.
+
+The two proposals are correctly coupled: §4 alone leaves a newcomer's
+laptop reachable from the LAN (just no longer with a known key); §5
+alone still ships a known key to anyone who can reach the loopback
+port. Approved together, as proposed, including the explicit
+changelog-entry-with-named-remedy treatment and the
+`docs/security/hardening.md` revision the RFC already names.
+
+**No changes requested to proposals 1, 2, 3 or 5** — outside this
+review's scope (channels already owner-approved; 3 and 5 are not
+security changes).
+
 ## Alternatives considered
 
 - **Documentation only.** Rejected by the owner's own decision, and it cannot
