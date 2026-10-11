@@ -243,11 +243,26 @@ mod tests {
                 .fetch_one(&pool)
                 .await
                 .expect("decode the millisecond (post-trigger) shape");
-        assert_ne!(
-            updated.timestamp_subsec_millis(),
-            0,
-            "the post-trigger value must carry a non-zero millisecond component, \
-             or this test cannot tell a working fix from a silently-truncating one"
+        // `SEC-001` fixed this in passing: `timestamp_subsec_millis() !=
+        // 0` is flaky, not just unlikely -- once in every roughly 1,000
+        // runs the trigger fires in the first millisecond of a second and
+        // the true fraction genuinely *is* `.000`, which is a correct
+        // result this assertion would have failed. The fraction's own
+        // *value* can coincide with zero; whether the trigger used the
+        // millisecond `strftime` format at all cannot, so check the raw
+        // stored text for the decimal point that format always produces,
+        // never the decoded value's own digits.
+        let (updated_raw,): (String,) =
+            sqlx::query_as("SELECT updated_at FROM issues WHERE id = 'i'")
+                .fetch_one(&pool)
+                .await
+                .expect("read the post-trigger value as raw text");
+        assert!(
+            updated_raw.contains('.'),
+            "the post-trigger value must be stored with a fractional-seconds \
+             component (0021's strftime format always includes one), got {updated_raw:?} \
+             -- this is a structural check on the stored text, not the decoded \
+             value's own digits, which can coincidentally be zero"
         );
         assert_eq!(
             round_trip(updated),

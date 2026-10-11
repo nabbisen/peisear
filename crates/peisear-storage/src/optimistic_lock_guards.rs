@@ -25,6 +25,20 @@
 //! same discipline as `STORE-001`'s own demonstration, and for the same
 //! reason: the defect this exists to catch is a same-second collision,
 //! and a test with a delay between its two writes could not find it.
+//!
+//! **Found running this file, not read in it** (`SEC-001`): each test's
+//! "stale" token is read straight after seeding — whole-second, the
+//! column `DEFAULT` — and the legitimate edit that follows fires
+//! `0021`'s trigger, millisecond precision. These two coincide with
+//! real, if rare (~1-in-1000), probability: if the trigger's own
+//! fraction happens to land on exactly `.000`, the "stale" token and the
+//! post-edit one are the *same value*, and there is nothing stale about
+//! it to refuse — a correct `Written(())` that an assertion expecting
+//! `Stale` would wrongly read as a guard regression. Each test below
+//! retries its legitimate edit (bounded, and only with a token read
+//! fresh from the row, so a retry is itself still a legitimate edit)
+//! until the post-edit token is provably distinct from the seed one,
+//! rather than let the next unlucky run fail on nothing.
 
 use crate::{Guarded, Pool, pool, projects, sprints, user_capacities};
 use chrono::{DateTime, NaiveDate, Utc};
@@ -72,10 +86,26 @@ async fn projects_update_guard_refuses_a_stale_millisecond_token_and_accepts_the
 
     // Legitimate first edit -- fires 0021's trigger, bumps to millisecond
     // precision. No sleep before or after: the collision this guards
-    // against is same-second.
-    projects::update_guarded(&pool, "p", "u", "P2", "", Some(t0))
-        .await
-        .expect("first edit");
+    // against is same-second. Retried (bounded) until the post-edit
+    // token is provably distinct from t0 -- see this module's doc
+    // comment on why that is not always true on the first try.
+    let mut current = t0;
+    for attempt in 0.. {
+        assert!(
+            attempt < 20,
+            "the trigger never produced a token distinct from t0"
+        );
+        projects::update_guarded(&pool, "p", "u", "P2", "", Some(current))
+            .await
+            .expect("first edit");
+        current = sqlx::query_scalar("SELECT updated_at FROM projects WHERE id = 'p'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        if current != t0 {
+            break;
+        }
+    }
 
     let outcome = projects::update_guarded(&pool, "p", "u", "P-stale", "", Some(t0))
         .await
@@ -119,10 +149,25 @@ async fn projects_delete_guard_refuses_a_stale_millisecond_token_and_accepts_the
         .await
         .unwrap();
 
-    // Legitimate edit, so the row's token has moved past t0.
-    projects::update_guarded(&pool, "p", "u", "P2", "", Some(t0))
-        .await
-        .expect("edit before the delete attempt");
+    // Legitimate edit, so the row's token has moved past t0. Retried
+    // (bounded) for the same reason as the update-guard test above.
+    let mut current = t0;
+    for attempt in 0.. {
+        assert!(
+            attempt < 20,
+            "the trigger never produced a token distinct from t0"
+        );
+        projects::update_guarded(&pool, "p", "u", "P2", "", Some(current))
+            .await
+            .expect("edit before the delete attempt");
+        current = sqlx::query_scalar("SELECT updated_at FROM projects WHERE id = 'p'")
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        if current != t0 {
+            break;
+        }
+    }
 
     let outcome = projects::delete_guarded(&pool, "p", "u", Some(t0))
         .await
@@ -190,17 +235,33 @@ async fn sprints_update_guard_refuses_a_stale_millisecond_token_and_accepts_the_
         .await
         .unwrap();
 
-    sprints::update_guarded(
-        &pool,
-        &sprint_id,
-        "Sprint 1 renamed",
-        None,
-        starts_on,
-        ends_on,
-        Some(t0),
-    )
-    .await
-    .expect("first edit");
+    // Retried (bounded) -- see this module's doc comment.
+    let mut current = t0;
+    for attempt in 0.. {
+        assert!(
+            attempt < 20,
+            "the trigger never produced a token distinct from t0"
+        );
+        sprints::update_guarded(
+            &pool,
+            &sprint_id,
+            "Sprint 1 renamed",
+            None,
+            starts_on,
+            ends_on,
+            Some(current),
+        )
+        .await
+        .expect("first edit");
+        current = sqlx::query_scalar("SELECT updated_at FROM sprints WHERE id = ?1")
+            .bind(&sprint_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        if current != t0 {
+            break;
+        }
+    }
 
     let outcome = sprints::update_guarded(
         &pool,
@@ -269,17 +330,33 @@ async fn sprints_delete_guard_refuses_a_stale_millisecond_token_and_accepts_the_
         .await
         .unwrap();
 
-    sprints::update_guarded(
-        &pool,
-        &sprint_id,
-        "Sprint 1 renamed",
-        None,
-        starts_on,
-        ends_on,
-        Some(t0),
-    )
-    .await
-    .expect("edit before the delete attempt");
+    // Retried (bounded) -- see this module's doc comment.
+    let mut current = t0;
+    for attempt in 0.. {
+        assert!(
+            attempt < 20,
+            "the trigger never produced a token distinct from t0"
+        );
+        sprints::update_guarded(
+            &pool,
+            &sprint_id,
+            "Sprint 1 renamed",
+            None,
+            starts_on,
+            ends_on,
+            Some(current),
+        )
+        .await
+        .expect("edit before the delete attempt");
+        current = sqlx::query_scalar("SELECT updated_at FROM sprints WHERE id = ?1")
+            .bind(&sprint_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        if current != t0 {
+            break;
+        }
+    }
 
     let outcome = sprints::delete_guarded(&pool, &sprint_id, Some(t0))
         .await
@@ -339,10 +416,35 @@ async fn user_capacities_delete_guard_refuses_a_stale_millisecond_token_and_acce
             .unwrap();
 
     // Legitimate edit, through the update function's own guarded form,
-    // so the row's token moves past t0.
-    user_capacities::update_guarded(&pool, &user, &capacity_id, 12, None, None, None, Some(t0))
+    // so the row's token moves past t0. Retried (bounded) -- see this
+    // module's doc comment.
+    let mut current = t0;
+    for attempt in 0.. {
+        assert!(
+            attempt < 20,
+            "the trigger never produced a token distinct from t0"
+        );
+        user_capacities::update_guarded(
+            &pool,
+            &user,
+            &capacity_id,
+            12,
+            None,
+            None,
+            None,
+            Some(current),
+        )
         .await
         .expect("edit before the delete attempt");
+        current = sqlx::query_scalar("SELECT updated_at FROM user_capacities WHERE id = ?1")
+            .bind(&capacity_id)
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+        if current != t0 {
+            break;
+        }
+    }
 
     let outcome = user_capacities::delete_guarded(&pool, &user, &capacity_id, Some(t0))
         .await

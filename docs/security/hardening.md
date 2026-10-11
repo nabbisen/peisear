@@ -35,6 +35,23 @@ Threats it does **not** try to handle on its own:
 - **Rate limiting.** Configure at the proxy (`limit_req_zone` in
   nginx, equivalents in HAProxy / Envoy / Caddy).
 - **DDoS absorption.** Not peisear's job.
+- **Data at rest.** `data/app.db`, its `-wal` and `-shm` siblings, and
+  every backup taken from it are not encrypted by peisear.
+  **Anything that can read that file has every user's personal
+  sustainability data** — the load, rhythm and WIP figures
+  `NFR-PRIV-001`'s inventory restricts to the person they describe —
+  in the clear, on disk. **The control is volume encryption**: LUKS,
+  `dm-crypt`, or your cloud provider's encrypted volume, applied
+  underneath the database file rather than inside it. **Declined, on
+  the record** (owner, 2026-10-11): database-level encryption.
+  SQLCipher is a driver-stack change underneath `sqlx`; column-level
+  encryption would break the equality comparisons the personal
+  metrics are computed from (`NFR-CONC-002`'s own `updated_at`
+  comparison is one of them). **This does not change with
+  PostgreSQL** — core PostgreSQL has no transparent data encryption
+  either, so volume encryption is the control on both backends. This
+  bullet documents a gap and names its mitigation; it is not a claim
+  that peisear protects data at rest on its own.
 
 ## What peisear does
 

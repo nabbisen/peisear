@@ -68,6 +68,29 @@ rsync -a "${BACKUP_DIR}/" offsite:/backups/peisear/
 
 Adjust the retention and offsite target to match your needs.
 
+## Durability of a single write
+
+Separate from backups, which protect against losing history: peisear
+fsyncs the write-ahead log **on every commit** (`synchronous = FULL`,
+measured and chosen in `STORE-002`/`RFC 0018` P0b). A change that
+reports success survives a power cut or an OS crash immediately
+after — it does not depend on the next backup running.
+
+**Measured cost**: about 2 ms on a ~440 ms fixture-building write path,
+on NVMe. **On storage where `fsync` is slow** — a network-backed volume,
+a spinning disk, anything without a power-loss-protected write
+cache — the trade is different; the guarantee is the same, the latency
+it costs is not.
+
+**This is not configurable.** There is deliberately no environment
+variable for it: a knob that can silently trade away a durability
+guarantee is the same shape `doc-screenshots.mjs`'s own fixture
+override was declined for in `DOCS-007`'s review — a lever that makes a
+safety property optional is worse than not having the property
+documented at all. If you need `synchronous = NORMAL`'s write-amplification
+profile for a workload this product's size doesn't anticipate, that is
+a question for an issue, not an environment variable.
+
 ## What's NOT in the backup
 
 - **Environment variables** (including `JWT_SECRET`). Keep those in

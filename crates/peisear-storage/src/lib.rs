@@ -14,14 +14,14 @@ pub mod issue_events;
 pub mod issues;
 pub mod metrics_snapshots;
 pub mod notifications;
+#[cfg(test)]
+mod optimistic_lock_guards;
 pub mod personal_metrics;
 pub mod pool;
 pub mod project_health;
 pub mod projects;
 pub mod search;
 pub mod sprints;
-#[cfg(test)]
-mod store002_guards;
 pub mod subjects;
 pub mod teams;
 pub mod user_burnout;
