@@ -214,6 +214,31 @@ fn literal_bool_default(config_rs: &str, var: &str) -> Option<bool> {
     }
 }
 
+// ---------- rule 6: README.md's absolute image URLs ----------
+
+const RAW_URL_PREFIX: &str = "https://github.com/nabbisen/peisear/raw/main/";
+
+/// Every path named by a `.../raw/main/<path>` URL in `text`, in the
+/// order they appear. Mechanical text splitting, same shape as rule 3's
+/// manifest parse -- no network call, ever (`DOCS-008` §7's own
+/// condition: "if rule 6 cannot be written without a network call, then
+/// it is not rule 6 and should not be built"; it doesn't need one, since
+/// the question is only "does this path exist in the tree", not "does
+/// the URL resolve").
+fn raw_url_paths(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut rest = text;
+    while let Some(idx) = rest.find(RAW_URL_PREFIX) {
+        let after = &rest[idx + RAW_URL_PREFIX.len()..];
+        let end = after
+            .find(|c: char| c == ')' || c == '"' || c == '\'' || c.is_whitespace())
+            .unwrap_or(after.len());
+        out.push(after[..end].to_string());
+        rest = &after[end..];
+    }
+    out
+}
+
 /// The *Default* cell of `configuration.md`'s reference table row for `var`.
 fn table_default(configuration: &str, var: &str) -> Option<String> {
     let marker = format!("`{var}`");
@@ -238,6 +263,8 @@ pub(crate) struct Input<'a> {
     pub deployment: &'a str,
     pub configuration: &'a str,
     pub config_rs: &'a str,
+    /// Does this repo-root-relative path exist? (rule 6 only.)
+    pub exists: &'a dyn Fn(&str) -> bool,
 }
 
 /// Every rule breach, each a sentence saying which rule and where. Messages
@@ -334,6 +361,15 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         }
     }
 
+    // Rule 6, live: every README.md raw-URL image names a file that exists.
+    for path in raw_url_paths(input.readme) {
+        if !(input.exists)(&path) {
+            out.push(format!(
+                "rule 6: README.md's raw URL names {path}, which does not exist"
+            ));
+        }
+    }
+
     out
 }
 
@@ -373,6 +409,8 @@ fn real() -> Real {
 }
 
 fn run(r: &Real) -> Vec<String> {
+    let root = repo_root();
+    let exists = move |p: &str| root.join(p).exists();
     violations(&Input {
         crate_dirs: r.crate_dirs.clone(),
         readme: &r.readme,
@@ -384,6 +422,7 @@ fn run(r: &Real) -> Vec<String> {
         deployment: &r.deployment,
         configuration: &r.configuration,
         config_rs: &r.config_rs,
+        exists: &exists,
     })
 }
 
@@ -490,6 +529,20 @@ fn rule_4_catches_a_documented_boolean_default_that_does_not_match_config_rs() {
 }
 
 #[test]
+fn rule_6_catches_a_raw_url_naming_a_file_that_does_not_exist() {
+    let mut r = real();
+    r.readme = format!(
+        "{}\n![missing](https://github.com/nabbisen/peisear/raw/main/docs/src/assets/screenshots/does-not-exist.png)\n",
+        r.readme
+    );
+    let v = only(run(&r), "rule 6:");
+    assert!(
+        v.iter().any(|m| m.contains("does-not-exist.png")),
+        "got {v:?}"
+    );
+}
+
+#[test]
 fn the_helpers_do_what_the_rules_assume() {
     assert_eq!(short_crate_name("peisear-i18n"), "i18n");
     assert_eq!(short_crate_name("peisear"), "peisear");
@@ -528,6 +581,12 @@ fn the_helpers_do_what_the_rules_assume() {
         ),
         vec!["app.css".to_string(), "board.js".to_string()]
     );
+    assert_eq!(
+        raw_url_paths(
+            "![a](https://github.com/nabbisen/peisear/raw/main/docs/a.png) and [b](https://github.com/nabbisen/peisear/raw/main/docs/b.png \"title\")"
+        ),
+        vec!["docs/a.png".to_string(), "docs/b.png".to_string()]
+    );
 }
 
 // ---------- rule 5: committed citations of a gitignored path ----------
@@ -551,7 +610,13 @@ fn the_helpers_do_what_the_rules_assume() {
 /// banning its own existence.
 const SELF_PATH: &str = "crates/peisear-web/src/docs_scan.rs";
 
-fn tracked_files() -> Vec<(String, String)> {
+/// Every path `git` considers tracked, unfiltered -- the raw list
+/// [`tracked_files`] filters `SELF_PATH` out of. Kept separate so a test
+/// can assert against the *un*filtered list too (`DOCS-008` §3): a test
+/// that only checks `SELF_PATH` is absent from the filtered output
+/// passes vacuously if `SELF_PATH` is stale (the file renamed or moved),
+/// since an absent path is trivially "not found" either way.
+fn git_tracked_paths() -> Vec<String> {
     let root = repo_root();
     let output = std::process::Command::new("git")
         .arg("-C")
@@ -560,13 +625,22 @@ fn tracked_files() -> Vec<(String, String)> {
         .arg("-z")
         .output()
         .expect("git ls-files");
+    String::from_utf8_lossy(&output.stdout)
+        .split('\0')
+        .filter(|s| !s.is_empty())
+        .map(|s| s.to_string())
+        .collect()
+}
+
+fn tracked_files() -> Vec<(String, String)> {
+    let root = repo_root();
     let mut out = Vec::new();
-    for rel in String::from_utf8_lossy(&output.stdout).split('\0') {
-        if rel.is_empty() || rel == SELF_PATH {
+    for rel in git_tracked_paths() {
+        if rel == SELF_PATH {
             continue;
         }
-        if let Ok(text) = fs::read_to_string(root.join(rel)) {
-            out.push((rel.to_string(), text));
+        if let Ok(text) = fs::read_to_string(root.join(&rel)) {
+            out.push((rel, text));
         }
     }
     out
@@ -608,11 +682,26 @@ fn a_planted_git_exclude_citation_is_counted() {
 /// `DOCS-005` review, finding F-1: `tracked_files()` used to count this
 /// module's own file, which cites `.git-exclude` nine times in its doc
 /// comments and test expectations -- so the rule below could never reach
-/// zero, even after `DOCS-006` closes the real gap. Proven directly
-/// (not just asserted by the exclusion's own existence): this module's
-/// own path is absent from what `tracked_files()` returns.
+/// zero, even after `DOCS-006` closes the real gap.
+///
+/// `DOCS-008` review, finding F-3: the first version of this test only
+/// asserted `SELF_PATH` was *absent* from `tracked_files()`'s filtered
+/// output -- which also holds, vacuously, if `SELF_PATH` is stale (the
+/// file renamed or moved), since the filtered list would never contain
+/// the old path either way. The one failure mode this test exists to
+/// catch is the one that shape can't see. Fixed to a positive assertion
+/// first: `SELF_PATH` must be present in git's own *unfiltered* tracked
+/// list, which fails loudly, naming the path, the moment a rename makes
+/// `SELF_PATH` stale -- then the filtered list must exclude it.
 #[test]
 fn the_scan_does_not_count_its_own_file() {
+    let tracked = git_tracked_paths();
+    assert!(
+        tracked.iter().any(|p| p == SELF_PATH),
+        "{SELF_PATH} is not a tracked file -- if docs_scan.rs was renamed \
+         or moved, update SELF_PATH to match, or this test cannot prove \
+         the exclusion it exists to prove"
+    );
     let files = tracked_files();
     assert!(
         !files.iter().any(|(path, _)| path == SELF_PATH),

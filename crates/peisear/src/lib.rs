@@ -1,4 +1,6 @@
-//! peisear — a minimal, sophisticated, solid, and easy issue tracker.
+//! peisear — a minimal, sophisticated, solid, and easy project and issue
+//! tracker that also shows how the project — and the people in it — are
+//! holding up.
 //!
 //! This is the public crates.io face of the project. The actual
 //! implementation is split across five sibling crates; this crate

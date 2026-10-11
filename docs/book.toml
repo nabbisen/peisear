@@ -14,7 +14,7 @@
 
 [book]
 title = "peisear Documentation"
-description = "Self-hostable issue tracker: getting started, operations, security, architecture, development and the normative specification."
+description = "Self-hostable project and issue tracking that also shows how the project — and the people in it — are holding up: getting started, operations, security, architecture, development and the normative specification."
 authors = ["peisear contributors"]
 language = "en"
 src = "."

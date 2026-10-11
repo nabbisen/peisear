@@ -36,26 +36,39 @@ const PORT = process.env.PEISEAR_PORT || '4176';
 process.env.PEISEAR_PORT = PORT;
 const OUT_DIR = process.env.DOC_SCREENSHOT_DIR || join(REPO_ROOT, 'docs/src/assets/screenshots');
 
-// `DOCS-007` §1: `createFixtures` now takes the eight fields that render
-// on these four pages as a parameter -- the gate passes its own
-// adversarial set (`overflow-gate.mjs`'s own `ADVERSARIAL_STRINGS`,
-// explicitly, at its own call site); this script passes `PLAIN_STRINGS`
-// below instead of building a second fixture function. `DOCS-007` §4.1
-// (owner instruction, 2026-10-11: nothing committed as an image may
-// carry anything private or local): every value below is invented, not
-// a real person, organisation or address -- the email stays on
-// `example.com`, a reserved domain, and the display name reads as a
-// fixture ("Demo Account") rather than as a plausible real person, per
-// that instruction's own preference for the former over a plain name
-// that merely *looks* real.
+// `DOCS-007` §1: `createFixtures` now takes the fields that render on
+// these pages as a parameter -- the gate passes its own adversarial set
+// (`overflow-gate.mjs`'s own `ADVERSARIAL_STRINGS`, explicitly, at its
+// own call site); this script passes `PLAIN_STRINGS` below instead of
+// building a second fixture function. `DOCS-008` §1 found three of
+// these fields were still fixture-flavoured even after `DOCS-007`'s own
+// pass (`projectDescription`, `firstIssueTitle`, `assignedIssueTitle`)
+// -- re-derived by reading the regenerated images, not by trusting the
+// review's own three; §2 added `secondIssueDescription` and the
+// optional `secondIssueSubIssueTitle`, so the issue-detail capture no
+// longer contradicts `first-run.md`'s own "a description, and a place
+// for sub-issues." `DOCS-007` §4.1 (owner instruction, 2026-10-11:
+// nothing committed as an image may carry anything private or local):
+// every value below is invented, not a real person, organisation or
+// address -- the email stays on `example.com`, a reserved domain, and
+// the display name reads as a fixture ("Demo Account") rather than as a
+// plausible real person, per that instruction's own preference for the
+// former over a plain name that merely *looks* real.
 const PLAIN_STRINGS = {
   displayName: 'Demo Account',
   email: 'demo@example.com',
   teamName: 'Product Team',
   projectName: 'Website Launch',
+  projectDescription: 'Tracking the launch of the redesigned marketing site.',
   sprintName: 'Sprint 12',
   sprintGoal: 'Ship the new checkout flow',
+  firstIssueTitle: 'Write release notes for the launch',
   secondIssueTitle: 'Checkout page times out on mobile Safari',
+  secondIssueDescription:
+    'Customers on iOS report the checkout page hanging indefinitely after ' +
+    'entering payment details. Reproduced on Safari 17 and 18; Chrome is unaffected.',
+  secondIssueSubIssueTitle: 'Confirm whether the timeout is client-side or server-side',
+  assignedIssueTitle: 'Review the new navigation design',
   plannedIssueTitle: 'Fix pagination on the activity feed',
 };
 

@@ -202,7 +202,7 @@ pub(crate) fn render(key: MessageKey) -> String {
         ),
 
         // ---- I18N-005a: components/{layout,breadcrumb,error_page} ----
-        MessageKey::AppBrandName => "Issue Tracker".to_string(),
+        MessageKey::AppBrandName => "peisear".to_string(),
         MessageKey::NavBellLabelNone => "Notifications".to_string(),
         MessageKey::NavBellLabelUnread { count } => format!("Notifications ({count} unread)"),
         MessageKey::NavBellCount { count } => bell_count(count),
@@ -218,7 +218,7 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::NavSignOut => "Sign out".to_string(),
         MessageKey::BreadcrumbNavLabel => "Breadcrumb".to_string(),
         MessageKey::BackToSection { section } => format!("Back to {}", nav_section(section)),
-        MessageKey::ErrorPageTitle => "Error — Issue Tracker".to_string(),
+        MessageKey::ErrorPageTitle => "Error — peisear".to_string(),
         MessageKey::ErrorPageGoHomeLink => "Go home".to_string(),
 
         // ---- I18N-005b: components/{issues,projects} ----
@@ -270,7 +270,7 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::EmptyIssueListMessage => "No issues yet.".to_string(),
         MessageKey::EffortEstimateTooltip => "Effort estimate".to_string(),
         MessageKey::ProjectDetailPageTitle { project_name } => {
-            format!("{project_name} — Issue Tracker")
+            format!("{project_name} — peisear")
         }
         MessageKey::IssueNewPageTitle { project_name } => format!("New issue — {project_name}"),
         MessageKey::NewIssueLabel => "New issue".to_string(),
@@ -324,13 +324,13 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::NoDescriptionProvided => "No description provided.".to_string(),
         MessageKey::CreatedAt { formatted } => format!("Created {formatted}"),
         MessageKey::UpdatedAt { formatted } => format!("Updated {formatted}"),
-        MessageKey::ProjectsListPageTitle => "Projects — Issue Tracker".to_string(),
+        MessageKey::ProjectsListPageTitle => "Projects — peisear".to_string(),
         MessageKey::ProjectsSubheading => "Your issue-tracking workspaces".to_string(),
         MessageKey::NewProjectLabel => "New project".to_string(),
         MessageKey::ProjectsEmptyMessage => "No projects yet.".to_string(),
         MessageKey::CreateFirstProjectButton => "Create your first project".to_string(),
         MessageKey::NoDescriptionShort => "No description".to_string(),
-        MessageKey::ProjectNewPageTitle => "New project — Issue Tracker".to_string(),
+        MessageKey::ProjectNewPageTitle => "New project — peisear".to_string(),
         MessageKey::NewBreadcrumbWord => "New".to_string(),
         MessageKey::ProjectNamePlaceholder => "e.g. Customer Portal".to_string(),
         MessageKey::ProjectDescriptionPlaceholder => "What is this project about?".to_string(),
@@ -342,7 +342,7 @@ pub(crate) fn render(key: MessageKey) -> String {
             .to_string(),
         MessageKey::CreateProjectButton => "Create project".to_string(),
         MessageKey::ProjectEditPageTitle { project_name } => {
-            format!("Edit {project_name} — Issue Tracker")
+            format!("Edit {project_name} — peisear")
         }
         MessageKey::EditProjectHeading => "Edit project".to_string(),
         MessageKey::DeleteProjectHeading => "Delete project".to_string(),
@@ -1037,8 +1037,8 @@ pub(crate) fn render(key: MessageKey) -> String {
         ),
 
         // ---- I18N-005e: components/auth.rs, handlers/auth.rs ----
-        MessageKey::LoginPageTitle => "Sign in — Issue Tracker".to_string(),
-        MessageKey::RegisterPageTitle => "Create account — Issue Tracker".to_string(),
+        MessageKey::LoginPageTitle => "Sign in — peisear".to_string(),
+        MessageKey::RegisterPageTitle => "Create account — peisear".to_string(),
         MessageKey::SignInTaglineText => "Sign in to your workspace".to_string(),
         MessageKey::RegisterTaglineText => "Create your account".to_string(),
         MessageKey::SignInWord => "Sign in".to_string(),

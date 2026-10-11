@@ -126,17 +126,38 @@ const PLANNED_ISSUE_TITLE = `Planned and assigned ${UNBROKEN_RUN}`;
 const SECOND_CONTRIBUTOR_NAME = 'Gate Second Contributor';
 const SECOND_CONTRIBUTOR_EMAIL = 'gatesecondcontributor@example.org';
 
+// `DOCS-008` §1: three more fields, found by reading the regenerated
+// images rather than trusting the three the review named -- the project
+// description and the two issue titles that were never adversarial
+// (no unbroken run, just leftover fixture wording) but still rendered
+// on the committed pages. `DOCS-008` §2 adds a fourth: the second
+// issue's own description, previously `''` on every call site
+// (including the gate's), which is why its own detail page -- also
+// `doc-screenshots.mjs`'s `issue_detail` capture -- always rendered
+// "No description provided." Same rule for all four: an adversarial
+// value here (an empty string counts, where that is the existing,
+// unrisky gate behaviour), a plain, non-empty one in
+// `doc-screenshots.mjs`'s own set, and the gate stays at 120 cells
+// because none of the four ever carried a property `BROWSER-002`
+// depends on, and an empty description is not a new surface for the
+// gate to sweep.
+//
 // The gate's own call site passes this, explicitly (`main`, below) --
-// see the comment above `LONG_EMAIL` for why these eight fields, and
-// only these, are parameters rather than module constants.
+// see the comment above `LONG_EMAIL` for why these fields, and only
+// these, are parameters rather than module constants.
 export const ADVERSARIAL_STRINGS = {
   displayName: LONG_DISPLAY_NAME,
   email: LONG_EMAIL,
   teamName: LONG_TEAM_NAME,
   projectName: LONG_PROJECT_NAME,
+  projectDescription: 'Fixture project for the BROWSER-001 overflow gate.',
   sprintName: LONG_SPRINT_NAME,
   sprintGoal: LONG_SPRINT_GOAL,
+  firstIssueTitle: 'An ordinary fixture issue',
   secondIssueTitle: LONG_ISSUE_TITLE,
+  secondIssueDescription: '',
+  secondIssueSubIssueTitle: 'An ordinary fixture sub-issue',
+  assignedIssueTitle: 'An assigned fixture issue',
   plannedIssueTitle: PLANNED_ISSUE_TITLE,
 };
 
@@ -240,7 +261,7 @@ export async function createFixtures(strings) {
 
   const projectRes = await jar.fetchForm(`${BASE}/projects`, {
     name: strings.projectName,
-    description: 'Fixture project for the BROWSER-001 overflow gate.',
+    description: strings.projectDescription,
     team_id: '',
   });
   if (projectRes.status !== 303) throw new Error(`create project: expected 303, got ${projectRes.status}`);
@@ -251,7 +272,7 @@ export async function createFixtures(strings) {
   // §10.21's own lesson (invisible on empty fixtures) is built in
   // rather than left to be rediscovered.
   const issue1Res = await jar.fetchForm(`${BASE}/projects/${projectId}/issues/new`, {
-    title: 'An ordinary fixture issue',
+    title: strings.firstIssueTitle,
     description: 'Some description text for the overflow gate fixtures.',
     status: 'open',
     priority: 'medium',
@@ -262,7 +283,7 @@ export async function createFixtures(strings) {
 
   const issue2Res = await jar.fetchForm(`${BASE}/projects/${projectId}/issues/new`, {
     title: strings.secondIssueTitle,
-    description: '',
+    description: strings.secondIssueDescription,
     status: 'in_progress',
     priority: 'high',
     effort: '5',
@@ -271,6 +292,20 @@ export async function createFixtures(strings) {
   if (issue2Res.status !== 303) throw new Error(`create issue 2: expected 303, got ${issue2Res.status}`);
   const issue2Location = issue2Res.headers.get('location');
   const issueId = issue2Location.split('/issues/')[1].split(/[/?]/)[0];
+
+  // `DOCS-008` §2 (optional half): one sub-issue under issue 2, through
+  // the real sub-issue form, so the "place for sub-issues" first-run.md
+  // promises -- and `doc-screenshots.mjs`'s own `issue_detail` capture
+  // shows -- has something in it rather than its own empty state.
+  const subIssueRes = await jar.fetchForm(`${BASE}/projects/${projectId}/issues/${issueId}/sub-issues/new`, {
+    title: strings.secondIssueSubIssueTitle,
+    description: '',
+    status: 'open',
+    priority: 'low',
+    effort: '',
+    assignee_id: '',
+  });
+  if (subIssueRes.status !== 303) throw new Error(`create sub-issue of issue 2: expected 303, got ${subIssueRes.status}`);
 
   // `LAYOUT-011`: an issue **assigned** to a person whose display name carries
   // the unbroken run, and in progress. Every issue above is unassigned, so no
@@ -282,7 +317,7 @@ export async function createFixtures(strings) {
   // personal project offers, and who is the account named `strings.displayName`.
   const ownerId = await optionValue(jar.header(), `${BASE}/projects/${projectId}/issues/new`, strings.displayName);
   const issue3Res = await jar.fetchForm(`${BASE}/projects/${projectId}/issues/new`, {
-    title: 'An assigned fixture issue',
+    title: strings.assignedIssueTitle,
     description: '',
     status: 'in_progress',
     priority: 'medium',

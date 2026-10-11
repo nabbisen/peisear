@@ -1,6 +1,6 @@
 [package]
 name        = "peisear-web"
-description = "Axum + Leptos SSR HTTP layer for peisear (issue tracker). Library only — the runnable binary lives in the `peisear` facade crate."
+description = "Axum + Leptos SSR HTTP layer for peisear (project and issue tracking that also shows how the project is holding up). Library only — the runnable binary lives in the `peisear` facade crate."
 readme      = "README.md"
 version.workspace       = true
 edition.workspace       = true

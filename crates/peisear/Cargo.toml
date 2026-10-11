@@ -1,6 +1,6 @@
 [package]
 name        = "peisear"
-description = "A minimal, sophisticated, solid, and easy issue tracker."
+description = "A minimal, sophisticated, solid, and easy project and issue tracker that also shows how the project — and the people in it — are holding up."
 readme      = "../../README.md"
 version.workspace       = true
 edition.workspace       = true
