@@ -53,6 +53,23 @@ repositioning is 0.50.0's**, beside `DOCS-006`; the brand string and the four
 published one-line descriptions went into 0.49.0 with `DOCS-008`, because the
 release publishes them.
 
+**Added 2026-10-11 from `REL-0.49.0`'s review, for 0.50.0:**
+
+- **`§10.36`, a new register entry**: *a check that cannot tell "nothing
+  wrong" from "nothing examined."* Three instances in two releases — rule 5
+  reading "no git here" as zero citations (found by running the release
+  gate, `9dd7900`), rule 6 passing by matching nothing (`11f7704`), and the
+  self-path test passing vacuously after a rename (`DOCS-008` §3). Adjacent
+  to `§10.17` but distinct: there the assertion is wrong, here the input is
+  empty for a reason the check never asks about.
+- **`README.md:77`'s PostgreSQL claim**, for `RFC 0016`'s repositioning
+  round: it calls swapping SQLite for Postgres *"a localised change"* while
+  `ROADMAP.md:582` says it *"is larger than the crate-shaping above
+  suggests, and needs its own RFC before it is scheduled or promised."* The
+  type boundary is clean; the contracts are not — **11 triggers** carrying
+  `NFR-CONC-003` and `FR-SUB-001..003`, and **8 `RAISE(ABORT)`** messages
+  string-matched by `translate_trigger_error`.
+
 **Two decisions are the owner's**, recorded here so they are not lost:
 
 1. **Do reviews become committed artefacts?** `.git-exclude/reviewed` is cited
