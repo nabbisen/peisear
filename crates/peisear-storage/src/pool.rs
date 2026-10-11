@@ -140,4 +140,111 @@ mod tests {
             let _ = std::fs::remove_file(format!("{}{ext}", path.display()));
         }
     }
+
+    /// `STORE-001` §3: the migration alone proves nothing if the token's
+    /// millisecond component is lost anywhere on the way out of SQLite,
+    /// through the render the application sends to the browser, or back
+    /// through the parse of the client's own resubmission -- `0021`'s
+    /// fix would "land" and change nothing observable. Asserts the exact
+    /// round trip `check_optimistic_lock`
+    /// (`crates/peisear-web/src/error.rs`) performs, against both
+    /// timestamp shapes this schema can hold side by side: the
+    /// whole-second shape every row still carries from its own `INSERT`
+    /// (the column `DEFAULT`, deliberately untouched by `0021`) and the
+    /// millisecond shape `0021`'s trigger produces on the row's first
+    /// `UPDATE`. A decoder that only handles one would break every row
+    /// on one side of that boundary.
+    #[tokio::test]
+    async fn the_lock_token_round_trip_preserves_milliseconds_across_both_timestamp_shapes() {
+        use chrono::{DateTime, Utc};
+
+        let path =
+            std::env::temp_dir().join(format!("peisear-store001-{}.db", uuid::Uuid::new_v4()));
+        let url = format!("sqlite://{}", path.display());
+        let pool = connect(&url).await.expect("connect");
+        migrate(&pool).await.expect("migrate");
+
+        // Round trip exactly the way `check_optimistic_lock` and
+        // `stamp_matches` do: render as the form does, parse as a
+        // client's resubmission is parsed, compare by equality.
+        fn round_trip(dt: DateTime<Utc>) -> DateTime<Utc> {
+            let rendered = dt.to_rfc3339();
+            chrono::DateTime::parse_from_rfc3339(&rendered)
+                .unwrap_or_else(|e| {
+                    panic!("a rendered lock token must parse back: {rendered:?}: {e}")
+                })
+                .with_timezone(&Utc)
+        }
+
+        sqlx::query(
+            "INSERT INTO users (id, email, password_hash, display_name) \
+             VALUES ('u', 'u@example.test', 'x', 'U')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        sqlx::query("INSERT INTO projects (id, owner_id, name) VALUES ('p', 'u', 'P')")
+            .execute(&pool)
+            .await
+            .unwrap();
+
+        // Shape 1: the row as `INSERT` leaves it -- the column `DEFAULT`
+        // is `CURRENT_TIMESTAMP`, whole-second, and `0021` does not touch
+        // it (the lock is spent on UPDATE, not INSERT).
+        sqlx::query(
+            "INSERT INTO issues (id, project_id, author_id, title, status) \
+             VALUES ('i', 'p', 'u', 'T', 'open')",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+        let (inserted,): (DateTime<Utc>,) =
+            sqlx::query_as("SELECT updated_at FROM issues WHERE id = 'i'")
+                .fetch_one(&pool)
+                .await
+                .expect("decode the whole-second (pre-first-update) shape");
+        assert_eq!(
+            inserted.timestamp_subsec_millis(),
+            0,
+            "the INSERT default is whole-second by design -- 0021 deliberately \
+             does not touch it"
+        );
+        assert_eq!(
+            round_trip(inserted),
+            inserted,
+            "the whole-second shape must round-trip too, or every row ever \
+             inserted and never updated breaks"
+        );
+
+        // Shape 2: `0021`'s trigger fires on this UPDATE and bumps
+        // `updated_at` to millisecond precision -- the shape a lock token
+        // actually carries from here on.
+        sqlx::query("UPDATE issues SET title = 'T2' WHERE id = 'i'")
+            .execute(&pool)
+            .await
+            .unwrap();
+        let (updated,): (DateTime<Utc>,) =
+            sqlx::query_as("SELECT updated_at FROM issues WHERE id = 'i'")
+                .fetch_one(&pool)
+                .await
+                .expect("decode the millisecond (post-trigger) shape");
+        assert_ne!(
+            updated.timestamp_subsec_millis(),
+            0,
+            "the post-trigger value must carry a non-zero millisecond component, \
+             or this test cannot tell a working fix from a silently-truncating one"
+        );
+        assert_eq!(
+            round_trip(updated),
+            updated,
+            "round trip must preserve the post-trigger value exactly, \
+             milliseconds included -- this is the comparison a real second \
+             request within the same wall-clock second depends on"
+        );
+
+        pool.close().await;
+        for ext in ["", "-wal", "-shm"] {
+            let _ = std::fs::remove_file(format!("{}{ext}", path.display()));
+        }
+    }
 }

@@ -67,6 +67,64 @@ async fn issue_update_with_stale_timestamp_returns_409() {
     );
 }
 
+/// `STORE-001` (`RFC 0018` P0): `NFR-CONC-001` has a window in which it
+/// cannot do its job. SQLite's `CURRENT_TIMESTAMP` is whole-second;
+/// `NFR-CONC-002` reuses `updated_at` as the lock token; so two writes to
+/// the same row inside one second can leave the token unchanged, and a
+/// client holding a stale token compares equal and is admitted. This
+/// demonstrates the defect **through the handlers**, not just against
+/// SQLite directly — a mechanism proven at the SQL layer and a defect
+/// proven through the product are different claims, and this is the
+/// latter.
+///
+/// Deliberately does **not** call `ensure_distinct_timestamp()` between
+/// the two edits, unlike every sibling test in this file. That helper
+/// exists specifically to keep every *other* optimistic-lock test clear
+/// of this exact window — which is also the reason none of them has ever
+/// exercised it. Must fail before `0021`'s migration lands and pass
+/// after; a test that passes on the unfixed tree is testing something
+/// else.
+#[tokio::test]
+async fn issue_edited_twice_in_the_same_second_with_the_same_token_must_409() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "Test").await;
+    let issue_id = create_issue(&app.db, &project_id, &user_id, "Original title").await;
+
+    // 1. Read T0.
+    let t0 = read_issue_updated_at(&app, &issue_id).await;
+
+    // 2. First edit, carrying T0. Succeeds; the trigger fires.
+    let resp = post_issue_update(&app, &project_id, &issue_id, &t0, "First edit").await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::SEE_OTHER,
+        "first edit should succeed, got {}",
+        resp.status_code()
+    );
+
+    // 3. Second, different edit, carrying T0 again — no sleep. If the
+    // trigger's token did not move inside this same second, this spends
+    // the same token twice.
+    let resp = post_issue_update(&app, &project_id, &issue_id, &t0, "Second edit").await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::CONFLICT,
+        "a token already spent in the same second must still be refused \
+         (NFR-CONC-001); got {} — the second edit was admitted",
+        resp.status_code()
+    );
+
+    // The conflict alone proves the lock; this proves what it protects —
+    // the first edit's title must survive, not be silently overwritten.
+    let title = read_issue_title(&app, &issue_id).await;
+    assert_eq!(
+        title, "First edit",
+        "the first edit's title must not have been overwritten by the refused second edit"
+    );
+}
+
 /// `QA-006` finding 1: the issue delete route now locks too.
 #[tokio::test]
 async fn issue_delete_with_stale_timestamp_returns_409() {
@@ -997,6 +1055,18 @@ async fn read_issue_status(app: &TestApp, issue_id: &str) -> String {
         .await
         .expect("read issue status");
     status
+}
+
+/// Read an issue's current `title` column directly from the DB — `STORE-001`'s
+/// own demonstration asserts this rather than only the status code, so a
+/// lock that returns 409 but still lets the write through is caught too.
+async fn read_issue_title(app: &TestApp, issue_id: &str) -> String {
+    let (title,): (String,) = sqlx::query_as(r#"SELECT title FROM issues WHERE id = ?1"#)
+        .bind(issue_id)
+        .fetch_one(&app.db)
+        .await
+        .expect("read issue title");
+    title
 }
 
 /// Read project's current updated_at as RFC3339, parallel to
