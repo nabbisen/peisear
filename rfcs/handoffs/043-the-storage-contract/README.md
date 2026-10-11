@@ -19,7 +19,9 @@ have masked it rather than fixed it.**
 | SEC-001 | [what leaves the process, and what the operator knows](./SEC-001-what-leaves-the-process-and-what-the-operator-knows.md) | **Three items from `RFC 0018` §2**, plus the durability note and the rename from `STORE-002`'s review. Redact the DSN in the startup log (`main.rs:22-27` logs it at `INFO`, no redaction anywhere; harmless as a path, a credential the day P3 lands). And **put data at rest in the threat model** — 194 lines across `docs/security/` contain zero occurrences of "encrypt", "at rest" or "disk" | 0.50.0 |
 | REG-001 | [the check that examined nothing](./REG-001-the-check-that-examined-nothing.md) | **`§10.36`**, a register entry: *a check that cannot tell "nothing wrong" from "nothing examined."* Three instances in two releases, all named in `REL-0.49.0`'s review | 0.50.0 |
 
-**Then the candidate.**
+| REL-0.50.0 | [the release candidate](./REL-0.50.0-release-candidate.md) | The cut, `DEC-028`'s baseline rows **and two amendments** — `NFR-MNT-005`'s status, which reads `Implemented` while 25 files under `crates/*/src/` hold 79 in-file tests, and `NFR-CONC-002`'s precision paragraph | 0.50.0 |
+
+**Then the four `DEC-056` legs, on the owner's approval.**
 
 **Deliberately not in this release**, and recorded so the order is visible
 rather than remembered:
