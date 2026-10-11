@@ -74,9 +74,9 @@ that remedy.
 **What this release does not fix.** `docs/architecture/`'s two documents and
 `docs/README.md` still omit `peisear-i18n` from the workspace they describe.
 `docs/operations/deployment.md`'s own manifest still lists two of
-`static/`'s eight shipped files. **132 committed citations** still point at
-a gitignored path (measured fresh for this release, not carried over from
-an earlier count). And the overflow gate's sprint-plan page still sweeps
+`static/`'s eight shipped files. **133 committed citations** still point at
+a gitignored path (counted at this release's own commit — the figure moves
+with every handoff that cites the path, so it is dated rather than carried). And the overflow gate's sprint-plan page still sweeps
 with two empty panels — every candidate issue a fixture builds ends up in a
 different, already-completed sprint, so there is nothing to put in either
 one. All four are `DOCS-006`'s, **0.50.0**.
