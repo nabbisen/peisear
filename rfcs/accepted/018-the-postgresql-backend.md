@@ -1,8 +1,9 @@
 # RFC 0018: The PostgreSQL backend — and the lock defect found while scoping it
 
 **Status**: **Accepted** (2026-10-11) — implementation may begin at P0
-**Target**: **P0 at 0.50.0**, **P1 at 0.51.0**, the backend across
-**0.52.0 – 0.54.0**, after `RFC 0017`
+**Target**: **P0 and P0b at 0.50.0**; the backend across
+**0.53.0 – 0.55.0**, after `RFC 0017` (0.52.0) and the documentation round
+(0.51.0)
 **Raised by**: the owner, 2026-10-11 — *"Is there any actual plan or schedule
 to extend peisear-storage for postgresql?"* then *"Make the schedule and
 RFC."*
@@ -290,12 +291,12 @@ be told about, and it is the honest price of a second backend.
 
 | Phase | Release | Content | Gate |
 |---|---|---|---|
-| **P0** | **0.50.0 or 0.51.0** | **§3**: demonstrate the same-second lost update end-to-end, then move the triggers and defaults to millisecond precision | The demonstration fails before the fix and passes after |
+| **P0** | **0.50.0** | **§3**: demonstrate the same-second lost update end-to-end, then move the triggers and defaults to millisecond precision | The demonstration fails before the fix and passes after |
 | **P0b** | **0.50.0** | **§2**: measure the write cost of `synchronous = FULL` and decide it on the number — the durability half of the owner's first reason, reachable without a backend | A measured figure on both settings, and the choice recorded with it |
-| **P1** | with P0 | **§4**: coded errors replacing prose matching | Existing validation tests green, no message text in any match arm |
-| **P2** | **0.52.0** | The dialect seam: feature flag, `compile_error!` guards, dialect module. **No PostgreSQL code yet** | Every existing test green on SQLite; the seam compiles with the flag absent |
-| **P3** | **0.53.0** | The schema on PostgreSQL: migrations ported, 11 triggers re-implemented, pool options | The migration suite applies cleanly on both |
-| **P4** | **0.54.0** | The conformance suite: the same storage and lock tests against both backends in CI; the operations story (backup is no longer `cp` on PostgreSQL); documentation | Both backends green on one suite; `NFR-CMP-003` restated to say *for the SQLite backend* |
+| **P1** | **0.53.0**, with P2 | **§4**: coded errors replacing prose matching | Existing validation tests green, no message text in any match arm |
+| **P2** | **0.53.0** | The dialect seam: feature flag, `compile_error!` guards, dialect module. **No PostgreSQL code yet** | Every existing test green on SQLite; the seam compiles with the flag absent |
+| **P3** | **0.54.0** | The schema on PostgreSQL: migrations ported, 11 triggers re-implemented, pool options | The migration suite applies cleanly on both |
+| **P4** | **0.55.0** | The conformance suite: the same storage and lock tests against both backends in CI; the operations story (backup is no longer `cp` on PostgreSQL); documentation | Both backends green on one suite; `NFR-CMP-003` restated to say *for the SQLite backend* |
 
 **Sequenced after `RFC 0017`** (the first five minutes), deliberately:
 PostgreSQL serves the operator who already has one, and `RFC 0017` serves the
@@ -325,14 +326,24 @@ same claim. Already recorded for `RFC 0016`'s repositioning round
    other way** — on a single box SQLite's posture is the stronger, so the
    documentation must claim separation and recoverability, never "more
    secure".
-2. **P0 lands at 0.50.0; P1 at 0.51.0** (architect, recorded here rather than
-   returned to the owner, since the RFC left the choice open between them).
-   **P0 is a correctness defect against a P0 requirement**, so it does not
-   wait behind a documentation release; it is also small — a migration
-   rewriting eleven triggers and the column defaults, plus the demonstration
-   that must fail first. **P1 is a refactor with no live defect behind it**
-   and is P2's own prerequisite, so it sits with `RFC 0017`'s round at 0.51.0
-   and still lands a release ahead of the seam.
+2. **P0 and P0b land at 0.50.0** as its own theme — *the storage contract*,
+   `rfcs/handoffs/043-the-storage-contract/`. **P0 is a correctness defect
+   against a P0 requirement**, so it does not wait behind a documentation
+   release; measured since, the migration rewrites **seven** triggers and
+   **no** column defaults, which is smaller than this RFC first assumed.
+   **P1 moves to 0.53.0 and pairs with P2**, whose prerequisite it is:
+   0.51.0 is documentation accuracy and 0.52.0 is `RFC 0017`, and dropping a
+   storage refactor into either would be the sprawl this schedule exists to
+   avoid. The cost of the move is named rather than hidden — P1 stands on
+   its own merits and now waits two releases longer than it needs to.
+
+3. **Database-level encryption is not required** (owner, 2026-10-11).
+   **Volume encryption is the control**, and documenting it is `SEC-001`'s
+   half of 0.50.0. SQLCipher and column-level encryption are declined on the
+   record: the first is a driver-stack change under `sqlx`, the second would
+   break the comparisons the personal metrics are computed from. **The same
+   answer holds after P3** — PostgreSQL does not change it, because core
+   PostgreSQL has no transparent data encryption either.
 
 **One implementation hazard, named so it is measured and not discovered**:
 P0 changes the stored format from `YYYY-MM-DD HH:MM:SS` to one carrying

@@ -3,9 +3,10 @@
 **Status**: **Proposed** (2026-10-11) — the two channel decisions are already
 taken (owner, 2026-10-11: **prebuilt binaries *and* a container image**); what
 remains for review is §4's security change and §5's default bind
-**Target**: **0.51.0** as its own theme. 0.50.0 is already carrying
-`DOCS-006`, `RFC 0016`'s README repositioning, the sprint-plan fixture and
-the alignment defect
+**Target**: **0.52.0** as its own theme — behind 0.50.0 (*the storage
+contract*, `RFC 0018` P0/P0b and the two security items) and 0.51.0
+(documentation accuracy: `DOCS-006`, `RFC 0016`'s README repositioning, the
+sprint-plan fixture and the alignment defect)
 **Raised by**: the owner, 2026-10-11 — *"the current installation on
 documentation was too poor for unskilled users. We should make it much easier
 to start up."*
