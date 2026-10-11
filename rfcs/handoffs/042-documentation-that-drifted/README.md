@@ -100,6 +100,19 @@ today is told the port is smaller than it is** — the third README-family
 overclaim about the same work, after `README.md:77` and ahead of whatever the
 backend documentation will say.
 
+**Added 2026-10-11 from `RFC 0018` §2's security assessment, for 0.50.0:**
+
+- **The threat model has no data-at-rest entry.** 194 lines across
+  `docs/security/`, **zero occurrences of "encrypt", "at rest" or "disk"**.
+  `hardening.md:11-38` takes three threats seriously and the database file is
+  not one of them; *What the operator does* covers TLS, `JWT_SECRET`,
+  headers, rate limiting, OS hardening and backups, and not encryption.
+  **Add the asset, name volume encryption as the control, and say plainly
+  that peisear does not encrypt its own storage.**
+- **`main.rs:22-27` logs the DSN at `INFO` with no redaction** anywhere in
+  the workspace. Harmless while it is a file path; **a credential in journald
+  the day `RFC 0018` P3 lands**. One line and a test, worth doing now.
+
 **Two decisions are the owner's**, recorded here so they are not lost:
 
 1. **Do reviews become committed artefacts?** `.git-exclude/reviewed` is cited

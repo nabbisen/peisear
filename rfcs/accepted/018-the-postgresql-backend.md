@@ -121,6 +121,65 @@ claim**: `scaling.md` and the eventual backend documentation must say
 *separation and recoverability*, never *"more secure"*, which for the default
 deployment would be false.
 
+### Security, part two: encryption at rest, and leak resilience
+
+*Owner question, 2026-10-11.* Both are worth answering precisely, because
+the intuitive answers are wrong in opposite directions.
+
+**Encryption at rest is not a differentiator. Neither engine has it.**
+Community PostgreSQL has **no transparent data encryption** — TDE lives in
+forks and in managed platforms, not in core; `pgcrypto` is column-level and
+driven by the application. SQLite has none either. **For both, the control
+that actually exists today is volume encryption** (LUKS, dm-crypt, or the
+cloud volume), and a managed PostgreSQL's "encrypted at rest" is a property
+of the platform, not of the engine.
+
+**And peisear's security documentation never mentions it.** 194 lines across
+`docs/security/README.md` and `hardening.md`, and **zero occurrences of
+"encrypt", "at rest" or "disk"**. The threat model (`hardening.md:11-38`)
+takes three threats seriously — external attackers on the HTTP endpoint,
+local users on a shared host, a lost session token — and **the database file
+is not among them**, nor are its backups. *What the operator does*
+(`:126-175`) covers TLS, `JWT_SECRET` hygiene, headers, rate limiting, OS
+hardening and backups, and **not encryption**.
+
+**That is the real encryption gap, and it needs no backend.**
+
+**Leak resilience: PostgreSQL removes one vector and adds two.**
+
+| | Today (SQLite) | After P3 (PostgreSQL) |
+|---|---|---|
+| **The data** | *The file is everything.* Anything that can read `data/app.db` — a backup script, a container mount, a stolen disk — has every user's personal sustainability data, which `NFR-PRIV-001` restricts to its subject | Reading needs credentials or raw datadir access, and the application's role can be restricted. **The one genuine gain** |
+| **Credentials** | A path. Nothing secret in it | **A password-bearing DSN** — and `main.rs:22-27` logs `database = %config.database_url` at `INFO` **on every start, with no redaction anywhere in the workspace**. Harmless today; a credential in journald after P3 |
+| **Transport** | A file read. No network surface | Database traffic on the network, needing TLS of its own |
+
+**So the net is positive only where the database runs somewhere the
+application's host cannot read.** On one box with both services and one
+`.env`, the first row's gain is largely theoretical and the other two rows
+are real additions.
+
+**What actually protects this data today is the application boundary, and it
+is in good shape** — Definition of Done item 1 reads **Met** since 0.37.0;
+`NFR-PRIV-005` was reconciled at 0.28.0 (*"entry was wrong"* — two
+independent barriers already) and `NFR-PRIV-007` is implemented with six
+acceptance tests. **No engine change strengthens or weakens any of it.**
+
+### Three items this produces, none of which waits for the backend
+
+1. **Redact the DSN in the startup log.** One line and a test. Correct today,
+   **mandatory before P3**, where it stops being cosmetic.
+2. **Put data at rest in the threat model.** Name the asset (the database
+   file and its backups), name volume encryption as the supported control,
+   and say plainly that **peisear does not encrypt its own storage** — an
+   operator who has read `hardening.md` end to end currently has no reason to
+   know that.
+3. **Decide whether database-level encryption is wanted at all** — owner's.
+   **Recommendation: no.** SQLCipher is the only SQLite-shaped route and it
+   is a driver-stack change under `sqlx` with real risk; column-level
+   encryption would break the comparisons the personal metrics are computed
+   from. **Volume encryption, documented, is the right control for this
+   product** — and it is the same control after P3.
+
 ### Extensibility — uncontested
 
 Full-text search without `LIKE '%…%'`, `LISTEN`/`NOTIFY` for the notification
