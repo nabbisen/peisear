@@ -48,7 +48,9 @@ RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 Open for review. Design may still change.
 
-**Nothing is currently proposed.**
+| ID | Title | Target |
+|----|-------|--------|
+| 017 | [The first five minutes](./proposed/017-the-first-five-minutes.md) — **owner-raised 2026-10-11**: *"the current installation on documentation was too poor for unskilled users."* **There is nothing to install** — zero assets on every release (measured 0.46–0.48), no `Dockerfile`, and `installation.md` is 48 lines about installing `rustc`. Channels decided by the owner the same day: **prebuilt binaries and a container image**. Still open: the `JWT_SECRET` fallback is a **published constant**, so an instance started without it signs sessions with a key the world knows — making startup easier makes that worse, so the two land together | 0.51.0 |
 
 ## Implemented
 
