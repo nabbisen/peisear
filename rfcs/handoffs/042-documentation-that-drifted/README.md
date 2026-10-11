@@ -87,6 +87,19 @@ release publishes them.
   directory is removed when the round closes. Both files are scanned, so the
   edit belongs in a round that runs the gates, not in a drive-by.
 
+**Added 2026-10-11 from `RFC 0018` §2, for 0.50.0:**
+`docs/operations/scaling.md:91-94` tells an operator the migrations hold
+*"no SQLite-specific tricks beyond a few `julianday` calls and
+`datetime('now', '-7 days')` modifier strings, both of which have direct
+PostgreSQL equivalents."* **Measured: 24 `julianday` uses, 10 `datetime('now'`
+modifiers — and the 11 triggers and 8 `RAISE(ABORT)` messages the sentence
+excludes, which have no direct equivalent at all.** The same paragraph points
+at `ROADMAP.md`'s *"Pluggable backends beyond relational"* (line 792) when it
+means *"PostgreSQL backend"* (line 569). **An operator reading this page
+today is told the port is smaller than it is** — the third README-family
+overclaim about the same work, after `README.md:77` and ahead of whatever the
+backend documentation will say.
+
 **Two decisions are the owner's**, recorded here so they are not lost:
 
 1. **Do reviews become committed artefacts?** `.git-exclude/reviewed` is cited

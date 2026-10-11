@@ -59,33 +59,100 @@ dependency can turn one on behind your back:
   written once for both, it moves there; if the module grows past a page,
   that is the signal the sibling-crate shape was right after all.
 
-## §2 — the decision that is the owner's: *why* PostgreSQL
+## §2 — the reason, settled by the owner
 
-**This is the one thing I cannot settle, because the answer changes whether a
-shipped requirement has to be amended.**
+**Owner, 2026-10-11, superseding this section's original recommendation:**
+*"For server stability and security, first. For extensibility, secondly."*
 
-`ROADMAP.md:580` justifies the backend as *"multi-node, multi-user-at-scale
-deployments."* But `NFR-PERF-001` states the target scale is **5–30 users on
-a single node with SQLite**, and **"Horizontal scaling is out of scope"**;
-`requirements.md §1.4` names **large-enterprise resource management** as a
-use the product deliberately does not serve.
+Not the "operator preference" this RFC first proposed, and not scale.
+**Recorded as given, and assessed honestly below** — because the reason
+decides what the documentation will claim, and a claim that does not hold is
+the defect this project keeps finding.
 
-**So the roadmap's stated reason contradicts a shipped requirement.** Two
-honest ways forward:
+**`docs/operations/scaling.md:84-88` already says two thirds of this.** Its
+*"When SQLite isn't enough"* list names HA, size, and *"point-in-time
+recovery, replication, or a managed backup story that SQLite can't satisfy"*.
+**The owner's first reason is the project's own documented line**, which is a
+good sign for it.
 
-- **(a) Operator preference — recommended.** The reason is that an operator
-  who already runs PostgreSQL wants one database to back up, monitor and
-  replicate, rather than a second storage technology beside it. **This
-  requires no requirement change**: it is a deployment choice at the same
-  scale, and `NFR-CMP-002` (self-hostable, no specific provider) already
-  points this way.
-- **(b) Scale.** Then `NFR-PERF-001` is amended first, deliberately, with the
-  new target stated — and `§1.4`'s non-intended users revisited, because
-  "multi-user-at-scale" is adjacent to the use the product refuses.
+### Stability — what PostgreSQL genuinely buys
 
-**I recommend (a)**, and the whole schedule below assumes it. Under (a),
-**SQLite stays the default and loses nothing** — which is also the only
-version of this work that does not quietly change what peisear is.
+- **Point-in-time recovery and replication.** SQLite has neither, at any
+  configuration. This is the strongest item and it is not reachable any
+  other way.
+- **Failure isolation.** The database is a separate process with its own
+  lifecycle: the application can crash, be upgraded, or be replaced without
+  the data file being in the blast radius, and it can be backed up and
+  restored without coordinating with the application at all.
+- **Concurrent writers.** SQLite admits one writer at a time; the pool holds
+  **8 connections** with a **5-second `busy_timeout`**
+  (`peisear-storage/src/pool.rs:42-46`), so sustained write contention
+  surfaces as a timeout rather than a queue. MVCC removes the mode.
+
+### Stability — what it does **not** buy, and what is available sooner
+
+- **Crash safety is already there.** WAL plus `foreign_keys` is set
+  (`pool.rs:28-30`); an application crash does not corrupt the file.
+- **Durability on power loss is one line, today.** `synchronous = NORMAL`
+  with WAL is safe against an application crash but **can lose recently
+  committed transactions on a power cut or OS crash**. `FULL` removes that,
+  at a write-throughput cost nobody here has measured. **This is the highest
+  stability-per-effort change available and it needs no backend** — scheduled
+  as **P0b** below, so the easy half of the owner's first reason is not
+  waiting three releases behind the hard half.
+
+### Security — the honest reading, because it runs the other way
+
+**For a single-node self-hosted install, SQLite is the stronger posture, not
+the weaker one.** It has no network surface, no credentials, and no second
+daemon to patch; access is filesystem permissions. **PostgreSQL adds all
+three.**
+
+What PostgreSQL does buy is **separation**: the data stops being a file the
+application's own user can copy wholesale, access becomes role-based and
+auditable, transport can be TLS, and encryption at rest becomes the
+platform's problem rather than the filesystem's.
+
+**So security is a reason to choose PostgreSQL where a hardened database
+platform already exists, and not a reason to prefer it on one box.** I have
+stated the concern once; the decision stands as the owner made it, and
+nothing in the plan changes because of it. **What does change is the
+claim**: `scaling.md` and the eventual backend documentation must say
+*separation and recoverability*, never *"more secure"*, which for the default
+deployment would be false.
+
+### Extensibility — uncontested
+
+Full-text search without `LIKE '%…%'`, `LISTEN`/`NOTIFY` for the notification
+dispatcher instead of in-process polling, richer types, and read replicas.
+This is also the `§11` *RDBMS backend* row the requirements already carry.
+
+### What this reason does **not** change
+
+**No requirement is amended.** Stability, security and extensibility are not
+scale claims, so `NFR-PERF-001` keeps its 5–30 users on a single node and its
+exclusion of horizontal scaling, and `§1.4`'s non-intended users stand.
+**SQLite stays the default and loses nothing** — a condition of this
+acceptance, enforced at every phase gate below.
+
+### One correction this reason exposes
+
+`scaling.md:91-94` tells an operator that the migrations hold *"no
+SQLite-specific tricks beyond a few `julianday` calls and `datetime('now',
+'-7 days')` modifier strings, both of which have direct PostgreSQL
+equivalents."*
+
+**Measured: 24 `julianday` uses and 10 `datetime('now'` modifiers — and
+`§5`'s 11 triggers and 8 `RAISE(ABORT)` messages, which the sentence excludes
+and which have no direct equivalent at all.** The date arithmetic does
+translate; the triggers are a rewrite in PL/pgSQL and the error text matching
+does not survive in any form. The same paragraph also points at
+`ROADMAP.md`'s *"Pluggable backends beyond relational"* (line 792) when the
+section it means is *"PostgreSQL backend"* (line 569) — a different subject.
+
+**Recorded for 0.50.0** in
+`rfcs/handoffs/042-documentation-that-drifted/README.md`: an operator reading
+`scaling.md` today is told this port is smaller than it is.
 
 ## §3 — found while scoping: the lock token does not always advance
 
@@ -165,6 +232,7 @@ be told about, and it is the honest price of a second backend.
 | Phase | Release | Content | Gate |
 |---|---|---|---|
 | **P0** | **0.50.0 or 0.51.0** | **§3**: demonstrate the same-second lost update end-to-end, then move the triggers and defaults to millisecond precision | The demonstration fails before the fix and passes after |
+| **P0b** | **0.50.0** | **§2**: measure the write cost of `synchronous = FULL` and decide it on the number — the durability half of the owner's first reason, reachable without a backend | A measured figure on both settings, and the choice recorded with it |
 | **P1** | with P0 | **§4**: coded errors replacing prose matching | Existing validation tests green, no message text in any match arm |
 | **P2** | **0.52.0** | The dialect seam: feature flag, `compile_error!` guards, dialect module. **No PostgreSQL code yet** | Every existing test green on SQLite; the seam compiles with the flag absent |
 | **P3** | **0.53.0** | The schema on PostgreSQL: migrations ported, 11 triggers re-implemented, pool options | The migration suite applies cleanly on both |
@@ -188,13 +256,16 @@ same claim. Already recorded for `RFC 0016`'s repositioning round
 
 ## §8 — decisions taken
 
-1. **The reason is operator preference** (owner, 2026-10-11, accepting this
-   RFC with its recommendation). **No requirement is amended**: `NFR-PERF-001`
-   keeps its 5–30 users on a single node and its exclusion of horizontal
-   scaling, and `§1.4`'s non-intended users stand. PostgreSQL is a deployment
-   choice at the same scale, for an operator who already runs one.
-   **SQLite stays the default and loses nothing** — that is a condition of
-   this acceptance, not an aspiration, and every phase gate below enforces it.
+1. **The reason is server stability and security first, extensibility
+   second** (owner, 2026-10-11, superseding this RFC's own "operator
+   preference" recommendation). **No requirement is amended** — none of the
+   three is a scale claim. **SQLite stays the default and loses nothing**,
+   a condition of this acceptance enforced at every phase gate.
+   **§2 records which parts of the first reason PostgreSQL delivers, which
+   are available sooner without it (P0b), and the one part that runs the
+   other way** — on a single box SQLite's posture is the stronger, so the
+   documentation must claim separation and recoverability, never "more
+   secure".
 2. **P0 lands at 0.50.0; P1 at 0.51.0** (architect, recorded here rather than
    returned to the owner, since the RFC left the choice open between them).
    **P0 is a correctness defect against a P0 requirement**, so it does not
