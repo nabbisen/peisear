@@ -50,6 +50,7 @@ Open for review. Design may still change.
 
 | ID | Title | Target |
 |----|-------|--------|
+| 018 | [The PostgreSQL backend](./proposed/018-the-postgresql-backend.md) — **owner-requested 2026-10-11**, answering `ROADMAP.md:582`'s *"needs its own RFC before it is scheduled or promised."* The type boundary is ready (one `Pool` alias, zero compile-time `sqlx` macros, 137 runtime queries); the contracts are not (**11 triggers**, **8 `RAISE(ABORT)`** messages matched by prose). **Found while scoping it**: SQLite's whole-second `CURRENT_TIMESTAMP` means the optimistic-lock token **does not advance between two writes in the same second** — verified directly, and a defect in the shipped product independent of this RFC | P0/P1 at 0.50–0.51, backend 0.52–0.54 |
 | 017 | [The first five minutes](./proposed/017-the-first-five-minutes.md) — **owner-raised 2026-10-11**: *"the current installation on documentation was too poor for unskilled users."* **There is nothing to install** — zero assets on every release (measured 0.46–0.48), no `Dockerfile`, and `installation.md` is 48 lines about installing `rustc`. Channels decided by the owner the same day: **prebuilt binaries and a container image**. Still open: the `JWT_SECRET` fallback is a **published constant**, so an instance started without it signs sessions with a key the world knows — making startup easier makes that worse, so the two land together | 0.51.0 |
 
 ## Implemented
