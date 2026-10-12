@@ -194,6 +194,8 @@ already `Implemented`.
 ## References
 
 - `§10.3`, the reconciliation at `QA-021` and the direction it recorded
-- `NFR-PRIV-005`, and `REQ-002`'s three-tier recount
-- `.git-exclude/reviewed/REQ-002-review.md` §3, on why *accept and scope* and
-  *verify the requester* are different readings and only one is satisfiable
+- `NFR-PRIV-005`, and `REQ-002`'s three-tier recount — that entry's own text
+  explains why *accept and scope* (36 of 40) and *verify the identity is
+  the requester's* (0 of 40, and cannot be otherwise: the parameter is a
+  `&str`, and storage cannot tell a session's id from any other) are
+  different readings, and only the first is satisfiable

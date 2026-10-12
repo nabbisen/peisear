@@ -872,8 +872,6 @@ only the conditions it chose.
 
 ### 10. Three defects from CONF-001's review — pulled forward to 0.25.0
 
-*Added 2026-08-16, from `.git-exclude/reviewed/CONF-001-review.md` §4–§6.*
-
 Three independent defects surfaced while reviewing `CONF-001`. None is a
 feature, none needs its own RFC, and all three are the kind of thing Phase E
 exists to sweep up — so they arrive here rather than inventing a home, the same

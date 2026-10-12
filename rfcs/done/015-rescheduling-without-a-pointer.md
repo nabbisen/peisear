@@ -12,9 +12,9 @@ on-surface), `FR-DM-001` (Met, four surfaces), `FR-DM-006` (Met),
 `NFR-A11Y-007` (touch targets), `NFR-A11Y-001`
 **Related register entries**: `§10.34`, `§10.15`
 **Governing decisions**: establishes **`DEC-059`**
-**Last updated**: 2026-10-08 — written from `FR-DM-002`'s measurement
-(`.git-exclude/reviewed/FR-DM-002-measurement-review.md`) and from the block
-geometry in `components/calendar.rs`, both measured rather than described
+**Last updated**: 2026-10-08 — written from `FR-DM-002`'s own measurement
+and from the block geometry in `components/calendar.rs`, both measured
+rather than described
 
 ## Summary
 

@@ -107,9 +107,9 @@ limit was measured and found not to be narrow.
 **What changed and why.** `DEC-049` was enforced by a guard keying off DaisyUI
 sizing classes, and everything else was recorded as a *named limit* — plain
 links "unassessed rather than passing", with WCAG's inline-link exception
-*probably* covering them. Measured across ten pages
-(`.git-exclude/tasks/architect/014-…`), **exactly one** sub-44 control was a link
-inside running text. The rest were an entire account menu on every page,
+*probably* covering them. Measured across ten pages, **exactly one** sub-44
+control was a link inside running text. The rest were an entire account
+menu on every page,
 `<summary>` disclosure toggles at 16 px that external design `§5.7` names by
 hand, breadcrumbs, and `FR-HLT-007`'s own indicator basis links at 17 px.
 

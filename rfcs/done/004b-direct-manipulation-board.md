@@ -18,8 +18,6 @@ contract the umbrella imposes and the board predates — and the item that matte
 most is that **three user-visible English sentences live inside `board.js`,
 outside the message table and outside every guard this project has built.**
 
-Full reconciliation: `.git-exclude/tasks/architect/010-d2-reconciliation.md`.
-
 ## Background
 
 RFC 004's D-2 sketch reads *"New view on project detail … Drag from one status
@@ -164,7 +162,6 @@ without varying them.
 
 ## References
 
-- `.git-exclude/tasks/architect/010-d2-reconciliation.md`
 - `static/board.js`; `static/dm.js` (the JSON-island pattern)
 - `DEC-021`, `DEC-018`; RFC 004 cross-cutting requirements 2a, 4, 6, 9
 - RFC 006's queue README — the `search.js` exclusion this RFC makes true

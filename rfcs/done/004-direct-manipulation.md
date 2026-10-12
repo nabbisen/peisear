@@ -29,8 +29,6 @@ the D-4 sketch's keyboard binding did not survive it
 > 2026-08-01 for `DEC-021`. That is the likeliest reason its shape held while
 > RFC 003's did not, and it is an argument for the revision itself rather than
 > for the reconciliation gate.
->
-> Full findings: `.git-exclude/tasks/architect/009-rfc-004-reconciliation.md`.
 
 > **Revision note (2026-08-01).** Revised to carry `DEC-021`, and
 > to correct three defects found on review: normative text that
@@ -348,9 +346,8 @@ sketches below are enough to plan the umbrella shape.
 
 #### D-2: Kanban drag
 
-*Corrected 2026-08-16, from the reconciliation
-(`.git-exclude/tasks/architect/009-rfc-004-reconciliation.md` §2.2). This
-substep was "Kanban view + drag"; the view shipped without it.*
+*Corrected 2026-08-16. This substep was "Kanban view + drag"; the view
+shipped without it.*
 
 - **The board already exists.** `?view=board` on project detail, with a
   **List / Board** selector (`components/issues.rs:41–60`). This substep is
@@ -425,8 +422,8 @@ prevent. Derive from the same flag the buttons use.
 > affordance: a drag is not a touch path, so on a phone this is per-row
 > buttons, which do not order a long backlog at any width.
 >
-> **Where the sketch was wrong**, found by reviewing it against the code
-> (`.git-exclude/tasks/architect/020-…`, `021-…`): (1) *per-user ordering*
+> **Where the sketch was wrong**, found by reviewing it against the code:
+> (1) *per-user ordering*
 > would fork the board, which already renders `position` to everyone;
 > (2) *"a global column on `issues` doesn't work"* — the column exists, is
 > scoped `(project_id, status)`, and is written on insert; (3) the endpoint

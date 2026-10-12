@@ -197,6 +197,5 @@ without varying them. Recorded as decided rather than left looking skipped.
 
 - RFC 0004 §Requirements cross-cutting 0 and 6
 - External design `§17.4` (the shape to avoid), `§7.3` (the response contract)
-- `.git-exclude/tasks/architect/009-rfc-004-reconciliation.md` §2.1
 - `components/issues.rs:1504–1531` (the inert segment), `:621` (the board's
   working form), `handlers/issues.rs:833` (the 204)

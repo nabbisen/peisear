@@ -9,8 +9,7 @@
 //! freely passed around once obtained. [`verify`] is the only function
 //! that can see the private field, so the only way to obtain a
 //! `RequesterId` is a token that actually passes signature and expiry
-//! verification. Proven by plant, not assumed:
-//! `.git-exclude/review-request/PRIV-002-identity-type-investigation/evidence/sealing-plant.md`.
+//! verification. Proven by plant, not assumed.
 //!
 //! `Claims` stays private to this module too -- nothing outside it ever
 //! read anything but `.sub` (checked: `grep -rn "claims\."` over the

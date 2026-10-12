@@ -17,10 +17,13 @@
 //!    missing from the manifest.
 //! 4. Documented environment-variable defaults, against `config.rs`'s
 //!    `unwrap_or_else`/`unwrap_or` fallbacks.
-//! 5. Committed citations of `.git-exclude/`, a gitignored path. Its
-//!    source of truth is `git`'s own tracked-file list, not a text
-//!    fixture this module's [`Input`] can hold cheaply, so its functions
-//!    and tests sit apart from the other four, at the end of this file.
+//! 5. No document under `docs/`, no RFC, and no published doc comment
+//!    cites `.git-exclude/`, a gitignored path -- four named exceptions.
+//!    Its population (hundreds of files under `docs/`, `rfcs/`, and
+//!    `crates/*/src/`) is too large for this module's [`Input`] to hold
+//!    cheaply the way rules 1-4's few fixed documents can, so its
+//!    functions and tests sit apart from the other four, at the end of
+//!    this file.
 //!
 //! **Rules 1 and 3 were not always this wide.** `DOCS-005` landed both as
 //! half-rules, deliberately: `README.md`'s crate count and the manifest's
@@ -32,6 +35,15 @@
 //! and `deployment.md` named all eight files in `static/`, both halves
 //! became assertable, the two gap-documenting tests were deleted, and
 //! the rules above are what they always intended to be.
+//!
+//! **Rule 5 was not always this narrow.** It started as "no *committed*
+//! file cites the path," which could never pass -- that version banned
+//! `docs/specification/README.md`'s own sentence defining what
+//! `.git-exclude/` is, and it banned every implementation handoff, which
+//! is an execution record, not documentation. `DOC-002` (`RFC 0019`,
+//! `0.51.0`) found the rule the defect was actually about and this is
+//! it: three documentation surfaces, four named exceptions, no `git`
+//! shell-out, enforced rather than reported.
 //!
 //! **Rule 4's own bound**: the security error this rule is named for
 //! (`hardening.md` once claimed `127.0.0.1:3000` was the default bind) was
@@ -576,124 +588,156 @@ fn the_helpers_do_what_the_rules_assume() {
     );
 }
 
-// ---------- rule 5: committed citations of a gitignored path ----------
+// ---------- rule 5: no document, RFC, or published doc comment cites a
+// gitignored path (`DOC-002`, `RFC 0019`) ----------
 //
-// `git` is the source of truth for "every committed file" -- a filesystem
-// walk would have to reimplement `.gitignore` pattern matching to answer
-// the same question, which `git ls-files` already does correctly. This is
-// the one function in this module that shells out; every other scan in
-// this crate walks the filesystem directly (see `changelog_scan`'s
-// `other_markdown`), because none of them needs git's own tracked/ignored
-// distinction -- this rule's whole subject *is* that distinction.
+// Narrowed from "no committed file cites the path," which could never
+// pass: that version banned `docs/specification/README.md`'s own
+// sentence defining the convention, and it banned every handoff, which
+// is an execution record, not documentation. The rule that matches the
+// defect `RFC 0019` actually found: no document under `docs/`, no RFC,
+// and no published doc comment cites `.git-exclude/`.
+//
+// A pure filesystem walk, not a git shell-out. The old version needed
+// `git`'s own tracked/ignored distinction because it scanned *every*
+// tracked file, including source and config, and had to tell a
+// genuinely untracked scratch file from one `.gitignore` merely
+// excludes. This version scans three fixed, already-known locations
+// (`docs/`, `rfcs/` minus `rfcs/handoffs/`, and `///`/`//!` lines under
+// `crates/*/src/`), so there is nothing left for "no `.git` here" to
+// mean -- the extracted-tree failure mode `REL-0.49.0` found the hard
+// way does not exist for this rule any more.
 
-/// This module's own path, repo-root-relative -- excluded by
-/// [`tracked_files`] (`DOCS-005` review, finding F-1). The rule explains
-/// itself in its own doc comment and test expectations, which
+/// This module's own path, repo-root-relative. The rule explains
+/// itself in its own doc comments and test expectations, which
 /// necessarily contain the string `.git-exclude` -- without this
-/// exclusion, the rule could never reach zero, because landing the file
-/// that reports the count raises the count. `DOCS-006` is left to decide
-/// what *else* may legitimately cite the path (a handoff discussing this
-/// problem does, more than once); this exclusion only stops the rule
-/// banning its own existence.
+/// exclusion the rule could never reach zero, because landing the file
+/// that enforces the count raises it.
 const SELF_PATH: &str = "crates/peisear-web/src/docs_scan.rs";
 
-/// `repo_root()` has no `.git` of its own -- which `git -C <dir>
-/// ls-files` does not require to answer *something*: git walks upward
-/// and happily resolves against an *enclosing* repository if `dir` is a
-/// subdirectory of one. That is exactly what a `git archive` extraction
-/// under `.git-exclude/tmp/` triggers during release-candidate
-/// verification: `.git-exclude/` is itself gitignored and nested inside
-/// this very checkout, so `git -C <extracted-tree> ls-files` silently
-/// answers against *this* repository and correctly reports nothing
-/// tracked under a gitignored path -- which reads as "zero citations"
-/// rather than "no git information is available here." Checked via
-/// `.git`'s own presence (a file in a worktree, a directory in an
-/// ordinary checkout; `.exists()` covers both) rather than shelling out
-/// again, since the question is only "does this directory have its own
-/// git metadata," not anything git itself needs to answer.
-fn in_own_git_repo() -> bool {
-    repo_root().join(".git").exists()
-}
+/// The other three named exceptions, each for its own reason: both
+/// *define* the convention they are quoted for (one documents what
+/// `.git-exclude/` is, in a table about what is normative; the other is
+/// `RFC 0019` itself, which proposed this very rule and quotes the
+/// paths it governs -- the same self-reference as `SELF_PATH`, one
+/// directory over). If this list needs a fifth entry, that is `§10.36`'s
+/// own shape: a rule whose exception list keeps growing is a rule whose
+/// subject is narrower than its name.
+const GIT_EXCLUDE_RULE_EXCEPTIONS: &[&str] = &[
+    "docs/specification/README.md",
+    "rfcs/accepted/019-what-is-in-the-repository.md",
+];
 
-/// Every path `git` considers tracked, unfiltered -- the raw list
-/// [`tracked_files`] filters `SELF_PATH` out of. Kept separate so a test
-/// can assert against the *un*filtered list too (`DOCS-008` §3): a test
-/// that only checks `SELF_PATH` is absent from the filtered output
-/// passes vacuously if `SELF_PATH` is stale (the file renamed or moved),
-/// since an absent path is trivially "not found" either way.
-///
-/// `None` when [`in_own_git_repo`] is false -- callers must not read an
-/// empty `Vec` as "git ran and found nothing," because that is exactly
-/// the silent-wrong-answer shape this function exists to avoid.
-fn git_tracked_paths() -> Option<Vec<String>> {
-    if !in_own_git_repo() {
-        return None;
+/// True if `rel` (repo-root-relative, forward slashes) is in rule 5's
+/// population: a markdown file under `docs/` or `rfcs/`, excluding
+/// `rfcs/handoffs/` (execution records, not documentation), the frozen
+/// `docs/specification/history/` snapshots, and the four named
+/// exceptions above.
+fn in_rule_5_scope(rel: &str) -> bool {
+    if rel == SELF_PATH || GIT_EXCLUDE_RULE_EXCEPTIONS.contains(&rel) {
+        return false;
     }
-    let root = repo_root();
-    let output = std::process::Command::new("git")
-        .arg("-C")
-        .arg(&root)
-        .arg("ls-files")
-        .arg("-z")
-        .output()
-        .expect("git ls-files");
-    Some(
-        String::from_utf8_lossy(&output.stdout)
-            .split('\0')
-            .filter(|s| !s.is_empty())
-            .map(|s| s.to_string())
-            .collect(),
-    )
+    if rel.starts_with("docs/specification/history/") || rel.starts_with("rfcs/handoffs/") {
+        return false;
+    }
+    rel.ends_with(".md") && (rel.starts_with("docs/") || rel.starts_with("rfcs/"))
 }
 
-fn tracked_files() -> Option<Vec<(String, String)>> {
+/// Every markdown file under `docs/` and `rfcs/` that [`in_rule_5_scope`]
+/// admits, as `(repo-root-relative path, text)`.
+fn docs_and_rfcs_files() -> Vec<(String, String)> {
     let root = repo_root();
     let mut out = Vec::new();
-    for rel in git_tracked_paths()? {
-        if rel == SELF_PATH {
-            continue;
-        }
-        if let Ok(text) = fs::read_to_string(root.join(&rel)) {
+    walk_rule_5_markdown(&root, &root.join("docs"), &mut out);
+    walk_rule_5_markdown(&root, &root.join("rfcs"), &mut out);
+    out.sort();
+    out
+}
+
+fn walk_rule_5_markdown(root: &Path, dir: &Path, out: &mut Vec<(String, String)>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for e in entries.flatten() {
+        let p = e.path();
+        let rel = p
+            .strip_prefix(root)
+            .expect("under root")
+            .to_string_lossy()
+            .replace('\\', "/");
+        if p.is_dir() {
+            if rel == "rfcs/handoffs" || rel == "docs/specification/history" {
+                continue;
+            }
+            walk_rule_5_markdown(root, &p, out);
+        } else if in_rule_5_scope(&rel)
+            && let Ok(text) = fs::read_to_string(&p)
+        {
             out.push((rel, text));
         }
     }
-    Some(out)
 }
 
-/// Occurrences, not distinct paths -- matching `git grep -o '.git-exclude'`.
+/// Every `///` or `//!` line across `crates/*/src/` -- what rustdoc, and
+/// so docs.rs, actually reads. A `//` implementation comment never
+/// reaches a published crate's documentation and is out of this rule's
+/// scope (`DOC-002` §5).
+fn published_doc_comment_lines() -> Vec<(String, String)> {
+    let root = repo_root();
+    let mut out = Vec::new();
+    let Ok(crates) = fs::read_dir(root.join("crates")) else {
+        return out;
+    };
+    for c in crates.flatten() {
+        walk_rule_5_doc_comments(&root, &c.path().join("src"), &mut out);
+    }
+    out.sort();
+    out
+}
+
+fn walk_rule_5_doc_comments(root: &Path, dir: &Path, out: &mut Vec<(String, String)>) {
+    let Ok(entries) = fs::read_dir(dir) else {
+        return;
+    };
+    for e in entries.flatten() {
+        let p = e.path();
+        if p.is_dir() {
+            walk_rule_5_doc_comments(root, &p, out);
+            continue;
+        }
+        if p.extension().and_then(|s| s.to_str()) != Some("rs") {
+            continue;
+        }
+        let rel = p
+            .strip_prefix(root)
+            .expect("under root")
+            .to_string_lossy()
+            .replace('\\', "/");
+        if rel == SELF_PATH {
+            continue;
+        }
+        let Ok(text) = fs::read_to_string(&p) else {
+            continue;
+        };
+        let doc_lines: Vec<&str> = text
+            .lines()
+            .filter(|l| {
+                let t = l.trim_start();
+                t.starts_with("///") || t.starts_with("//!")
+            })
+            .collect();
+        if !doc_lines.is_empty() {
+            out.push((rel, doc_lines.join("\n")));
+        }
+    }
+}
+
+/// Occurrences, not distinct paths.
 fn git_exclude_citations(files: &[(String, String)]) -> usize {
     files
         .iter()
         .map(|(_, text)| text.matches(".git-exclude").count())
         .sum()
-}
-
-/// Always runs, never fails: surfaces the count so a reader of `cargo test
-/// -p peisear-web --lib -- --nocapture` sees it without the live suite
-/// going red over a gap `DOCS-006` (0.50.0) is what's expected to close.
-/// Reports plainly, rather than a false `0`, when run somewhere with no
-/// git information for this repository (`REL-0.49.0`'s own extracted-tree
-/// verification found this the hard way: an absent count silently read
-/// as a zero count).
-#[test]
-fn git_exclude_citation_count_is_reported() {
-    let Some(files) = tracked_files() else {
-        println!(
-            "docs_scan rule 5: no git information available for this repository here \
-             (no `.git` at {:?} -- e.g. a `git archive` extraction) -- count not measured",
-            repo_root()
-        );
-        return;
-    };
-    let count = git_exclude_citations(&files);
-    println!(
-        "docs_scan rule 5: {count} citations to `.git-exclude` in tracked files, \
-         excluding this module's own ({SELF_PATH}) -- 130 at last measurement \
-         (2026-10-11, DOCS-005 review's own count, after subtracting the 9 this \
-         file necessarily carries), taken as a count of occurrences, not distinct \
-         paths, which is why it moves release to release; DOCS-006 (0.50.0) is \
-         expected to remove them"
-    );
 }
 
 #[test]
@@ -705,66 +749,68 @@ fn a_planted_git_exclude_citation_is_counted() {
     assert_eq!(git_exclude_citations(&files), 2);
 }
 
-/// `DOCS-005` review, finding F-1: `tracked_files()` used to count this
-/// module's own file, which cites `.git-exclude` nine times in its doc
-/// comments and test expectations -- so the rule below could never reach
-/// zero, even after `DOCS-006` closes the real gap.
-///
-/// `DOCS-008` review, finding F-3: the first version of this test only
-/// asserted `SELF_PATH` was *absent* from `tracked_files()`'s filtered
-/// output -- which also holds, vacuously, if `SELF_PATH` is stale (the
-/// file renamed or moved), since the filtered list would never contain
-/// the old path either way. The one failure mode this test exists to
-/// catch is the one that shape can't see. Fixed to a positive assertion
-/// first: `SELF_PATH` must be present in git's own *unfiltered* tracked
-/// list, which fails loudly, naming the path, the moment a rename makes
-/// `SELF_PATH` stale -- then the filtered list must exclude it.
-///
-/// Skips, rather than fails, when [`in_own_git_repo`] is false: this
-/// test's own subject is git's tracked/untracked distinction, and
-/// nothing can be proved about it without git information for this
-/// repository to check against. Found during `REL-0.49.0`'s own
-/// extracted-tree verification -- exactly the context this guard exists
-/// for, not a hypothetical one.
+/// `DOC-002` §7: both halves of the scope boundary, proven on the
+/// literal paths the rule reasons about -- a document in scope, a
+/// handoff that must not be, and all four named exceptions.
 #[test]
-fn the_scan_does_not_count_its_own_file() {
-    let Some(tracked) = git_tracked_paths() else {
-        println!(
-            "docs_scan: no git information available for this repository here -- \
-             skipping (cannot prove the exclusion without it)"
-        );
-        return;
-    };
+fn rule_5_scope_catches_a_document_and_excludes_a_handoff() {
+    assert!(in_rule_5_scope("docs/architecture/workspace-layout.md"));
+    assert!(in_rule_5_scope("rfcs/done/999-example.md"));
     assert!(
-        tracked.iter().any(|p| p == SELF_PATH),
-        "{SELF_PATH} is not a tracked file -- if docs_scan.rs was renamed \
-         or moved, update SELF_PATH to match, or this test cannot prove \
-         the exclusion it exists to prove"
+        !in_rule_5_scope("rfcs/handoffs/999-example/README.md"),
+        "a handoff is an execution record, not documentation"
     );
-    let files = tracked_files().expect("git_tracked_paths() just succeeded above");
+    assert!(!in_rule_5_scope(SELF_PATH));
+    assert!(!in_rule_5_scope("docs/specification/README.md"));
+    assert!(!in_rule_5_scope(
+        "docs/specification/history/peisear-0.20.0-requirements-en.md"
+    ));
+    assert!(!in_rule_5_scope(
+        "rfcs/accepted/019-what-is-in-the-repository.md"
+    ));
+}
+
+/// Both halves again, this time against the real tree rather than
+/// literal strings -- `rule_5_scope_catches_a_document_and_excludes_a_
+/// handoff` proves the predicate; this proves the *walker* applies it
+/// correctly to what is actually on disk, which a predicate test alone
+/// cannot: a directory-traversal bug would still pass that one.
+#[test]
+fn rule_5_population_includes_docs_and_rfcs_but_excludes_handoffs() {
+    let files = docs_and_rfcs_files();
     assert!(
-        !files.iter().any(|(path, _)| path == SELF_PATH),
-        "tracked_files() must exclude {SELF_PATH}, or rule 5 can never pass"
+        files.iter().any(|(p, _)| p.starts_with("docs/")),
+        "expected at least one real docs/ file in rule 5's population"
+    );
+    assert!(
+        files
+            .iter()
+            .any(|(p, _)| p.starts_with("rfcs/") && !p.starts_with("rfcs/handoffs/")),
+        "expected at least one real rfcs/ file (not a handoff) in rule 5's population"
+    );
+    assert!(
+        !files.iter().any(|(p, _)| p.starts_with("rfcs/handoffs/")),
+        "rfcs/handoffs/ is an execution record, not documentation, and must not appear"
+    );
+    assert!(
+        !files
+            .iter()
+            .any(|(p, _)| p == "docs/specification/README.md"),
+        "the definition row's own document must be excepted"
     );
 }
 
-/// Deferred to `DOCS-006` (0.50.0), the same way rule 5's own handoff text
-/// proposes for itself (§1): "write it, and report its current count
-/// rather than landing it failing... write it as a `#[ignore]`d test with
-/// the count in its name." The count is in the ignore reason rather than
-/// the test name because it is a measured, moving number, not a stable
-/// identifier -- a name that goes stale the moment the count changes would
-/// be its own small drift.
+/// Live, not `#[ignore]`d: `DOC-002` closed the real gap (19 citations,
+/// 15 of them resolved to a rewrite or a cut, four kept as the
+/// exceptions above), so the rule that could never pass before now can,
+/// and is enforced rather than merely reported.
 #[test]
-#[ignore = "DOCS-006 (0.50.0) removes committed citations of `.git-exclude/`; \
-            130 at last measurement (2026-10-11, this module's own excluded) -- \
-            see docs_scan's rule 5 and this module's own doc comment"]
-fn no_committed_file_cites_git_exclude() {
-    let files = tracked_files()
-        .expect("run this inside the repository's own git working tree, not an extracted one");
+fn no_document_rfc_or_published_doc_comment_cites_git_exclude() {
+    let mut files = docs_and_rfcs_files();
+    files.extend(published_doc_comment_lines());
     let count = git_exclude_citations(&files);
     assert_eq!(
         count, 0,
-        "{count} committed citations to .git-exclude/ remain"
+        "{count} citations to .git-exclude/ remain outside the named exceptions"
     );
 }

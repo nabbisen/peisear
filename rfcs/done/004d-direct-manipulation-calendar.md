@@ -227,4 +227,3 @@ JSON island the server authors.
   finding this substep inherits
 - [RFC 0002](../done/002-calendar-surfaces.md) — the views and their geometry
 - [RFC 0004b](../done/004b-direct-manipulation-board.md) — the link-drag trap
-- `.git-exclude/tasks/architect/018-0.34.0-scope-proposal.md` §3

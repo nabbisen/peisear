@@ -194,4 +194,3 @@ it for a screen the user cannot see past.
 - [RFC 0004b](../done/004b-direct-manipulation-board.md) — the substep this one
   most resembles
 - [RFC 0001](../done/001-sprint-planning-page.md) — the screen and its endpoints
-- `.git-exclude/tasks/architect/018-0.34.0-scope-proposal.md` §3

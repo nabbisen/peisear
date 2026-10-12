@@ -125,9 +125,9 @@ pub(crate) fn t(key: peisear_i18n::MessageKey) -> String {
 }
 
 /// `NFR-A11Y-007`'s 44px touch target (`DEC-049`), resolved:
-/// `min-h-11`/`min-w-11` = `2.75rem` = 44px each, verified against the
-/// pinned `daisyui@4.12.14` bundle `TT-001` located at
-/// `.git-exclude/tmp/daisy.css`. One name, composed at each of
+/// `min-h-11`/`min-w-11` = `2.75rem` = 44px each, verified by `TT-001`
+/// against the pinned `daisyui@4.12.14` bundle, now tracked at
+/// `static/daisyui.min.css` (`ASSET-001`). One name, composed at each of
 /// `TT-002`'s 136 call sites, rather than the pair repeated as many
 /// times — the same "move the fact to where it can be checked" shape
 /// as [`t`] itself, `RFC 006`, `QA-019`, `HLT-001`, and `JS-003`.

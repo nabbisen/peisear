@@ -181,9 +181,5 @@ recurring sprints, multi-team sprints. The one-active-sprint rule, which
 
 ## References
 
-- `.git-exclude/reviewed/SPRINT-002-003-escalation-review.md` — the ruling and
-  the four-input finding
-- `.git-exclude/review-request/SPRINT-002-003-escalation/` — the measurement
-  that stopped the work
 - `FR-SPR-004`, and its `0.39.0` correction recording that its old status
   blamed an unbuilt screen for three shipped routes

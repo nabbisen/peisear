@@ -137,8 +137,7 @@ git push origin X.Y.Z
 ## Keeping the file a readable size — `DEC-055`
 
 **Decided 2026-09-25.** The arrangement below was implemented from another
-project's policy before anyone here decided it (see
-`.git-exclude/reviewed/CHANGELOG-POLICY-review.md`). It is kept **on this
+project's policy before anyone here decided it. It is kept **on this
 project's own reasoning**: `CHANGELOG.md` had reached 4,154 lines, the move is
 verbatim and reversible, and the scan makes the arrangement checkable rather
 than remembered. What is *not* inherited is anything about how a section reads.

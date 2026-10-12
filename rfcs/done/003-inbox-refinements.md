@@ -25,10 +25,9 @@ returned from Accepted on 2026-08-16 and is superseded in full
 **Last updated**: 2026-08-16
 
 > **Why this was rewritten rather than amended.** The previous text was
-> accepted 2026-05-04 and never dispatched. Reconciled against the shipped code
-> before any handoff was written
-> (`.git-exclude/tasks/architect/008-rfc-003-reconciliation.md`), three of its
-> four design items did not survive:
+> accepted 2026-05-04 and never dispatched. Reconciled against the shipped
+> code before any handoff was written, three of its four design items did
+> not survive:
 >
 > - **Mark-all-read** was already built — hide-when-zero included — at
 >   0.9.0–0.16.0, *before* the RFC was accepted. It was wrong on the day it was
@@ -177,8 +176,6 @@ banner outside `/inbox`.
 
 ## References
 
-- `.git-exclude/tasks/architect/008-rfc-003-reconciliation.md` — the findings
-  that produced this rewrite
 - `handlers/notification_preferences.rs:136` — `silence_all`
 - `storage/notifications.rs:326, 348` — `global_acknowledged`,
   `set_global_acknowledged`
