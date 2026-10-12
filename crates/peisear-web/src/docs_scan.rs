@@ -9,8 +9,14 @@
 //! 1. The crate set a document names, against `crates/*/` -- all three
 //!    documents that enumerate the crate set (`README.md`,
 //!    `workspace-layout.md`, `crate-boundaries.md`), as this rule always
-//!    intended.
-//! 2. `installation.md`'s MSRV claims, against `Cargo.toml`'s `rust-version`.
+//!    intended. **Rule 1b**, since `DOC-004`: the crate set's own
+//!    *count*, in the four fixed phrase shapes the documents use for it
+//!    -- `docs/README.md` included, which rule 1 itself still does not
+//!    read (it has no crate to be missing; it only ever claims a count).
+//! 2. MSRV claims, against `Cargo.toml`'s `rust-version` -- `installation.md`
+//!    and, since `DOC-004`, `.github/CONTRIBUTING.md`, which cites
+//!    `installation.md` but carried its own copy of the number and had
+//!    drifted independently.
 //! 3. `deployment.md`'s *What to ship* manifest against `static/`'s actual
 //!    contents, exhaustively in both directions: nothing the manifest
 //!    lists is missing from `static/`, and nothing in `static/` is
@@ -35,6 +41,19 @@
 //! and `deployment.md` named all eight files in `static/`, both halves
 //! became assertable, the two gap-documenting tests were deleted, and
 //! the rules above are what they always intended to be.
+//!
+//! **Rule 1b exists because rule 1 checks presence, never cardinality**
+//! (`DOC-001`'s own review, finding F-3). `DOC-004` measured the claims
+//! instead of assuming one rule would cover them: three documents, four
+//! claims, two different denominators (the full crate set, and the
+//! implementation crates alone, facade excluded) -- and `crate-boundaries.md`
+//! also says "five of the six", "four of the other five" and "existing
+//! five", subset counts a rule keyed on *any* number word near "crate"
+//! would flag as violations. So rule 1b matches the four fixed phrase
+//! shapes the real claims use, the same way rule 2 matches `**X.Y or
+//! later**` rather than any number near "rust" -- declining the generic
+//! version rather than shipping a rule with an exception list longer
+//! than itself.
 //!
 //! **Rule 5 was not always this narrow.** It started as "no *committed*
 //! file cites the path," which could never pass -- that version banned
@@ -92,6 +111,75 @@ fn short_crate_name(dir: &str) -> &str {
 /// its own backtick span (`README.md`'s friendlier style).
 fn mentions_crate(doc: &str, dir: &str) -> bool {
     doc.contains(dir) || doc.contains(&format!("`{}`", short_crate_name(dir)))
+}
+
+// ---------- rule 1b: the crate set's own cardinality (`DOC-004`) ----------
+//
+// Rule 1 asks "is each crate named"; it never asked "does the document's
+// own claimed *count* match." `crate-boundaries.md` also says "five of
+// the six", "four of the other five" and "existing five" -- subset
+// counts, not claims about the crate set's own size -- so this does not
+// match any number word near the word "crate": it matches the four
+// fixed phrase shapes the documents actually use for the claim this
+// rule is about, the same way rule 2 matches `**X.Y or later**` rather
+// than any number near "rust".
+
+/// A cardinal-number word, "one" through "ten" -- this workspace's crate
+/// count is nowhere near needing more.
+fn word_to_number(word: &str) -> Option<usize> {
+    Some(match word {
+        "one" => 1,
+        "two" => 2,
+        "three" => 3,
+        "four" => 4,
+        "five" => 5,
+        "six" => 6,
+        "seven" => 7,
+        "eight" => 8,
+        "nine" => 9,
+        "ten" => 10,
+        _ => return None,
+    })
+}
+
+/// The number word immediately before `marker` in `text`.
+fn number_before(text: &str, marker: &str) -> Option<usize> {
+    let idx = text.find(marker)?;
+    let word = text[..idx].trim_end().rsplit(char::is_whitespace).next()?;
+    word_to_number(word)
+}
+
+/// `workspace-layout.md`: "peisear is a Cargo workspace containing
+/// {N} published crates".
+fn published_crate_count(workspace_layout: &str) -> Option<usize> {
+    number_before(workspace_layout, " published crates")
+}
+
+/// `docs/README.md`'s index line: "why there are {N} crates and what
+/// belongs in each".
+fn readme_index_crate_count(docs_readme: &str) -> Option<usize> {
+    number_before(docs_readme, " crates and what belongs in each")
+}
+
+/// `crate-boundaries.md`'s intro: "peisear is split into {N}
+/// implementation crates plus a thin facade".
+fn implementation_crate_count_intro(crate_boundaries: &str) -> Option<usize> {
+    number_before(
+        crate_boundaries,
+        " implementation crates plus a thin facade",
+    )
+}
+
+/// `crate-boundaries.md`'s own "## The {N} implementation crates"
+/// heading -- matched as a whole line, not a substring, so the subset
+/// sentence at `crate-boundaries.md:115` ("five of the **six**
+/// implementation crates") can never be mistaken for it: that line is
+/// prose, not a `##` heading.
+fn implementation_crate_count_heading(crate_boundaries: &str) -> Option<usize> {
+    crate_boundaries.lines().find_map(|l| {
+        let rest = l.strip_prefix("## The ")?;
+        word_to_number(rest.strip_suffix(" implementation crates")?)
+    })
 }
 
 // ---------- rule 2: the MSRV ----------
@@ -259,8 +347,10 @@ pub(crate) struct Input<'a> {
     pub readme: &'a str,
     pub workspace_layout: &'a str,
     pub crate_boundaries: &'a str,
+    pub docs_readme: &'a str,
     pub cargo_toml: &'a str,
     pub installation: &'a str,
+    pub contributing: &'a str,
     pub static_files: Vec<String>,
     pub deployment: &'a str,
     pub configuration: &'a str,
@@ -290,15 +380,74 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         }
     }
 
-    // Rule 2, live: installation.md's MSRV claims match Cargo.toml.
-    let msrv = rust_version_major_minor(input.cargo_toml);
-    match bold_or_later(input.installation) {
-        Some(bold) if bold != msrv => out.push(format!(
-            "rule 2: installation.md's \"{bold} or later\" does not match Cargo.toml's rust-version {msrv}"
+    // Rule 1b: the crate set's own cardinality, in the four fixed phrase
+    // shapes the documents actually use -- `DOC-004`.
+    let total_crates = input.crate_dirs.len();
+    let implementation_crates = input
+        .crate_dirs
+        .iter()
+        .filter(|d| d.starts_with("peisear-"))
+        .count();
+    match published_crate_count(input.workspace_layout) {
+        Some(n) if n != total_crates => out.push(format!(
+            "rule 1b: workspace-layout.md claims {n} published crates, crates/ has {total_crates}"
         )),
         Some(_) => {}
-        None => out
-            .push("rule 2: installation.md has no \"X.Y or later\" MSRV sentence to check".into()),
+        None => out.push(
+            "rule 1b: workspace-layout.md has no \"N published crates\" sentence to check".into(),
+        ),
+    }
+    match readme_index_crate_count(input.docs_readme) {
+        Some(n) if n != total_crates => out.push(format!(
+            "rule 1b: docs/README.md claims {n} crates, crates/ has {total_crates}"
+        )),
+        Some(_) => {}
+        None => out.push(
+            "rule 1b: docs/README.md has no \"N crates and what belongs in each\" sentence to check"
+                .into(),
+        ),
+    }
+    match implementation_crate_count_intro(input.crate_boundaries) {
+        Some(n) if n != implementation_crates => out.push(format!(
+            "rule 1b: crate-boundaries.md's intro claims {n} implementation crates, crates/ has {implementation_crates} (excluding the facade)"
+        )),
+        Some(_) => {}
+        None => out.push(
+            "rule 1b: crate-boundaries.md has no \"N implementation crates plus a thin facade\" sentence to check"
+                .into(),
+        ),
+    }
+    match implementation_crate_count_heading(input.crate_boundaries) {
+        Some(n) if n != implementation_crates => out.push(format!(
+            "rule 1b: crate-boundaries.md's \"## The {n} implementation crates\" heading does not match crates/'s {implementation_crates} (excluding the facade)"
+        )),
+        Some(_) => {}
+        None => out.push(
+            "rule 1b: crate-boundaries.md has no \"## The N implementation crates\" heading to check"
+                .into(),
+        ),
+    }
+
+    // Rule 2, live: MSRV claims match Cargo.toml -- installation.md and,
+    // since DOC-004, CONTRIBUTING.md, which cites installation.md but
+    // carries its own copy of the number and drifted independently
+    // (`DOC-004` found it at 1.85 while Cargo.toml had moved to 1.88).
+    // Reworded to the same `**X.Y or later**` shape so one parser
+    // serves both documents rather than adding a second pattern.
+    let msrv = rust_version_major_minor(input.cargo_toml);
+    for (doc_name, doc) in [
+        ("installation.md", input.installation),
+        ("CONTRIBUTING.md", input.contributing),
+    ] {
+        match bold_or_later(doc) {
+            Some(bold) if bold != msrv => out.push(format!(
+                "rule 2: {doc_name}'s \"{bold} or later\" does not match Cargo.toml's rust-version {msrv}"
+            )),
+            Some(_) => {}
+            None => out.push(format!(
+                "rule 2: {doc_name} has no \"X.Y or later\" MSRV sentence to check"
+            )),
+        }
     }
     for tool in ["rustc", "cargo"] {
         match verify_block_version(input.installation, tool) {
@@ -372,8 +521,10 @@ struct Real {
     readme: String,
     workspace_layout: String,
     crate_boundaries: String,
+    docs_readme: String,
     cargo_toml: String,
     installation: String,
+    contributing: String,
     static_files: Vec<String>,
     deployment: String,
     configuration: String,
@@ -389,9 +540,12 @@ fn real() -> Real {
             .expect("read workspace-layout.md"),
         crate_boundaries: fs::read_to_string(root.join("docs/architecture/crate-boundaries.md"))
             .expect("read crate-boundaries.md"),
+        docs_readme: fs::read_to_string(root.join("docs/README.md")).expect("read docs/README.md"),
         cargo_toml: fs::read_to_string(root.join("Cargo.toml")).expect("read Cargo.toml"),
         installation: fs::read_to_string(root.join("docs/getting-started/installation.md"))
             .expect("read installation.md"),
+        contributing: fs::read_to_string(root.join(".github/CONTRIBUTING.md"))
+            .expect("read CONTRIBUTING.md"),
         static_files: static_files(),
         deployment: fs::read_to_string(root.join("docs/operations/deployment.md"))
             .expect("read deployment.md"),
@@ -410,8 +564,10 @@ fn run(r: &Real) -> Vec<String> {
         readme: &r.readme,
         workspace_layout: &r.workspace_layout,
         crate_boundaries: &r.crate_boundaries,
+        docs_readme: &r.docs_readme,
         cargo_toml: &r.cargo_toml,
         installation: &r.installation,
+        contributing: &r.contributing,
         static_files: r.static_files.clone(),
         deployment: &r.deployment,
         configuration: &r.configuration,
@@ -464,11 +620,85 @@ fn rule_1_catches_a_crate_missing_from_crate_boundaries() {
 }
 
 #[test]
+fn rule_1b_catches_a_stale_count_in_workspace_layout() {
+    let mut r = real();
+    r.workspace_layout =
+        r.workspace_layout
+            .replacen("seven published crates", "six published crates", 1);
+    let v = only(run(&r), "rule 1b:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("workspace-layout.md") && m.contains("6 published crates")),
+        "got {v:?}"
+    );
+}
+
+#[test]
+fn rule_1b_catches_a_stale_count_in_docs_readme() {
+    let mut r = real();
+    r.docs_readme = r.docs_readme.replacen(
+        "seven crates and what belongs",
+        "six crates and what belongs",
+        1,
+    );
+    let v = only(run(&r), "rule 1b:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("docs/README.md") && m.contains("6 crates")),
+        "got {v:?}"
+    );
+}
+
+#[test]
+fn rule_1b_catches_a_stale_count_in_crate_boundaries_intro() {
+    let mut r = real();
+    r.crate_boundaries = r.crate_boundaries.replacen(
+        "six implementation crates plus a thin facade",
+        "five implementation crates plus a thin facade",
+        1,
+    );
+    let v = only(run(&r), "rule 1b:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("intro") && m.contains("5 implementation crates")),
+        "got {v:?}"
+    );
+}
+
+#[test]
+fn rule_1b_catches_a_stale_count_in_crate_boundaries_heading() {
+    let mut r = real();
+    r.crate_boundaries = r.crate_boundaries.replacen(
+        "## The six implementation crates",
+        "## The five implementation crates",
+        1,
+    );
+    let v = only(run(&r), "rule 1b:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("heading") && m.contains("5 implementation crates")),
+        "got {v:?}"
+    );
+}
+
+#[test]
 fn rule_2_catches_a_stale_msrv_sentence() {
     let mut r = real();
     r.installation = r.installation.replace("1.88 or later", "1.85 or later");
     let v = only(run(&r), "rule 2:");
     assert!(v.iter().any(|m| m.contains("1.85")), "got {v:?}");
+}
+
+#[test]
+fn rule_2_catches_a_stale_msrv_in_contributing() {
+    let mut r = real();
+    r.contributing = r.contributing.replace("1.88 or later", "1.85 or later");
+    let v = only(run(&r), "rule 2:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("CONTRIBUTING.md") && m.contains("1.85")),
+        "got {v:?}"
+    );
 }
 
 #[test]
@@ -542,6 +772,37 @@ fn the_helpers_do_what_the_rules_assume() {
     assert_eq!(
         bold_or_later("needs `rustc` **1.88 or later**."),
         Some("1.88".into())
+    );
+    assert_eq!(word_to_number("seven"), Some(7));
+    assert_eq!(word_to_number("eleven"), None);
+    assert_eq!(
+        number_before(
+            "peisear is split into six implementation crates plus a thin facade",
+            " implementation crates plus a thin facade"
+        ),
+        Some(6)
+    );
+    // The subset sentences rule 1b must not match: no fixed phrase shape
+    // appears in either, so none of the extractors find anything to flag.
+    assert_eq!(
+        implementation_crate_count_intro("Depends on five of the six implementation crates"),
+        None
+    );
+    assert_eq!(
+        implementation_crate_count_heading("four of the other five crates depend on it"),
+        None
+    );
+    assert_eq!(
+        implementation_crate_count_heading("## The six implementation crates"),
+        Some(6)
+    );
+    assert_eq!(
+        published_crate_count("containing seven published crates plus static assets"),
+        Some(7)
+    );
+    assert_eq!(
+        readme_index_crate_count("why there are\n  seven crates and what belongs in each"),
+        Some(7)
     );
     assert_eq!(
         verify_block_version("# rustc 1.88.x ...   (or newer)", "rustc"),

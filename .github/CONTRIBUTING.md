@@ -18,7 +18,7 @@ project communication.
 
 ## Development setup
 
-1. Install Rust 1.85+ — see
+1. Install `rustc` **1.88 or later** — see
    [docs/getting-started/installation.md](../docs/getting-started/installation.md).
 2. Clone the workspace and run the test suite:
    ```bash
@@ -30,6 +30,15 @@ project communication.
    cp .env.example .env
    cargo run --release -p peisear
    ```
+4. **Remove a scratch build's target directory when you're done with
+   it.** A throwaway or isolated build pointed at its own
+   `CARGO_TARGET_DIR` (an extracted tree, a parallel check) is cheap to
+   create and easy to forget — 65 of them, cleared on the owner's
+   instruction, had pushed one disk to 91% before anyone looked. **One
+   caveat if your filesystem compresses**: on Btrfs with
+   `compress=zstd:1`, `du` reports apparent size, and those 65
+   directories' 808 GB of `du` freed only 199 GB — a build tree costs
+   roughly a quarter of what `du` says there.
 
 For an in-depth walkthrough of the architecture before making
 changes, start with
