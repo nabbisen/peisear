@@ -112,17 +112,19 @@ facade.
 
 ### `peisear` — crates.io entry point
 
-Pulls in four of the six implementation crates and exposes them as
-`peisear::core`, `peisear::auth`, `peisear::storage`, and
-`peisear::web`. The other two are present but not re-exported, for two
-different reasons: **`peisear-notify`** is a *direct* dependency of
-this facade crate too, not merely inherited through `peisear-web` —
-`main.rs` starts its dispatch loop itself — so external consumers get
-it only transitively through `peisear::web`'s own request handling,
-never as its own module. **`peisear-i18n`** is not a direct dependency
-of this facade at all; every one of the other five crates already
-depends on it, so it arrives purely transitively and the facade has no
-call site of its own to name it from. Owns `[[bin]] name = "peisear"`
+Depends on **five** of the six implementation crates and re-exports
+**four** of those as `peisear::core`, `peisear::auth`,
+`peisear::storage`, and `peisear::web`. The other two are not
+re-exported, for two different reasons: **`peisear-notify`** *is* a
+direct dependency of this facade — `main.rs` starts its dispatch loop
+itself — but is not re-exported, so external consumers reach it only
+through `peisear::web`'s own request handling, never as its own
+module. **`peisear-i18n`** is not a direct dependency of this facade
+at all; four of the other five crates depend on it
+(`peisear-core`, `peisear-storage`, `peisear-notify`, `peisear-web` —
+**not `peisear-auth`**, which carries no user-visible string), so it
+arrives transitively and the facade has no call site of its own to
+name it from. Owns `[[bin]] name = "peisear"`
 so that `cargo install peisear` ships the runnable server.
 
 The rule: **the facade is the public face on crates.io; it does not
