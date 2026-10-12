@@ -89,16 +89,21 @@ The headline signs:
   backup story that SQLite can't satisfy
 
 **This is the PostgreSQL line.** peisear's storage layer is
-designed for it: `sqlx` is the abstraction, the migrations are
-SQL with no SQLite-specific tricks beyond a few `julianday`
-calls and `datetime('now', '-7 days')` modifier strings, both of
-which have direct PostgreSQL equivalents.
+designed for it — `sqlx` is the abstraction, and the type boundary
+(the `Pool` alias, `StorageError`) is ready — but the port is
+larger than the abstraction suggests: eleven triggers and eight
+`RAISE(ABORT)` error messages carry real requirements and do not
+survive a port in any direct form, only the date arithmetic
+(`julianday`, `datetime('now', …)` modifiers) does. See
+[ROADMAP.md](https://github.com/nabbisen/peisear/blob/main/ROADMAP.md#postgresql-backend)
+for the full assessment, the schedule, and why the reason is
+stability and security, not scale.
 
 The path is:
 
-1. Land the PostgreSQL backend code (planned; see ROADMAP
-   "Pluggable backends beyond relational"). When this lands, it
-   will ship as a feature flag in `peisear-storage`.
+1. Land the PostgreSQL backend code (planned; see the ROADMAP
+   link above). When this lands, it will ship as a feature flag
+   in `peisear-storage`.
 2. Stand up a PostgreSQL instance.
 3. Migrate data with `pg_dump`-equivalent tooling against the
    SQLite file. We expect to ship a `peisear migrate` command for
@@ -174,5 +179,5 @@ territory and there is plenty of literature for that.
   append-only tables
 - [observability.md](observability.md) — what to monitor as load
   increases
-- ROADMAP "Pluggable backends beyond relational" — the
+- [ROADMAP.md](https://github.com/nabbisen/peisear/blob/main/ROADMAP.md#postgresql-backend) — the
   PostgreSQL story's status

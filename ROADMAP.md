@@ -568,37 +568,88 @@ Three threads to revisit when the product or its scale changes:
 
 ### PostgreSQL backend
 
-Two implementation paths are on the table:
+**`RFC 0018`, accepted 2026-10-11, is the assessment this section used to
+defer to a future RFC.** This is now the single place that assessment is
+stated; `README.md` and `docs/operations/scaling.md` each carry one
+sentence pointing here rather than repeating it.
 
-1. A `backend` feature flag on `peisear-storage` itself, swapping the
-   `Pool` type alias between `SqlitePool` and `PgPool`.
-2. A sibling `peisear-storage-postgres` crate with identical query
-   function signatures, selected at link time.
+**The shape: a feature flag, not a sibling crate.** A `backend` feature
+flag on `peisear-storage`, swapping the `Pool` type alias between
+`SqlitePool` and `PgPool`, with the dialect-specific SQL confined to one
+module per backend. A sibling `peisear-storage-postgres` crate was the
+other option on the table and is rejected: it would carry a second copy
+of 137 query function signatures to keep in step with nothing but
+discipline holding them together, the same shape this project has
+already ruled against twice elsewhere.
 
-The `Pool` alias and `StorageError` abstraction are already shaped
-for either route. SQLite will remain the default for single-node
-self-hosting; PostgreSQL unlocks multi-node, multi-user-at-scale
-deployments.
+**The reason is server stability and security first, extensibility
+second** (owner's own ordering) — **not** scale. `NFR-PERF-001`'s 5–30
+users on a single node is unchanged and PostgreSQL does not widen it.
 
-**This is larger than the crate-shaping above suggests, and needs
-its own RFC before it is scheduled or promised.** The abstraction
-is ready; the *contracts underneath it* are not:
+- **What PostgreSQL genuinely buys**: point-in-time recovery and
+  replication (SQLite has neither, at any configuration — the strongest
+  item), failure isolation (the database is a separate process; an
+  application crash, upgrade or replacement never puts the data file in
+  the blast radius), and concurrent writers via MVCC (SQLite admits one
+  writer at a time).
+- **What it does not buy, and is available sooner without it**: crash
+  safety (already there — WAL plus `foreign_keys`) and durability on
+  power loss (`synchronous = FULL`, landed at 0.50.0, P0b below — no
+  backend needed for either).
+- **Security runs the other way on one box.** For a single-node
+  self-hosted install, SQLite has no network surface, no credentials and
+  no second daemon to patch; PostgreSQL adds all three. What it buys
+  instead is *separation* — the data stops being a file the
+  application's own user can copy wholesale — which matters once the
+  database runs somewhere the application's host cannot read, and is
+  largely theoretical on one box with both services and one `.env`.
+  **The documentation must say separation and recoverability, never
+  "more secure."** Encryption at rest is not a differentiator either way
+  — neither engine has it; volume encryption is the control on both,
+  before and after this lands (`SEC-001`, 0.50.0).
+- **Extensibility, uncontested**: full-text search without `LIKE
+  '%…%'`, `LISTEN`/`NOTIFY` for the notification dispatcher instead of
+  in-process polling, richer types, read replicas.
 
-- `updated_at` is maintained by **SQLite triggers**, and that is the
-  backbone of the optimistic-lock contract. A port means
-  re-implementing and re-verifying a P0 concurrency contract on a
-  second engine.
+**The contracts underneath the type boundary are not ready, and the
+triggers are the real work:**
+
+- **Eleven `CREATE TRIGGER` statements** across four migrations carry
+  two requirement families — `NFR-CONC-003` (`updated_at` has exactly
+  one authority, seven triggers) and `FR-SUB-001..003` (sub-issue
+  invariants enforced at the database layer, not only in application
+  code, two triggers; two more validate planned dates). `FR-SUB-001` is
+  explicit that application-level enforcement is not sufficient, so
+  these must be **ported, not replaced** — two implementations of one
+  invariant, on two engines, verified by running the same tests against
+  both in CI.
 - `issues::translate_trigger_error` string-matches SQLite `RAISE`
-  message text to produce validation errors. It does not survive
-  the port in any form.
-- SQLite's `CURRENT_TIMESTAMP` is whole-second; PostgreSQL's is not.
-  The two backends would therefore have **different concurrency
-  characteristics** on the same code — a correctness divergence, not
-  a configuration difference.
+  message text to produce validation errors; it does not survive a port
+  in any form and is brittle today. Replaced by coded errors, raised by
+  both backends and translated on the code — worth doing even if
+  PostgreSQL never ships.
+- SQLite's `CURRENT_TIMESTAMP` **was** whole-second, which would have
+  given the two backends different concurrency characteristics on the
+  same code. **Closed already**: `0021` (`STORE-001`, 0.50.0) moved the
+  lock token to millisecond precision before this backend work begins,
+  so the divergence this bullet used to warn about does not carry
+  forward.
 - `NFR-CMP-003` requires state in a single file so that backup is a
   file copy. PostgreSQL does not remove that guarantee for SQLite
   users, but it does create a second supported topology with a
-  different operational story.
+  different operational story — restated to say *for the SQLite
+  backend* once a second one ships.
+
+**Schedule**: P0 and P0b (the lock-token fix and the `synchronous`
+measurement, both scheduled whether or not this backend ever ships)
+landed at **0.50.0**. P1 (coded errors) and P2 (the dialect seam, no
+PostgreSQL code yet) are **0.53.0**, after `RFC 0017` (0.52.0) and this
+documentation round (0.51.0) — a storage refactor dropped into either
+would be the sprawl this schedule exists to avoid. P3 (the schema on
+PostgreSQL) is **0.54.0**; P4 (the conformance suite, both backends green
+in CI, the operations story rewritten) is **0.55.0**. **SQLite stays the
+default and loses nothing at every phase** — a condition of the
+acceptance, enforced at each gate.
 
 ### OIDC / IDaaS integration
 

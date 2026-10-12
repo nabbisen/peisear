@@ -1,6 +1,7 @@
 # Peisear
 
-**Issue tracking that fits in a single binary.**
+**Project and issue tracking that also shows how the project — and
+the people in it — are holding up.**
 Sophisticated. Solid. Really easy. Good UI.
 
 ![Status](https://img.shields.io/badge/status-unstable-red)
@@ -15,18 +16,29 @@ Sophisticated. Solid. Really easy. Good UI.
 
 ## Overview
 
-peisear is a self-hostable issue management system — projects, issues,
-a kanban board, and a handful of thoughtful edges. One Rust binary,
-one SQLite file, no Node toolchain, no external services.
+peisear is a self-hostable project and issue management service for
+individuals and small teams. It does the ordinary things — projects,
+issues, sub-issues, a kanban board, teams and sprints — and then
+answers two questions ordinary trackers leave invisible until they
+become crises: **how is this project trending?** and **am I
+overloaded?**
+
+It answers them quietly, and without turning the answer into a
+judgement. Personal sustainability data is visible only to the person
+it describes — a team administrator holds a management role, not an
+oversight role.
+
+One Rust binary, one SQLite file, no Node toolchain, no external
+services.
 
 ![The kanban board: issue cards in Open, In Progress and Done columns](https://github.com/nabbisen/peisear/raw/main/docs/src/assets/screenshots/board.png)
 
 ## Why peisear?
 
-Most issue trackers either bloat into swiss-army platforms or thin
-themselves out into note apps. peisear stays in the middle on purpose:
-enough to plan real work, little enough that you can read the whole
-codebase in an afternoon and own your own instance over a weekend.
+Most trackers can tell you what is left to do. Few can tell you that
+one person is carrying the project, that three issues have not moved
+in a fortnight, or that you have been over your own capacity for a
+week — and fewer still will tell *you* first.
 
 - **You own your data.** One SQLite file. `cp` is the backup strategy.
 - **You own your uptime.** One static binary. Your ops story is
@@ -62,20 +74,22 @@ The full guide is in [`docs/getting-started/`](https://github.com/nabbisen/peise
 
 ## Features
 
+- **Project health in plain language.** Six indicators; a non-healthy
+  one explains itself in a sentence rather than a number.
+- **A dashboard that is yours alone.** `/today`'s load, rhythm and
+  sustainability panels, private to you. No route exists by which
+  anyone else, including a team administrator, can read it.
+- **Quiet by design.** Notifications fire once, at the moment a
+  threshold is crossed, with a cooldown.
+- **Teams, sprints and planning.** With carried-over work described
+  as a fact, never as a shortfall.
 - **Projects & issues with a kanban board.** Drag-and-drop between
   *Open* / *In Progress* / *Done*, or flip to a dense list view.
 - **Secure-by-default auth.** Argon2id password hashing, 7-day JWT
   sessions in HTTP-only cookies, timing-attack-hardened login.
-- **Server-side rendered UI.** Leptos SSR components with typed props
-  and compile-time HTML escaping. First paint is cache-friendly HTML,
-  not a blank screen waiting for JavaScript.
 - **One binary deploy.** Migrations embedded at compile time,
   templates compiled into the binary. Ship one executable plus
   `static/` and you're live.
-- **Workspace-first architecture.** Seven crates — `i18n`, `core`,
-  `auth`, `storage`, `notify`, `web`, and a thin `peisear` facade —
-  with deliberately thin waists, so swapping SQLite for Postgres or
-  adding OIDC is a localised change.
 
 ## Design Notes
 
@@ -95,6 +109,20 @@ Three ideas shape every choice in this repo:
 > also a user. Config is environment variables. State is one file.
 > Backups are `cp`. Logs go to stdout. No surprises on day one, no
 > surprises on day 365.
+
+Two more, about the shape of the code rather than the product:
+
+> **Server-rendered, not client-rendered.** Leptos SSR components
+> with typed props and compile-time HTML escaping. First paint is
+> cache-friendly HTML, not a blank screen waiting for JavaScript.
+
+> **One workspace, seven thin crates.** `i18n`, `core`, `auth`,
+> `storage`, `notify`, `web`, and a `peisear` facade, each with a
+> single clear job — so a new backend or identity provider has a
+> well-bounded place to land. A PostgreSQL backend is scheduled; see
+> [ROADMAP.md](https://github.com/nabbisen/peisear/blob/main/ROADMAP.md#postgresql-backend)
+> for what it actually requires, which is more than the crate split
+> alone suggests.
 
 ---
 
