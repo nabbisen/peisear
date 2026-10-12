@@ -56,31 +56,45 @@ all of the processes; noise and temporary things should be cut off"*:
 > statement?** If yes, the substance is missing from the document — write
 > it. If no, the link is noise — cut it.
 
-## §3 — the one structural gap: decisions have no home
+## §3 — decisions: written where they take effect, not collected
 
-Measured across every committed file:
+**Owner, 2026-10-12, correcting a false choice I offered** (a standalone
+register, or a section of `requirements.md`): *"It sounds strange to me if
+you asked me where to collect the project decisions. Decisions should not be
+written isolated from specification or requirement."*
 
-| | |
-|---|---|
-| Decision numbers assigned (`DEC-001`…`DEC-059`) | **59** |
-| Cited anywhere in the repository | **35** |
-| **Appearing in no committed file at all** | **24** |
-| Cited but absent from `docs/` | **6** |
-| **Files that define a decision rather than cite one** | **0** |
+**That is right, and a register would have recreated the defect one
+directory over** — `requirements.md` → `decisions.md` instead of
+`requirements.md` → `.git-exclude/`. Still a pointer; the reader still has
+to go somewhere else.
 
-**Nothing in this repository says what any decision is.** `DEC-049` governs
-219 call sites; to say what it is I had to reconstruct it from six citations
-and a doc comment. `DEC-013` is named as the *source* of a P0 requirement and
-is written nowhere.
+**The project's own data proves the principle:**
 
-**This is the owner's category six with no owning document**, and it is the
-only part of the issue that a line edit cannot fix. A decision register —
-each entry a few distilled lines, not a review's prose — is what §2's table
-is missing.
+| Decision | Where it lives | Legible? |
+|---|---|---|
+| `DEC-055` | its own section in the document it governs — *"## Keeping the file a readable size — `DEC-055`"* (`changelog-and-releases.md:137`) | **Yes** |
+| `DEC-056` | stated in situ — *"**A release is four steps** (`DEC-056`, 2026-09-29): tag · push the tag · …"* | **Yes** |
+| `DEC-013` | `requirements.md:2212`, *"Source: implementation decision `DEC-013`, migrations `0014`, `0017`"* — **and nothing else, anywhere** | **No** |
+| `DEC-049` | discussed in **four** places in `requirements.md` (`:2728`, `:2751`, `:4859`, `:4876`), each about a different clause | **No** — I reconstructed it from six citations |
 
-**Not every decision needs an entry.** The ones that do are the ones a
-document already cites, and the ones that would otherwise be reconstructed
-from code. **24 numbers that nothing references may simply be retired.**
+**`DEC-049` is the instructive one.** It *is* in the governing document, in
+situ, four times — and still unreadable, because **no single place states
+it**. In situ is necessary and not sufficient.
+
+**So the rule:**
+
+> **A decision is stated once, in the document it governs, at a location the
+> other mentions point to.** Not collected elsewhere, and not only in
+> passing.
+
+`DEC-055`'s own section heading is the project's worked example of this, and
+it costs one heading.
+
+**The counts stay the measurement of the gap**: 59 numbers assigned, 35
+cited, **24 appearing in no committed file at all**, 0 that any document
+states outright rather than mentions. **The 24 that nothing references may
+simply be retired** — a number with no citation is not a decision anyone is
+relying on.
 
 ## §4 — the 19, classified
 
@@ -139,9 +153,9 @@ rule that can pass, and it is the one the defect was actually about.
 - **No new process.** §2's table and §3's register are documents, not
   procedure.
 
-## §7 — decision required
+## §7 — nothing required from the owner
 
-**§3's decision register: does it get built, and where?** Candidates:
-`docs/specification/decisions.md`, or a section of `requirements.md`.
-Everything else in this RFC is editing nineteen lines against a stated test
-and is mine to schedule.
+§3's question is withdrawn; the owner answered it by rejecting its premise.
+What remains is editing nineteen lines against §2's test, and giving each
+decision a document cites one stated location in that document — both mine
+to schedule, as rounds of 0.51.0.
