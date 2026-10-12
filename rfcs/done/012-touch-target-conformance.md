@@ -63,9 +63,16 @@ mostly self-enforcing.** CSS `gap` on a flex or grid container is applied by the
 layout engine independent of a child's box size — a child that grows cannot
 consume it. So:
 
-4. **`Grow` is the default mechanism, and a grown cluster inside a container
+4. ~~**`Grow` is the default mechanism, and a grown cluster inside a container
    with a positive `gap` is presumed to satisfy clause (2)** with no further
-   verification, at any gap value.
+   verification, at any gap value.~~ **Withdrawn, 0.51.0 (`DOC-005 §3.1`,
+   `external-design.md §5.7`).** The round that first read the product's own
+   rendered pictures, rather than only its markup, found a `Grow`'d plain-text
+   element's label sitting at the top of its 44 px box rather than centred —
+   the presumption never asked what `Grow` guaranteed beyond adjacency, and
+   nobody had looked. `components::grow_text` is the second mechanism this
+   forced; `Grow` keeps its original meaning and this clause's text stays
+   for the record rather than being deleted.
 5. **`Expand` is permitted only where the expanded target is a real
    layout-participating element** — a `<label>` wrapping its input, or padding
    on the control itself — **never an invisible overlay** (pseudo-element,

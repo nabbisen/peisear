@@ -1887,8 +1887,13 @@ derived from either — including badge colour, glyph, tooltip, or
 annotation. Where this inventory and `NFR-PRIV-001` appear to overlap,
 **`NFR-PRIV-001` governs**: an explicit P0 inventory beats a general P1
 permission.
-*Source*: `SPEC §11.2`; scope clarified by `DEC-019`. *Acceptance*:
-`workload_privacy` test crate — four negative checks on the response body
+*Source*: `SPEC §11.2`; scope clarified by `DEC-019`. *Decision
+(`DEC-019`)*: "workload distribution" is in-flight volume only, not
+anything capacity-derived — `SPEC §11.2` named the inventory but left
+the boundary implicit, and `NFR-PRIV-001`'s own P0 inventory (capacity
+settings, WIP limit, burnout streaks) is exactly the material a reader
+could otherwise have read "workload distribution" as including.
+*Acceptance*: `workload_privacy` test crate — four negative checks on the response body
 (capacity denominator, *over capacity*, *strained*, `badge-error`) **plus,
 from 0.46.0, a positive assertion on the workload strip's `title=`**: it
 renders the permitted name-and-in-flight-count shape and nothing else.
@@ -2211,6 +2216,16 @@ maintain it, so the lock value has exactly one authority.
 *Acceptance*: `updated_at_authority` (4 tests) and
 `peisear-web`'s `updated_at_authority_scan`. *Status*: **Implemented
 (`QA-019`, post-0.27.0)**. *Priority*: P1.
+
+*Decision (`DEC-013`)*: one authority rather than two conventions kept
+in step by discipline. The alternative was application code and a
+trigger agreeing because every `UPDATE` carried the column and review
+caught any new write site that didn't — which is exactly what had
+already failed, twice, on the two tables this requirement's own
+guarantee protects most (below). The payoff repeated at `STORE-001`:
+moving the column's own precision from one second to one millisecond
+touched **seven trigger bodies in one migration**, not an audit of
+every application call site that might have copied the clause by hand.
 
 *Correction*: this read `Implemented` from 0.17.0 and **was not**. `0014`
 added the column and a bump trigger to the four entities that lacked the
@@ -3190,6 +3205,15 @@ the declared MSRV MUST be exercised by an automated build.
 **Implemented (0.20.0)** — MSRV `1.88.0`, `rust-toolchain.toml` pins
 `1.97.1`, and a dedicated CI job builds the workspace at the MSRV.
 *Priority*: P2.
+*Decision (`DEC-044`/`DEC-045`)*: the toolchain pin and the declared MSRV
+are two different numbers on purpose. The pin (`rust-toolchain.toml`)
+reproduces exactly what CI builds against; the MSRV is the compatibility
+floor the project advertises downstream (`DEC-047`: all seven crates
+publish, so it is a public signal, not an internal choice) — and per
+`DEC-045`, the MSRV is **a documentation fact, not a commitment that
+blocks raising it**, which is why unlocking seven MSRV-gated clippy lints
+was a side effect nobody had to schedule separately. The two drifting
+apart unexercised is exactly the defect the correction below records.
 *Correction*: the declared MSRV of `1.85` was **false** — the dependency
 tree had drifted past it and 1.85 could not build the workspace at all.
 Nothing had ever exercised the claim.
@@ -3784,6 +3808,16 @@ set measures what the available event data supports. Two resolutions are
 open: revise `SPEC §28.1` to the implemented set, or specify an issue
 dependency model and add the indicator. `FR-HLT-001` is written to the
 implemented set pending that decision.
+
+*Decision (`DEC-030`)*: ship the five-indicator set this assessment
+describes rather than hold the health feature for a sixth indicator
+with no data model behind it — the four close mappings already cover
+what `SPEC §28.1` asked for in substance, and `Dependency tightness`
+needs issue dependencies to exist as data before it can be computed at
+all, which is a separate feature, not a health-indicator gap.
+`SPEC §28.1`'s own amendment stays pending (recorded the way this
+entry is), open rather than resolved, since closing it either way is
+the still-open choice above, not a foregone one.
 
 ### 10.0 How to read this register at 0.29.0
 

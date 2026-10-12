@@ -42,7 +42,10 @@ pre-existing gate failures (ISSUE-001). Verification showed CI has failed on
 passed. `NFR-MNT-007` is recorded as *"Implemented in CI"* and never has been.
 That is the same class of defect as the other four, so it belongs here rather
 than in a separate release. **Scope change ratified by the owner 2026-08-01
-(`DEC-043`).**
+(`DEC-043`): fold the `NFR-MNT-007` CI-gate fix into this release rather than
+deferring it to its own.** The alternative was a separate release for one
+defect that is, by its own description, the same shape as the four already
+in scope here — a second release just to say so again.
 
 DEV-007 carries an explicit ambition limit: clear the lints conservatively, do
 not redesign the storage crate inside a correction release. If the fourteen

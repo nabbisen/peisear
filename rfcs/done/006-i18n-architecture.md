@@ -59,6 +59,15 @@ Two supporting drivers:
 - The mockup (`peisear-mockup-v0.7.0`) already proves the pattern with
   `Locale::tr` plus a `FORBIDDEN_LABELS` test. `DEC-023` cherry-picks the guard.
 
+  **`DEC-023` in full**: take the mockup's vocabulary guard, not the rest of
+  it — a proven mechanism is worth adopting on its own, independent of
+  whether the surface it was proven on ships. The same decision also defers
+  the mockup's v3 expansion entities to roadmap replanning
+  (`rfcs/done/007-compliance-pass.md`'s own citation of it): proving the
+  guard needed the mockup's existing fixture data, not its unshipped
+  entities, so nothing about adopting the guard argued for building those
+  too.
+
 ## Requirements
 
 ### Must

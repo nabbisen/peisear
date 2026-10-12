@@ -745,6 +745,24 @@ now explicit, because their absence is what left this section unenforceable:
 (`DEC-050`).** All 139 such controls reach a 44 px target and
 `touch_target_scan` enforces it with no exception list.
 
+**Amended again, 0.51.0 (`DEC-049` as amended by `DOC-005 §3.1`) — the
+clause 4 presumption is withdrawn.** `DEC-049` presumed a `Grow` cluster
+inside a positive-`gap` container needs no further verification against
+clause (2) (adjacency) "at any gap value" — it said nothing about
+clause (1)'s own target shape, and the round that first rendered the
+product's pictures rather than only its markup found a `Grow`'d plain-text
+element's label sitting at the top of its 44 px box, not centred, inside
+that same `gap` row. **One mechanism cannot serve both the controls
+`Grow` already fit and a bare label needing its own centring without
+breaking a third shape that was already correct** — a `Grow`'d link or
+button already made a flex container by its own other classes (`btn`,
+`badge`, an explicit `flex`) would have its own layout flipped by a
+blanket fix, since the vendored stylesheet resolves a later `inline-flex`
+rule over an earlier `flex` one regardless of class order on the element.
+`components::grow_text` is the second mechanism: the touch target plus
+`inline-flex items-center`, for a plain text element only. `Grow` keeps
+its original meaning.
+
 **The "unassessed, not passing" limit has been measured and removed.** It was
 not narrow: an account menu on every page, `<summary>` disclosure toggles at
 16 px — which this very section names — breadcrumbs, and the indicator basis
@@ -2127,6 +2145,19 @@ footing `fmt` and `clippy` already have, and it is **not counted** in the
 project's test inventory. It was **watched red before it was trusted**: four
 planted defects — `§10.18`'s cause, `§10.20`'s, `§10.24`'s and `§10.26`'s —
 each fail it, each restored and rebuilt before the next.
+
+*Decision (`DEC-007`)*: `cargo test --workspace` MUST run per-crate and
+per-target as well — `.github/CONTRIBUTING.md`'s own command block —
+not inferred from a single workspace-wide run, and the release gate
+runs the whole block **three consecutive times**. Per-crate/per-target
+isolation exists because a test suffering a name collision or a shared
+resource conflict can still pass inside the full workspace run while a
+narrower invocation exposes it (`rfcs/done/005-quality-consolidation.md`'s
+own finding — a clock-derived temp-path collision in `peisear-storage`
+passed every workspace run and failed the moment it ran alone). Three
+consecutive runs rather than one are the flake floor: a test that fails
+one run in three is a defect the first pass alone cannot distinguish
+from noise.
 
 **What the gate sees is exactly its fixture and its page list, and 0.33.0 showed
 this four times.** The gate was green on a tree with three overflow defects

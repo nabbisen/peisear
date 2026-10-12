@@ -22,6 +22,13 @@ than rewritten.
 These two documents are the single source of truth (`DEC-020`, closed
 2026-09-24; `DEC-015`). **There is no other specification, in any language.**
 
+*Decision (`DEC-015`)*: no translated specification, ever — a second
+language would be a second copy of normative text, and this project's
+own "state a fact once" rule applies to its own specification as much
+as to application copy. `DEC-020` is the placement and promotion of
+these English baselines; `DEC-015` is the separate commitment that
+nothing else, in any language, joins them.
+
 That decision closes a question the project carried for two months. `DEC-020`
 had two halves: restore a canonical specification to `docs/`, and promote these
 English baselines to normative. The first half was recorded as *blocked* on a
