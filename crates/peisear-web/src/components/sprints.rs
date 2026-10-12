@@ -54,7 +54,7 @@ use peisear_core::{
 };
 
 use super::layout::AppShell;
-use super::{grow, t};
+use super::{grow, grow_text, t};
 
 // ──────────────────────────────────────────────────────────────
 // Listing page
@@ -116,8 +116,8 @@ pub fn SprintsListPage(
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams" class=grow("")>{t(MessageKey::NavLinkTeams)}</a></li>
-                    <li><a href=team_href class=grow("")>{team_name.clone()}</a></li>
+                    <li><a href="/teams" class=grow_text("")>{t(MessageKey::NavLinkTeams)}</a></li>
+                    <li><a href=team_href class=grow_text("")>{team_name.clone()}</a></li>
                     <li>{t(MessageKey::SprintsSectionName)}</li>
                 </ul></div>
 
@@ -432,7 +432,7 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) 
                     </svg>
                 </div>
                 <details class="text-xs mt-2">
-                    <summary class=grow("cursor-pointer text-base-content/70 hover:text-base-content")>
+                    <summary class=grow_text("cursor-pointer text-base-content/70 hover:text-base-content")>
                         {t(MessageKey::ChartTableSummaryLabel)}
                     </summary>
                     <div class="overflow-x-auto mt-1">
@@ -486,9 +486,9 @@ pub fn SprintNewPage(
                   unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams" class=grow("")>{t(MessageKey::NavLinkTeams)}</a></li>
-                    <li><a href=team_href class=grow("")>{team_name}</a></li>
-                    <li><a href=sprints_href class=grow("")>{t(MessageKey::SprintsSectionName)}</a></li>
+                    <li><a href="/teams" class=grow_text("")>{t(MessageKey::NavLinkTeams)}</a></li>
+                    <li><a href=team_href class=grow_text("")>{team_name}</a></li>
+                    <li><a href=sprints_href class=grow_text("")>{t(MessageKey::SprintsSectionName)}</a></li>
                     <li>{t(MessageKey::NewBreadcrumbWord)}</li>
                 </ul></div>
 
@@ -976,7 +976,7 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
                     </span>
                 </div>
                 <details class="text-xs mt-2">
-                    <summary class=grow("cursor-pointer text-base-content/70 hover:text-base-content")>
+                    <summary class=grow_text("cursor-pointer text-base-content/70 hover:text-base-content")>
                         {t(MessageKey::ChartTableSummaryLabel)}
                     </summary>
                     <div class="overflow-x-auto mt-1">
@@ -1111,10 +1111,10 @@ pub fn SprintEditPage(
                   unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams" class=grow("")>{t(MessageKey::NavLinkTeams)}</a></li>
-                    <li><a href=team_href class=grow("")>{team_name}</a></li>
-                    <li><a href=sprints_href class=grow("")>{t(MessageKey::SprintsSectionName)}</a></li>
-                    <li><a href=detail_href.clone() class=grow("")>{sprint_name.clone()}</a></li>
+                    <li><a href="/teams" class=grow_text("")>{t(MessageKey::NavLinkTeams)}</a></li>
+                    <li><a href=team_href class=grow_text("")>{team_name}</a></li>
+                    <li><a href=sprints_href class=grow_text("")>{t(MessageKey::SprintsSectionName)}</a></li>
+                    <li><a href=detail_href.clone() class=grow_text("")>{sprint_name.clone()}</a></li>
                     <li>{t(MessageKey::EditWord)}</li>
                 </ul></div>
 

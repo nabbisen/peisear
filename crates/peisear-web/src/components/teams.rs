@@ -16,9 +16,9 @@ use peisear_core::{
     teams::{Team, TeamRole},
 };
 
-use super::grow;
 use super::layout::AppShell;
 use super::t;
+use super::{grow, grow_text};
 
 #[component]
 pub fn TeamsListPage(
@@ -145,7 +145,7 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                   unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams" class=grow("")>{t(MessageKey::NavLinkTeams)}</a></li>
+                    <li><a href="/teams" class=grow_text("")>{t(MessageKey::NavLinkTeams)}</a></li>
                     <li>{t(MessageKey::NewBreadcrumbWord)}</li>
                 </ul></div>
 
@@ -564,8 +564,8 @@ pub fn TeamEditPage(
                   unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/teams" class=grow("")>{t(MessageKey::NavLinkTeams)}</a></li>
-                    <li><a href=back_href.clone() class=grow("")>{team_name.clone()}</a></li>
+                    <li><a href="/teams" class=grow_text("")>{t(MessageKey::NavLinkTeams)}</a></li>
+                    <li><a href=back_href.clone() class=grow_text("")>{team_name.clone()}</a></li>
                     <li>{t(MessageKey::NavLinkSettings)}</li>
                 </ul></div>
 

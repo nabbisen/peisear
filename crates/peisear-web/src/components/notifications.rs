@@ -37,7 +37,7 @@ use peisear_core::notifications::{Notification, Severity, kind};
 use peisear_i18n::{MessageKey, NotificationKindLabel};
 
 use super::layout::AppShell;
-use super::{channel_label_for, grow, kind_label_for, t};
+use super::{channel_label_for, grow, grow_text, kind_label_for, t};
 
 #[component]
 pub fn InboxPage(
@@ -246,7 +246,7 @@ fn render_row(n: Notification) -> impl IntoView {
                                 </span>
                             })}
                             {link_target.map(|target| view! {
-                                <a href={target} class=grow("link link-primary")>
+                                <a href={target} class=grow_text("link link-primary")>
                                     {t(MessageKey::ViewContextLinkLabel)}
                                 </a>
                             })}

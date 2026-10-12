@@ -11,7 +11,7 @@ use axum::response::Html;
 use leptos::prelude::*;
 
 use super::layout::AppShell;
-use super::{grow, t};
+use super::{grow, grow_text, t};
 use peisear_core::{
     CurrentUser, DisplayHealthState,
     personal_metrics::{
@@ -356,7 +356,7 @@ pub fn PersonalDashboard(
 
                 <section class="text-xs text-base-content/70">
                     <details>
-                        <summary class=grow("cursor-pointer")>{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
+                        <summary class=grow_text("cursor-pointer")>{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
                         <div class="mt-2 space-y-2">
                             <p>
                                 <strong>{t(MessageKey::WipChipLabel)}</strong>
@@ -505,7 +505,7 @@ fn render_burnout_panel(
                 {sustainability_heading}
             </h2>
             <details open=any_watch>
-                <summary class=grow("cursor-pointer text-sm text-base-content/80 mb-2")>
+                <summary class=grow_text("cursor-pointer text-sm text-base-content/80 mb-2")>
                     {summary}
                 </summary>
                 {has_streaks.then(|| view! {

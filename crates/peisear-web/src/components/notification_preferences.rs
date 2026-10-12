@@ -38,7 +38,7 @@ use peisear_core::notifications::{
 use peisear_i18n::{MessageKey, NotificationChannelLabel, NotificationKindLabel};
 
 use super::layout::AppShell;
-use super::{grow, kind_label_for, t};
+use super::{grow, grow_text, kind_label_for, t};
 
 #[component]
 pub fn PreferencesPage(
@@ -86,7 +86,7 @@ pub fn PreferencesPage(
                   unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/settings" class=grow("")>{t(MessageKey::SettingsSectionName)}</a></li>
+                    <li><a href="/settings" class=grow_text("")>{t(MessageKey::SettingsSectionName)}</a></li>
                     <li>{notifications_breadcrumb}</li>
                 </ul></div>
                 <div class="flex items-center justify-between mb-4">

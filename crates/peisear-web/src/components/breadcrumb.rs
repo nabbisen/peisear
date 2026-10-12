@@ -44,7 +44,7 @@ use leptos::prelude::*;
 
 use peisear_i18n::{MessageKey, NavSection};
 
-use super::{grow, t};
+use super::{grow, grow_text, t};
 
 /// One node in a breadcrumb trail.
 ///
@@ -108,7 +108,7 @@ pub fn render_breadcrumb(items: Vec<BreadcrumbItem>) -> impl IntoView {
             };
             match item.href {
                 Some(href) => view! {
-                    <li><a href=href class=grow("")>{label_span}</a></li>
+                    <li><a href=href class=grow_text("")>{label_span}</a></li>
                 }
                 .into_any(),
                 None => view! {

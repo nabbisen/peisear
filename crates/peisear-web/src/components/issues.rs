@@ -12,7 +12,7 @@ use peisear_core::{
 };
 use peisear_i18n::{Field, IssueStatusLabel, Locale, MessageKey, NavSection, TrendDirectionLabel};
 
-use super::{grow, t};
+use super::{grow, grow_text, t};
 
 /// Project-detail page: header + board/list view toggle.
 #[component]
@@ -248,7 +248,7 @@ fn HealthStrip(health: ProjectHealthReport, project_id: String) -> impl IntoView
             <p class="text-sm text-base-content/70 mb-2">{summary}</p>
 
             <details class="text-xs">
-                <summary class=grow("cursor-pointer text-base-content/70 hover:text-base-content")>
+                <summary class=grow_text("cursor-pointer text-base-content/70 hover:text-base-content")>
                     {t(MessageKey::IndicatorsSummaryLabel)}
                 </summary>
                 // Phase B PR3 (B-2): human-language
@@ -534,7 +534,7 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
                 <h3 class="text-xs uppercase tracking-wide text-base-content/70">
                     {t(MessageKey::WorkloadHeading)}
                 </h3>
-                <a href="/settings" class=grow("text-xs link link-hover opacity-70")>
+                <a href="/settings" class=grow_text("text-xs link link-hover opacity-70")>
                     {t(MessageKey::WorkloadSetCapacityLink)}
                 </a>
             </div>
@@ -1172,8 +1172,8 @@ pub fn IssueNewPage(
         <AppShell title=title user=user flash=flash>
             <div class="max-w-2xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects" class=grow("")>{t(MessageKey::ProjectsSectionName)}</a></li>
-                    <li><a href=back_link_for_breadcrumb class=grow("")>{name_for_breadcrumb}</a></li>
+                    <li><a href="/projects" class=grow_text("")>{t(MessageKey::ProjectsSectionName)}</a></li>
+                    <li><a href=back_link_for_breadcrumb class=grow_text("")>{name_for_breadcrumb}</a></li>
                     <li>{t(MessageKey::NewIssueLabel)}</li>
                 </ul></div>
 
@@ -1310,9 +1310,9 @@ pub fn SubIssueNewPage(
         <AppShell title=title user=user flash=flash>
             <div class="max-w-2xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects" class=grow("")>{t(MessageKey::ProjectsSectionName)}</a></li>
-                    <li><a href=project_href class=grow("")>{project_name}</a></li>
-                    <li><a href=parent_href class=grow("")>{parent_title}</a></li>
+                    <li><a href="/projects" class=grow_text("")>{t(MessageKey::ProjectsSectionName)}</a></li>
+                    <li><a href=project_href class=grow_text("")>{project_name}</a></li>
+                    <li><a href=parent_href class=grow_text("")>{parent_title}</a></li>
                     <li>{t(MessageKey::NewSubIssueLabel)}</li>
                 </ul></div>
 
@@ -1614,7 +1614,7 @@ pub fn IssueDetailPage(
                                             <span class=status_badge_class>
                                                 {status_label}
                                             </span>
-                                            <a href=detail_href class=grow("text-sm hover:underline flex-1")>
+                                            <a href=detail_href class=grow_text("text-sm hover:underline flex-1")>
                                                 {si.title}
                                             </a>
                                         </li>
@@ -2096,8 +2096,8 @@ fn HealthIndicatorBasisPage(
         <AppShell title=title.clone() user=user flash=None>
             <div class="max-w-2xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects" class=grow("")>{t(MessageKey::ProjectsSectionName)}</a></li>
-                    <li><a href=back_link class=grow("")>{project.name}</a></li>
+                    <li><a href="/projects" class=grow_text("")>{t(MessageKey::ProjectsSectionName)}</a></li>
+                    <li><a href=back_link class=grow_text("")>{project.name}</a></li>
                     <li>{title.clone()}</li>
                 </ul></div>
 

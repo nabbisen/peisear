@@ -149,6 +149,27 @@ pub(crate) fn grow(base: &str) -> String {
     format!("{base} {TOUCH_TARGET}")
 }
 
+/// [`grow`]'s counterpart for a bare text element — a plain `<a>` or
+/// `<summary>` carrying a label and nothing that already makes it a
+/// flex container (`DOC-005` §3.1). Composes [`TOUCH_TARGET`] *and*
+/// `inline-flex items-center`, so the 44px box centres its own label
+/// instead of leaving it pinned to the box's top edge — the defect
+/// `DOC-005` §1 found in two of three published screenshots.
+///
+/// **Not folded into [`grow`].** `static/tailwind.css` emits
+/// `.flex{display:flex}` immediately before
+/// `.inline-flex{display:inline-flex}`; the later rule wins regardless
+/// of class order on the element, so adding `inline-flex`
+/// unconditionally to `grow` would flip every already-centring site
+/// that reaches its own layout via a bare `flex` class from
+/// block-level to inline-level flex, and would do nothing useful on a
+/// form control, which centres its own content natively. One helper
+/// cannot be correct for all three kinds `DOC-005` §2 measured; this
+/// is the second.
+pub(crate) fn grow_text(base: &str) -> String {
+    format!("{base} {TOUCH_TARGET} inline-flex items-center")
+}
+
 /// Column of issues on the kanban board, grouped by status. Shared
 /// between [`issues::ProjectDetailPage`] and its handler.
 #[derive(Debug, Clone)]

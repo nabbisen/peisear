@@ -10,7 +10,7 @@ use leptos::prelude::*;
 use peisear_core::CurrentUser;
 use peisear_i18n::MessageKey;
 
-use super::{grow, t};
+use super::{grow, grow_text, t};
 
 /// Minimum HTML scaffold. Children render inside `<main>`.
 ///
@@ -140,7 +140,7 @@ pub fn PublicShell(#[prop(into)] title: String, children: Children) -> impl Into
 fn SkipLink() -> impl IntoView {
     view! {
         <a href="#main"
-           class=grow("sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:flex focus:items-center focus:bg-base-100 focus:text-base-content focus:px-4 focus:rounded-md focus:shadow-lg focus:border focus:border-base-300 focus:outline focus:outline-2 focus:outline-offset-2")>
+           class=grow_text("sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:flex focus:items-center focus:bg-base-100 focus:text-base-content focus:px-4 focus:rounded-md focus:shadow-lg focus:border focus:border-base-300 focus:outline focus:outline-2 focus:outline-offset-2")>
             {t(MessageKey::SkipToMainContent)}
         </a>
     }
@@ -309,10 +309,10 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                         // (Tailwind's `!important`) because nothing lower
                         // specificity reaches through the vendored rule
                         // without editing it.
-                        <li><a href="/today" class=grow(MENU_FOCUS_RING)>{t(MessageKey::NavLinkToday)}</a></li>
-                        <li><a href="/teams" class=grow(MENU_FOCUS_RING)>{t(MessageKey::NavLinkTeams)}</a></li>
-                        <li><a href="/inbox" class=grow(MENU_FOCUS_RING)>{t(MessageKey::NavLinkInbox)}</a></li>
-                        <li><a href="/settings" class=grow(MENU_FOCUS_RING)>{t(MessageKey::NavLinkSettings)}</a></li>
+                        <li><a href="/today" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkToday)}</a></li>
+                        <li><a href="/teams" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkTeams)}</a></li>
+                        <li><a href="/inbox" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkInbox)}</a></li>
+                        <li><a href="/settings" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkSettings)}</a></li>
                         <li>
                             <form method="post" action="/logout">
                                 // The DaisyUI menu-item grid/padding lands on

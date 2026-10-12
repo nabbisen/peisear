@@ -24,9 +24,9 @@
 use axum::response::Html;
 use leptos::prelude::*;
 
-use super::grow;
 use super::layout::AppShell;
 use super::t;
+use super::{grow, grow_text};
 use peisear_core::{CurrentUser, personal_metrics::DEFAULT_WIP_LIMIT};
 use peisear_i18n::MessageKey;
 use peisear_storage::user_capacities::CapacityRow;
@@ -138,7 +138,7 @@ pub fn SettingsPage(
                         </div>
 
                         <details class="mt-2">
-                            <summary class=grow("cursor-pointer text-sm")>
+                            <summary class=grow_text("cursor-pointer text-sm")>
                                 {t(MessageKey::AddCapacityRowSummary)}
                             </summary>
                             <form method="post" action="/settings/capacity"
@@ -280,7 +280,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
         <tr aria-label=aria>
             <td>
                 <details class="dropdown">
-                    <summary class=grow("cursor-pointer")>
+                    <summary class=grow_text("cursor-pointer")>
                         <span class="font-medium">{row.points}</span>
                         {t(MessageKey::PointsUnitSuffix)}
                     </summary>

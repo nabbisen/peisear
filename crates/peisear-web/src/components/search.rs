@@ -16,7 +16,7 @@ use peisear_i18n::MessageKey;
 use peisear_storage::search::SearchHit;
 
 use super::layout::AppShell;
-use super::{grow, t};
+use super::{grow, grow_text, t};
 
 #[allow(clippy::too_many_arguments)]
 pub fn render_results(
@@ -176,7 +176,7 @@ fn SearchSection(
                         let prev_url = format!("/search?q={}&page={}",
                             urlencode(&q_prev), prev_page);
                         view! {
-                            <a href=prev_url class=grow("link link-hover")>
+                            <a href=prev_url class=grow_text("link link-hover")>
                                 {t(MessageKey::PreviousPageLink)}
                             </a>
                         }
@@ -185,7 +185,7 @@ fn SearchSection(
                         let next_url = format!("/search?q={}&page={}",
                             urlencode(&q_next), next_page);
                         view! {
-                            <a href=next_url class=grow("link link-hover")>
+                            <a href=next_url class=grow_text("link link-hover")>
                                 {t(MessageKey::NextPageLink)}
                             </a>
                         }

@@ -16,6 +16,8 @@
 //! bug — rustc's own suggested fix for exactly this error.
 #![recursion_limit = "256"]
 
+#[cfg(test)]
+mod alignment_scan;
 pub mod app;
 #[cfg(test)]
 mod changelog_scan;

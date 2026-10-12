@@ -4,7 +4,7 @@ use axum::response::Html;
 use leptos::prelude::*;
 
 use super::layout::AppShell;
-use super::{grow, t};
+use super::{grow, grow_text, t};
 use peisear_core::{CurrentUser, Project};
 use peisear_i18n::{Field, MessageKey};
 
@@ -111,7 +111,7 @@ pub fn ProjectNewPage(
         <AppShell title=t(MessageKey::ProjectNewPageTitle) user=user flash=flash>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects" class=grow("")>{t(MessageKey::ProjectsSectionName)}</a></li>
+                    <li><a href="/projects" class=grow_text("")>{t(MessageKey::ProjectsSectionName)}</a></li>
                     <li>{t(MessageKey::NewBreadcrumbWord)}</li>
                 </ul></div>
 
@@ -190,8 +190,8 @@ pub fn ProjectEditPage(
         <AppShell title=title user=user flash=flash>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
-                    <li><a href="/projects" class=grow("")>{t(MessageKey::ProjectsSectionName)}</a></li>
-                    <li><a href=project_href class=grow("")>{name_for_breadcrumb}</a></li>
+                    <li><a href="/projects" class=grow_text("")>{t(MessageKey::ProjectsSectionName)}</a></li>
+                    <li><a href=project_href class=grow_text("")>{name_for_breadcrumb}</a></li>
                     <li>{t(MessageKey::EditWord)}</li>
                 </ul></div>
 

@@ -169,6 +169,17 @@
 //! other count this module takes and must from this one too), 9
 //! `<textarea>`.
 //!
+//! **`DOC-005` §3.1 — a second helper, `grow_text`, both counted as
+//! declaring a target.** `components::grow_text` composes the same
+//! [`components::TOUCH_TARGET`] constant as `components::grow`, plus
+//! `inline-flex items-center`, for the 47 plain-text sites (`<a>`,
+//! `<summary>`) `DOC-005` found could not share `grow`'s own
+//! mechanism without flipping 19 `flex`-based sites to inline-level
+//! flex. The coverage clause's `declares_target` check reads
+//! `class=grow_text(` as a second, equally valid spelling of the same
+//! fact -- a text element reaching its target through the sibling
+//! helper is not an offender.
+//!
 //! No new named escalation exclusion. The three resolutions:
 //!
 //! - **32 `type="hidden"` inputs are not interactive elements.**
@@ -777,6 +788,7 @@ fn every_interactive_element_declares_a_touch_target() {
                 continue;
             }
             let declares_target = tag.contains("class=grow(")
+                || tag.contains("class=grow_text(")
                 || tag.contains("data-inline-text-link")
                 || class_value_identifier_binding_calls_grow(&stripped, start, tag)
                 || is_named_escalation_exclusion(tag)
@@ -793,8 +805,8 @@ fn every_interactive_element_declares_a_touch_target() {
         offenders.is_empty(),
         "every interactive element (<a>, <button>, <summary>, <input> other \
          than type=\"hidden\", <select>, <textarea>) must declare a 44x44 \
-         touch target via components::grow(...), carry \
-         data-inline-text-link if it is a link inside a block of running \
+         touch target via components::grow(...) or components::grow_text(...), \
+         carry data-inline-text-link if it is a link inside a block of running \
          text, or sit inside a <label class=grow(...)> that provides the \
          hit area (NFR-A11Y-007, DEC-050) -- TT-004 and TT-007 brought every \
          site this scan found on the tree they shipped against into one of \
