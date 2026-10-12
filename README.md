@@ -40,7 +40,8 @@ one person is carrying the project, that three issues have not moved
 in a fortnight, or that you have been over your own capacity for a
 week — and fewer still will tell *you* first.
 
-- **You own your data.** One SQLite file. `cp` is the backup strategy.
+- **You own your data.** One SQLite file — `sqlite3 … ".backup"` while
+  it runs, `cp` once it is stopped. No database server to operate.
 - **You own your uptime.** One static binary. Your ops story is
   `systemctl restart peisear`.
 - **You own your roadmap.** Clean Cargo workspace boundaries so a new
