@@ -4,6 +4,16 @@
 documents that describe the code, the document that introduces the product,
 the guards that check them, and the two things the screenshots exposed.
 
+**Scope correction, 2026-10-13.** This release's subject is documentation
+accuracy. **`DOC-004`'s scan half, `DOC-007` entirely, and most of
+`DOC-005` are not documentation** — they are guards, test layout and a UI
+defect, scoped in here because each sat next to a document. **That was the
+architect's error.** The landed work is sound and stays; `DOC-005` was
+already with the dev team when the drift was noticed and **finishes rather
+than stalling**, but **the release notes say plainly what this release
+contains**, and nothing further that is not documentation is added to it.
+`DOC-006` and the candidate close it.
+
 **Five rounds and a candidate.** Each has one subject, because the list is
 long and a round that carries two is a round nobody can review cleanly.
 

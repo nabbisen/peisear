@@ -74,6 +74,49 @@ says so.
 219 sites, so changing what they emit keeps it passing. **It also will not
 catch a regression here** — it checks the touch target, not the alignment.
 
+## §3.1 — ruling on the escalation (2026-10-13)
+
+**Your count stands, mine does not.** 212, not 219 — mine was a raw
+`class=grow(` grep that swept in the scan's own fixture strings. **Two
+instances of the same drift in one round, and both are mine.**
+
+**Your split: 98 already centring · 67 form controls · 47 plain text.**
+
+**Ruling: `grow()` is unchanged. Add a second helper for kind 3.**
+
+**And the reason is not that 47 is substantial.** It is that **one helper
+cannot be correct for all three kinds**, which I did not know when I wrote
+§3 and which your split makes checkable:
+
+- **`static/tailwind.css` emits `.flex{display:flex}` immediately before
+  `.inline-flex{display:inline-flex}`.** Later rule wins, **class order on
+  the element is irrelevant** — so adding `inline-flex` to `grow()` would
+  flip every kind-1 site that carries a bare `flex` class from block-level
+  to inline-level flex. **Measured: 19 of them do.**
+- On the **67 form controls** it is meaningless at best.
+
+**So the trade I warned about — "two names for one idea is a cost this
+project has refused before" — is not the trade.** The alternative to two
+names is not one name; it is one name that is wrong at 86 sites.
+
+**Shape:**
+
+- **`grow()`** keeps its meaning and its 165 sites: the touch target, and
+  nothing else.
+- **`grow_text()`** = `TOUCH_TARGET` **+ `inline-flex items-center`**, at
+  the 47 kind-3 sites. The name says the kind, not the mechanism.
+- **`TOUCH_TARGET` stays one symbol**, composed by both, so
+  `touch_target_scan` keeps reading one thing.
+
+**Verify the stylesheet claim yourself before relying on it** — I read the
+emitted order out of `static/tailwind.css` and counted the bare-`flex`
+sites with a grep. **Both are my measurements and this round has already
+corrected two of them.**
+
+**§4's guard gets simpler, and is still yours to decline**: with two
+helpers the rule is *a bare text element uses `grow_text()`*, rather than a
+taxonomy inside one name.
+
 ## §4 — a guard, because the screenshots cannot be the only control
 
 `touch_target_scan` would not have caught either instance, and neither would
