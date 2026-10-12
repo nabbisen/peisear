@@ -1,9 +1,8 @@
 # RFC 0019: What belongs in documentation, and what the links to `.git-exclude/` are
 
-**Status**: **Proposed** (2026-10-12, rewritten) — the owner's framing,
-replacing two earlier drafts of mine that proposed restructuring instead of
-answering
-**Target**: 0.51.0
+**Status**: **Accepted** (2026-10-12) — implementation may begin
+**Target**: 0.51.0, as `DOC-002` (the nineteen) and `DOC-006` (the
+decisions), the second sized by the first's own survey
 **Raised by**: the owner — *"the issue is missing links: some statements in
 documentation point to some in `.git-exclude/`… the issue possibly consists
 of the two: lack of documentation, useless link to `.git-exclude/`."*
