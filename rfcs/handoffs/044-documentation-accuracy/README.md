@@ -14,6 +14,16 @@ than stalling**, but **the release notes say plainly what this release
 contains**, and nothing further that is not documentation is added to it.
 `DOC-006` and the candidate close it.
 
+**Carried out of this release, 2026-10-13** (`DOC-005` review §4):
+`strip_line_comments` is copy-pasted into **six** scans and **five carry a
+bug** — it splits on the first literal `//`, including one inside
+`xmlns="http://…"`, which is present in five component files, corrupting
+quote pairing for the rest of the file. **`touch_target_scan`'s answer for
+those files is unrelated to the question it asks, and it reports clean
+either way.** Guard infrastructure, not documentation: **its own round
+after the candidate**, beginning with what each scan's output actually is
+before and after the fix.
+
 **Five rounds and a candidate.** Each has one subject, because the list is
 long and a round that carries two is a round nobody can review cleanly.
 
