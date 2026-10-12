@@ -6,9 +6,15 @@
 //! whole design -- five rules, each comparing one document against a source
 //! of truth read at runtime:
 //!
-//! 1. The crate set a document names, against `crates/*/`.
+//! 1. The crate set a document names, against `crates/*/` -- all three
+//!    documents that enumerate the crate set (`README.md`,
+//!    `workspace-layout.md`, `crate-boundaries.md`), as this rule always
+//!    intended.
 //! 2. `installation.md`'s MSRV claims, against `Cargo.toml`'s `rust-version`.
-//! 3. `deployment.md`'s *What to ship* manifest, against `ls static/`.
+//! 3. `deployment.md`'s *What to ship* manifest against `static/`'s actual
+//!    contents, exhaustively in both directions: nothing the manifest
+//!    lists is missing from `static/`, and nothing in `static/` is
+//!    missing from the manifest.
 //! 4. Documented environment-variable defaults, against `config.rs`'s
 //!    `unwrap_or_else`/`unwrap_or` fallbacks.
 //! 5. Committed citations of `.git-exclude/`, a gitignored path. Its
@@ -16,32 +22,16 @@
 //!    fixture this module's [`Input`] can hold cheaply, so its functions
 //!    and tests sit apart from the other four, at the end of this file.
 //!
-//! **Two deferrals, both because a different, later handoff is what fixes
-//! the tree these rules would otherwise fail against on day one** -- the
-//! trap this handoff's own ordering note (`TT-007`) warns about:
-//!
-//! - **Rule 1's architecture half.** `docs/architecture/workspace-layout.md`
-//!   and `crate-boundaries.md` still omit `peisear-i18n` -- `DOCS-003`
-//!   fixed `README.md`'s count but was explicitly told not to touch
-//!   `docs/architecture/` (`DOCS-006`'s territory, `0.50.0`). The live rule
-//!   covers `README.md`; the architecture-doc half is asserted only in
-//!   [`rule_1_deferred_names_the_architecture_docs_gap`], which documents
-//!   the gap rather than landing the suite red.
-//! - **Rule 3's exhaustive half.** `deployment.md`'s manifest lists two of
-//!   the eight files in `static/`; fixing that list is "the deployment
-//!   manifest's own fix," named in the `042` README as deferred to `0.50.0`
-//!   alongside `DOCS-006`. The live rule only checks the direction that is
-//!   already true -- nothing the manifest lists is missing from `static/`
-//!   -- which still catches a renamed or removed file. The exhaustive
-//!   direction is asserted only in
-//!   [`rule_3_deferred_names_the_missing_manifest_entries`].
-//!
-//! Both deferred checks are proven against the real, measured gap (not a
-//! synthetic plant) and are not `#[ignore]`d in this module -- see
-//! [`live`] and [`only`]: the live suite's own `#[test]` filters deferred
-//! messages out before asserting emptiness, so the suite stays green while
-//! the gap stays visible (`cargo test -p peisear-web --lib -- --nocapture`
-//! shows it, and the two tests naming it by name always run).
+//! **Rules 1 and 3 were not always this wide.** `DOCS-005` landed both as
+//! half-rules, deliberately: `README.md`'s crate count and the manifest's
+//! one already-true direction, with the other half asserted only in a
+//! named test that documented the gap rather than landing the suite red
+//! -- the trap `TT-007`'s own ordering note warns about, hitting a rule
+//! against a tree a *later* handoff is what fixes. `DOC-001` (`0.51.0`)
+//! is that later handoff: once `docs/architecture/` named `peisear-i18n`
+//! and `deployment.md` named all eight files in `static/`, both halves
+//! became assertable, the two gap-documenting tests were deleted, and
+//! the rules above are what they always intended to be.
 //!
 //! **Rule 4's own bound**: the security error this rule is named for
 //! (`hardening.md` once claimed `127.0.0.1:3000` was the default bind) was
@@ -267,31 +257,22 @@ pub(crate) struct Input<'a> {
     pub exists: &'a dyn Fn(&str) -> bool,
 }
 
-/// Every rule breach, each a sentence saying which rule and where. Messages
-/// for the two deferred checks (see the module doc) contain `(deferred` so
-/// [`live`] can filter them out of the suite's own pass/fail assertion
-/// while [`only`] can still pull them out by name.
+/// Every rule breach, each a sentence saying which rule and where.
 pub(crate) fn violations(input: &Input) -> Vec<String> {
     let mut out = Vec::new();
 
-    // Rule 1, live: every crate is named in README.md.
-    for dir in &input.crate_dirs {
-        if !mentions_crate(input.readme, dir) {
-            out.push(format!(
-                "rule 1: README.md does not name crate {dir} (as `{}` or `{dir}`)",
-                short_crate_name(dir)
-            ));
-        }
-    }
-    // Rule 1, deferred to DOCS-006 (0.50.0): the architecture documents.
+    // Rule 1: every crate is named in each of the three documents that
+    // enumerate the crate set.
     for (doc_name, doc) in [
+        ("README.md", input.readme),
         ("workspace-layout.md", input.workspace_layout),
         ("crate-boundaries.md", input.crate_boundaries),
     ] {
         for dir in &input.crate_dirs {
             if !mentions_crate(doc, dir) {
                 out.push(format!(
-                    "rule 1 (deferred, DOCS-006): {doc_name} does not name crate {dir}"
+                    "rule 1: {doc_name} does not name crate {dir} (as `{}` or `{dir}`)",
+                    short_crate_name(dir)
                 ));
             }
         }
@@ -319,7 +300,9 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         }
     }
 
-    // Rule 3, live: every file the manifest lists actually exists in static/.
+    // Rule 3: deployment.md's manifest and static/ agree, in both
+    // directions -- every file the manifest lists exists in static/, and
+    // every file in static/ is listed in the manifest.
     let manifest = manifest_static_files(input.deployment);
     for name in &manifest {
         if !input.static_files.contains(name) {
@@ -328,11 +311,10 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
             ));
         }
     }
-    // Rule 3, deferred to DOCS-006 (0.50.0): every file in static/ is listed.
     for name in &input.static_files {
         if !manifest.contains(name) {
             out.push(format!(
-                "rule 3 (deferred, DOCS-006): static/{name} is not listed in deployment.md's manifest"
+                "rule 3: static/{name} is not listed in deployment.md's manifest"
             ));
         }
     }
@@ -430,15 +412,10 @@ fn only(v: Vec<String>, rule: &str) -> Vec<String> {
     v.into_iter().filter(|m| m.starts_with(rule)).collect()
 }
 
-/// Drop the two deferred checks' messages -- see the module doc.
-fn live(v: Vec<String>) -> Vec<String> {
-    v.into_iter().filter(|m| !m.contains("(deferred")).collect()
-}
-
 #[test]
 fn the_repository_satisfies_the_live_rules() {
     let r = real();
-    let v = live(run(&r));
+    let v = run(&r);
     assert!(v.is_empty(), "docs scan violations:\n{}", v.join("\n"));
 }
 
@@ -446,19 +423,27 @@ fn the_repository_satisfies_the_live_rules() {
 fn rule_1_catches_a_crate_missing_from_the_readme() {
     let mut r = real();
     r.readme = r.readme.replace("`i18n`, ", "");
-    let v = only(live(run(&r)), "rule 1:");
+    let v = only(run(&r), "rule 1:");
     assert!(v.iter().any(|m| m.contains("peisear-i18n")), "got {v:?}");
 }
 
 #[test]
-fn rule_1_deferred_names_the_architecture_docs_gap() {
-    let r = real();
-    let v = only(run(&r), "rule 1 (deferred");
+fn rule_1_catches_a_crate_missing_from_workspace_layout() {
+    let mut r = real();
+    r.workspace_layout = r.workspace_layout.replace("peisear-i18n", "");
+    let v = only(run(&r), "rule 1:");
     assert!(
         v.iter()
             .any(|m| m.contains("workspace-layout.md") && m.contains("peisear-i18n")),
         "got {v:?}"
     );
+}
+
+#[test]
+fn rule_1_catches_a_crate_missing_from_crate_boundaries() {
+    let mut r = real();
+    r.crate_boundaries = r.crate_boundaries.replace("peisear-i18n", "");
+    let v = only(run(&r), "rule 1:");
     assert!(
         v.iter()
             .any(|m| m.contains("crate-boundaries.md") && m.contains("peisear-i18n")),
@@ -470,7 +455,7 @@ fn rule_1_deferred_names_the_architecture_docs_gap() {
 fn rule_2_catches_a_stale_msrv_sentence() {
     let mut r = real();
     r.installation = r.installation.replace("1.88 or later", "1.85 or later");
-    let v = only(live(run(&r)), "rule 2:");
+    let v = only(run(&r), "rule 2:");
     assert!(v.iter().any(|m| m.contains("1.85")), "got {v:?}");
 }
 
@@ -478,7 +463,7 @@ fn rule_2_catches_a_stale_msrv_sentence() {
 fn rule_2_catches_a_stale_verify_block() {
     let mut r = real();
     r.installation = r.installation.replace("# rustc 1.88.x", "# rustc 1.85.x");
-    let v = only(live(run(&r)), "rule 2:");
+    let v = only(run(&r), "rule 2:");
     assert!(v.iter().any(|m| m.contains("rustc 1.85.x")), "got {v:?}");
 }
 
@@ -486,27 +471,20 @@ fn rule_2_catches_a_stale_verify_block() {
 fn rule_3_catches_a_manifest_entry_that_does_not_exist() {
     let mut r = real();
     r.deployment = r.deployment.replace("app.css", "app-renamed.css");
-    let v = only(live(run(&r)), "rule 3:");
+    let v = only(run(&r), "rule 3:");
     assert!(v.iter().any(|m| m.contains("app-renamed.css")), "got {v:?}");
 }
 
 #[test]
-fn rule_3_deferred_names_the_missing_manifest_entries() {
-    let r = real();
-    let v = only(run(&r), "rule 3 (deferred");
-    for name in [
-        "calendar.js",
-        "dm.js",
-        "plan.js",
-        "search.js",
-        "daisyui.min.css",
-        "tailwind.css",
-    ] {
-        assert!(
-            v.iter().any(|m| m.contains(name)),
-            "expected static/{name} reported missing, got {v:?}"
-        );
-    }
+fn rule_3_catches_a_static_file_missing_from_the_manifest() {
+    let mut r = real();
+    r.deployment = r.deployment.replace("    ├── calendar.js\n", "");
+    let v = only(run(&r), "rule 3:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("static/calendar.js") && m.contains("not listed")),
+        "got {v:?}"
+    );
 }
 
 #[test]

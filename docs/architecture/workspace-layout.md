@@ -1,6 +1,6 @@
 # Workspace Layout
 
-peisear is a Cargo workspace containing six published crates plus
+peisear is a Cargo workspace containing seven published crates plus
 static assets and an `infra/` placeholder. The tree:
 
 ```
@@ -26,6 +26,17 @@ peisear/
 │   └── development/                 # Release notes and tags
 │
 ├── crates/
+│   ├── peisear-i18n/                # Every user-visible string.
+│   │   └── src/{lib,message,en,guard,locale}.rs
+│   │                                #   MessageKey enum, Locale::render
+│   │                                #   (English only, NFR-LANG-005),
+│   │                                #   find_violations §1.7 guard.
+│   │                                #   Depends on no other peisear
+│   │                                #   crate -- a leaf, so the rest
+│   │                                #   can speak in message keys
+│   │                                #   without a cycle back to
+│   │                                #   presentation.
+│   │
 │   ├── peisear-core/                # Pure domain types.
 │   │   └── src/lib.rs               #   User, Project, Issue, IssueStatus,
 │   │                                #   Priority, CurrentUser. Deps: serde,
@@ -83,8 +94,19 @@ peisear/
 │                                    # `cargo install peisear` ships.
 │
 ├── static/
-│   ├── app.css                      # Supplemental CSS.
-│   └── board.js                     # Kanban drag-and-drop.
+│   ├── app.css                      # Supplemental CSS, loaded after
+│   │                                #   daisyui.min.css and before
+│   │                                #   tailwind.css (see below).
+│   ├── board.js                     # Kanban drag-and-drop.
+│   ├── calendar.js                  # Calendar drag-and-drop.
+│   ├── daisyui.min.css              # Vendored component styles.
+│   ├── dm.js                        # Direct-manipulation keyboard
+│   │                                #   fallback (issue detail, board).
+│   ├── plan.js                      # Sprint-plan drag-and-drop.
+│   ├── search.js                    # Global search, loaded on every
+│   │                                #   page (`components/layout.rs`).
+│   └── tailwind.css                 # Self-hosted utility classes
+│                                     #   (../operations/tailwind-local.md).
 │
 └── infra/                           # Placeholder for Dockerfile,
     └── README.md                    # compose.yaml, Terraform, GitHub
@@ -103,7 +125,7 @@ names alone tells you the module graph.
 - **Migrations** are embedded at compile time via
   `sqlx::migrate!("./migrations")` relative to the `peisear-storage`
   crate's `CARGO_MANIFEST_DIR`, so the binary ships with them baked in.
-- **Static files** (`static/app.css`, `static/board.js`) are served at
+- **Static files** (all eight under `static/`, above) are served at
   runtime by `tower_http::services::ServeDir::new("static")`, which
   resolves **relative to the server's working directory**. Deploy
   scripts and systemd units must `cd` to the directory containing

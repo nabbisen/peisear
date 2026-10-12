@@ -1,16 +1,45 @@
 # Crate Boundaries
 
-peisear is split into five implementation crates plus a thin facade
+peisear is split into six implementation crates plus a thin facade
 crate, because the Roadmap has distinct kinds of work — each with a
 natural home — and crates.io needs a single name to install.
 
-## The five implementation crates
+## The six implementation crates
+
+### `peisear-i18n` — every user-visible string
+
+One enum, `MessageKey`, and one exhaustive `match` per shipped locale
+(`Locale::render`) that turns a key into prose — a key without a
+rendering fails to **compile**, rather than falling back to a raw key
+string at runtime. Depends on no other crate in this workspace: the
+one leaf, so every other crate can speak in message keys without a
+dependency cycle back to presentation.
+
+The rule: **a user-visible string is a message key, not a literal.**
+Two of the three consumer crates carry a `MessageKey` (or a label enum
+built from one) as typed data and never render it themselves —
+`peisear-core`'s domain types and `StorageError::Conflict`/`::Validation`
+are the examples; rendering happens only where the string is about to
+be shown, through `peisear-web`'s own `t()` helper, pinned to English
+today (`NFR-LANG-005`). `peisear-notify` is the one exception, and
+deliberately so: a notification's copy is decided and persisted (the
+audit row) before it is ever sent, so it calls `Locale::render` itself,
+at the point a `DispatchEvent` is turned into a `Notification` —
+there is no later web request to defer rendering to.
+
+This crate also carries the `§1.7` prohibited-vocabulary guard
+(`find_violations`), run as a blocking check over every shipped and
+fixture locale table.
 
 ### `peisear-core` — the vocabulary
 
 Pure domain types: `User`, `Project`, `Issue`, `IssueStatus`,
-`Priority`, `CurrentUser`. Dependencies are `serde`, `chrono`, and
-`thiserror` — nothing else. No axum, no sqlx, no HTTP library.
+`Priority`, `CurrentUser`. Dependencies are `serde`, `chrono`,
+`thiserror`, and `peisear-i18n` — nothing else. No axum, no sqlx, no
+HTTP library. The `peisear-i18n` dependency is for label enums
+(`IssueStatusLabel`, `PriorityLabel`, `HealthStateLabel`, …) that a
+domain type converts itself into, never for rendering: this crate
+calls no `Locale::render`.
 
 The rule: **if it's the name of a concept in peisear, it lives here.**
 Anything that speaks "a user, a project, an issue" can depend on core
@@ -43,8 +72,12 @@ When a PostgreSQL backend lands, either a feature flag swaps the
 `Pool` alias or a sibling `peisear-storage-postgres` crate takes the
 same function signatures and the web crate depends on whichever is
 selected. `StorageError` is already abstract enough (`Database`,
-`Migration`, `InvalidData`, `NotFound`, `Bootstrap`) to hold either
-backend's errors.
+`Migration`, `InvalidData`, `NotFound`, `Bootstrap`, `Conflict`,
+`Validation`) to hold either backend's errors. The last two carry a
+`peisear_i18n::MessageKey` rather than a `String` — the crate depends
+on `peisear-auth`, `peisear-core`, and `peisear-i18n`, never on axum or
+any web type, so a storage-layer error can still name *what* went
+wrong without knowing how it will be rendered.
 
 ### `peisear-notify` — the notification dispatch pipeline
 
@@ -53,8 +86,10 @@ caller in `peisear-web` observes a state change and sends a
 `DispatchEvent`), filtering + delivery (resolves the user's
 notification preference, applies severity and cooldown filters,
 persists an audit row), and per-channel send (`in_app`, `email`,
-`webhook`). Depends on `peisear-core` (domain types) and
-`peisear-storage` (the audit row, preference lookups). The rule:
+`webhook`). Depends on `peisear-core` (domain types), `peisear-storage`
+(the audit row, preference lookups), and `peisear-i18n` (the
+notification copy itself is message keys, rendered only at the point
+of send). The rule:
 **anything about deciding whether, and how, to notify a user lives
 here** — separate from `peisear-web` so the filtering/cooldown logic
 is testable without spinning up HTTP.
@@ -77,13 +112,18 @@ facade.
 
 ### `peisear` — crates.io entry point
 
-Pulls in four of the five implementation crates and exposes them as
+Pulls in four of the six implementation crates and exposes them as
 `peisear::core`, `peisear::auth`, `peisear::storage`, and
-`peisear::web`. (`peisear-notify` is a dependency of `peisear-web`,
-not re-exported separately here — external consumers of this facade
-get it transitively through `peisear::web`, not as its own module.)
-Owns `[[bin]] name = "peisear"` so that `cargo install peisear` ships
-the runnable server.
+`peisear::web`. The other two are present but not re-exported, for two
+different reasons: **`peisear-notify`** is a *direct* dependency of
+this facade crate too, not merely inherited through `peisear-web` —
+`main.rs` starts its dispatch loop itself — so external consumers get
+it only transitively through `peisear::web`'s own request handling,
+never as its own module. **`peisear-i18n`** is not a direct dependency
+of this facade at all; every one of the other five crates already
+depends on it, so it arrives purely transitively and the facade has no
+call site of its own to name it from. Owns `[[bin]] name = "peisear"`
+so that `cargo install peisear` ships the runnable server.
 
 The rule: **the facade is the public face on crates.io; it does not
 own logic.** `main.rs` is a fifteen-line bootstrap that calls into

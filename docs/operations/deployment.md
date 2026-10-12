@@ -36,8 +36,22 @@ your config-management system.
 ├── peisear              # The release binary
 └── static/              # Required at runtime
     ├── app.css
-    └── board.js
+    ├── board.js
+    ├── calendar.js
+    ├── daisyui.min.css
+    ├── dm.js
+    ├── plan.js
+    ├── search.js
+    └── tailwind.css
 ```
+
+**Derived from what the rendered HTML actually references** — the
+`<link>`/`<script src>` tags in `peisear-web`'s own components
+(`components/layout.rs` for the three stylesheets and `search.js`,
+loaded on every page; `components/{calendar,sprint_plan,issues}.rs`
+for the remaining four scripts, loaded only on the pages that use
+them) — not from listing `static/`'s contents. All eight files in
+`static/` are referenced by something; none is a dead asset.
 
 The SQLite database (`data/app.db` by default) is created on first
 run.
