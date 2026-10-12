@@ -108,6 +108,15 @@ const LONG_SPRINT_GOAL = `Ship the gate fixture work, digest ${UNBROKEN_RUN}`;
 // project below carries the run in its name (as the personal one does);
 // its three issues are the run in a title, a long title made of words only
 // (which must *wrap*, not break), and an ordinary one.
+//
+// `DOC-005` §5/§6: moved from a plain module constant to a parameter.
+// It never rendered on `doc-screenshots.mjs`'s own three pages, so
+// `DOCS-007` §1's "do not plainify what the screenshots never show"
+// left it here -- but `DOC-005` §5's sprint-plan fixture puts the
+// Backlog row's *source project* on the page `DOC-005` §6 now
+// captures, and that page's own string must be plain. Found by
+// reading the regenerated `sprint_plan.png`, the same way `DOCS-008`
+// §1 found its own three.
 const LONG_TEAM_PROJECT_NAME = `Overflow Gate Team Project ${UNBROKEN_RUN}`;
 // 165 characters, spaces at every point: the wrapping shape, as against
 // `LONG_ISSUE_TITLE`'s unbreakable one.
@@ -120,6 +129,15 @@ const ORDINARY_TEAM_ISSUE_TITLE = 'An ordinary completed sprint issue';
 // only); planned puts a block on both calendars. Until this every calendar
 // swept empty.
 const PLANNED_ISSUE_TITLE = `Planned and assigned ${UNBROKEN_RUN}`;
+// `DOC-005` §5: `sprintId` -- the still-planned sprint, above -- never
+// got an issue of its own; every team-project issue went into the
+// completed sprint instead, so its own `/plan` page swept with both
+// panels empty at all five widths (`GATE-001`/`GATE-002` again,
+// verbatim: a surface the gate had never swept with content). The
+// plan-item issue carries the run; the backlog one does not, the same
+// ordinary/adversarial pairing `firstIssueTitle`/`secondIssueTitle`
+// already uses.
+const LONG_PLAN_ITEM_ISSUE_TITLE = `Planned sprint item ${UNBROKEN_RUN}`;
 // `NFR-PRIV-007` suppresses the burndown below two contributors, counted
 // as distinct assignees of *done* issues in the sprint -- so the second
 // person is a real second account, added to the team through the route.
@@ -159,6 +177,9 @@ export const ADVERSARIAL_STRINGS = {
   secondIssueSubIssueTitle: 'An ordinary fixture sub-issue',
   assignedIssueTitle: 'An assigned fixture issue',
   plannedIssueTitle: PLANNED_ISSUE_TITLE,
+  backlogIssueTitle: 'An ordinary backlog fixture issue',
+  planItemIssueTitle: LONG_PLAN_ITEM_ISSUE_TITLE,
+  teamProjectName: LONG_TEAM_PROJECT_NAME,
 };
 
 function log(...args) {
@@ -397,7 +418,7 @@ export async function createFixtures(strings) {
 
   const teamId = await optionValue(jar.header(), `${BASE}/projects/new`, strings.teamName);
   const teamProjectRes = await jar.fetchForm(`${BASE}/projects`, {
-    name: LONG_TEAM_PROJECT_NAME,
+    name: strings.teamProjectName,
     description: 'Team fixture project for the GATE-001 completed sprint.',
     team_id: teamId,
   });
@@ -443,6 +464,29 @@ export async function createFixtures(strings) {
   });
   if (completeRes.status !== 303) throw new Error(`complete sprint: expected 303, got ${completeRes.status}`);
 
+  // `DOC-005` §5: two more team-project issues, for the still-planned
+  // `sprintId`'s own `/plan` page -- one left off the plan entirely
+  // (open, top-level, team-scoped, not in an active sprint: lands in
+  // Backlog), one added through the real `/plan/add` route (lands in
+  // Sprint Items). Both through `newIssueUrl`, the same team project
+  // the completed sprint's own three issues used.
+  const backlogIssueRes = await jar.fetchForm(newIssueUrl, {
+    title: strings.backlogIssueTitle, description: '', status: 'open',
+    priority: 'medium', effort: '2', assignee_id: '',
+  });
+  if (backlogIssueRes.status !== 303) throw new Error(`create backlog issue: expected 303, got ${backlogIssueRes.status}`);
+
+  const planItemIssueRes = await jar.fetchForm(newIssueUrl, {
+    title: strings.planItemIssueTitle, description: '', status: 'open',
+    priority: 'medium', effort: '3', assignee_id: '',
+  });
+  if (planItemIssueRes.status !== 303) throw new Error(`create plan-item issue: expected 303, got ${planItemIssueRes.status}`);
+  const planItemIssueId = planItemIssueRes.headers.get('location').split('/issues/')[1].split(/[/?]/)[0];
+  const planItemAddRes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints/${sprintId}/plan/add`, {
+    issue_id: planItemIssueId, project_id: teamProjectId,
+  });
+  if (planItemAddRes.status !== 303) throw new Error(`add issue to plan: expected 303, got ${planItemAddRes.status}`);
+
   // The page the gate sweeps must actually hold what this fixture exists to
   // put on it -- a 200 says nothing about that. Three titles in the issue
   // list, and the burndown (which two contributors are what let render).
@@ -478,6 +522,14 @@ export async function createFixtures(strings) {
   const projectCal = await fetchPage(`/projects/${projectId}/calendar`);
   if (!projectCal.includes(strings.plannedIssueTitle)) throw new Error('project calendar: no block for the planned issue');
   log(`branches rendered: issue-detail assignee badge x${badgeCount(detailHtml)}; board assignee badges x${boardBadges} + workload chip x${stripChips}; calendar block on personal and project axes`);
+
+  // `DOC-005` §5: the still-planned sprint's own plan page, asserted the
+  // same way -- a green cell on a page with no list in it is exactly
+  // what §6/GATE-001/GATE-002 warn a passing sweep can hide.
+  const planPage = await fetchPage(`/teams/${teamSlug}/sprints/${sprintId}/plan`);
+  if (!planPage.includes(strings.backlogIssueTitle)) throw new Error('sprint plan: Backlog panel missing its fixture issue');
+  if (!planPage.includes(strings.planItemIssueTitle)) throw new Error('sprint plan: Sprint Items panel missing its fixture issue');
+  log('branches rendered: sprint plan Backlog + Sprint Items both hold a fixture issue');
 
   // `GATE-003`: the day and month layouts, on both axes, anchored **explicitly**
   // on the day the issue was planned for (`?date=`), not on whatever "today"

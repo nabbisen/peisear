@@ -410,7 +410,13 @@ fn render_backlog(
                         <a href=href draggable=link_draggable
                            class=grow("link link-hover font-medium truncate flex items-center")>{issue.title}</a>
                         <div class="flex items-center gap-2 text-xs text-base-content/70 mt-0.5">
-                            <span>{row.project_name}</span>
+                            // `DOC-005` §5: unconstrained inside this flex row,
+                            // a long team-project name (a flex child's own
+                            // `min-width: auto` default, never a flex-shrink
+                            // override) pushed the whole row past the
+                            // viewport. Latent until this round populated
+                            // the Backlog panel for the first time.
+                            <span class="min-w-0 truncate">{row.project_name}</span>
                             <span class="badge badge-xs badge-ghost">{priority_label}</span>
                             <span class="tabular-nums">{points_text}</span>
                         </div>

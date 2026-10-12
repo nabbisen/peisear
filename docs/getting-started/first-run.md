@@ -68,6 +68,26 @@ starts accepting connections.
 
    ![The same project in list view: a filterable, sortable table of every issue](../src/assets/screenshots/list.png)
 
+## Planning a sprint
+
+Sprints belong to teams, not to a single project — a team can pull
+issues from any of its projects into one sprint.
+
+1. On `/teams` click **New team**. Name it, submit; you land on the
+   team's own detail page as its admin.
+2. From there, create a project under the team (same **New project**
+   form as before, now with the team pre-selected) and add an issue or
+   two to it.
+3. Click **Sprints**, then **New sprint**. Name it, set a start and
+   end date, submit.
+4. The sprint's **Plan** page is a two-column view: **Backlog** on the
+   left (every open, top-level issue across the team's projects not
+   already committed to an active sprint) and **Sprint Items** on the
+   right. Move an issue between them with its row's own button, or by
+   dragging it across.
+
+   ![A sprint's plan page: an uncommitted issue in Backlog, a committed one in Sprint Items](../src/assets/screenshots/sprint_plan.png)
+
 ## Health check
 
 A trivial `/health` endpoint returns `200 ok` without authentication.

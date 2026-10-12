@@ -70,6 +70,16 @@ const PLAIN_STRINGS = {
   secondIssueSubIssueTitle: 'Confirm whether the timeout is client-side or server-side',
   assignedIssueTitle: 'Review the new navigation design',
   plannedIssueTitle: 'Fix pagination on the activity feed',
+  // `DOC-005` §5: `createFixtures` now requires these two as well.
+  backlogIssueTitle: 'Draft the onboarding email sequence',
+  planItemIssueTitle: 'Add empty states to the dashboard widgets',
+  // `DOC-005` §6: found reading the regenerated `sprint_plan.png` --
+  // the Backlog row's own source-project name was still the gate's
+  // adversarial fixture value (a module constant, not a parameter)
+  // because it had never rendered on a captured page before this
+  // round's fourth screen. `teamProjectName` fixes that the same way
+  // `DOCS-008` §1 fixed its own three.
+  teamProjectName: 'Internal Tools',
 };
 
 // One width: a desktop width for the README and `first-run.md`, not the
@@ -128,18 +138,21 @@ async function main() {
     await waitForServer(`${BASE}/login`);
     log('server ready');
 
-    const { cookie, projectId, issueId } = await createFixtures(PLAIN_STRINGS);
+    const { cookie, projectId, issueId, teamSlug, sprintId } = await createFixtures(PLAIN_STRINGS);
     log(`fixtures created: project=${projectId} issue=${issueId}`);
 
-    // Three pages (`DOCS-007` §3 dropped `/today`; this round drops the
-    // sprint plan for the same class of reason -- see the review
-    // package's own finding): the board (the product's signature
-    // screen), the list view (the dense alternative), and an issue
-    // detail (where most time is spent).
+    // Four pages (`DOCS-007` §3 dropped `/today`; `DOCS-008` §4/`DOC-005`
+    // found the sprint plan's own alignment defect in two of the three
+    // committed images rather than add a fourth page over an unfixed
+    // one). The board (the product's signature screen), the list view
+    // (the dense alternative), an issue detail (where most time is
+    // spent), and now the sprint plan -- `DOC-005` §5 populated both of
+    // its panels, which is the fix this capture was waiting on.
     const pages = {
       board: `${BASE}/projects/${projectId}`,
       list: `${BASE}/projects/${projectId}?view=list`,
       issue_detail: `${BASE}/projects/${projectId}/issues/${issueId}`,
+      sprint_plan: `${BASE}/teams/${teamSlug}/sprints/${sprintId}/plan`,
     };
 
     mkdirSync(OUT_DIR, { recursive: true });
