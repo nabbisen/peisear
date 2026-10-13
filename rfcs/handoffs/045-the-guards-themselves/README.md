@@ -1,6 +1,6 @@
 # Handoffs — the guards themselves
 
-**0.52.0, proposed.** Three rounds, one subject: **the checks this project
+**0.52.0, authorized by the owner 2026-10-14.** Three rounds, one subject: **the checks this project
 relies on, checked.** Every item here was found by a guard failing to be
 what it claimed — not by a feature request.
 

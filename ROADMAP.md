@@ -147,9 +147,12 @@ decision, not a side effect.
 
 ## What ships next
 
-**The architect maintains this table; the owner authorizes it.** It is
+**The architect maintains this table; the owner authorizes it.**
+Authorized by the owner 2026-10-14, as it stands below. It is
 reconciled before every release is cut (Release cycle, exit criterion
-8), which is what stops it becoming the fixed sequence retired above.
+8), which is what stops it becoming the fixed sequence retired above —
+and a row that changes after authorization is re-authorized, not
+quietly edited.
 
 **Release numbers live here and nowhere else.** An RFC states its
 phases and their order; which release a phase lands in is this table's
@@ -158,11 +161,11 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| **0.52.0** | **The guards themselves.** One `strip_line_comments` instead of six, five of which could not read a line holding a URL; fifteen test-only files split to the shape `project-instructions-rust.md` gives; and `docs_scan` rule 5 widened to the citations it bans but cannot see | [`rfcs/handoffs/045-the-guards-themselves/`](rfcs/handoffs/045-the-guards-themselves/README.md) | **Two of three rounds landed. Awaiting authorization** |
-| 0.53.0 | **The first five minutes.** Prebuilt binaries and a container image, so starting peisear does not begin with installing a compiler | `RFC 0017` (**Proposed**) | **Blocked on acceptance** — §4's security change and §5's default bind are the two open items, and both are the owner's to authorize |
-| 0.54.0 | **The dialect seam.** `RFC 0018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet | `RFC 0018` §6 | Sequenced |
-| 0.55.0 | **PostgreSQL's schema.** `RFC 0018` P3 — migrations ported, triggers re-implemented | `RFC 0018` §6 | Sequenced |
-| 0.56.0 | **The conformance suite.** `RFC 0018` P4 — one suite against both backends in CI, and the operations story | `RFC 0018` §6 | Sequenced |
+| **0.52.0** | **The guards themselves.** One `strip_line_comments` instead of six, five of which could not read a line holding a URL; fifteen test-only files split to the shape `project-instructions-rust.md` gives; and `docs_scan` rule 5 widened to the citations it bans but cannot see | [`rfcs/handoffs/045-the-guards-themselves/`](rfcs/handoffs/045-the-guards-themselves/README.md) | **Authorized 2026-10-14.** Two of three rounds landed; `GRD-003` open |
+| 0.53.0 | **The first five minutes.** Prebuilt binaries and a container image, so starting peisear does not begin with installing a compiler | `RFC 0017` (**Proposed**) | **Authorized 2026-10-14, blocked on acceptance** — §4's security change and §5's default bind are the two open items. The architect brings a recommendation on each with 0.52.0's release candidate |
+| 0.54.0 | **The dialect seam.** `RFC 0018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet | `RFC 0018` §6 | Authorized 2026-10-14 |
+| 0.55.0 | **PostgreSQL's schema.** `RFC 0018` P3 — migrations ported, triggers re-implemented | `RFC 0018` §6 | Authorized 2026-10-14 |
+| 0.56.0 | **The conformance suite.** `RFC 0018` P4 — one suite against both backends in CI, and the operations story | `RFC 0018` §6 | Authorized 2026-10-14 |
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
