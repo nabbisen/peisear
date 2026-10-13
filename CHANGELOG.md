@@ -11,6 +11,86 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.51.0] — 2026-10-13
+
+**This release's subject is documentation accuracy — and it contains two
+things that are not documentation, because the scope was widened to include
+them.** A label that sat above its neighbour now sits beside it, and the
+sprint plan no longer overflows on a phone. Nine decisions a requirement
+cites were stated nowhere at all; now each is, once, where it governs. This
+is not a documentation-only release.
+
+### Fixed
+
+- **A 44px touch target was being applied without centring its content, at
+  41 sites.** `components::grow_text()` composes the touch target plus
+  `inline-flex items-center`, for a plain-text label such as a breadcrumb or
+  a nav link — distinct from `components::grow()`, which keeps its original
+  meaning at 171 sites that were already flex containers or form controls.
+  A reader notices this on any project page (the capacity hint now sits
+  level with `WORKLOAD`, not above it) and on an issue's sub-issue list (a
+  status badge now sits beside its title, not below).
+- **The sprint plan's own Backlog row no longer overflows a 320px phone.**
+  A row's source-project name had no truncation — latent for as long as the
+  plan page's Backlog and Sprint Items panels were always swept empty by
+  the fixture that exercises them.
+
+### Changed
+
+- **`README.md`'s front door now describes the product.** It read *"issue
+  tracking"*; the requirements say the aim is keeping a project — and the
+  people in it — sustainable. The hero, overview and features now say
+  that, and the backup bullet no longer teaches the technique
+  `docs/operations/backup.md`'s own "The wrong way" section forbids.
+- **The documents that describe the code now agree with it.** Three
+  documents named six crates where there are seven. A deployment manifest
+  listed two of eight shipped files. Nineteen citations pointed into the
+  project's own gitignored private working area — closed per the ruling
+  that such a link is either missing documentation or a useless one.
+
+### Added
+
+- **Nine decisions a requirement cites, stated once, where they govern** —
+  previously named only as a *Source* citation or scattered across several
+  mentions with no single statement anyone could point to. `DEC-013`
+  (`NFR-CONC-003`, why the database alone maintains `updated_at`) and
+  `DEC-049` (the touch-target presumption, amended — see Fixed, above —
+  with its superseded clause marked withdrawn rather than rewritten) are
+  named specifically; seven more follow the same rule.
+- **`alignment_scan`**, a new guard: every `grow()` call site must already
+  be a form control or a flex container, and no `grow_text()` site may be
+  a form control. It caught six sites its own first pass misclassified on
+  the day it was written — daisyUI card links and explicit `block` links
+  wrapping rich content, not the plain-label shape the fix exists for.
+
+### Internal
+
+- Rule 1b now checks the crate *count*, not only the names. Rule 2 reads
+  `.github/CONTRIBUTING.md` too, not only `crates/*/tests/`. Rule 5 is
+  narrowed to documents (a decision citing `.git-exclude/` for its
+  reasoning is now a violation) and switched on.
+- Nine files whose tests sat inside their own implementation source moved
+  to `src/<mod>/tests.rs`. `NFR-MNT-005`'s status stays `Divergent`: the
+  other fourteen are test-only modules with no implementation to separate
+  tests *from*, which is an open question for the owner's own
+  `project-instructions-rust.md`, not this release's to settle alone.
+- `NFR-CONC-003`'s own `updated_at_authority_scan` citation now states the
+  guard's coverage limit: the needle catches only a `SET updated_at =`
+  where `updated_at` is the first column named. No live violation found;
+  widening it is not done here.
+
+**What this release does not fix.** The sibling scans' shared
+`strip_line_comments` helper — duplicated in five modules — corrupts
+quote-pairing on five component files that carry a URL string literal
+(`xmlns="http://..."`), found measuring this release's own call-site count.
+Guard infrastructure, not documentation; scheduled for its own round after
+the candidate. `updated_at_authority_scan`'s first-column limit, above.
+`NFR-MNT-005`'s kind-2 question, above.
+
+**No migration, the second release running — `0021` remains the most
+recent.** Test inventory **431 → 442**, measured directly, three
+consecutive clean runs.
+
 ## [0.50.0] — 2026-10-12
 
 **This release's subject is the storage contract: what a committed write
