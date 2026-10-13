@@ -141,7 +141,10 @@ pub const TOUCH_TARGET: &str = "min-h-11 min-w-11";
 /// default, and a `Grow` cluster inside a positive-`gap` container is
 /// presumed to satisfy clause (2) with no further verification). `TT-003`'s
 /// guard checks for [`TOUCH_TARGET`] as one symbol rather than
-/// pattern-matching a class pair at 136 sites.
+/// pattern-matching a class pair at **212** sites -- 171 [`grow`] and 41
+/// [`grow_text`], measured 2026-10-14. *Was 136, the count when `TT-003`
+/// was written; the figure moved with the call sites and the sentence
+/// did not, which is the whole reason the guard keys on the symbol.*
 pub(crate) fn grow(base: &str) -> String {
     format!("{base} {TOUCH_TARGET}")
 }

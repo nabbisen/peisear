@@ -3082,6 +3082,23 @@ subject rather than `tests.rs` (`peisear-core/src/notifications/
 enumeration_guard.rs`, `peisear-web/src/components/me/
 read_first_tests.rs`). The owner settled kind 2 on 2026-10-13: move
 them. See `§10.37`, closed.
+*Amended (0.52.0) — where a **guard** lives is not constrained by this
+entry, and the inconsistency reported against it is declined.* `GRD-002`
+raised that `peisear-i18n` keeps its guards in `crates/peisear-i18n/
+tests/` while every other crate keeps them under `src/`, and recommended
+preferring `src/` workspace-wide **because a `tests/` file only runs if
+that crate's `DEC-007` block line omits `--lib`**. The architect agreed
+in review and was wrong to: **that hazard is already closed
+mechanically.** `dec_007_fs_scan` asserts every `crates/*/tests/*.rs`
+has a line in the block that runs it, and `dec_007_ci_scan` asserts
+every block line has a CI job — filesystem → block → CI, the composed
+guarantee `§10.16` was reopened for. **Demonstrated, not reasoned**: a
+test file planted at `crates/peisear-core/tests/` — a crate whose block
+line carries `--lib` — fails that scan by name. A placement convention
+would therefore buy nothing a guard does not already enforce, and would
+cost a rule to maintain and a move to review. **Either location is
+correct**; this entry's own rule (no `#[test]` inside an implementation
+file) is what constrains, and it is satisfied both ways.
 *Priority*: P2.
 
 **NFR-MNT-006 — Tests validate specification, not code shape**
