@@ -11,6 +11,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.52.0] — 2026-10-14
+
+**Nothing you can see changed, and nothing you run differently.** No
+screen, no route, no copy, no migration — the third release running
+with none. Every line that ships to a running instance is what
+`0.51.0` shipped; the only line gated behind `#[cfg(test)]` is a new
+module declaration.
+
+**What changed is the checking.** This project decides what is true
+about itself by running guards, and this release is about two of them
+that were not answering the question they were named for — both found
+by looking at the guards rather than at the product.
+
+### Fixed
+
+- **A guard reporting clean on files it could not read.**
+  `strip_line_comments` existed in six copies; five truncated any line
+  holding `xmlns="http://…"`, which corrupted quote-pairing for the
+  rest of five component files. `touch_target_scan` is one of those
+  five, and `NFR-A11Y-007` rests on it. One copy now —
+  `scan_support::strip_line_comments`, the one that was already
+  correct — which reverses `QA-002`'s duplication call for this helper
+  and nothing else. Demonstrated by plant: a violation planted in a
+  corrupted region passed at `0.51.0` and fails now.
+- **A rule that enforced the spelling of what it banned.** `docs_scan`
+  rule 5 forbids citing the project's private, gitignored area, and
+  matched only the literal path; this project's own house style for
+  such a citation is the bare file name. 64 such citations sat in
+  published doc comments and in the specification itself while the
+  rule reported clean. Cleared by stating the substance — never by
+  publishing the private file — and the needle widened to a shape that
+  reads nothing under the gitignored path, so it works the same way in
+  a published crate or an extracted tree as it does here.
+
+### Internal
+
+- Fifteen files that were wholly tests now use the shape
+  `project-instructions-rust.md` gives (`<name>.rs` + `<name>/
+  tests.rs`). `NFR-MNT-005` is `Implemented`, with a measured live
+  count of zero; `§10.37` closes.
+- The `peisear-i18n`/`peisear-core` guard-location inconsistency,
+  raised against this release, is declined: the hazard it rested on
+  (a `tests/` file not running in CI) is already closed mechanically
+  by `dec_007_fs_scan`/`dec_007_ci_scan`, demonstrated by a planted
+  test file that the scan catches by name. Either location is correct.
+- `components.rs`'s own doc comment named the touch-target guard's
+  call-site count as 136; it is 212 (171 `grow()` and 41
+  `grow_text()`). Corrected with both figures stated, so the next
+  reader sees why the guard keys on the symbol rather than a count.
+
+**What this release does not fix.** The widened rule-5 needle has a
+residual of nine privately-named files it cannot match by shape,
+stated with the number in `§10.39`; 45 occurrences in `//`
+implementation comments and `crates/*/tests/` are out of scope by
+design and left. The figures in this release's own specification
+register were corrected three times before they were right — recorded
+there, because measurement discipline is what this release is about.
+
+**No migration, the third release running — `0021` remains the most
+recent.** Test inventory **442 → 451**: `scan_support`'s four new
+tests and the widened rule-5 needle's five; moving a test between
+files, as the fifteen-file split did, neither creates nor destroys
+one.
+
 ## [0.51.0] — 2026-10-13
 
 **This release's subject is documentation accuracy — and it contains two
