@@ -9,8 +9,9 @@ for the mapping.
 **How work is chosen today**: a handoff under `rfcs/handoffs/`, an
 entry closing in the `§10.x` defect-class register, or the
 specification sweep that reads every requirement's status and
-acceptance each release. The owner schedules from these, not from a
-release sequence fixed in advance. The Milestones and Release sequence
+acceptance each release. **The architect schedules from these and the
+owner authorizes the result** — see **What ships next**, below. Not
+from a release sequence fixed in advance. The Milestones and Release sequence
 sections below were that fixed sequence, agreed 2026-08-01 and current
 through `0.27.0` (shipped) — they are retained as history, like the
 phase narrative that follows them immediately, and are superseded for
@@ -144,6 +145,42 @@ the compliance pass, then behind i18n. Each displacement was right on
 its own; the pattern is not. Any further displacement is an explicit
 decision, not a side effect.
 
+## What ships next
+
+**The architect maintains this table; the owner authorizes it.** It is
+reconciled before every release is cut (Release cycle, exit criterion
+8), which is what stops it becoming the fixed sequence retired above.
+
+**Release numbers live here and nowhere else.** An RFC states its
+phases and their order; which release a phase lands in is this table's
+to say. Two documents carrying the same number is how the retired
+sequence above went twenty minor versions stale.
+
+| Release | Theme | Governing document | State |
+|---|---|---|---|
+| **0.52.0** | **The guards themselves.** One `strip_line_comments` instead of six, five of which could not read a line holding a URL; fifteen test-only files split to the shape `project-instructions-rust.md` gives; and `docs_scan` rule 5 widened to the citations it bans but cannot see | [`rfcs/handoffs/045-the-guards-themselves/`](rfcs/handoffs/045-the-guards-themselves/README.md) | **Two of three rounds landed. Awaiting authorization** |
+| 0.53.0 | **The first five minutes.** Prebuilt binaries and a container image, so starting peisear does not begin with installing a compiler | `RFC 0017` (**Proposed**) | **Blocked on acceptance** — §4's security change and §5's default bind are the two open items, and both are the owner's to authorize |
+| 0.54.0 | **The dialect seam.** `RFC 0018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet | `RFC 0018` §6 | Sequenced |
+| 0.55.0 | **PostgreSQL's schema.** `RFC 0018` P3 — migrations ported, triggers re-implemented | `RFC 0018` §6 | Sequenced |
+| 0.56.0 | **The conformance suite.** `RFC 0018` P4 — one suite against both backends in CI, and the operations story | `RFC 0018` §6 | Sequenced |
+
+**This is order, not dates.** A row's number changes when something
+lands ahead of it, and the change is recorded here rather than argued
+from memory.
+
+**Why 0.52.0 is not `RFC 0017`.** `RFC 0018 §8` was written when the
+answer was *"0.51.0 is documentation accuracy and 0.52.0 is `RFC
+0017`"*. 0.51.0 then found two things it could not absorb: a helper
+five guards had copied naively, so that `touch_target_scan` — a guard
+`NFR-A11Y-007` depends on — reported clean on five files it could not
+read, and a rule enforcing the spelling of what it bans rather than the
+thing. Both are guard infrastructure, both were named in 0.51.0's own
+changelog as carried, and **a guard that cannot see its subject should
+not queue behind a release about installation.** The cost is named
+rather than hidden: every row below moves one release later, and
+`RFC 0018`'s P1 now waits three releases longer than it needs to rather
+than two.
+
 ## Release cycle
 
 ### Entry — before implementation starts
@@ -167,6 +204,8 @@ decision, not a side effect.
 5. Affected documentation updated in the same release.
 6. Tarball built and extraction verified.
 7. Release recommendation issued; **owner approves**.
+8. **What ships next** reconciled — the shipped row removed, the
+   remaining rows' numbers and blockers correct as of the tag.
 
 Criterion 2 is the one that has historically failed. It is a gate,
 not an aspiration.

@@ -289,14 +289,21 @@ be told about, and it is the honest price of a second backend.
 
 ## §6 — the schedule
 
-| Phase | Release | Content | Gate |
+*Amended (0.52.0): the **Release** column is withdrawn, not rewritten.
+Release numbers now live in one table, `ROADMAP.md`'s **What ships
+next**, because this one and that one drifted the moment a round landed
+ahead of them. What this RFC states is the order and each phase's gate,
+which do not move. The numbers struck through below were right when
+written and are kept so the shift is visible rather than silent.*
+
+| Phase | Release (withdrawn — see `ROADMAP.md`) | Content | Gate |
 |---|---|---|---|
 | **P0** | **0.50.0** | **§3**: demonstrate the same-second lost update end-to-end, then move the triggers and defaults to millisecond precision | The demonstration fails before the fix and passes after |
 | **P0b** | **0.50.0** | **§2**: measure the write cost of `synchronous = FULL` and decide it on the number — the durability half of the owner's first reason, reachable without a backend | A measured figure on both settings, and the choice recorded with it |
-| **P1** | **0.53.0**, with P2 | **§4**: coded errors replacing prose matching | Existing validation tests green, no message text in any match arm |
-| **P2** | **0.53.0** | The dialect seam: feature flag, `compile_error!` guards, dialect module. **No PostgreSQL code yet** | Every existing test green on SQLite; the seam compiles with the flag absent |
-| **P3** | **0.54.0** | The schema on PostgreSQL: migrations ported, 11 triggers re-implemented, pool options | The migration suite applies cleanly on both |
-| **P4** | **0.55.0** | The conformance suite: the same storage and lock tests against both backends in CI; the operations story (backup is no longer `cp` on PostgreSQL); documentation | Both backends green on one suite; `NFR-CMP-003` restated to say *for the SQLite backend* |
+| **P1** | ~~**0.53.0**~~, with P2 | **§4**: coded errors replacing prose matching | Existing validation tests green, no message text in any match arm |
+| **P2** | ~~**0.53.0**~~ | The dialect seam: feature flag, `compile_error!` guards, dialect module. **No PostgreSQL code yet** | Every existing test green on SQLite; the seam compiles with the flag absent |
+| **P3** | ~~**0.54.0**~~ | The schema on PostgreSQL: migrations ported, 11 triggers re-implemented, pool options | The migration suite applies cleanly on both |
+| **P4** | ~~**0.55.0**~~ | The conformance suite: the same storage and lock tests against both backends in CI; the operations story (backup is no longer `cp` on PostgreSQL); documentation | Both backends green on one suite; `NFR-CMP-003` restated to say *for the SQLite backend* |
 
 **Sequenced after `RFC 0017`** (the first five minutes), deliberately:
 PostgreSQL serves the operator who already has one, and `RFC 0017` serves the
@@ -331,11 +338,15 @@ same claim. Already recorded for `RFC 0016`'s repositioning round
    against a P0 requirement**, so it does not wait behind a documentation
    release; measured since, the migration rewrites **seven** triggers and
    **no** column defaults, which is smaller than this RFC first assumed.
-   **P1 moves to 0.53.0 and pairs with P2**, whose prerequisite it is:
-   0.51.0 is documentation accuracy and 0.52.0 is `RFC 0017`, and dropping a
-   storage refactor into either would be the sprawl this schedule exists to
-   avoid. The cost of the move is named rather than hidden — P1 stands on
-   its own merits and now waits two releases longer than it needs to.
+   **P1 moves behind P2's release and pairs with it**, whose prerequisite
+   it is: dropping a storage refactor into a documentation or installation
+   release would be the sprawl this schedule exists to avoid. The cost of
+   the move is named rather than hidden — P1 stands on its own merits and
+   waits longer than it needs to. *Amended (0.52.0): this clause read
+   "P1 moves to 0.53.0 … 0.51.0 is documentation accuracy and 0.52.0 is
+   `RFC 0017`". 0.52.0 is the guard round instead — `ROADMAP.md`'s **What
+   ships next** carries the reason and the current numbers. The pairing and
+   the ordering are unchanged.*
 
 3. **Database-level encryption is not required** (owner, 2026-10-11).
    **Volume encryption is the control**, and documenting it is `SEC-001`'s

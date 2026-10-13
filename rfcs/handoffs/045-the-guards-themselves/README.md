@@ -9,13 +9,14 @@ non-documentation work, and said so twice in its own changelog. This
 series is the correction: **guard infrastructure gets its own release**,
 and `RFC 0017` moves to `0.53.0`.
 
-**Schedule change, for the owner's authorisation.** `RFC 0018` records
-*"0.51.0 is documentation accuracy and 0.52.0 is `RFC 0017`"*. This
-series proposes `0.52.0` = the guards, `0.53.0` = `RFC 0017` (the first
-five minutes), `0.54.0`–`0.56.0` = `RFC 0018` P1–P4. The reason is
-`GRD-001`: a guard that `NFR-A11Y-007` depends on is reporting clean on
-files it cannot read, and that should not queue behind a release about
-installation.
+**The schedule this changed** is in one place now:
+[`ROADMAP.md`'s **What ships next**](../../../ROADMAP.md#what-ships-next),
+which carries the current numbers, the reason 0.52.0 is the guards
+rather than `RFC 0017`, and what the shift costs the rows behind it.
+`RFC 0018 §6`'s own release column is withdrawn in favour of it. The
+reason in one line is `GRD-001`: a guard that `NFR-A11Y-007` depends on
+is reporting clean on files it cannot read, and that should not queue
+behind a release about installation.
 
 ---
 
