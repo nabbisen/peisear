@@ -3051,8 +3051,12 @@ is simply a different measurement. **The definition is part of the number.**
 **NFR-MNT-005 — Test organisation**
 Tests MUST be separated from implementation files. In-file `#[test]`
 modules inside implementation source MUST NOT be used.
-*Source*: project convention. *Status*: **Divergent** — 25 files, 84
-in-file tests contradict this text; see `§10.37`. *Priority*: P2.
+*Source*: project convention. *Status*: **Divergent** — **15 files, 60
+in-file tests** contradict this text today: the fourteen test-only
+modules `0.51.0` left open, plus `alignment_scan`, written in the same
+release. Nine files were resolved at `0.51.0`. See `§10.37`, which
+carries the survey's own figures and why they are not these.
+*Priority*: P2.
 
 **NFR-MNT-006 — Tests validate specification, not code shape**
 Test cases MUST derive from design specifications rather than mirroring
@@ -5860,10 +5864,28 @@ narrower than a requirement, but a requirement whose text the shipped
 practice has contradicted for many releases without anyone's status
 field saying so.
 
-*Correction, `DOC-007`*: the review's own 79 was an estimate — public
-items against test attributes, a proxy. Measured directly (whole-line
-attribute match, not a doc-comment mention): **84** test functions, not
-79, across the same 25 files.
+*Correction, `DOC-007` — and the correction was measured on a tree that
+had already moved (`REL-0.51.0` review).* `DOC-007` reported **84**
+against the survey's 79, as a whole-line attribute match "across the
+same 25 files". At `0.50.0` (`f5323f6`), the tree the 25 were surveyed
+on, that needle gives **78** across **23** files — the other two of the
+25 declare a `#[cfg(test)]` module with no test function of their own,
+so they can hold none. The 84 counts the **six** tests `DOC-004` added
+to `docs_scan` at `9018906`, earlier in this same release and before
+`932dc5d` moved kind 1: 78 + 6 = 84. The survey's own 79 was very nearly
+right — 78, plus one doc-comment mention at `docs_scan.rs:41`. **A
+figure re-measured on a later tree and dated to the earlier one is
+`§10.36`'s family**: the number was real, the thing it described was not
+the thing it named, and because it arrived labelled *measured* it
+displaced a figure that was closer.
+
+*The live figure, at `0.51.0`*: **15 files hold 60 in-file tests** — the
+fourteen kind-2 modules below (58, up from 50 as their own guards grew)
+plus `alignment_scan` (2), which **did not exist at `0.50.0`** and is
+therefore a fifteenth file rather than one of the fourteen. `9 + 14 + 2
+= 25` is the survey's arithmetic and stays true of the survey. **The
+divergent set did not simply shrink**: this release resolved nine and
+wrote one.
 
 **Status corrected to `Divergent` at 0.50.0, the rule left open.** A
 status is a claim about what is true and should not wait on a design
@@ -5875,9 +5897,10 @@ tests into `tests/` — is `0.51.0`'s reconciliation.
 25 files: **9** carried real implementation code alongside their tests
 (kind 1) and **14** were test-only modules with nothing to separate
 tests *from* — `docs_scan`, `touch_target_scan`, `prose_scan`,
-`changelog_scan`, `updated_at_authority_scan`, `alignment_scan` (new
-this release) among them — plus **2** files (kind 3) declaring a
-`#[cfg(test)] mod` with no test function of its own. Kind 1 moved to
+`changelog_scan`, `updated_at_authority_scan`,
+`optimistic_lock_guards` among them — plus **2** files (kind 3)
+declaring a `#[cfg(test)] mod` with no test function of its own.
+Kind 1 moved to
 `src/<mod>/tests.rs`, closing the letter of the text for those 9. Kind
 2 is the open question: **a module that *is* a test has nothing to
 separate tests from**, so whether it violates this requirement's
@@ -5885,10 +5908,14 @@ separate tests from**, so whether it violates this requirement's
 question than kind 1's. `NFR-MNT-005` restates the owner's own
 `project-instructions-rust.md`, outside this repository, so amending
 the rule past what that document says is not this release's call to
-make unilaterally. **Status stays `Divergent`**: the 14 kind-2 files
-still carry in-file tests and the requirement's text still prohibits
-that, unchanged. `§10.37` stays open until the owner settles whether
-kind 2 is a carve-out the source document itself should state.
+make unilaterally. **Status stays `Divergent`**: the kind-2 files —
+fourteen surveyed, **fifteen today**, `alignment_scan` being the one
+this release added — still carry in-file tests and the requirement's
+text still prohibits that, unchanged. `§10.37` stays open until the
+owner settles whether kind 2 is a carve-out the source document itself
+should state. **Until it is settled, every new scan written here adds a
+file to the divergent set**, which is the practical cost of leaving it
+open and the reason it should not stay open indefinitely.
 
 ## 11. Deferred and future requirements
 
@@ -5902,6 +5929,8 @@ Accepted in principle, deliberately not scheduled.
 | AI-assisted warnings | Use indicator data as input to generated guidance | `BRIEF §7` | Phase 2 |
 | External integration | Commit logs, CI results as supplementary indicator input | `BRIEF §2.1` | Phase 2 |
 | Quality indicators | Defect density, technical-debt ratio | `BRIEF §1.1` | Requires external integration |
+| Import from other trackers | Bring existing work in: GitHub Issues, Jira, Redmine, CSV | `RFC 0017` (owner, 2026-10-11) | After `RFC 0017` |
+| Instance migration and upgrade | Move an instance between machines and versions; eventually SQLite → PostgreSQL, which the *RDBMS backend* row below already carries | `RFC 0017` (owner, 2026-10-11) | After import |
 | Webhook channel | Third notification channel | `SPEC §29.1` | Phase 2 |
 | Comments | Issue comments as a first-class feature | `KICK §3.3` (optional) | Unscheduled |
 | Cross-organisation analysis | Trends spanning organisations | `BRIEF §7` | Phase 3 |
@@ -5939,7 +5968,7 @@ Accepted in principle, deliberately not scheduled.
 | Language | 5 | 1 | 2 | — | 1 | 1 |
 | Security | 7 | 7 | — | — | — | — |
 | Performance | 4 | 4 | — | — | — | — |
-| Maintainability | 10 | 8 | 1 | — | — | 1 (`NFR-MNT-005`, status only; rule open to 0.51.0) |
+| Maintainability | 10 | 8 | 1 | — | — | 1 (`NFR-MNT-005`; kind 1 resolved at 0.51.0, kind 2 open to the owner's `project-instructions-rust.md`, no target) |
 | Release | 8 | 6 | 1 | — | — | 1 undefined |
 | Compatibility | 6 | 5 | 1 | — | — | — |
 | **Non-functional total** | **66** | **52** | **5** | **0** | **2** | **7** |
@@ -6014,7 +6043,7 @@ let `FR-DM-002` be violated for four releases without anyone checking.
 | V3 (`V3`) | Reconciliation with implemented state through 0.19.0 |
 | 0.19.1 baseline | Consolidation into English normative requirements; identifiers assigned; §10 compliance gaps recorded |
 | 0.20.0 | Compliance pass. Nine recorded statuses corrected — five of them P0 or P1 requirements annotated as satisfied while the code did the opposite. `NFR-PRIV-002` scoped (`DEC-019`); `NFR-CMP-001` extended with the toolchain/MSRV distinction (`DEC-044`/`DEC-045`); `NFR-LANG-005` rescheduled to 0.21.0 (`DEC-022`). §10 gains a state table and six new entries, five of which close in this release. Test inventory 65 → 82 active, 0 disabled. `RSK-001` closed |
-| **0.51.0 (this baseline)** | **Documentation accuracy — and two things that are not documentation, scoped in anyway.** `DOC-001` through `DOC-007`, `RFC 0019` accepted. **Two user-visible fixes**: a 44 px touch target was applied without centring its content — `grow_text()` composes the touch target plus `inline-flex items-center` for the 41 plain-text sites that needed it (`DOC-005`), distinct from `grow()`'s 171 sites, which stay as they were — and the sprint plan's own Backlog row no longer overflows a 320 px phone, a truncation gap latent since the panel was always swept empty. **The front door describes the product**: `README.md`'s hero, overview and features said *"issue tracking"*; the requirements say the aim is keeping a project — and the people in it — sustainable, and the backup bullet no longer teaches the technique `docs/operations/backup.md`'s own "The wrong way" section forbids (`DOC-003`). **The documents that describe the code now agree with it**: three documents omitted `peisear-i18n` from the crate set (`DOC-001`); nineteen citations pointed into the project's gitignored private area, closed per `RFC 0019`'s own ruling that a link there is either missing documentation or a useless link (`DOC-002`); and **nine decisions a requirement cites were stated nowhere at all** — `DEC-013`, `DEC-049` named specifically, `DEC-049` amended with its presumption clause (`DOC-005 §3.1`'s own helper split) marked withdrawn rather than silently rewritten (`DOC-006`, `RFC 0019 §3`). **The guards grew to match**: rule 1b now checks the crate *count*, not only the names; rule 2 reads `.github/CONTRIBUTING.md` too; rule 5 is narrowed to documents and switched on; a new `alignment_scan` caught six sites misclassified by its own first pass, the day it was written (`DOC-005`). **Test organisation reconciled in part**: nine files whose tests sat inside their own implementation moved to `src/<mod>/tests.rs`; `NFR-MNT-005`'s status stays `Divergent` — fourteen test-only files are an open question for the owner's `project-instructions-rust.md` (`§10.37`, `DOC-007`). **This document's own `updated_at_authority_scan` citation gets its coverage limit stated** (`NFR-CONC-003`): the needle catches only a first-column `SET updated_at =`, no live violation, widening it left undone. **This release is not documentation-only** — say so plainly, since beat one is a UI fix and a layout fix. **What this release does not fix**: the sibling scans' shared `strip_line_comments` helper corrupts quote-pairing on five component files carrying a URL string (found measuring `DOC-005`'s own count; scheduled after the candidate, guard infrastructure rather than documentation). **No migration, the second release running. Test inventory 431 → 442** |
+| **0.51.0 (this baseline)** | **Documentation accuracy — and two things that are not documentation, scoped in anyway.** `DOC-001` through `DOC-007`, `RFC 0019` accepted. **Two user-visible fixes**: a 44 px touch target was applied without centring its content — `grow_text()` composes the touch target plus `inline-flex items-center` for the 41 plain-text sites that needed it (`DOC-005`), distinct from `grow()`'s 171 sites, which stay as they were — and the sprint plan's own Backlog row no longer overflows a 320 px phone, a truncation gap latent since the panel was always swept empty. **The front door describes the product**: `README.md`'s hero, overview and features said *"issue tracking"*; the requirements say the aim is keeping a project — and the people in it — sustainable, and the backup bullet no longer teaches the technique `docs/operations/backup.md`'s own "The wrong way" section forbids (`DOC-003`). **The documents that describe the code now agree with it**: three documents omitted `peisear-i18n` from the crate set (`DOC-001`); nineteen citations pointed into the project's gitignored private area, closed per `RFC 0019`'s own ruling that a link there is either missing documentation or a useless link (`DOC-002`); and **nine decisions a requirement cites were stated nowhere at all** — `DEC-013`, `DEC-049` named specifically, `DEC-049` amended with its presumption clause (`DOC-005 §3.1`'s own helper split) marked withdrawn rather than silently rewritten (`DOC-006`, `RFC 0019 §3`). **The guards grew to match**: rule 1b now checks the crate *count*, not only the names; rule 2 reads `.github/CONTRIBUTING.md` too; rule 5 is narrowed to documents and switched on; a new `alignment_scan` caught six sites misclassified by its own first pass, the day it was written (`DOC-005`). **Test organisation reconciled in part**: nine files whose tests sat inside their own implementation moved to `src/<mod>/tests.rs`; `NFR-MNT-005`'s status stays `Divergent` — fifteen test-only files (fourteen surveyed plus the new `alignment_scan`) are an open question for the owner's `project-instructions-rust.md` (`§10.37`, `DOC-007`). **This document's own `updated_at_authority_scan` citation gets its coverage limit stated** (`NFR-CONC-003`): the needle catches only a first-column `SET updated_at =`, no live violation, widening it left undone. **This release is not documentation-only** — say so plainly, since beat one is a UI fix and a layout fix. **What this release does not fix**: `strip_line_comments` is copied into **six** scans and **five** carry a naive `split("//")` that corrupts quote-pairing on five component files carrying a URL string — the sixth, `alignment_scan`'s, is already string-aware, so the carried round is five copies adopting one that works (found measuring `DOC-005`'s own count; guard infrastructure rather than documentation); and **rule 5 cannot see the commonest form of what it bans** — it scans published doc comments too, but matches on the gitignored path itself, which a citation written as a bare review-file name never spells; `crates/` carries 60 such citations across 25 files, 27 of them doc comments, naming 31 files that exist only in the private area, and the rule reports clean (`§10.36`, in the guard `RFC 0019` asked for). **No migration, the second release running. Test inventory 431 → 442** |
 | 0.50.0 | **What a committed write means, and what leaves the process.** `NFR-CONC-001`'s own stale-page window — one whole second, reproduced directly — narrows to one millisecond: `0021` moves the seven triggers `0014`/`0017` added to millisecond-resolution `strftime`, demonstrated through the real handlers both before (fails) and after (passes) the migration. **The residual is stated, not claimed closed**: two writes inside one millisecond still share a token, and `NFR-CONC-002` gains a precision paragraph saying so. A committed write now fsyncs on every commit (`synchronous = FULL`) rather than at the next checkpoint — **measured, not assumed**, about 2 ms on a ~440 ms write path on NVMe, after a first, implausible result was read as a measurement-order artefact rather than published. **Two hazards closed while neither was yet leaking**: the database URL is redacted at the source before the startup line logs it, and `Config` no longer derives `Debug` over the session-signing key. **Data at rest joins the threat model for the first time** — the asset named, volume encryption named as the control, the owner's declined alternatives (SQLCipher, column-level encryption) on the record. **`§10.36` opens and names its own sixth-instance candidate in the same release**: a check that can be right about its assertion and still examine nothing, reintroduced while fixing a flake, caught in review before shipping — the round's clearest argument for why the entry exists. **`NFR-MNT-005`'s status corrects to `Divergent`** against 25 files and 79 in-file tests its text prohibits (`§10.37`); the rule itself — which side is wrong — is `0.51.0`'s. **One migration, the eleventh, the first since `0020` in ten releases. Test inventory 421 → 431** |
 | 0.49.0 | **Four audits on one day, over the documentation a user reads, the documentation a contributor reads, the three design documents, and the security/privacy posture, independently reached the same remedy**: *the documents outside this repository never get swept.* `DOCS-003` through `DOCS-008` are that remedy, in four rounds: the start path fixed (the Quick Start's tarball, the unbuildable MSRV, the CDN claim ASSET-001 had already removed seventeen releases earlier, crates.io's ten dead links — six wrong sentences, none a product defect), three generated screenshots replacing prose with pictures a harness regenerates rather than a person maintains, a six-rule scan (`docs_scan.rs`, bounded by `REQ-003`'s own finding that prose cannot be mechanised — a crate set, an MSRV, a file manifest, config defaults, gitignored citations, and `README.md`'s image URLs, each checked against its own source, nothing else attempted), and the images read back by a human, which is how two rounds' fixture language and one contradicted caption were found — a scan reads text, not pixels. **Mid-sequence, `RFC 0016`: the interface had never said its own name.** The navbar and seven page titles read *"Issue Tracker"* since before this document's own baseline; they read `peisear` now, lowercase, matching the crate, and the four published one-line descriptions (two `Cargo.toml`s, the `lib.rs` doc comment, `book.toml`) follow, worded from the RFC's own hero draft and marked provisional — `README.md`'s own repositioning is deliberately **not** in this release. **No requirement in this document described the brand string before this release, so none needed correcting — only none existed to be wrong.** **What this release does not fix, named rather than left to be discovered**: `docs/architecture/`'s two documents and `docs/README.md` still omit `peisear-i18n`; `deployment.md`'s manifest still lists two of `static/`'s eight files; 132 committed citations still point at the project's gitignored private working area (measured fresh with a `git grep` for that path, excluding this module's own file), not the 126 first measured or the 130 reported after; and the sprint plan's own fixture sweeps the overflow gate's 24-page set with two empty panels, unpopulated because every candidate issue a handoff could reach ends up in a different, completed sprint — all `DOCS-006`'s, `0.50.0`. **No migration. Test inventory 407 → 421**, fourteen tests, all `docs_scan`'s. |
 | 0.48.0 | **Where unscheduled work lives, and one loss a phone reader actually feels.** `ROADMAP.md` asserted that its *current plan* was the Milestones and Release-sequence sections — **a sequence ending at `0.27.0`, twenty minor versions behind the release that shipped the day before**. Not a stale-file complaint: **the way work is chosen had changed** — handoffs, this register, the sweep — and the roadmap never moved with it. Retired in place, with the Release-cycle section explicitly kept because it *is* still current, and **an `Unscheduled work` table added** for quality gaps on shipped work, which `§10.x` (defect classes) and `§11` (deferred features) both correctly exclude. **The symptom that found it is the argument for it**: the architect had been reciting that list from memory, and of its items **one did not exist** — *"`FR-DM-005`'s keyboard undo"*, carried across many releases, where `FR-DM-005` is *Conflict message vocabulary* and `Implemented`, and no keyboard-undo requirement exists anywhere — while **another was recorded only under a gitignored path**. **Then the POST landing was measured** rather than described: on a 390 × 844 phone, a sprint-plan move discarded **1292 px of 3078**, with a row the reader could see ending 1990 px below the fold; an issue **create** lost nothing, landing on the new object. **And the fix split in two, which was the finding.** A fragment anchor fixes the sprint plan — `NAV-002`, no script, after the query string and never instead of it, so **the row you acted on is on screen** (not *your scroll position restored*: returning the reader to 1292 would put them where the row no longer is). **It cannot fix the calendar**, whose subject **leaves the landing page**, so a fragment has nothing to target and `CAL-006`'s flash is already that remedy — *a uniform “fragment on every redirect” would have looked solved and done nothing for the case that raised it.* **Also: the GitHub Release title format, unwritten since `DEC-056`**, typed from habit for seven releases until the owner saw it on the page; now the bare `X.Y.Z`, documented with the fourth leg, and **all seven existing releases retitled — titles touch no tag, commit or crate, so unlike `0.40.0`'s force-push nothing is left mismatched.** **No migration. Test inventory 405 → 407** |

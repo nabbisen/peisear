@@ -70,21 +70,31 @@ is not a documentation-only release.
   narrowed to documents (a decision citing `.git-exclude/` for its
   reasoning is now a violation) and switched on.
 - Nine files whose tests sat inside their own implementation source moved
-  to `src/<mod>/tests.rs`. `NFR-MNT-005`'s status stays `Divergent`: the
-  other fourteen are test-only modules with no implementation to separate
-  tests *from*, which is an open question for the owner's own
+  to `src/<mod>/tests.rs`. `NFR-MNT-005`'s status stays `Divergent`:
+  fifteen files remain — fourteen test-only modules with no
+  implementation to separate tests *from*, plus the `alignment_scan`
+  this release wrote — which is an open question for the owner's own
   `project-instructions-rust.md`, not this release's to settle alone.
 - `NFR-CONC-003`'s own `updated_at_authority_scan` citation now states the
   guard's coverage limit: the needle catches only a `SET updated_at =`
   where `updated_at` is the first column named. No live violation found;
   widening it is not done here.
 
-**What this release does not fix.** The sibling scans' shared
-`strip_line_comments` helper — duplicated in five modules — corrupts
-quote-pairing on five component files that carry a URL string literal
+**What this release does not fix.** `strip_line_comments` is copied into
+**six** scans, and **five** carry a naive `split("//")` that corrupts
+quote-pairing on five component files holding a URL string literal
 (`xmlns="http://..."`), found measuring this release's own call-site count.
-Guard infrastructure, not documentation; scheduled for its own round after
-the candidate. `updated_at_authority_scan`'s first-column limit, above.
+The sixth copy — `alignment_scan`'s, written here — is already
+string-aware, so the fix is five copies adopting one that already works.
+Guard infrastructure, not documentation; its own round next.
+**And rule 5 cannot see the commonest form of what it bans.** It scans
+documents, RFCs *and* published doc comments, but matches on the
+gitignored path itself — and a citation written as a bare review-file
+name never spells it. 31 such files exist only in the project's private
+working area. `crates/` carries **60** of those citations across 25
+files, **27** of them doc comments that render on docs.rs. The rule
+reports clean, which is `§10.36` in the guard `RFC 0019` asked for.
+`updated_at_authority_scan`'s first-column limit, above.
 `NFR-MNT-005`'s kind-2 question, above.
 
 **No migration, the second release running — `0021` remains the most
