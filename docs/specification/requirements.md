@@ -1,19 +1,17 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.50.0` (**what a committed write means, and what
-leaves the process** — `NFR-CONC-001`'s own stale-page window narrows from
-one second to one millisecond (`0021`), stated as a residual rather than a
-closure; a committed write now fsyncs on every commit rather than at the
-next checkpoint; the database URL is redacted before the startup line logs
-it and `Config` no longer derives `Debug` over the session-signing key,
-closing two hazards that were not yet leaking; data at rest joins the
-threat model for the first time, naming the control and the owner's
-declined alternatives; a new register entry, `§10.36`, records a check
-that can be right about its own assertion and still examine nothing — and
-was reintroduced in the same release that named it, caught in review;
-`NFR-MNT-005`'s status is corrected to `Divergent` against 79 tests its
-text prohibits; implementation through `0.50.0`)
+**Covers release**: `0.51.0` (**documentation accuracy, and two things
+that are not documentation, scoped in anyway** — nine decisions a
+requirement cites stated once where they govern, `DEC-049` amended with
+its presumption clause withdrawn; `NFR-CMP-003`'s backup qualifier
+corrected; `NFR-CONC-003`'s own scan citation gets its coverage limit
+stated (first-column `SET` only); `NFR-MNT-005` stays `Divergent`, kind 1
+resolved and kind 2 left to the owner (`§10.37`); a 44 px touch target
+applied without centring its content is fixed at 41 sites
+(`components::grow_text`); a sprint-plan row's missing truncation,
+latent while its panel swept empty, is fixed; implementation through
+`0.51.0`)
 **Supersedes**: [`history/peisear-0.20.0-requirements-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.20.0-requirements-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 and through it
@@ -21,7 +19,7 @@ and through it
 (on GitHub; excluded from this book, see `docs/README.md`).
 Both retained unedited as the record of their releases
 **Language**: English (normative)
-**Prepared**: 2026-07-27 · **Amended**: 2026-10-11 (0.50.0)
+**Prepared**: 2026-07-27 · **Amended**: 2026-10-13 (0.51.0)
 **Location**: `docs/specification/requirements.md`. **This document is the
 normative source of truth** — English only, placed 2026-09-24 (`DEC-020`,
 closed). See [the directory README](./README.md) for how its citations
@@ -2255,8 +2253,26 @@ taken a spurious `409`. The dev team hit this before writing the migration and
 stopped. `update_status` now reads the value back in the same transaction; the
 round trip `RETURNING` was introduced to avoid is the price of one authority.
 
-*Guarded*: `updated_at = CURRENT_TIMESTAMP` may not appear anywhere under
-`peisear-storage/src/`.
+*Guarded*: `SET updated_at =` (widened from `updated_at = CURRENT_TIMESTAMP`
+at `DOC-007`, to catch any right-hand side — `?`, a literal, `datetime('now')`,
+or the migrations' own `strftime(...)` idiom) may not appear anywhere under
+`peisear-storage/src/`, excluding `*/tests.rs` and `*/tests/*` by path.
+
+*Amended (0.51.0) — the guard's own limit, stated rather than left
+implicit.* The needle matches `SET updated_at =` **only when `updated_at`
+is the first column named after `SET`.** This codebase writes
+multi-column `UPDATE`s with `updated_at` *not* first —
+`issues.rs:496`, `user_capacities.rs:476`, `teams.rs:312` all set other
+columns before it — so an application write added as a second or later
+column in one of those statements would not be seen. **No live
+violation**: searched directly, nothing under `peisear-storage/src/`
+writes `updated_at` outside a trigger today. **A guard whose coverage is
+narrower than the requirement it cites should say so here, not only in
+the scan's own doc comment**, which is this entry's own job in
+`0.51.0`. Widening the needle itself — the span between `SET` and
+`WHERE` is a small state machine, the same order of complexity as
+`NFR-LANG-001`'s indentation parse — is not done here; stating the
+limit precisely enough to act on is.
 
 **NFR-CONC-004 — No force overwrite**
 The system MUST NOT provide an option to override a detected conflict.
@@ -3035,7 +3051,7 @@ is simply a different measurement. **The definition is part of the number.**
 **NFR-MNT-005 — Test organisation**
 Tests MUST be separated from implementation files. In-file `#[test]`
 modules inside implementation source MUST NOT be used.
-*Source*: project convention. *Status*: **Divergent** — 25 files, 79
+*Source*: project convention. *Status*: **Divergent** — 25 files, 84
 in-file tests contradict this text; see `§10.37`. *Priority*: P2.
 
 **NFR-MNT-006 — Tests validate specification, not code shape**
@@ -3253,9 +3269,21 @@ CDNs blocked: identical rendering, three stylesheets, 44 px controls, no
 overflow.
 
 **NFR-CMP-003 — Single-file database**
-Persistent state MUST reside in a single SQLite file so that backup is a
-file copy.
+Persistent state MUST reside in a single SQLite file, so the file is the
+unit a backup captures — not that a backup *is* a file copy. Taken while
+peisear runs, the copy MUST go through SQLite's own `.backup` command;
+taken while it is stopped, a plain file copy is correct. `docs/operations/
+backup.md` MUST state and keep stating that distinction.
 *Source*: `KICK §2.3`. *Status*: Implemented. *Priority*: P2.
+*Amended (0.51.0)*: the previous wording — *"so that backup is a file
+copy"* — was imprecise in exactly the direction `backup.md`'s own "The
+wrong way" section warns against: a plain `cp` against the live file,
+without coordinating with the running writer, produces an incomplete
+snapshot (the main file without its WAL/SHM). `external-design.md §1.1`'s
+own external-entities table ("Single file; backup is a file copy →
+`NFR-CMP-003`") restated the same imprecision and is corrected
+alongside this entry. `README.md` already said `.backup`, correctly,
+and is unaffected.
 
 **NFR-CMP-004 — Forward-only migrations**
 Schema migrations MUST be forward-only and numbered sequentially. A
@@ -3364,6 +3392,12 @@ free. All three are forward-fix only, with no schema change to reverse.
 relied on since 0.19.1 and asserted by nothing — a schema guarantee the
 application depended on, with `foreign_keys(true)` set on the pool and no test
 proving either half.
+
+*At 0.51.0*: **no migration, the second release running.** `0021`
+(`STORE-001`/`SEC-001`/`REG-001`, 0.50.0) remains the most recent — the
+first since `0020` in ten releases, per the 0.50.0 baseline row below.
+This section's own entries stop short of `0018`–`0021`; backfilling
+them is not this round's work.
 
 ---
 
@@ -5394,6 +5428,38 @@ candidate handoff. Rule (e)'s shape survives as one line of it, by hand rather
 than as a scan: *does this stale-looking status cite a sibling requirement that
 is already clean?*
 
+**The ninth run found three amendments and zero status corrections — the
+amendments are the result, not a lesser one.** `0.51.0`'s own code change
+is narrow (`components::grow_text`, 41 call sites; one truncation fix;
+nine decision statements already landed in a prior round of this baseline
+and now carried into it), and **pass 1** found three requirements whose
+*text*, not status, undersold or overstated what the code and the guards
+actually do: `NFR-CMP-003`'s *"backup is a file copy"* read as the
+technique `docs/operations/backup.md`'s own "The wrong way" section
+forbids while running, corrected to name the unit and the two correct
+techniques; `NFR-CONC-003`'s `updated_at_authority_scan` citation said
+nothing about the needle's own first-column-only reach, found measuring
+`DOC-005`'s own call-site count and stated here rather than left implicit
+in the scan's doc comment; `§10.37` recorded `DOC-007`'s own kind-1/kind-2
+split, which resolves the letter of `NFR-MNT-005` for nine files and
+leaves the other fourteen to the owner's `project-instructions-rust.md`.
+**Pass 2** found one sibling: `§1.1`'s external-entities table in
+`external-design.md` repeated `NFR-CMP-003`'s own imprecision and is
+corrected alongside it. **Pass 3** found nothing further — no other
+requirement cites `grow()`/`grow_text()`, the authority scan, or
+`NFR-MNT-005`'s file count. **Pass 4 found no Appendix A row to
+change**: no status moved — `NFR-CMP-003` and `NFR-CONC-003` stay
+`Implemented`, `NFR-MNT-005` stays `Divergent`, all three amended in
+text only. **Pass 5** re-read `README.md`, `docs/getting-started/`,
+`docs/operations/backup.md` (this release's own correction read back as
+an operator would), `docs/security/hardening.md`, `docs/architecture/`
+and `.github/CONTRIBUTING.md`: nothing this release shipped contradicts
+any of them. The four screenshots were reopened — two show the
+alignment fix directly (`board.png`, `issue_detail.png`), one shows the
+sprint-plan fix (`sprint_plan.png`, new this release), and all four were
+confirmed free of anything private or local before being committed
+(`DOC-005 §6`).
+
 **The eighth instance is the procedure's own first run, and it is the most
 useful one.** `FR-DM-006` was corrected at 0.43.0 *because the sweep found it
 stale* — and the correction was wrong. The architect read the entry's own
@@ -5794,11 +5860,35 @@ narrower than a requirement, but a requirement whose text the shipped
 practice has contradicted for many releases without anyone's status
 field saying so.
 
+*Correction, `DOC-007`*: the review's own 79 was an estimate — public
+items against test attributes, a proxy. Measured directly (whole-line
+attribute match, not a doc-comment mention): **84** test functions, not
+79, across the same 25 files.
+
 **Status corrected to `Divergent` at 0.50.0, the rule left open.** A
 status is a claim about what is true and should not wait on a design
 decision; which way the **rule** should go — narrow the text to carve
 out source-reading scans and unit tests of private items, or move 79
 tests into `tests/` — is `0.51.0`'s reconciliation.
+
+**0.51.0 resolves kind 1, leaves kind 2 open.** `DOC-007` classified the
+25 files: **9** carried real implementation code alongside their tests
+(kind 1) and **14** were test-only modules with nothing to separate
+tests *from* — `docs_scan`, `touch_target_scan`, `prose_scan`,
+`changelog_scan`, `updated_at_authority_scan`, `alignment_scan` (new
+this release) among them — plus **2** files (kind 3) declaring a
+`#[cfg(test)] mod` with no test function of its own. Kind 1 moved to
+`src/<mod>/tests.rs`, closing the letter of the text for those 9. Kind
+2 is the open question: **a module that *is* a test has nothing to
+separate tests from**, so whether it violates this requirement's
+*intent* at all — not merely its literal text — is a different
+question than kind 1's. `NFR-MNT-005` restates the owner's own
+`project-instructions-rust.md`, outside this repository, so amending
+the rule past what that document says is not this release's call to
+make unilaterally. **Status stays `Divergent`**: the 14 kind-2 files
+still carry in-file tests and the requirement's text still prohibits
+that, unchanged. `§10.37` stays open until the owner settles whether
+kind 2 is a carve-out the source document itself should state.
 
 ## 11. Deferred and future requirements
 
@@ -5924,7 +6014,8 @@ let `FR-DM-002` be violated for four releases without anyone checking.
 | V3 (`V3`) | Reconciliation with implemented state through 0.19.0 |
 | 0.19.1 baseline | Consolidation into English normative requirements; identifiers assigned; §10 compliance gaps recorded |
 | 0.20.0 | Compliance pass. Nine recorded statuses corrected — five of them P0 or P1 requirements annotated as satisfied while the code did the opposite. `NFR-PRIV-002` scoped (`DEC-019`); `NFR-CMP-001` extended with the toolchain/MSRV distinction (`DEC-044`/`DEC-045`); `NFR-LANG-005` rescheduled to 0.21.0 (`DEC-022`). §10 gains a state table and six new entries, five of which close in this release. Test inventory 65 → 82 active, 0 disabled. `RSK-001` closed |
-| **0.50.0 (this baseline)** | **What a committed write means, and what leaves the process.** `NFR-CONC-001`'s own stale-page window — one whole second, reproduced directly — narrows to one millisecond: `0021` moves the seven triggers `0014`/`0017` added to millisecond-resolution `strftime`, demonstrated through the real handlers both before (fails) and after (passes) the migration. **The residual is stated, not claimed closed**: two writes inside one millisecond still share a token, and `NFR-CONC-002` gains a precision paragraph saying so. A committed write now fsyncs on every commit (`synchronous = FULL`) rather than at the next checkpoint — **measured, not assumed**, about 2 ms on a ~440 ms write path on NVMe, after a first, implausible result was read as a measurement-order artefact rather than published. **Two hazards closed while neither was yet leaking**: the database URL is redacted at the source before the startup line logs it, and `Config` no longer derives `Debug` over the session-signing key. **Data at rest joins the threat model for the first time** — the asset named, volume encryption named as the control, the owner's declined alternatives (SQLCipher, column-level encryption) on the record. **`§10.36` opens and names its own sixth-instance candidate in the same release**: a check that can be right about its assertion and still examine nothing, reintroduced while fixing a flake, caught in review before shipping — the round's clearest argument for why the entry exists. **`NFR-MNT-005`'s status corrects to `Divergent`** against 25 files and 79 in-file tests its text prohibits (`§10.37`); the rule itself — which side is wrong — is `0.51.0`'s. **One migration, the eleventh, the first since `0020` in ten releases. Test inventory 421 → 431** |
+| **0.51.0 (this baseline)** | **Documentation accuracy — and two things that are not documentation, scoped in anyway.** `DOC-001` through `DOC-007`, `RFC 0019` accepted. **Two user-visible fixes**: a 44 px touch target was applied without centring its content — `grow_text()` composes the touch target plus `inline-flex items-center` for the 41 plain-text sites that needed it (`DOC-005`), distinct from `grow()`'s 171 sites, which stay as they were — and the sprint plan's own Backlog row no longer overflows a 320 px phone, a truncation gap latent since the panel was always swept empty. **The front door describes the product**: `README.md`'s hero, overview and features said *"issue tracking"*; the requirements say the aim is keeping a project — and the people in it — sustainable, and the backup bullet no longer teaches the technique `docs/operations/backup.md`'s own "The wrong way" section forbids (`DOC-003`). **The documents that describe the code now agree with it**: three documents omitted `peisear-i18n` from the crate set (`DOC-001`); nineteen citations pointed into the project's gitignored private area, closed per `RFC 0019`'s own ruling that a link there is either missing documentation or a useless link (`DOC-002`); and **nine decisions a requirement cites were stated nowhere at all** — `DEC-013`, `DEC-049` named specifically, `DEC-049` amended with its presumption clause (`DOC-005 §3.1`'s own helper split) marked withdrawn rather than silently rewritten (`DOC-006`, `RFC 0019 §3`). **The guards grew to match**: rule 1b now checks the crate *count*, not only the names; rule 2 reads `.github/CONTRIBUTING.md` too; rule 5 is narrowed to documents and switched on; a new `alignment_scan` caught six sites misclassified by its own first pass, the day it was written (`DOC-005`). **Test organisation reconciled in part**: nine files whose tests sat inside their own implementation moved to `src/<mod>/tests.rs`; `NFR-MNT-005`'s status stays `Divergent` — fourteen test-only files are an open question for the owner's `project-instructions-rust.md` (`§10.37`, `DOC-007`). **This document's own `updated_at_authority_scan` citation gets its coverage limit stated** (`NFR-CONC-003`): the needle catches only a first-column `SET updated_at =`, no live violation, widening it left undone. **This release is not documentation-only** — say so plainly, since beat one is a UI fix and a layout fix. **What this release does not fix**: the sibling scans' shared `strip_line_comments` helper corrupts quote-pairing on five component files carrying a URL string (found measuring `DOC-005`'s own count; scheduled after the candidate, guard infrastructure rather than documentation). **No migration, the second release running. Test inventory 431 → 442** |
+| 0.50.0 | **What a committed write means, and what leaves the process.** `NFR-CONC-001`'s own stale-page window — one whole second, reproduced directly — narrows to one millisecond: `0021` moves the seven triggers `0014`/`0017` added to millisecond-resolution `strftime`, demonstrated through the real handlers both before (fails) and after (passes) the migration. **The residual is stated, not claimed closed**: two writes inside one millisecond still share a token, and `NFR-CONC-002` gains a precision paragraph saying so. A committed write now fsyncs on every commit (`synchronous = FULL`) rather than at the next checkpoint — **measured, not assumed**, about 2 ms on a ~440 ms write path on NVMe, after a first, implausible result was read as a measurement-order artefact rather than published. **Two hazards closed while neither was yet leaking**: the database URL is redacted at the source before the startup line logs it, and `Config` no longer derives `Debug` over the session-signing key. **Data at rest joins the threat model for the first time** — the asset named, volume encryption named as the control, the owner's declined alternatives (SQLCipher, column-level encryption) on the record. **`§10.36` opens and names its own sixth-instance candidate in the same release**: a check that can be right about its assertion and still examine nothing, reintroduced while fixing a flake, caught in review before shipping — the round's clearest argument for why the entry exists. **`NFR-MNT-005`'s status corrects to `Divergent`** against 25 files and 79 in-file tests its text prohibits (`§10.37`); the rule itself — which side is wrong — is `0.51.0`'s. **One migration, the eleventh, the first since `0020` in ten releases. Test inventory 421 → 431** |
 | 0.49.0 | **Four audits on one day, over the documentation a user reads, the documentation a contributor reads, the three design documents, and the security/privacy posture, independently reached the same remedy**: *the documents outside this repository never get swept.* `DOCS-003` through `DOCS-008` are that remedy, in four rounds: the start path fixed (the Quick Start's tarball, the unbuildable MSRV, the CDN claim ASSET-001 had already removed seventeen releases earlier, crates.io's ten dead links — six wrong sentences, none a product defect), three generated screenshots replacing prose with pictures a harness regenerates rather than a person maintains, a six-rule scan (`docs_scan.rs`, bounded by `REQ-003`'s own finding that prose cannot be mechanised — a crate set, an MSRV, a file manifest, config defaults, gitignored citations, and `README.md`'s image URLs, each checked against its own source, nothing else attempted), and the images read back by a human, which is how two rounds' fixture language and one contradicted caption were found — a scan reads text, not pixels. **Mid-sequence, `RFC 0016`: the interface had never said its own name.** The navbar and seven page titles read *"Issue Tracker"* since before this document's own baseline; they read `peisear` now, lowercase, matching the crate, and the four published one-line descriptions (two `Cargo.toml`s, the `lib.rs` doc comment, `book.toml`) follow, worded from the RFC's own hero draft and marked provisional — `README.md`'s own repositioning is deliberately **not** in this release. **No requirement in this document described the brand string before this release, so none needed correcting — only none existed to be wrong.** **What this release does not fix, named rather than left to be discovered**: `docs/architecture/`'s two documents and `docs/README.md` still omit `peisear-i18n`; `deployment.md`'s manifest still lists two of `static/`'s eight files; 132 committed citations still point at the project's gitignored private working area (measured fresh with a `git grep` for that path, excluding this module's own file), not the 126 first measured or the 130 reported after; and the sprint plan's own fixture sweeps the overflow gate's 24-page set with two empty panels, unpopulated because every candidate issue a handoff could reach ends up in a different, completed sprint — all `DOCS-006`'s, `0.50.0`. **No migration. Test inventory 407 → 421**, fourteen tests, all `docs_scan`'s. |
 | 0.48.0 | **Where unscheduled work lives, and one loss a phone reader actually feels.** `ROADMAP.md` asserted that its *current plan* was the Milestones and Release-sequence sections — **a sequence ending at `0.27.0`, twenty minor versions behind the release that shipped the day before**. Not a stale-file complaint: **the way work is chosen had changed** — handoffs, this register, the sweep — and the roadmap never moved with it. Retired in place, with the Release-cycle section explicitly kept because it *is* still current, and **an `Unscheduled work` table added** for quality gaps on shipped work, which `§10.x` (defect classes) and `§11` (deferred features) both correctly exclude. **The symptom that found it is the argument for it**: the architect had been reciting that list from memory, and of its items **one did not exist** — *"`FR-DM-005`'s keyboard undo"*, carried across many releases, where `FR-DM-005` is *Conflict message vocabulary* and `Implemented`, and no keyboard-undo requirement exists anywhere — while **another was recorded only under a gitignored path**. **Then the POST landing was measured** rather than described: on a 390 × 844 phone, a sprint-plan move discarded **1292 px of 3078**, with a row the reader could see ending 1990 px below the fold; an issue **create** lost nothing, landing on the new object. **And the fix split in two, which was the finding.** A fragment anchor fixes the sprint plan — `NAV-002`, no script, after the query string and never instead of it, so **the row you acted on is on screen** (not *your scroll position restored*: returning the reader to 1292 would put them where the row no longer is). **It cannot fix the calendar**, whose subject **leaves the landing page**, so a fragment has nothing to target and `CAL-006`'s flash is already that remedy — *a uniform “fragment on every redirect” would have looked solved and done nothing for the case that raised it.* **Also: the GitHub Release title format, unwritten since `DEC-056`**, typed from habit for seven releases until the owner saw it on the page; now the bare `X.Y.Z`, documented with the fourth leg, and **all seven existing releases retitled — titles touch no tag, commit or crate, so unlike `0.40.0`'s force-push nothing is left mismatched.** **No migration. Test inventory 405 → 407** |
 | 0.47.0 | **The three gaps that needed a judgement, not a test — and `§10.35` closes.** Held back from 0.46.0 on purpose: written against current behaviour they would have produced three tests that pass and prove little, which is the class's own defect. **`FR-PER-006` cited one test — the case where *nothing* applies — for a requirement whose content is a precedence chain.** The code has **four** conditions, not the three its sentence names (burnout is two), and two boundaries its comments call deliberate: strict `>` on WIP, *because being exactly at the limit is the limit*, and `long_stale_count >= 1`. **A chain is only a chain where two conditions compete**, so each tie-break was verified by **inverting the corresponding pair of arms**, and the at-most-one clause is asserted as a rendered **count** rather than as the presence of the expected callout. **`FR-HLT-007` reaches five of five non-excepted indicators**; the test whose plural name made it read like a sample for six releases is widened, and widening it **found a rule nobody had written down** — a non-empty basis is not sufficient for a basis link, because `human_explanation` returns `None` for `Good`, learned by running the test and reading the failure. **`NFR-A11Y-008` gets a browser gate**, the only mechanism matching its text: its regions are empty in server-rendered HTML, so no Rust test can assert an announcement happened. `GATE-005` asked whether one could be built and answered **yes** — correcting the architect's population from three surfaces to **two** on the way, `notifications.rs`'s regions being server-rendered and out of scope. `GATE-006` built it: one script, port `4175`, the browser job's **third** gate, asserting the drop's stored effect, the region's text, and the **undo toast's Tab order** — which closes a standing inference this document had written down and nothing had acted on. **A real OS-level drag gesture is declined on the record**, with its CDP capability gap named so nobody re-proposes it. **Two instrument failures are recorded rather than quietly fixed**: a gate's fixed 2000-character window over HTML that **ran past `</section>` and accused the product of a defect it did not have**, and a risk the architect made structural that **the dev team found already false** in a script they re-read in full. **No migration. Test inventory unchanged at 405** — the gate is not a Rust test |
