@@ -3040,7 +3040,18 @@ crate, free of database dependencies.
 **NFR-MNT-002 — Crate boundaries**
 The workspace MUST separate domain computation, storage, authentication,
 notification, and web presentation.
-*Source*: decision `DEC-001`. *Status*: Implemented (six crates).
+*Source*: decision `DEC-001`. *Status*: Implemented — each of the five
+concerns above is its own crate.
+*Amended (0.52.0) — the count is removed rather than corrected.* This
+read *"Implemented (six crates)"* and there have been **seven** since
+`peisear-i18n` landed; three other places in this document say seven,
+so the document contradicted itself. **The number is not this entry's
+to carry**: the crate set's membership and its count are already
+guarded against `crates/` itself, by `docs_scan` rules 1 and 1b, in the
+three documents that enumerate them — and `DOC-001` corrected exactly
+this omission in those three at `0.51.0` while this copy, which no rule
+reads, went on saying six. A fourth copy would need a fourth guard; a
+fact stated once needs none.
 *Priority*: P2.
 
 **NFR-MNT-003 — Module layout**
