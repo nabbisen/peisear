@@ -73,8 +73,8 @@
 //!   `apply_change_exists_by_name` — correctly, since that is exactly
 //!   the kind of change this guard exists to force a deliberate
 //!   decision about, not a false negative to work around.
-//! - **Closed in round 2** (`JS-002-review.md` §2): a `try`/`catch`
-//!   nested inside `applyChange`'s own `showUndoToast` callback used
+//! - **Closed in round 2**: a `try`/`catch` nested inside
+//!   `applyChange`'s own `showUndoToast` callback used
 //!   to satisfy `apply_change_carries_its_own_try_catch`'s bare
 //!   substring search without protecting anything — the function's
 //!   own top-level statements (`setPressed`, `announcePolite`, …)
@@ -167,8 +167,8 @@ fn find_function_body<'a>(source: &'a str, function_name: &str) -> &'a str {
 /// function's own top-level statements, not nested inside a callback
 /// or any other brace pair defined within it.
 ///
-/// `JS-002` round 2 (the architect's own plant, `JS-002-review.md`
-/// §2): a bare `body.contains("try {")` still matches a `try`/`catch`
+/// `JS-002` round 2 (the architect's own plant): a bare
+/// `body.contains("try {")` still matches a `try`/`catch`
 /// moved *inside* the callback `applyChange` already passes to
 /// `showUndoToast` -- the substring is present, but it no longer
 /// protects anything. An exception in `setPressed`/`announcePolite`,

@@ -42,10 +42,9 @@
 //! only requires that shape to be covered *somewhere*.
 //!
 //! **A qualifying line, on either side, must not be commented out** —
-//! same convention as `dec_007_scan`'s own commented-line check
-//! (`QA-005-review.md` §2): a `#`-prefixed `run:` step names a job
-//! step that never runs, same as a `#`-prefixed line in the
-//! `CONTRIBUTING.md` block.
+//! same convention as `dec_007_scan`'s own commented-line check: a
+//! `#`-prefixed `run:` step names a job step that never runs, same as
+//! a `#`-prefixed line in the `CONTRIBUTING.md` block.
 //!
 //! **`QA-009` §4 — `if: false` is now closed, `continue-on-error` is
 //! deliberately left open, for two different reasons.** `QA-008`

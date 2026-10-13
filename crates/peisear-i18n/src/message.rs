@@ -157,16 +157,14 @@ impl IndicatorLabel {
     }
 }
 
-/// A destination `render_back_link` can name — our own copy, never
-/// user data. `I18N-005a-review.md` §2: the original
-/// `render_back_link(label: impl Into<String>, ...)` let every
-/// caller pass a raw string, so "Projects" and "sprints" — the same
-/// construct, the same screen family — drifted to different
-/// capitalisation without the guard ever seeing either one. Shaped
-/// like [`IndicatorLabel`] rather than kept as an open `String`: the
-/// rule the review settles is that a `String` parameter carries user
-/// data only, and a back-link's own words ("projects", "issues",
-/// "sprints") are never that.
+/// A destination `render_back_link` can name — our own copy, never user
+/// data. The original `render_back_link(label: impl Into<String>, ...)` let
+/// every caller pass a raw string, so "Projects" and "sprints" — the same
+/// construct, the same screen family — drifted to different capitalisation
+/// without the guard ever seeing either one. Shaped like [`IndicatorLabel`]
+/// rather than kept as an open `String`: a `String` parameter carries user
+/// data only, and a back-link's own words ("projects", "issues", "sprints")
+/// are never that.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NavSection {
     Projects,
@@ -419,9 +417,9 @@ impl TrendDirectionLabel {
 /// [`MessageKey::CreatedAt`]/[`MessageKey::UpdatedAt`]).
 /// `I18N-005a` removed and re-added this derive once already
 /// (`BackToLabel` turned out to be carrying our own copy, not user
-/// data — `I18N-005a-review.md` §2); this crossing is the real one
-/// `RFC 006` D3 anticipated, kept accurate to the variant set as it
-/// stands rather than guarded against in advance.
+/// data); this crossing is the real one `RFC 006` D3 anticipated,
+/// kept accurate to the variant set as it stands rather than
+/// guarded against in advance.
 ///
 /// `PartialEq`, not `Eq`: `I18N-005d` adds `f64` fields (pace and
 /// drift figures — genuinely numeric display data, not enumerable
@@ -444,8 +442,12 @@ pub enum MessageKey {
     OptimisticLockConflict {
         entity: EntityKind,
     },
-    /// `check_optimistic_lock`'s parse-failure message — entity-
-    /// neutral since 0.20.0 (`DEV-001-004-review.md` §1.4).
+    /// `check_optimistic_lock`'s parse-failure message. Shared by the
+    /// issue, project, sprint and capacity form paths, so it cannot
+    /// name "the board" the way the original wording did — a
+    /// capacity-period edit has no board, and the board-specific
+    /// sentence stays only where the board is the actual context.
+    /// Entity-neutral since 0.20.0.
     LockValueUnreadable,
     /// A named field is required and was left blank.
     FieldRequired {
@@ -494,8 +496,7 @@ pub enum MessageKey {
     /// No value to show for this indicator (the raw counts it would
     /// divide by are zero). Shared across every indicator's
     /// zero-denominator case — genuinely the same message, not
-    /// several concepts collapsed into one (`I18N-001-review.md`
-    /// §2 Q1's distinction).
+    /// several concepts collapsed into one.
     IndicatorValueUnavailable,
     IndicatorValueThroughput {
         done: i64,
@@ -541,13 +542,12 @@ pub enum MessageKey {
     IndicatorExplanationActivity {
         count: i64,
     },
-    /// **`I18N-004` fix for `ISSUE-006` finding 2.** Was "solo of
-    /// in-flight work is concentrated on one person." — a
-    /// percentage-shaped template fed the non-percentage value
-    /// "solo". Now its own plainly factual sentence, per
-    /// `ISSUE-006-decision.md` §3: no evaluation, no implied fault,
-    /// no directive ("consider spreading the load" would be a "you
-    /// should" in disguise, which §1.7 prohibits).
+    /// **`I18N-004` fix for `ISSUE-006` finding 2.** Was "solo of in-flight
+    /// work is concentrated on one person." — a percentage-shaped template
+    /// fed the non-percentage value "solo". Now its own plainly factual
+    /// sentence: no evaluation, no implied fault, no directive ("consider
+    /// spreading the load" would be a "you should" in disguise, which §1.7
+    /// prohibits).
     IndicatorExplanationBusFactorSolo,
     IndicatorExplanationBusFactor {
         pct: i64,
@@ -569,15 +569,14 @@ pub enum MessageKey {
 
     // ---- I18N-002/004: peisear_core::project_health::summarize ----
     HealthSummaryHealthy,
-    /// **`I18N-004`**: the only two reachable shapes since the
-    /// `ISSUE-006` finding 1 fix — `summarize` now selects between
-    /// these based on the clamped `DisplayHealthState`, which has no
-    /// `Concern` variant to select on. What was
-    /// `HealthSummaryOneConcern` (removed) and this variant now
-    /// render identically ("worth a glance") for a `Concern`-tier
-    /// lead indicator, same as a `Watch`-tier one — see
-    /// `ISSUE-006-decision.md` §3: "no new wording is needed; the
-    /// `Watch` sentences already exist and already read correctly."
+    /// **`I18N-004`**: the only two reachable shapes since the `ISSUE-006`
+    /// finding 1 fix — `summarize` now selects between these based on the
+    /// clamped `DisplayHealthState`, which has no `Concern` variant to
+    /// select on. What was `HealthSummaryOneConcern` (removed) and this
+    /// variant now render identically ("worth a glance") for a
+    /// `Concern`-tier lead indicator, same as a `Watch`-tier one — no new
+    /// wording is needed; the `Watch` sentences already exist and already
+    /// read correctly.
     HealthSummaryOneWatch {
         label: IndicatorLabel,
     },
@@ -690,9 +689,9 @@ pub enum MessageKey {
     /// with a render of this key, matching the fixed prefix in the
     /// `aria-label`, which already went through `format!`).
     /// [`NavSection`], not a `String`: see that type's doc comment —
-    /// `I18N-005a-review.md` §2 found the original `String` version
-    /// let two call sites' copy ("Projects", "sprints") drift to
-    /// different capitalisation outside the guard's reach.
+    /// the original `String` version let two call sites' copy
+    /// ("Projects", "sprints") drift to different capitalisation
+    /// outside the guard's reach.
     BackToSection {
         section: NavSection,
     },
@@ -723,13 +722,14 @@ pub enum MessageKey {
     FieldLabel {
         field: Field,
     },
-    /// "Projects" — the section name, reused identically as a
-    /// breadcrumb link and as the `/projects` list page's `<h1>`.
-    /// Distinct from [`MessageKey::BackToSection`]'s lowercase
-    /// "projects": same destination, different grammatical context,
-    /// not coupled (`I18N-005a-review.md` §10's "worth watching"
-    /// note — this is the second instance, now on record rather than
-    /// rediscovered).
+    /// "Projects" — the section name, reused identically as a breadcrumb
+    /// link and as the `/projects` list page's `<h1>`. Distinct from
+    /// [`MessageKey::BackToSection`]'s lowercase "projects": same
+    /// destination, different grammatical context, not coupled — nothing
+    /// ties the two keys together, so renaming one leaves the other with the
+    /// old word. Both are in the message table, which is the property that
+    /// matters: a copy review sees them side by side. This is the second
+    /// instance of that pattern, now on record rather than rediscovered.
     ProjectsSectionName,
     /// The board/list view-toggle buttons on the project detail page.
     ViewToggleBoard,
@@ -984,20 +984,19 @@ pub enum MessageKey {
     },
     /// A sprint card's `aria-label`. `name` and `dates` are data
     /// (user text, a formatted range); `status` is the typed
-    /// [`SprintStatusLabel`] rather than a pre-rendered `String` —
-    /// I18N-005c-review §3's correction. The original shape passed
-    /// `status`/`summary` as already-rendered `String`s composed
-    /// from [`MessageKey::SprintStatusName`]/the `SprintCardSummary*`
-    /// keys above, reasoning that wasn't the `BackToLabel` mistake
-    /// (every fragment did come from the table). It was still wrong:
-    /// runtime string concatenation assembles the sentence outside
-    /// any single render arm, so no guard check ever sees the whole
-    /// — the assembled-sentence half of the concatenation
-    /// prohibition, not the raw-literal half. The four count fields
-    /// below are the same typed data `SprintCardSummary*` render
-    /// from; this key's own render arm composes the summary clause
-    /// once, matching on `status`, rather than receiving someone
-    /// else's pre-rendered output.
+    /// [`SprintStatusLabel`] rather than a pre-rendered `String`. The
+    /// original shape passed `status`/`summary` as already-rendered
+    /// `String`s composed from [`MessageKey::SprintStatusName`]/the
+    /// `SprintCardSummary*` keys above, reasoning that wasn't the
+    /// `BackToLabel` mistake (every fragment did come from the
+    /// table). It was still wrong: runtime string concatenation
+    /// assembles the sentence outside any single render arm, so no
+    /// guard check ever sees the whole — the assembled-sentence half
+    /// of the concatenation prohibition, not the raw-literal half.
+    /// The four count fields below are the same typed data
+    /// `SprintCardSummary*` render from; this key's own render arm
+    /// composes the summary clause once, matching on `status`,
+    /// rather than receiving someone else's pre-rendered output.
     SprintCardAriaLabel {
         name: String,
         status: SprintStatusLabel,
@@ -1036,8 +1035,8 @@ pub enum MessageKey {
     /// exact word. Distinct from
     /// [`MessageKey::CompletedStatLabel`]'s standalone, title-case
     /// use (same word, different grammatical context, same
-    /// non-coupling `I18N-005a-review.md` §10 already noted for
-    /// "Projects"/"projects").
+    /// non-coupling [`MessageKey::ProjectsSectionName`] already notes
+    /// for "Projects"/"projects").
     CaptionWordCompleted,
     VelocityCaptionMiddle,
     /// "carried over", lowercase and mid-sentence. Distinct from
@@ -1167,18 +1166,17 @@ pub enum MessageKey {
     /// in the sprint now, which is not what it reported. See
     /// [`MessageKey::SummaryAtCompletionHeading`].
     IssuesInSprintNowHeading,
-    /// "Goal: " — deliberately **not** combined with the goal value
-    /// into one `"Goal: {goal}"` key the way
-    /// [`MessageKey::CreatedAt`]/[`MessageKey::UpdatedAt`] combine
-    /// their prefix and value: the source wraps only this prefix in
-    /// its own `opacity-60` span, styled distinctly from the value
-    /// that follows it — combining would either lose that styling
-    /// split or extend it to the value too, a visible change this
-    /// handoff isn't authorised to make. Unlike the "Back to " defect
-    /// `I18N-005a-review.md` §2 closed, this prefix is a complete,
-    /// closed, guard-covered string in its own right — no user data
-    /// flows through this key, so nothing here can carry copy the
-    /// guard can't see.
+    /// "Goal: " — deliberately **not** combined with the goal value into one
+    /// `"Goal: {goal}"` key the way
+    /// [`MessageKey::CreatedAt`]/[`MessageKey::UpdatedAt`] combine their
+    /// prefix and value: the source wraps only this prefix in its own
+    /// `opacity-60` span, styled distinctly from the value that follows it —
+    /// combining would either lose that styling split or extend it to the
+    /// value too, a visible change this handoff isn't authorised to make.
+    /// Unlike the "Back to " defect [`MessageKey::BackToSection`]'s own doc
+    /// comment describes, this prefix is a complete, closed, guard-covered
+    /// string in its own right — no user data flows through this key, so
+    /// nothing here can carry copy the guard can't see.
     GoalFieldPrefixLabel,
     /// "Summary", reused for both a section `aria-label` and its
     /// `<h2>`.
@@ -1479,11 +1477,14 @@ pub enum MessageKey {
     PaceChipLabel,
     WhatDoTheseMeanLabel,
     /// The glossary's `<strong>"WIP"</strong>` term reuses
-    /// [`MessageKey::WipChipLabel`]; this is only the definition
-    /// clause that follows it, split at the existing `<strong>`
-    /// boundary per the sanctioned-composition rule (`I18N-005c-review`
-    /// §6 — markup requires the split, each fragment is independently
-    /// meaningful).
+    /// [`MessageKey::WipChipLabel`]; this is only the definition clause that
+    /// follows it, split at the existing `<strong>` boundary. Sanctioned
+    /// composition, distinct from `RFC 006` §D6's own prohibition on
+    /// assembling a sentence from another message's rendered text: markup
+    /// requires this split, and each resulting fragment is independently
+    /// meaningful on its own — composing to save keys, or threading one
+    /// key's output into another's parameter, is not sanctioned by the
+    /// same reasoning.
     WipGlossaryDefinition,
     LoadGlossaryDefinition,
     ThroughputGlossaryDefinition {
@@ -1554,10 +1555,12 @@ pub enum MessageKey {
         older_median_days_per_point: f64,
     },
     /// Composes the full sentence — including the long "trending
-    /// ..." phrase — from typed data in this one render arm, per
-    /// `I18N-005c-review` §3's correction: not a pre-rendered
-    /// `String` threaded in from [`MessageKey::DriftDirectionWord`]
-    /// or [`MessageKey::DriftValueLine`].
+    /// ..." phrase — from typed data in this one render arm: not a
+    /// pre-rendered `String` threaded in from
+    /// [`MessageKey::DriftDirectionWord`] or
+    /// [`MessageKey::DriftValueLine`] (see
+    /// [`MessageKey::SprintCardAriaLabel`]'s own doc comment for why
+    /// that shape is wrong).
     DriftAriaLabel {
         recent_median_days_per_point: f64,
         older_median_days_per_point: f64,
@@ -1585,8 +1588,7 @@ pub enum MessageKey {
     /// the median number itself (`switching_median_number`, the same
     /// one-decimal rule `switching_median_text` uses for the chip)
     /// with no suffix, composed from the typed `median: f64` in this
-    /// arm rather than a pre-rendered `String`, per
-    /// `I18N-005c-review` §3.
+    /// arm rather than a pre-rendered `String`.
     SwitchingAriaLabel {
         median: f64,
         total_events_observed: i64,
@@ -1597,17 +1599,19 @@ pub enum MessageKey {
     /// Merges what was two sentences at the call site (a static
     /// lead plus a `format!`-composed hint) into one key taking the
     /// raw `default_wip_limit: i64`, avoiding the
-    /// pre-rendered-`String`-as-parameter shape `I18N-005c-review`
-    /// §3 corrected elsewhere.
+    /// pre-rendered-`String`-as-parameter shape
+    /// [`MessageKey::SprintCardAriaLabel`]'s own doc comment corrects
+    /// elsewhere.
     WipLimitExplanation {
         default_wip_limit: i64,
     },
     NoCapacitySetTodayLabel,
     ConflictLabel,
     /// `SCR-22`'s overlap-rejection guidance, split at the existing
-    /// `<em>"Close on date"</em>` boundary (sanctioned composition,
-    /// `I18N-005c-review` §6). [`MessageKey::CloseOnDateActionWord`]
-    /// is the emphasised middle fragment.
+    /// `<em>"Close on date"</em>` boundary — sanctioned composition,
+    /// the same shape [`MessageKey::WipGlossaryDefinition`]'s own doc
+    /// comment explains. [`MessageKey::CloseOnDateActionWord`] is the
+    /// emphasised middle fragment.
     CapacityOverlapGuidanceLead,
     CloseOnDateActionWord,
     CapacityOverlapGuidanceTail,
@@ -1624,7 +1628,9 @@ pub enum MessageKey {
     /// Composes "Effective capacity today: ..." from the raw
     /// `Option<i64>` in one arm, rather than embedding the
     /// pre-rendered `effective_label` `String` the component used to
-    /// build separately (same class of fix as `I18N-005c-review` §3).
+    /// build separately (the same class of fix
+    /// [`MessageKey::SprintCardAriaLabel`]'s own doc comment
+    /// explains).
     EffectiveCapacityTodayAriaLabel {
         points: Option<i64>,
     },
@@ -1657,8 +1663,9 @@ pub enum MessageKey {
     WipLimitLabel,
     InProgressIssuesHint,
     /// `from`/`to` are formatted dates or [`MessageKey::NoValuePlaceholder`]'s
-    /// "—" — formatted data, not copy (`I18N-005c-review` §3's
-    /// carve-out for `dates: String` applies the same way here).
+    /// "—" — formatted data, not copy, the same carve-out
+    /// [`MessageKey::SprintCardAriaLabel`]'s own `dates: String`
+    /// field uses.
     CapacityRowAriaLabel {
         points: i64,
         from: String,
@@ -1735,9 +1742,10 @@ pub enum MessageKey {
     MarkAllReadAriaLabel,
     MarkAllReadButton,
     InboxEmptyMessage,
-    /// Split around the `<a href="/settings/notifications">` link
-    /// (sanctioned composition, `I18N-005c-review` §6).
-    /// [`MessageKey::SettingsLinkWord`] is the link text.
+    /// Split around the `<a href="/settings/notifications">` link —
+    /// sanctioned composition, the same shape
+    /// [`MessageKey::WipGlossaryDefinition`]'s own doc comment
+    /// explains. [`MessageKey::SettingsLinkWord`] is the link text.
     InboxEmptyFooterLead,
     /// Lowercase "settings" as the inline link text — distinct from
     /// [`MessageKey::SettingsSectionName`]'s capitalised standalone
@@ -2114,11 +2122,11 @@ pub enum MessageKey {
     CannotDemoteIssueWithSubIssuesMessage,
     /// Migration `0016`'s RAISE text (`CAL-001` §2.3), same
     /// verbatim-needle relationship as the four above — but not
-    /// their register. `CAL-001-review.md` §4: the sub-issue
-    /// fragments above (lowercase, no period) are grandfathered
-    /// under no-rewording, not a house style to extend; register
-    /// should follow the surface the user reads, not the mechanism
-    /// (trigger vs. Rust check) that produced the message. The
+    /// their register. The sub-issue fragments above (lowercase, no
+    /// period) are grandfathered under no-rewording, not a house
+    /// style to extend; register should follow the surface the user
+    /// reads, not the mechanism (trigger vs. Rust check) that
+    /// produced the message. The
     /// semantic sibling is `SprintEndDateMustBeOnOrAfterStartMessage`
     /// ("Sprint end date must be on or after start date.") — this
     /// key matches its capitalised, terminal-period register. Names
@@ -2178,9 +2186,9 @@ pub enum MessageKey {
     /// render lowercase ("committed"/"completed") for the caption
     /// directly below this legend. Reusing them here would force a
     /// casing compromise on one side or the other -- the fifth
-    /// instance of the inflection question this release has hit
-    /// (`I18N-006-review.md` §6's precedent for recording rather than
-    /// absorbing). Recorded, not bent.
+    /// instance of the inflection question this release has hit.
+    /// Recorded, not bent: own keys here rather than a forced
+    /// casing match.
     BurndownLegendCommitted,
     BurndownLegendCompleted,
 
@@ -2323,15 +2331,15 @@ pub enum MessageKey {
     /// reload, the same posture `board.js` takes on conflict.
     StatusChangeUndoConflictMessage,
     /// Undo's non-409 failure case — a network rejection, a non-2xx
-    /// response, or a malformed body. `STATUS-002-review.md` §4:
-    /// conflated with [`MessageKey::StatusChangeUndoConflictMessage`]
-    /// in the first round, telling the user someone else changed the
-    /// issue when nobody did. `board.js` already draws this
-    /// distinction (`CONFLICT_MESSAGE` vs. `UNAVAILABLE_MESSAGE`);
-    /// this is that same split for undo.
+    /// response, or a malformed body. Conflated with
+    /// [`MessageKey::StatusChangeUndoConflictMessage`] in the first
+    /// round, telling the user someone else changed the issue when
+    /// nobody did. `board.js` already draws this distinction
+    /// (`CONFLICT_MESSAGE` vs. `UNAVAILABLE_MESSAGE`); this is that
+    /// same split for undo.
     StatusChangeUndoUnavailableMessage,
-    /// Undo's `unconfirmed` case (`JS-003-review.md` §3, round 2) — a
-    /// `2xx` response whose body carries no usable `updated_at`. The
+    /// Undo's `unconfirmed` case — a `2xx` response whose body
+    /// carries no usable `updated_at`. The
     /// mutation's outcome is genuinely unknown, not failed: the
     /// server returned success, just not confirmation. Deliberately
     /// **not** [`MessageKey::StatusChangeUndoUnavailableMessage`]
@@ -2356,8 +2364,7 @@ pub enum MessageKey {
     /// non-2xx response. `board.js` reverts the card without
     /// reloading.
     BoardUnavailableMessage,
-    /// A drag's `unconfirmed` case (`JS-003-review.md` §3, round 2) —
-    /// same reasoning as
+    /// A drag's `unconfirmed` case — same reasoning as
     /// [`MessageKey::StatusChangeUndoUnconfirmedMessage`]:
     /// [`MessageKey::BoardUnavailableMessage`]'s *"…The card has been
     /// returned to its previous column"* is false here for a

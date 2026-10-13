@@ -1499,12 +1499,12 @@ pub mod project_health {
     /// was never carried past the filter. `HealthIndicator`'s
     /// four-state ordering is still used, but only internally, in
     /// the *ranking* below — a genuinely `Concern`-tier indicator
-    /// still leads over a `Watch`-tier one when both are present, per
-    /// `ISSUE-006-decision.md` §3 ("clamp at the point the state
-    /// reaches a sentence, not before the ranking"). This is DEV-004's
-    /// fix applied one layer down: DEV-004 clamped the type badges
-    /// and the composite chip render from; this clamps the type this
-    /// function's own output decision is made from.
+    /// still leads over a `Watch`-tier one when both are present: the
+    /// clamp applies at the point the state reaches a sentence, not
+    /// before the ranking. This is DEV-004's fix applied one layer
+    /// down: DEV-004 clamped the type badges and the composite chip
+    /// render from; this clamps the type this function's own output
+    /// decision is made from.
     pub fn summarize(indicators: &[Indicator]) -> MessageKey {
         let mut bad: Vec<&Indicator> = indicators
             .iter()

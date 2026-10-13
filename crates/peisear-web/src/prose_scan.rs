@@ -1,7 +1,7 @@
 //! I18N-007 §3 — the completion claim replaced by a test.
 //!
 //! Four handoffs each declared their surface complete and each was
-//! followed by another find (`I18N-006-review.md` §4). This walks
+//! followed by another find. This walks
 //! every `.rs` file under `src/` at test time and fails on hardcoded
 //! user-visible prose, so "every string is in the table" stops
 //! depending on anyone's thoroughness.
@@ -130,16 +130,15 @@ fn is_allowlisted(v: &Violation) -> bool {
 /// file in scope has one today; this is forward cover, not a
 /// guarantee.
 ///
-/// `I18N-007-review.md` §3.1: a brace-less item (`use`/`const`/
-/// `static`/`type`, terminated by `;` rather than a `{...}` body)
-/// used to blind the scan for the *entire rest of the file* --
-/// `after.find('{')` would walk past the marker's own item and
-/// match some unrelated brace much further down, swallowing every
-/// real attribute/text-node literal in between. Demonstrated in
-/// review by planting `#[cfg(test)] use std::fmt as _unused_fmt;`
-/// above an already-caught literal; the scan passed, silently. Fixed
-/// by checking whether `;` or `{` comes first after the marker: `;`
-/// first means a brace-less item, and the item ends there.
+/// A brace-less item (`use`/`const`/`static`/`type`, terminated by `;`
+/// rather than a `{...}` body) used to blind the scan for the *entire rest
+/// of the file* -- `after.find('{')` would walk past the marker's own item
+/// and match some unrelated brace much further down, swallowing every real
+/// attribute/text-node literal in between. Demonstrated in review by
+/// planting `#[cfg(test)] use std::fmt as _unused_fmt;` above an
+/// already-caught literal; the scan passed, silently. Fixed by checking
+/// whether `;` or `{` comes first after the marker: `;` first means a
+/// brace-less item, and the item ends there.
 fn strip_cfg_test_blocks(src: &str) -> String {
     const MARKER: &str = "#[cfg(test)]";
     let mut result = String::with_capacity(src.len());
@@ -236,17 +235,15 @@ fn looks_like_percent_pattern(s: &str) -> bool {
 }
 
 /// A line that is nothing but one balanced `{expr}` block -- e.g.
-/// `{t(MessageKey::Something)}` on its own line. `I18N-007-review.md`
-/// §3.2: a standalone text node sitting between two such expression
-/// children (fragment composition -- a literal connector between two
-/// converted fragments) has neither a tag-close before it nor a
-/// tag-open after it, so the original tag-only boundary check missed
-/// it. Verified this addition does not reintroduce either
-/// false-positive family the tag-boundary check was built to
-/// exclude: the six CSS-class match arms (`if is_board {` / `} else
-/// {`) neither start with `{` nor end with `}` as a whole trimmed
-/// line, and `root.rs`'s lone `}` closing `health()` is one
-/// character, not a `{...}` pair.
+/// `{t(MessageKey::Something)}` on its own line. A standalone text node
+/// sitting between two such expression children (fragment composition -- a
+/// literal connector between two converted fragments) has neither a
+/// tag-close before it nor a tag-open after it, so the original tag-only
+/// boundary check missed it. Verified this addition does not reintroduce
+/// either false-positive family the tag-boundary check was built to exclude:
+/// the six CSS-class match arms (`if is_board {` / `} else {`) neither start
+/// with `{` nor end with `}` as a whole trimmed line, and `root.rs`'s lone
+/// `}` closing `health()` is one character, not a `{...}` pair.
 fn looks_like_complete_expression(l: &str) -> bool {
     l.len() >= 2 && l.starts_with('{') && l.ends_with('}')
 }

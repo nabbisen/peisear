@@ -5054,14 +5054,14 @@ a page added, not swapped, since the planned sprint's plan page carries the
 backlog and its drag controls).
 
 **`overflow-wrap: anywhere` was tested as a single universal remedy and
-rejected** (`LAYOUT-007-review.md` §4): with every existing remedy stripped it
-clears nine of thirteen sites alone and fails on a `line-clamp` title and on a
-`<select>`. One class would move the exception list, not remove it.
+rejected**: with every existing remedy stripped it clears nine of thirteen
+sites alone and fails on a `line-clamp` title and on a `<select>`. One class
+would move the exception list, not remove it.
 
 *State*: all thirteen sites closed in tree (`§10.24`, `LAYOUT-004`, `LAYOUT-005`,
 `LAYOUT-007`, `LAYOUT-008`), each watched red then green. A sweep of every
 route at four widths with an unbroken run in every user-text field found no
-further site (2026-09-12, `LAYOUT-008-review.md`).
+further site (2026-09-12).
 
 ### 10.26 Every page overflows a 320 px phone when the display name is 21 characters — **closed in tree** by `LAYOUT-006`, 0.33.0
 
@@ -6015,6 +6015,18 @@ did not cover. **Reversed for this helper only**: `strip_line_comments`
 now lives once, in `peisear-web/src/scan_support.rs`, called from all
 six sites. `collect_rs_files` and `extract_hidden_field` stay
 duplicated under the rule above, not exempted from it.
+
+### 10.39 A rule named for a subject and keyed on a string enforces the string — **closed**, `GRD-003`, 0.52.0; found 2026-10-14
+
+**Not `§10.36`'s family, though it looks like it at a glance — cross-referenced, not reused.** `§10.36` is about a check that examined nothing and so could not tell *nothing wrong* from *nothing examined*. Rule 5 (`DOC-002`, `RFC 0019`) examined plenty: every document under `docs/`, every RFC, every published `///`/`//!` line. It answered a real question and the question was the wrong one — it matched the literal gitignored path, and this project's own house style for citing a private file is the bare file name (an ID like `QA-002` with a `-review` tail, `.md` or not, next to a section number), which spells no path at all. The rule was not blind; it was keyed on a spelling nobody uses for the thing it was built to ban.
+
+**The evidence is a population the path needle could not see.** `DOC-002` (`0.51.0`) closed 19 citations of the path spelling, in the same files, at the same time, as **64** citations of the bare-name spelling — 60 in published doc comments across 18 files, 4 in documents across 3 files, naming 29 distinct private files. The round that counted the spelling inherited the same boundary the rule matched on, so the larger population was never in view. *Corrected once already, in this baseline's own `0.51.0` row (Appendix C): the figures first measured there (60 across 25 files, 27 doc comments, 31 named files) were themselves a partial count written up as a total — found and restated before this round started, not by it.*
+
+**The needle.** A token ending `-review`, `-decision`, `-decisions`, or `-recommendation` (each tried with and without a trailing `.md`), whose prefix has the shape this project's own private-area naming uses — an uppercase ID followed by `-` and a digit (`TT-003`, `I18N-005c`, `REL-0.51.0`). This is what tells a real citation (`QA-002` plus a `-review.md` tail) apart from an ordinary hyphenated prose word like `mid-review` or `design-review` without an exception list: the prefix shape, not a name on a list. See `docs_scan.rs`'s own `review_file_citations`/`is_review_id_shape` for the implementation and its tests.
+
+**The residual, stated rather than discovered later.** Four files in the private area use a multi-word descriptive name (`DOCS-AUDIT-user-facing-documentation` and three siblings) rather than the ID-digit-suffix shape, and are not catchable by this needle without an exception list the rule's own design forbids growing. None is cited anywhere in rule 5's population today — checked against the needle's own output, not assumed. **Measured by the needle itself, not by the private directory's own listing** (which only the owner's tree has, and which a published crate or an extracted worktree never sees): **0** citations remain, both spellings, as of this entry.
+
+**Out of scope, deliberately**: `DOC-002 §5`'s own line — a `//` comment never reaches a published crate's documentation, and `crates/*/tests/` is never walked for doc comments at all, since cargo never publishes an integration-test binary to docs.rs. **Measured directly rather than carried from the handoff's own estimate, which undercounted it**: 25 occurrences across 14 files, not 16 across 11 — 6 in `//` implementation comments under `crates/*/src/` (`message.rs`, `touch_target_scan.rs`, `components/layout.rs`, `components/sprint_plan.rs`, `handlers/sprints.rs` ×2), 19 under `crates/*/tests/` across 9 files (`peisear-notify/tests/dispatch_integration.rs`, `peisear-i18n/tests/common/fixture_locale.rs`, and seven `peisear-web/tests/*.rs` files — `sprint_plan.rs` alone carries 8). Reported, not swept in.
 
 ## 11. Deferred and future requirements
 

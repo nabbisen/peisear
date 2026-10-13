@@ -41,9 +41,9 @@
 //! `NFR-A11Y-007`'s whole size clause unconstructible, not just one
 //! class of it. Reads `components::TOUCH_TARGET`/`grow`'s own
 //! behaviour rather than a hardcoded copy — the guard lives in this
-//! crate and has no excuse for one (`TT-002-round2-review.md` §4: the
-//! 44px value already has one home in production and seven in test
-//! code; this guard must not be an eighth).
+//! crate and has no excuse for one (the 44px value already has one
+//! home in production and seven in test code; this guard must not be
+//! an eighth).
 //!
 //! **What is allowed through, and what is not** (`TT-006`, `§10.28` —
 //! this paragraph used to say "no exception list", which was true of
@@ -60,7 +60,7 @@
 //! - [`every_sizing_class_site_composes_the_touch_target`] — the size
 //!   clause — **needs no allowances at all.** That is what `TT-002`
 //!   round 2 bought by converting the last three hardcoded
-//!   `min-h-11 min-w-11` literals (`TT-002-round2-review.md` §2).
+//!   `min-h-11 min-w-11` literals.
 //! - [`every_interactive_element_declares_a_touch_target`] — the
 //!   coverage clause, added by `TT-004` — has two kinds of allowance,
 //!   both decided by `DEC-050` and reported as findings before they
@@ -97,7 +97,7 @@
 //! source char-by-char and only yields the span between an actual
 //! `"..."` Rust string literal's quotes.
 //!
-//! **`TT-003-review.md` §3 — that claim held in only one direction.**
+//! **That claim held in only one direction.**
 //! A doc comment reading *"`btn-sm` is 32px"* (backticked, no quotes)
 //! was already invisible, correctly. But `quoted_string_spans` has no
 //! notion of comments at all, so a sizing class **inside quotes
@@ -141,8 +141,8 @@
 //! passing. A green result here is a claim about class-carrying
 //! controls, not about every interactive element in the tree.
 //!
-//! **`TT-003-review.md` §2 — bare checkboxes were the same kind of
-//! gap, at the other end of `TT-002`'s own scope.** `class="checkbox"`
+//! **Bare checkboxes were the same kind of gap, at the other end of
+//! `TT-002`'s own scope.** `class="checkbox"`
 //! carries no `btn-*`/`input-*`/`select-*` sizing class, so
 //! [`every_sizing_class_site_composes_the_touch_target`] never sees
 //! it — and `TT-002` §8 already named the check this handoff needed
@@ -491,8 +491,8 @@ fn bare_class_identifier(tag: &str) -> Option<&str> {
 /// True if `tag`'s `class=` value is a bare identifier (see
 /// [`bare_class_identifier`]) and the *nearest* `let` binding of that
 /// identifier **before** `tag_start` in `source` has `grow(` as the
-/// **outermost call of its initialiser** -- `TT-004-review.md` round 2
-/// §2/§3: requiring `grow(` merely to *appear* in the initialiser
+/// **outermost call of its initialiser** -- requiring `grow(` merely
+/// to *appear* in the initialiser
 /// passed `let cls = if cond { grow("...") } else { "...".to_string() };`,
 /// where only one branch actually grows and the other reaches this
 /// guard as a plain string. That is not a contrived shape -- it is

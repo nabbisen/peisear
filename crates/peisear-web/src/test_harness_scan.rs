@@ -1,11 +1,10 @@
-//! `QA-001-review.md` §3.1 — a deterministic guard for the property
-//! the repeated-run gate in `CONTRIBUTING.md` was standing in for
-//! and cannot reliably detect: **the test harness must not derive a
-//! temporary path from the clock.**
+//! A deterministic guard for the property the repeated-run gate in
+//! `CONTRIBUTING.md` was standing in for and cannot reliably detect: **the
+//! test harness must not derive a temporary path from the clock.**
 //!
-//! The review measured the repeated `cargo test --workspace` gate's
-//! detection rate directly (not reasoned about it) and found it is a
-//! property of machine load, not of the defect: 3/6 failures on a
+//! Measured directly, not reasoned about: the repeated `cargo test
+//! --workspace` gate's own detection rate for this harness bug is a
+//! property of machine load, not of the defect — 3/6 failures on a
 //! loaded machine, 0/6 on a quiet one, with the harness bug fully
 //! present both times. A probabilistic gate cannot protect a
 //! deterministic property. `TestApp::spawn`
@@ -25,15 +24,14 @@
 //! directory internally, so a harness that already migrated to it
 //! never calls `create_dir_all` for any reason).
 //!
-//! **`QA-001-corrections-review.md` §3**: the first version of this
-//! guard watched two named files. The property holds over every test
-//! harness, not two chosen ones — the same defect already appeared
-//! independently in two crates, which is evidence about how it
-//! spreads, not about how many files it lives in. Now walks
-//! `crates/*/tests/**.rs` workspace-wide instead. The signature is
-//! narrow enough that this costs nothing: a comment-stripped scan
-//! over all matching files (23, at review time) returns zero hits
-//! outside the two files that ever had the defect.
+//! **Widened past its first version**, which watched two named files. The
+//! property holds over every test harness, not two chosen ones — the same
+//! defect already appeared independently in two crates, which is evidence
+//! about how it spreads, not about how many files it lives in. Now walks
+//! `crates/*/tests/**.rs` workspace-wide instead. The signature is narrow
+//! enough that this costs nothing: a comment-stripped scan over all matching
+//! files (23, at review time) returns zero hits outside the two files that
+//! ever had the defect.
 
 use std::fs;
 use std::path::{Path, PathBuf};

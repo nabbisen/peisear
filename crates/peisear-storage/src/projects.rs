@@ -180,12 +180,12 @@ pub async fn update_guarded(
 /// and `rows_affected() == 0 → NotFound` turns that into "no such
 /// project for you" — the concealment behaviour external design §9
 /// asks for — rather than a distinguishable "found it, but you can't
-/// touch it" response. `QA-002-review.md` §4.1: a handler-level
-/// ownership check was added on top of this, on a misdiagnosis that
-/// this function reported success on a zero-row delete; it does not,
-/// and the handler check was reverted. This comment exists so the
-/// next reader sees why the row count is deliberate before mistaking
-/// it for a gap the way that review did.
+/// touch it" response. A handler-level ownership check was once
+/// added on top of this, on a misdiagnosis that this function
+/// reported success on a zero-row delete; it does not, and the
+/// handler check was reverted. This comment exists so the next
+/// reader sees why the row count is deliberate before mistaking it
+/// for a gap the same way.
 pub async fn delete(pool: &Pool, id: &str, owner_id: &str) -> StorageResult<()> {
     delete_guarded(pool, id, owner_id, None)
         .await

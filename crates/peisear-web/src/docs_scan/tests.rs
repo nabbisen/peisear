@@ -329,17 +329,92 @@ fn rule_5_population_includes_docs_and_rfcs_but_excludes_handoffs() {
     );
 }
 
-/// Live, not `#[ignore]`d: `DOC-002` closed the real gap (19 citations,
-/// 15 of them resolved to a rewrite or a cut, four kept as the
-/// exceptions above), so the rule that could never pass before now can,
-/// and is enforced rather than merely reported.
+/// Live, not `#[ignore]`d. `DOC-002` closed the path-spelling gap (19
+/// citations); `GRD-003` closes the bare-file-name gap the path needle
+/// could never see (64 citations across 21 files, the same shape
+/// `§10.36` names: a rule named for a subject and keyed on a string
+/// enforces the string). Both needles summed here -- a citation that
+/// spells the path and one that spells the bare name are the same
+/// defect under this rule's own name.
 #[test]
-fn no_document_rfc_or_published_doc_comment_cites_git_exclude() {
+fn no_document_rfc_or_published_doc_comment_cites_a_private_file() {
     let mut files = docs_and_rfcs_files();
     files.extend(published_doc_comment_lines());
-    let count = git_exclude_citations(&files);
+    let path_count = git_exclude_citations(&files);
+    let review_count = review_file_citation_count(&files);
     assert_eq!(
-        count, 0,
-        "{count} citations to .git-exclude/ remain outside the named exceptions"
+        path_count, 0,
+        "{path_count} citations to .git-exclude/ remain outside the named exceptions"
     );
+    assert_eq!(
+        review_count, 0,
+        "{review_count} bare review-file-name citations remain -- extract the substance \
+         or re-point to a published handoff, never publish the private file itself"
+    );
+}
+
+/// `GRD-003 §4` constraint 2: both house-style spellings, with and
+/// without `.md`, must be caught.
+#[test]
+fn review_file_citations_catches_both_spellings() {
+    let with_md = "see `QA-002-review.md` §3 for the reasoning";
+    let without_md = "see `QA-002-review` §3 for the reasoning";
+    assert_eq!(review_file_citations(with_md), vec!["QA-002-review.md"]);
+    assert_eq!(review_file_citations(without_md), vec!["QA-002-review"]);
+}
+
+/// `GRD-003 §4` constraint 3 and `§1`'s own residual: an ordinary
+/// hyphenated prose word ending in "review" must not match, and must
+/// not need an exception list to exclude -- the identifier-shape check
+/// on the prefix is what does this, not a name on a list.
+#[test]
+fn review_file_citations_does_not_match_ordinary_prose() {
+    let text = "the author is mid-review; this needs a design-review before merge";
+    assert!(
+        review_file_citations(text).is_empty(),
+        "an ordinary lowercase-prefixed word ending in -review must not match: {:?}",
+        review_file_citations(text)
+    );
+}
+
+/// A longer word built on the suffix (`reviewed`/`reviewing`/`reviewer`)
+/// must not match -- the right-hand boundary check, not just the left.
+#[test]
+fn review_file_citations_does_not_match_a_longer_word_on_the_suffix() {
+    let text = "QA-002-reviewed this already; QA-002-reviewer noted it; QA-002-reviewing now";
+    assert!(
+        review_file_citations(text).is_empty(),
+        "a longer word built on the suffix must not match: {:?}",
+        review_file_citations(text)
+    );
+}
+
+/// Widened past `-review` alone (`GRD-003 §4`'s residual): the private
+/// area's other real suffixes, `-decision`/`-decisions`/
+/// `-recommendation`, measured against its own listing, not assumed.
+#[test]
+fn review_file_citations_catches_the_widened_suffixes() {
+    let text = "`ISSUE-006-decision.md` says one thing, `DOC-900-decisions` another, \
+                `QA-900-recommendation.md` a third";
+    let mut found = review_file_citations(text);
+    found.sort();
+    let mut expected = vec![
+        "ISSUE-006-decision.md".to_string(),
+        "DOC-900-decisions".to_string(),
+        "QA-900-recommendation.md".to_string(),
+    ];
+    expected.sort();
+    assert_eq!(found, expected);
+}
+
+/// `GRD-003 §10`'s own exit condition: the widened rule must be shown
+/// failing on a planted citation, not merely passing because nothing
+/// was ever tried against it.
+#[test]
+fn a_planted_bare_review_citation_is_caught() {
+    let files = vec![(
+        "x.md".to_string(),
+        "see `QA-999-review.md` §1 and `TT-999-review` §2".to_string(),
+    )];
+    assert_eq!(review_file_citation_count(&files), 2);
 }

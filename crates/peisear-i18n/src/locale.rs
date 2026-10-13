@@ -13,7 +13,7 @@
 //! aren't caught by `wildcard_enum_match_arm` alone — see that
 //! module's doc comment): a `_ => ...` arm in [`Locale::render`]
 //! would compile without these denies and silently stop guaranteeing
-//! every shipped locale handles every key (`I18N-001-review.md` §4).
+//! every shipped locale handles every key.
 #![deny(clippy::wildcard_enum_match_arm)]
 #![deny(clippy::match_wildcard_for_single_variants)]
 

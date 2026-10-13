@@ -10,9 +10,9 @@
 //! The two `#![deny]`s below are what keep that guarantee from being
 //! able to quietly dissolve: without them, a future `_ => ...` arm
 //! added to any match in this file would compile cleanly and
-//! silently stop distinguishing a missing key from a handled one
-//! (`I18N-001-review.md` §4) — the exhaustiveness guarantee would go
-//! back to being a convention, exactly the failure mode this release
+//! silently stop distinguishing a missing key from a handled one —
+//! the exhaustiveness guarantee would go back to being a convention,
+//! exactly the failure mode this release
 //! exists to replace. Two lints, not one: `wildcard_enum_match_arm`
 //! alone does **not** fire when the wildcard covers exactly one
 //! remaining variant — verified empirically while implementing this
@@ -1451,10 +1451,10 @@ fn bell_count(count: i64) -> String {
 /// The three destinations a back-link can name. Lowercase throughout,
 /// consistent with `NavSignOut`'s sentence-case convention ("Sign
 /// out", not "Sign Out") — the leading word of the enclosing "Back
-/// to " phrase carries the capital, not this word. `I18N-005a-review.md`
-/// §2's own evidence for why this needed a table: the two call sites
-/// this crate never saw had already drifted to "Projects" and
-/// "sprints".
+/// to " phrase carries the capital, not this word. This is why a
+/// table was needed: the call sites this crate never saw had already
+/// drifted to "Projects" and "sprints" (see
+/// [`MessageKey::BackToSection`]'s own doc comment).
 fn nav_section(section: NavSection) -> &'static str {
     match section {
         NavSection::Projects => "projects",
@@ -1585,11 +1585,12 @@ fn sprint_status_label(label: SprintStatusLabel) -> &'static str {
 }
 
 /// Same three templates as `MessageKey::SprintCardSummary*`
-/// (deliberately not shared with those arms — I18N-005c-review §3's
-/// point is that `SprintCardAriaLabel` composes its own summary
-/// clause from typed data in one place, not that the two sibling
-/// keys must be deduplicated against each other). `carried_over_points`
-/// and `committed_count` are unused outside their own status branch;
+/// (deliberately not shared with those arms — the point
+/// [`MessageKey::SprintCardAriaLabel`]'s own doc comment makes is
+/// that it composes its own summary clause from typed data in one
+/// place, not that the two sibling keys must be deduplicated against
+/// each other). `carried_over_points` and `committed_count` are
+/// unused outside their own status branch;
 /// callers pass `0` for whichever doesn't apply.
 fn sprint_card_summary_text(
     status: SprintStatusLabel,

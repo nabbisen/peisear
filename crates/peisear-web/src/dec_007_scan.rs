@@ -36,17 +36,15 @@
 //! for both transcripts; a real `.github/CONTRIBUTING.md` edit is not
 //! something to leave embedded in this file's own test code.
 //!
-//! **Matches on `-p <name>`, not on `<name>` alone**
-//! (`QA-004-review.md` §2). Every line in the block runs `-p
-//! <crate>`, so that pair is the actual invariant — matching the bare
-//! name would let a comment that merely *mentions* a crate (`# note:
-//! peisear itself is the facade crate`) satisfy the scan with no
-//! command present at all, which is a silent pass on the exact defect
-//! this guard exists for. The one thing this gives up: `cargo test
-//! --package peisear` (the long flag) would fail the guard even
-//! though it runs the crate. That is a false alarm with a clear
-//! message pointing at this file, not a false pass — the direction
-//! worth erring toward.
+//! **Matches on `-p <name>`, not on `<name>` alone.** Every line in the
+//! block runs `-p <crate>`, so that pair is the actual invariant — matching
+//! the bare name would let a comment that merely *mentions* a crate (`#
+//! note: peisear itself is the facade crate`) satisfy the scan with no
+//! command present at all, which is a silent pass on the exact defect this
+//! guard exists for. The one thing this gives up: `cargo test --package
+//! peisear` (the long flag) would fail the guard even though it runs the
+//! crate. That is a false alarm with a clear message pointing at this file,
+//! not a false pass — the direction worth erring toward.
 //!
 //! **A qualifying line must not be a `--test <target>` line**
 //! (`QA-005` §3). `peisear-web`'s own case is the reason: it appeared
@@ -78,30 +76,27 @@
 //! through `--test` lines, and does not claim to know what any
 //! crate's tests currently contain.
 //!
-//! **A qualifying line must not be commented out** (`QA-005-review.md`
-//! §2). `-p <name>` matching stops a *prose mention* of a crate
-//! (`QA-004`'s hole); it does not stop a *disabled command* — `#
-//! cargo test -p peisear-web --lib` still names `peisear-web` at a
-//! word boundary, on a non-`--test` line, and commenting a line out is
-//! how a command actually gets disabled far more often than deleting
-//! it. A qualifying line's trimmed form must not start with `#`.
+//! **A qualifying line must not be commented out.** `-p <name>` matching
+//! stops a *prose mention* of a crate (`QA-004`'s hole); it does not stop a
+//! *disabled command* — `# cargo test -p peisear-web --lib` still names
+//! `peisear-web` at a word boundary, on a non-`--test` line, and commenting
+//! a line out is how a command actually gets disabled far more often than
+//! deleting it. A qualifying line's trimmed form must not start with `#`.
 //!
-//! **This guard has been strengthened three times, each by planting
-//! the next-most-realistic way the block could lie** — after the bare
-//! substring match on the crate name, which was never shipped as a
-//! hole: `appears_at_word_boundary` existed from `QA-004`'s first
-//! version specifically to defeat it, proved at the time by planting
-//! the facade's line missing while its `peisear-*` siblings stayed
-//! present. The three real corrections, in order: a comment merely
-//! mentioning the crate with no command behind it (`QA-004-review.md`
-//! §2 → matched on `-p <name>`, not the bare name), a `--test
-//! <target>` line standing in for the crate's own library scope
-//! (`QA-005` §3 → the not-a-`--test`-line requirement), and a
-//! commented-out command (`QA-005-review.md` §2 → the
-//! not-commented-out requirement above). All three share a shape: a
-//! line that *looks* like coverage but is not a command that runs. A
-//! future reader extending this file again should expect the next
-//! hole to take that same shape.
+//! **This guard has been strengthened three times, each by planting the
+//! next-most-realistic way the block could lie** — after the bare substring
+//! match on the crate name, which was never shipped as a hole:
+//! `appears_at_word_boundary` existed from `QA-004`'s first version
+//! specifically to defeat it, proved at the time by planting the facade's
+//! line missing while its `peisear-*` siblings stayed present. The three
+//! real corrections, in order: a comment merely mentioning the crate with no
+//! command behind it (matched on `-p <name>`, not the bare name), a `--test
+//! <target>` line standing in for the crate's own library scope (the
+//! not-a-`--test`-line requirement), and a commented-out command (the
+//! not-commented-out requirement above). All three share a shape: a line
+//! that *looks* like coverage but is not a command that runs. A future
+//! reader extending this file again should expect the next hole to take that
+//! same shape.
 
 use std::fs;
 use std::path::Path;
@@ -155,9 +150,9 @@ pub(crate) fn appears_at_word_boundary(haystack: &str, needle: &str) -> bool {
 
 /// True if some line in `block` both names `name` via `-p <name>` (at
 /// a word boundary), is not itself a `--test <target>` line, and is
-/// not commented out — see the module doc's `QA-005` §3 and
-/// `QA-005-review.md` §2 notes for why a `--test` line and a `#`
-/// line don't count as covering a crate's own library target.
+/// not commented out — see the module doc's own notes for why a
+/// `--test` line and a `#` line don't count as covering a crate's own
+/// library target.
 fn covers_own_lib_tests(block: &str, name: &str) -> bool {
     let flag = format!("-p {name}");
     block.lines().any(|line| {

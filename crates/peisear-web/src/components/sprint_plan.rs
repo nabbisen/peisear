@@ -10,7 +10,7 @@
 //! the no-JavaScript path, the keyboard path and the touch path;
 //! `plan.js` enhances rather than replaces them.
 //!
-//! ## Three shapes, not two (`PLAN-001-review.md` §3.2)
+//! ## Three shapes, not two: a viewer's page is not a completed sprint's
 //!
 //! | Sprint status | Role | Backlog column | Move buttons | Drag (`PLAN-002`) |
 //! |---|---|---|---|---|
@@ -282,14 +282,12 @@ fn render_filter_form(
 /// missing-looking key.
 ///
 /// Eight keys: two "moved to" announcements, the undo label, the two
-/// empty-state messages (reused byte-for-byte from the no-JavaScript
-/// page, not restated), one message for an undo that did not apply,
-/// and — round 2 (`PLAN-002-review.md` §6c) — the two move-button
-/// labels, so the script can bring a moved row's own form (its
-/// fallback path) into line with its new position without authoring
-/// a string: `MoveToSprintButton`/`MoveToBacklogButton` already
-/// exist and render the buttons themselves, reused rather than
-/// restated.
+/// empty-state messages (reused byte-for-byte from the no-JavaScript page,
+/// not restated), one message for an undo that did not apply, and — round 2
+/// — the two move-button labels, so the script can bring a moved row's own
+/// form (its fallback path) into line with its new position without
+/// authoring a string: `MoveToSprintButton`/`MoveToBacklogButton` already
+/// exist and render the buttons themselves, reused rather than restated.
 fn render_plan_copy_assets() -> impl IntoView {
     let copy = serde_json::json!({
         "movedToSprint": t(MessageKey::PlanMovedToSprintAnnouncement),

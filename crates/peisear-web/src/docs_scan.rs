@@ -24,7 +24,10 @@
 //! 4. Documented environment-variable defaults, against `config.rs`'s
 //!    `unwrap_or_else`/`unwrap_or` fallbacks.
 //! 5. No document under `docs/`, no RFC, and no published doc comment
-//!    cites `.git-exclude/`, a gitignored path -- four named exceptions.
+//!    cites the private area -- not only its gitignored path spelled out,
+//!    but a citation written as the bare review-file name (`` `QA-002-
+//!    review.md` §3 ``), the form this project actually uses and the one
+//!    the original rule never saw (`GRD-003`) -- four named exceptions.
 //!    Its population (hundreds of files under `docs/`, `rfcs/`, and
 //!    `crates/*/src/`) is too large for this module's [`Input`] to hold
 //!    cheaply the way rules 1-4's few fixed documents can, so its
@@ -670,10 +673,20 @@ fn walk_rule_5_markdown(root: &Path, dir: &Path, out: &mut Vec<(String, String)>
     }
 }
 
-/// Every `///` or `//!` line across `crates/*/src/` -- what rustdoc, and
-/// so docs.rs, actually reads. A `//` implementation comment never
-/// reaches a published crate's documentation and is out of this rule's
-/// scope (`DOC-002` §5).
+/// Every `///` or `//!` line across `crates/*/src/`. A `//`
+/// implementation comment never reaches a published crate's
+/// documentation and is out of this rule's scope (`DOC-002` §5).
+///
+/// **A deliberate over-approximation of what rustdoc, and so docs.rs,
+/// actually publishes, not a measurement of it** (`GRD-003 §3`): this
+/// walks every `.rs` file under `crates/*/src/`, including the
+/// `#[cfg(test)]`-gated scan modules and private submodules rustdoc
+/// never renders. An over-approximation on a *ban* costs nothing --
+/// there is no legitimate reason to write a citation of
+/// `.git-exclude/` inside a test-only module either -- so this is not
+/// narrowed to the published subset. Narrowing it would add attribute
+/// parsing to a rule whose whole design is a filesystem walk, to
+/// permit something nobody wants to write.
 fn published_doc_comment_lines() -> Vec<(String, String)> {
     let root = repo_root();
     let mut out = Vec::new();
@@ -729,6 +742,120 @@ fn git_exclude_citations(files: &[(String, String)]) -> usize {
     files
         .iter()
         .map(|(_, text)| text.matches(".git-exclude").count())
+        .sum()
+}
+
+/// True if `c` can appear inside the identifier token this needle looks
+/// for -- a letter, a digit, `.` (`REL-0.51.0`'s own dots) or `-`
+/// (`DEV-001-004`'s own multi-hyphen shape).
+fn is_review_id_token_char(c: char) -> bool {
+    c.is_ascii_alphanumeric() || c == '.' || c == '-'
+}
+
+/// True if `prefix` -- the token immediately before a `-review`/
+/// `-review.md` suffix -- has the shape this project's own private-area
+/// naming uses: an uppercase ID (`[A-Z][A-Z0-9]*`) followed by `-` and a
+/// digit. `TT-003`, `I18N-005c`, `QA-001`, `REL-0.51.0` and
+/// `DEV-001-004` all qualify; an ordinary hyphenated prose word
+/// (`mid-review`, `design-review`) does not, because its first segment
+/// is lowercase -- `§10.x`'s own residual note: this is what keeps the
+/// needle from needing an exception list for prose that merely contains
+/// the word "review".
+fn is_review_id_shape(prefix: &str) -> bool {
+    let Some(dash) = prefix.find('-') else {
+        return false;
+    };
+    let id = &prefix[..dash];
+    let first_upper = id.chars().next().is_some_and(|c| c.is_ascii_uppercase());
+    let id_shape = first_upper
+        && !id.is_empty()
+        && id
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit());
+    if !id_shape {
+        return false;
+    }
+    prefix[dash + 1..]
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_digit())
+}
+
+/// The private area's own naming suffixes this needle catches, measured
+/// against `.git-exclude/reviewed/`'s actual listing (`GRD-003 §4`):
+/// **199** end `-review`, **21** `-recommendation`, **3** `-decision`,
+/// **1** `-decisions` -- 224 of 225 files. (The remaining one,
+/// `ISSUE-001-decision.md`, is the same suffix; the count is of
+/// citations, not files, and that file is cited only from inside
+/// `rfcs/handoffs/`, outside rule 5's population.) Each is tried with
+/// and without a trailing `.md`.
+const REVIEW_FILE_SUFFIXES: &[&str] = &["review", "recommendation", "decisions", "decision"];
+
+/// Every bare review-file citation in `text`: a token ending in one of
+/// [`REVIEW_FILE_SUFFIXES`] (with or without a trailing `.md`), bounded
+/// on the left by a non-identifier character (or the start of `text`)
+/// and on the right by a non-alphanumeric character (or the end of
+/// `text`) -- so `-reviewed`/`-reviewer`/`-reviewing` never match --
+/// whose prefix has [`is_review_id_shape`]. This is the needle
+/// `GRD-003` widens rule 5 with: a citation written as the bare file
+/// name (`` `QA-002-review.md` §3 ``) spells no path at all, so the
+/// literal `.git-exclude` match in [`git_exclude_citations`] has never
+/// seen one.
+///
+/// **Stated residual, not discovered later**: four files under
+/// `.git-exclude/reviewed/` use a multi-word descriptive name rather
+/// than an ID-digit-suffix shape (`DOCS-AUDIT-user-facing-documentation`
+/// and three siblings) -- not caught, and not catchable without an
+/// exception list, since nothing distinguishes that shape from an
+/// ordinary compound document title. None is cited anywhere in rule
+/// 5's population today (checked, not assumed); if one ever is, this is
+/// where that citation would go uncaught.
+fn review_file_citations(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    for suffix in REVIEW_FILE_SUFFIXES {
+        let needle = format!("-{suffix}");
+        let mut search_from = 0;
+        while let Some(rel) = text[search_from..].find(needle.as_str()) {
+            let dash_pos = search_from + rel;
+            let after_suffix = dash_pos + needle.len();
+            let end = if text[after_suffix..].starts_with(".md") {
+                after_suffix + 3
+            } else {
+                after_suffix
+            };
+            let right_boundary_ok = text[end..]
+                .chars()
+                .next()
+                .is_none_or(|c| !c.is_ascii_alphanumeric());
+            if right_boundary_ok {
+                let mut start = dash_pos;
+                while start > 0 {
+                    let c = text[..start].chars().next_back().expect("non-empty");
+                    if is_review_id_token_char(c) {
+                        start -= c.len_utf8();
+                    } else {
+                        break;
+                    }
+                }
+                let prefix = &text[start..dash_pos];
+                if is_review_id_shape(prefix) {
+                    out.push(text[start..end].to_string());
+                }
+            }
+            search_from = after_suffix;
+        }
+    }
+    out
+}
+
+/// Occurrences, not distinct IDs -- the same shape
+/// [`git_exclude_citations`] reports in. Added to that count, this is
+/// rule 5's own enforced total (`no_document_rfc_or_published_doc_
+/// comment_cites_a_private_file`, below).
+fn review_file_citation_count(files: &[(String, String)]) -> usize {
+    files
+        .iter()
+        .map(|(_, text)| review_file_citations(text).len())
         .sum()
 }
 

@@ -1,12 +1,11 @@
 use super::*;
 
-/// `I18N-005d-review.md` §2.2: `kind_label_for`/`channel_label_for`
-/// end in `_ => None`, so there is no type for the compiler to be
-/// exhaustive over at this seam — adding a notification kind or
-/// channel in `peisear-core` without updating the map here would
-/// ship a raw id to a user's inbox with no compile error, no
-/// guard rejection. This test converts that hole into a failing
-/// test the moment a kind/channel is declared without a label.
+/// `kind_label_for`/`channel_label_for` end in `_ => None`, so there is no
+/// type for the compiler to be exhaustive over at this seam — adding a
+/// notification kind or channel in `peisear-core` without updating the map
+/// here would ship a raw id to a user's inbox with no compile error, no
+/// guard rejection. This test converts that hole into a failing test the
+/// moment a kind/channel is declared without a label.
 #[test]
 fn every_declared_notification_kind_has_a_label() {
     for kind_id in peisear_core::notifications::kind::all_user_facing() {

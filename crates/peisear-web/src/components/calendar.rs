@@ -134,21 +134,19 @@ fn plan_datetime_attr(dt: Option<chrono::DateTime<chrono::Utc>>) -> String {
 /// `DEC-021` permits JS only as an enhancement over a working no-JS
 /// path, and this is the no-JS path.
 ///
-/// `CAL-003` §3.3: each block is now a wrapper `<div>` (identity,
-/// position, `draggable`) around the same `<a>` (appearance, `href`,
+/// `CAL-003` §3.3: each block is now a wrapper `<div>` (identity, position,
+/// `draggable`) around the same `<a>` (appearance, `href`,
 /// `draggable="false"`) — the board card's own shape
-/// (`components/issues.rs::IssueCard`), for the same reason: a
-/// `<form>` can't nest inside an `<a>`, so a future sibling element
-/// (an undo affordance, say) needs the wrapper to attach to, and an
-/// `<a href>` is draggable by browser default, which `board.js`
-/// already paid to learn the hard way (`DEV-002-005-review.md`
-/// §1.3). **`bg-primary/15` and `href` stay on the `<a>`** —
-/// `touch_target_scan`'s `is_named_escalation_exclusion` keys on the
-/// former, and the latter is the plain path (a click still
-/// navigates). The wrapper introduces no new site for
-/// `NFR-A11Y-007`: it carries no `role`, no handler of its own
-/// visible to assistive tech, the same non-interactive status the
-/// board card's wrapper `<div>` already has.
+/// (`components/issues.rs::IssueCard`), for the same reason: a `<form>`
+/// can't nest inside an `<a>`, so a future sibling element (an undo
+/// affordance, say) needs the wrapper to attach to, and an `<a href>` is
+/// draggable by browser default, which `board.js` already paid to learn the
+/// hard way. **`bg-primary/15` and `href` stay on the `<a>`** —
+/// `touch_target_scan`'s `is_named_escalation_exclusion` keys on the former,
+/// and the latter is the plain path (a click still navigates). The wrapper
+/// introduces no new site for `NFR-A11Y-007`: it carries no `role`, no
+/// handler of its own visible to assistive tech, the same non-interactive
+/// status the board card's wrapper `<div>` already has.
 fn render_day_view(
     day: &CalendarDay,
     project_badge_for: impl Fn(&Issue) -> Option<String>,

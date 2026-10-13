@@ -62,9 +62,9 @@ views pack several chips into one cell.
 1. **A draggable link drags the link.** An `<a href>` is draggable by browser
    default, and D-2 hit this exactly: without `draggable="false"` the drag
    became a link drag, carrying the href in `dataTransfer` and showing the
-   link ghost, because two nested drag sources existed
-   (`DEV-002-005-review.md` §1.3). Whatever this substep attaches, that trap is
-   already documented and must not be re-paid for.
+   link ghost, because two nested drag sources existed. Whatever this
+   substep attaches, that trap is already documented and must not be
+   re-paid for.
 2. **These blocks are two of the three call sites `DEC-050` excluded from the
    44 px floor**, keyed in `touch_target_scan.rs` on `bg-primary/1` — because a
    block's height is proportional to an appointment's duration and a 44 px

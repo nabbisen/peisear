@@ -68,13 +68,12 @@
 //! column's `min-w-0` is what bounds it) and the list view's
 //! `<select>` (a control, not text). Three shapes, three rows.
 //!
-//! **This is not guarded from source.** Which text is user-supplied is
-//! not a property a scan can read off a class string
-//! (`LAYOUT-003-review.md` §4). What catches it is the overflow gate's
-//! fixture, which since `BROWSER-002` carries a 64-character unbroken
-//! run in the issue title, the project name and the team name — add
-//! new user-text surfaces to `browser-checks/overflow-gate.mjs`'s page
-//! list rather than trusting review to spot the class.
+//! **This is not guarded from source.** Which text is user-supplied is not a
+//! property a scan can read off a class string. What catches it is the
+//! overflow gate's fixture, which since `BROWSER-002` carries a 64-character
+//! unbroken run in the issue title, the project name and the team name — add
+//! new user-text surfaces to `browser-checks/overflow-gate.mjs`'s page list
+//! rather than trusting review to spot the class.
 
 pub mod auth;
 pub mod breadcrumb;
@@ -112,14 +111,13 @@ where
     Html(format!("<!DOCTYPE html>{body}"))
 }
 
-/// Shorthand for `Locale::English.render(key)` — the only locale this
-/// crate ever renders (`NFR-LANG-005`). `I18N-005a-review.md` §6:
-/// the full call was too long to sit comfortably inline in markup, so
-/// components pre-bound every rendered string to a `let` even where
-/// it was only used once. Short enough to inline, so pre-binding can
-/// go back to being a choice — made when a string is used more than
-/// once or needs conditional logic to select, not a requirement for
-/// every rendered string.
+/// Shorthand for `Locale::English.render(key)` — the only locale this crate
+/// ever renders (`NFR-LANG-005`). The full call was too long to sit
+/// comfortably inline in markup, so components pre-bound every rendered
+/// string to a `let` even where it was only used once. Short enough to
+/// inline, so pre-binding can go back to being a choice — made when a string
+/// is used more than once or needs conditional logic to select, not a
+/// requirement for every rendered string.
 pub(crate) fn t(key: peisear_i18n::MessageKey) -> String {
     peisear_i18n::Locale::English.render(key)
 }
@@ -138,13 +136,12 @@ pub(crate) fn t(key: peisear_i18n::MessageKey) -> String {
 /// under `tests/`) needs to read this symbol directly.
 pub const TOUCH_TARGET: &str = "min-h-11 min-w-11";
 
-/// Append [`TOUCH_TARGET`] to `base`'s existing classes — `TT-002`'s
-/// one call site for the `Grow` mechanism (`DEC-049` as amended by
-/// `TT-001-review.md` §2.1: `Grow` is the default, and a `Grow`
-/// cluster inside a positive-`gap` container is presumed to satisfy
-/// clause (2) with no further verification). `TT-003`'s guard checks
-/// for [`TOUCH_TARGET`] as one symbol rather than pattern-matching a
-/// class pair at 136 sites.
+/// Append [`TOUCH_TARGET`] to `base`'s existing classes — `TT-002`'s one
+/// call site for the `Grow` mechanism (`DEC-049` as amended: `Grow` is the
+/// default, and a `Grow` cluster inside a positive-`gap` container is
+/// presumed to satisfy clause (2) with no further verification). `TT-003`'s
+/// guard checks for [`TOUCH_TARGET`] as one symbol rather than
+/// pattern-matching a class pair at 136 sites.
 pub(crate) fn grow(base: &str) -> String {
     format!("{base} {TOUCH_TARGET}")
 }
@@ -223,12 +220,11 @@ pub struct CalendarDay {
 /// `IssueStatus::parse`'s shape for an id that could, in principle,
 /// be unrecognised; callers fall back to the raw id.
 ///
-/// `I18N-005d-review.md` §2.1: this used to be defined identically in
-/// both `notifications.rs` and `notification_preferences.rs` — the
-/// fourth instance this release of the same "second copy invisible
-/// until something consolidates it" pattern (two back-link casings,
-/// three nav-destination casings, a hand-rolled issue-status word in
-/// `sprints.rs`). One mapping, one place, now.
+/// This used to be defined identically in both `notifications.rs` and
+/// `notification_preferences.rs` — the fourth instance this release of the
+/// same "second copy invisible until something consolidates it" pattern (two
+/// back-link casings, three nav-destination casings, a hand-rolled
+/// issue-status word in `sprints.rs`). One mapping, one place, now.
 pub(crate) fn kind_label_for(kind_id: &str) -> Option<peisear_i18n::NotificationKindLabel> {
     use peisear_core::notifications::kind;
     use peisear_i18n::NotificationKindLabel;

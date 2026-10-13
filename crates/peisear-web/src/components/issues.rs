@@ -699,14 +699,13 @@ fn assignee_label<'a>(id: &'a str, assignees: &'a [AssigneeOption]) -> &'a str {
 /// difference is real, not duplication (§4: "keep the rule in one
 /// place; do not force the actions to match").
 ///
-/// **`unconfirmed` does *not* reuse `unavailable`'s copy**
-/// (`JS-003-review.md` §3, round 2 — the original design did, and it
-/// was wrong): `unavailable`'s copy asserts the change *failed*,
-/// which the code cannot support when the server returned `2xx` and
-/// the outcome is merely unconfirmed — it may well have applied. This
-/// product does not assert what it does not know
-/// (`NFR-LANG-002`, `FR-HLT-005`/`006`), so `unconfirmed` gets its own
-/// message, specified at each call site.
+/// **`unconfirmed` does *not* reuse `unavailable`'s copy** — the original
+/// design did, and it was wrong: `unavailable`'s copy asserts the change
+/// *failed*, which the code cannot support when the server returned `2xx`
+/// and the outcome is merely unconfirmed — it may well have applied. This
+/// product does not assert what it does not know (`NFR-LANG-002`,
+/// `FR-HLT-005`/`006`), so `unconfirmed` gets its own message, specified at
+/// each call site.
 ///
 /// `conflictStatus` comes from [`AppError::conflict_status_code`],
 /// never written out as a literal here.

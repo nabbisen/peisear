@@ -144,10 +144,9 @@ pub fn render_breadcrumb(items: Vec<BreadcrumbItem>) -> impl IntoView {
 /// the user arrived via a deep link (e.g. an email). Linking to
 /// the canonical parent URL is the predictable behaviour.
 ///
-/// `section` is a [`NavSection`], not a `String`, per
-/// `I18N-005a-review.md` §2: every caller was naming one of our own
-/// destinations ("Projects", "sprints") rather than user data, and a
-/// raw string let those two drift to different capitalisation
+/// `section` is a [`NavSection`], not a `String`: every caller was naming
+/// one of our own destinations ("Projects", "sprints") rather than user
+/// data, and a raw string let those two drift to different capitalisation
 /// without the guard ever seeing either one.
 pub fn render_back_link(section: NavSection, href: impl Into<String>) -> impl IntoView {
     let href = href.into();
