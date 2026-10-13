@@ -25,12 +25,12 @@ installation.
 |---|---|---|---|
 | GRD-001 | [the helper five scans share](./GRD-001-the-helper-five-scans-share.md) | `strip_line_comments` exists in **six** copies and **five** carry a naive `split("//")` that truncates any line holding `xmlns="http://…"` — five component files. `touch_target_scan` is one of the five, so its answer for those files is **unrelated to its question and clean either way** (`§10.36` in a guard `NFR-A11Y-007` depends on). The sixth copy, `alignment_scan`'s, is already correct. **Reverses `QA-002`'s duplication call for this helper**, which is recorded in a handoff and two source comments and in neither specification | 0.52.0 |
 | GRD-002 | [the fifteen that are wholly tests](./GRD-002-the-fifteen-that-are-wholly-tests.md) | `NFR-MNT-005`'s kind 2, **settled by the owner 2026-10-13: move them.** Fifteen files under `crates/*/src/` are guards with no implementation beside them. Each splits into `<name>.rs` (helpers) + `<name>/tests.rs` (the `#[test]`s) — the owner's own `project-instructions-rust.md` shape, already used by the nine kind-1 files at `0.51.0`. **Zero build cost**; `§10.37` closes | 0.52.0 |
-| GRD-003 | the needle that cannot see what it bans | Rule 5 scans documents, RFCs **and published doc comments**, but matches the gitignored path itself — and a citation written as a bare review-file name never spells it. **31 such files are cited 60 times across 25 files in `crates/`, 27 of them in doc comments that render on docs.rs.** Widen the needle, then close the sixty by extracting the substance, never by publishing the review | 0.52.0 |
+| GRD-003 | [the needle that cannot see what it bans](./GRD-003-the-needle-that-cannot-see-what-it-bans.md) | Rule 5 scans documents, RFCs **and published doc comments**, but matches the gitignored path itself — and a citation written as a bare review-file name never spells it. **29 such files are cited 64 times across 21 files** — 60 in doc comments, two in `requirements.md` itself — **and the rule reports zero.** `DOC-002` closed 19 of the path spelling while these sat in the same files. Clear them by extracting the substance, never by publishing the review; *then* widen the needle, to a shape that reads nothing under the gitignored path | 0.52.0 |
 
 **Order is deliberate.** `GRD-001` first: it is a live defect, and it
 edits the helper half of five files that `GRD-002` then splits — one
 edit each rather than two. `GRD-003` last, because it touches doc
-comments across 25 files and should land when nothing else is moving
+comments across 21 files and should land when nothing else is moving
 them.
 
 ---
