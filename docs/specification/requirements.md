@@ -2656,6 +2656,28 @@ Conformance therefore requires the guard **and** measurement in a browser, and
 this entry says so rather than letting a green guard read as a claim about the
 rendered product — which is the shape `QA-009` found when `MessageKey::all()`
 was missing five live `aria-label` variants the P0 guard had never read.
+
+*Amended (0.52.0) — `alignment_scan`'s own coverage, stated here rather
+than left in the scan's doc comment.* `DOC-005` added `alignment_scan`
+(0.51.0) to hold the `grow()`/`grow_text()` split this entry's
+amendment depends on. **Both of its tests iterate quoted string
+literals, so a call whose argument is an identifier is invisible to
+them.** Measured: `grow(` has **171** call sites and **176** literal
+arguments — the five `let`-bound `grow(if … else …)` calls
+(`calendar.rs:375`, `issues.rs:54`, `:59`, `:1087`, `:1939`) carry two
+each, and all ten are skipped because no enclosing tag can be
+attributed, which the module doc names. `grow_text(` has **41** call
+sites and **37** literal arguments: four take a constant,
+`grow_text(MENU_FOCUS_RING)` at `layout.rs:312`–`315`. **So the
+grow-text guard examines 37 of 41 sites, and that limit is named
+nowhere** — the scan's own comment records it leaving the `grow` test
+(*"`MENU_FOCUS_RING`'s four sites moved to `grow_text`"*) without
+recording that it arrived in the other. **No live violation**: all four
+are `<a>` elements, and the test only fires on a form control. Widening
+the needle to resolve a constant to its value is not done here; stating
+what the guard does not look at is. Same shape, and the same remedy, as
+`NFR-CONC-003`'s own first-column limit at 0.51.0.
+
 *Source*: `SPEC §33.2`. *Status*: **Met with a named, counted population** (`TT-004`, 0.32.0). Every
 `<a>`, `<button>` and `<summary>` in `src/components/` reaches 44 × 44 or carries
 the one declared exception — **one site**, the notifications footer link that
