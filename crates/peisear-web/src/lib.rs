@@ -43,6 +43,8 @@ pub mod jobs;
 mod one_encoder_scan;
 #[cfg(test)]
 mod prose_scan;
+#[cfg(test)]
+mod scan_support;
 pub mod state;
 #[cfg(test)]
 mod static_js_scan;

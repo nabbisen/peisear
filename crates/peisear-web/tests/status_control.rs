@@ -71,9 +71,10 @@ fn location_of(resp: &axum_test::TestResponse) -> String {
 
 /// Pull `value="..."` from `<input type="hidden" name="{field}"
 /// value="...">` in rendered HTML. Same minimal shape as
-/// `confirmation.rs`'s own copy — duplicated rather than shared, the
-/// same call `QA-002` made for `strip_line_comments`: small enough
-/// that sharing costs more than it saves.
+/// `confirmation.rs`'s own copy — duplicated rather than shared: a
+/// straight-line helper that reads one thing and returns it, the kind
+/// `requirements.md §10.38` says may stay duplicated (unlike
+/// `strip_line_comments`, which carried state and did not).
 fn extract_hidden_field(body: &str, field: &str) -> Option<String> {
     let marker = format!(r#"name="{field}" value=""#);
     let start = body.find(&marker)? + marker.len();

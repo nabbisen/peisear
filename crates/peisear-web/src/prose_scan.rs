@@ -62,6 +62,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::scan_support::strip_line_comments;
+
 /// Attribute names this scan treats as copy-bearing. `onsubmit` is
 /// here because of the nine `confirm('…')` dialogs, not because
 /// `onsubmit` is copy-bearing in general — see [`ALLOWLIST`].
@@ -138,31 +140,6 @@ fn is_allowlisted(v: &Violation) -> bool {
 /// above an already-caught literal; the scan passed, silently. Fixed
 /// by checking whether `;` or `{` comes first after the marker: `;`
 /// first means a brace-less item, and the item ends there.
-/// `QA-002` item 3. Strips `//`-style line comments (plain, `///` doc
-/// comments, and `//!` inner doc comments alike — all start with
-/// `//`) so a comment that *mentions* an attribute-shaped or
-/// text-node-shaped string this scan looks for — the way this
-/// module's own doc comment on `confirmation.rs` once did — is not
-/// mistaken for real markup. `test_harness_scan.rs` had the identical
-/// need and solved it first (`QA-001`'s round-1 correction); this is
-/// that same function, deliberately duplicated rather than shared —
-/// small enough that a shared module would add more indirection than
-/// it saves, and duplication keeps this port from being able to
-/// change `test_harness_scan`'s behaviour as a side effect.
-///
-/// Line-based and does not account for `//` appearing inside a string
-/// literal — a real attribute value containing `//` (a URL, say)
-/// would have its tail truncated rather than being missed outright.
-/// No attribute in [`SCOPED_ATTRS`] carries one in this tree today;
-/// `test_harness_scan.rs` carries the identical documented limitation.
-fn strip_line_comments(source: &str) -> String {
-    source
-        .lines()
-        .map(|line| line.split("//").next().unwrap_or(""))
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
 fn strip_cfg_test_blocks(src: &str) -> String {
     const MARKER: &str = "#[cfg(test)]";
     let mut result = String::with_capacity(src.len());
@@ -419,75 +396,5 @@ fn all_violations() -> Vec<Violation> {
     violations
 }
 
-#[test]
-fn no_hardcoded_prose_outside_the_message_table() {
-    let unallowed: Vec<Violation> = all_violations()
-        .into_iter()
-        .filter(|v| !is_allowlisted(v))
-        .collect();
-    assert!(
-        unallowed.is_empty(),
-        "hardcoded prose found outside the message table (route through peisear_i18n::MessageKey, \
-         or add a reasoned allowlist entry in prose_scan.rs):\n{}",
-        unallowed
-            .iter()
-            .map(|v| format!("  {}:{} [{}] {:?}", v.file, v.line, v.kind, v.text))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-}
-
-/// `I18N-007` §3's "prove it works": every allowlist entry must
-/// still match something real. If a confirm() dialog is later
-/// converted, its entry becomes dead weight that silently stops
-/// testing anything -- this fails loudly instead.
-#[test]
-fn every_allowlist_entry_still_matches_something() {
-    let violations = all_violations();
-    for entry in ALLOWLIST {
-        let matched = violations
-            .iter()
-            .any(|v| v.file.ends_with(entry.file) && v.text.contains(entry.snippet));
-        assert!(
-            matched,
-            "allowlist entry for {} ({:?}) no longer matches any scanned literal -- \
-             remove it, or if it was fixed, celebrate and remove it",
-            entry.file, entry.snippet
-        );
-    }
-}
-
-/// `QA-002` item 3, test 6. Reproduces the exact false positive found
-/// in `CONF-001`'s review: a doc comment that quotes attribute-shaped
-/// text (the old `onsubmit="return confirm(...)"` defect,
-/// documented in prose) must not be scanned as if it were real
-/// markup, now that `strip_line_comments` removes it before the attr
-/// scan sees it.
-#[test]
-fn a_doc_comment_quoting_attribute_markup_does_not_fail_the_scan() {
-    let source = "//! An old defect quoted for context: onsubmit=\"return confirm('Delete?')\"\nfn example() {}\n";
-    let without_comments = strip_line_comments(source);
-    let mut out = Vec::new();
-    scan_attrs(&without_comments, "fake/path.rs", &mut out);
-    assert!(
-        out.is_empty(),
-        "a doc comment quoting attribute-shaped text must not be scanned as real markup: {out:?}"
-    );
-}
-
-/// `QA-002` item 3, test 7 — the half that matters more (`§4`'s own
-/// framing): a guard made quieter about comments is only an
-/// improvement if it stayed loud where it should. A real
-/// `aria-label` literal in real markup, on the same line shape the
-/// scan expects, must still be caught after the port.
-#[test]
-fn a_real_literal_in_real_markup_still_fails_the_scan() {
-    let source = "fn example() -> impl IntoView {\n    view! {\n        <button aria-label=\"Delete this thing\">{\"Delete\"}</button>\n    }\n}\n";
-    let without_comments = strip_line_comments(source);
-    let mut out = Vec::new();
-    scan_attrs(&without_comments, "fake/path.rs", &mut out);
-    assert!(
-        !out.is_empty(),
-        "a real aria-label literal in real markup must still be caught after the port"
-    );
-}
+#[cfg(test)]
+mod tests;

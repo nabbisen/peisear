@@ -3051,11 +3051,15 @@ is simply a different measurement. **The definition is part of the number.**
 **NFR-MNT-005 — Test organisation**
 Tests MUST be separated from implementation files. In-file `#[test]`
 modules inside implementation source MUST NOT be used.
-*Source*: project convention. *Status*: **Divergent** — **15 files, 60
-in-file tests** contradict this text today: the fourteen test-only
-modules `0.51.0` left open, plus `alignment_scan`, written in the same
-release. Nine files were resolved at `0.51.0`. See `§10.37`, which
-carries the survey's own figures and why they are not these.
+*Source*: project convention. *Status*: **Implemented** (`0.52.0`) —
+**live count zero, measured**: every workspace `.rs` file under
+`crates/*/src/` carrying a `#[test]`/`#[tokio::test]` function now
+either declares `#[cfg(test)] mod tests;` and keeps the test functions
+in a sibling `tests.rs`, or is itself wholly tests, named for its
+subject rather than `tests.rs` (`peisear-core/src/notifications/
+enumeration_guard.rs`, `peisear-web/src/components/me/
+read_first_tests.rs`). The owner settled kind 2 on 2026-10-13: move
+them. See `§10.37`, closed.
 *Priority*: P2.
 
 **NFR-MNT-006 — Tests validate specification, not code shape**
@@ -5843,7 +5847,7 @@ fixing something else. The rule is not "remember this"; it is a question to
 ask of a green check: **what did it examine, and how would I know if the
 answer were nothing?**
 
-### 10.37 `NFR-MNT-005`'s status said one thing while 79 tests said another — **open, status corrected**, `REG-001`'s review, 0.50.0; found 2026-10-11
+### 10.37 `NFR-MNT-005`'s status said one thing while 79 tests said another — **closed**, `REG-001`'s review / `GRD-002`, 0.50.0–0.52.0; found 2026-10-11
 
 **Measured, not estimated.** `NFR-MNT-005` says *"in-file `#[test]` modules
 inside implementation source MUST NOT be used"* and had read `Implemented`.
@@ -5852,12 +5856,21 @@ inside implementation source MUST NOT be used"* and had read `Implemented`.
 `touch_target_scan`, `prose_scan`, `changelog_scan`,
 `updated_at_authority_scan`, and `pool.rs`'s own tests, added this release.
 
-**The practice is almost certainly right and the requirement almost
+~~**The practice is almost certainly right and the requirement almost
 certainly wrong, not the code.** A scan reading the source tree needs
 `env!("CARGO_MANIFEST_DIR")`, which only resolves inside the crate being
 scanned; a unit test of a private helper cannot live in `tests/`, which
 only sees a crate's public surface. Both are reasons this requirement
-never anticipated when it was written.
+never anticipated when it was written.~~ **Corrected, `GRD-002`
+(0.52.0)**: the constraint on `tests/` (the top-level integration-test
+directory, which only sees a crate's public surface) is real, but it was
+never the only place a test can live. `src/<mod>/tests.rs` — a sibling
+file inside the same crate's `src/` tree — resolves `CARGO_MANIFEST_DIR`
+exactly as the implementation file beside it does and sees everything
+`src/` sees, including private items. The argument above was a claim
+about `tests/` specifically, read as a claim about every alternative to
+the same file; checked against the fifteen files it was supposedly
+impossible for, it held for none of them.
 
 **This is `§10.35`'s family seen from the other end** — not a citation
 narrower than a requirement, but a requirement whose text the shipped
@@ -5900,22 +5913,86 @@ tests *from* — `docs_scan`, `touch_target_scan`, `prose_scan`,
 `changelog_scan`, `updated_at_authority_scan`,
 `optimistic_lock_guards` among them — plus **2** files (kind 3)
 declaring a `#[cfg(test)] mod` with no test function of its own.
-Kind 1 moved to
-`src/<mod>/tests.rs`, closing the letter of the text for those 9. Kind
-2 is the open question: **a module that *is* a test has nothing to
-separate tests from**, so whether it violates this requirement's
-*intent* at all — not merely its literal text — is a different
-question than kind 1's. `NFR-MNT-005` restates the owner's own
-`project-instructions-rust.md`, outside this repository, so amending
-the rule past what that document says is not this release's call to
-make unilaterally. **Status stays `Divergent`**: the kind-2 files —
-fourteen surveyed, **fifteen today**, `alignment_scan` being the one
-this release added — still carry in-file tests and the requirement's
-text still prohibits that, unchanged. `§10.37` stays open until the
-owner settles whether kind 2 is a carve-out the source document itself
-should state. **Until it is settled, every new scan written here adds a
-file to the divergent set**, which is the practical cost of leaving it
-open and the reason it should not stay open indefinitely.
+Kind 1 moved to `src/<mod>/tests.rs`, closing the letter of the text
+for those 9. Kind 2 was the open question: **a module that *is* a test
+has nothing to separate tests from**, so whether it violates this
+requirement's *intent* at all — not merely its literal text — read as a
+different question than kind 1's, pending the owner's own
+`project-instructions-rust.md`, outside this repository.
+
+**Closed, `GRD-002` (0.52.0): the owner settled it on 2026-10-13 — move
+them.** Measured against the files, not argued from their shape: every
+one of the fifteen (the fourteen surveyed, plus `alignment_scan`,
+written after the survey) turned out to have helper functions beside
+its tests — from 1 to 29 — so "nothing to separate tests from" was
+never checked against the files it was asserted of. All fifteen split
+into `<name>.rs` + `<name>/tests.rs`, the same shape kind 1 already
+used, at zero build cost (same lib binary, same compile unit).
+`NFR-MNT-005` moves to `Implemented`, live count zero, measured. **The
+general lesson, stated once because this release family met it twice**:
+an argument for why something cannot be done is a claim about the
+files, and is checked against the files — `§10.36`'s own question asked
+of a reason instead of a result.
+
+**One inconsistency left for the owner, not settled here**: the two
+files that were already separated before this release —
+`peisear-core/src/notifications/enumeration_guard.rs` and
+`peisear-web/src/components/me/read_first_tests.rs` — both satisfy
+`NFR-MNT-005`'s text (no implementation file carries their tests) but
+are named for their subject rather than `tests.rs`, and
+`peisear-i18n`'s own equivalent guard lives at
+`peisear-i18n/tests/enumeration_guard.rs` instead of beside
+`peisear-core`'s in `src/`. Both placements individually work:
+`peisear-core` has no `tests/` directory and its CI job runs `--lib`
+only, so a `tests/` file there would silently never run (the file's own
+doc comment states this); `peisear-i18n`'s own `CONTRIBUTING.md` line
+has no `--lib`, so its `tests/` file does run. Whether the workspace
+should prefer one shape consistently is the architect's call, not
+this round's; `GRD-002`'s review records a recommendation.
+
+### 10.38 A shared helper's duplication call had no home to be wrong in — **closed**, `GRD-001`, 0.52.0; found 2026-10-13
+
+**No requirement governs helper duplication.** `QA-002` (0.25.0) chose to
+duplicate `strip_line_comments` across the scan modules rather than
+share it — *"small enough that sharing costs more than it saves"* — and
+that call was recorded in a handoff
+(`rfcs/handoffs/004b-direct-manipulation-board/BOARD-001-board-copy-and-parity.md`)
+and cited as precedent in two source comments
+(`peisear-web/tests/status_control.rs`, `peisear-web/src/contrast_scan.rs`),
+never in either specification — `RFC 0019 §3`'s exact shape, found by
+the same question this release's `GRD-001` round asked of a different
+helper. No `NFR-MNT-0XX` entry is about duplication at all; this entry
+is the rule's home, not a new requirement invented to hold it.
+
+**The call was wrong for this one helper, found by what it cost.** Six
+copies of `strip_line_comments` existed: five identical,
+`line.split("//").next()`, and one — `alignment_scan`'s, written
+independently in `0.51.0` — correct, tracking quote state so a `//`
+inside a real string literal is not read as a comment start. Five
+component files carry `xmlns="http://www.w3.org/2000/svg"`; every naive
+copy truncated those lines mid-literal, corrupting quote-pairing for the
+rest of the file. `touch_target_scan`'s answer for those five files was
+not wrong, it was unrelated to the question, and it reported clean
+either way — `§10.36`'s shape, in a guard `NFR-A11Y-007` depends on.
+
+**The distinction, stated once, here:**
+
+> **A straight-line helper may be duplicated. A parser may not.**
+> `collect_rs_files` and `extract_hidden_field` read one thing and
+> return it; a second copy is either right or obviously wrong.
+> `strip_line_comments` carries state across a line and has edge cases,
+> so six copies were six chances to be wrong *differently* — and were:
+> five shared one bug and the sixth, written later and independently,
+> did not have it. Duplication's real cost is not the lines. It is that
+> a defect found in one copy does not reach the others, and no single
+> copy tells you how many siblings are wrong.
+
+`QA-002`'s reasoning was sound for the cost it priced and did not
+anticipate this one — not an error to correct, a case the original call
+did not cover. **Reversed for this helper only**: `strip_line_comments`
+now lives once, in `peisear-web/src/scan_support.rs`, called from all
+six sites. `collect_rs_files` and `extract_hidden_field` stay
+duplicated under the rule above, not exempted from it.
 
 ## 11. Deferred and future requirements
 
@@ -5968,7 +6045,7 @@ Accepted in principle, deliberately not scheduled.
 | Language | 5 | 1 | 2 | — | 1 | 1 |
 | Security | 7 | 7 | — | — | — | — |
 | Performance | 4 | 4 | — | — | — | — |
-| Maintainability | 10 | 8 | 1 | — | — | 1 (`NFR-MNT-005`; kind 1 resolved at 0.51.0, kind 2 open to the owner's `project-instructions-rust.md`, no target) |
+| Maintainability | 10 | 9 | 1 | — | — | — |
 | Release | 8 | 6 | 1 | — | — | 1 undefined |
 | Compatibility | 6 | 5 | 1 | — | — | — |
 | **Non-functional total** | **66** | **52** | **5** | **0** | **2** | **7** |

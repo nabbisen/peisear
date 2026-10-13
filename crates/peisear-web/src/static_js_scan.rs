@@ -70,6 +70,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::scan_support::strip_line_comments;
+
 /// Files under `static/` this guard does not scan, each with a
 /// reason that is a decision, not "not converted yet" (`I18N-007`
 /// §3's standard, carried over unchanged).
@@ -82,18 +84,6 @@ const ALLOWLIST: &[(&str, &str)] = &[(
 
 fn is_allowlisted(filename: &str) -> bool {
     ALLOWLIST.iter().any(|(name, _)| *name == filename)
-}
-
-/// Strips `//`-style line comments. Same documented limitation as
-/// `prose_scan.rs`/`test_harness_scan.rs`: line-based, does not
-/// account for `//` inside a string literal -- no file in scope has
-/// one today.
-fn strip_line_comments(source: &str) -> String {
-    source
-        .lines()
-        .map(|line| line.split("//").next().unwrap_or(""))
-        .collect::<Vec<_>>()
-        .join("\n")
 }
 
 /// Byte offset (relative to `s`) of the first `quote` not preceded
@@ -204,7 +194,8 @@ fn scan_string_literals(stripped: &str, rel_path: &str, out: &mut Vec<Violation>
 /// have escaped this scan silently. Recursing costs nothing and closes
 /// it before it can happen, mirroring `prose_scan.rs`'s and
 /// `test_harness_scan.rs`'s own `collect_rs_files` — duplicated rather
-/// than shared, same reasoning as this file's `strip_line_comments`.
+/// than shared, a straight-line helper `GRD-001` left as-is (unlike
+/// `strip_line_comments`, now `scan_support`'s one shared copy).
 fn collect_js_files(dir: &Path, out: &mut Vec<(PathBuf, String)>) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
@@ -250,50 +241,6 @@ fn all_violations() -> Vec<Violation> {
     violations
 }
 
-#[test]
-fn no_hardcoded_prose_in_static_js_outside_the_message_table() {
-    let files = all_static_js_files();
-    assert!(
-        !files.is_empty(),
-        "found no static/*.js files -- the workspace layout assumption \
-         this scan depends on may have changed"
-    );
-
-    let violations = all_violations();
-    assert!(
-        violations.is_empty(),
-        "user-visible prose found in static/*.js (route it through peisear_i18n::MessageKey \
-         and a JSON island, `dm.js`'s pattern, or add a reasoned allowlist entry in \
-         static_js_scan.rs):\n{}",
-        violations
-            .iter()
-            .map(|v| format!("  {}:{} {:?}", v.file, v.line, v.text))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-}
-
-/// `search.js` genuinely has string literals this guard would flag
-/// if it weren't allowlisted -- proves the allowlist entry excludes a
-/// real file with real matches, not a name that no longer needs it.
-#[test]
-fn search_js_allowlist_entry_still_matches_something() {
-    let files = all_static_js_files();
-    let (path, _) = files
-        .iter()
-        .find(|(_, name)| name == "search.js")
-        .expect("search.js present under static/");
-    let source = fs::read_to_string(path).expect("read search.js");
-    let stripped = strip_line_comments(&source);
-    let mut violations = Vec::new();
-    scan_string_literals(&stripped, "search.js", &mut violations);
-    assert!(
-        !violations.is_empty(),
-        "search.js no longer has anything this guard would flag -- if it was converted, \
-         remove the allowlist entry and let this guard cover it"
-    );
-}
-
 /// File extensions allowed under `static/`, each with the reason it is
 /// there (`STATIC-001`). The directory is served in full, so this list is
 /// the list of things the project has decided to publish. Adding a type --
@@ -337,48 +284,5 @@ fn collect_all_files(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
-/// `STATIC-001`: nothing under `static/` that is not a servable asset
-/// type. See the module doc for what this does and does not check.
-#[test]
-fn every_entry_under_static_is_a_servable_asset_type() {
-    let static_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
-        .join("static");
-    let mut files = Vec::new();
-    collect_all_files(&static_dir, &mut files);
-    assert!(
-        !files.is_empty(),
-        "found nothing under static/ -- the workspace layout assumption this scan \
-         depends on may have changed"
-    );
-
-    let mut offenders: Vec<String> = files
-        .iter()
-        .filter(|p| !is_servable_asset_type(p))
-        .map(|p| {
-            p.strip_prefix(&static_dir)
-                .unwrap_or(p)
-                .display()
-                .to_string()
-        })
-        .collect();
-    offenders.sort();
-    assert!(
-        offenders.is_empty(),
-        "static/ is served in full (`ServeDir::new(\"static\")` in app.rs), so every file \
-         in it is a public URL on every deployment -- and these are not an allowed asset \
-         type (allowed: {}). Move a document to docs/; to publish a new kind of asset, add \
-         its extension and a reason to SERVABLE_ASSET_TYPES in static_js_scan.rs:\n{}",
-        SERVABLE_ASSET_TYPES
-            .iter()
-            .map(|(ext, _)| format!(".{ext}"))
-            .collect::<Vec<_>>()
-            .join(", "),
-        offenders
-            .iter()
-            .map(|o| format!("  static/{o}"))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-}
+#[cfg(test)]
+mod tests;

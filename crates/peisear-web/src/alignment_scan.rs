@@ -22,21 +22,25 @@
 //! `grow_text` composes `inline-flex` unconditionally and `DOC-005`
 //! §2 ruled that wrong on a form control's own native centring.
 //!
-//! **A corrected comment-stripper, not the sibling scans' shared
-//! one.** `touch_target_scan`/`prose_scan`/`test_harness_scan`'s own
-//! `strip_line_comments` splits a line on the first literal `"//"`,
+//! **A corrected comment-stripper, written here first.** At `0.51.0`,
+//! `touch_target_scan`/`prose_scan`/`test_harness_scan`'s own
+//! `strip_line_comments` split a line on the first literal `"//"`,
 //! including one inside a real string literal — `xmlns="http://
 //! www.w3.org/2000/svg"`, present in five files under
 //! `src/components/` (`layout.rs`, `notifications.rs`, `projects.rs`,
-//! `sprints.rs`, `teams.rs`). That truncates the line mid-literal,
-//! leaving an unterminated quote that misdirects every subsequent
+//! `sprints.rs`, `teams.rs`). That truncated the line mid-literal,
+//! leaving an unterminated quote that misdirected every subsequent
 //! `"..."` span's pairing for the rest of the file — found measuring
 //! `DOC-005` §2's own call-site count, confirmed live against this
-//! tree (not merely theoretical), and named to the architect as a
-//! finding on the shared helper rather than fixed there: this round's
-//! scope is the alignment defect, not guard infrastructure generally.
-//! This module needs its own correct version to mean anything, so it
-//! does not inherit the bug by sharing the sibling's copy.
+//! tree, and named to the architect as a finding on the shared helper
+//! rather than fixed there: that round's scope was the alignment
+//! defect, not guard infrastructure generally. This module needed its
+//! own correct version to mean anything at the time, so it did not
+//! inherit the bug by sharing the sibling's copy. `GRD-001` (`0.52.0`)
+//! lifted this function verbatim into `scan_support::strip_line_comments`
+//! and switched every scan, this one included, to the one shared copy —
+//! see `requirements.md §10.38` for `QA-002`'s duplication call
+//! reversed for this helper.
 //!
 //! **A named limit on the let-bound sites, not a parser.** Five `let`
 //! bindings in this tree compose `grow` as
@@ -55,6 +59,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::scan_support::strip_line_comments;
+
 /// Every `.rs` file under `dir`, recursively — the same walk the
 /// sibling scans use, duplicated rather than shared for a
 /// fifteen-line helper (their own stated reasoning).
@@ -71,36 +77,6 @@ fn collect_rs_files(dir: &Path, out: &mut Vec<PathBuf>) {
             out.push(path);
         }
     }
-}
-
-/// Quote-aware line-comment strip — unlike the sibling scans'
-/// `strip_line_comments`, does not treat a `//` inside a `"..."`
-/// string literal (a URL, say) as a comment marker. See the module
-/// doc for why this scan carries its own copy rather than the shared
-/// one.
-fn strip_line_comments(source: &str) -> String {
-    let mut out = String::with_capacity(source.len());
-    for line in source.lines() {
-        let bytes = line.as_bytes();
-        let mut in_str = false;
-        let mut i = 0;
-        let mut cut = line.len();
-        while i < bytes.len() {
-            match bytes[i] {
-                b'"' => in_str = !in_str,
-                b'\\' if in_str && i + 1 < bytes.len() => i += 1,
-                b'/' if !in_str && i + 1 < bytes.len() && bytes[i + 1] == b'/' => {
-                    cut = i;
-                    break;
-                }
-                _ => {}
-            }
-            i += 1;
-        }
-        out.push_str(&line[..cut]);
-        out.push('\n');
-    }
-    out
 }
 
 /// Every `"..."` string literal's content span in `source` —
@@ -244,107 +220,5 @@ fn already_establishes_a_block_box(content: &str) -> bool {
 
 const FORM_CONTROL_TAGS: [&str; 3] = ["input", "select", "textarea"];
 
-#[test]
-fn every_grow_call_site_is_a_form_control_or_already_a_flex_container() {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let components_dir = manifest_dir.join("src").join("components");
-    let mut files = Vec::new();
-    collect_rs_files(&components_dir, &mut files);
-    assert!(
-        !files.is_empty(),
-        "found no .rs files under src/components/ -- the workspace layout \
-         assumption this scan depends on may have changed"
-    );
-
-    let mut offenders = Vec::new();
-    for path in &files {
-        let source =
-            fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-        let stripped = strip_line_comments(&source);
-        for (quote_pos, cs, ce) in quoted_string_spans(&stripped) {
-            if !is_call_argument(&stripped, quote_pos, "grow") {
-                continue;
-            }
-            let Some((tag, line)) = enclosing_tag(&stripped, quote_pos, "grow") else {
-                // Unattributed: either a let-bound `grow(if cond {...}
-                // else {...})` branch (the module doc's named limit) or
-                // an identifier argument with no quoted literal at all
-                // (none remain after DOC-005's fix -- MENU_FOCUS_RING's
-                // four sites moved to grow_text).
-                continue;
-            };
-            if FORM_CONTROL_TAGS.contains(&tag.as_str()) {
-                continue;
-            }
-            let content = &stripped[cs..ce];
-            if !is_flex_container(content) && !already_establishes_a_block_box(content) {
-                offenders.push(format!(
-                    "{}:{line}: <{tag}> class={content:?} composes grow(), but is \
-                     neither a form control, already a flex container, nor already \
-                     a block box (`block`/`card`) -- use grow_text() instead",
-                    path.display()
-                ));
-            }
-        }
-    }
-
-    assert!(
-        offenders.is_empty(),
-        "every components::grow(...) call site in src/components/ must already be \
-         a flex container or a form control (NFR-A11Y-007, DEC-049 as amended by \
-         DOC-005 §3.1) -- a plain text element reaching grow() directly, rather \
-         than components::grow_text(), reproduces DOC-005 §1's alignment defect:\n{}",
-        offenders
-            .iter()
-            .map(|o| format!("  {o}"))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-}
-
-#[test]
-fn no_grow_text_call_site_is_a_form_control() {
-    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let components_dir = manifest_dir.join("src").join("components");
-    let mut files = Vec::new();
-    collect_rs_files(&components_dir, &mut files);
-    assert!(
-        !files.is_empty(),
-        "found no .rs files under src/components/ -- the workspace layout \
-         assumption this scan depends on may have changed"
-    );
-
-    let mut offenders = Vec::new();
-    for path in &files {
-        let source =
-            fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-        let stripped = strip_line_comments(&source);
-        for (quote_pos, _cs, _ce) in quoted_string_spans(&stripped) {
-            if !is_call_argument(&stripped, quote_pos, "grow_text") {
-                continue;
-            }
-            if let Some((tag, line)) = enclosing_tag(&stripped, quote_pos, "grow_text")
-                && FORM_CONTROL_TAGS.contains(&tag.as_str())
-            {
-                offenders.push(format!(
-                    "{}:{line}: <{tag}> composes grow_text(), which adds \
-                     inline-flex unconditionally -- a form control centres its \
-                     own content natively and must use grow() instead",
-                    path.display()
-                ));
-            }
-        }
-    }
-
-    assert!(
-        offenders.is_empty(),
-        "no <input>/<select>/<textarea> in src/components/ may compose \
-         components::grow_text(...) (DOC-005 §2/§3.1: inline-flex is meaningless \
-         at best on a form control's native centring):\n{}",
-        offenders
-            .iter()
-            .map(|o| format!("  {o}"))
-            .collect::<Vec<_>>()
-            .join("\n")
-    );
-}
+#[cfg(test)]
+mod tests;
