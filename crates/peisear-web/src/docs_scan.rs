@@ -781,14 +781,16 @@ fn is_review_id_shape(prefix: &str) -> bool {
         .is_some_and(|c| c.is_ascii_digit())
 }
 
-/// The private area's own naming suffixes this needle catches, measured
-/// against `.git-exclude/reviewed/`'s actual listing (`GRD-003 §4`):
-/// **199** end `-review`, **21** `-recommendation`, **3** `-decision`,
-/// **1** `-decisions` -- 224 of 225 files. (The remaining one,
-/// `ISSUE-001-decision.md`, is the same suffix; the count is of
-/// citations, not files, and that file is cited only from inside
-/// `rfcs/handoffs/`, outside rule 5's population.) Each is tried with
-/// and without a trailing `.md`.
+/// The private area's own naming suffixes this needle catches, each
+/// tried with and without a trailing `.md` (`GRD-003 §4`).
+///
+/// **No census of that directory belongs here.** It is gitignored, it
+/// grows every time a review is written, and no reader of this file can
+/// check a number taken from it -- so a count copied in rots silently
+/// and in the one direction that matters, by overstating coverage. What
+/// this list is measured against is the *shape* below, not a tally: a
+/// suffix is in this set because the naming convention uses it, and
+/// [`is_review_id_shape`] decides the rest.
 const REVIEW_FILE_SUFFIXES: &[&str] = &["review", "recommendation", "decisions", "decision"];
 
 /// Every bare review-file citation in `text`: a token ending in one of
@@ -802,14 +804,19 @@ const REVIEW_FILE_SUFFIXES: &[&str] = &["review", "recommendation", "decisions",
 /// literal `.git-exclude` match in [`git_exclude_citations`] has never
 /// seen one.
 ///
-/// **Stated residual, not discovered later**: four files under
-/// `.git-exclude/reviewed/` use a multi-word descriptive name rather
-/// than an ID-digit-suffix shape (`DOCS-AUDIT-user-facing-documentation`
-/// and three siblings) -- not caught, and not catchable without an
-/// exception list, since nothing distinguishes that shape from an
-/// ordinary compound document title. None is cited anywhere in rule
-/// 5's population today (checked, not assumed); if one ever is, this is
-/// where that citation would go uncaught.
+/// **Stated residual, not discovered later**: a private file whose name
+/// does not reach a digit immediately after its first hyphen is not
+/// caught. That is a compound prefix (`DOCS-AUDIT-...`, `DM-TEST-...`,
+/// `FR-DM-...`, `CHANGELOG-POLICY-...`) or a lowercase word in that
+/// position, and as of 2026-10-14 it is **nine** of the files in the
+/// private area, not the four the first measurement reported -- which
+/// counted the files whose *suffix* this list matches and read that as
+/// the needle's coverage. Five more end in a listed suffix and still
+/// fail [`is_review_id_shape`]. Not catchable without an exception
+/// list, which the rule's own design forbids growing. None is cited in
+/// rule 5's population today -- checked, and demonstrated by planting
+/// four of them in a doc comment and watching this rule still report
+/// clean. If one ever is cited, this is where it goes uncaught.
 fn review_file_citations(text: &str) -> Vec<String> {
     let mut out = Vec::new();
     for suffix in REVIEW_FILE_SUFFIXES {
