@@ -100,6 +100,27 @@ goes to me and waits for its own release, including the carried
 
 ---
 
+## How `FIV-001`'s open half closes, since no round does it
+
+*Added 2026-10-15, answering the dev team's own question.* `§10.40` and
+`NFR-SEC-004` wait on `.env.example`'s `JWT_SECRET` line, which no tool
+in this project may read.
+
+**Release cycle exit criterion 9 replaces the per-round walk; it does
+not supplement it.** `FIV-001` §9b already removed the walk from the
+rounds — test the behaviour with the value set directly, report the
+file's state as a conditional, do not route around the deny rule. What
+was left over was a question being carried in conversation, which is
+where facts go stale. Criterion 9 puts it in the gate: **the documented
+start is walked on the release artefact, and it either works or it does
+not.**
+
+**So no round in this series closes `§10.40`**, and none should try.
+`REL-0.53.0` reports what criterion 9's walk showed, and the entry and
+the requirement move then — on a walk, not on an answer from anyone.
+
+---
+
 ## Decisions already taken, so no round re-opens them
 
 - **`DEC-056` stays four legs.** The asset workflow runs *after* the
