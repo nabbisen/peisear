@@ -1,4 +1,4 @@
-# RFC 0013: The sprint record — capturing what a sprint reported, instead of freezing what it contains
+# RFC 013: The sprint record — capturing what a sprint reported, instead of freezing what it contains
 
 **Status**: **Done** — shipped at 0.39.0 (`SPRINT-004`, `SPRINT-005`).
 (Accepted 2026-09-24; moved to `done/` 2026-10-07, having sat in `accepted/`

@@ -1,4 +1,4 @@
-# RFC 0003: Inbox refinements
+# RFC 003: Inbox refinements
 
 **Status**: Implemented (0.24.0), on the rewrite. The 2026-05-04 text was
 returned from Accepted on 2026-08-16 and is superseded in full

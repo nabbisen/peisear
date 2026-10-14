@@ -11,14 +11,14 @@ the keyboard a control that *moves* a block, with the server computing both
 timestamps so the duration survives.
 
 **Read first**: `FR-DM-002`'s entry (the clause and how the calendar fails
-it), RFC 0015 §2 (the geometry), §4 (why Option A), §5 (the clause), §8 (the
+it), RFC 015 §2 (the geometry), §4 (why Option A), §5 (the clause), §8 (the
 open questions this handoff must answer).
 
 ---
 
 ## §0 — one variation on `DEC-059`, stated before anything else
 
-**RFC 0015 §3 wrote Option A as the block gaining "a second link (or its
+**RFC 015 §3 wrote Option A as the block gaining "a second link (or its
 existing link's target changes) to a `GET`-able reschedule page". This
 handoff specifies neither.** The control goes on the **issue detail page**,
 in its schedule area. The owner has been told; if they prefer the RFC's
@@ -93,7 +93,7 @@ hand-built body does.*
 ### 2.2 The target, and duration preserved by construction
 
 **Granularity: *same time, different day*, and nothing else in this
-handoff.** RFC 0015 §8 named it as the drag's commonest gesture and the
+handoff.** RFC 015 §8 named it as the drag's commonest gesture and the
 smallest honest first step. A `<select>` of days, an explicit **Move**
 button.
 
@@ -145,7 +145,7 @@ parsed with the same `parse_view` the calendar uses, rebuilt by the handler.
 
 ### 2.5 The scroll position — in scope, not optional
 
-RFC 0015 §7.1 put the backlog's **lost phone scroll position after a POST**
+RFC 015 §7.1 put the backlog's **lost phone scroll position after a POST**
 in this handoff's scope, because this control is a POST that returns to the
 calendar and the user's place on the page is the information they came for.
 

@@ -79,7 +79,7 @@ Every locking write path changes shape. **Enumerate them before changing any**
 — `check_optimistic_lock`'s callers, plus any storage write taking a
 `client_updated_at` — and list them in the review request. The board, the sprint
 plan and the calendar additionally consume the returned `updated_at` to keep
-their client stamp fresh (`RFC 0004` D-1 step 2), so their responses must carry
+their client stamp fresh (`RFC 004` D-1 step 2), so their responses must carry
 the same value they do today.
 
 **If one path cannot take the `WHERE` form**, say so and leave it; a partial

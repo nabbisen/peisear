@@ -1,4 +1,4 @@
-# RFC 0009: Team assignment and workload scope
+# RFC 009: Team assignment and workload scope
 
 **Status**: Implemented (0.22.0)
 

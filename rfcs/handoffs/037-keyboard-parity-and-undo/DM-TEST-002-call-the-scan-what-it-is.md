@@ -112,6 +112,6 @@ nothing else; `dec_007` 4/4; `DEC-007` 376 three times; both browser scripts
 run from the wired job's own commands with the port question answered
 explicitly. Then stop.
 
-**`DM-TEST-001` closes with this, and its closure unblocks `RFC 0015`'s
+**`DM-TEST-001` closes with this, and its closure unblocks `RFC 015`'s
 0.45.0 control handoff** — which is why this is a naming handoff and not a
 rebuild.

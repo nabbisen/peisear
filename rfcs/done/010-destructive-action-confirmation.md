@@ -1,4 +1,4 @@
-# RFC 0010: Destructive-action confirmation
+# RFC 010: Destructive-action confirmation
 
 **Status**: **Implemented (0.25.0)** — `CONF-001`
 **Target**: 0.25.0 — **before RFC 004's first substep**

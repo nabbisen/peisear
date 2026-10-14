@@ -1,7 +1,7 @@
 # REL-0.45.0 — release candidate
 
-**Contents**: `CAL-004` (`fa9d2ab`) and `CAL-005` (`d9796b4`) — RFC 0015's
-control, `DEC-059`; **`FR-DM-002` reaching Met** and RFC 0015 closing
+**Contents**: `CAL-004` (`fa9d2ab`) and `CAL-005` (`d9796b4`) — RFC 015's
+control, `DEC-059`; **`FR-DM-002` reaching Met** and RFC 015 closing
 (`3b78b3a`); and the specification amendment with its sweep (`3dad873`).
 **Every handoff reviewed and closed.**
 
@@ -61,7 +61,7 @@ things.
    `DM-TEST-001` found the two schedule paths agreeing only because two
    authors made the same choice, and this is the difference.
 4. **Two design choices went the other way from the RFC, and both are worth a
-   reader's time** (RFC 0015 §9):
+   reader's time** (RFC 015 §9):
    - **Not a control on the block.** A calendar block's height *is* its
      duration, so a 44 × 44 px control cannot fit; and retargeting the
      block's existing link would have served the keyboard by **taking the

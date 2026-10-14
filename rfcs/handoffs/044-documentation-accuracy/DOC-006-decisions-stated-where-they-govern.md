@@ -4,7 +4,7 @@
 this release started from: *why was the documentation not updated as it
 should have been?*
 
-**`RFC 0019 §3`, accepted.** **Target**: 0.51.0.
+**`RFC 019 §3`, accepted.** **Target**: 0.51.0.
 
 ---
 

@@ -1,4 +1,4 @@
-# RFC 0001: Sprint planning page
+# RFC 001: Sprint planning page
 
 **Status**: Implemented (0.22.0) — minus the capacity hint, withdrawn on
 privacy grounds
@@ -391,5 +391,5 @@ existing per-test-crate jobs.
 - Spec §38.1 task 3 — Phase C task list
 - CHANGELOG entry for 0.19.0 — sub-issue follow-parent rule
   (informs §17 sub-issue handling here)
-- RFC 0004 — direct manipulation, where the DnD version of
+- RFC 004 — direct manipulation, where the DnD version of
   this page is detailed

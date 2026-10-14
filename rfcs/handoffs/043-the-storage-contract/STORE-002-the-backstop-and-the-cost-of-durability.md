@@ -1,6 +1,6 @@
 # STORE-002 — the backstop, and the cost of durability
 
-**Two small subjects, both storage.** `RFC 0018` P0b, and the half of
+**Two small subjects, both storage.** `RFC 018` P0b, and the half of
 `STORE-001` its own demonstration could not reach.
 
 **Review**: `.git-exclude/reviewed/STORE-001-review.md` (§2, §3).
@@ -42,7 +42,7 @@ precision** (review §2's table). **That is not the same as demonstrating
 them, which is the point of this round** — and if your demonstration
 disagrees with my measurement, yours is the one that counts.
 
-## §2 — `RFC 0018` P0b: what `synchronous = FULL` costs
+## §2 — `RFC 018` P0b: what `synchronous = FULL` costs
 
 `pool.rs:29` sets `SqliteSynchronous::Normal`. With WAL that survives an
 application crash but **can lose recently committed transactions on a power

@@ -42,7 +42,7 @@ documentation screenshot falls out of it for free**. Held out of 0.49.0
 deliberately: populating a never-swept surface can turn the gate red, and
 that does not belong inside a release candidate.
 
-**Added 2026-10-11, owner-raised, `RFC 0016` (accepted):** `README.md`'s
+**Added 2026-10-11, owner-raised, `RFC 016` (accepted):** `README.md`'s
 hero, overview, "Why peisear?" and feature list describe a self-hosted issue
 tracker. The in-repo normative requirements (§1.1) describe a service whose
 distinguishing purpose is keeping *"a project — and the people in it —
@@ -62,7 +62,7 @@ release publishes them.
   self-path test passing vacuously after a rename (`DOCS-008` §3). Adjacent
   to `§10.17` but distinct: there the assertion is wrong, here the input is
   empty for a reason the check never asks about.
-- **`README.md:77`'s PostgreSQL claim**, for `RFC 0016`'s repositioning
+- **`README.md:77`'s PostgreSQL claim**, for `RFC 016`'s repositioning
   round: it calls swapping SQLite for Postgres *"a localised change"* while
   `ROADMAP.md:582` says it *"is larger than the crate-shaping above
   suggests, and needs its own RFC before it is scheduled or promised."* The
@@ -87,7 +87,7 @@ release publishes them.
   directory is removed when the round closes. Both files are scanned, so the
   edit belongs in a round that runs the gates, not in a drive-by.
 
-**Added 2026-10-11 from `RFC 0018` §2, for 0.50.0:**
+**Added 2026-10-11 from `RFC 018` §2, for 0.50.0:**
 `docs/operations/scaling.md:91-94` tells an operator the migrations hold
 *"no SQLite-specific tricks beyond a few `julianday` calls and
 `datetime('now', '-7 days')` modifier strings, both of which have direct
@@ -100,7 +100,7 @@ today is told the port is smaller than it is** — the third README-family
 overclaim about the same work, after `README.md:77` and ahead of whatever the
 backend documentation will say.
 
-**Added 2026-10-11 from `RFC 0018` §2's security assessment, for 0.50.0:**
+**Added 2026-10-11 from `RFC 018` §2's security assessment, for 0.50.0:**
 
 - **The threat model has no data-at-rest entry.** 194 lines across
   `docs/security/`, **zero occurrences of "encrypt", "at rest" or "disk"**.
@@ -111,7 +111,7 @@ backend documentation will say.
   that peisear does not encrypt its own storage.**
 - **`main.rs:22-27` logs the DSN at `INFO` with no redaction** anywhere in
   the workspace. Harmless while it is a file path; **a credential in journald
-  the day `RFC 0018` P3 lands**. One line and a test, worth doing now.
+  the day `RFC 018` P3 lands**. One line and a test, worth doing now.
 
 **Added 2026-10-12 from `REL-0.50.0`'s own sweep:** `first-run.md`'s sample
 log line shows the tracing target `peisear_web` where the code's own target

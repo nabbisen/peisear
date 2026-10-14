@@ -12,7 +12,7 @@ population.
 
 ## §1 — the rule, and what it actually enforces
 
-`docs_scan` rule 5 (`DOC-002`, `RFC 0019`) says: no document under
+`docs_scan` rule 5 (`DOC-002`, `RFC 019`) says: no document under
 `docs/`, no RFC outside `rfcs/handoffs/`, and no published doc comment
 under `crates/*/src/` cites the project's gitignored private area. Four
 named exceptions. It is live and enforced, not reported.
@@ -24,7 +24,7 @@ actually uses — spells no path at all, and the rule has never seen one.
 Today the rule reports **zero**. Inside the very surfaces it scans sit
 **64 citations of files that exist only in the private area**, naming
 **29 distinct private files**. The rule is clean and its subject is not:
-`§10.36`, in a guard `RFC 0019` asked for.
+`§10.36`, in a guard `RFC 019` asked for.
 
 **`DOC-002` closed 19 citations of the path spelling** — fifteen
 resolved to a rewrite or a cut, four kept as the exceptions. Those

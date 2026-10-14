@@ -1,7 +1,7 @@
 # REL-0.49.0 — release candidate
 
 **Contents**: `DOCS-003` (`8a7a960`), `DOCS-004` (`19f90e7`), `DOCS-005`
-(`23d2546`), `DOCS-007` (`c8d247f`), `DOCS-008` (`8006cef`), and `RFC 0016`
+(`23d2546`), `DOCS-007` (`c8d247f`), `DOCS-008` (`8006cef`), and `RFC 016`
 accepted (`1a9e897`, `582c011`, `77837c9`). **Every handoff reviewed and
 closed.**
 
@@ -63,7 +63,7 @@ reader. Five beats.
    never said its own name. It now reads **`peisear`**. Say that the crates.io
    and docs.rs one-line descriptions changed with it, and that
    **`README.md`'s own repositioning is deliberately not in this release**
-   (`RFC 0016` proposal 2, `0.50.0`). A reader who sees the name change and
+   (`RFC 016` proposal 2, `0.50.0`). A reader who sees the name change and
    then reads an unchanged README should find that difference explained, not
    discover it.
 2. **The start path could not be followed, and now can.** The Quick Start's

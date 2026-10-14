@@ -1,4 +1,4 @@
-# RFC 0005: Quality consolidation
+# RFC 005: Quality consolidation
 
 **Status**: **Implemented (0.28.0)** — all fourteen sections, `QA-001`–`QA-021`
 **Target**: shipped across 0.22.0-0.28.0 (Phase E) — §9 shipped at 0.22.0, §10 pulled forward to 0.25.0,
@@ -123,7 +123,7 @@ The six axes restated for clarity:
   upgrades don't silently regress them.
 - Lighthouse score ≥ 95 for the four key flows (proxy
   metric; not a hard requirement).
-- Bundle size: `static/dm.js` (RFC 0004) under 8 KB
+- Bundle size: `static/dm.js` (RFC 004) under 8 KB
   uncompressed.
 
 ### Explicitly out

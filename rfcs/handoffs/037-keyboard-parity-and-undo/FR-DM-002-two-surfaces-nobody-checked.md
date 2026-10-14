@@ -9,7 +9,7 @@ end is mine, not yours.
 **Background**: `requirements.md`'s `FR-DM-002`, `FR-DM-006`, `FR-DM-001`
 (four surfaces, Met), `§10.34`, and `docs/development/changelog-and-releases.md`'s
 sweep procedure. The surfaces in question are the **sprint-planning drag**
-(0.35.0, RFC 0004c) and the **calendar block drag** (0.36.0, RFC 0004d).
+(0.35.0, RFC 004c) and the **calendar block drag** (0.36.0, RFC 004d).
 
 **Do not amend either specification.** `DEC-028` work is the architect's.
 Report what you measure.

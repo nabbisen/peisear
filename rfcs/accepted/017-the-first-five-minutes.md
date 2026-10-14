@@ -1,12 +1,15 @@
-# RFC 0017: The first five minutes — from nothing installed to a board on screen
+# RFC 017: The first five minutes — from nothing installed to a board on screen
 
-**Status**: **Proposed** (2026-10-11) — the two channel decisions are already
-taken (owner, 2026-10-11: **prebuilt binaries *and* a container image**); what
-remains for review is §4's security change and §5's default bind
-**Target**: **0.52.0** as its own theme — behind 0.50.0 (*the storage
-contract*, `RFC 0018` P0/P0b and the two security items) and 0.51.0
-(documentation accuracy: `DOCS-006`, `RFC 0016`'s README repositioning, the
-sprint-plan fixture and the alignment defect)
+**Status**: **Accepted** (owner, 2026-10-14). The two channel decisions were
+taken 2026-10-11 (**prebuilt binaries *and* a container image**); §4's
+security change and §5's default bind were reviewed and approved as proposed
+the same day, recorded below. Acceptance is the owner's sign-off on that
+settled design, and it is what lets the implementer start.
+**Target**: **0.53.0** as its own theme — behind 0.50.0 (*the storage
+contract*, `RFC 018` P0/P0b and the two security items), 0.51.0
+(documentation accuracy) and 0.52.0 (*the guards themselves*, which took
+0.52.0 from this RFC; `ROADMAP.md`'s *What ships next* carries the reason).
+**Implementation**: `rfcs/handoffs/046-the-first-five-minutes/`, four rounds.
 **Raised by**: the owner, 2026-10-11 — *"the current installation on
 documentation was too poor for unskilled users. We should make it much easier
 to start up."*

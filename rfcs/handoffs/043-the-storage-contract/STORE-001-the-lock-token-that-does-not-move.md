@@ -1,6 +1,6 @@
 # STORE-001 — the lock token that does not move
 
-**`RFC 0018` P0**, accepted 2026-10-11. **Target**: 0.50.0, first round.
+**`RFC 018` P0**, accepted 2026-10-11. **Target**: 0.50.0, first round.
 
 **`NFR-CONC-001` is P0 and has a window in which it cannot do its job.**
 SQLite's `CURRENT_TIMESTAMP` is whole-second; `NFR-CONC-002` reuses

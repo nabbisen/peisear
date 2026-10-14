@@ -1,4 +1,4 @@
-# RFC 0006: Internationalisation architecture and vocabulary guard
+# RFC 006: Internationalisation architecture and vocabulary guard
 
 **Status**: Implemented (0.21.0)
 **Target**: 0.21.0 — shipped 2026-08-11, published to crates.io

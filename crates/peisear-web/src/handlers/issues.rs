@@ -1279,7 +1279,7 @@ pub struct ScheduleChangeResponse {
 /// `POST /projects/{project_id}/issues/{issue_id}/schedule` —
 /// `calendar.js`'s drag-and-drop entry point. `CAL-004` gives this a
 /// form sibling after all — [`change_schedule_move`], on the issue
-/// page rather than the day view itself (RFC 0015 §0): the day view
+/// page rather than the day view itself (RFC 015 §0): the day view
 /// still has no plain control of its own to fall back to, but the
 /// keyboard equivalent `FR-DM-002`'s clause asks for doesn't have to
 /// live on the same screen as the pointer affordance, only one
@@ -1310,7 +1310,7 @@ pub async fn change_schedule(
 #[derive(Debug, Deserialize)]
 pub struct ScheduleMoveForm {
     /// `YYYY-MM-DD`, one of the `<select>` options the issue page
-    /// rendered — a day, never a timestamp (RFC 0015 §5's clause:
+    /// rendered — a day, never a timestamp (RFC 015 §5's clause:
     /// nothing for a keyboard user to reconstruct). The server below
     /// computes both new timestamps from it and the issue's current
     /// ones.

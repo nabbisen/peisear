@@ -2,7 +2,7 @@
 
 **Contents**: `DEP-001` (`7383dd0`), `DM-TEST-001` (`c7de37f`), `DM-TEST-002`
 (`558be78`, `09dded1`), the `FR-DM` measurement and its amendments
-(`df2fa9a`, `596fc51`), **`DEC-059`** with RFC 0015 accepted (`85d2d7a`,
+(`df2fa9a`, `596fc51`), **`DEC-059`** with RFC 015 accepted (`85d2d7a`,
 `1c860ab`, `c582287`), and the specification amendment with its sweep
 (`f227ad8`). **Every handoff reviewed and closed.**
 
@@ -60,7 +60,7 @@ correction to the project's own record. Six things.
    the new end time by hand, against one drag. **And state that the surfaces
    are not inaccessible** — the effect is reachable and both write paths are
    locked. What is wrong is the cost and the shape.
-2. **The remedy is scheduled, not pending**: RFC 0015 Option A at **0.45.0**.
+2. **The remedy is scheduled, not pending**: RFC 015 Option A at **0.45.0**.
    A reader should not have to wonder whether a named P0 failure is being
    left alone.
 3. **`FR-DM-006` reaches Met on all four surfaces — reversing a correction

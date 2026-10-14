@@ -1,6 +1,6 @@
 # FIV-002 — something to download
 
-**Target**: 0.53.0, after `FIV-001`. `RFC 0017` proposal 1.
+**Target**: 0.53.0, after `FIV-001`. `RFC 017` proposal 1.
 
 **Barriers 1 and 2** in the RFC's own table — *install a compiler*,
 *wait for a release build* — are removed by there being a file to
@@ -36,7 +36,7 @@ the artefact was missing. Do not change the instruction.
 
 ## §2 — the workflow never gates the release
 
-**This is the design, not an implementation preference** (`RFC 0017`
+**This is the design, not an implementation preference** (`RFC 017`
 proposal 1, and the owner's standing concern is continuous cost):
 
 - the workflow runs **after** the Release exists

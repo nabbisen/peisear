@@ -1,6 +1,6 @@
 # Handoffs — issue ordering
 
-**RFC 0004, by retirement.** `ORD-001` closes substep D-5 by removing what it
+**RFC 004, by retirement.** `ORD-001` closes substep D-5 by removing what it
 was going to build on, rather than by building it. The reasoning is in
 `.git-exclude/tasks/architect/021-d5-decision.md`; the owner approved the
 amendment of `FR-DM-001` from five surfaces to four on 2026-09-24.

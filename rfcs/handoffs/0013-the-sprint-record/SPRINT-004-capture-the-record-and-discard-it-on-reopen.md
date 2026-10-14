@@ -133,7 +133,7 @@ with these amendments:
 
 - **If capturing inside `complete`'s transaction is not possible** as written.
 - **If the backfill cannot be faithful** (§3).
-- **If a fifth input to the figures exists** that RFC 0013's table misses.
+- **If a fifth input to the figures exists** that RFC 013's table misses.
   Four was the count from reading `summary` and `burndown`; it is not a proof.
 - **If reverting §1.1 turns out to break something** other than its own tests.
 - **If any user-visible string other than §1.1's removal and reopen's two

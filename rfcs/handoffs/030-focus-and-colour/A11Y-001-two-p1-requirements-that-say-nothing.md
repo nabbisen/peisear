@@ -34,7 +34,7 @@ cannot see it the way its author does.**
 releases adding **mode changes**: `D-1`'s in-place status change, the board
 drag, the sprint-plan drag, the calendar drag, and now reopen. Each replaces
 part of a page under the user. **Nobody has ever checked where focus goes**,
-and `RFC 0004`'s requirement 1 gives every drag a keyboard equivalent — which
+and `RFC 004`'s requirement 1 gives every drag a keyboard equivalent — which
 is worth nothing if using it strands the caret.
 
 ## 2. `NFR-A11Y-002` — what to establish
@@ -46,7 +46,7 @@ more:
 - **`D-1` in-place status change** (issue list, issue detail) — the control is
   replaced after the POST.
 - **The board drag and its move buttons**; **the sprint-plan drag and buttons**;
-  **the calendar drag**. Per `RFC 0004` requirement 10, the buttons are the
+  **the calendar drag**. Per `RFC 004` requirement 10, the buttons are the
   touch and keyboard path, so **the button path matters more than the drag**.
 - **Undo toasts** (`D-1`, `D-4`) — they appear, take an action, and vanish.
 - **Reopen, start, complete** — a form POST that re-renders the page.

@@ -1,8 +1,8 @@
 # CAL-003 — drag a day-view block to reschedule it
 
 **Target release**: 0.36.0. **Governing RFC**:
-[RFC 0004d](../../done/004d-direct-manipulation-calendar.md) (D-3), under
-[RFC 0004](../../done/004-direct-manipulation.md)'s cross-cutting
+[RFC 004d](../../done/004d-direct-manipulation-calendar.md) (D-3), under
+[RFC 004](../../done/004-direct-manipulation.md)'s cross-cutting
 requirements 0–10. **Depends on**: nothing.
 
 ## 1. What ships, and what was already cut from it
@@ -210,7 +210,7 @@ reason behind it.
 - `update()` and the issue edit form — the plain path, reached by clicking a
   block.
 - `calendar_surfaces`'s **ten** tests, which must pass unchanged.
-- `FR-CAL-003`'s semantics and migration `0016`. **No new schema** — RFC 0004's
+- `FR-CAL-003`'s semantics and migration `0016`. **No new schema** — RFC 004's
   substep contract says only D-5 needs one, and this substep confirms it.
 - `FR-CAL-007`'s prohibitions: no occupancy rate, no efficiency figure, nothing
   derived from how full a day is.

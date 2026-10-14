@@ -67,7 +67,7 @@ async fn issue_update_with_stale_timestamp_returns_409() {
     );
 }
 
-/// `STORE-001` (`RFC 0018` P0): `NFR-CONC-001` has a window in which it
+/// `STORE-001` (`RFC 018` P0): `NFR-CONC-001` has a window in which it
 /// cannot do its job. SQLite's `CURRENT_TIMESTAMP` is whole-second;
 /// `NFR-CONC-002` reuses `updated_at` as the lock token; so two writes to
 /// the same row inside one second can leave the token unchanged, and a

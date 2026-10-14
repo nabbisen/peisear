@@ -1160,7 +1160,7 @@ pub enum MessageKey {
     /// (`DEC-054`): those figures are what the sprint reported when it
     /// completed, captured then, and stay as they were however its issues move
     /// afterwards. The list below them is *current* membership; the two headings
-    /// say which is which (RFC 0013, decision 2).
+    /// say which is which (RFC 013, decision 2).
     SummaryAtCompletionHeading,
     /// The heading of the issue list on a **completed** sprint's page: what is
     /// in the sprint now, which is not what it reported. See
@@ -2423,7 +2423,7 @@ pub enum MessageKey {
     /// (`NFR-LANG-002`, `FR-HLT-005`/`006`).
     CalendarRescheduleUnconfirmedMessage,
 
-    // ---- CAL-004: a move control for the keyboard (RFC 0015, `DEC-059`) ----
+    // ---- CAL-004: a move control for the keyboard (RFC 015, `DEC-059`) ----
     /// The move control's own heading on the issue page — kept
     /// distinct from the edit form's "Planned start/end date" labels
     /// (`Field::PlannedStartDate`/`PlannedEndDate`) because the two

@@ -1,6 +1,6 @@
 # SPRINT-002 — the third route out of a completed sprint
 
-> **WITHDRAWN 2026-09-24, never implemented** (RFC 0013). The dev team stopped
+> **WITHDRAWN 2026-09-24, never implemented** (RFC 013). The dev team stopped
 > before writing code: this would have refused the planning page's primary
 > carry-over flow for issues the same page lists as candidates. Checking further
 > showed why — membership is **one of four inputs** to a completed sprint's

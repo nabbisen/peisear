@@ -1,8 +1,8 @@
 # PLAN-002 — drag between the backlog and the sprint
 
 **Target release**: 0.35.0. **Governing RFC**:
-[RFC 0004c](../../done/004c-direct-manipulation-sprint-plan.md) (D-4),
-under [RFC 0004](../../done/004-direct-manipulation.md)'s cross-cutting
+[RFC 004c](../../done/004c-direct-manipulation-sprint-plan.md) (D-4),
+under [RFC 004](../../done/004-direct-manipulation.md)'s cross-cutting
 requirements 0–10. **Depends on**: nothing.
 
 ## 1. What ships
@@ -83,7 +83,7 @@ and reaches the fallback.
   redirect, this client reads success as failure and falls back to a native
   submit — which re-sends a mutation that already applied. Adding an issue
   already in the sprint, or removing one already out, is idempotent in effect
-  (RFC 0004c §D1), so the user sees a page reload and the correct state. The
+  (RFC 004c §D1), so the user sees a page reload and the correct state. The
   inverse arrangement — `res.ok` with `follow` — would read a failure as
   success if an error path ever rendered `200`, and that failure is silent.
 
@@ -94,7 +94,7 @@ twice.
 ### 3.2 Drag the row. No handle
 
 The drag source is the `<li>`, not a new grip control. This is the same answer
-RFC 0004d settled for the calendar and for the same reason: a handle would be
+RFC 004d settled for the calendar and for the same reason: a handle would be
 a new interactive element, `NFR-A11Y-007` would give it a 44 px floor, and the
 question of where a 44 px grip fits in a dense list row would have to be
 answered for no gain.

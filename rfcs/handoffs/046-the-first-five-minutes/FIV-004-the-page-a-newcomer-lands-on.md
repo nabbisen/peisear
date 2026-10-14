@@ -1,6 +1,6 @@
 # FIV-004 — the page a newcomer lands on
 
-**Target**: 0.53.0, last. `RFC 0017` proposals **3** and **5**.
+**Target**: 0.53.0, last. `RFC 017` proposals **3** and **5**.
 
 **Last for a reason.** This round writes down what the other three
 produce. An Install page written before the download URLs and the

@@ -1,4 +1,4 @@
-# RFC 0015: Rescheduling without a pointer — the one surface whose keyboard path leaves the screen
+# RFC 015: Rescheduling without a pointer — the one surface whose keyboard path leaves the screen
 
 **Status**: **Done** (2026-10-09) — the clause in force from 0.44.0, the
 control shipped at 0.45.0 (`CAL-004`, `CAL-005`). **`FR-DM-002` is Met.**
@@ -147,7 +147,7 @@ navigation, and the grid is untouched.
 
 - **Cost**: one component, one handler, no new route. Slightly more markup on
   a page the overflow gate already sweeps at five widths.
-- **For it**: it is genuinely **on-surface** and it is the pattern RFC 0004's
+- **For it**: it is genuinely **on-surface** and it is the pattern RFC 004's
   cross-cutting requirement 10 already blesses — *on a phone the affordance
   is per-row buttons rather than a drag.* A list of rows under the grid is
   that requirement's own answer, arrived at from the opposite direction.
@@ -217,7 +217,7 @@ more machinery for a path that is supposed to be the simple one.
   to understand that the rows beneath the calendar are the same issues as the
   blocks above, and that the select's options change meaning when the view
   changes. On a month view with forty scheduled issues, B is forty rows and a
-  wall of options under the grid — worse on a phone, which `RFC 0004`'s
+  wall of options under the grid — worse on a phone, which `RFC 004`'s
   requirement 10 exists to protect.
 - **Robust.** A is one rendering and one handler. **B is two renderings of
   the same data that must stay in agreement forever** — precisely the

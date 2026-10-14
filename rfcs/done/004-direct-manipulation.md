@@ -1,4 +1,4 @@
-# RFC 0004: Direct manipulation
+# RFC 004: Direct manipulation
 
 **Status**: **Done** — closed 2026-09-24. Four substeps shipped; **D-5 is
 retired by owner decision** and no `0004e` exists (`ORD-001`, 0.38.0).
@@ -16,7 +16,7 @@ the D-4 sketch's keyboard binding did not survive it
 > **Reconciliation note (2026-08-16).** Checked against the code before any
 > substep RFC was written, per the practice RFC 003 established. **The shape
 > survives; two substep sketches drifted.** D-2's view shipped without its
-> drag, and its "List / Calendar / Kanban selector" contradicts RFC 0002,
+> drag, and its "List / Calendar / Kanban selector" contradicts RFC 002,
 > which made the calendar its own screen. D-4's endpoints now exist and carry
 > three constraints from `PLAN-001` that this document predates. Both
 > corrected in place, each marked.
@@ -48,8 +48,8 @@ require form submissions or page navigation:
 |---|---|---|---|
 | D-1 | Issue list, issue detail | Click status badge / segment to advance status | **Shipped** — [RFC 004a](../done/004a-direct-manipulation-status.md), 0.25.0 and 0.26.0 |
 | D-2 | Kanban (new view on project detail) | Drag issue between status columns | **Shipped** — [RFC 004b](../done/004b-direct-manipulation-board.md), 0.26.0 |
-| D-3 | Calendar | Drag issue blocks to reschedule | **Shipped** at 0.36.0 — [RFC 0004d](../done/004d-direct-manipulation-calendar.md), 0.36.0. **Reschedule only**: the empty-cell action has no plain-form path (requirement 0), and resize's edge affordance cannot meet `NFR-A11Y-007` without breaking `DEC-050`'s block proportionality |
-| D-4 | Sprint plan | Drag between backlog and sprint | **Shipped** at 0.35.0 — [RFC 0004c](../done/004c-direct-manipulation-sprint-plan.md), 0.35.0. **This sketch's keyboard binding is withdrawn** — the move buttons are already the keyboard path, as on the board |
+| D-3 | Calendar | Drag issue blocks to reschedule | **Shipped** at 0.36.0 — [RFC 004d](../done/004d-direct-manipulation-calendar.md), 0.36.0. **Reschedule only**: the empty-cell action has no plain-form path (requirement 0), and resize's edge affordance cannot meet `NFR-A11Y-007` without breaking `DEC-050`'s block proportionality |
+| D-4 | Sprint plan | Drag between backlog and sprint | **Shipped** at 0.35.0 — [RFC 004c](../done/004c-direct-manipulation-sprint-plan.md), 0.35.0. **This sketch's keyboard binding is withdrawn** — the move buttons are already the keyboard path, as on the board |
 | D-5 | Issue list | Drag rows to reorder | **Retired** 2026-09-24, owner-approved — no `0004e`. The product already answers *what is next* with priority, sprint membership and planned dates, and **the sprint is the better answer**: named, shared, time-boxed, on its own page. A manual order would be a second answer with no name in the UI and no visible provenance. Requirement 10 settles the affordance — on a phone this is per-row buttons, which do not order a long backlog. `ORD-001` removes `position`. Reversible; the revisit trigger is in `FR-DM-001` |
 
 **Substep status, 2026-08-25.** D-1 and D-2 are done and their RFCs are in
@@ -204,7 +204,7 @@ excludes. See open question 1, now resolved.
 8. **All keyboard alternatives announce via `aria-live`**:
    the same screen-reader announcement fires whether the
    action came from mouse or keyboard.
-9. **All copy routes through the i18n table.** RFC 0006 lands
+9. **All copy routes through the i18n table.** RFC 006 lands
    at 0.21.0, four releases before this one, so every string
    introduced here — toasts, conflict notices, announcements —
    is table copy subject to the vocabulary guard. No inline
@@ -352,10 +352,10 @@ shipped without it.*
 - **The board already exists.** `?view=board` on project detail, with a
   **List / Board** selector (`components/issues.rs:41–60`). This substep is
   the drag, not the view.
-- **The calendar is not a third view mode.** RFC 0002 shipped it as its own
+- **The calendar is not a third view mode.** RFC 002 shipped it as its own
   screen — `/projects/{id}/calendar`, SCR-28 — reached by a link. The earlier
   text here described a "List / Calendar / Kanban selector"; implementing that
-  would change two shipped URLs and undo RFC 0002's shape. Do not.
+  would change two shipped URLs and undo RFC 002's shape. Do not.
 - Drag from one status column to another → POST
   status change.
 - Keyboard: Tab to issue, Space to "pick up" (visual lift),
@@ -388,7 +388,7 @@ shipped without it.*
 
 - Drag backlog issue to sprint column → POST add.
 - Drag sprint issue to backlog → POST remove.
-- Endpoints: from RFC 0001's `/plan/add` and `/plan/remove` — **shipped at
+- Endpoints: from RFC 001's `/plan/add` and `/plan/remove` — **shipped at
   0.22.0**, not pending.
 - Keyboard: Tab to issue, Space to move (cycles through
   destination columns; Enter confirms).
@@ -457,7 +457,7 @@ Within Phase D, ship in this order:
 2. **D-2** (uses D-1's module; no schema).
 3. **D-4** (no schema; reuses D-2's column-style picker for
    keyboard parity).
-4. **D-3** (uses calendar from RFC 0002; no schema).
+4. **D-3** (uses calendar from RFC 002; no schema).
 5. ~~**D-5** (introduces the per-user-order schema).~~ **Retired** — no schema was ever needed; `ORD-001` removes the column instead.
 
 D-3 has the most complex interaction and benefits from D-1
@@ -482,10 +482,10 @@ For the umbrella:
    conflict). Assert the server still 409s; the client-side
    rollback path is unit-tested separately.
 3. **Vocabulary**: no separate `tests/dm_language.rs` regex.
-   RFC 0006 ships the vocabulary guard at 0.21.0 and requirement
+   RFC 006 ships the vocabulary guard at 0.21.0 and requirement
    9 puts all Phase D copy in the table, so the existing guard
    covers this surface. Extend the prohibited set with
-   celebration terms (`great`, `yay`, `✓ Done!`) if RFC 0006 has
+   celebration terms (`great`, `yay`, `✓ Done!`) if RFC 006 has
    not already; do not build a second checker.
 
 Each substep adds (in its own RFC and its own test crate):
@@ -595,9 +595,9 @@ specifies only what's new.
 - Spec §32 — keyboard alternatives
 - Spec §39 — Phase D plan (where the substeps are first
   named)
-- RFC 0001 — sprint planning page (what D-4 wires drag onto)
-- RFC 0002 — calendar surfaces (what D-3 wires drag onto)
-- RFC 0006 — i18n architecture and vocabulary guard
+- RFC 001 — sprint planning page (what D-4 wires drag onto)
+- RFC 002 — calendar surfaces (what D-3 wires drag onto)
+- RFC 006 — i18n architecture and vocabulary guard
   (requirement 9; supersedes the planned `dm_language` test)
 - `DEC-018`, `DEC-021` — approved decisions, 2026-07-31
 - DEV-001 — optimistic-lock repair; establishes the shared lock

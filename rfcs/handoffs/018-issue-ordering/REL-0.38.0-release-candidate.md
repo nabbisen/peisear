@@ -49,9 +49,9 @@ Seven things.
    answers *what do we do next* with priority bands, sprint membership and
    planned dates, and the sprint is the better answer — named, shared,
    time-boxed, on a page of its own. A manual order would have been a second
-   answer with no name in the UI and no visible provenance, and RFC 0004's
+   answer with no name in the UI and no visible provenance, and RFC 004's
    requirement 10 means it would have been per-row buttons on a phone, which do
-   not order a long backlog. **RFC 0004 is closed at four of five.** Name the
+   not order a long backlog. **RFC 004 is closed at four of five.** Name the
    revisit trigger — it is in the requirement.
 
 2. **What users will actually notice, as a short list and not a narrative.**

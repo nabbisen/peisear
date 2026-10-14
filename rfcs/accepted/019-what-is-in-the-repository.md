@@ -1,4 +1,4 @@
-# RFC 0019: What belongs in documentation, and what the links to `.git-exclude/` are
+# RFC 019: What belongs in documentation, and what the links to `.git-exclude/` are
 
 **Status**: **Accepted** (2026-10-12) — implementation may begin
 **Target**: 0.51.0, as `DOC-002` (the nineteen) and `DOC-006` (the

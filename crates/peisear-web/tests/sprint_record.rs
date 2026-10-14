@@ -1,4 +1,4 @@
-//! `SPRINT-004` (RFC 0013, `DEC-054`, `DEC-053`) -- the record of a
+//! `SPRINT-004` (RFC 013, `DEC-054`, `DEC-053`) -- the record of a
 //! completed sprint is **captured at completion and discarded on reopen**.
 //!
 //! A completed sprint's figures and burndown used to be computed live from

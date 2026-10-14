@@ -1,4 +1,4 @@
-# RFC 0014: The identity newtype — a convention held by a variable's name, made a type
+# RFC 014: The identity newtype — a convention held by a variable's name, made a type
 
 **Status**: **Accepted** (2026-10-07) — implementation may begin
 **Target**: 0.43.0 if accepted; the work is one substep and does not need

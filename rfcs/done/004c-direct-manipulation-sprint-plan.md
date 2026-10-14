@@ -1,10 +1,10 @@
-# RFC 0004c: Direct manipulation — the sprint plan (D-4)
+# RFC 004c: Direct manipulation — the sprint plan (D-4)
 
 **Status**: **Done** — shipped at 0.35.0.
 (Accepted 2026-09-13; moved to `done/` 2026-09-24, having sat in
 `accepted/` for four releases after shipping.)
 **Target**: 0.35.0
-**Umbrella**: [RFC 0004](../done/004-direct-manipulation.md) — substep D-4
+**Umbrella**: [RFC 004](../done/004-direct-manipulation.md) — substep D-4
 **Governing decisions**: `DEC-021`, `DEC-013`
 **Related requirements**: `FR-SPR-*`, `FR-DM-002/005`, `NFR-LANG-001`,
 `NFR-A11Y-001/006/007`
@@ -189,8 +189,8 @@ it for a screen the user cannot see past.
 
 ## References
 
-- [RFC 0004](../done/004-direct-manipulation.md) — umbrella, cross-cutting
+- [RFC 004](../done/004-direct-manipulation.md) — umbrella, cross-cutting
   requirements 0–9 and the substep contract
-- [RFC 0004b](../done/004b-direct-manipulation-board.md) — the substep this one
+- [RFC 004b](../done/004b-direct-manipulation-board.md) — the substep this one
   most resembles
-- [RFC 0001](../done/001-sprint-planning-page.md) — the screen and its endpoints
+- [RFC 001](../done/001-sprint-planning-page.md) — the screen and its endpoints

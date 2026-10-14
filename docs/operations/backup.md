@@ -72,7 +72,7 @@ Adjust the retention and offsite target to match your needs.
 
 Separate from backups, which protect against losing history: peisear
 fsyncs the write-ahead log **on every commit** (`synchronous = FULL`,
-measured and chosen in `STORE-002`/`RFC 0018` P0b). A change that
+measured and chosen in `STORE-002`/`RFC 018` P0b). A change that
 reports success survives a power cut or an OS crash immediately
 after — it does not depend on the next backup running.
 

@@ -1,4 +1,4 @@
-# RFC 0011: Browser verification — deciding what it buys before buying it
+# RFC 011: Browser verification — deciding what it buys before buying it
 
 **Status**: Done
 **Target**: steps 1 and 1b shipped in 0.29.0; step 2 is **done but unreleased**, shipping in 0.30.0; steps 3-4 at 0.31.0 and 0.32.0

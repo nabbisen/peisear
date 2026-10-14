@@ -1,4 +1,4 @@
-# RFC 0016: What peisear is called, and what it says it is
+# RFC 016: What peisear is called, and what it says it is
 
 **Status**: **Accepted** (2026-10-11) — both decisions taken by the owner;
 implementation may begin

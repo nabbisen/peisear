@@ -23,7 +23,7 @@ pub async fn connect(url: &str) -> StorageResult<Pool> {
     let opts = SqliteConnectOptions::from_str(url)?
         .create_if_missing(true)
         .journal_mode(SqliteJournalMode::Wal)
-        // `STORE-002` (`RFC 0018` P0b), measured 2026-10-11 on an AMD Ryzen 9
+        // `STORE-002` (`RFC 018` P0b), measured 2026-10-11 on an AMD Ryzen 9
         // 9950X (NVMe-backed, LUKS-encrypted filesystem): `NORMAL` can lose
         // recently committed transactions on a power cut or an OS crash;
         // `WAL`+`NORMAL` only fsyncs at checkpoint, where `FULL` fsyncs the

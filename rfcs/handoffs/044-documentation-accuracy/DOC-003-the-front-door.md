@@ -1,6 +1,6 @@
 # DOC-003 — the front door
 
-**`RFC 0016` proposal 2**, accepted 2026-10-11 and deferred from 0.49.0 so
+**`RFC 016` proposal 2**, accepted 2026-10-11 and deferred from 0.49.0 so
 the copy got a round of its own rather than a corner of a release-closing
 one. Plus three statements about the same subject that are wrong in three
 different documents.
@@ -31,7 +31,7 @@ repository:
 **two of them visible in the hero screenshot the README already carries**
 — the board's HEALTH section and its WORKLOAD chip.
 
-**`RFC 0016 §5` holds draft copy for the hero, overview, *Why peisear?* and
+**`RFC 016 §5` holds draft copy for the hero, overview, *Why peisear?* and
 features.** It is a draft, not a specification: **refine it against §1.7's
 vocabulary table** — no *velocity*, no *performance*, no achievement
 framing — and keep the owner's own adjectives where they still fit.
@@ -53,12 +53,12 @@ different ways, and the reader meets whichever they happen to open.**
 | `docs/operations/scaling.md:91-94` | *"no SQLite-specific tricks beyond a few `julianday` calls and `datetime('now', '-7 days')` modifier strings, both of which have direct PostgreSQL equivalents"* | **24** `julianday` uses, **10** `datetime('now'` modifiers — **and 11 triggers and 8 `RAISE(ABORT)` messages the sentence excludes**, which have no direct equivalent |
 | `ROADMAP.md:582` | *"larger than the crate-shaping above suggests, and needs its own RFC before it is scheduled or promised"* | **Correct** |
 
-**`RFC 0018` is now that RFC and it is accepted**, so the roadmap's
+**`RFC 018` is now that RFC and it is accepted**, so the roadmap's
 sentence needs updating too — it says the work needs an RFC that now
 exists.
 
 **Write one assessment and let the other places point at it.**
-`RFC 0019 §3`'s rule applies: stated once, in the document that governs it.
+`RFC 019 §3`'s rule applies: stated once, in the document that governs it.
 **`ROADMAP.md`'s section is the natural home** — it already has the fullest
 version. `README.md` and `scaling.md` then carry a sentence each, not an
 argument each.
@@ -106,7 +106,7 @@ what the binary actually prints**, by running it rather than by reading it.
 
 ## §6 — escalate rather than deciding
 
-- **If the draft copy in `RFC 0016 §5` claims something that does not
+- **If the draft copy in `RFC 016 §5` claims something that does not
   ship.** The RFC is a draft and I wrote it in one sitting.
 - **If `ROADMAP.md`'s PostgreSQL section cannot absorb §2's single
   assessment** without becoming the RFC over again.

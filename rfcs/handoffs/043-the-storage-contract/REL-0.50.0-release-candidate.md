@@ -1,7 +1,7 @@
 # REL-0.50.0 — release candidate
 
 **Contents**: `STORE-001` (`f80762a`), `STORE-002` (`63ea707`), `SEC-001`
-(`8aec73d`), `REG-001` (`9e5cd74`), and `RFC 0018` accepted (`2b91925`,
+(`8aec73d`), `REG-001` (`9e5cd74`), and `RFC 018` accepted (`2b91925`,
 `a84a47e`, `b6c9b49`, `47ea5da`). **Every handoff reviewed and closed.**
 
 **`DEC-028` is this round's work** — neither specification covers `0.50.0`

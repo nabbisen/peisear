@@ -1,6 +1,6 @@
 # FIV-001 — the key that is published
 
-**Target**: 0.53.0, first. `RFC 0017` proposals **4** and **§5**, which
+**Target**: 0.53.0, first. `RFC 017` proposals **4** and **§5**, which
 the RFC couples deliberately: §4 alone leaves a newcomer's laptop
 reachable from the LAN, just no longer with a known key; §5 alone still
 ships a known key to anyone who can reach the loopback port.
@@ -126,7 +126,7 @@ nothing.
 ## §5 — specification work (`DEC-028`)
 
 - **`NFR-SEC-004`** moves off `Divergent` once the literal is gone —
-  **and its text needs the amendment `RFC 0017`'s review already
+  **and its text needs the amendment `RFC 017`'s review already
   named**: it reads *"Deployment secrets are supplied by the
   environment"*, and after this round "generated and persisted locally,
   with the environment variable taking precedence when set" is a

@@ -157,7 +157,7 @@ gitignored path itself — and a citation written as a bare review-file
 name never spells it. 31 such files exist only in the project's private
 working area. `crates/` carries **60** of those citations across 25
 files, **27** of them doc comments that render on docs.rs. The rule
-reports clean, which is `§10.36` in the guard `RFC 0019` asked for.
+reports clean, which is `§10.36` in the guard `RFC 019` asked for.
 `updated_at_authority_scan`'s first-column limit, above.
 `NFR-MNT-005`'s kind-2 question, above.
 

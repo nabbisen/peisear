@@ -31,6 +31,7 @@ Design settled. Implementation may begin.
 
 | ID | Title | Target |
 |----|-------|--------|
+| 017 | [The first five minutes](./accepted/017-the-first-five-minutes.md) — **accepted 2026-10-14**, owner-raised: *"the current installation on documentation was too poor for unskilled users."* **There is nothing to install** — zero assets on every release (re-measured 0.48 through 0.52), no `Dockerfile`, and `installation.md` is 48 lines about installing `rustc`. Prebuilt binaries and a container image remove barriers 1–2; **a generated-and-persisted `JWT_SECRET` removes 3 and 4 and closes a P0** — `config.rs:31`'s published literal is the key that signs sessions on any unconfigured instance, which left `NFR-SEC-004` `Divergent` (`§10.40`) — and the bind default moves to loopback with it. **The security half lands first**: making startup easier without it is a one-command start into that state | 0.53.0, [handoffs 046](./handoffs/046-the-first-five-minutes/README.md) |
 | 019 | [What belongs in documentation](./accepted/019-what-is-in-the-repository.md) — **accepted 2026-10-12**. The owner's two parts: a link into the project's private working area is either **lack of documentation** (the claim depends on what only the private file says) or a **useless link** (the document already carries the substance). 137 occurrences repo-wide, but **83 of the 104 files are handoffs**, which are execution records — **inside documentation there are 19**, four of them not defects. Writes down what documentation is, and the rule for decisions: **stated once, in the document it governs, at a location the other mentions point to** | 0.51.0 |
 | 018 | [The PostgreSQL backend](./accepted/018-the-postgresql-backend.md) — **accepted 2026-10-11**. The type boundary is ready (one `Pool` alias, zero compile-time `sqlx` macros, 137 runtime queries); the contracts are not (**11 triggers**, **8 `RAISE(ABORT)`** messages matched by prose). Reason settled by the owner as **server stability and security first, extensibility second** — none of them a scale claim, so no requirement is amended and SQLite stays the default. **Encryption is not a differentiator**: core PostgreSQL has no TDE either, and the real gap is that `docs/security/` never mentions data at rest. **Found while scoping it**: SQLite's whole-second `CURRENT_TIMESTAMP` is the optimistic-lock token, so it **does not advance between two writes in the same second** — verified directly, and scheduled first because the backend work would have masked it | P0/P0b at 0.50.0, backend 0.53–0.55 |
 | 016 | [What peisear says it is](./accepted/016-what-peisear-says-it-is.md) — **accepted 2026-10-11**, owner-raised. The requirements call the distinguishing purpose keeping *"a project — and the people in it — sustainable"*; `README.md` says *"issue tracking"*, and the interface's own brand string is **"Issue Tracker"**, so the product never says its name. `README.md` mentions health, sustainability, privacy, `/today`, WIP and sprints **zero times each** — all shipped, two of them visible in the hero screenshot the README carries. The logo is a hearth with people around it; only the words disagree | 0.49.0 (brand + published one-liners), 0.50.0 (README) |
@@ -50,9 +51,8 @@ RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 Open for review. Design may still change.
 
-| ID | Title | Target |
-|----|-------|--------|
-| 017 | [The first five minutes](./proposed/017-the-first-five-minutes.md) — **owner-raised 2026-10-11**: *"the current installation on documentation was too poor for unskilled users."* **There is nothing to install** — zero assets on every release (measured 0.46–0.48), no `Dockerfile`, and `installation.md` is 48 lines about installing `rustc`. Channels decided by the owner the same day: **prebuilt binaries and a container image**. Still open: the `JWT_SECRET` fallback is a **published constant**, so an instance started without it signs sessions with a key the world knows — making startup easier makes that worse, so the two land together | 0.52.0 |
+**None today.** `RFC 017` was the last one here and was accepted
+2026-10-14.
 
 ## Implemented
 
@@ -104,13 +104,13 @@ the RFC number they are keyed to.
 | [`handoffs/014-vendored-assets/`](./handoffs/014-vendored-assets/README.md) | `DEC-051` — Tailwind and DaisyUI move out of two CDNs into `static/` |
 | [`handoffs/016-privacy-coverage/`](./handoffs/016-privacy-coverage/README.md) | not RFC-governed — `NFR-PRIV-008`'s coverage, target 0.37.0 |
 | [`handoffs/017-backlog-ordering/`](./handoffs/017-backlog-ordering/README.md) | **Not RFC-governed** — `PLAN-003`, the sprint-plan backlog's priority sort, target 0.38.0 |
-| [`handoffs/018-issue-ordering/`](./handoffs/018-issue-ordering/README.md) | RFC 0004 — `ORD-001` **retires substep D-5** and removes `position`; `ORD-002`/`ORD-003` follow on ordering defects it uncovered, target 0.38.0 |
+| [`handoffs/018-issue-ordering/`](./handoffs/018-issue-ordering/README.md) | RFC 004 — `ORD-001` **retires substep D-5** and removes `position`; `ORD-002`/`ORD-003` follow on ordering defects it uncovered, target 0.38.0 |
 | [`handoffs/019-capacity-integrity/`](./handoffs/019-capacity-integrity/README.md) | **Not RFC-governed** — `CAP-001`, the capacity overlap check is not atomic, target 0.38.0 |
 | [`handoffs/020-read-then-write/`](./handoffs/020-read-then-write/README.md) | **Not RFC-governed** — `RACE-001`/`RACE-002`, four more check-then-write races `CAP-001` uncovered, target 0.39.0 |
 | [`handoffs/021-static-is-public/`](./handoffs/021-static-is-public/README.md) | **Not RFC-governed** — `STATIC-001`, a document under the served `static/` directory; **blocks the 0.38.0 tag** |
 | [`handoffs/022-sprint-membership/`](./handoffs/022-sprint-membership/README.md) | **Not RFC-governed** — `SPRINT-001`/`SPRINT-002`, changes that alter a completed sprint's record, target 0.39.0 |
 | [`handoffs/023-sprint-reopen/`](./handoffs/023-sprint-reopen/README.md) | `DEC-053` — `SPRINT-003`, reopening a completed sprint; **superseded by `SPRINT-004`**, design still normative |
-| [`handoffs/0013-the-sprint-record/`](./handoffs/0013-the-sprint-record/README.md) | RFC 0013 / `DEC-054` — `SPRINT-004`, capture at completion and discard on reopen, target 0.39.0 |
+| [`handoffs/0013-the-sprint-record/`](./handoffs/0013-the-sprint-record/README.md) | RFC 013 / `DEC-054` — `SPRINT-004`, capture at completion and discard on reopen, target 0.39.0 |
 | [`handoffs/024-requirement-status-audit/`](./handoffs/024-requirement-status-audit/README.md) | **Not RFC-governed** — `REQ-001`, what the record claims against what the code does, target 0.40.0 |
 | [`handoffs/025-noticed-and-deferred/`](./handoffs/025-noticed-and-deferred/README.md) | **Not RFC-governed** — `PERF-001` and `GATE-001`, two items found during other work, target 0.40.0 |
 | [`handoffs/026-plan-filter-overflow/`](./handoffs/026-plan-filter-overflow/README.md) | **Not RFC-governed** — `LAYOUT-010`, the plan page's filter selects; **holds a red gate**, target 0.40.0 |
@@ -124,7 +124,7 @@ the RFC number they are keyed to.
 | [`handoffs/034-reach-after-navigation/`](./handoffs/034-reach-after-navigation/README.md) | **Not RFC-governed** — `A11Y-006`, `NFR-A11Y-011`'s skip link, target 0.42.0 |
 | [`handoffs/035-non-text-contrast/`](./handoffs/035-non-text-contrast/README.md) | **Not RFC-governed** — `A11Y-007`/`A11Y-008`, `NFR-A11Y-010` at 3:1, target 0.42.0 |
 | [`handoffs/036-status-drift/`](./handoffs/036-status-drift/README.md) | **Not RFC-governed** — `REQ-003`, whether a stale requirement status is mechanically detectable, target 0.43.0 |
-| [`handoffs/0014-the-identity-newtype/`](./handoffs/0014-the-identity-newtype/README.md) | RFC 0014 / `DEC-058` — `PRIV-002`, identity becomes a type, target 0.43.0 |
+| [`handoffs/0014-the-identity-newtype/`](./handoffs/0014-the-identity-newtype/README.md) | RFC 014 / `DEC-058` — `PRIV-002`, identity becomes a type, target 0.43.0 |
 | [`handoffs/015-mobile-completion/`](./handoffs/015-mobile-completion/README.md) | **Not RFC-governed** — closing `NFR-A11Y-006`, unverified since Phase E |
 | [`handoffs/008-explainability/`](./handoffs/008-explainability/README.md) | 008 — historical, RFC implemented |
 | [`handoffs/003-inbox-refinements/`](./handoffs/003-inbox-refinements/README.md) | 003 — historical, RFC implemented |

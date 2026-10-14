@@ -13,7 +13,7 @@
 
 `FR-CAL-007` is **P0**: *the calendar MUST NOT display occupancy rate,
 week-over-week comparison, free-hours totals, or any derived efficiency
-figure.* Its status says **RFC 0002 mandates a guard test asserting these
+figure.* Its status says **RFC 002 mandates a guard test asserting these
 strings are absent.**
 
 **The behaviour holds** — `REQ-001` checked, and no efficiency copy renders on

@@ -6,7 +6,7 @@ one small addition.
 
 **Review**: `.git-exclude/reviewed/DOCS-007-review.md`. **Target**: 0.49.0.
 
-**Amended 2026-10-11, after the round was written**: `RFC 0016` was raised by
+**Amended 2026-10-11, after the round was written**: `RFC 016` was raised by
 the owner, accepted the same day, and puts **one change ahead of the
 captures** — §0 below. Read it first; it changes what the images must show.
 
@@ -14,7 +14,7 @@ captures** — §0 below. Read it first; it changes what the images must show.
 
 ## §0 — before you capture anything: the product's own name
 
-**`RFC 0016` (accepted, owner decision): the interface brand string becomes
+**`RFC 016` (accepted, owner decision): the interface brand string becomes
 `peisear`.** Today it is **"Issue Tracker"** — in the navbar of every
 authenticated page and in seven page titles — so the product never says its
 own name, and `DOCS-007`'s committed screenshots publish the wrong one.
@@ -41,13 +41,13 @@ interface's.
 
 **My search for anything that asserts the old text was bounded**:
 `git grep -F 'Issue Tracker'` over tracked files returns the eight above plus
-`RFC 0016`'s own quotations — **no test, fixture or document asserts it**
+`RFC 016`'s own quotations — **no test, fixture or document asserts it**
 (`fixture_locale.rs:131` uses `[fx-brand]`, so the i18n guard is unaffected).
 **Re-run that search yourself before trusting it**, and say what you found.
 
 ## §0.1 — and the same claim in four published one-liners
 
-`RFC 0016 §9`. Each is **published by the 0.49.0 release itself**, so leaving
+`RFC 016 §9`. Each is **published by the 0.49.0 release itself**, so leaving
 them would pair a corrected hero image with an uncorrected crates.io card:
 
 - `crates/peisear/Cargo.toml:3` — the **crates.io description**.
@@ -55,7 +55,7 @@ them would pair a corrected hero image with an uncorrected crates.io card:
 - `crates/peisear-web/Cargo.toml:3` — "…for peisear (issue tracker)".
 - `docs/book.toml:17` — the book's own description.
 
-**Take the wording from `RFC 0016`'s hero draft**, not from a fresh
+**Take the wording from `RFC 016`'s hero draft**, not from a fresh
 invention, so one phrasing governs: *project and issue tracking that also
 shows how the project — and the people in it — are holding up*. Keep the
 owner's own adjectives where they still fit. **These are provisional** —

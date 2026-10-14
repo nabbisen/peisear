@@ -1230,7 +1230,7 @@ async fn calendar_js_is_referenced_only_on_day_view() {
 }
 
 // ──────────────────────────────────────────────────────────────
-// `CAL-004` (RFC 0015, `DEC-059`): the move control. The acceptance
+// `CAL-004` (RFC 015, `DEC-059`): the move control. The acceptance
 // `FR-DM-002`'s clause actually rests on — a Move must produce the
 // identical stored row a drag of the same intent would, with the
 // duration preserved and the lock enforced.

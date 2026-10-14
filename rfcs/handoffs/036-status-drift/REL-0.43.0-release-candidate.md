@@ -2,7 +2,7 @@
 
 **Contents**: the identity newtype — `PRIV-002` (`259320e`), `PRIV-003`
 (`d720db1`), `PRIV-004` and its round 2 (`a3650b9`, `6417ca6`), under
-`DEC-058`/RFC 0014 with the `DEC-058` correction (`38e0f8c`); `DOCS-002`
+`DEC-058`/RFC 014 with the `DEC-058` correction (`38e0f8c`); `DOCS-002`
 (`61c7b96`) with the escalation (`7592fbf`) and round 2 (`219cbca`);
 `REQ-003` (`fce0d87`) and the `NFR-A11Y-011` renumber (`8222ce7`); and the
 specification amendment and its sweep (`5ae64ff`). **Every handoff reviewed

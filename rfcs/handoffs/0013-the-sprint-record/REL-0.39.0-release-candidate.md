@@ -2,7 +2,7 @@
 
 **Contents**: `RACE-001` (`2479327`, `05cd94c`, `4da1104`), `RACE-002`
 (`376c21f`), `RACE-003` (`e7ab562`), `SPRINT-001` (`762a31e`, **half reverted**
-by `fbfc1db`), `SPRINT-004` (`a9f9556`), `SPRINT-005` (`2c35237`), RFC 0013
+by `fbfc1db`), `SPRINT-004` (`a9f9556`), `SPRINT-005` (`2c35237`), RFC 013
 accepted with `DEC-053` and `DEC-054`, and the requirement work at `7aa2192`,
 `39d7a43`, `3e7d3bc`. All six reviewed and closed.
 **Depends on**: nothing outstanding.
@@ -39,7 +39,7 @@ decision it made four days ago.** Seven things.
 
 2. **A completed sprint's figures no longer change** — the release's subject.
    Its committed and completed totals, counts, carried-over and burndown are
-   **captured when it completes** (`DEC-054`, RFC 0013) and read from the
+   **captured when it completes** (`DEC-054`, RFC 013) and read from the
    capture thereafter. Before this they were computed live from four inputs,
    so carrying an issue over and finishing it a month later moved a finished
    sprint's numbers.
@@ -93,7 +93,7 @@ decision it made four days ago.** Seven things.
    at freezing membership, which is **one of four inputs** to the figures they
    meant to protect — and they would have blocked carry-over, the product's
    designed path for unfinished work. **The dev team stopped the second before
-   writing code, having measured the flow it would break.** RFC 0013 replaced
+   writing code, having measured the flow it would break.** RFC 013 replaced
    the mechanism. `FR-SPR-004`'s rationale was right throughout; the sentence
    built on it was not.
 

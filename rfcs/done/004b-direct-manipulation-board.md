@@ -1,8 +1,8 @@
-# RFC 0004b: Direct manipulation — the board (D-2)
+# RFC 004b: Direct manipulation — the board (D-2)
 
 **Status**: **Implemented (0.26.0)** — `BOARD-001`
 **Target**: 0.26.0
-**Umbrella**: [RFC 0004](../done/004-direct-manipulation.md) — substep D-2
+**Umbrella**: [RFC 004](../done/004-direct-manipulation.md) — substep D-2
 **Governing decisions**: `DEC-021`, `DEC-018`
 **Related requirements**: `FR-DM-001/002/005`, `NFR-LANG-001`, `NFR-CONC-001`
 **Last updated**: 2026-08-25

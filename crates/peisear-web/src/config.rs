@@ -50,7 +50,7 @@ impl Config {
     /// query string or fragment (a DSN's own business, never a startup
     /// line's). Today's `sqlite://data/app.db` has no userinfo and
     /// round-trips unchanged; the day a `postgres://user:password@host/db`
-    /// DSN exists (`RFC 0018` P3), this is what keeps the password out of
+    /// DSN exists (`RFC 018` P3), this is what keeps the password out of
     /// every log line that names the database.
     ///
     /// Redact at the source, not at each call site — `main.rs`'s startup

@@ -1,6 +1,6 @@
 # FIV-003 — the container image
 
-**Target**: 0.53.0, after `FIV-001`. `RFC 0017` proposal 2.
+**Target**: 0.53.0, after `FIV-001`. `RFC 017` proposal 2.
 
 **The only path with no prerequisite at all** beyond a container
 runtime, and one build rather than five. There is no `Dockerfile`

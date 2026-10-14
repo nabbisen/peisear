@@ -7,13 +7,13 @@ what it claimed — not by a feature request.
 `0.51.0` was a documentation release that absorbed three rounds of
 non-documentation work, and said so twice in its own changelog. This
 series is the correction: **guard infrastructure gets its own release**,
-and `RFC 0017` moves to `0.53.0`.
+and `RFC 017` moves to `0.53.0`.
 
 **The schedule this changed** is in one place now:
 [`ROADMAP.md`'s **What ships next**](../../../ROADMAP.md#what-ships-next),
 which carries the current numbers, the reason 0.52.0 is the guards
-rather than `RFC 0017`, and what the shift costs the rows behind it.
-`RFC 0018 §6`'s own release column is withdrawn in favour of it. The
+rather than `RFC 017`, and what the shift costs the rows behind it.
+`RFC 018 §6`'s own release column is withdrawn in favour of it. The
 reason in one line is `GRD-001`: a guard that `NFR-A11Y-007` depends on
 is reporting clean on files it cannot read, and that should not queue
 behind a release about installation.

@@ -1,4 +1,4 @@
-# RFC 0002: Calendar surfaces
+# RFC 002: Calendar surfaces
 
 **Status**: Implemented (0.23.0)
 
@@ -96,7 +96,7 @@ This RFC narrows that to two. See open question 1.
    `?view=day|week|month` URL parameter (week as default).
    The selection is in the URL so it bookmarks; per-user
    preference is **not** persisted (matches the rationale in
-   RFC 0001's filter section: episodic activity).
+   RFC 001's filter section: episodic activity).
 4. Period navigation: `?date=YYYY-MM-DD` URL parameter
    anchoring the visible range. Prev/next buttons advance or
    retreat by the current view's span and update the URL.
@@ -476,6 +476,6 @@ assert!(matches!(err, StorageError::Validation(_)));
 - Spec §10.2-10.4 — calendar concept
 - Spec §16 — calendar screen
 - Spec §38.1 task 2 — Phase C tasks
-- RFC 0001 — sprint planning page (sprint band overlap
+- RFC 001 — sprint planning page (sprint band overlap
   semantics referenced from there)
-- RFC 0004 — direct manipulation, where calendar DnD lands
+- RFC 004 — direct manipulation, where calendar DnD lands

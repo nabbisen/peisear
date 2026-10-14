@@ -1,6 +1,6 @@
 # REL-0.51.0 — release candidate
 
-**Contents**: `DOC-001` through `DOC-007`, and `RFC 0019` accepted.
+**Contents**: `DOC-001` through `DOC-007`, and `RFC 019` accepted.
 **Every handoff reviewed and closed.**
 
 **`DEC-028` is this round's work** — neither specification covers `0.51.0`

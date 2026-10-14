@@ -1,9 +1,9 @@
-# RFC 0004a: Direct manipulation — status change (D-1)
+# RFC 004a: Direct manipulation — status change (D-1)
 
 **Status**: **Implemented (0.26.0)** — step 1 shipped in 0.25.0 (`STATUS-001`),
 step 2 in 0.26.0 (`STATUS-002`)
 **Target**: 0.25.0, **after CONF-001**
-**Umbrella**: [RFC 0004](../done/004-direct-manipulation.md) — substep D-1
+**Umbrella**: [RFC 004](../done/004-direct-manipulation.md) — substep D-1
 **Governing decisions**: `DEC-021` (JavaScript posture), `DEC-018`
 **Related requirements**: `FR-ISS-005/006`, `FR-DM-001/005`, `NFR-CONC-001/004`
 **Last updated**: 2026-08-25
@@ -195,7 +195,7 @@ without varying them. Recorded as decided rather than left looking skipped.
 
 ## References
 
-- RFC 0004 §Requirements cross-cutting 0 and 6
+- RFC 004 §Requirements cross-cutting 0 and 6
 - External design `§17.4` (the shape to avoid), `§7.3` (the response contract)
 - `components/issues.rs:1504–1531` (the inert segment), `:621` (the board's
   working form), `handlers/issues.rs:833` (the 204)

@@ -53,7 +53,7 @@ that sharing costs more than it saves."* That call is recorded in
 `rfcs/handoffs/004b-direct-manipulation-board/BOARD-001-board-copy-and-parity.md:82`
 and cited as precedent in two source comments
 (`tests/status_control.rs:75`, `src/contrast_scan.rs:63`). **It is in
-neither specification** — the exact shape `RFC 0019 §3` ruled on at
+neither specification** — the exact shape `RFC 019 §3` ruled on at
 `0.51.0`.
 
 **Reverse it for this helper, and state the test that distinguishes the
@@ -158,7 +158,7 @@ rest.
 
 - **No requirement governs helper duplication.** Then §2's rule has no
   home. Report it; do not invent a requirement, and do not leave the
-  rule only in a source comment — that is the defect `RFC 0019` just
+  rule only in a source comment — that is the defect `RFC 019` just
   closed nineteen instances of.
 - **A sixth scan turns out to need a different helper** — e.g. one that
   must keep comments. Then the shared module is the wrong shape and the

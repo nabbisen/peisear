@@ -245,7 +245,7 @@ pub fn build_router(state: AppState) -> Router {
             "/projects/{id}/issues/{issue_id}/schedule",
             post(issues::change_schedule),
         )
-        // `CAL-004` (RFC 0015, `DEC-059`): the form sibling, on the
+        // `CAL-004` (RFC 015, `DEC-059`): the form sibling, on the
         // issue page rather than the day view — see
         // `change_schedule`'s own doc comment for why not the latter.
         .route(

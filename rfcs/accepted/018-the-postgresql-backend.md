@@ -1,8 +1,8 @@
-# RFC 0018: The PostgreSQL backend — and the lock defect found while scoping it
+# RFC 018: The PostgreSQL backend — and the lock defect found while scoping it
 
 **Status**: **Accepted** (2026-10-11) — implementation may begin at P0
 **Target**: **P0 and P0b at 0.50.0**; the backend across
-**0.53.0 – 0.55.0**, after `RFC 0017` (0.52.0) and the documentation round
+**0.53.0 – 0.55.0**, after `RFC 017` (0.52.0) and the documentation round
 (0.51.0)
 **Raised by**: the owner, 2026-10-11 — *"Is there any actual plan or schedule
 to extend peisear-storage for postgresql?"* then *"Make the schedule and
@@ -305,8 +305,8 @@ written and are kept so the shift is visible rather than silent.*
 | **P3** | ~~**0.54.0**~~ | The schema on PostgreSQL: migrations ported, 11 triggers re-implemented, pool options | The migration suite applies cleanly on both |
 | **P4** | ~~**0.55.0**~~ | The conformance suite: the same storage and lock tests against both backends in CI; the operations story (backup is no longer `cp` on PostgreSQL); documentation | Both backends green on one suite; `NFR-CMP-003` restated to say *for the SQLite backend* |
 
-**Sequenced after `RFC 0017`** (the first five minutes), deliberately:
-PostgreSQL serves the operator who already has one, and `RFC 0017` serves the
+**Sequenced after `RFC 017`** (the first five minutes), deliberately:
+PostgreSQL serves the operator who already has one, and `RFC 017` serves the
 person who has nothing. The owner has just said the second is the problem.
 
 **P0 and P1 do not depend on this RFC being accepted.** If the backend is
@@ -318,7 +318,7 @@ each prerequisite had to pass to be listed here.
 `README.md:77` tells a prospective adopter that *"swapping SQLite for Postgres
 … is a localised change."* **It is localised in types and not in contracts**,
 and the reader meets the README, not `ROADMAP.md:582`'s own correction of the
-same claim. Already recorded for `RFC 0016`'s repositioning round
+same claim. Already recorded for `RFC 016`'s repositioning round
 (`rfcs/handoffs/042-documentation-that-drifted/README.md`).
 
 ## §8 — decisions taken
@@ -344,7 +344,7 @@ same claim. Already recorded for `RFC 0016`'s repositioning round
    the move is named rather than hidden — P1 stands on its own merits and
    waits longer than it needs to. *Amended (0.52.0): this clause read
    "P1 moves to 0.53.0 … 0.51.0 is documentation accuracy and 0.52.0 is
-   `RFC 0017`". 0.52.0 is the guard round instead — `ROADMAP.md`'s **What
+   `RFC 017`". 0.52.0 is the guard round instead — `ROADMAP.md`'s **What
    ships next** carries the reason and the current numbers. The pairing and
    the ordering are unchanged.*
 

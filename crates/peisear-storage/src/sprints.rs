@@ -746,7 +746,7 @@ async fn live_totals(
 /// The summary figures for one sprint.
 ///
 /// **A `completed` sprint reads the record captured when it completed**
-/// (`DEC-054`, RFC 0013): what it reported does not change afterwards, however
+/// (`DEC-054`, RFC 013): what it reported does not change afterwards, however
 /// its issues are carried over, finished, edited or re-estimated. Any other
 /// sprint computes live from its current membership; carried-over is `0` for
 /// those by convention.

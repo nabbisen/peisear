@@ -1,4 +1,4 @@
-# RFC 0008: Explainability — the basis behind an indicator
+# RFC 008: Explainability — the basis behind an indicator
 
 **Status**: **Implemented (0.29.0)** — `HLT-001`, `HLT-002`; history deferred
 **Target**: 0.29.0

@@ -323,7 +323,7 @@ async fn viewer_role_sees_the_same_behaviour_as_member() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// SPRINT-005 (`DEC-054`, RFC 0013) -- the gate reads the record's basis
+// SPRINT-005 (`DEC-054`, RFC 013) -- the gate reads the record's basis
 // ─────────────────────────────────────────────────────────────
 //
 // After `SPRINT-004` a completed sprint *displays* the record captured at

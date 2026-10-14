@@ -165,7 +165,7 @@ it does not, the table-rebuild form is the fallback and needs the triggers from
 ## 8. What the architect does, not the dev team
 
 `FR-DM-001` amended to four surfaces with D-5 recorded as retired by decision;
-RFC 0004's table and status updated; `021`'s revisit trigger carried into the
+RFC 004's table and status updated; `021`'s revisit trigger carried into the
 requirement. Those land alongside this change, not in it.
 
 ## 9. Exit condition

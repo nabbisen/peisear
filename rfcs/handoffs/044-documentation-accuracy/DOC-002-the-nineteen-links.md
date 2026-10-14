@@ -1,6 +1,6 @@
 # DOC-002 — the nineteen links
 
-**`RFC 0019`, accepted.** Every link from documentation into `.git-exclude/`
+**`RFC 019`, accepted.** Every link from documentation into `.git-exclude/`
 is either **lack of documentation** or a **useless link**. Nineteen sit
 inside documentation; **four of them are not defects**. Close them, then
 narrow rule 5 to the rule the defect was actually about and switch it on.

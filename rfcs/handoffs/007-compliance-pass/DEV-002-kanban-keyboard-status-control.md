@@ -23,7 +23,7 @@ navigates to the issue — it does not change status. There is no keyboard route
 to the status change the drag performs.
 
 `DEC-018` chose to keep the drag and add a form-POST control rather than remove
-the board or pull RFC 0004 forward. The reasoning: RFC 0004's value is the
+the board or pull RFC 004 forward. The reasoning: RFC 004's value is the
 *drag* contract — optimistic update, undo, rollback — which a form POST does
 not touch, so Phase D is not preempted.
 
@@ -52,7 +52,7 @@ not touch, so Phase D is not preempted.
 - **Do not touch `board.js`.** DEV-001 owns it. The drag path stays as DEV-001
   leaves it.
 - Do not add drag, undo, or optimistic update to the keyboard path. Those are
-  RFC 0004.
+  RFC 004.
 - Do not alter the `SCR-11` issue-detail status segment. `FR-ISS-006` keeps it
   display-only until Phase D — this task is the *board*, not the detail screen.
 - No schema change.

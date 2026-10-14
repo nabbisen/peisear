@@ -161,10 +161,10 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| **0.53.0** | **The first five minutes.** Prebuilt binaries and a container image, so starting peisear does not begin with installing a compiler — **and the published signing key deleted**, which is why the security round goes first | `RFC 0017` (**Proposed**), [handoffs 046](rfcs/handoffs/046-the-first-five-minutes/README.md) | **Authorized 2026-10-14. Scoped; four rounds written. Blocked on one thing: the owner accepting `RFC 0017`** — its §4/§5 security review is done and recorded in the RFC (2026-10-11, both approved as proposed), so acceptance is the remaining event, not the review |
-| 0.54.0 | **The dialect seam.** `RFC 0018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet | `RFC 0018` §6 | Authorized 2026-10-14 |
-| 0.55.0 | **PostgreSQL's schema.** `RFC 0018` P3 — migrations ported, triggers re-implemented | `RFC 0018` §6 | Authorized 2026-10-14 |
-| 0.56.0 | **The conformance suite.** `RFC 0018` P4 — one suite against both backends in CI, and the operations story | `RFC 0018` §6 | Authorized 2026-10-14 |
+| **0.53.0** | **The first five minutes.** Prebuilt binaries and a container image, so starting peisear does not begin with installing a compiler — **and the published signing key deleted**, which is why the security round goes first | `RFC 017` (**Proposed**), [handoffs 046](rfcs/handoffs/046-the-first-five-minutes/README.md) | **Authorized 2026-10-14. Scoped; four rounds written. Blocked on one thing: the owner accepting `RFC 017`** — its §4/§5 security review is done and recorded in the RFC (2026-10-11, both approved as proposed), so acceptance is the remaining event, not the review |
+| 0.54.0 | **The dialect seam.** `RFC 018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet | `RFC 018` §6 | Authorized 2026-10-14 |
+| 0.55.0 | **PostgreSQL's schema.** `RFC 018` P3 — migrations ported, triggers re-implemented | `RFC 018` §6 | Authorized 2026-10-14 |
+| 0.56.0 | **The conformance suite.** `RFC 018` P4 — one suite against both backends in CI, and the operations story | `RFC 018` §6 | Authorized 2026-10-14 |
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
@@ -175,7 +175,7 @@ themselves) on 2026-10-14. A row leaves when the release is cut; what
 it contained is in `CHANGELOG.md` and in the specification's own
 baseline rows, which is where release history belongs.
 
-**Why `RFC 0017` moved off 0.52.0, kept for the record.** `RFC 0018 §8` was written when the
+**Why `RFC 017` moved off 0.52.0, kept for the record.** `RFC 018 §8` was written when the
 answer was *"0.51.0 is documentation accuracy and 0.52.0 is `RFC
 0017`"*. 0.51.0 then found two things it could not absorb: a helper
 five guards had copied naively, so that `touch_target_scan` — a guard
@@ -185,7 +185,7 @@ thing. Both are guard infrastructure, both were named in 0.51.0's own
 changelog as carried, and **a guard that cannot see its subject should
 not queue behind a release about installation.** The cost is named
 rather than hidden: every row below moves one release later, and
-`RFC 0018`'s P1 now waits three releases longer than it needs to rather
+`RFC 018`'s P1 now waits three releases longer than it needs to rather
 than two.
 
 ## Release cycle
@@ -614,7 +614,7 @@ Three threads to revisit when the product or its scale changes:
 
 ### PostgreSQL backend
 
-**`RFC 0018`, accepted 2026-10-11, is the assessment this section used to
+**`RFC 018`, accepted 2026-10-11, is the assessment this section used to
 defer to a future RFC.** This is now the single place that assessment is
 stated; `README.md` and `docs/operations/scaling.md` each carry one
 sentence pointing here rather than repeating it.
@@ -689,7 +689,7 @@ triggers are the real work:**
 **Schedule**: P0 and P0b (the lock-token fix and the `synchronous`
 measurement, both scheduled whether or not this backend ever ships)
 landed at **0.50.0**. P1 (coded errors) and P2 (the dialect seam, no
-PostgreSQL code yet) are **0.53.0**, after `RFC 0017` (0.52.0) and this
+PostgreSQL code yet) are **0.53.0**, after `RFC 017` (0.52.0) and this
 documentation round (0.51.0) — a storage refactor dropped into either
 would be the sprawl this schedule exists to avoid. P3 (the schema on
 PostgreSQL) is **0.54.0**; P4 (the conformance suite, both backends green

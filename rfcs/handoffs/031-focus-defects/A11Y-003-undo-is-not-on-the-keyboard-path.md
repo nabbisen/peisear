@@ -4,7 +4,7 @@
 **Date**: 2026-09-25
 **Target release**: 0.41.0
 **Related requirements**: **`FR-DM-002`** (keyboard parity), `NFR-A11Y-002`.
-**Governing RFC**: `RFC 0004`, requirement 1. **Source**: `A11Y-001` §1.1,
+**Governing RFC**: `RFC 004`, requirement 1. **Source**: `A11Y-001` §1.1,
 measured. **Depends on**: nothing. **After `A11Y-002`.**
 
 ---
@@ -26,7 +26,7 @@ is not moved to the toast, and when the toast ends — pressed **or** expired �
 focus drops to `body`.
 
 **`FR-DM-002`**: *every direct-manipulation action MUST have a keyboard
-equivalent producing the identical effect.* `RFC 0004b`'s open question 3
+equivalent producing the identical effect.* `RFC 004b`'s open question 3
 decided undo was worth building **because the inconsistency between surfaces
 was visible to a user**. It was built on the pointer path only. **Five releases
 have shipped with it and nobody counted the presses.**
@@ -58,7 +58,7 @@ that decides it.
   required evidence runs** — the no-reload sequence and, if the toast's markup
   or position changes, the before-and-after rendering check. `PLAN-002` round 1
   is why.
-- **The five-second lifetime is `RFC 0004`'s**, not incidental. Changing it is
+- **The five-second lifetime is `RFC 004`'s**, not incidental. Changing it is
   a decision; propose, do not take.
 - **The pointer path must not regress.** Its Tab count is 2 on issue detail
   today, and a fix that helps the board must not cost that.

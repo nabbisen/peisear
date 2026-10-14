@@ -62,7 +62,7 @@
 //! file cites the path," which could never pass -- that version banned
 //! `docs/specification/README.md`'s own sentence defining what
 //! `.git-exclude/` is, and it banned every implementation handoff, which
-//! is an execution record, not documentation. `DOC-002` (`RFC 0019`,
+//! is an execution record, not documentation. `DOC-002` (`RFC 019`,
 //! `0.51.0`) found the rule the defect was actually about and this is
 //! it: three documentation surfaces, four named exceptions, no `git`
 //! shell-out, enforced rather than reported.
@@ -584,13 +584,13 @@ fn only(v: Vec<String>, rule: &str) -> Vec<String> {
 }
 
 // ---------- rule 5: no document, RFC, or published doc comment cites a
-// gitignored path (`DOC-002`, `RFC 0019`) ----------
+// gitignored path (`DOC-002`, `RFC 019`) ----------
 //
 // Narrowed from "no committed file cites the path," which could never
 // pass: that version banned `docs/specification/README.md`'s own
 // sentence defining the convention, and it banned every handoff, which
 // is an execution record, not documentation. The rule that matches the
-// defect `RFC 0019` actually found: no document under `docs/`, no RFC,
+// defect `RFC 019` actually found: no document under `docs/`, no RFC,
 // and no published doc comment cites `.git-exclude/`.
 //
 // A pure filesystem walk, not a git shell-out. The old version needed
@@ -613,7 +613,7 @@ const SELF_PATH: &str = "crates/peisear-web/src/docs_scan.rs";
 /// The other three named exceptions, each for its own reason: both
 /// *define* the convention they are quoted for (one documents what
 /// `.git-exclude/` is, in a table about what is normative; the other is
-/// `RFC 0019` itself, which proposed this very rule and quotes the
+/// `RFC 019` itself, which proposed this very rule and quotes the
 /// paths it governs -- the same self-reference as `SELF_PATH`, one
 /// directory over). If this list needs a fifth entry, that is `§10.36`'s
 /// own shape: a rule whose exception list keeps growing is a rule whose

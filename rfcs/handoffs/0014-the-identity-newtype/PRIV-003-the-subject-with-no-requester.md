@@ -69,7 +69,7 @@ from personal-data storage entirely.
   path parameter and reach the converted functions through `From`'s inverse if
   one existed. **There is no inverse.**
 - **Not a conversion of resource ids.** Project, team and issue ids stay as
-  they are; RFC 0014's scope is identity.
+  they are; RFC 014's scope is identity.
 - **Not a second extractor.** Handlers already have `RequesterId`; they use
   `From`.
 - **`notifications::insert` and the dispatch-loop functions** are job-side and

@@ -12,7 +12,7 @@ A version-bump-and-changelog commit on `main`'s tip. `Cargo.toml`,
 
 **No migration.** `0017` remains the most recent. The reschedule writes columns
 that migration `0016` added at 0.23.0; nothing new was needed, which is what
-RFC 0004's substep contract predicted when it said only D-5 needs schema.
+RFC 004's substep contract predicted when it said only D-5 needs schema.
 
 **Expected: 268**, up from 0.35.0's 262 — eleven new tests across two existing
 files, so `DEC-007`'s command block is unchanged. If the block needs an edit,

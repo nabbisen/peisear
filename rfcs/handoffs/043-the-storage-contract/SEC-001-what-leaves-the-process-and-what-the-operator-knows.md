@@ -1,6 +1,6 @@
 # SEC-001 — what leaves the process, and what the operator knows
 
-**Three items from `RFC 0018` §2's security assessment**, plus one rename
+**Three items from `RFC 018` §2's security assessment**, plus one rename
 and one durability note carried from `STORE-002`'s review. **All of them are
 about information leaving the process, or about an operator not being told
 something true.**
@@ -16,7 +16,7 @@ something true.**
 `database = %config.database_url` at `INFO`, **every start**, and **nothing
 in the workspace redacts it** (searched: no `redact`, no custom `Display`).
 
-Today it is a file path and harmless. **The day `RFC 0018` P3 lands it is
+Today it is a file path and harmless. **The day `RFC 018` P3 lands it is
 `postgres://user:password@host/db`** — in journald, in any log shipper, in
 every support paste an operator sends you.
 
