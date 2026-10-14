@@ -231,3 +231,77 @@ fn resolve_jwt_secret_generates_when_the_environment_is_unset() {
     assert_eq!(secret.len(), JWT_SECRET_BYTES * 2);
     assert!(dir.path().join(JWT_SECRET_FILE_NAME).exists());
 }
+
+/// `FIV-001` round 3 `§13`: an empty value is not a secret, and must
+/// be refused rather than used verbatim as an HMAC key.
+#[test]
+fn resolve_jwt_secret_refuses_an_empty_value() {
+    match resolve_jwt_secret(Some(""), "sqlite://data/app.db") {
+        Err(ConfigError::EmptySecret) => {}
+        other => panic!("expected EmptySecret for an empty value, got {other:?}"),
+    }
+}
+
+/// `§13`'s own distinction from `§9`'s placeholder check: whitespace
+/// alone is not `str::is_empty`, so this needs its own case, not reuse
+/// of the empty-string one.
+#[test]
+fn resolve_jwt_secret_refuses_a_whitespace_only_value() {
+    match resolve_jwt_secret(Some("   \t  "), "sqlite://data/app.db") {
+        Err(ConfigError::EmptySecret) => {}
+        other => panic!("expected EmptySecret for a whitespace-only value, got {other:?}"),
+    }
+}
+
+/// `FIV-001` round 3 `§14`: the exact bypass the review demonstrated
+/// against round 2 -- a trailing space must not let the placeholder
+/// through as if it were a different, real value.
+#[test]
+fn resolve_jwt_secret_refuses_the_placeholder_with_trailing_whitespace() {
+    let padded = format!("{PUBLISHED_PLACEHOLDER} ");
+    match resolve_jwt_secret(Some(&padded), "sqlite://data/app.db") {
+        Err(ConfigError::PublishedPlaceholder) => {}
+        other => panic!("expected PublishedPlaceholder for the padded value, got {other:?}"),
+    }
+}
+
+/// Same shape, leading whitespace, so the fix is confirmed to be a
+/// trim and not a `trim_end`/`strip_suffix` special case.
+#[test]
+fn resolve_jwt_secret_refuses_the_placeholder_with_leading_whitespace() {
+    let padded = format!(" {PUBLISHED_PLACEHOLDER}");
+    match resolve_jwt_secret(Some(&padded), "sqlite://data/app.db") {
+        Err(ConfigError::PublishedPlaceholder) => {}
+        other => panic!("expected PublishedPlaceholder for the padded value, got {other:?}"),
+    }
+}
+
+/// A real value with incidental surrounding whitespace (a trailing
+/// newline from an editor, say) is still accepted -- the trim is not
+/// rejecting everything with whitespace near it, only checking against
+/// it. The *stored* secret is the trimmed form, so what was checked is
+/// what actually signs sessions.
+#[test]
+fn resolve_jwt_secret_trims_a_real_value_before_using_it() {
+    let secret = resolve_jwt_secret(
+        Some("  a-real-secret-with-stray-whitespace  \n"),
+        "sqlite://data/app.db",
+    )
+    .expect("a real, padded value must still be accepted");
+    assert_eq!(secret, "a-real-secret-with-stray-whitespace");
+}
+
+/// `FIV-001` round 3 `§16`: `thiserror`'s `#[error(...)]` cannot
+/// interpolate a `const`, so `PublishedPlaceholder`'s message and
+/// `PUBLISHED_PLACEHOLDER` itself are two copies of the same literal
+/// with nothing to keep them in sync. This test is that sync check --
+/// if the constant ever changes, this fails until the message is
+/// updated to match, which a compiler cannot enforce here.
+#[test]
+fn published_placeholder_message_names_the_actual_constant() {
+    let message = ConfigError::PublishedPlaceholder.to_string();
+    assert!(
+        message.contains(PUBLISHED_PLACEHOLDER),
+        "the error message must quote the exact literal it refuses, got {message:?}"
+    );
+}

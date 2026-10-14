@@ -6257,36 +6257,48 @@ maintenance cost, and the release that absorbs whatever is found while
 walking it never cuts (`0.51.0`, and `ROADMAP.md` carries what it
 cost).
 
-**Round 2's own code, done and verified; the status held open for the
-half that is not.** `crates/peisear-web/src/config.rs` now refuses to
+**Round 2's code, accepted at review; round 3 closed the two bypasses
+the review found in it.** `crates/peisear-web/src/config.rs` refuses to
 start when `JWT_SECRET` resolves to exactly the published placeholder,
 naming both the remedy (unset the variable; a key generates itself)
 and the cost (the value is public, so any instance using it can have
-its sessions forged) — a dedicated unit test
-(`resolve_jwt_secret_refuses_the_published_placeholder`) and a real,
-walked run both confirm it (`cp` the tracked `.env.example` to `.env`,
-start the binary: `Error: JWT_SECRET is set to the published
-placeholder…`, exit 1). `main`'s error path now prints `Display`, not
-`Debug` — the remedy text above is what a real terminal shows, checked
-against all six real runs, not assumed from the type signature. The
-`openssl rand -base64 48` guidance `FIV-001` round 1 removed is
-restored in `docs/getting-started/configuration.md`, scoped to the
-override path it actually serves.
+its sessions forged) — confirmed directly by a dedicated unit test
+(`resolve_jwt_secret_refuses_the_published_placeholder`), which takes
+the looked-up environment value as a parameter rather than reading the
+process's shared environment. Round 2's own review then demonstrated
+two ways past that refusal against the committed binary: an empty or
+whitespace-only `JWT_SECRET` started cleanly and signed every session
+with a zero-length HMAC key, nothing logged; a single trailing space
+defeated the exact-equality placeholder comparison. Round 3 closes
+both — a new `ConfigError::EmptySecret` variant refuses the first, and
+the placeholder comparison now runs on `v.trim()` for the second — each
+with its own unit test, and both re-verified against the rebuilt
+binary alongside the original six real runs (`FIV-001` round 3 `§17`).
+`main`'s error path prints
+`Display`, not `Debug` — the remedy text above is what a real terminal
+shows, checked against all eight real runs now, not assumed from the
+type signature. The `openssl rand -base64 48` guidance `FIV-001` round
+1 removed is restored in `docs/getting-started/configuration.md`,
+scoped to the override path it actually serves.
 
-**`.env.example`'s `JWT_SECRET` line is still uncommented as of this
-entry**: the
-round's own tool access denies every `.env*` path, confirmed across
-three tools in two rounds; the one-line fix is the owner's to apply.
-**Per `§9b`, the two land together or neither does** — this entry
-therefore stays **open** and `NFR-SEC-004` stays **Divergent** until
-the file is fixed and the walk above is re-run clean. Re-running that
-walk, not re-reading this paragraph, is what closes it.
-
-**The sentence above said "uncommitted" through `FIV-001` round 2 and
-meant "uncommented".** The file is committed; its `JWT_SECRET` line is
-not commented out. Corrected at the review — a register entry whose
-remedy is one word is an entry a later reader cannot act on.
-
+**`.env.example` itself was not walked this round, and its current
+state is unverified from this end.** Round 2's own review ruled the
+`git show HEAD:.env.example`-based walk an impermissible workaround of
+the tool-level deny rule on every `.env*` path (a denial on a path is a
+denial on the content) and corrected `§9b` to ask for what is both
+sufficient and permitted instead: test the behaviour with the value
+set directly in the environment, which is exactly what this round's
+scenarios 6 and 8 do, and report the file's own state as a conditional
+rather than something read or reconstructed. That conditional: **for
+as long as `.env.example`'s `JWT_SECRET` line sets the published
+placeholder, `cp .env.example .env` followed by a start fails** — with
+or without trailing whitespace, and now also if a hand-edit blanks the
+line to `JWT_SECRET=` rather than commenting it out. The one-line fix
+is the owner's to apply; confirming it, not a walk from this end, is
+what this entry is waiting on. **Per `§9b`, the two land together or
+neither does** — this entry therefore stays **open** and
+`NFR-SEC-004` stays **Divergent** until the file is fixed and the
+owner confirms it.
 
 ### 10.41 A documented install path the published artefact cannot satisfy — **open**, `FIV-005`, 0.53.0; found 2026-10-14 while reading the Quick Start as a newcomer
 

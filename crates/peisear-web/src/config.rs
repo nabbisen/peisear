@@ -121,6 +121,15 @@ const PUBLISHED_PLACEHOLDER: &str = "change-me-to-a-long-random-string";
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
     #[error(
+        "JWT_SECRET is set to an empty or whitespace-only value -- that is not a \
+         secret, and every session would be signed with it exactly as given \
+         (an empty HMAC key, if JWT_SECRET is empty). Unset JWT_SECRET entirely \
+         (a real key will be generated for you and persisted beside the \
+         database), or set it to a real secret of your own."
+    )]
+    EmptySecret,
+
+    #[error(
         "JWT_SECRET is set to the published placeholder from .env.example \
          (\"change-me-to-a-long-random-string\") -- this exact value is public \
          in the repository and in every copy of the source, so anyone can forge \
@@ -166,19 +175,44 @@ const JWT_SECRET_BYTES: usize = 32;
 /// they actually back up.
 const JWT_SECRET_FILE_NAME: &str = "jwt_secret";
 
-/// The full `JWT_SECRET` resolution: refuses the published placeholder
-/// if the environment carries exactly that value (`FIV-001` round 2
-/// `§9`); uses the environment variable unchanged otherwise, if set at
-/// all (no migration for anyone who already configures a real one);
-/// resolves the generated key file otherwise. Takes the
-/// already-looked-up environment value as a parameter, deliberately,
-/// rather than calling `env::var` itself — the only way `Config::
-/// from_env`'s own five cases stay testable without a test reaching
-/// into the process's real, shared environment.
+/// The full `JWT_SECRET` resolution: refuses an empty or
+/// whitespace-only value (`FIV-001` round 3 `§13`) or the published
+/// placeholder (round 2 `§9`) if the environment carries one; uses the
+/// environment variable otherwise, if set at all (no migration for
+/// anyone who already configures a real one); resolves the generated
+/// key file otherwise. Takes the already-looked-up environment value
+/// as a parameter, deliberately, rather than calling `env::var` itself
+/// — the only way `Config::from_env`'s own cases stay testable without
+/// a test reaching into the process's real, shared environment.
+///
+/// **Both checks compare `v.trim()`, not `v`** (round 3 `§14`): a
+/// trailing space makes `v == PUBLISHED_PLACEHOLDER` false by exact
+/// inequality, and a whitespace-only value is not "empty" by `str::
+/// is_empty` alone. **This is a trim, not the start of normalisation**
+/// — no case-folding, no quote-stripping, no Unicode handling. If the
+/// accepted value differs from `v` because of this trim, the trimmed
+/// form is what is actually used as the key, so there is no gap
+/// between what was checked and what signs sessions.
 fn resolve_jwt_secret(env_value: Option<&str>, database_url: &str) -> Result<String, ConfigError> {
     match env_value {
-        Some(v) if v == PUBLISHED_PLACEHOLDER => Err(ConfigError::PublishedPlaceholder),
-        Some(v) => Ok(v.to_string()),
+        Some(v) => {
+            let trimmed = v.trim();
+            // A predicate ("is this a usable secret at all"), not a
+            // blocklist ("is this one of the bad values we know
+            // about") -- `is_empty` holds for every value in its
+            // class, not a finite set someone could extend later.
+            if trimmed.is_empty() {
+                return Err(ConfigError::EmptySecret);
+            }
+            // A blocklist of exactly one literal, deliberately (round
+            // 2 `§9`'s own "not a list" rule): the one value that has
+            // ever actually been published. A second literal would be
+            // a different design, not an extension of this one.
+            if trimmed == PUBLISHED_PLACEHOLDER {
+                return Err(ConfigError::PublishedPlaceholder);
+            }
+            Ok(trimmed.to_string())
+        }
         None => resolve_generated_jwt_secret(database_url),
     }
 }
@@ -306,9 +340,19 @@ fn create_restricted_file(path: &Path, bytes: &[u8]) -> io::Result<()> {
     file.write_all(bytes)
 }
 
+/// `create_new` needs no platform-specific API -- only the mode bit
+/// does (`FIV-001` round 3 `§16`: the first version of this function
+/// used a plain `fs::write` here, which silently dropped the
+/// leftover-temp-file protection on this platform along with the
+/// permission bits, when only the latter actually needed to differ).
 #[cfg(not(unix))]
 fn create_restricted_file(path: &Path, bytes: &[u8]) -> io::Result<()> {
-    fs::write(path, bytes)
+    use std::io::Write;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)?;
+    file.write_all(bytes)
 }
 
 /// Lower-case hex, no separator. No `hex` crate dependency for an
