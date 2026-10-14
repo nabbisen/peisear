@@ -30,10 +30,7 @@ impl Config {
         let database_url =
             env::var("DATABASE_URL").unwrap_or_else(|_| "sqlite://data/app.db".to_string());
 
-        let jwt_secret = match env::var("JWT_SECRET") {
-            Ok(v) => v,
-            Err(_) => resolve_generated_jwt_secret(&database_url)?,
-        };
+        let jwt_secret = resolve_jwt_secret(env::var("JWT_SECRET").ok().as_deref(), &database_url)?;
 
         // `RFC 017` §5: loopback by default. A first run that skips
         // configuration entirely must not also publish the instance to
@@ -107,11 +104,32 @@ impl std::fmt::Debug for Config {
     }
 }
 
+/// The literal `.env.example` ships (uncommented) for `JWT_SECRET` --
+/// not a credential in source, since nothing uses it silently, but a
+/// value a user can install by following the documented
+/// `cp .env.example .env` path and never be told to replace. `FIV-001`
+/// round 2 `§9`: refused rather than warned about, per the owner's own
+/// ruling that the hypothetical cost (breaking an instance that was
+/// running before an upgrade) does not apply while there is no
+/// production use yet, and that a refusal cannot be learned around the
+/// way a per-start warning can.
+const PUBLISHED_PLACEHOLDER: &str = "change-me-to-a-long-random-string";
+
 /// `RFC 017` §4. `from_env` fails with one of these rather than ever
 /// falling back to a constant or silently regenerating over a file
 /// that might only be damaged, not absent.
 #[derive(Debug, thiserror::Error)]
 pub enum ConfigError {
+    #[error(
+        "JWT_SECRET is set to the published placeholder from .env.example \
+         (\"change-me-to-a-long-random-string\") -- this exact value is public \
+         in the repository and in every copy of the source, so anyone can forge \
+         a session against an instance using it. Unset JWT_SECRET (a real key \
+         will be generated for you and persisted beside the database), or set \
+         it to a real secret of your own."
+    )]
+    PublishedPlaceholder,
+
     #[error(
         "JWT_SECRET is not set, and DATABASE_URL ({database_url:?}) has no filesystem path \
          to persist a generated signing key beside. Set JWT_SECRET explicitly."
@@ -147,6 +165,23 @@ const JWT_SECRET_BYTES: usize = 32;
 /// points `DATABASE_URL` elsewhere gets the key inside the directory
 /// they actually back up.
 const JWT_SECRET_FILE_NAME: &str = "jwt_secret";
+
+/// The full `JWT_SECRET` resolution: refuses the published placeholder
+/// if the environment carries exactly that value (`FIV-001` round 2
+/// `§9`); uses the environment variable unchanged otherwise, if set at
+/// all (no migration for anyone who already configures a real one);
+/// resolves the generated key file otherwise. Takes the
+/// already-looked-up environment value as a parameter, deliberately,
+/// rather than calling `env::var` itself — the only way `Config::
+/// from_env`'s own five cases stay testable without a test reaching
+/// into the process's real, shared environment.
+fn resolve_jwt_secret(env_value: Option<&str>, database_url: &str) -> Result<String, ConfigError> {
+    match env_value {
+        Some(v) if v == PUBLISHED_PLACEHOLDER => Err(ConfigError::PublishedPlaceholder),
+        Some(v) => Ok(v.to_string()),
+        None => resolve_generated_jwt_secret(database_url),
+    }
+}
 
 /// `database_url`'s own filesystem path, if it has one -- the same
 /// `sqlite://` parsing `peisear_storage::pool::connect` uses, kept in
@@ -206,11 +241,21 @@ fn resolve_generated_jwt_secret(database_url: &str) -> Result<String, ConfigErro
 
 /// Write `bytes` to `path` atomically: a temp file in `path`'s own
 /// directory (so the rename stays on one filesystem and is therefore
-/// atomic), permissioned *before* the rename so the file visible at
-/// `path` is never briefly world-readable, then renamed into place.
-/// `RFC 017` §4's security review, item 1: two processes starting
-/// concurrently (a restart loop, a crashed first boot) must not be
-/// able to read a partially-written key.
+/// atomic), restricted *from the moment it is created* (`FIV-001`
+/// round 2 `§11`: a create-then-`chmod` leaves a window where the temp
+/// file holds the key at the default, more permissive mode — this
+/// creates it already restricted, so there is no window at all), then
+/// renamed into place. `RFC 017` §4's security review, item 1: two
+/// processes starting concurrently (a restart loop, a crashed first
+/// boot) must not be able to read a partially-written key.
+///
+/// **Noted, not fixed**: two processes starting concurrently against
+/// one empty data directory each generate their own key and write
+/// their own temp file; whichever `rename` lands last wins, silently.
+/// Nothing reads a partial file either way, which is the guarantee the
+/// security review asked for — this is a weaker, separate property
+/// (last-writer-wins, not corruption) recorded here so a future reader
+/// does not assume this function also serializes concurrent *writers*.
 fn write_key_file_atomically(
     path: &Path,
     bytes: &[u8; JWT_SECRET_BYTES],
@@ -228,8 +273,7 @@ fn write_key_file_atomically(
         std::process::id()
     ));
     let write_result: io::Result<()> = (|| {
-        fs::write(&tmp_path, bytes)?;
-        set_key_file_permissions(&tmp_path)?;
+        create_restricted_file(&tmp_path, bytes)?;
         fs::rename(&tmp_path, path)?;
         Ok(())
     })();
@@ -239,22 +283,32 @@ fn write_key_file_atomically(
     })
 }
 
-/// `mode 0600` on Unix -- owner read/write only. **POSIX-only**
-/// (`RFC 017` §4's security review, item 3): Windows has no equivalent
-/// of Unix permission bits, and `std::fs::Permissions` on Windows only
-/// ever exposes a read-only flag, so there is no bit pattern this
-/// function could set that would mean the same thing there. A no-op on
+/// Create `path` and write `bytes` to it, restricted to owner
+/// read/write **from creation**, not permissioned afterward. `mode
+/// 0600` plus `create_new` on Unix: the latter also turns a leftover
+/// temp file from an earlier, pid-wrapped run into an error rather
+/// than a silent overwrite of it. **POSIX-only** (`RFC 017` §4's
+/// security review, item 3): Windows has no equivalent of Unix
+/// permission bits, and `std::fs::Permissions` on Windows only ever
+/// exposes a read-only flag, so there is no bit pattern this function
+/// could set that would mean the same thing there. A plain create on
 /// that platform is a documented difference, not a silent gap --
 /// `docs/security/hardening.md` says so.
 #[cfg(unix)]
-fn set_key_file_permissions(path: &Path) -> io::Result<()> {
-    use std::os::unix::fs::PermissionsExt;
-    fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+fn create_restricted_file(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    use std::io::Write;
+    use std::os::unix::fs::OpenOptionsExt;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)?;
+    file.write_all(bytes)
 }
 
 #[cfg(not(unix))]
-fn set_key_file_permissions(_path: &Path) -> io::Result<()> {
-    Ok(())
+fn create_restricted_file(path: &Path, bytes: &[u8]) -> io::Result<()> {
+    fs::write(path, bytes)
 }
 
 /// Lower-case hex, no separator. No `hex` crate dependency for an

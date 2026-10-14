@@ -6257,8 +6257,29 @@ maintenance cost, and the release that absorbs whatever is found while
 walking it never cuts (`0.51.0`, and `ROADMAP.md` carries what it
 cost).
 
+**Round 2's own code, done and verified; the status held open for the
+half that is not.** `crates/peisear-web/src/config.rs` now refuses to
+start when `JWT_SECRET` resolves to exactly the published placeholder,
+naming both the remedy (unset the variable; a key generates itself)
+and the cost (the value is public, so any instance using it can have
+its sessions forged) — a dedicated unit test
+(`resolve_jwt_secret_refuses_the_published_placeholder`) and a real,
+walked run both confirm it (`cp` the tracked `.env.example` to `.env`,
+start the binary: `Error: JWT_SECRET is set to the published
+placeholder…`, exit 1). `main`'s error path now prints `Display`, not
+`Debug` — the remedy text above is what a real terminal shows, checked
+against all six real runs, not assumed from the type signature. The
+`openssl rand -base64 48` guidance `FIV-001` round 1 removed is
+restored in `docs/getting-started/configuration.md`, scoped to the
+override path it actually serves.
 
-### 10.41 A documented install path the published artefact cannot satisfy — **open**, `FIV-005`, 0.53.0; found 2026-10-14 while reading the Quick Start as a newcomer
+**`.env.example` itself is still uncommitted as of this entry**: the
+round's own tool access denies every `.env*` path, confirmed across
+three tools in two rounds; the one-line fix is the owner's to apply.
+**Per `§9b`, the two land together or neither does** — this entry
+therefore stays **open** and `NFR-SEC-004` stays **Divergent** until
+the file is fixed and the walk above is re-run clean. Re-running that
+walk, not re-reading this paragraph, is what closes it.
 
 `README.md`'s Quick Start opens with the instruction a first-time
 reader is most likely to follow:

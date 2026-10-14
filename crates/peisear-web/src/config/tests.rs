@@ -194,3 +194,40 @@ fn database_file_path_has_no_filesystem_path_for_in_memory_urls() {
         Some(PathBuf::from("data/app.db"))
     );
 }
+
+/// `FIV-001` round 2 `§9`: the published `.env.example` placeholder
+/// must be refused, not used, regardless of `DATABASE_URL` -- the
+/// check happens before any key-file resolution is attempted.
+#[test]
+fn resolve_jwt_secret_refuses_the_published_placeholder() {
+    match resolve_jwt_secret(Some(PUBLISHED_PLACEHOLDER), "sqlite://data/app.db") {
+        Err(ConfigError::PublishedPlaceholder) => {}
+        other => panic!("expected PublishedPlaceholder, got {other:?}"),
+    }
+    // Even with no filesystem path to resolve a key against -- the
+    // placeholder check must come first, not be masked by a different
+    // failure that happens to also apply.
+    match resolve_jwt_secret(Some(PUBLISHED_PLACEHOLDER), "sqlite::memory:") {
+        Err(ConfigError::PublishedPlaceholder) => {}
+        other => panic!("expected PublishedPlaceholder, got {other:?}"),
+    }
+}
+
+#[test]
+fn resolve_jwt_secret_uses_a_real_environment_value_unchanged() {
+    let secret = resolve_jwt_secret(
+        Some("a-real-operator-chosen-secret"),
+        "sqlite://data/app.db",
+    )
+    .expect("a real value must be accepted");
+    assert_eq!(secret, "a-real-operator-chosen-secret");
+}
+
+#[test]
+fn resolve_jwt_secret_generates_when_the_environment_is_unset() {
+    let dir = tempfile::TempDir::new().expect("temp dir");
+    let database_url = format!("sqlite://{}/app.db", dir.path().display());
+    let secret = resolve_jwt_secret(None, &database_url).expect("generate a key");
+    assert_eq!(secret.len(), JWT_SECRET_BYTES * 2);
+    assert!(dir.path().join(JWT_SECRET_FILE_NAME).exists());
+}

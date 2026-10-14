@@ -9,9 +9,21 @@
 use peisear::storage::pool;
 use peisear::web::{AppState, Config, build_router, jobs};
 use std::net::SocketAddr;
+use std::process::ExitCode;
 
+/// `FIV-001` round 2, `§10`: `main` returning `Result<(), Box<dyn
+/// Error>>` prints the error's **`Debug`** on exit (Rust's default
+/// `Termination` impl) -- `ConfigError::KeyMalformed`'s carefully
+/// written remedy, and every other error this function can produce,
+/// would otherwise reach the terminal as `Error: KeyMalformed { path:
+/// "data/jwt_secret", expected: 32, found: 3 }` rather than the
+/// message itself. `main` now matches on `run`'s result and prints
+/// `Display` instead, for any failure here -- not only `Config`'s,
+/// since the same printing defect applies equally to a pool-connect
+/// or bind failure and there is no reason to fix it for one error type
+/// and not the others in a function this size.
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> ExitCode {
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -19,6 +31,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .init();
 
+    match run().await {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("Error: {e}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let config = Config::from_env()?;
     // `SEC-001` §1: redacted at the source, not inline here, so a future
     // second startup line that also wants to name the database cannot

@@ -25,8 +25,8 @@ cold cache. Subsequent runs are instant.
 You should see:
 
 ```
-2026-04-24T… INFO peisear: starting peisear database=sqlite://data/app.db addr=0.0.0.0:3000
-2026-04-24T… INFO peisear: listening addr=0.0.0.0:3000
+2026-04-24T… INFO peisear: starting peisear database=sqlite://data/app.db addr=127.0.0.1:3000
+2026-04-24T… INFO peisear: listening addr=127.0.0.1:3000
 ```
 
 Open <http://localhost:3000>.

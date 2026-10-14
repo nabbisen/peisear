@@ -40,6 +40,14 @@ get you to a working local instance.
 - **A damaged key file fails startup loudly**, naming the path, rather
   than silently generating a new one — a wrong-length `jwt_secret` is
   never treated as absent.
+- **If you want to set `JWT_SECRET` yourself** (the multi-instance
+  case above, or any reason to manage it outside the generated file),
+  generate a real one rather than typing a placeholder:
+  `openssl rand -base64 48` (or any CSPRNG you trust). **Startup
+  refuses to run with `.env.example`'s own published placeholder
+  value** — it is public in the repository, so an instance using it
+  unmodified could have its sessions forged by anyone who read the
+  source.
 
 ## Next
 
