@@ -5950,6 +5950,34 @@ fixing something else. The rule is not "remember this"; it is a question to
 ask of a green check: **what did it examine, and how would I know if the
 answer were nothing?**
 
+**Decided 2026-10-14, at `FIV-001` round 3's review — the register
+gets a guard, and it is a citation check rather than a numbering
+check.** `§10.41`'s heading was deleted by an edit to `§10.40` and no
+gate could see it (`FIV-001` round 3 `§15`). The obvious remedy is a
+`docs_scan` rule asserting `### 10.N` headings are unique and
+consecutive. **Round 3's own report argued that shape down, correctly,
+and the architect had proposed it**: `§10.41` was the *last* heading in
+the document, so its deletion left `…, 10.39, 10.40` — consecutive,
+unique, and clean. **The cheap guard passes the exact incident it was
+proposed for.**
+
+What would have failed is a check on the other side of the reference:
+`ROADMAP.md` and `FIV-005` both cited `§10.41` in prose while no such
+heading existed. **So the rule is: every `§10.N`-shaped citation across
+`docs/` and `rfcs/handoffs/` must have a matching `### 10.N` heading.**
+It is a predicate, not a list, so it does not drift; the numbering
+assertion comes nearly free once the heading extraction exists and is
+worth adding **as a second assertion, never as the whole rule**.
+
+**Its own bound, stated so it is not mistaken for completeness**: an
+entry that nothing cites can still be deleted silently. The rule
+catches a reader following a reference to nothing, which is the
+failure that costs someone time — not every possible loss.
+
+**Not in 0.53.0.** Scheduled with the carried `RFC 0NNN` citation rule,
+which is the same class and the same scanner; `ROADMAP.md` carries
+which release.
+
 ### 10.37 `NFR-MNT-005`'s status said one thing while 79 tests said another — **closed**, `REG-001`'s review / `GRD-002`, 0.50.0–0.52.0; found 2026-10-11
 
 **Measured, not estimated.** `NFR-MNT-005` says *"in-file `#[test]` modules
@@ -6305,7 +6333,11 @@ owner confirms it.
 *This heading was deleted by `FIV-001` round 2's own edit to `§10.40`
 and restored at that round's review. For the eleven hours in between,
 `§10.41` did not exist and its text read as part of `§10.40` — see the
-closing note of `§10.40` and `FIV-001` round 3 `§13`.*
+closing note of `§10.40` and `FIV-001` round 3 `§15`. (This note cited
+`§13` until round 3's review; `§13` is the empty-secret finding and
+`§15` is this one. Written before round 3 was numbered, which is how a
+citation to a section that did not exist yet goes wrong — the defect
+this very entry is about, committed in the sentence recording it.)*
 
 `README.md`'s Quick Start opens with the instruction a first-time
 reader is most likely to follow:
