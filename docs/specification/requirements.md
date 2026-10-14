@@ -2976,8 +2976,12 @@ Passwords MUST be stored only as Argon2 hashes.
 **NFR-SEC-004 — No secrets in repository or release artefact**
 Credentials MUST NOT appear in source, configuration, or release
 archives. Deployment secrets are supplied by the environment.
-*Source*: project convention. *Status*: Implemented; automated scanning
-is advisory and not yet wired. *Priority*: P0.
+*Source*: project convention. *Status*: **Divergent** (recorded
+2026-10-14) — `crates/peisear-web/src/config.rs:31` carries the literal
+fallback this entry's own first sentence forbids, and it is the key that
+signs session cookies on any instance started without `JWT_SECRET`. See
+`§10.40`. Automated scanning remains advisory and not yet wired.
+*Closing*: `RFC 0017` proposal 4, scheduled `0.53.0`. *Priority*: P0.
 
 **NFR-SEC-005 — No `unsafe` code**
 Project code MUST NOT use `unsafe`. Any future use requires explicit
@@ -6056,6 +6060,57 @@ duplicated under the rule above, not exempted from it.
 
 **Out of scope, deliberately**: `DOC-002 §5`'s own line — a `//` comment never reaches a published crate's documentation, and `crates/*/tests/` is never walked for doc comments at all, since cargo never publishes an integration-test binary to docs.rs. **Measured directly — twice, because the first two measurements of it were both wrong**: **45** occurrences across **21** files. The handoff's own estimate (16 across 11) dropped doc-comment lines inside `crates/*/tests/` from both surfaces; the round's correction of it (25 across 14) undercounted differently and transposed the two halves. Measured: **19** under `crates/*/src/` across 9 files, of which **9** are this rule's own planted fixtures in `docs_scan/tests.rs`; **26** under `crates/*/tests/` across 12 files, `peisear-web/tests/sprint_plan.rs` alone carrying 10. Reported, not swept in — and the three attempts at this one number are the clearest evidence in this entry for why a figure that decides nothing still gets measured twice.
 
+### 10.40 A P0 forbidding credentials in source, with the session signing key in source — **open**, found 2026-10-14 while scoping `0.53.0`; closing `FIV-001`
+
+`NFR-SEC-004` reads *"Credentials MUST NOT appear in source,
+configuration, or release archives"*, Priority **P0**, and has read
+*Implemented* throughout. `crates/peisear-web/src/config.rs:31` is:
+
+> ```rust
+> let jwt_secret = env::var("JWT_SECRET").unwrap_or_else(|| {
+>     tracing::warn!("JWT_SECRET is not set; falling back to a development-only default. ...");
+>     "dev-only-insecure-change-me".to_string()
+> });
+> ```
+
+**On any instance started without `JWT_SECRET`, that published literal
+is the key that signs session cookies.** It is in a public repository
+and in every crates.io copy of the source. Session forgery against such
+an instance needs nothing but the string.
+
+**Why the status survived.** The entry's second sentence — *"Deployment
+secrets are supplied by the environment"* — reads as the whole rule, and
+under it a development-only default is not a deployment secret and the
+entry is satisfied. Under the first sentence it is not. **The entry is
+ambiguous, and the ambiguity is what let a published signing key sit
+beside an `Implemented` P0 for the life of the fallback.** This is not
+a status that drifted from a measurement; no measurement was ever taken,
+because the requirement did not say what would count as one.
+
+**The reading, stated so the status means something.** A credential is
+a value that authenticates or signs in a running instance. A default
+that is used — rather than refused — when configuration is absent is
+such a value, whatever it is named. Under that reading the entry is
+**Divergent** today and `RFC 0017` proposal 4 closes it: generate the
+key on first run, persist it beside the database, let the environment
+variable win where set, **fail loudly rather than fall back**, and
+delete the literal.
+
+**Its sibling says the same thing to the user and not to the code.**
+`docs/security/hardening.md`'s *`JWT_SECRET` hygiene* tells the reader
+to *"keep it out of source control"*, and never says what happens if
+the variable is unset — the one case where the project does the
+opposite of its own instruction.
+
+**The class, which is what this entry is for.** `§10.34` records a
+status saying one thing while the release said another. This is a
+degree worse: **a requirement whose own wording cannot decide whether
+it is met, carrying a status that therefore never had to be earned.**
+A P3 like that wastes a reader's time. A P0 like that is the register
+reporting clean on the thing it exists to watch — `§10.36`'s question
+asked of a requirement rather than of a check.
+
+
 ## 11. Deferred and future requirements
 
 Accepted in principle, deliberately not scheduled.
@@ -6105,12 +6160,12 @@ Accepted in principle, deliberately not scheduled.
 | Concurrency | 7 | 7 | — | — | — | — |
 | Accessibility | 11 | 8 | — | — | 1 | 2 unverified |
 | Language | 5 | 1 | 2 | — | 1 | 1 |
-| Security | 7 | 7 | — | — | — | — |
+| Security | 7 | 6 | — | — | — | 1 (`NFR-SEC-004`, `§10.40`) |
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
 | Release | 8 | 6 | 1 | — | — | 1 undefined |
 | Compatibility | 6 | 5 | 1 | — | — | — |
-| **Non-functional total** | **66** | **52** | **5** | **0** | **2** | **7** |
+| **Non-functional total** | **66** | **51** | **5** | **0** | **2** | **8** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.
