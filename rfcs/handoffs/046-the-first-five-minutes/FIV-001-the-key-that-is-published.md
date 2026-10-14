@@ -205,7 +205,11 @@ to `Divergent`** for something round 1 did not close and partly made
 worse. This round closes it. **`FIV-002`–`FIV-004` are not blocked by
 it** — they are blocked by round 1, which is accepted.
 
-## §9 — the documented path still installs a published credential
+## §9 — the documented path installs a placeholder nothing ever asks you to replace
+
+**Rewritten 2026-10-14 on the owner's ruling. Round 1's version of this
+section called for a startup refusal; it does not any more. Read this
+version, not the review that preceded it.**
 
 `Config::from_env` calls `dotenvy::dotenv()`. The repository ships
 `.env.example` with an **uncommented**
@@ -215,31 +219,60 @@ and `docs/getting-started/configuration.md:12`, whose *Minimum viable
 `.env`* section this round rewrote to read **"That's it — no secret to
 generate by hand."**
 
-So the documented path sets `JWT_SECRET` to a published literal, the
-generated branch never runs, and the sentence promising otherwise is
-false. **Round 1 also deleted `README.md`'s `openssl rand -base64 48`
-lines** — the instruction that previously told the reader to replace
-the placeholder. The cause was left and the mitigation removed.
+So the documented path sets `JWT_SECRET`, the generated branch never
+runs, and the sentence promising otherwise is false. **Round 1 also
+deleted `README.md`'s `openssl rand -base64 48` lines** — the
+instruction that previously told the reader to replace the
+placeholder. The cause was left and the mitigation removed.
 
-**Two changes, and they are not alternatives.**
+**What this is, now that it has been ruled on.** The owner's reading,
+2026-10-14: *"I don't think it is a serious issue. Just design issue:
+Give user initialization wizard or warning etc."* **A placeholder the
+user actively installs is a usability defect, not a credential in
+source** — unlike the deleted literal, which was used silently by a
+user who did nothing. `§10.40` records the ruling and why it settles
+an ambiguity that entry says was the root cause.
 
-1. **`.env.example`**: comment the `JWT_SECRET` line out, per the diff
-   round 1 already wrote. **This is the owner's to apply** — every file
-   tool in this project denies `.env*` paths, which round 1 reported
-   honestly. Do not attempt to work around that rule.
-2. **Refuse the placeholder at startup.** If `JWT_SECRET` resolves to
-   the published literal, **fail with the same shape as the other
-   `ConfigError` variants**, naming the remedy (unset it and let the
-   key be generated). This is the half that reaches an instance
-   *already running* from a copied `.env`, which the file edit cannot.
-   `§10.40`'s own reading is why one rejected constant in source is not
-   a credential: *a value refused is not a credential, only a value
-   used is.* Say that in the code comment, so the next reader does not
-   "fix" it by deleting the constant.
+**So: warn, do not refuse.** Refusing would reach the same
+installations, and it would reach them by **failing to start an
+instance that was running before the upgrade** — breaking a deployment
+in order to protect it, for a value its operator chose. That cost is
+real and was not weighed when round 1's version of this section was
+written.
+
+**Three changes.**
+
+1. **Warn loudly at startup when `JWT_SECRET` resolves to the published
+   placeholder.** One line, at `WARN`, naming the consequence rather
+   than the fact: that this value is published in the repository, that
+   anyone can therefore forge a session on this instance, and that the
+   remedy is to unset the variable and let the key be generated.
+   **Name the consequence, not the default** — *"JWT_SECRET is set to
+   the example value"* tells an operator nothing about what it costs
+   them. It fires on every start while the condition holds; that is the
+   point, and it stops the day they fix it.
+2. **`.env.example`**: comment the `JWT_SECRET` line out. **The
+   owner's to apply** — every file tool here denies `.env*`, which
+   round 1 reported honestly; do not work around it. This is now
+   hygiene rather than a security fix: a shipped value that makes the
+   good path not run is a value that guarantees every new user sees the
+   warning in item 1, which is noise where it should be silence.
+   **If it is still pending at the end of this round, say so and carry
+   on** — it no longer gates anything.
+3. **Put the `openssl rand` guidance back somewhere it belongs**, or
+   say why it is no longer needed now that the key generates itself.
+   Round 1 removed it as obsolete, and it was obsolete *for the path
+   where generation runs*. Decide and state which.
 
 **Not a list.** One literal, because exactly one has ever been
 published. If a second is ever tempting, that is a different design and
 a different round.
+
+**Not a wizard.** The owner's other suggestion — an initialization
+wizard — is `RFC 020`, proposed separately and **not in 0.53.0**. A
+warning is one function; a wizard is a surface with continuous
+maintenance cost, and it is a product feature rather than a defect
+fix. Do not start one here.
 
 ## §10 — the error messages nobody sees
 
@@ -318,10 +351,11 @@ rather than both assuming the other.**
 
 ## §12 — exit condition
 
-`.env.example`'s line commented out (owner-applied) **or** reported
-still pending with the status left `Divergent` — never a status moved
-ahead of the tree; the placeholder refused at startup with a test for
-it; `ConfigError`'s `Display` reaching the terminal, shown by pasting
+the published placeholder **warned about** at startup in words naming
+what it costs the operator, with a test for it; `.env.example`'s line
+commented out (owner-applied) **or** reported still pending — it no
+longer gates the status; the `openssl rand` guidance restored or its
+removal reasoned; `ConfigError`'s `Display` reaching the terminal, shown by pasting
 five real runs' actual output; the temp file created `0600` and
 `create_new`; `§10.40` closed and `NFR-SEC-004` re-statused **only
 once both halves are true**; `first-run.md`'s expected-output block

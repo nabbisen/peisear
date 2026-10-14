@@ -2997,11 +2997,23 @@ loads `.env` through `dotenvy`, and `README.md`,
 `.github/CONTRIBUTING.md` and `docs/getting-started/configuration.md`
 all instruct the reader to copy it — so the documented path sets the
 variable to a published literal and the generated branch never runs.
-See `§10.40`, reopened. *Closing*: `FIV-001` round 2 — the line
-commented out, **and** the placeholder refused at startup, which is
-the only one of the two that reaches an instance already running from
-a copied `.env`. Automated scanning remains advisory and not yet
-wired. *Priority*: P0.
+See `§10.40`, reopened.
+
+*Amended again (0.53.0), owner's ruling 2026-10-14* — **what remains
+is not this requirement's subject.** A placeholder the user actively
+copies and installs is a usability defect; the credential this entry
+forbids was the literal used *silently* by a user who did nothing, and
+that one is deleted. The entry is still `Divergent` only because the
+product currently says nothing at all to a user who installs the
+placeholder — not because a credential is in source. *Closing*:
+`FIV-001` round 2's **startup warning**, naming what the published
+value costs the operator. A startup *refusal* was considered and
+**declined**: it would reach the same installations by failing to
+start an instance that ran before the upgrade, breaking a deployment
+to protect it, for a value its operator chose. Commenting the line out
+in `.env.example` is hygiene that keeps the warning silent for new
+users, and **no longer gates this status**. Automated scanning remains
+advisory and not yet wired. *Priority*: P0.
 
 **NFR-SEC-005 — No `unsafe` code**
 Project code MUST NOT use `unsafe`. Any future use requires explicit
@@ -6093,7 +6105,7 @@ duplicated under the rule above, not exempted from it.
 
 **Out of scope, deliberately**: `DOC-002 §5`'s own line — a `//` comment never reaches a published crate's documentation, and `crates/*/tests/` is never walked for doc comments at all, since cargo never publishes an integration-test binary to docs.rs. **Measured directly — twice, because the first two measurements of it were both wrong**: **45** occurrences across **21** files. The handoff's own estimate (16 across 11) dropped doc-comment lines inside `crates/*/tests/` from both surfaces; the round's correction of it (25 across 14) undercounted differently and transposed the two halves. Measured: **19** under `crates/*/src/` across 9 files, of which **9** are this rule's own planted fixtures in `docs_scan/tests.rs`; **26** under `crates/*/tests/` across 12 files, `peisear-web/tests/sprint_plan.rs` alone carrying 10. Reported, not swept in — and the three attempts at this one number are the clearest evidence in this entry for why a figure that decides nothing still gets measured twice.
 
-### 10.40 A P0 forbidding credentials in source, with the session signing key in source — **open**; the fallback is gone (`FIV-001`, 0.53.0) and a **second door is still open**, below; found 2026-10-14 while scoping `0.53.0`
+### 10.40 A P0 forbidding credentials in source, with the session signing key in source — **open**; the fallback is gone (`FIV-001`, 0.53.0), and what remains was **ruled a usability defect rather than this entry's class** by the owner on 2026-10-14; closes on `FIV-001` round 2's startup warning; found 2026-10-14 while scoping `0.53.0`
 
 `NFR-SEC-004` reads *"Credentials MUST NOT appear in source,
 configuration, or release archives"*, Priority **P0**, and has read
@@ -6188,6 +6200,41 @@ worse than that. The reopening is a third degree: **a status set from
 the half of the change that was done, with the other half written down
 in the same review request as a diff nobody could apply.** The round
 knew. The status did not.
+
+**The owner's ruling, 2026-10-14 — and why it belongs in this entry
+rather than in a reply.** Asked to apply the `.env.example` edit, the
+owner answered: *"I don't think it is a serious issue. Just design
+issue: Give user initialization wizard or warning etc."*
+
+**This entry exists because `NFR-SEC-004` could not decide what counted
+as a credential, so its status never had to be earned.** The ruling
+decides it: **a value the user actively installs from a file that names
+itself an example is a usability defect; a value used silently when the
+user does nothing is a credential.** The deleted literal was the
+second. The placeholder is the first. The distinction is the user's
+action, not the string's content, and it is checkable — which is what
+the original wording was not.
+
+**Two things the architect had weighed wrongly, recorded because the
+register is for that too.** First, the remedy: the file edit fixes only
+fresh copies from this repository, while a startup message reaches
+people who already copied it, people who chose a weak secret of their
+own, and people working from a fork — the owner's remedy is strictly
+wider than the one pressed on them. Second, the cost: round 2 had
+asked for a startup **refusal**, which on upgrade fails an instance
+that was running before it, breaking a deployment in order to protect
+it, for a value its operator chose. Neither was in the review.
+
+**What does not change.** Exploitability is indifferent to intent: a
+forged cookie works the same whether the key was a placeholder or a
+secret. That is why the remedy is a warning that names the consequence
+rather than a note that records a default, and why this entry stays
+open until that warning exists. **An initialization wizard** — the
+owner's other suggestion — is `RFC 020`, deliberately not in 0.53.0: a
+warning is one function, a wizard is a surface with continuous
+maintenance cost, and the release that absorbs whatever is found while
+walking it never cuts (`0.51.0`, and `ROADMAP.md` carries what it
+cost).
 
 
 ### 10.41 A documented install path the published artefact cannot satisfy — **open**, `FIV-005`, 0.53.0; found 2026-10-14 while reading the Quick Start as a newcomer
