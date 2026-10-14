@@ -215,6 +215,18 @@ than two.
 7. Release recommendation issued; **owner approves**.
 8. **What ships next** reconciled — the shipped row removed, the
    remaining rows' numbers and blockers correct as of the tag.
+9. **The documented start walked on the release artefact**, from a
+   clean directory, exactly as `README.md`'s Quick Start writes it —
+   every path it offers, each one run rather than read, and what the
+   first screen actually shows reported. *Added 2026-10-15.* A start
+   path cannot be verified by inspecting the files it depends on;
+   three separate defects in 0.53.0 — an install that ships no assets
+   (`§10.41`), a documented copy that installs a placeholder
+   (`§10.40`), an expected-output block showing an address the binary
+   no longer binds — were each invisible to every gate and visible in
+   the first thirty seconds of doing it. **This criterion is also
+   where the state of files no tool may read is established**: the
+   walk either works or it does not, and nobody has to be asked.
 
 Criterion 2 is the one that has historically failed. It is a gate,
 not an aspiration.
