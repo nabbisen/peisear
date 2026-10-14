@@ -6,7 +6,7 @@ use axum::{
     Router,
     routing::{get, post},
 };
-use tower_http::{compression::CompressionLayer, services::ServeDir, trace::TraceLayer};
+use tower_http::{compression::CompressionLayer, trace::TraceLayer};
 
 use crate::{
     AppState,
@@ -14,6 +14,7 @@ use crate::{
         api_users, auth, calendar, issues, me, notification_preferences, notifications, projects,
         redirects, root, search, settings, sprints, teams,
     },
+    static_assets,
 };
 
 /// Build the full axum router given an already‑initialised state.
@@ -252,11 +253,14 @@ pub fn build_router(state: AppState) -> Router {
             "/projects/{id}/issues/{issue_id}/schedule/move",
             post(issues::change_schedule_move),
         )
-        // Static assets served from the directory named "static" in the
-        // working directory of the running binary. For typical
-        // `cargo run`‑from‑workspace‑root usage this resolves to
-        // `<workspace>/static/`. See README for deployment guidance.
-        .nest_service("/static", ServeDir::new("static"))
+        // Static assets, embedded into the binary at compile time
+        // (`FIV-005`, `§10.41`) rather than resolved against the
+        // working directory at request time -- `cargo install
+        // peisear` publishes no `static/` directory alongside the
+        // binary, so a filesystem `ServeDir` 404s on every installed
+        // copy. See `static_assets.rs` and `docs/operations/
+        // deployment.md`.
+        .route("/static/{*path}", get(static_assets::serve))
         .layer(CompressionLayer::new())
         .layer(TraceLayer::new_for_http())
         .with_state(state)

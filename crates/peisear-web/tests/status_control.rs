@@ -596,14 +596,12 @@ async fn json_endpoint_still_reports_ok_for_success_and_409_for_conflict() {
 /// routes, and never looks for `board.js` at all. Corrected here
 /// rather than left for a reader to trust and find otherwise.
 ///
-/// Does not `GET /static/dm.js` itself: `ServeDir::new("static")` in
-/// `app.rs` resolves relative to the process's working directory,
-/// which is the crate root under `cargo test`, not the workspace
-/// root `static/` lives under — `board.js` and `search.js` have never
-/// had an HTTP-level "is it actually served" test for the same
-/// reason, and fixing that path resolution is a separate concern from
-/// this handoff. The file's presence on disk is what the build
-/// depends on.
+/// `GET /static/dm.js` itself is `smoke::every_static_asset_is_
+/// actually_servable` (`FIV-005`): `static/` used to resolve against
+/// the process's working directory at request time, which was the
+/// crate root under `cargo test`, not the workspace root it lives
+/// under, so an HTTP-level test here would have 404'd regardless of
+/// real reachability. The embedded set has no such dependency.
 #[tokio::test]
 async fn dm_js_is_served_with_defer_on_both_surfaces() {
     let app = TestApp::spawn().await;
@@ -647,9 +645,9 @@ async fn dm_js_is_served_with_defer_on_both_surfaces() {
 /// `crates/peisear-web/src/components/issues.rs:142` could be deleted
 /// and every gate, including the doc comment above that used to point
 /// here, stayed green. Same shape as
-/// `dm_js_is_served_with_defer_on_both_surfaces`, including why it
-/// does not `GET /static/board.js` itself (see that test's doc
-/// comment).
+/// `dm_js_is_served_with_defer_on_both_surfaces`; `GET
+/// /static/board.js` itself is `smoke::every_static_asset_is_
+/// actually_servable`, same reasoning as that test's doc comment.
 ///
 /// **Residual gap, not closed here**: a fourth JavaScript file added
 /// under `static/` later gets no reference test automatically — this

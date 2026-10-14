@@ -86,8 +86,8 @@ The full guide is in [`docs/getting-started/`](https://github.com/nabbisen/peise
 - **Secure-by-default auth.** Argon2id password hashing, 7-day JWT
   sessions in HTTP-only cookies, timing-attack-hardened login.
 - **One binary deploy.** Migrations embedded at compile time,
-  templates compiled into the binary. Ship one executable plus
-  `static/` and you're live.
+  templates and static assets compiled into the binary. Ship one
+  executable and you're live.
 
 ## Design Notes
 

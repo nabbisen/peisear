@@ -140,7 +140,7 @@ fn rule_3_catches_a_manifest_entry_that_does_not_exist() {
 #[test]
 fn rule_3_catches_a_static_file_missing_from_the_manifest() {
     let mut r = real();
-    r.deployment = r.deployment.replace("    ├── calendar.js\n", "");
+    r.deployment = r.deployment.replace("    calendar.js\n", "");
     let v = only(run(&r), "rule 3:");
     assert!(
         v.iter()

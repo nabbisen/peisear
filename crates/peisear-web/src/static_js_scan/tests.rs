@@ -73,8 +73,8 @@ fn every_entry_under_static_is_a_servable_asset_type() {
     offenders.sort();
     assert!(
         offenders.is_empty(),
-        "static/ is served in full (`ServeDir::new(\"static\")` in app.rs), so every file \
-         in it is a public URL on every deployment -- and these are not an allowed asset \
+        "static/ is embedded and served in full (`static_assets.rs`, mounted in app.rs), so \
+         every file in it is a public URL on every deployment -- and these are not an allowed asset \
          type (allowed: {}). Move a document to docs/; to publish a new kind of asset, add \
          its extension and a reason to SERVABLE_ASSET_TYPES in static_js_scan.rs:\n{}",
         SERVABLE_ASSET_TYPES

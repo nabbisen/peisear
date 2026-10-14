@@ -179,11 +179,8 @@ async fn logout_clears_session_and_redirects() {
 /// every such page renders through `AppShell`. `smoke` is the right
 /// home for this claim: it's about the shell, not about search.
 ///
-/// Does not `GET /static/search.js` itself, same reason as
-/// `status_control::dm_js_is_served_with_defer_on_both_surfaces`:
-/// `ServeDir::new("static")` resolves against the process's working
-/// directory, which is the crate root under `cargo test`, not the
-/// workspace root `static/` lives under.
+/// `GET /static/search.js` itself is `every_static_asset_is_actually_
+/// servable`, below.
 #[tokio::test]
 async fn search_js_is_referenced_in_the_app_shell() {
     let app = TestApp::spawn().await;
@@ -196,4 +193,41 @@ async fn search_js_is_referenced_in_the_app_shell() {
         body.contains(r#"<script src="/static/search.js" defer"#),
         "an authenticated page must reference search.js with defer: {body}"
     );
+}
+
+/// `FIV-005`: `static/` is embedded into the binary at compile time
+/// (`static_assets.rs`) rather than resolved against the process's
+/// working directory at request time, which closes a gap the three
+/// reference tests above and in `status_control.rs` used to name in
+/// their own doc comments -- `ServeDir::new("static")` resolved
+/// against `cargo test`'s crate-root working directory, not the
+/// workspace root `static/` lives under, so an HTTP-level "is it
+/// actually served" assertion would have 404'd regardless of whether
+/// the file was really reachable from a real deployment. The embedded
+/// set has no working-directory dependency, so this now tests the
+/// real thing.
+#[tokio::test]
+async fn every_static_asset_is_actually_servable() {
+    let app = TestApp::spawn().await;
+    for name in [
+        "app.css",
+        "tailwind.css",
+        "daisyui.min.css",
+        "search.js",
+        "board.js",
+        "calendar.js",
+        "plan.js",
+        "dm.js",
+    ] {
+        let resp = app.server.get(&format!("/static/{name}")).await;
+        assert_eq!(
+            resp.status_code(),
+            StatusCode::OK,
+            "GET /static/{name} must be 200, found {}",
+            resp.status_code()
+        );
+    }
+
+    let resp = app.server.get("/static/does-not-exist.js").await;
+    assert_eq!(resp.status_code(), StatusCode::NOT_FOUND);
 }

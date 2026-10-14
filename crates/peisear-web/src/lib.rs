@@ -46,6 +46,7 @@ mod prose_scan;
 #[cfg(test)]
 mod scan_support;
 pub mod state;
+pub mod static_assets;
 #[cfg(test)]
 mod static_js_scan;
 #[cfg(test)]

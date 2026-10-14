@@ -1,8 +1,7 @@
 # Deployment
 
-peisear is designed to deploy as a single binary plus a directory of
-static assets. This document covers the mechanics of putting that
-into production.
+peisear is designed to deploy as a single binary. This document covers
+the mechanics of putting that into production.
 
 ## Build a release binary
 
@@ -33,25 +32,31 @@ your config-management system.
 
 ```
 /var/lib/peisear/
-├── peisear              # The release binary
-└── static/              # Required at runtime
-    ├── app.css
-    ├── board.js
-    ├── calendar.js
-    ├── daisyui.min.css
-    ├── dm.js
-    ├── plan.js
-    ├── search.js
-    └── tailwind.css
+└── peisear              # The release binary -- static/ is embedded in it
+    app.css
+    board.js
+    calendar.js
+    daisyui.min.css
+    dm.js
+    plan.js
+    search.js
+    tailwind.css
 ```
 
-**Derived from what the rendered HTML actually references** — the
-`<link>`/`<script src>` tags in `peisear-web`'s own components
+**These eight files are embedded into the binary at compile time**
+(`FIV-005`) and served from memory, not read from a `static/`
+directory beside it at request time — nothing under `peisear` above is
+a real path; it is what the binary carries, for reference. The list
+itself is **derived from what the rendered HTML actually references**
+— the `<link>`/`<script src>` tags in `peisear-web`'s own components
 (`components/layout.rs` for the three stylesheets and `search.js`,
 loaded on every page; `components/{calendar,sprint_plan,issues}.rs`
 for the remaining four scripts, loaded only on the pages that use
-them) — not from listing `static/`'s contents. All eight files in
-`static/` are referenced by something; none is a dead asset.
+them) — not from listing `static/`'s contents directly. All eight are
+referenced by something; none is a dead asset. It is checked against
+`static/`'s real contents in both directions (`docs_scan` rule 3) — a
+drift here now means the binary was built from a `static/` this list
+no longer describes, not a missing copy step.
 
 The SQLite database (`data/app.db` by default) is created on first
 run.
@@ -104,14 +109,20 @@ systemctl enable --now peisear
 
 ## The working-directory rule
 
-**`ServeDir::new("static")` resolves relative to `$PWD`.** The
-`WorkingDirectory=` directive in the systemd unit above is the
-mechanism that makes this resolve to `/var/lib/peisear/static/` at
-runtime.
+**`DATABASE_URL`'s default, `sqlite://data/app.db`, resolves relative
+to `$PWD`** — and so does the generated JWT signing key file beside it
+(`FIV-001`). The `WorkingDirectory=` directive in the systemd unit
+above is the mechanism that makes this resolve to
+`/var/lib/peisear/data/` at runtime.
 
-If you run the binary manually and `cd` somewhere else first, `GET
-/static/app.css` will 404. This is by design — but it's the one
-deploy-time gotcha worth remembering.
+If you run the binary manually and `cd` somewhere else first, it opens
+or creates a *different* database and key file at `./data/` under
+whatever directory you happened to be standing in — no error, no
+warning, just a second, empty instance. This is by design — but it's
+the one deploy-time gotcha worth remembering. **It used to apply to
+`static/` too**; `FIV-005` embedded that directory into the binary, so
+a `cd` before starting it no longer produces a 404 for every asset,
+only (if anything) a second database.
 
 ## Environment file
 

@@ -45,7 +45,7 @@ axum                        = { version = "0.8", features = ["macros"] }
 axum-extra                  = { version = "0.12", features = ["cookie"] }
 tokio                       = { version = "1", features = ["full"] }
 tower                       = "0.5"
-tower-http                  = { version = "0.6", features = ["fs", "trace", "compression-gzip"] }
+tower-http                  = { version = "0.6", features = ["trace", "compression-gzip"] }
 
 # ─── Storage ─────────────────────────────────────────────────────────
 sqlx                        = { version = "0.8", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "macros", "migrate", "chrono", "uuid"] }
@@ -76,6 +76,13 @@ mail-builder                = "0.4"
 
 # ─── Web‑layer specifics ─────────────────────────────────────────────
 dotenvy                     = "0.15"
+# `static/`'s eight files, embedded into the binary at compile time
+# (`FIV-005`, `§10.41`): `cargo install peisear` publishes no
+# directory alongside the binary, so a filesystem `ServeDir` 404s on
+# every installed copy. `include_dir` walks the directory at compile
+# time -- a new file under `static/` is picked up on the next build
+# with no list to keep in step.
+include_dir                 = "0.7"
 leptos                      = { version = "0.8", features = ["ssr"] }
 serde_urlencoded            = "0.7"
 time                        = "0.3"

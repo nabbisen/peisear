@@ -3197,6 +3197,14 @@ across the workspace.
 Release archives MUST be named with the version suffix and MUST unpack
 with files at the archive root, without an intermediate directory.
 *Source*: project convention. *Status*: Implemented. *Priority*: P2.
+*Amended (0.53.0, `FIV-005`)*: the archive's root MUST contain the
+release binary **and nothing else** — no `static/` directory beside
+it. `static/`'s eight files are embedded into the binary at compile
+time (`§10.41`), so an archive that also carried a `static/` directory
+would carry the same bytes twice, once inside the binary and once
+beside it, for nothing any running instance reads. `FIV-002` verifies
+this layout by extracting the archives it builds, since this entry's
+own status rested on no release ever having shipped one.
 
 **NFR-REL-003 — Release cadence**
 Releases MUST be cut at logical boundaries — a resolved RFC, a completed
@@ -6328,7 +6336,7 @@ neither does** — this entry therefore stays **open** and
 `NFR-SEC-004` stays **Divergent** until the file is fixed and the
 owner confirms it.
 
-### 10.41 A documented install path the published artefact cannot satisfy — **open**, `FIV-005`, 0.53.0; found 2026-10-14 while reading the Quick Start as a newcomer
+### 10.41 A documented install path the published artefact cannot satisfy — **closed**, `FIV-005`, 0.53.0; found 2026-10-14 while reading the Quick Start as a newcomer
 
 *This heading was deleted by `FIV-001` round 2's own edit to `§10.40`
 and restored at that round's review. For the eleven hours in between,
@@ -6391,6 +6399,64 @@ the project already makes becomes the behaviour it has. **Not a
 instead of removing it, and adds a value the reader must know. The
 entry closes on the walk (an installed binary run from outside the
 repository, with the board confirmed *rendered*), never on the build.
+
+**Closed on that walk, 2026-10-15.** `static/`'s eight files are
+embedded into the binary at compile time (`include_dir!`,
+`static_assets.rs`) and served from memory; `app.rs:259`'s
+`ServeDir::new("static")` is gone. `cargo install --path crates/peisear
+--root <scratch prefix>`, then the installed binary run from an empty
+directory that is not the repository, with no `static/` beside it:
+registration, login, and project creation each returned a fully styled
+page (daisyui buttons, the app's own fonts and spacing, no raw HTML),
+and the board itself — the Open / In Progress / Done columns, not just
+a 200 — rendered with its own three stylesheets and `search.js`. All
+eight embedded files served individually with the correct content type
+(`text/css` or `text/javascript`) over a direct request, and a path
+outside the embedded set 404s. **Before/after binary size, release
+profile, same machine**: 21,008,840 → 23,699,432 bytes, **+2,690,592
+bytes** (+12.8%) — static/'s own 3.0 MB on disk, `daisyui.min.css`
+already minified so it does not compress away. Not escalated: the
+growth is the embedded directory's own size, not a surprise on top of
+it.
+
+**The two further consequences §10.41 named are unchanged, correctly**
+— `DATABASE_URL` and the generated `jwt_secret` still resolve relative
+to `$PWD`; embedding removed the asset half of the relative-path
+problem, not the database half. `docs/operations/deployment.md`'s own
+working-directory section now says so.
+
+**The development path**: a debug build still reads `static/<path>`
+from disk first (`static_assets::read_from_disk_in_debug`), falling
+through to the embedded copy on a miss. Measured before deciding, not
+assumed: a one-line `static/app.css` edit forced an 18-second relink of
+`peisear-web` and `peisear` with no fallback, since the embedded bytes
+are part of their compiled output — real enough friction for a
+contributor iterating on CSS that "nothing at all" was not the honest
+answer here. `#[cfg(debug_assertions)]` compiles the disk path out of
+release entirely, so this is not a runtime branch release pays for.
+
+**`deployment.md`'s instructions re-counted**: three sections assumed
+`static/` shipped beside the binary (the opening sentence, *What to
+ship*, and *The working-directory rule*) — all three rewritten.
+`docs_scan` rule 3 still compares `deployment.md`'s manifest against
+`static/`'s real contents in both directions; its assertion is
+unchanged, its meaning is not — a drift now means the binary was built
+from a `static/` the manifest no longer describes, not a missed copy
+step. `README.md`'s self-contradiction (*"Ship one executable plus
+`static/`"* against *"One binary deploy"*) is resolved in the direction
+the entry predicted: the second was already the intent.
+
+**`static_js_scan`'s `STATIC-001` guard, `dm_fallback_boundary_scan`,
+and the `static/*.js` prose scan all still read `static/` from the
+repository's own filesystem** (`CARGO_MANIFEST_DIR`-relative, not
+through the router), confirmed rather than assumed — all three pass
+unchanged, because what they guard was never the serving mechanism.
+
+**`NFR-REL-002`** is amended in place to say the archive's root MUST
+carry the binary alone. **`NFR-CMP-002`** needs no amendment:
+self-hostability and no-CDN-dependency are unaffected by where
+`static/` lives relative to the binary, and embedding makes the
+self-contained claim strictly truer, not conditionally so.
 
 ## 11. Deferred and future requirements
 

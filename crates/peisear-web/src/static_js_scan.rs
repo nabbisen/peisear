@@ -47,9 +47,12 @@
 //! disproportionate.
 //!
 //! **`STATIC-001` — a second, unrelated guard lives here because this
-//! module already walks `static/`.** `app.rs` mounts
-//! `ServeDir::new("static")`, so every file in that directory is a public
-//! URL on every deployment. [`every_entry_under_static_is_a_servable_asset_type`]
+//! module already walks `static/`.** `app.rs` embeds the whole
+//! directory at compile time (`static_assets.rs`, `FIV-005`) and
+//! serves whatever that embedded set contains, so every file here is
+//! still a public URL on every deployment -- the mechanism changed,
+//! the guarantee this guard reads from did not.
+//! [`every_entry_under_static_is_a_servable_asset_type`]
 //! asserts that each file under it (recursively) has an extension on the
 //! short list in [`SERVABLE_ASSET_TYPES`]. **That is all it checks**: the
 //! extension, compared case-sensitively. It does not read a file's
@@ -265,8 +268,9 @@ fn is_servable_asset_type(path: &Path) -> bool {
         })
 }
 
-/// Every file under `dir`, recursively (`ServeDir` serves
-/// subdirectories too).
+/// Every file under `dir`, recursively (`static_assets::serve` looks
+/// files up by their full relative path in the embedded set, so a
+/// subdirectory is served exactly as a top-level file would be).
 fn collect_all_files(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(dir) else {
         return;
