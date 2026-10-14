@@ -2975,13 +2975,23 @@ Passwords MUST be stored only as Argon2 hashes.
 
 **NFR-SEC-004 — No secrets in repository or release artefact**
 Credentials MUST NOT appear in source, configuration, or release
-archives. Deployment secrets are supplied by the environment.
-*Source*: project convention. *Status*: **Divergent** (recorded
-2026-10-14) — `crates/peisear-web/src/config.rs:31` carries the literal
-fallback this entry's own first sentence forbids, and it is the key that
-signs session cookies on any instance started without `JWT_SECRET`. See
-`§10.40`. Automated scanning remains advisory and not yet wired.
-*Closing*: `RFC 017` proposal 4, scheduled `0.53.0`. *Priority*: P0.
+archives. Deployment secrets are supplied by the environment, or
+generated and persisted locally, with the environment variable taking
+precedence when set.
+*Amended (0.53.0)* — `RFC 017` §4's review: the original second
+sentence read as the whole rule, and a development-only default used
+when configuration was absent satisfied it on that reading while
+violating the first. The reading that makes the status mean something
+is in `§10.40`, which this amendment follows rather than precedes —
+a status set against unamended text is the ambiguity that entry is
+about.
+*Source*: project convention. *Status*: **Implemented** (`0.53.0`) —
+`crates/peisear-web/src/config.rs`'s literal fallback is deleted;
+`JWT_SECRET` unset now generates 32 random bytes, persists them beside
+the resolved database path, and fails loudly rather than falling back
+on either a missing-and-unwritable or a damaged key file. See `§10.40`,
+closed. Automated scanning remains advisory and not yet wired.
+*Priority*: P0.
 
 **NFR-SEC-005 — No `unsafe` code**
 Project code MUST NOT use `unsafe`. Any future use requires explicit
@@ -3328,11 +3338,11 @@ CDNs blocked: identical rendering, three stylesheets, 44 px controls, no
 overflow.
 
 **NFR-CMP-003 — Single-file database**
-Persistent state MUST reside in a single SQLite file, so the file is the
-unit a backup captures — not that a backup *is* a file copy. Taken while
-peisear runs, the copy MUST go through SQLite's own `.backup` command;
-taken while it is stopped, a plain file copy is correct. `docs/operations/
-backup.md` MUST state and keep stating that distinction.
+Persistent state MUST reside in a single SQLite file. Taken while
+peisear runs, a backup of that file MUST go through SQLite's own
+`.backup` command; taken while it is stopped, a plain file copy of it
+is correct. `docs/operations/backup.md` MUST state and keep stating
+that distinction.
 *Source*: `KICK §2.3`. *Status*: Implemented. *Priority*: P2.
 *Amended (0.51.0)*: the previous wording — *"so that backup is a file
 copy"* — was imprecise in exactly the direction `backup.md`'s own "The
@@ -3343,6 +3353,19 @@ own external-entities table ("Single file; backup is a file copy →
 `NFR-CMP-003`") restated the same imprecision and is corrected
 alongside this entry. `README.md` already said `.backup`, correctly,
 and is unaffected.
+*Amended (0.53.0) — the backup unit becomes the directory, not the
+file* (`RFC 017` §4's own words). The database remains a single SQLite
+file, and the `.backup`-while-running / plain-copy-while-stopped
+distinction above is about that file and is unchanged. But `FIV-001`
+adds a generated signing-key file (`jwt_secret`) beside it when
+`JWT_SECRET` is not set explicitly, and the database and the key that
+validates its sessions belong together: a restore of the database
+without the key is not an error, but it invalidates every session that
+existed at backup time. `docs/operations/backup.md`'s cold backup is
+now a directory copy; its online backup is `.backup` for the database
+plus a plain `cp` of the key file, which carries no live-coordination
+requirement because it is written once and never modified after
+generation.
 
 **NFR-CMP-004 — Forward-only migrations**
 Schema migrations MUST be forward-only and numbered sequentially. A
@@ -6060,7 +6083,7 @@ duplicated under the rule above, not exempted from it.
 
 **Out of scope, deliberately**: `DOC-002 §5`'s own line — a `//` comment never reaches a published crate's documentation, and `crates/*/tests/` is never walked for doc comments at all, since cargo never publishes an integration-test binary to docs.rs. **Measured directly — twice, because the first two measurements of it were both wrong**: **45** occurrences across **21** files. The handoff's own estimate (16 across 11) dropped doc-comment lines inside `crates/*/tests/` from both surfaces; the round's correction of it (25 across 14) undercounted differently and transposed the two halves. Measured: **19** under `crates/*/src/` across 9 files, of which **9** are this rule's own planted fixtures in `docs_scan/tests.rs`; **26** under `crates/*/tests/` across 12 files, `peisear-web/tests/sprint_plan.rs` alone carrying 10. Reported, not swept in — and the three attempts at this one number are the clearest evidence in this entry for why a figure that decides nothing still gets measured twice.
 
-### 10.40 A P0 forbidding credentials in source, with the session signing key in source — **open**, found 2026-10-14 while scoping `0.53.0`; closing `FIV-001`
+### 10.40 A P0 forbidding credentials in source, with the session signing key in source — **closed**, `FIV-001`, 0.53.0; found 2026-10-14 while scoping `0.53.0`
 
 `NFR-SEC-004` reads *"Credentials MUST NOT appear in source,
 configuration, or release archives"*, Priority **P0**, and has read
@@ -6101,6 +6124,20 @@ delete the literal.
 to *"keep it out of source control"*, and never says what happens if
 the variable is unset — the one case where the project does the
 opposite of its own instruction.
+
+**Closed, `FIV-001`.** The literal is deleted from
+`crates/peisear-web/src/config.rs`. On an unset `JWT_SECRET`, peisear
+now generates 32 random bytes, persists them beside the resolved
+database path (never a fixed `data/`), and reuses the file on later
+runs; the environment variable still wins where set. Both failure
+paths fail loudly, naming the path, rather than falling back: a file
+that cannot be written, and a file that exists but is not exactly 32
+bytes are never silently treated as absent. `docs/security/hardening.md`'s
+*`JWT_SECRET` hygiene* now describes the generated key instead of
+giving advice the project's own fallback contradicted. **The reading
+above is left intact, not narrowed** — it is what made the status
+`Divergent` in the first place, and `NFR-SEC-004`'s own text now
+states it rather than leaving it to this entry.
 
 **The class, which is what this entry is for.** `§10.34` records a
 status saying one thing while the release said another. This is a
@@ -6160,12 +6197,12 @@ Accepted in principle, deliberately not scheduled.
 | Concurrency | 7 | 7 | — | — | — | — |
 | Accessibility | 11 | 8 | — | — | 1 | 2 unverified |
 | Language | 5 | 1 | 2 | — | 1 | 1 |
-| Security | 7 | 6 | — | — | — | 1 (`NFR-SEC-004`, `§10.40`) |
+| Security | 7 | 7 | — | — | — | — |
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
 | Release | 8 | 6 | 1 | — | — | 1 undefined |
 | Compatibility | 6 | 5 | 1 | — | — | — |
-| **Non-functional total** | **66** | **51** | **5** | **0** | **2** | **8** |
+| **Non-functional total** | **66** | **52** | **5** | **0** | **2** | **7** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.

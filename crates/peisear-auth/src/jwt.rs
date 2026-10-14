@@ -18,6 +18,7 @@
 //! fully-public-fielded, trivially-forgeable struct to keep existing
 //! outside `verify`'s own use for signing and decoding.
 
+use argon2::password_hash::rand_core::{OsRng, RngCore};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
@@ -25,6 +26,16 @@ use crate::AuthResult;
 
 /// 7 days.
 pub const SESSION_TTL_SECS: i64 = 60 * 60 * 24 * 7;
+
+/// 32 random bytes from the OS CSPRNG (`RFC 017` §4) -- a signing key an
+/// instance generates once, when no `JWT_SECRET` is configured. Same
+/// `OsRng` import path as [`crate::password::hash`]'s salt generation,
+/// reused rather than adding a second randomness source to this crate.
+pub fn generate_signing_key() -> [u8; 32] {
+    let mut bytes = [0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    bytes
+}
 
 /// Proof that a token was issued by this process and has not expired --
 /// obtainable only from [`verify`]. See the module doc comment for why

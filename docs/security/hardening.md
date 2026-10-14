@@ -23,15 +23,17 @@ seriously:
 Threats it does **not** try to handle on its own:
 
 - **TLS termination.** Put a reverse proxy in front of peisear in
-  production — **and set `BIND_ADDR=127.0.0.1:3000` when you do.**
-  **The default is `0.0.0.0:3000`, which binds every interface**
-  (`peisear-web/src/config.rs`), so a proxy in front of an otherwise
-  untouched instance leaves port 3000 reachable directly — **bypassing
-  the proxy, and with it the TLS termination and rate limiting this
-  section delegates to it.** Loopback is the safe choice; it is not the
-  default. *Corrected 2026-10-11: this sentence read "`BIND_ADDR=127.0.0.1:3000`
-  is the default-safe choice", which `docs/getting-started/configuration.md`
-  has always contradicted correctly.*
+  production. **`BIND_ADDR` defaults to `127.0.0.1:3000`** (`RFC 017`
+  §5, `0.53.0`) — loopback, so an otherwise-untouched instance behind a
+  reverse proxy is not also reachable directly on port 3000,
+  **bypassing the proxy and with it the TLS termination and rate
+  limiting this section delegates to it.** The one place an open bind
+  is correct is the container image, which sets
+  `BIND_ADDR=0.0.0.0:3000` itself because the host's own port mapping
+  is the boundary there. *Amended 0.53.0: the default changed from
+  `0.0.0.0:3000` to `127.0.0.1:3000` — see the `0.53.0` changelog entry
+  for the remedy if you relied on the previous default to reach an
+  instance from another machine.*
 - **Rate limiting.** Configure at the proxy (`limit_req_zone` in
   nginx, equivalents in HAProxy / Envoy / Caddy).
 - **DDoS absorption.** Not peisear's job.
@@ -149,9 +151,29 @@ session cookie is only sent over HTTPS. Set HSTS at the proxy.
 
 ### `JWT_SECRET` hygiene
 
-Generate with `openssl rand -base64 48` (or stronger). Keep it out of
-source control. Rotate on suspected compromise — every existing
-session is invalidated the moment the secret changes.
+**Generated automatically; there is nothing to set.** `RFC 017` §4
+(`0.53.0`): on first run, if `JWT_SECRET` is unset, peisear generates
+32 random bytes, writes them to a file named `jwt_secret` beside the
+database file (`mode 0600` on Unix — Windows has no equivalent
+permission bit to set, so the file relies on the filesystem's own
+default ACL there), and reuses that file on every later run. Losing
+the file logs out every existing session, the same consequence as
+rotating a manually-configured secret.
+
+**The file must be backed up with the database.** `NFR-CMP-003`'s
+backup unit is the database's own directory, not just the `.db` file —
+see [`../operations/backup.md`](../operations/backup.md). A restore
+that brings back the database without the key file it was running
+against still works (a new key is generated on the next start), but
+invalidates every session that existed at backup time.
+
+**Setting `JWT_SECRET` explicitly still works and still wins** — for a
+multi-instance deployment sharing one secret, or an operator who
+prefers to manage it themselves. Keep it out of source control if you
+do. Rotate on suspected compromise, by deleting the generated file (or
+changing the explicit variable) — every existing session is
+invalidated the moment the secret changes, which is the same property
+either path has.
 
 ### Security headers
 

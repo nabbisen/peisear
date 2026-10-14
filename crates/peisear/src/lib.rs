@@ -33,7 +33,7 @@
 //! use peisear::web::{AppState, Config, build_router};
 //! use std::net::SocketAddr;
 //!
-//! let config = Config::from_env();
+//! let config = Config::from_env()?;
 //! let db = pool::connect(&config.database_url).await?;
 //! pool::migrate(&db).await?;
 //!

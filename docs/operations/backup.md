@@ -1,8 +1,13 @@
 # Backup
 
-peisear's entire persistent state lives in one SQLite database file.
-This makes backup cheap and restore obvious — but there are two
-right ways and one wrong way.
+peisear's persistent state lives in the database file and, if
+`JWT_SECRET` is not set explicitly, a generated signing-key file beside
+it (`jwt_secret`, `RFC 017` §4, `0.53.0`). **The backup unit is the
+directory, not the database file alone** — the database and the key
+that validates its sessions belong together, and a restore of one
+without the other is a restore that logs everyone out. Backup is
+still cheap and restore still obvious — there are two right ways and
+one wrong way.
 
 ## Online backup (while peisear is running)
 
@@ -12,45 +17,58 @@ the server is live is safe:
 
 ```bash
 sqlite3 /var/lib/peisear/data/app.db ".backup /var/lib/peisear/backups/app-$(date +%F).db"
+cp /var/lib/peisear/data/jwt_secret /var/lib/peisear/backups/jwt_secret-$(date +%F) 2>/dev/null || true
 ```
 
-This produces a single-file snapshot that is internally consistent.
-Wrap it in a cron job or a systemd timer and copy the output offsite.
+`.backup` produces a single-file database snapshot that is internally
+consistent, the same guarantee as before. The key file is written once
+at generation and never modified after, so a plain `cp` of it is
+always safe regardless of server state — the `|| true` is only there
+because the file doesn't exist at all when `JWT_SECRET` is set
+explicitly, which is not a failure. Wrap both in a cron job or a
+systemd timer and copy the output offsite.
 
 ## Cold backup (while peisear is stopped)
 
 If you can afford the downtime, the simplest strategy is also the
-most correct:
+most correct — and now a directory copy, not a single file:
 
 ```bash
 systemctl stop peisear
-cp /var/lib/peisear/data/app.db /var/lib/peisear/backups/app-$(date +%F).db
+cp -r /var/lib/peisear/data/ /var/lib/peisear/backups/data-$(date +%F)/
 systemctl start peisear
 ```
 
 The server stops holding the WAL and SHM files, the database
-consolidates, and a plain `cp` gets a consistent copy.
+consolidates, and a plain recursive `cp` gets a consistent copy of the
+database **and** the key file beside it.
 
 ## The wrong way
 
 **Do not `cp` the live `app.db` file while the server is running.**
 Without coordinating with the running sqlite writer, you'll capture
 the main file without its associated WAL/SHM, producing an incomplete
-snapshot. Use `.backup` (above) instead.
+snapshot. Use `.backup` (above) instead — the key file has no such
+restriction and may be `cp`'d live.
 
 ## Restore
 
-Restoration is the obverse of the cold copy:
+Restoration is the obverse of the cold copy — **restore the database
+and the key file together**, from the same backup:
 
 ```bash
 systemctl stop peisear
-cp /var/lib/peisear/backups/app-2026-04-23.db /var/lib/peisear/data/app.db
+cp /var/lib/peisear/backups/data-2026-04-23/app.db /var/lib/peisear/data/app.db
+cp /var/lib/peisear/backups/data-2026-04-23/jwt_secret /var/lib/peisear/data/jwt_secret 2>/dev/null || true
 systemctl start peisear
 ```
 
 No migration step is required: the backup captures the schema along
 with the data, and peisear's embedded migrations know how to
-no-op-forward from whatever version that backup had.
+no-op-forward from whatever version that backup had. **Restoring the
+database without its key file is not an error** — peisear generates a
+new one on the next start — but it invalidates every session that
+existed at backup time, same as a deliberate `JWT_SECRET` rotation.
 
 ## Offsite rotation
 
@@ -92,13 +110,16 @@ not an environment variable.
 
 ## What's NOT in the backup
 
-- **Environment variables** (including `JWT_SECRET`). Keep those in
-  your infrastructure-as-code or secrets manager separately.
+- **An explicitly-set `JWT_SECRET` environment variable.** If you set
+  it yourself rather than letting peisear generate one, it lives in
+  your infrastructure-as-code or secrets manager, not in `data/`, and
+  is on you to back up separately. The *generated* key file, when
+  there is one, is in `data/` and is covered above.
 - **`static/` assets**. They come from the release tarball; there's
   no point backing them up.
-- **Per-session data**. The JWT is signed with the current
-  `JWT_SECRET`; if the secret rotates, all existing sessions
-  invalidate. This is intentional.
+- **Per-session data**. The JWT is signed with the current signing
+  key, generated or explicit; if the key changes, all existing
+  sessions invalidate. This is intentional.
 
 ## Next
 

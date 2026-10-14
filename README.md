@@ -53,8 +53,6 @@ week — and fewer still will tell *you* first.
 
 ```bash
 cargo install peisear
-echo "JWT_SECRET=$(openssl rand -base64 48)" > .env
-
 peisear
 #   → http://localhost:3000
 ```
@@ -64,7 +62,6 @@ peisear
 ```bash
 git clone https://github.com/nabbisen/peisear.git && cd peisear
 cp .env.example .env
-echo "JWT_SECRET=$(openssl rand -base64 48)" >> .env
 
 cargo run --release -p peisear
 #   → http://localhost:3000

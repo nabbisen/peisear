@@ -152,9 +152,10 @@ fn rule_3_catches_a_static_file_missing_from_the_manifest() {
 #[test]
 fn rule_4_catches_a_documented_default_that_does_not_match_config_rs() {
     let mut r = real();
+    let needle = table_default(&r.configuration, "BIND_ADDR").expect("BIND_ADDR row");
     r.configuration = r
         .configuration
-        .replace("`0.0.0.0:3000`", "`127.0.0.1:3000`");
+        .replacen(&format!("`{needle}`"), "`0.0.0.0:9999`", 1);
     let v = only(run(&r), "rule 4:");
     assert!(v.iter().any(|m| m.contains("BIND_ADDR")), "got {v:?}");
 }

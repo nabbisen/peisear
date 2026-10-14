@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .init();
 
-    let config = Config::from_env();
+    let config = Config::from_env()?;
     // `SEC-001` §1: redacted at the source, not inline here, so a future
     // second startup line that also wants to name the database cannot
     // reintroduce the leak by logging `database_url` directly.
