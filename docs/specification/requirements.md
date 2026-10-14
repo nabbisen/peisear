@@ -2985,13 +2985,23 @@ violating the first. The reading that makes the status mean something
 is in `§10.40`, which this amendment follows rather than precedes —
 a status set against unamended text is the ambiguity that entry is
 about.
-*Source*: project convention. *Status*: **Implemented** (`0.53.0`) —
-`crates/peisear-web/src/config.rs`'s literal fallback is deleted;
+*Source*: project convention. *Status*: **Divergent** — half closed,
+and the half that is left is the documented path.
+`crates/peisear-web/src/config.rs`'s literal fallback **is** deleted:
 `JWT_SECRET` unset now generates 32 random bytes, persists them beside
 the resolved database path, and fails loudly rather than falling back
-on either a missing-and-unwritable or a damaged key file. See `§10.40`,
-closed. Automated scanning remains advisory and not yet wired.
-*Priority*: P0.
+on either a missing-and-unwritable or a damaged key file (`FIV-001`,
+0.53.0). **But `.env.example` still ships an uncommented
+`JWT_SECRET=change-me-to-a-long-random-string`**, `Config::from_env`
+loads `.env` through `dotenvy`, and `README.md`,
+`.github/CONTRIBUTING.md` and `docs/getting-started/configuration.md`
+all instruct the reader to copy it — so the documented path sets the
+variable to a published literal and the generated branch never runs.
+See `§10.40`, reopened. *Closing*: `FIV-001` round 2 — the line
+commented out, **and** the placeholder refused at startup, which is
+the only one of the two that reaches an instance already running from
+a copied `.env`. Automated scanning remains advisory and not yet
+wired. *Priority*: P0.
 
 **NFR-SEC-005 — No `unsafe` code**
 Project code MUST NOT use `unsafe`. Any future use requires explicit
@@ -6083,7 +6093,7 @@ duplicated under the rule above, not exempted from it.
 
 **Out of scope, deliberately**: `DOC-002 §5`'s own line — a `//` comment never reaches a published crate's documentation, and `crates/*/tests/` is never walked for doc comments at all, since cargo never publishes an integration-test binary to docs.rs. **Measured directly — twice, because the first two measurements of it were both wrong**: **45** occurrences across **21** files. The handoff's own estimate (16 across 11) dropped doc-comment lines inside `crates/*/tests/` from both surfaces; the round's correction of it (25 across 14) undercounted differently and transposed the two halves. Measured: **19** under `crates/*/src/` across 9 files, of which **9** are this rule's own planted fixtures in `docs_scan/tests.rs`; **26** under `crates/*/tests/` across 12 files, `peisear-web/tests/sprint_plan.rs` alone carrying 10. Reported, not swept in — and the three attempts at this one number are the clearest evidence in this entry for why a figure that decides nothing still gets measured twice.
 
-### 10.40 A P0 forbidding credentials in source, with the session signing key in source — **closed**, `FIV-001`, 0.53.0; found 2026-10-14 while scoping `0.53.0`
+### 10.40 A P0 forbidding credentials in source, with the session signing key in source — **open**; the fallback is gone (`FIV-001`, 0.53.0) and a **second door is still open**, below; found 2026-10-14 while scoping `0.53.0`
 
 `NFR-SEC-004` reads *"Credentials MUST NOT appear in source,
 configuration, or release archives"*, Priority **P0**, and has read
@@ -6147,6 +6157,38 @@ A P3 like that wastes a reader's time. A P0 like that is the register
 reporting clean on the thing it exists to watch — `§10.36`'s question
 asked of a requirement rather than of a check.
 
+**Reopened at `FIV-001`'s review, 2026-10-14 — the same defect through
+a different door.** `config.rs`'s literal is deleted and the generated
+key is correct. But `Config::from_env` calls `dotenvy::dotenv()`, the
+repository ships `.env.example` with an **uncommented**
+`JWT_SECRET=change-me-to-a-long-random-string`, and three documents
+instruct the reader to `cp .env.example .env` — `README.md`,
+`.github/CONTRIBUTING.md`, and `docs/getting-started/configuration.md`,
+whose *Minimum viable `.env`* section now reads **"That's it — no secret
+to generate by hand"**. Following the documented path therefore sets
+`JWT_SECRET` to a published literal, the generated-key branch never
+runs, and the sentence promising otherwise is false.
+
+**`FIV-001` made this path worse before it made it better**: the same
+round deleted `README.md`'s `openssl rand -base64 48` lines, which were
+what previously told the reader to replace the placeholder. The cause
+was left and the mitigation removed.
+
+**Two remedies, and they are not alternatives.** Commenting the line
+out in `.env.example` fixes the repository; it does nothing for anyone
+who already copied it, and that file is where their live secret came
+from. **Refusing the published placeholder at startup** fixes the
+installations, and this entry's own reading says why that is
+sufficient: a value *refused* is not a credential, only a value
+*used* is. Both are `FIV-001`'s round 2.
+
+**What this costs the entry's own lesson.** `§10.34` is a status saying
+one thing while the release said another; this entry opened as a degree
+worse than that. The reopening is a third degree: **a status set from
+the half of the change that was done, with the other half written down
+in the same review request as a diff nobody could apply.** The round
+knew. The status did not.
+
 
 ## 11. Deferred and future requirements
 
@@ -6197,12 +6239,12 @@ Accepted in principle, deliberately not scheduled.
 | Concurrency | 7 | 7 | — | — | — | — |
 | Accessibility | 11 | 8 | — | — | 1 | 2 unverified |
 | Language | 5 | 1 | 2 | — | 1 | 1 |
-| Security | 7 | 7 | — | — | — | — |
+| Security | 7 | 6 | — | — | — | 1 (`NFR-SEC-004`, `§10.40`) |
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
 | Release | 8 | 6 | 1 | — | — | 1 undefined |
 | Compatibility | 6 | 5 | 1 | — | — | — |
-| **Non-functional total** | **66** | **52** | **5** | **0** | **2** | **7** |
+| **Non-functional total** | **66** | **51** | **5** | **0** | **2** | **8** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.

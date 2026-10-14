@@ -192,3 +192,104 @@ re-statused, `§10.40` closed, `NFR-CMP-003` amended, Appendix A
 reconciled; `DEC-007` accounted for against 451; and **five real runs**
 — clean first run, restart, damaged key, `JWT_SECRET` set, and a
 non-file `DATABASE_URL` — each reported with what it printed.
+
+---
+
+# FIV-001 round 2 — the second door
+
+**Added by the architect at round 1's review, 2026-10-14.** Round 1's
+code is accepted: the literal is deleted, the key is generated,
+persisted beside the resolved database path, atomic, and fails loudly
+on both failure paths. **`§10.40` is reopened and `NFR-SEC-004` is back
+to `Divergent`** for something round 1 did not close and partly made
+worse. This round closes it. **`FIV-002`–`FIV-004` are not blocked by
+it** — they are blocked by round 1, which is accepted.
+
+## §9 — the documented path still installs a published credential
+
+`Config::from_env` calls `dotenvy::dotenv()`. The repository ships
+`.env.example` with an **uncommented**
+`JWT_SECRET=change-me-to-a-long-random-string`. Three documents tell
+the reader to copy it: `README.md:64`, `.github/CONTRIBUTING.md:30`,
+and `docs/getting-started/configuration.md:12`, whose *Minimum viable
+`.env`* section this round rewrote to read **"That's it — no secret to
+generate by hand."**
+
+So the documented path sets `JWT_SECRET` to a published literal, the
+generated branch never runs, and the sentence promising otherwise is
+false. **Round 1 also deleted `README.md`'s `openssl rand -base64 48`
+lines** — the instruction that previously told the reader to replace
+the placeholder. The cause was left and the mitigation removed.
+
+**Two changes, and they are not alternatives.**
+
+1. **`.env.example`**: comment the `JWT_SECRET` line out, per the diff
+   round 1 already wrote. **This is the owner's to apply** — every file
+   tool in this project denies `.env*` paths, which round 1 reported
+   honestly. Do not attempt to work around that rule.
+2. **Refuse the placeholder at startup.** If `JWT_SECRET` resolves to
+   the published literal, **fail with the same shape as the other
+   `ConfigError` variants**, naming the remedy (unset it and let the
+   key be generated). This is the half that reaches an instance
+   *already running* from a copied `.env`, which the file edit cannot.
+   `§10.40`'s own reading is why one rejected constant in source is not
+   a credential: *a value refused is not a credential, only a value
+   used is.* Say that in the code comment, so the next reader does not
+   "fix" it by deleting the constant.
+
+**Not a list.** One literal, because exactly one has ever been
+published. If a second is ever tempting, that is a different design and
+a different round.
+
+## §10 — the error messages nobody sees
+
+`ConfigError`'s `thiserror` messages are good — `KeyMalformed`'s names
+the path, both byte counts, and the remedy including that deleting the
+file invalidates every session. **A user never sees any of it.**
+`main` returns `Result<(), Box<dyn Error>>`, and Rust's default
+termination prints `Debug`:
+
+```
+Error: KeyMalformed { path: "data/jwt_secret", expected: 32, found: 3 }
+```
+
+Round 1's own evidence logs show this and read it as passing, because
+the struct dump does technically name the path. **In the release whose
+subject is output a beginner can act on, the remedy was written and
+then not delivered.**
+
+Handle the error in `main` — print `Display`, exit non-zero — rather
+than returning it. Re-run all five real runs and **paste what the
+terminal actually shows**, not the exit code.
+
+## §11 — the temp file is world-readable for a moment
+
+`write_key_file_atomically` does `fs::write(&tmp_path, bytes)` and
+*then* `set_key_file_permissions`. The doc comment's claim is right
+about `path` — the renamed file is never briefly world-readable — but
+the **temp file holds the key at the default mode** for the window
+between those two calls, in the same directory.
+
+Create it restricted instead: `OpenOptions` with `.mode(0o600)` and
+`.create_new(true)` under `#[cfg(unix)]`. `create_new` also turns a
+leftover temp from a pid-wrapped earlier run into an error rather than
+a silent clobber. **On Windows this stays the documented no-op** —
+nothing about item 3 changes.
+
+**Noted, not required**: two processes starting concurrently against
+one empty data directory still generate two different keys, and the
+later `rename` wins. Nothing reads a partial file, which is what the
+security review asked for, so this is recorded rather than fixed — say
+in the doc comment that last-writer-wins is the known behaviour, so the
+next reader does not infer a guarantee the code does not make.
+
+## §12 — exit condition
+
+`.env.example`'s line commented out (owner-applied) **or** reported
+still pending with the status left `Divergent` — never a status moved
+ahead of the tree; the placeholder refused at startup with a test for
+it; `ConfigError`'s `Display` reaching the terminal, shown by pasting
+five real runs' actual output; the temp file created `0600` and
+`create_new`; `§10.40` closed and `NFR-SEC-004` re-statused **only
+once both halves are true**; `DEC-007` accounted for against round 1's
+baseline.
