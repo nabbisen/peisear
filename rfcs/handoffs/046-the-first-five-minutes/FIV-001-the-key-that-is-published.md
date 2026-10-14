@@ -286,9 +286,20 @@ gate, not a courtesy:
   invisible: nothing sets the variable, the key generates, nobody ever
   meets the new error.
 - If it is still uncommented when this round is ready, **say so plainly
-  in the report and do not ship the refusal into that tree.** A round
-  that makes the README's first command fail is worse than the defect
-  it closes.
+  in the report.** A release that makes the README's first command fail
+  is worse than the defect it closes.
+
+**What "ship" means here, because round 2 and the architect read it
+differently and the architect was the one who got it wrong.** The gate
+is **the tag** — `0.53.0` must not be cut while that walk fails, and
+`DEC-056`'s legs are where it bites. It is *not* a gate on `main`:
+`main` is a development branch, no release is cut from it
+automatically, and there is no production use. Round 2 held its commit
+back on the stricter reading, which was reasonable and which nothing in
+this handoff contradicted — then the architect's own review commit,
+sitting on top of it, pushed it anyway. **Recorded rather than tidied
+away**: the rule was ambiguous, the stricter reading was the sound one
+to take while it was, and the person who tripped on it wrote it.
 
 **Verify rather than assume — but not by reading the file.**
 *Corrected at round 2's review: the instruction below originally said
