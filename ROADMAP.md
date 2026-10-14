@@ -166,18 +166,11 @@ sequence above went twenty minor versions stale.
 | 0.55.0 | **PostgreSQL's schema.** `RFC 018` P3 — migrations ported, triggers re-implemented | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.56.0 | **The conformance suite.** `RFC 018` P4 — one suite against both backends in CI, and the operations story | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.57.0 | **Citations that point at nothing.** Two `docs_scan` rules over the same scanner: every `§10.N` citation in `docs/` and `rfcs/handoffs/` has a matching `### 10.N` heading, and no `RFC 0NNN` four-digit citation survives outside `docs/specification/history/` | `§10.36`'s decision (2026-10-14), and the citation-form sweep carried since 0.52.0 | **Authorized 2026-10-15.** Both are guard work, both are predicates rather than lists, and the second has been carried unplaced for two releases. Placed here rather than earlier because **guards do not displace an authorized sequence** — but ahead of `RFC 020`, because 0.52.0's own precedent is that guard infrastructure should not queue behind a feature |
+| 0.58.0 | **The first thing it says.** `RFC 020` — a first run with no configuration asks five questions with working defaults and writes the `.env` it describes, so the file and the explanation cannot disagree. Skipped when configuration exists or stdin is not a terminal | `RFC 020` (**Accepted**, 2026-10-15) | **Authorized 2026-10-15.** Placement follows the note authorized with the 0.57.0 row: behind `RFC 018`'s phases, and behind the citation guard on 0.52.0's precedent that guard work does not queue behind a feature. **Handoffs are not written yet** and are not due until 0.57.0 is cut (Release cycle, entry criterion 3) |
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
 from memory.
-
-**`RFC 020`, if accepted, lands at 0.58.0, not 0.57.0.** Its own §6
-proposed 0.57.0 on the reasoning that it must not displace `RFC 018`'s
-phases; that reasoning holds and now applies to the guard row above it
-too. The RFC's text is left as written rather than edited to match —
-**this table is where release numbers live**, and an RFC that disagrees
-with it is corrected by reading this, not by two documents carrying the
-number.
 
 **Shipped and removed from this table**: `0.52.0` (the guards
 themselves) on 2026-10-14. A row leaves when the release is cut; what

@@ -1,12 +1,17 @@
 # RFC 020: The first thing it says — guiding setup instead of documenting it
 
-**Status**: **Proposed**, 2026-10-14. Raised by the owner while ruling on
+**Status**: **Accepted** (owner, 2026-10-15). Raised by the owner while ruling on
 `§10.40`: *"I don't think it is a serious issue. Just design issue: Give user
 initialization wizard or warning etc."* **The refusal half is already
 scheduled** — `FIV-001` round 2, 0.53.0: the published placeholder is
 rejected at startup with a named remedy. **This RFC is the other half**, and
 it is deliberately not in 0.53.0.
-**Target**: proposed for **0.57.0**, after `RFC 018`'s four phases. See §6.
+**Target**: **0.58.0**. §6 proposed 0.57.0 on the reasoning that this must
+not displace `RFC 018`'s phases; that reasoning held and then applied again
+to the guard row the owner authorized at 0.57.0 the same week, so this moved
+one further. **`ROADMAP.md`'s *What ships next* is the number's home** — §6 is
+left as it was written rather than back-edited, so the reasoning stays
+readable and the number is read from one place.
 **Raised by**: the owner, 2026-10-14.
 **Related requirements**: `NFR-CMP-002` (self-hostable), `NFR-SEC-004`
 (no secrets in repository or release artefact), `NFR-REL-007`
@@ -126,3 +131,9 @@ PostgreSQL sequence.
 **0.57.0 is a proposal, not a schedule.** It enters `ROADMAP.md` when the
 owner accepts the RFC, per `RFC 000`, and release numbers live in that table
 and nowhere else.
+
+*Accepted 2026-10-15, and this section is what moved it.* 0.57.0 went to
+`§10.36`'s citation guard — guard work, authorized the same day, and
+0.52.0's precedent is that guard infrastructure does not queue behind a
+feature. **The argument above did not change; it applied twice.** This RFC
+is 0.58.0. See the header, and `ROADMAP.md` before either.
