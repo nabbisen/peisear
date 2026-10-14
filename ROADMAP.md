@@ -161,8 +161,7 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| **0.52.0** | **The guards themselves.** One `strip_line_comments` instead of six, five of which could not read a line holding a URL; fifteen test-only files split to the shape `project-instructions-rust.md` gives; and `docs_scan` rule 5 widened to the citations it bans but cannot see | [`rfcs/handoffs/045-the-guards-themselves/`](rfcs/handoffs/045-the-guards-themselves/README.md) | **Authorized 2026-10-14.** Two of three rounds landed; `GRD-003` open |
-| 0.53.0 | **The first five minutes.** Prebuilt binaries and a container image, so starting peisear does not begin with installing a compiler | `RFC 0017` (**Proposed**) | **Authorized 2026-10-14, blocked on acceptance** — §4's security change and §5's default bind are the two open items. The architect brings a recommendation on each with 0.52.0's release candidate |
+| **0.53.0** | **The first five minutes.** Prebuilt binaries and a container image, so starting peisear does not begin with installing a compiler — **and the published signing key deleted**, which is why the security round goes first | `RFC 0017` (**Proposed**), [handoffs 046](rfcs/handoffs/046-the-first-five-minutes/README.md) | **Authorized 2026-10-14. Scoped; four rounds written. Blocked on one thing: the owner accepting `RFC 0017`** — its §4/§5 security review is done and recorded in the RFC (2026-10-11, both approved as proposed), so acceptance is the remaining event, not the review |
 | 0.54.0 | **The dialect seam.** `RFC 0018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet | `RFC 0018` §6 | Authorized 2026-10-14 |
 | 0.55.0 | **PostgreSQL's schema.** `RFC 0018` P3 — migrations ported, triggers re-implemented | `RFC 0018` §6 | Authorized 2026-10-14 |
 | 0.56.0 | **The conformance suite.** `RFC 0018` P4 — one suite against both backends in CI, and the operations story | `RFC 0018` §6 | Authorized 2026-10-14 |
@@ -171,7 +170,12 @@ sequence above went twenty minor versions stale.
 lands ahead of it, and the change is recorded here rather than argued
 from memory.
 
-**Why 0.52.0 is not `RFC 0017`.** `RFC 0018 §8` was written when the
+**Shipped and removed from this table**: `0.52.0` (the guards
+themselves) on 2026-10-14. A row leaves when the release is cut; what
+it contained is in `CHANGELOG.md` and in the specification's own
+baseline rows, which is where release history belongs.
+
+**Why `RFC 0017` moved off 0.52.0, kept for the record.** `RFC 0018 §8` was written when the
 answer was *"0.51.0 is documentation accuracy and 0.52.0 is `RFC
 0017`"*. 0.51.0 then found two things it could not absorb: a helper
 five guards had copied naively, so that `touch_target_scan` — a guard
