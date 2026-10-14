@@ -3006,14 +3006,18 @@ forbids was the literal used *silently* by a user who did nothing, and
 that one is deleted. The entry is still `Divergent` only because the
 product currently says nothing at all to a user who installs the
 placeholder — not because a credential is in source. *Closing*:
-`FIV-001` round 2's **startup warning**, naming what the published
-value costs the operator. A startup *refusal* was considered and
-**declined**: it would reach the same installations by failing to
-start an instance that ran before the upgrade, breaking a deployment
-to protect it, for a value its operator chose. Commenting the line out
-in `.env.example` is hygiene that keeps the warning silent for new
-users, and **no longer gates this status**. Automated scanning remains
-advisory and not yet wired. *Priority*: P0.
+`FIV-001` round 2's **startup refusal** — the placeholder is rejected
+with a named remedy rather than used. The architect had downgraded this
+to a warning over upgrade breakage; the owner restored it the same day,
+*"Refuse is acceptable. You don't have to consider on migration now,
+for there is no production use yet"*, which removes the only cost the
+downgrade rested on. **Refusal is also what this requirement's own
+reading needs**: a value refused is not a credential, only a value used
+is. **Commenting the line out in `.env.example` ships with it or
+neither ships** — a refusal against an uncommented example file makes
+`cp .env.example .env` fail for every new user, which is `§10.40`'s
+defect inverted rather than closed. Automated scanning remains advisory
+and not yet wired. *Priority*: P0.
 
 **NFR-SEC-005 — No `unsafe` code**
 Project code MUST NOT use `unsafe`. Any future use requires explicit
@@ -6105,7 +6109,7 @@ duplicated under the rule above, not exempted from it.
 
 **Out of scope, deliberately**: `DOC-002 §5`'s own line — a `//` comment never reaches a published crate's documentation, and `crates/*/tests/` is never walked for doc comments at all, since cargo never publishes an integration-test binary to docs.rs. **Measured directly — twice, because the first two measurements of it were both wrong**: **45** occurrences across **21** files. The handoff's own estimate (16 across 11) dropped doc-comment lines inside `crates/*/tests/` from both surfaces; the round's correction of it (25 across 14) undercounted differently and transposed the two halves. Measured: **19** under `crates/*/src/` across 9 files, of which **9** are this rule's own planted fixtures in `docs_scan/tests.rs`; **26** under `crates/*/tests/` across 12 files, `peisear-web/tests/sprint_plan.rs` alone carrying 10. Reported, not swept in — and the three attempts at this one number are the clearest evidence in this entry for why a figure that decides nothing still gets measured twice.
 
-### 10.40 A P0 forbidding credentials in source, with the session signing key in source — **open**; the fallback is gone (`FIV-001`, 0.53.0), and what remains was **ruled a usability defect rather than this entry's class** by the owner on 2026-10-14; closes on `FIV-001` round 2's startup warning; found 2026-10-14 while scoping `0.53.0`
+### 10.40 A P0 forbidding credentials in source, with the session signing key in source — **open**; the fallback is gone (`FIV-001`, 0.53.0), and what remains was **ruled a usability defect rather than this entry's class** by the owner on 2026-10-14; closes on `FIV-001` round 2's startup refusal; found 2026-10-14 while scoping `0.53.0`
 
 `NFR-SEC-004` reads *"Credentials MUST NOT appear in source,
 configuration, or release archives"*, Priority **P0**, and has read
@@ -6220,16 +6224,33 @@ register is for that too.** First, the remedy: the file edit fixes only
 fresh copies from this repository, while a startup message reaches
 people who already copied it, people who chose a weak secret of their
 own, and people working from a fork — the owner's remedy is strictly
-wider than the one pressed on them. Second, the cost: round 2 had
-asked for a startup **refusal**, which on upgrade fails an instance
-that was running before it, breaking a deployment in order to protect
-it, for a value its operator chose. Neither was in the review.
+wider than the one pressed on them. Second, the severity: the file edit
+was reported as a blocker needing the owner's immediate hand, when the
+half that actually closes the defect was always the product's to do.
+
+**And one the architect got wrong in the other direction, the same
+day.** Told the class was usability rather than security, the architect
+downgraded the remedy with it — from refusing the placeholder to
+warning about it — on the ground that refusing breaks an instance that
+ran before the upgrade. **The owner restored the refusal**: *"Refuse is
+acceptable. You don't have to consider on migration now, for there is
+no production use yet."* The cost was hypothetical and the architect
+had not checked whether it existed. **A class is not a severity**: that
+the user installed the value themselves says what kind of defect it is,
+not how weak the fix may be.
+
+**Refusal is also what this entry's own reading asks for** — *a value
+refused is not a credential, only a value used is* — so the entry
+closes on a property of the code rather than on a judgement about how
+loud a log line is. **With one coupling that is not optional**: a
+refusal shipped against an uncommented `.env.example` makes
+`cp .env.example .env` fail for every new user, in the release whose
+subject is a newcomer's first five minutes. The two land together or
+neither lands (`FIV-001` §9b).
 
 **What does not change.** Exploitability is indifferent to intent: a
 forged cookie works the same whether the key was a placeholder or a
-secret. That is why the remedy is a warning that names the consequence
-rather than a note that records a default, and why this entry stays
-open until that warning exists. **An initialization wizard** — the
+secret. **An initialization wizard** — the
 owner's other suggestion — is `RFC 020`, deliberately not in 0.53.0: a
 warning is one function, a wizard is a surface with continuous
 maintenance cost, and the release that absorbs whatever is found while

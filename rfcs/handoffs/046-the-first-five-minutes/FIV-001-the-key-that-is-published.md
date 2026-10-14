@@ -207,9 +207,11 @@ it** — they are blocked by round 1, which is accepted.
 
 ## §9 — the documented path installs a placeholder nothing ever asks you to replace
 
-**Rewritten 2026-10-14 on the owner's ruling. Round 1's version of this
-section called for a startup refusal; it does not any more. Read this
-version, not the review that preceded it.**
+**Rewritten twice on 2026-10-14, both times by the owner. This is the
+version to build.** Round 1 asked for a refusal; the architect's review
+downgraded it to a warning over upgrade breakage; the owner answered
+*"Refuse is acceptable. You don't have to consider on migration now,
+for there is no production use yet."* **It refuses.**
 
 `Config::from_env` calls `dotenvy::dotenv()`. The repository ships
 `.env.example` with an **uncommented**
@@ -225,40 +227,36 @@ deleted `README.md`'s `openssl rand -base64 48` lines** — the
 instruction that previously told the reader to replace the
 placeholder. The cause was left and the mitigation removed.
 
-**What this is, now that it has been ruled on.** The owner's reading,
-2026-10-14: *"I don't think it is a serious issue. Just design issue:
-Give user initialization wizard or warning etc."* **A placeholder the
-user actively installs is a usability defect, not a credential in
+**What class of defect this is.** The owner's ruling, 2026-10-14: *"I
+don't think it is a serious issue. Just design issue."* **A placeholder
+the user actively installs is a usability defect, not a credential in
 source** — unlike the deleted literal, which was used silently by a
-user who did nothing. `§10.40` records the ruling and why it settles
-an ambiguity that entry says was the root cause.
+user who did nothing. `§10.40` records why that distinction settles an
+ambiguity the entry says was its root cause. **The class changed; the
+remedy did not get weaker.**
 
-**So: warn, do not refuse.** Refusing would reach the same
-installations, and it would reach them by **failing to start an
-instance that was running before the upgrade** — breaking a deployment
-in order to protect it, for a value its operator chose. That cost is
-real and was not weighed when round 1's version of this section was
-written.
+**Why refusal rather than a warning, now that the objection is gone.**
+The objection was that refusing fails an instance that ran before the
+upgrade. **There is no production use yet**, so that cost is
+hypothetical and the simpler rule wins: a refusal is binary and cannot
+be learned-around, where a warning that fires on every start is a
+warning an operator stops reading. It also matches `§10.40`'s own
+reading — *a value refused is not a credential, only a value used is* —
+so the entry closes cleanly instead of closing on a judgement about
+how loud a log line is.
 
 **Three changes.**
 
-1. **Warn loudly at startup when `JWT_SECRET` resolves to the published
-   placeholder.** One line, at `WARN`, naming the consequence rather
-   than the fact: that this value is published in the repository, that
-   anyone can therefore forge a session on this instance, and that the
-   remedy is to unset the variable and let the key be generated.
-   **Name the consequence, not the default** — *"JWT_SECRET is set to
-   the example value"* tells an operator nothing about what it costs
-   them. It fires on every start while the condition holds; that is the
-   point, and it stops the day they fix it.
+1. **Refuse to start when `JWT_SECRET` resolves to the published
+   placeholder.** A new `ConfigError` variant, failing with the same
+   shape as the others, **naming the remedy**: unset the variable and
+   let the key be generated. Name the consequence too — that this value
+   is published in the repository and anyone can forge a session with
+   it. §10's fix is what makes this message actually reach the
+   terminal; without it this variant prints as a struct dump.
 2. **`.env.example`**: comment the `JWT_SECRET` line out. **The
-   owner's to apply** — every file tool here denies `.env*`, which
-   round 1 reported honestly; do not work around it. This is now
-   hygiene rather than a security fix: a shipped value that makes the
-   good path not run is a value that guarantees every new user sees the
-   warning in item 1, which is noise where it should be silence.
-   **If it is still pending at the end of this round, say so and carry
-   on** — it no longer gates anything.
+   owner's to apply** — every file tool here denies `.env*`; do not
+   work around it. **This is now release-gating, and §9b says why.**
 3. **Put the `openssl rand` guidance back somewhere it belongs**, or
    say why it is no longer needed now that the key generates itself.
    Round 1 removed it as obsolete, and it was obsolete *for the path
@@ -268,11 +266,35 @@ written.
 published. If a second is ever tempting, that is a different design and
 a different round.
 
-**Not a wizard.** The owner's other suggestion — an initialization
-wizard — is `RFC 020`, proposed separately and **not in 0.53.0**. A
-warning is one function; a wizard is a surface with continuous
-maintenance cost, and it is a product feature rather than a defect
-fix. Do not start one here.
+**Not a wizard.** The owner's other suggestion is `RFC 020`, proposed
+separately and **not in 0.53.0**. Do not start one here.
+
+## §9b — refusing makes the owner's one-line edit release-gating
+
+**This is the consequence of choosing refusal, and it is not optional.**
+
+With a warning, an uncommented `.env.example` meant noise. **With a
+refusal it means the documented quick-start path fails outright**:
+`cp .env.example .env` then `cargo run` would exit with an error, for
+every new user, on the first command the README gives them — in the
+release whose entire subject is a newcomer's first five minutes.
+
+**So the two land together or neither lands.** Treat this as a release
+gate, not a courtesy:
+
+- If `.env.example`'s line is commented out, the refusal is correct and
+  invisible: nothing sets the variable, the key generates, nobody ever
+  meets the new error.
+- If it is still uncommented when this round is ready, **say so plainly
+  in the report and do not ship the refusal into that tree.** A round
+  that makes the README's first command fail is worse than the defect
+  it closes.
+
+**Verify rather than assume.** The architect has never read that file —
+every claim about its contents in this handoff is quoted from round
+1's review request. **Walk `cp .env.example .env` and start the server**
+as part of this round's gates, and report what actually happens. That
+walk is the check; the file's text is hearsay until it runs.
 
 ## §10 — the error messages nobody sees
 
@@ -351,11 +373,12 @@ rather than both assuming the other.**
 
 ## §12 — exit condition
 
-the published placeholder **warned about** at startup in words naming
-what it costs the operator, with a test for it; `.env.example`'s line
-commented out (owner-applied) **or** reported still pending — it no
-longer gates the status; the `openssl rand` guidance restored or its
-removal reasoned; `ConfigError`'s `Display` reaching the terminal, shown by pasting
+the published placeholder **refused** at startup, in a message naming
+both the remedy and what the value costs the operator, with a test for
+it; **`cp .env.example .env` walked and the resulting startup reported
+verbatim** — and the refusal not shipped into a tree where that walk
+fails (§9b); the `openssl rand` guidance restored or its removal
+reasoned; `ConfigError`'s `Display` reaching the terminal, shown by pasting
 five real runs' actual output; the temp file created `0600` and
 `create_new`; `§10.40` closed and `NFR-SEC-004` re-statused **only
 once both halves are true**; `first-run.md`'s expected-output block

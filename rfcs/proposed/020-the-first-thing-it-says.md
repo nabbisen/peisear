@@ -2,10 +2,10 @@
 
 **Status**: **Proposed**, 2026-10-14. Raised by the owner while ruling on
 `§10.40`: *"I don't think it is a serious issue. Just design issue: Give user
-initialization wizard or warning etc."* **The warning half is already
-scheduled** — `FIV-001` round 2, 0.53.0 — because it is one function and it
-carries the risk mitigation. **This RFC is the other half**, and it is
-deliberately not in 0.53.0.
+initialization wizard or warning etc."* **The refusal half is already
+scheduled** — `FIV-001` round 2, 0.53.0: the published placeholder is
+rejected at startup with a named remedy. **This RFC is the other half**, and
+it is deliberately not in 0.53.0.
 **Target**: proposed for **0.57.0**, after `RFC 018`'s four phases. See §6.
 **Raised by**: the owner, 2026-10-14.
 **Related requirements**: `NFR-CMP-002` (self-hostable), `NFR-SEC-004`
@@ -91,11 +91,11 @@ defects above would have been *prevented* by a wizard, or merely moved.
 
 ## §4 — the alternative, named so it is not rediscovered
 
-**Do nothing beyond the warning.** `FIV-001` round 2's startup warning plus a
+**Do nothing beyond the refusal.** `FIV-001` round 2's startup refusal plus a
 corrected `.env.example` closes the defect that raised this. Everything here
 is improvement, not repair, and **a project whose maintenance budget is the
 binding constraint should be able to say no to it.** The owner's words were
-*"wizard or warning etc."* — the warning is the floor and it ships in 0.53.0
+*"wizard or warning etc."* — the refusal is the floor and it ships in 0.53.0
 either way.
 
 If this RFC is declined, the thing worth keeping is §1's third property as a
@@ -120,7 +120,7 @@ output and most of the value.
 `RFC 018`'s four phases, authorized 2026-10-14. **Inserting this would push
 each of them one release later** — the precise cost `0.51.0` incurred and
 that `ROADMAP.md` records. The risk this RFC addresses is already carried by
-0.53.0's warning, so there is nothing here that justifies displacing the
+0.53.0's refusal, so there is nothing here that justifies displacing the
 PostgreSQL sequence.
 
 **0.57.0 is a proposal, not a schedule.** It enters `ROADMAP.md` when the
