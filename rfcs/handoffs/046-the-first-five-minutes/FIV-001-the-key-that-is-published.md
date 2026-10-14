@@ -283,6 +283,39 @@ security review asked for, so this is recorded rather than fixed — say
 in the doc comment that last-writer-wins is the known behaviour, so the
 next reader does not infer a guarantee the code does not make.
 
+## §11b — the output the documentation still promises
+
+**Added 2026-10-14, after round 2 was written**, from reading the
+getting-started path end to end rather than from a scan.
+
+`docs/getting-started/first-run.md:28-29` shows the reader what they
+should see on a successful start:
+
+> ```
+> 2026-04-24T… INFO peisear: starting peisear database=sqlite://data/app.db addr=0.0.0.0:3000
+> 2026-04-24T… INFO peisear: listening addr=0.0.0.0:3000
+> ```
+
+**Round 1 changed that default to `127.0.0.1:3000`.** A reader
+following the page will not see those lines, and the page they were
+sent to by `installation.md` is the one that tells them what a correct
+start looks like. **This is `§10.34`'s shape** — a document saying one
+thing while the release says another — in the release whose subject is
+a newcomer's first five minutes.
+
+**Round 1 swept the sibling and not this one.** `configuration.md`'s
+reference table reads `127.0.0.1:3000` correctly; `first-run.md` was
+missed. §4 of this handoff is titled *documentation that must move with
+the code*, so the instruction existed — what was missing was a list of
+the files it covered. **State the list you used this time.**
+
+**Coordinate with `FIV-004` §2.** That round adds a plain line of
+output naming the URL to open. Whatever this page shows must be what
+the binary actually prints after both rounds land — so fix the address
+here, and if `FIV-004` changes the shape of the output, that round
+updates this block again. **Say which of the two you are leaving it to,
+rather than both assuming the other.**
+
 ## §12 — exit condition
 
 `.env.example`'s line commented out (owner-applied) **or** reported
@@ -291,5 +324,7 @@ ahead of the tree; the placeholder refused at startup with a test for
 it; `ConfigError`'s `Display` reaching the terminal, shown by pasting
 five real runs' actual output; the temp file created `0600` and
 `create_new`; `§10.40` closed and `NFR-SEC-004` re-statused **only
-once both halves are true**; `DEC-007` accounted for against round 1's
-baseline.
+once both halves are true**; `first-run.md`'s expected-output block
+showing the address the binary now actually binds, with the list of
+documentation files checked for the old default stated; `DEC-007`
+accounted for against round 1's baseline.

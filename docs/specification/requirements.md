@@ -6190,6 +6190,61 @@ in the same review request as a diff nobody could apply.** The round
 knew. The status did not.
 
 
+### 10.41 A documented install path the published artefact cannot satisfy — **open**, `FIV-005`, 0.53.0; found 2026-10-14 while reading the Quick Start as a newcomer
+
+`README.md`'s Quick Start opens with the instruction a first-time
+reader is most likely to follow:
+
+> ```bash
+> cargo install peisear
+> peisear
+> #   → http://localhost:3000
+> ```
+
+**It installs an application with no stylesheets and no JavaScript.**
+`crates/peisear-web/src/app.rs:259` serves assets with
+`ServeDir::new("static")` — a path relative to the process's working
+directory — and `static/` sits at the workspace root, outside every
+package directory, named in no `Cargo.toml`'s `include`. It is
+therefore in no published crate and could not be — **measured
+2026-10-14 across all seven published crates with
+`cargo package --list`: zero `static/` entries in each, the `peisear`
+crate publishing seven files in total, of which five are source or
+metadata and one is `README.md`.** The rendered page requests three
+stylesheets and five scripts; all eight 404.
+
+**The class, which is what this entry is for.** `§10.34` is a status
+saying one thing while the release said another. `§10.36` is a check
+that cannot tell *nothing wrong* from *nothing examined*. This is the
+pair of them aimed at a reader rather than at a requirement: **an
+instruction that completes successfully, exits zero, and produces
+something that does not work.** Nothing in the project could have
+caught it, because nothing in the project ever ran it — the gates build
+from the workspace root, where the relative path happens to resolve,
+and the one environment where it does not resolve is the only one a
+user is ever in.
+
+**Two further consequences of the same relative-path assumption**, both
+below the threshold of a separate entry and both recorded so the fix
+covers them: `DATABASE_URL` defaults to `sqlite://data/app.db`, also
+relative, so an installed binary run from two directories silently
+keeps two databases; and after `FIV-001` the generated `jwt_secret`
+sits beside that database, so it is two signing keys as well.
+
+**The document disagrees with itself about this and has since before
+the entry existed.** `README.md`'s Features says *"Ship one executable
+plus `static/` and you're live"*; its Design Notes says *"One binary
+deploy."* The first describes today and the second describes the
+intent, and no requirement adjudicated between them — which is why the
+contradiction survived in one file, three sections apart.
+
+**Remedy**: `FIV-005`. Embed `static/` at compile time, so the claim
+the project already makes becomes the behaviour it has. **Not a
+`STATIC_DIR` environment variable** — that documents the failure
+instead of removing it, and adds a value the reader must know. The
+entry closes on the walk (an installed binary run from outside the
+repository, with the board confirmed *rendered*), never on the build.
+
 ## 11. Deferred and future requirements
 
 Accepted in principle, deliberately not scheduled.
