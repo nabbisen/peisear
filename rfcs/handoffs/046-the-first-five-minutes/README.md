@@ -25,10 +25,10 @@ addition**: see *What this series is not*, below.
 | ID | Handoff | Subject | Blocked on |
 |---|---|---|---|
 | FIV-001 | [the key that is published](./FIV-001-the-key-that-is-published.md) | **`RFC 017` proposals 4 and §5, which land together or not at all.** `config.rs:31` is the literal that signs session cookies on any instance started without `JWT_SECRET`, published in every copy of the source; `BIND_ADDR` defaults to every interface. **`NFR-SEC-004` is `Divergent` at P0 because of the first (`§10.40`)**, and the second is what makes it reachable from the LAN. Generate, persist beside the database, fail loudly, delete the literal; default the bind to loopback | — |
-| FIV-002 | [something to download](./FIV-002-something-to-download.md) | **Proposal 1.** Five targets, built in CI, attached to the Release **after it exists and never gating it**. Closes `DOCS-003`'s finding from the other end — the Quick Start's first command opens a tarball no release provides. **`NFR-REL-002` has read `Implemented` while no release has ever carried an archive**; this is what makes it checkable | FIV-001 |
-| FIV-003 | [the container image](./FIV-003-the-container-image.md) | **Proposal 2.** `ghcr.io/nabbisen/peisear` from a `Dockerfile` in the repository, same tag, one volume, one port — **and the image sets `BIND_ADDR=0.0.0.0:3000` itself**, which is the half of FIV-001's bind change that makes the container correct | FIV-001 |
+| FIV-002 | [something to download](./FIV-002-something-to-download.md) | **Proposal 1.** Five targets, built in CI, attached to the Release **after it exists and never gating it**. Closes `DOCS-003`'s finding from the other end — the Quick Start's first command opens a tarball no release provides. **`NFR-REL-002` has read `Implemented` while no release has ever carried an archive**; this is what makes it checkable | FIV-001, **FIV-005** |
+| FIV-003 | [the container image](./FIV-003-the-container-image.md) | **Proposal 2.** `ghcr.io/nabbisen/peisear` from a `Dockerfile` in the repository, same tag, one volume, one port — **and the image sets `BIND_ADDR=0.0.0.0:3000` itself**, which is the half of FIV-001's bind change that makes the container correct | FIV-001, **FIV-005** |
 | FIV-004 | [the page a newcomer lands on](./FIV-004-the-page-a-newcomer-lands-on.md) | **Proposals 3 and 5.** `installation.md` splits into **Install** (download, `docker run`, or `cargo install` for people who already have Rust) and **Build from source** (today's 48 lines, moved intact); and one line of output on a successful bind naming the URL to open, plus a warning when the bind is not loopback | FIV-001, FIV-002, FIV-003 |
-| FIV-005 | [the binary that is not one](./FIV-005-the-binary-that-is-not-one.md) | **Not in the RFC; `§10.41`, found 2026-10-14.** `README.md`'s first instruction is `cargo install peisear`, and **`static/` is in no published crate** — it sits outside every package directory and no `Cargo.toml` includes it — while `app.rs:259` serves it relative to the working directory. Eight assets, eight 404s: the primary documented path installs an unstyled application. Embed `static/` in the binary, which is what makes the README's own *"One binary deploy"* true | — |
+| FIV-005 | [the binary that is not one](./FIV-005-the-binary-that-is-not-one.md) | **Not in the RFC; `§10.41`, found 2026-10-14.** `README.md`'s first instruction is `cargo install peisear`, and **`static/` is in no published crate** — it sits outside every package directory and no `Cargo.toml` includes it — while `app.rs:259` serves it relative to the working directory. Eight assets, eight 404s: the primary documented path installs an unstyled application. Embed `static/` in the binary, which is what makes the README's own *"One binary deploy"* true | — ; **blocks FIV-002 and FIV-003** |
 | FIV-006 | [two pictures for a newcomer](./FIV-006-two-pictures-for-a-newcomer.md) | **Owner request, 2026-10-14**, with the privacy floor restated as its condition. `/today` has never been captured though `DOCS-004` named it in 0.49.0, and it is the screen the README sells hardest and shows least. One new capture, one reused image, two in `README.md` — and the health `<details>` expanded, because today's board image shows an empty `Indicators` label directly beneath the README's six-indicators claim | — |
 | REL-0.53.0 | the release candidate | The cut, `DEC-028`, and the first release whose own page carries artefacts. Written when the six rounds close | all six |
 
@@ -44,18 +44,36 @@ release exists to serve, at the moment they are least able to notice.
 produce. An Install page written before the download URLs and the
 `docker run` line are real is a page that describes an intention.
 
-**`FIV-005` and `FIV-006` are blocked on nothing and block nothing.**
-`FIV-005` is packaging and `FIV-006` is the capture harness; neither
-touches the key, the bind, or the artefact workflows. Run them in
-parallel with `FIV-001` round 2 rather than queueing them behind it —
-the chain above is a security ordering, and these two are not in it.
+**`FIV-005` is next, and the sentence that used to be here was wrong.**
+It said *"`FIV-005` and `FIV-006` are blocked on nothing and block
+nothing."* **`FIV-005` blocks two rounds**, found when the dev team
+stopped to ask which to start (2026-10-15) rather than guessing:
 
-**But `FIV-004` should land after `FIV-005`.** The Install page's third
-path is `cargo install peisear`, and `FIV-005` is why that path
-currently produces an unstyled application. Documenting it first would
-write down a working instruction for something that does not work —
-which is the failure `FIV-004` already exists to avoid for the other
-two paths.
+- **`FIV-002` §4 is titled *what the archive contains*** and asks
+  whether `static/` belongs in it, against `deployment.md`'s manifest.
+- **`FIV-003` says its *"stage carries the binary and `static/`"***.
+
+**`FIV-005` embeds `static/` into the binary, so both of those answers
+change** — the archive becomes a binary and its documentation, and the
+image's copy step disappears. Building either first means building it
+around a layout `FIV-005` then invalidates, and `NFR-REL-002`'s own
+archive layout would be amended twice in one release.
+
+`FIV-005`'s own §4 saw half of this and recorded it as *"coordinate
+rather than both editing it"* — a note where an ordering was needed.
+Coordination between two rounds that are not running at the same time
+is just an order nobody wrote down.
+
+**So: `FIV-005` → `FIV-002` → `FIV-003` → `FIV-004`.** `FIV-004` is
+last for its own reason, below, and `FIV-005` preceding it was already
+true for a second reason: the Install page's third path is
+`cargo install peisear`, which produces an unstyled application until
+`FIV-005` lands.
+
+**`FIV-006` is the one round that really is independent.** It touches
+the capture harness and `README.md`'s images — not the key, the bind,
+the artefacts, or the asset layout. **Run it whenever there is
+capacity, including alongside any of the above.**
 
 ---
 

@@ -71,6 +71,15 @@ upload. It is published, and a release page is not a scratch surface.
 
 ## §4 — what the archive contains
 
+**`FIV-005` runs first and answers most of this** *(added 2026-10-15)*.
+It embeds `static/` into the binary and amends `NFR-REL-002`'s layout
+once, there. **Read that round's outcome before this section** — if
+`static/` is in the binary, the question below is already settled and
+what remains is the binary plus whatever documentation belongs beside
+it. Do not re-amend `NFR-REL-002` here. If `FIV-005` landed differently
+from what it proposed, this section is live again and **say so rather
+than following it blindly.**
+
 The binary, and whatever a running instance needs that is not compiled
 in. **Check `static/` against `deployment.md`'s *What to ship*
 manifest** — `docs_scan` rule 3 already holds that manifest to

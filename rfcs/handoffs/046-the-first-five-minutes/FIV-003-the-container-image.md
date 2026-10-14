@@ -40,7 +40,11 @@ re-running one job. **`DEC-056` stays four legs.**
 
 - **Not a build environment.** A multi-stage build whose final stage
   carries a Rust toolchain is a large image for no reason; the final
-  stage carries the binary and `static/`.
+  stage carries the binary and `static/`. **Unless `FIV-005` embedded
+  `static/` into the binary, which runs first and is the expected
+  outcome** *(added 2026-10-15)* — then the stage carries the binary
+  alone and this line is one fewer `COPY`. **Check what that round
+  actually did**; do not copy a directory the binary no longer reads.
 - **Not root, if it can be helped.** If the image runs as a non-root
   user, say which and confirm the volume is writable by it — a
   first-run key file that cannot be written is `FIV-001`'s hard

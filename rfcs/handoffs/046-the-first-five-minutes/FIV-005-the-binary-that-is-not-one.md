@@ -116,9 +116,19 @@ project has had it twice.
 
 - **`NFR-CMP-002`** (self-hostable) and **`NFR-REL-002`** (archive
   naming and layout) both describe what a deployment consists of.
-  `FIV-002` is already touching `NFR-REL-002`; **say whether the
-  archive's layout changes** when the binary is self-contained, and
-  coordinate rather than both editing it.
+  **`NFR-REL-002` is this round's to amend, not `FIV-002`'s** — see
+  below. Say what the archive layout becomes when the binary is
+  self-contained, and amend the requirement here, once.
+
+**This round runs before `FIV-002` and `FIV-003`, and that is an
+ordering, not a preference** *(added 2026-10-15)*. `FIV-002` §4 asks
+whether `static/` belongs in the archive; `FIV-003` says its *"stage
+carries the binary and `static/`"*. **Embedding changes both answers.**
+Building either first means building it around a layout this round
+invalidates, and amending `NFR-REL-002` twice in one release. This
+section previously said *"coordinate rather than both editing it"* —
+coordination between rounds that do not run at the same time is just an
+order nobody wrote down.
 - **`§10.41`** is open in `requirements.md` and is this round's to
   close — but only on evidence, which means §6's walk, not the build
   succeeding.
