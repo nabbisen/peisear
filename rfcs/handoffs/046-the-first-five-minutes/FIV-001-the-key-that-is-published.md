@@ -290,11 +290,30 @@ gate, not a courtesy:
   that makes the README's first command fail is worse than the defect
   it closes.
 
-**Verify rather than assume.** The architect has never read that file —
-every claim about its contents in this handoff is quoted from round
-1's review request. **Walk `cp .env.example .env` and start the server**
-as part of this round's gates, and report what actually happens. That
-walk is the check; the file's text is hearsay until it runs.
+**Verify rather than assume — but not by reading the file.**
+*Corrected at round 2's review: the instruction below originally said
+to walk `cp .env.example .env`. That cannot be done without reading a
+path the permission rule denies, and round 2 did it by extracting the
+tracked blob through `git show`. That is working around the rule, and
+asking for it was the architect's error, not the round's.* **See
+round 3 `§15`.**
+
+What is both sufficient and permitted:
+
+- **Test the behaviour directly.** Set `JWT_SECRET` to the placeholder
+  in the environment and start the binary. That establishes *"if this
+  value is present, startup refuses"* completely, and it needs nobody
+  to read `.env.example`.
+- **Leave the file's state to the owner.** Whether that value is still
+  uncommented there is a question only they can answer, and the answer
+  is a sentence in a reply, not a measurement for this round. Report
+  the conditional — *"the documented path fails for as long as that
+  line is uncommented"* — and name it as unverified from here.
+
+**Do not route around the rule to resolve the condition.** Not with
+`git show`, not with `git grep`, not with a copy to an intermediate
+file, and not with any other tool that happens not to match the
+pattern. A denial on a path is a denial on the content.
 
 ## §10 — the error messages nobody sees
 
@@ -385,3 +404,131 @@ once both halves are true**; `first-run.md`'s expected-output block
 showing the address the binary now actually binds, with the list of
 documentation files checked for the old default stated; `DEC-007`
 accounted for against round 1's baseline.
+
+---
+
+# FIV-001 round 3 — two values the refusal does not catch
+
+**Target**: 0.53.0, after round 2. Round 2's code is accepted (see the
+review); this is what reviewing it found, and `§13` is the one that
+matters.
+
+## §13 — an empty `JWT_SECRET` is accepted, silently
+
+**Verified at the review against round 2's own binary**, in a scratch
+directory with no `.env`:
+
+```
+$ env -i PATH=… BIND_ADDR="127.0.0.1:38777" JWT_SECRET="" ./target/debug/peisear
+… INFO peisear: listening addr=127.0.0.1:38777
+exit 0
+```
+
+No key file was generated — `data/` held only the database. So
+`resolve_jwt_secret` took its `Some(v) => Ok(v.to_string())` arm with
+`v == ""`, and `peisear-auth`'s `EncodingKey::from_secret(secret.as_bytes())`
+received an empty slice. **Every session on that instance is signed
+with a zero-length HMAC key**, and nothing anywhere is logged.
+
+**This is worse than the defect round 2 just closed.** The placeholder
+is at least a published *secret*, and it now refuses. An empty key is
+no secret at all, it is accepted, and the operator is told nothing.
+
+**And it sits directly in front of the owner's pending edit.**
+`.env.example`'s line has to stop setting the variable. *Commenting it
+out* is correct. *Blanking it* — `JWT_SECRET=` — looks equally correct
+to anyone editing that file and produces exactly the state above. The
+round that asked for that edit must make the wrong version of it
+impossible, not rely on it being done the right way.
+
+**Remedy**: reject an empty or whitespace-only value, with its own
+`ConfigError` variant and its own message — *not* folded into
+`PublishedPlaceholder`, whose text would then be wrong for this case.
+
+**Why this is not "a list".** The handoff's *not a list* rule is about
+refusing to accumulate known-bad literals; this is the separate
+question of whether a value is a value at all. One is a blocklist that
+grows; the other is a predicate that does not. **Say in the code
+comment which of the two you are implementing**, or the next round will
+read the rule as broken.
+
+## §14 — one trailing space defeats the refusal
+
+**Also verified**:
+
+```
+$ env -i … JWT_SECRET="change-me-to-a-long-random-string " ./target/debug/peisear
+… INFO peisear: listening addr=127.0.0.1:38778
+exit 0
+```
+
+`Some(v) if v == PUBLISHED_PLACEHOLDER` is exact-equality, so an
+invisible character walks past it. A user who edits `.env.example` by
+hand and leaves a trailing space gets no refusal and no warning, and
+believes the opposite.
+
+**Remedy**: compare on the trimmed value. `§13`'s check wants the same
+trim, which is why they are one change and not two.
+
+**Not a widening.** Trimming is not the beginning of normalisation
+(case-folding, quote-stripping, unicode). Compare `v.trim()` against
+the one literal and stop; **say so in the comment** so this is not read
+later as licence for a fuzzy match.
+
+## §15 — the register lost an entry, and nothing could have told you
+
+**`### 10.41`'s heading was deleted** by round 2's own edit to
+`§10.40`. Its body — `FIV-005`'s entry, the `cargo install` defect —
+was left in place, reading as part of `§10.40`. Restored at the
+review.
+
+**Not a careless edit so much as an unguarded one.** The insertion
+anchored at the end of `§10.40` and the following heading went with
+it. `fmt`, `clippy`, `DEC-007`, rustdoc and `mdbook build` all passed
+**and none of them can see a missing `###` in a document none of them
+reads for structure.** Two downstream citations dangled silently:
+`FIV-005`'s *"`§10.41` is open in `requirements.md` and is this round's
+to close"*, and `ROADMAP.md`'s 0.53.0 row.
+
+**This is `§10.36`'s own question aimed at the register**: a set of
+checks that cannot tell *the register is intact* from *nothing looked
+at the register*. The specification is this project's most-edited
+document and the only one with no structural guard at all.
+
+**Do not build that guard in this round.** A `docs_scan` rule over
+`§10.x` numbering — present, unique, consecutive, each with a status
+word in its heading — is the obvious shape and it is a `GATE-00x`
+decision, which is the architect's. **Report whether you think it is
+worth its maintenance cost**, with the shape you would build; that
+report is the deliverable here, not the rule.
+
+**Also fixed at the review**: round 2's own paragraph said
+`.env.example` was *"uncommitted"* where it meant *"uncommented"*. The
+file is committed; its line is not commented out. In an entry whose
+whole remedy is one word, that word has to be the right one.
+
+## §16 — two small ones, stated once
+
+- **`PublishedPlaceholder`'s message hardcodes the literal** rather
+  than citing `PUBLISHED_PLACEHOLDER`, so the constant and the message
+  can drift apart. `thiserror`'s `#[error(...)]` cannot interpolate a
+  `const`, so the honest fix is **a test asserting the rendered message
+  contains the constant** — not a restructure.
+- **`create_restricted_file`'s non-Unix arm drops `create_new` as well
+  as the mode.** The doc comment explains the permissions difference
+  and is silent about the other half, so on Windows the
+  leftover-temp-file protection quietly does not exist. **One clause in
+  the comment**, or `.create_new(true)` on that arm too — it needs no
+  platform-specific API. Decide and say which.
+
+## §17 — exit condition
+
+An empty or whitespace-only `JWT_SECRET` refused, with its own variant
+and message and a unit test, and a comment distinguishing a predicate
+from a blocklist; the placeholder compared on the trimmed value, with
+one unit test per bypass this review demonstrated; `§16`'s two items
+each fixed or reasoned; a recommendation on a register-structure scan
+**with its maintenance cost argued either way**, and no such rule built
+this round; `DEC-007` accounted for against **461**, the review's own
+figure; and the six real runs re-run, with `JWT_SECRET=""` and the
+trailing-space case added to them and pasted verbatim.

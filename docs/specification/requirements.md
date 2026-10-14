@@ -6273,13 +6273,27 @@ against all six real runs, not assumed from the type signature. The
 restored in `docs/getting-started/configuration.md`, scoped to the
 override path it actually serves.
 
-**`.env.example` itself is still uncommitted as of this entry**: the
+**`.env.example`'s `JWT_SECRET` line is still uncommented as of this
+entry**: the
 round's own tool access denies every `.env*` path, confirmed across
 three tools in two rounds; the one-line fix is the owner's to apply.
 **Per `§9b`, the two land together or neither does** — this entry
 therefore stays **open** and `NFR-SEC-004` stays **Divergent** until
 the file is fixed and the walk above is re-run clean. Re-running that
 walk, not re-reading this paragraph, is what closes it.
+
+**The sentence above said "uncommitted" through `FIV-001` round 2 and
+meant "uncommented".** The file is committed; its `JWT_SECRET` line is
+not commented out. Corrected at the review — a register entry whose
+remedy is one word is an entry a later reader cannot act on.
+
+
+### 10.41 A documented install path the published artefact cannot satisfy — **open**, `FIV-005`, 0.53.0; found 2026-10-14 while reading the Quick Start as a newcomer
+
+*This heading was deleted by `FIV-001` round 2's own edit to `§10.40`
+and restored at that round's review. For the eleven hours in between,
+`§10.41` did not exist and its text read as part of `§10.40` — see the
+closing note of `§10.40` and `FIV-001` round 3 `§13`.*
 
 `README.md`'s Quick Start opens with the instruction a first-time
 reader is most likely to follow:
