@@ -21,7 +21,7 @@ use axum::{
     http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
 };
-use include_dir::{Dir, include_dir};
+use include_dir::{Dir, DirEntry, File, include_dir};
 
 /// `static/`'s contents at compile time, rooted the same two
 /// directories above this crate's manifest that
@@ -29,15 +29,36 @@ use include_dir::{Dir, include_dir};
 /// separate reasons -- one real path, read two different ways.
 static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../static");
 
+/// Every file under `dir`, recursively (`FIV-005` round 3 `§12`):
+/// [`Dir::files`] returns direct children only, while
+/// [`Dir::get_file`] (via `get_entry`) recursively searches --
+/// building [`ETAGS`] from the former while [`serve`] looks files up
+/// with the latter is exactly the mismatch that let a nested
+/// `static/vendor/foo.js` resolve in one and vanish in the other. One
+/// walk, used everywhere a file list is needed, so there is only one
+/// definition of "every file" to drift out of step with itself.
+fn all_files<'a>(dir: &Dir<'a>, out: &mut Vec<&'a File<'a>>) {
+    for entry in dir.entries() {
+        match entry {
+            DirEntry::File(f) => out.push(f),
+            DirEntry::Dir(d) => all_files(d, out),
+        }
+    }
+}
+
 /// One strong `ETag` per embedded file, computed once at first use and
 /// cached for the rest of the process's life (`FIV-005` round 2 `§9`:
 /// hashing 2.93 MB on every request trades bandwidth for CPU, which is
 /// not the point of caching at all). Keyed on the same relative path
 /// [`serve`] receives, so the lookup is a hash-map hit, not a second
-/// walk of the embedded tree.
+/// walk of the embedded tree -- and built by [`all_files`], the same
+/// walk [`serve`]'s own `STATIC_DIR.get_file` can reach, so the two
+/// can no longer disagree about what exists.
 static ETAGS: LazyLock<HashMap<&'static str, String>> = LazyLock::new(|| {
-    STATIC_DIR
-        .files()
+    let mut files = Vec::new();
+    all_files(&STATIC_DIR, &mut files);
+    files
+        .into_iter()
         .map(|f| (f.path().to_str().unwrap(), etag_for(f.contents())))
         .collect()
 });
@@ -75,8 +96,22 @@ fn if_none_match_matches(headers: &HeaderMap, etag: &str) -> bool {
 /// `304 Not Modified`: the `ETag` repeated so the client knows which
 /// representation was revalidated, and no body -- a body on a 304 is
 /// the defect this round exists to close, with extra steps.
+///
+/// **`Cache-Control` repeated too** (`FIV-005` round 3 `§13`, RFC 9111
+/// §4.3.4): a 304 is how a cache refreshes what it already stored, and
+/// the directive governing that stored copy is part of what it needs
+/// to update. Cost is near zero under `no-cache` -- there is no
+/// freshness lifetime to recompute -- which is why this was a clause
+/// to add rather than a design question to resolve.
 fn not_modified(etag: &str) -> Response {
-    (StatusCode::NOT_MODIFIED, [(header::ETAG, etag.to_string())]).into_response()
+    (
+        StatusCode::NOT_MODIFIED,
+        [
+            (header::ETAG, etag.to_string()),
+            (header::CACHE_CONTROL, "no-cache".to_string()),
+        ],
+    )
+        .into_response()
 }
 
 /// `200 OK` with the asset's content type, its `ETag`, and
@@ -145,9 +180,11 @@ pub async fn serve(Path(path): Path<String>, headers: HeaderMap) -> Response {
     let Some(file) = STATIC_DIR.get_file(&path) else {
         return StatusCode::NOT_FOUND.into_response();
     };
-    let etag = ETAGS
-        .get(path.as_str())
-        .expect("every file get_file can find has a precomputed entry in ETAGS -- both walk the same STATIC_DIR");
+    let etag = ETAGS.get(path.as_str()).expect(
+        "ETAGS is built by all_files, the same recursive walk STATIC_DIR.get_file performs \
+         via get_entry (FIV-005 round 3 §12) -- so anything get_file can resolve, ETAGS must \
+         already have a tag for",
+    );
     if if_none_match_matches(&headers, etag) {
         return not_modified(etag);
     }

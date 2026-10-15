@@ -18,10 +18,13 @@ const EXPECTED_FILES: &[&str] = &[
 
 #[test]
 fn the_embedded_set_holds_exactly_the_eight_files_static_js_scan_also_sees() {
-    let mut embedded: Vec<&str> = STATIC_DIR
-        .files()
-        .map(|f| f.path().to_str().unwrap())
-        .collect();
+    // `all_files`, not `STATIC_DIR.files()` directly (`FIV-005` round 3
+    // `§12`): this test should see exactly what `ETAGS` and `serve`'s
+    // own `get_file` see, not a third, non-recursive view that would
+    // stay green while the other two disagreed about a subdirectory.
+    let mut files = Vec::new();
+    all_files(&STATIC_DIR, &mut files);
+    let mut embedded: Vec<&str> = files.iter().map(|f| f.path().to_str().unwrap()).collect();
     embedded.sort();
     assert_eq!(
         embedded, EXPECTED_FILES,
@@ -211,4 +214,70 @@ fn disk_fallback_refuses_a_path_that_climbs_out_of_static() {
 #[test]
 fn disk_fallback_returns_none_for_a_missing_file() {
     assert_eq!(read_from_disk_in_debug("does-not-exist.css"), None);
+}
+
+/// `FIV-005` round 3 `§12`: *"test it with a nested file, not by
+/// reading the fix."* `static/` itself has no subdirectory today
+/// (`the_embedded_set_holds_exactly_the_eight_files_...` pins that),
+/// so this builds a small tree entirely with `include_dir`'s own
+/// public constructors (`Dir::new`, `File::new`, `DirEntry`) -- no
+/// second `include_dir!` macro root, no file added to the real
+/// `static/`, per the handoff's own instruction not to invent either.
+#[test]
+fn all_files_recurses_into_a_subdirectory() {
+    let nested = [DirEntry::File(File::new("vendor/foo.js", b"nested"))];
+    let root_entries = [DirEntry::Dir(Dir::new("vendor", &nested))];
+    let root = Dir::new("", &root_entries);
+
+    let mut files = Vec::new();
+    all_files(&root, &mut files);
+
+    let paths: Vec<&str> = files.iter().map(|f| f.path().to_str().unwrap()).collect();
+    assert_eq!(
+        paths,
+        vec!["vendor/foo.js"],
+        "all_files must find a file nested one directory down, not only direct children"
+    );
+}
+
+/// The regression `§12` found: `ETAGS` must have an entry for anything
+/// `get_file` can resolve, including something nested -- checked
+/// against a synthetic tree built the same way as the test above,
+/// not against `STATIC_DIR` (which has nothing nested to check this
+/// with today).
+#[test]
+fn every_file_all_files_finds_gets_an_etag() {
+    let nested = [DirEntry::File(File::new("vendor/foo.js", b"nested"))];
+    let root_entries = [DirEntry::Dir(Dir::new("vendor", &nested))];
+    let root = Dir::new("", &root_entries);
+
+    let mut files = Vec::new();
+    all_files(&root, &mut files);
+    let etags: HashMap<&str, String> = files
+        .into_iter()
+        .map(|f| (f.path().to_str().unwrap(), etag_for(f.contents())))
+        .collect();
+
+    assert!(
+        root.get_file("vendor/foo.js").is_some(),
+        "the synthetic tree's own get_file must resolve the nested file, or this test proves \
+         nothing about the mismatch it's checking for"
+    );
+    assert!(
+        etags.contains_key("vendor/foo.js"),
+        "get_file can reach vendor/foo.js but the all_files-built map has no entry for it -- \
+         exactly the panic §12 found"
+    );
+}
+
+#[tokio::test]
+async fn not_modified_also_carries_cache_control() {
+    let response = not_modified("\"some-etag\"");
+    assert_eq!(response.status(), axum::http::StatusCode::NOT_MODIFIED);
+    assert_eq!(
+        response.headers().get(header::CACHE_CONTROL).unwrap(),
+        "no-cache",
+        "a 304 is how a cache refreshes what it stored -- RFC 9111 §4.3.4 has it repeat the \
+         directive governing that stored copy, not just the ETag"
+    );
 }
