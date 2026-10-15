@@ -25,6 +25,19 @@ name: Release
 # (macos-15-intel) hosted image -- that combination covers all five
 # targets without reaching for `cross` or a Docker container.
 #
+# No third-party action anywhere in this file either (FIV-002 round 2
+# §10): `dtolnay/rust-toolchain` and `Swatinem/rust-cache` were here
+# in round 1 and are not now. GitHub's own hosted images already ship
+# a working rustup toolchain, so `rustup target add` in a plain `run:`
+# step does what the first did -- measured against all five runners,
+# including the arm64 Linux image specifically, not assumed from the
+# images' changelog. The build-time saving the second offered is a
+# supply-chain dependency, at a moving ref, in the one workflow that
+# holds `contents: write` and writes to what the public downloads --
+# the more expensive side of that trade on a workflow that runs a
+# handful of times a release, by this project's own standing
+# preference for fewer dependencies over convenience ones.
+#
 # NFR-REL-002: files at the archive root, no intermediate directory.
 # Each packaging step copies the binary alone into a scratch `dist/`
 # directory, then archives with `tar`'s own `-C dist` (changes
@@ -77,13 +90,32 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
+      # FIV-002 round 2 §9: on a real release, Cargo.toml's version and
+      # the tag that triggered this run are two sources of truth that
+      # agree at exactly one commit per release (the one the version
+      # bump happens on) and disagree the rest of the time -- nothing
+      # upstream of this step checks which one is being built. Runs
+      # before the build, not after, so a mismatch costs a grep, not a
+      # matrix's worth of compile time. Strips one leading "v" from the
+      # tag, if present -- this project's own tags carry none (`0.52.0`,
+      # not `v0.52.0`), so the strip is a no-op here, but the comparison
+      # accepts either spelling rather than silently failing a
+      # correctly-versioned tag that happens to use the other one.
+      - name: Verify Cargo.toml's version matches the release tag
+        if: github.event_name == 'release'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo_version=$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          tag="${{ github.event.release.tag_name }}"
+          tag_version="${tag#v}"
+          if [ "$cargo_version" != "$tag_version" ]; then
+            echo "::error::Cargo.toml's version ($cargo_version) does not match the release tag ($tag) -- refusing to attach an archive named for the wrong version."
+            exit 1
+          fi
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          key: ${{ matrix.target }}
+      - name: Install the target
+        run: rustup target add ${{ matrix.target }}
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }} -p peisear
