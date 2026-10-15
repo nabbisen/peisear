@@ -211,6 +211,27 @@ async function main() {
           throw new Error(`${label} capture: the "${detailsToExpand}" <details> was not found to expand`);
         }
       }
+      // `FIV-006` round 2 §9: `/today`'s own content ends well short
+      // of the shared 1280x900 viewport -- `<body>`'s `min-h-screen`
+      // keeps the page's background filling the viewport regardless,
+      // so the capture showed real content sitting atop a blank gap
+      // roughly 40% of the image. Resized to the content's own
+      // measured height, after the Rhythm panel above is expanded
+      // (measuring first would crop the content this round just
+      // added back in) -- `#main`'s own bottom edge, not `body`'s,
+      // since `body` is exactly the element whose min-height was the
+      // problem. Measured per capture, not a guessed pixel constant:
+      // this page's content height moves with the account data it
+      // renders. No `clip` argument to `screenshot()` -- cdp.mjs's
+      // own comment below already warns `clip` triggers `scale: 3`,
+      // a worse defect in a README image than the whitespace this
+      // fixes, so the fix is a viewport resize, not a crop.
+      if (label === 'today') {
+        const contentHeight = await browser.eval(
+          "Math.ceil(document.getElementById('main').getBoundingClientRect().bottom)",
+        );
+        await browser.setViewport(VIEWPORT.width, contentHeight, false);
+      }
       const path = join(OUT_DIR, `${label}.png`);
       // `DOCS-007` §2: no `clip` argument -- `cdp.mjs`'s `screenshot()`
       // only applies its `scale: 3` (sized for evidence-log clarity)
@@ -218,6 +239,13 @@ async function main() {
       // captures the viewport at its natural 1x, which is both smaller
       // and the right resolution for a README or book image.
       await browser.screenshot(path);
+      if (label === 'today') {
+        // Restored for whichever page the loop reaches next -- `today`
+        // is last in `pages` today, so nothing currently depends on
+        // this, but leaving the viewport shrunk would silently affect
+        // a page added after it later.
+        await browser.setViewport(VIEWPORT.width, VIEWPORT.height, false);
+      }
       const bytes = statSync(path).size;
       written.push({ label, path, bytes });
       log(`captured ${label} -> ${path} (${bytes} bytes)`);

@@ -309,7 +309,19 @@ fn render_explanation_row(
             {text}
             {has_basis.then(|| view! {
                 " "
-                <a href=basis_href class=grow("link link-hover inline-flex items-center") aria-label=basis_aria>
+                // `FIV-006` round 2 §10: `link-hover` underlines only
+                // on hover, so at rest this read as an unmarked
+                // continuation of the sentence it follows -- unlike
+                // the `<details>` chips beside it, which carry a
+                // native disclosure triangle at rest. `link-primary`
+                // gives it the same always-visible affordance
+                // `auth.rs`'s "Create one"/"Sign in" links and
+                // `notifications.rs`'s settings link already use;
+                // this is the one call site that needed it, not a
+                // sweep of the other nine `link-hover` uses, whose
+                // own position (a project name, a team name, a
+                // search result) already reads as a link without it.
+                <a href=basis_href class=grow("link link-primary inline-flex items-center") aria-label=basis_aria>
                     {basis_text}
                 </a>
             })}
