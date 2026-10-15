@@ -5630,6 +5630,62 @@ inherent `clamp` it delegates to, as a recorded decision rather than a defect.
 The general rule: **when the link cannot name the method, link the type.**
 Never add an import to satisfy a documentation tool.
 
+### 10.43 A rule whose stated reason had never been measured — **two audited 2026-10-15 on the owner's instruction; one held, one retired**
+
+The owner, 2026-10-15, on hearing two rules flagged as unmeasured:
+*"Yes. Proceed."* Both are in `.github/CONTRIBUTING.md`; both had
+carried a justification in prose for releases without a number behind
+it. **The outcome is one of each, which is the point of auditing
+rather than assuming.**
+
+**`DEC-007`'s per-crate block — the claim holds, and now has a date.**
+Its stated reason is that *"peak linker memory stays bounded this
+way"*. Measured with dependencies pre-built and every member's sources
+touched, so both shapes relink the same code, under a `systemd-run`
+scope with `MemoryAccounting=1`: `cargo test --workspace --no-run`
+peaked at **31,799 MiB**; the block at **19,550 MiB**. **12.2 GiB
+lower, 38% less.** Caveats recorded with it: cgroup `memory.peak`
+includes page cache, so the absolutes overstate linker RSS; and the
+block's figure is a maximum over ~39 invocations sharing one scope,
+biasing it upward and the gap conservative. **A rule can be old and
+right**, and the audit's value is that this one is no longer taken on
+faith.
+
+**The "run `cargo test --workspace` three times" recommendation —
+retired.** The evidence was already in the same file, two paragraphs
+above it: `QA-001`'s own measurement of that practice found **3 of 6**
+runs failing on a loaded machine and **0 of 6** on a quiet one, *with
+the defect fully present both times*, and a separate measurement in
+this document (`§4585`'s neighbourhood) identifies the determining
+variable as **free memory** — at ~14 GB free the command passed 6 of 6
+with the defect present. On a machine with memory to spare the
+practice detects nothing and costs half an hour.
+
+**What makes it a relic rather than merely weak.** Its own revision
+clause read *"re-measure and adjust the count if a new defect's
+observed rate suggests three isn't enough"* — a condition that could
+only fire on a defect the practice had itself caught. **No defect in
+this project's record is attributed to it.** A rule that specifies its
+own retirement in terms of an event it must produce can only persist;
+it has no feedback loop, and nothing about the passage of time can
+ever count against it.
+
+**What this leaves openly unguarded, which is the honest half.** A
+flake arising from two tests interacting at runtime is exactly what the
+per-crate isolation hides, and nothing detects that class now. It is
+named in `CONTRIBUTING.md` as a gap rather than papered over, because
+`§10.36`'s objection applies to the retired practice as much as to any
+scan: a check that cannot distinguish *nothing wrong* from *nothing
+examined* is worse than a stated absence.
+
+**The class, which is what this entry is for.** `§10.42` records a
+finding read past its evidence. This is its neighbour: **a reason
+recorded in prose, never measured, and therefore never falsifiable.**
+Both survive the same way — by being quoted rather than re-run. The
+remedy is the same in both cases and it is cheap: **when a rule states
+why it exists, the statement carries a measurement and a date, or it
+is a belief.**
+
 ### 10.42 A finding about one checkable property, read as a verdict on all of them — **open**, raised by the owner 2026-10-15
 
 The owner, 2026-10-15: *"My concern is that outdated, nonsensical rules

@@ -115,10 +115,29 @@ cargo test -p peisear
 ```
 
 This isolates each test binary's link step. That is the live,
-present-tense reason it exists: peak linker memory stays bounded
-this way, because the combined `--workspace` build links several
-large crates at once (sqlx, leptos, axum, the wasm-smtp family). It
-also gives clean per-target failure attribution.
+present-tense reason it exists: peak build memory stays bounded this
+way, because the combined `--workspace` build links several large
+crates at once (sqlx, leptos, axum, the wasm-smtp family). It also
+gives clean per-target failure attribution.
+
+**Measured 2026-10-15, because this sentence had asserted it without a
+number since it was written.** Both shapes run with dependencies
+already built and every workspace member's sources touched first, so
+each rebuilds and relinks the same code, under a `systemd-run` scope
+with `MemoryAccounting=1`:
+
+| shape | peak |
+|---|---|
+| `cargo test --workspace --no-run` | **31,799 MiB** |
+| this block, `--no-run` on each line | **19,550 MiB** |
+
+**The per-crate shape peaks 12.2 GiB lower — 38% less.** The claim
+holds; this rule is not a relic, and it is no longer unmeasured. *Two
+caveats, so the number is not read for more than it says*: cgroup
+`memory.peak` counts page cache as well as RSS, so the absolute
+figures overstate what the linker itself holds; and the block's figure
+is the maximum across ~39 sequential invocations sharing one scope,
+which biases it **upward**, making the gap a conservative one.
 
 **The `--lib` shape on `peisear-core`, `peisear-auth`, and
 `peisear-storage` skips doctests.** There are none in those three
@@ -151,18 +170,29 @@ reliable detector for a deterministic property, so `test_harness_scan`
 is the guard for this specific class now, not the recommendation
 below.
 
-**Still run `cargo test --workspace` three times in a row before
-opening a PR that touches `crates/peisear-web/tests/` or
-`crates/peisear-notify/tests/`, or before cutting a release
-candidate** — for flakes of *other* kinds, the ones a structural scan
-cannot see because they're not "a file contains a bad pattern" but
-"two things interact badly at runtime." This is deliberately the
-condition a contributor reaches for without thinking, by typing the
-obvious command, because the per-crate procedure's isolation is
-exactly what would hide a class of defect like that from every other
-gate result — which is what happened here, once, before it had a
-better guard. Re-measure and adjust the count if a new defect's
-observed rate suggests three isn't enough.
+**There is no "run it three times" recommendation here any more.**
+One stood in this place until 2026-10-15, for *"flakes of other
+kinds"*. It was retired on this document's own evidence, two
+paragraphs above: the only defect whose rate was ever measured failed
+**3 of 6** runs on a loaded machine and **0 of 6** on a quiet one, and
+the determining variable was **free memory**, not load — once free
+memory rose to ~14 GB the same command passed 6 of 6 *with the defect
+fully present*. On any machine with memory to spare, three runs test
+nothing and cost half an hour.
+
+**No defect in this project's record is attributed to it**, and its own
+revision clause — *"re-measure and adjust the count if a new defect's
+observed rate suggests three isn't enough"* — could only ever fire on a
+defect it had itself caught, so it specified a condition that could not
+occur. A rule that cannot be retired by its own terms is not a rule
+with a feedback loop.
+
+**What is now openly unguarded, rather than falsely guarded**: a flake
+that comes from two tests interacting at runtime, which the per-crate
+isolation above would hide. Nothing here detects that class today. It
+is named so the next person meets an honest gap instead of a check
+that could not tell *nothing wrong* from *nothing examined*
+(`requirements.md` `§10.36`).
 
 ### Documentation
 
