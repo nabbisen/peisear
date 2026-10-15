@@ -264,3 +264,77 @@ defect with extra steps.
 constraint in `§9`; a test proving different content yields different
 tags; `DEC-007` accounted for against 475; and the installed-binary
 walk re-run with **second-navigation wire bytes reported**, not first.
+
+---
+
+# FIV-005 round 3 — the map and the lookup disagree about subdirectories
+
+Round 2 is accepted (see the review). One defect, latent today and
+certain the first time anyone organises `static/`.
+
+## §12 — `ETAGS` cannot see a nested file; `get_file` can
+
+```rust
+static ETAGS: LazyLock<HashMap<&'static str, String>> = LazyLock::new(|| {
+    STATIC_DIR.files().map(…).collect()
+});
+…
+let etag = ETAGS.get(path.as_str())
+    .expect("every file get_file can find has a precomputed entry in ETAGS -- both walk the same STATIC_DIR");
+```
+
+**They do not walk it the same way.** From `include_dir` 0.7.4's own
+source:
+
+- `Dir::files()` is `self.entries().iter().filter_map(as_file)` —
+  **direct children only.**
+- `Dir::get_file()` calls `get_entry()`, whose own doc comment reads
+  *"Recursively search for a `DirEntry`"*.
+
+So for `static/vendor/foo.js`: `get_file` returns `Some`, `ETAGS.get`
+returns `None`, and **the handler panics on a request** — in release,
+where the `expect` is the only thing standing there.
+
+**This is not hypothetical, and the codebase says so itself.**
+`static_js_scan.rs:193` already reads: *"a future `static/vendor/*.js`
+or similar would…"*. That scan walks `static/` recursively on purpose;
+`docs_scan` rule 3 compares the manifest against its real contents.
+**Nothing forbids a subdirectory, and one module already plans for
+one.** The first person to tidy eight flat files into folders turns a
+page load into a panic.
+
+**The `expect` message is the finding.** It states the invariant —
+*"both walk the same STATIC_DIR"* — and the invariant is false. An
+`expect` whose message argues for a guarantee the code does not make is
+worse than an unwrapped `None`, because it tells the next reader not to
+check.
+
+**Remedy**: build `ETAGS` from the same recursive walk `get_file`
+uses — `STATIC_DIR.find("**/*")`, or an explicit recursion over
+`entries()`. **And then the `expect` is true**, so keep it and keep the
+message, corrected.
+
+**Test it with a nested file, not by reading the fix.** The existing
+tests all use top-level paths, which is exactly why the suite is green
+today. If the embedded tree cannot be given a subdirectory in a test
+without adding one to the real `static/`, **say so** — that is a
+finding about testability, and inventing a second `include_dir!` root
+for tests is the kind of thing to raise rather than do.
+
+## §13 — a 304 should carry what a 200 would
+
+`not_modified` sets `ETag` alone. RFC 9111 §4.3.4 has the server send
+the headers a cache would need to update its stored response —
+`Cache-Control` among them. With `no-cache` the practical cost is near
+zero, which is why this is a clause and not a section: **add it, or say
+why not.**
+
+## §14 — exit condition
+
+`ETAGS` built by the same recursive walk `get_file` performs, with the
+`expect` message left in place and now true; **a test that serves a
+nested path**, or a stated reason the embedded tree cannot be given one
+in a test; `§13` decided; `DEC-007` accounted for against **483**, the
+review's own figure; and **rustdoc re-run after the last edit of the
+round**, not before it — round 2's own `§4` is why that sentence is
+here.
