@@ -3290,6 +3290,28 @@ incompleteness, plus a sweep of every acceptance citation. This entry says
 said nothing about — **the limit `REQ-001` stated in its own words, producing
 its first confirmed instance.**
 
+**NFR-REL-009 — Released artefacts**
+Every published GitHub Release MUST carry the five per-platform
+archives, named and laid out per `NFR-REL-002`. **The check is the
+artefact being there**, not a workflow existing that would produce it.
+*Source*: `FIV-002`'s own escalation, 2026-10-15, raised by the round
+rather than written by it. *Status*: **Divergent** — no Release has
+ever carried one, and `0.53.0` is the first that can. *Why this
+requirement exists rather than being folded into `NFR-REL-002`.* That
+entry governs an archive's **shape if one exists**; it cannot be
+violated by producing none. A Release published with all five matrix
+jobs red would satisfy it completely. **This is `NFR-REL-008`'s own
+precedent reused**: that entry was added at 0.41.0 because *"no
+requirement governed the one artefact this project publishes without
+authoring"*, and the gap here is the same shape — a published artefact
+nothing requires to exist. *Closing*: the first Release whose own run
+of `.github/workflows/release.yml` attaches five assets, verified by
+reading the Release, not the workflow. **The upload path is
+unexercised as of 0.53.0's preparation** (`workflow_dispatch` never
+satisfies its `github.event_name == 'release'` guard), which is
+precisely why this entry is `Divergent` rather than `Implemented` on
+the strength of a green matrix. *Priority*: P2.
+
 **NFR-REL-008 — Published API documentation**
 The seven published crates' API documentation MUST build with no
 unresolved intra-doc links, and that MUST be enforced by an automated
@@ -6529,9 +6551,9 @@ Accepted in principle, deliberately not scheduled.
 | Security | 7 | 6 | — | — | — | 1 (`NFR-SEC-004`, `§10.40`) |
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
-| Release | 8 | 6 | 1 | — | — | 1 undefined |
+| Release | 9 | 6 | 1 | — | — | 2 (1 undefined, `NFR-REL-009`) |
 | Compatibility | 6 | 5 | 1 | — | — | — |
-| **Non-functional total** | **66** | **51** | **5** | **0** | **2** | **8** |
+| **Non-functional total** | **67** | **52** | **5** | **0** | **2** | **8** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.

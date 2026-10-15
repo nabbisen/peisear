@@ -131,3 +131,104 @@ extraction and its entry restated to say what it now rests on; the
 upload path named as unexercised with what would show it working;
 `DEC-007` unchanged from `FIV-001`'s baseline and accounted for;
 `dec_007_ci_scan` confirmed green.
+
+---
+
+# FIV-002 round 2 — the version nobody checks, and the dependencies nobody counted
+
+Round 1 is accepted (see the review); the workflow works and the five
+archives extract correctly. Two things it reported are not quite what
+it did.
+
+## §9 — the archive's version is `Cargo.toml`'s, and nothing ties it to the tag
+
+Both packaging steps read the version out of `Cargo.toml`. Round 1's
+own comment defends that for `workflow_dispatch`, correctly — a branch
+has no version-shaped name. **On a `release` event it is a coupling
+with nothing holding it.**
+
+**Measured 2026-10-15, and it is not theoretical:**
+
+```
+main's Cargo.toml:      version = "0.52.0"
+0.52.0 tag's Cargo.toml: version = "0.52.0"
+```
+
+**`0.52.0` shipped on 2026-10-14 and `main` is 0.53.0's tree** — yet
+`main` still says `0.52.0`, because the bump happens when the release
+is cut. So the two sources of truth agree at exactly one commit per
+release and disagree the rest of the time, and **nothing in the
+workflow checks which one it is standing on.** A Release cut from a
+commit whose `Cargo.toml` had not been bumped would attach five
+archives named for the previous version, to a Release named for the
+new one, and every gate in this project would pass.
+
+**Remedy**: on `github.event_name == 'release'`, compare the version
+read from `Cargo.toml` against the triggering tag and **fail the job**
+if they differ. A packaging step that cannot tell which release it is
+building is `§10.36` in the one workflow whose output the public
+downloads.
+
+**This also corrects round 1's own §3.** It offered the archive name as
+*"the strongest confirmation available that the historical tag was
+actually built, not `main`'s current HEAD"*. It is not confirmation at
+all — **`main` would have produced the identical name**. The claim is
+nonetheless true, on the other two pieces of evidence the round
+gathered: `/static/app.css` 404ing (impossible on post-`FIV-005`
+`main`) and the binary being 20.8 MB against `main`'s 23.7 MB. **Say
+which evidence carries a claim**, and drop the one that does not.
+
+## §10 — two third-party actions were added, and the report says none were
+
+`§2` reads: *"no cross-compilation, no third-party action or container,
+so `§7`'s first escalation condition never arises."* The workflow uses
+**`dtolnay/rust-toolchain@stable`** and **`Swatinem/rust-cache@v2`**.
+
+**The escalation condition genuinely did not arise** — `§7` asks about
+a *target* that cannot be built without one, and none needed either;
+every target builds natively. That reasoning is right and the round
+does not owe an escalation. **But the sentence is still false**, and
+`§7`'s stated reason — *"a new dependency in the release path is a
+maintenance cost and is the architect's call"* — applies to a
+dependency added for convenience exactly as much as to one added from
+necessity.
+
+**Both are at moving refs** (`@stable` and `@v2` are tags that
+advance), in the one workflow that holds `contents: write` and writes
+to published Releases. That is third-party code, re-resolved on every
+run, with permission to modify what the public downloads.
+
+**The call, which is mine**: prefer removing both.
+
+- GitHub's hosted images ship a rustup toolchain, so
+  `rustup target add <target>` in a `run:` step does what
+  `dtolnay/rust-toolchain` is doing here.
+- `Swatinem/rust-cache` is a build-time saving on a workflow that runs
+  a handful of times a release. An 18-minute cold matrix is
+  acceptable; a supply-chain dependency on the release path is the
+  more expensive side of that trade, by this project's own
+  *"new dependencies are expensive"*.
+
+**If a runner turns out not to carry a usable toolchain — the arm64
+Linux image is the one I would actually check — keeping the action is
+the right answer, and then pin it to a commit SHA**, not a moving tag.
+Report what you find either way; this is a measurement, not a
+preference.
+
+## §11 — what this round does not reopen
+
+`NFR-REL-002` is settled. `NFR-REL-009` is **new and is the
+architect's**, written at this review from round 1's own escalation —
+do not write a second one, and do not move its status: it closes on
+the first Release that actually carries five assets, which is
+`0.53.0`'s own.
+
+## §12 — exit condition
+
+A version check on the `release` event that fails the job on a
+mismatch, with the comparison's handling of a leading `v` stated;
+`§3`'s confirmation claim re-attributed to the evidence that carries
+it; the two actions removed, **or** a measured reason a runner needs
+one and that one pinned to a SHA; `DEC-007` unchanged at **486** and
+said to be unchanged rather than assumed; and all four gates re-run
+**after the round's last edit**.
