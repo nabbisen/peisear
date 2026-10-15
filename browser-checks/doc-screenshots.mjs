@@ -125,6 +125,16 @@ async function main() {
       DATABASE_URL: `sqlite://${dbPath}`,
       BIND_ADDR: `127.0.0.1:${PORT}`,
       COOKIE_SECURE: 'false',
+      // `FIV-006` §1, the same reasoning as `DATABASE_URL` above:
+      // explicit, not ambient. Without this, `Config::from_env`'s
+      // `JWT_SECRET` lookup falls through to whatever a developer's
+      // own `.env` happens to set (`FIV-001`'s resolution order), so
+      // a real local signing key would sign the cookies this
+      // throwaway capture session uses. It never reaches a committed
+      // image -- the database is a temp directory, deleted in
+      // `finally` below -- so this is hygiene, not exposure, but the
+      // capture should not depend on that distinction holding.
+      JWT_SECRET: 'doc-screenshots-throwaway-signing-key-not-for-reuse',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
@@ -141,18 +151,25 @@ async function main() {
     const { cookie, projectId, issueId, teamSlug, sprintId } = await createFixtures(PLAIN_STRINGS);
     log(`fixtures created: project=${projectId} issue=${issueId}`);
 
-    // Four pages (`DOCS-007` §3 dropped `/today`; `DOCS-008` §4/`DOC-005`
+    // Five pages (`DOCS-007` §3 dropped `/today`; `DOCS-008` §4/`DOC-005`
     // found the sprint plan's own alignment defect in two of the three
     // committed images rather than add a fourth page over an unfixed
     // one). The board (the product's signature screen), the list view
     // (the dense alternative), an issue detail (where most time is
-    // spent), and now the sprint plan -- `DOC-005` §5 populated both of
-    // its panels, which is the fix this capture was waiting on.
+    // spent), the sprint plan -- `DOC-005` §5 populated both of its
+    // panels, which is the fix this capture was waiting on -- and now
+    // `/today` (`FIV-006` §2): never captured before this round,
+    // though `DOCS-004` named it a candidate in 0.49.0, and it is the
+    // one screen the README's own "am I overloaded?" and "a dashboard
+    // that is yours alone" claims point at without ever showing. Not a
+    // URL parameter away from the others -- it is the signed-in user's
+    // own page, no project or issue id in its path.
     const pages = {
       board: `${BASE}/projects/${projectId}`,
       list: `${BASE}/projects/${projectId}?view=list`,
       issue_detail: `${BASE}/projects/${projectId}/issues/${issueId}`,
       sprint_plan: `${BASE}/teams/${teamSlug}/sprints/${sprintId}/plan`,
+      today: `${BASE}/today`,
     };
 
     mkdirSync(OUT_DIR, { recursive: true });
@@ -168,6 +185,32 @@ async function main() {
     for (const [label, url] of Object.entries(pages)) {
       await browser.goto(url);
       await browser.waitForSelector('header.navbar', 5000);
+      // `FIV-006` §3: two panels that collapse by default, on
+      // purpose, each documented as such in its own component --
+      // `HealthStrip`'s indicator breakdown ("so the standard board
+      // view stays uncluttered") and `/today`'s own Rhythm panel
+      // ("Rhythm is a 'if you want to dig' surface, not first-glance
+      // content"). Both sit directly beneath a README claim that
+      // promises their contents (the health bullet names six
+      // indicators; the dashboard bullet sells "load, rhythm and
+      // sustainability"), so a capture that leaves either collapsed
+      // reads as broken rather than as a fold a reader hasn't opened.
+      // Expanded here, for these captures only -- the product's own
+      // default is unchanged, and the alt text in README.md says
+      // "expanded" so neither image is read as the page's resting
+      // state.
+      const detailsToExpand = { board: 'Indicators', today: 'Rhythm' }[label];
+      if (detailsToExpand) {
+        const opened = await browser.eval(`(() => {
+          const details = Array.from(document.querySelectorAll('details'))
+            .find(d => d.querySelector('summary')?.textContent.trim() === ${JSON.stringify(detailsToExpand)});
+          if (details) details.open = true;
+          return !!details;
+        })()`);
+        if (!opened) {
+          throw new Error(`${label} capture: the "${detailsToExpand}" <details> was not found to expand`);
+        }
+      }
       const path = join(OUT_DIR, `${label}.png`);
       // `DOCS-007` §2: no `clip` argument -- `cdp.mjs`'s `screenshot()`
       // only applies its `scale: 3` (sized for evidence-log clarity)

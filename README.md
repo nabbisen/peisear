@@ -31,7 +31,7 @@ oversight role.
 One Rust binary, one SQLite file, no Node toolchain, no external
 services.
 
-![The kanban board: issue cards in Open, In Progress and Done columns](https://github.com/nabbisen/peisear/raw/main/docs/src/assets/screenshots/board.png)
+![The kanban board: issue cards in Open, In Progress and Done columns, with the project health indicators expanded to show the full breakdown](https://github.com/nabbisen/peisear/raw/main/docs/src/assets/screenshots/board.png)
 
 ## Why peisear?
 
@@ -88,6 +88,8 @@ The full guide is in [`docs/getting-started/`](https://github.com/nabbisen/peise
 - **One binary deploy.** Migrations embedded at compile time,
   templates and static assets compiled into the binary. Ship one
   executable and you're live.
+
+![The personal dashboard at /today: WIP and load chips under "Right now", the Rhythm panel expanded to show throughput and stale-issue counts, and a steady sustainability reading](https://github.com/nabbisen/peisear/raw/main/docs/src/assets/screenshots/today.png)
 
 ## Design Notes
 

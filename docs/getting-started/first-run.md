@@ -68,6 +68,12 @@ starts accepting connections.
 
    ![The same project in list view: a filterable, sortable table of every issue](../src/assets/screenshots/list.png)
 
+Open <http://localhost:3000/today> once you've assigned yourself an
+issue or two. It's empty before that point — there's nothing personal
+to show yet — but with even one assigned issue it has a WIP count and
+a load figure, which is the one moment that page explains itself
+rather than needing a tour.
+
 ## Planning a sprint
 
 Sprints belong to teams, not to a single project — a team can pull
