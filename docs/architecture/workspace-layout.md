@@ -108,9 +108,11 @@ peisear/
 │   └── tailwind.css                 # Self-hosted utility classes
 │                                     #   (../operations/tailwind-local.md).
 │
-└── infra/                           # Placeholder for Dockerfile,
-    └── README.md                    # compose.yaml, Terraform, GitHub
-                                     # Actions workflows.
+└── infra/
+    ├── docker/
+    │   └── Dockerfile               # The published ghcr.io image
+    │                                #   (FIV-003, 0.53.0).
+    └── README.md
 ```
 
 ## Module style
@@ -125,11 +127,13 @@ names alone tells you the module graph.
 - **Migrations** are embedded at compile time via
   `sqlx::migrate!("./migrations")` relative to the `peisear-storage`
   crate's `CARGO_MANIFEST_DIR`, so the binary ships with them baked in.
-- **Static files** (all eight under `static/`, above) are served at
-  runtime by `tower_http::services::ServeDir::new("static")`, which
-  resolves **relative to the server's working directory**. Deploy
-  scripts and systemd units must `cd` to the directory containing
-  `static/` before exec-ing the binary. See
+- **Static files** (all eight under `static/`, above) are embedded
+  into the binary at compile time (`crates/peisear-web/src/
+  static_assets.rs`, via `include_dir!`, `FIV-005`, 0.53.0) and served
+  from memory, with no runtime dependency on the server's working
+  directory. `cargo install peisear` and a release archive both
+  publish the binary alone — `static/` is not a separate directory to
+  place beside it. See
   [../operations/deployment.md](../operations/deployment.md).
 
 ## Next

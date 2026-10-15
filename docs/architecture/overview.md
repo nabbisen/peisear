@@ -48,7 +48,10 @@ and that boundary has an explicit error type
   the binary at compile time — no separate migration tool, no runtime
   filesystem lookup.
 - **One binary, one file.** `target/release/peisear` + `data/app.db`
-  is the whole deployable artifact (plus `static/`).
+  is the whole deployable artifact. `static/` is embedded into the
+  binary at compile time (`FIV-005`, 0.53.0), not shipped alongside
+  it — `cargo install peisear` and a release archive both publish the
+  binary alone.
 - **Configuration is env-vars-only.** No config file format, no TOML
   parsing; see [Configuration](../getting-started/configuration.md).
 

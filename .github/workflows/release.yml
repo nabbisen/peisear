@@ -216,10 +216,20 @@ jobs:
               try { Invoke-WebRequest -Uri http://127.0.0.1:3000/health -UseBasicParsing | Out-Null; $ok = $true; break } catch { Start-Sleep -Seconds 1 }
             }
             if (-not $ok) { throw "health check never came up" }
+            # `-MaximumRedirection 0` plus `-SkipHttpErrorCheck` does not
+            # return the 303 here -- measured directly: pwsh 7's
+            # HttpClient-backed `Invoke-WebRequest` throws "the maximum
+            # redirection count has been exceeded" instead, a different
+            # error path than the status-code one `-SkipHttpErrorCheck`
+            # suppresses. Letting the redirect follow (.NET correctly
+            # downgrades the method to GET on a 303, same as a real
+            # browser) and asserting the session is authenticated on the
+            # other side of it is what the Unix script's explicit `303`
+            # check and this are both really establishing.
             $body = @{ email = "walk@example.com"; password = "a-real-walk-password-123"; display_name = "Walk" }
-            $resp = Invoke-WebRequest -Uri http://127.0.0.1:3000/register -Method Post -Body $body -SessionVariable session -MaximumRedirection 0 -SkipHttpErrorCheck
-            Write-Host "register: $($resp.StatusCode)"
-            if ($resp.StatusCode -ne 303) { throw "register did not redirect (303), got $($resp.StatusCode)" }
+            $resp = Invoke-WebRequest -Uri http://127.0.0.1:3000/register -Method Post -Body $body -SessionVariable session -SkipHttpErrorCheck
+            Write-Host "register, followed to its redirect target: $($resp.StatusCode)"
+            if ($resp.StatusCode -ne 200) { throw "register's redirect chain did not end at 200, got $($resp.StatusCode)" }
             $resp2 = Invoke-WebRequest -Uri http://127.0.0.1:3000/projects -WebSession $session -SkipHttpErrorCheck
             Write-Host "authenticated /projects: $($resp2.StatusCode)"
             if ($resp2.StatusCode -ne 200) { throw "session from register did not authenticate, got $($resp2.StatusCode)" }

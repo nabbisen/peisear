@@ -29,7 +29,12 @@ publish the real thing.
   on a missing-and-unwritable or corrupted key file — if that cannot
   be done (`FIV-001`). `BIND_ADDR` now defaults to `127.0.0.1:3000`
   rather than every interface, so a first run is reachable from this
-  machine only until someone chooses otherwise.
+  machine only until someone chooses otherwise. **If you relied on the
+  previous `0.0.0.0:3000` default to reach an instance from another
+  machine**, set `BIND_ADDR=0.0.0.0:3000` explicitly — the container
+  image already does this for you, so this only affects a
+  build-from-source or `cargo install` deployment that had no `.env`
+  entry for it.
 - **An instance that starts with `.env.example`'s own placeholder
   secret now refuses to start**, naming the remedy, rather than
   running signed by a value anyone reading this file already knows.
