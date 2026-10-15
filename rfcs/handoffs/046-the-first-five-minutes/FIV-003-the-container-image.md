@@ -98,3 +98,73 @@ as written and a project created through it; the volume test passing;
 the image size and the user it runs as both stated; `NFR-CMP-002`
 checked against the new shape and `DEC-007` unchanged and accounted
 for.
+
+---
+
+# FIV-003 round 2 — the nesting had a third option
+
+Round 1 is accepted (see the review): the image is right, the
+distroless choice is argued from a real `ldd`, and the volume test is
+the discriminating one rather than "it starts again".
+
+## §6 — `WORKDIR /` removes the nested `data/` with no second default
+
+Round 1 reports `/data/data/app.db` as *"a fact about the chosen
+shape, not fixed — fixing it would mean baking in `DATABASE_URL`,
+which is the thing declined above."*
+
+**That is a choice between two options when there are three.** The
+nesting comes from `WORKDIR /data` meeting a relative default of
+`sqlite://data/app.db`. Move the working directory up one:
+
+```dockerfile
+WORKDIR /
+VOLUME /data
+```
+
+The default is unchanged, nothing is baked in, no second environment
+variable appears — and `data/app.db` relative to `/` **is**
+`/data/app.db`, the mount root, with `jwt_secret` beside it. A host
+`-v ./data:/data` then holds `app.db` directly, which is what
+`docs/operations/backup.md` describes as the backup unit.
+
+**Check it rather than taking it** — run the volume test again and
+report the actual paths inside the volume, because this is a claim
+about how two relative paths compose and it deserves the same
+treatment the `:nonroot` attempt got.
+
+**The reasoning that declined baking `DATABASE_URL` was right.** This
+does not reverse it; it reaches the same goal without paying that
+price. **Say in the comment why `WORKDIR` is `/` and not `/data`**, or
+the next reader will "tidy" it back.
+
+## §7 — the root decision stands, with its third option named too
+
+Running as root is accepted, and the measurement behind it is the kind
+this project wants: `:nonroot` tried, failed on bind-mount ownership,
+reported rather than worked around.
+
+**Recorded for completeness, not as a change to make**: a *named*
+volume (`-v peisear-data:/data`) takes its ownership from the image,
+so `:nonroot` would work with one — the bind mount is what forbids it.
+Round 1's reasoning for preferring a bind mount is sound and
+unstated: host-visible data is what makes this project's own backup
+story (`cp` the directory) true. **State that preference where the
+decision is made**, so the next person sees three options and a reason
+rather than two options and a constraint.
+
+## §8 — a comment that describes a thing the round then fixed
+
+The Dockerfile says `infra/README.md`'s *"plus `static/`"* is *"stale
+as of this round; not fixed here, reported in the round's own
+README."* **It was fixed** — `infra/README.md:8` now reads *"Not 'plus
+`static/`' as this file used to say."* Good fix, stale comment. One
+line.
+
+## §9 — exit condition
+
+`WORKDIR /` with the volume test re-run and the **actual paths inside
+the volume** reported; the bind-mount-over-named-volume preference
+stated where the root decision is made; `§8`'s comment corrected;
+`DEC-007` unchanged at **486** and confirmed unchanged rather than
+assumed; all four gates re-run after the round's last edit.

@@ -3312,6 +3312,25 @@ satisfies its `github.event_name == 'release'` guard), which is
 precisely why this entry is `Divergent` rather than `Implemented` on
 the strength of a green matrix. *Priority*: P2.
 
+**NFR-REL-010 — Published container image**
+Every published GitHub Release MUST have a correspondingly-tagged image
+on `ghcr.io`. **The check is the tag existing in the registry**, not a
+workflow existing that would push it.
+*Source*: `FIV-003`'s own escalation, 2026-10-15, raised by the round
+rather than written by it — the same escalation `FIV-002` made that
+became `NFR-REL-009`, and granted for the same reason. *Status*:
+**Divergent** — no image has ever been published, and `0.53.0` is the
+first Release that can publish one. *Why a second entry rather than
+widening `NFR-REL-009`.* That entry is about archives attached to a
+Release; this is about a tag in a different registry, pushed by a
+different workflow, and either can be absent while the other is
+present. One entry covering both would be satisfied by half of it.
+*Closing*: the first Release whose own run of
+`.github/workflows/image.yml` pushes a tag, verified by pulling it.
+**The publish path is unexercised** — its `github.event_name ==
+'release'` guard cannot fire from `workflow_dispatch`, the same
+honest gap `NFR-REL-009` carries. *Priority*: P2.
+
 **NFR-REL-008 — Published API documentation**
 The seven published crates' API documentation MUST build with no
 unresolved intra-doc links, and that MUST be enforced by an automated
@@ -6567,9 +6586,9 @@ Accepted in principle, deliberately not scheduled.
 | Security | 7 | 6 | — | — | — | 1 (`NFR-SEC-004`, `§10.40`) |
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
-| Release | 9 | 6 | 1 | — | — | 2 (1 undefined, `NFR-REL-009`) |
+| Release | 10 | 6 | 1 | — | — | 3 (1 undefined, `NFR-REL-009`, `NFR-REL-010`) |
 | Compatibility | 6 | 5 | 1 | — | — | — |
-| **Non-functional total** | **67** | **52** | **5** | **0** | **2** | **8** |
+| **Non-functional total** | **68** | **52** | **5** | **0** | **2** | **9** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.

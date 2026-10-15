@@ -151,3 +151,87 @@ confirmed in the report, per image, against the owner's constraint in
 §1: no local path, no real address, no account that is not fixture data.
 A scan reads text, not pixels, which is why this last one is a person's
 job and cannot be delegated to a gate.
+
+---
+
+# FIV-006 round 2 — one image is half empty, and it showed me a defect
+
+Round 1 is accepted (see the review). The privacy floor held, `/today`
+is captured at last, and reading `board.png` did what reading a
+screenshot is for.
+
+## §8 — your reading of "one image reused" was right, and my handoff was not
+
+Round 1 flagged, rather than guessed, that it read `§2`'s *"one image
+reused"* as `board.png` continuing in place — two README images total,
+not three. **That reading is correct**, and `§4` of this handoff says
+so explicitly: *"two images, each beside the claim it illustrates. The
+board already sits under Overview; `/today` belongs with…"*.
+
+**`§2`'s sentence contradicted `§4`** by suggesting `list` as the
+second image when `§4` had already spent both slots. Mine, not the
+round's. Nothing to change in the repository — recorded so the next
+reader of `§2` is not sent after a third image.
+
+## §9 — `today.png` is 900px tall and its content stops at 500
+
+Look at the image as a README reader meets it: the three panels end at
+*"What do these mean?"* and **roughly the lower 40% is blank white**.
+Beside a feature bullet, that reads as a broken or half-loaded
+capture, which is the same failure mode `§3` set out to fix on
+`board.png` — an image that misinforms by looking wrong.
+
+`board.png` does not have this problem because a board is tall.
+`/today` is short, and the capture is a fixed 1280×900 viewport.
+
+**Remedy is a capture-side change, not a product one.** Either shoot
+this page at a shorter viewport, or clip to content height. **Mind
+`cdp.mjs`'s own behaviour**, which this script's comments already
+record: `screenshot()` applies `scale: 3` when a `clip` is given, so a
+naive clip returns a 3× image — which is why the round that wrote that
+comment deliberately passed no clip. **Decide which way and say
+why**; a 3× README image is a worse defect than the whitespace.
+
+## §10 — the basis link reads as a broken sentence
+
+In `board.png`, the second explanation row reads:
+
+> In-flight work is currently carried by one person. What this is based on
+
+**"What this is based on" is a link** (`issues.rs:312`,
+`render_explanation_row`) carrying `class="link link-hover …"` —
+daisyUI's `link-hover` shows the underline **only on hover**, so at
+rest it is visually identical to the sentence it follows. Its sibling
+chips all carry a `▶` marker; this one carries nothing. A reader sees
+a sentence that ends in a fragment.
+
+**Why this is in scope for a round about pictures.** `DOCS-004`'s rule
+is that a screen looking wrong in a screenshot is a finding for the
+architect, and it is — this is me deciding it. It lands here because
+**this round publishes that image into `README.md`**, the project's
+front door, and because the fix is one class in one call site, which
+is smaller than the round it would otherwise need.
+
+**Measured before being called a defect**: `link link-hover` appears
+**10 times** across `components/`, and `link link-primary` **4 times**
+— both are house style. The other `link-hover` uses sit on project
+names, team names and search results, where position alone says
+"link". **This one is a fragment appended to the end of a sentence,
+where position says the opposite.** So the finding is this call site,
+not the convention.
+
+**Remedy**: give it the affordance its siblings have — `link-primary`,
+already used four times in this codebase, or the `▶` the chips use.
+**Not a sweep of all ten.** Then regenerate `board.png`, which is this
+round's own output anyway.
+
+## §11 — exit condition
+
+`today.png` re-captured so its content fills its frame, with the
+viewport-versus-clip decision stated and the `scale: 3` trap
+explicitly avoided; the basis link given a resting affordance at that
+one call site and `board.png` regenerated to show it; both images
+opened and checked against `§1`'s privacy floor again, per image;
+byte counts restated; `DEC-007` stated — it should move by zero again
+unless the link change touches a test that reads that markup, in which
+case **say which**.
