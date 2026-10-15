@@ -13,9 +13,14 @@ cargo build --release
 
 The resulting binary is `target/release/peisear`. It is fully static
 with respect to peisear's own code — templates are compiled in as
-Leptos components, migrations are baked in via `sqlx::migrate!()` —
-but dynamically links against system `libc`, `libssl`, `libsqlite3`,
-and so on. For fully static binaries, see "Building static" below.
+Leptos components, migrations are baked in via `sqlx::migrate!()`,
+and `static/`'s own assets are embedded too (`FIV-005`) — and `ldd`
+against it shows exactly three dynamic dependencies: `libc`,
+`libgcc_s`, `libm` (`FIV-003`'s own measurement, carried here rather
+than left to drift from the claim this line used to make — no
+`libssl`, since this project's `sqlx` uses `rustls`, not native TLS;
+no `libsqlite3`, bundled and statically linked by default). For fully
+static binaries anyway, see "Building static" below.
 
 Alternatively, install the published binary directly from crates.io:
 
@@ -123,6 +128,14 @@ the one deploy-time gotcha worth remembering. **It used to apply to
 `static/` too**; `FIV-005` embedded that directory into the binary, so
 a `cd` before starting it no longer produces a 404 for every asset,
 only (if anything) a second database.
+
+**The same principle governs the container image** (`FIV-003`): its
+`WORKDIR /` puts the mount point itself where `DATABASE_URL`'s
+relative default resolves, so `-v ./data:/data` holds `app.db` and
+`jwt_secret` directly, not nested a level down. There is no
+`WorkingDirectory=`-equivalent to misconfigure inside the image —
+`WORKDIR` is fixed at build time — but the same relative-path default
+is what both deployment shapes are resolving.
 
 ## Environment file
 
