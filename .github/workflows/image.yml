@@ -72,11 +72,17 @@ jobs:
           docker image inspect peisear:walk --format='image size: {{.Size}} bytes'
           docker image inspect peisear:walk --format='runs as: {{.Config.User}}'
 
+      # `docker logs` always runs, success or failure (a trap, not a
+      # line at the end of the script) -- the first measured run of
+      # this step failed before reaching its own final `docker logs`
+      # line, under `set -e`, and left nothing to diagnose with. Not
+      # repeating that.
       - name: Walk it -- register, create a project
         run: |
           set -euo pipefail
           mkdir -p "$PWD/data"
           docker run -d --name peisear-a -p 3000:3000 -v "$PWD/data:/data" peisear:walk
+          trap 'docker logs peisear-a; docker rm -f peisear-a' EXIT
           for i in $(seq 1 30); do curl -sf http://localhost:3000/health > /dev/null && break; sleep 1; done
           curl -sf http://localhost:3000/health
           code=$(curl -s -o /dev/null -w '%{http_code}' -c "$COOKIE_JAR" \
@@ -89,9 +95,6 @@ jobs:
           code=$(curl -s -o /dev/null -w '%{http_code}' -b "$COOKIE_JAR" http://localhost:3000/projects)
           echo "authenticated /projects: $code"
           [ "$code" = "200" ] || { echo "::error::session from register did not authenticate, got $code"; exit 1; }
-          docker logs peisear-a
-          docker stop peisear-a
-          docker rm peisear-a
 
       # FIV-003 §1: the database and FIV-001's generated key live in
       # the same volume. If the volume did not actually persist the
@@ -105,13 +108,11 @@ jobs:
         run: |
           set -euo pipefail
           docker run -d --name peisear-b -p 3000:3000 -v "$PWD/data:/data" peisear:walk
+          trap 'docker logs peisear-b; docker rm -f peisear-b' EXIT
           for i in $(seq 1 30); do curl -sf http://localhost:3000/health > /dev/null && break; sleep 1; done
           code=$(curl -s -o /dev/null -w '%{http_code}' -b "$COOKIE_JAR" http://localhost:3000/projects)
           echo "authenticated /projects after recreation, same cookie: $code"
           [ "$code" = "200" ] || { echo "::error::session did not survive container recreation on the same volume"; exit 1; }
-          docker logs peisear-b
-          docker stop peisear-b
-          docker rm peisear-b
 
       - name: Publish to ghcr.io
         if: github.event_name == 'release'

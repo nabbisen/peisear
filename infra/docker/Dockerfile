@@ -27,7 +27,24 @@ RUN cargo build --release -p peisear
 # manager, no second way into the container once it is running.
 # `-debian12` matches the builder's own Debian release, so the two
 # images' glibc versions agree.
-FROM gcr.io/distroless/cc-debian12:nonroot
+#
+# **Runs as root, and here is why** (FIV-003 §3's own "if it must run
+# as root, say why"): the `:nonroot` variant (uid 65532) was tried
+# first and measured, not assumed -- `evidence/` in the round's own
+# report. `-v ./data:/data` is a bind mount, so `/data`'s ownership on
+# disk is the *host* directory's, which Docker never changes to match
+# the image; a fresh `./data` a new user creates is owned by their own
+# host account, uid 65532 cannot write the first-run database or
+# `FIV-001`'s generated key file into it, and the app exits with
+# exactly the hard failure that handoff calls correct -- just at the
+# worst possible moment, the first command a newcomer runs. Requiring
+# a manual `chown 65532 ./data` before the documented `docker run`
+# line defeats what this round exists to remove: a prerequisite beyond
+# "have a container runtime." Root inside this container is still
+# unprivileged (no added Linux capabilities, no `--privileged`) --
+# contained, not equivalent to host root -- and distroless/cc carries
+# no shell for that root user to reach a second way in with regardless.
+FROM gcr.io/distroless/cc-debian12
 
 COPY --from=builder /build/target/release/peisear /usr/local/bin/peisear
 
