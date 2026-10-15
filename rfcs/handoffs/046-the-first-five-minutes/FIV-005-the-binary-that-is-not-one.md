@@ -171,3 +171,96 @@ corrected with the count given; rule 3's post-change assertion decided
 with reasoning; `README.md`'s self-contradiction resolved; the three
 `static/*.js` scans confirmed still reaching their subject; and
 `§10.41` closed **on the walk's evidence**, not on the build.
+
+---
+
+# FIV-005 round 2 — the assets are never cached now
+
+Round 1 is accepted (see the review). This is the one thing it traded
+away, found by asking what `ServeDir` used to do that the new handler
+does not.
+
+## §8 — every page navigation re-downloads every asset
+
+`static_assets::serve` sets exactly one response header,
+`Content-Type`. **No `ETag`, no `Last-Modified`, no `Cache-Control`.**
+`ServeDir` set `Last-Modified` and answered conditional requests; this
+does not. Measured against round 1's own binary:
+
+```
+$ curl -D - -o /dev/null http://…/static/daisyui.min.css
+HTTP/1.1 200 OK
+content-type: text/css; charset=utf-8
+vary: accept-encoding
+content-length: 2930630
+
+$ curl -H 'If-Modified-Since: …' …        # a conditional request
+status=200 bytes=2930630                   # not 304
+```
+
+**A browser has nothing to revalidate with, so it refetches.** Every
+page in this application loads three stylesheets and at least one
+script from `/static/`: **~184 KB gzipped per navigation**
+(`daisyui.min.css` 176,891 · `tailwind.css` 4,098 · `search.js` 2,856 ·
+`app.css` 325), re-sent and re-decompressed on every page view, for
+bytes that cannot change while the process is running.
+
+**This is a real trade, not a slip.** Round 1 fixed a cold-start defect
+— the app did not work at all when installed — and introduced a
+warm-path one. The first is worse and the order was right. But *"the
+pages feel slow"* is a first-five-minutes problem too, and this release
+is the one that owns that.
+
+**Why no gate saw it.** Every test asserts status, bytes and
+content-type. **Not one asserts a header the asset pipeline depends
+on**, so the suite could not tell a correctly cached response from an
+uncached one — `§10.36`'s question, aimed at an HTTP contract.
+
+## §9 — what the fix has to satisfy
+
+Two constraints, and they pull against each other:
+
+- **An upgraded binary must never serve its new page against the old
+  CSS.** The URLs are not fingerprinted (`/static/app.css` is the same
+  URL forever), so a long `max-age` alone would do exactly that, and
+  the symptom — a half-styled page after an upgrade, cleared by a hard
+  refresh the user does not know to perform — is worse than the slow
+  load it replaces.
+- **A repeat navigation must not re-send the body.**
+
+**A strong `ETag` over the embedded bytes satisfies both**: content
+that changes with the build changes the tag, and a revalidation that
+matches costs a 304 with no body. Whether to pair it with
+`Cache-Control: no-cache` (store, always revalidate) or a short
+`max-age` is yours — **state which and why**. `Last-Modified` is the
+weaker option here and says so by itself: embedded bytes have no
+meaningful mtime, and the build time is not one.
+
+**Compute the tag once, not per request.** Hashing 2.93 MB on every
+request trades bandwidth for CPU and is not the point.
+
+**Handle `If-None-Match` yourself if nothing in the stack does.**
+Setting an `ETag` and still returning 200 with a full body is the
+defect with extra steps.
+
+## §10 — gates
+
+- **A test per header this round adds**, asserting the response
+  carries it — and **one asserting a matching `If-None-Match` returns
+  304 with an empty body.** That second one is the whole round; the
+  first without it is `§10.36` again.
+- A test that **two different asset bodies produce two different
+  tags**, so the tag is over content and not a constant.
+- `DEC-007` against **475**, the review's own figure.
+- **Re-walk round 1's installed-binary walk**, and report the wire
+  bytes for a second navigation. Round 1 proved the page renders; this
+  round has to prove it renders twice without paying twice.
+
+## §11 — exit condition
+
+`ETag` over the embedded content, computed once; a matching
+`If-None-Match` answered **304, no body**, with a test; the
+`Cache-Control` choice made and reasoned against the upgrade-staleness
+constraint in `§9`; a test proving different content yields different
+tags; `DEC-007` accounted for against 475; and the installed-binary
+walk re-run with **second-navigation wire bytes reported**, not first.
