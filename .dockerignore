@@ -1,0 +1,12 @@
+# Everything the image build does not need to send to the Docker
+# daemon as build context. `target/` alone is hundreds of gigabytes on
+# a machine that has built every release candidate's own tarball --
+# without this file, `docker build`'s context-upload step pays for all
+# of it before the first instruction even runs.
+target/
+.git/
+.git-exclude/
+docs/
+.github/
+browser-checks/
+infra/
