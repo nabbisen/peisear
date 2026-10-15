@@ -1,0 +1,133 @@
+name: Release
+
+# FIV-002 (RFC 017 proposal 1): a per-platform archive on each GitHub
+# Release, attached after the Release already exists -- never gating
+# it. DEC-056 stays four legs; this is not a fifth one the architect
+# runs, it runs itself, on the `release: published` event the owner's
+# own `gh release create` (or the UI) fires. A failed matrix entry
+# leaves that Release with one fewer asset -- exactly today's state
+# for all five -- and is fixed by re-running that one job, not by
+# re-cutting the release.
+#
+# Deliberately its own workflow file, not a job added to test.yml --
+# same reason as docs.yml (see that file's own comment):
+# `dec_007_ci_scan` reads only test.yml's `run:` lines against
+# `.github/CONTRIBUTING.md`'s DEC-007 block, and a `cargo build
+# --release --target ...` line living there would read as an
+# untracked DEC-007 obligation it isn't.
+#
+# Every target below builds natively, on a GitHub-hosted runner whose
+# own OS and architecture already match it -- no cross-compilation, no
+# third-party action or container (FIV-002 §7's own escalation
+# condition). GitHub's Linux arm64 runners (ubuntu-24.04-arm) have
+# been generally available for public repositories since 2025-08-07,
+# and macOS ships both an Apple Silicon (macos-latest) and an Intel
+# (macos-15-intel) hosted image -- that combination covers all five
+# targets without reaching for `cross` or a Docker container.
+#
+# NFR-REL-002: files at the archive root, no intermediate directory.
+# Each packaging step copies the binary alone into a scratch `dist/`
+# directory, then archives with `tar`'s own `-C dist` (changes
+# directory before adding `peisear`, so the path recorded in the
+# tarball is just `peisear`, not `dist/peisear`) or by pointing
+# `Compress-Archive` straight at the file inside `dist/` rather than
+# at the directory -- either way, `dist` itself never becomes an
+# entry in the archive.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: >-
+          Branch, tag, or commit to build. workflow_dispatch never
+          uploads to any Release regardless of this value -- it only
+          produces the five archives as workflow artifacts, per
+          FIV-002 §3.
+        required: true
+        default: main
+
+permissions:
+  contents: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    name: build (${{ matrix.target }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+          - target: aarch64-apple-darwin
+            os: macos-latest
+          - target: x86_64-apple-darwin
+            os: macos-15-intel
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.ref || '' }}
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build
+        run: cargo build --release --target ${{ matrix.target }} -p peisear
+
+      # The version lives in Cargo.toml, not the triggering ref --
+      # workflow_dispatch can target a branch with no version-shaped
+      # name at all (FIV-002 §3's own "0.52.0's commit" walk is a
+      # branch, not a tag), so the archive name has to come from the
+      # one place ROADMAP.md and NFR-REL-002 both already treat as
+      # authoritative for it.
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(grep -m1 '^version' Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')
+          name="peisear-${version}-${{ matrix.target }}"
+          mkdir -p dist
+          cp "target/${{ matrix.target }}/release/peisear" dist/peisear
+          tar czf "${name}.tar.gz" -C dist peisear
+          echo "ARCHIVE_NAME=${name}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path Cargo.toml -Pattern '^version' | Select-Object -First 1).Line -replace '.*"([^"]+)".*','$1'
+          $name = "peisear-$version-${{ matrix.target }}"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Copy-Item "target/${{ matrix.target }}/release/peisear.exe" "dist/peisear.exe"
+          Compress-Archive -Path "dist/peisear.exe" -DestinationPath "$name.zip" -Force
+          echo "ARCHIVE_NAME=$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ env.ARCHIVE_NAME }}
+          if-no-files-found: error
+
+      # workflow_dispatch's whole point is testing the above without
+      # this step ever running -- see the trigger's own description.
+      - name: Attach to Release
+        if: github.event_name == 'release'
+        shell: bash
+        run: gh release upload "${{ github.event.release.tag_name }}" "${{ env.ARCHIVE_NAME }}" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
