@@ -184,3 +184,70 @@ screenshots checked rather than assumed,
 each confirmed against the privacy floor; and **all three install
 paths walked on the real artefacts**, with what a reader would see
 reported for each.
+
+---
+
+# FIV-004 round 2 — the page promises one screen and shows five others
+
+Round 1 is accepted (see the review). The split is right, all three
+paths were walked on real artefacts, and the startup line does what
+barrier 5 asked. One thing on the new page itself.
+
+## §9 — "an empty project list", followed by five pictures of a full one
+
+`install.md`'s *What you'll see* reads:
+
+> Register an account, and you land on an empty project list:
+
+and is followed by **five screenshots**: the board with issues, the
+list view, an issue detail, a sprint plan, and `/today`. **Not one of
+them is an empty project list.**
+
+**This is the defect class the release exists to remove**, on the page
+it exists to produce — a caption contradicted by the image beneath it
+is `DOCS-006`'s own finding, and `DOCS-008` was a whole round about
+images a stranger can read. A newcomer following Option A reaches a
+screen that looks nothing like the five they were just shown, at the
+exact moment they are least able to tell whether they did something
+wrong.
+
+**And four of the five are already on the next page.** `first-run.md`
+carries `board`, `list`, `issue_detail` and `sprint_plan` — so the
+book now shows the same four images twice, on adjacent pages, with the
+second showing them *in the walkthrough that explains them*.
+
+**My own `§4` invited this** by saying *"the first-run screenshots sit
+beside the Install page's ending"* without saying how many or which.
+Recorded as mine; the fix is still yours.
+
+## §10 — what the page's ending is actually for
+
+The Install page's job is **three paths and one shared ending**. The
+ending is one moment: *the server is up and you are looking at it.*
+One image serves that; five turn the ending into a gallery and bury
+the `Next` link under it.
+
+**Two ways to make it honest, and the choice is yours:**
+
+- **Capture what the sentence promises.** The harness registers an
+  account before it creates fixtures, so an empty `/projects` is a
+  state it already passes through. A new `projects_empty.png` is a
+  real option — `FIV-006` is closed, but the script it left is not.
+- **Keep one image and make the sentence match it.** If the kept image
+  is `board.png`, then the sentence is about what the product looks
+  like once there is work in it, and *"Register an account"* needs to
+  say so.
+
+**Do not keep five**, and **do not keep an image whose own page is one
+click away** unless you can say what the Install page's copy adds that
+`first-run.md`'s does not.
+
+## §11 — exit condition
+
+`install.md`'s *What you'll see* carrying **one** image, with the
+sentence above it true of that image — either a new capture of the
+empty project list or a reworded lead-in, and **say which you chose
+and why**; `first-run.md` unchanged; the duplication across the two
+pages resolved and stated; `mdbook build` with linkcheck clean and the
+built book's screenshot directory read rather than assumed;
+`DEC-007` at **486**, which this should not move.
