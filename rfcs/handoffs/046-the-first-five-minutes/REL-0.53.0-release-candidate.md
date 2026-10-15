@@ -130,14 +130,42 @@ either runs or refuses. **Report what happened, verbatim.**
 `git show`, not with a copy to an intermediate file. `FIV-001` round 2
 did, and `§9b` was rewritten because of it.
 
+## §5b — `NFR-REL-011`'s two missing walks, in this release
+
+*Added 2026-10-15, reversing a one-day-old deferral. The reasoning is
+in the entry itself.*
+
+`image.yml` walks the container path on every run. **`release.yml`
+builds five archives and never extracts one**, and nothing runs an
+installed binary. Close both here:
+
+- **`release.yml`**: after packaging, extract the archive this job
+  just built and **run the binary from a scratch directory**, to an
+  authenticated session — the same shape as `image.yml`'s own *"Walk
+  it"* step, which is the model to copy rather than invent.
+- **`cargo install`**: `--path crates/peisear` into a scratch root,
+  run from outside the repository. `FIV-005`'s own walk is the
+  precedent.
+
+**Exercise both by `workflow_dispatch` before the tag**, against a
+real ref, and paste the run IDs. `FIV-002` and `FIV-003` each did this
+three times; a workflow step proven by dispatch is not a step taken on
+faith at leg 4. **If a dispatch run cannot be made to pass, stop and
+report** — that is the escalation, not a reason to ship the walk
+untested.
+
+**This makes `NFR-REL-011` `Implemented` rather than `Partial`** — on
+the jobs existing and passing, not on §5's human walk, which stays
+what it is: a one-time look at three paths that did not exist a week
+ago.
+
 ## §6 — what closes *after* the tag, and is not yours
 
 `NFR-REL-009` (five archives on the Release) and `NFR-REL-010` (a
 `ghcr.io` tag) **stay `Divergent` in this candidate.** `NFR-REL-011`
-(the documented paths exercised by CI) **stays `Partial`** — the
-container path is walked, the other two are `0.54.0`'s. §5's walk is
-evidence for this release, not a status change: **a human walking a
-path is not the job this entry requires.** Their artefacts
+(the documented paths exercised by CI) moves to **`Implemented`** on
+§5b's two new jobs — **on the jobs, not on §5's walk**: a human
+walking a path is not what that entry requires, and never was. Their artefacts
 do not exist until the Release publishes and the two workflows run.
 
 **Write them as pending with the condition stated**, and leave the
@@ -168,7 +196,8 @@ document it edits and Appendix A recomputed from its rows; `§11`'s
 candidate commit with the browser gates among them; `§5`'s three-path
 walk performed and reported verbatim, with `§10.40` and
 `NFR-SEC-004` moved **only** on what it showed; `NFR-REL-009` and
-`NFR-REL-010` left `Divergent` and `NFR-REL-011` left `Partial`, each
-with its condition stated; and a
+`NFR-REL-010` left `Divergent` with their conditions stated;
+`NFR-REL-011` moved to `Implemented` **only** on §5b's jobs passing a
+real dispatch run, with the run IDs quoted; and a
 recommendation to the architect — **not a tag**. The four legs are the
 architect's, on the owner's approval.

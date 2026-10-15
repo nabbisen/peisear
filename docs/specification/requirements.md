@@ -3366,9 +3366,19 @@ each invisible to every gate because every gate tested the product
 rather than the path a reader is told to take.
 *Closing*: `release.yml` extracting its own archive and running it, as
 `image.yml` already does for the image, and the same for an installed
-binary. **Deliberately not in 0.53.0**: changing the release workflow
-days before cutting a release is risk where the consequence is
-highest, and the gap is covered once, by hand, in `REL-0.53.0` §5.
+binary — **in 0.53.0, with the release**.
+*The deferral this entry carried for one day, and why it was wrong.*
+It first read *"deliberately not in 0.53.0 — changing the release
+workflow days before cutting a release is risk where the consequence
+is highest."* **That caution was never measured.** This project's own
+method removes it: every workflow change this release has been
+exercised by `workflow_dispatch` against a real ref before it could
+ever run on a Release — `FIV-002` did it three times, `FIV-003` three
+times. A step proven by dispatch is not a step taken on faith at the
+tag. **And the release whose subject is the install paths should not
+ship with its own install paths half-guarded**; deferring the guard to
+the next release would leave 0.53.0 relying for one cycle on exactly
+the human walk this entry exists to replace.
 *Priority*: P1.
 
 **NFR-REL-008 — Published API documentation**
@@ -5619,6 +5629,62 @@ reviewing (`DisplayHealthState`'s `From` impl); one was left naming the
 inherent `clamp` it delegates to, as a recorded decision rather than a defect.
 The general rule: **when the link cannot name the method, link the type.**
 Never add an import to satisfy a documentation tool.
+
+### 10.42 A finding about one checkable property, read as a verdict on all of them — **open**, raised by the owner 2026-10-15
+
+The owner, 2026-10-15: *"My concern is that outdated, nonsensical rules
+may still be in place — relics from the work of architects who, in the
+past, created unrealistic designs — and that these rules are now
+holding us back."*
+
+**The relic found by asking is not a predecessor's. It is `REQ-003`'s
+own conclusion, read far past what it proved.** `§10.34` records that
+finding: four candidate rules against six historical instances, the
+best scoring 4 of 6, *"no text rule detects it"*. **That is true, and
+it is about one thing — whether a prose status word matches reality.**
+
+It has since been doing duty as *the specification cannot be
+machine-checked*, and the evidence that this is wrong was produced in
+three days of 0.53.0's own reviews:
+
+| defect | mechanically checkable? |
+|---|---|
+| `NFR-MNT-002` said *"six crates"*; there are seven | yes — `docs_scan` rule 1's own needle, pointed at this file |
+| Appendix A wrong in two compensating cells, so the total looked right | yes — five lines of arithmetic over its own rows |
+| `§10.41`'s heading deleted; its body absorbed into `§10.40` | yes — the citation scan already scheduled for 0.57.0 |
+| a citation to `§13` where the section was `§15` | yes — same scan |
+| *"uncommitted"* written where *"uncommented"* was meant | no — and this is the only one |
+
+**Four of five, and not one of them is a status-drift defect.**
+`REQ-003` was right about the class it measured and has been applied to
+a class it never tested.
+
+**What makes this the project's most expensive relic.** `requirements.md`
+is the most-edited and most-authoritative document here, and **no
+automated check reads it for its own consistency** — `docs_scan`'s six
+rules all target user-facing documents. Its only guard is `DEC-028`'s
+five-pass human sweep. That sweep's own record is in this document:
+*"Ten entries have now been stale in this document, nine of them the
+architect's."*
+
+**And it is the same argument the architect just used against a
+criterion of their own.** Exit criterion 9 was withdrawn on 2026-10-15
+because a recurring human walk *"varies, degrades, and produces prose
+that cannot distinguish nothing wrong from nobody looked."* **Every
+word of that applies to the five-pass sweep**, which is older, larger,
+and has a documented failure record the walk never had.
+
+**The remedy is not to replace the sweep.** `REQ-003` stands: status
+semantics need a reader. The remedy is to **stop the sweep being the
+only guard** — each mechanical property moved into a check is one
+fewer thing a person must catch by eye, and the sweep gets to spend
+its attention on the part that genuinely needs judgement.
+
+*Scheduled*: a `spec_scan` over this document's own checkable
+properties, with `0.57.0`'s citation scan as its first rule. The
+bounds matter as much as the rules — **a scan that tries to read a
+status word is `REQ-003`'s rejected design rebuilt**, and must be
+refused on the same evidence.
 
 ### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; seven instances
 
