@@ -3875,8 +3875,13 @@ that would fit.
 counts come from per-crate and per-target runs, and under a single
 `cargo test --workspace` the suite fails roughly one run in two for reasons
 unrelated to any requirement (§10.13). That is fixed. The counts above hold
-under both procedures, and three consecutive `cargo test --workspace` runs are
-now part of the release gate.
+under both procedures, and three consecutive `cargo test --workspace` runs
+were made part of the release gate at 0.22.0.
+*Withdrawn 2026-10-15 (`§10.43`, owner-authorized)*: that practice is
+retired, measured at **0 of 6** detections on a quiet machine. **This
+sentence is left standing with its correction rather than deleted** —
+it is the record of why the gate existed, and a reader meeting the
+0.22.0 note elsewhere should find out here that it no longer holds.
 
 **A convention adopted at 0.26.0 from `QA-004`, discharged at 0.27.0.** The
 facade's single test is a doctest, so `cargo test -p peisear --lib` reports
@@ -5677,6 +5682,21 @@ named in `CONTRIBUTING.md` as a gap rather than papered over, because
 `§10.36`'s objection applies to the retired practice as much as to any
 scan: a check that cannot distinguish *nothing wrong* from *nothing
 examined* is worse than a stated absence.
+
+**Authorized by the owner, 2026-10-15.** Retiring a standing rule is a
+decision, not a tidy-up; the architect measured and proposed, the owner
+authorized, and this line is where that is recorded rather than implied
+by a commit.
+
+**And the retirement immediately proved the other half of `§10.42`'s
+point.** `§5` of this document carried *"three consecutive
+`cargo test --workspace` runs are now part of the release gate"* — a
+present-tense claim about a gate that had just stopped existing. It was
+found by grepping for the retired phrase, and **no scan planned for
+0.57.0 would have caught it**: it is prose semantics, `REQ-003`'s own
+class. The sweep has real work that automation will not cover, which is
+exactly why `§10.42` argues for narrowing what the sweep must carry
+rather than replacing it.
 
 **The class, which is what this entry is for.** `§10.42` records a
 finding read past its evidence. This is its neighbour: **a reason
