@@ -110,6 +110,48 @@ jobs:
       - run: node browser-checks/undo-mousedown-trap.mjs
       - run: node browser-checks/drag-outcome-gate.mjs
 
+  # NFR-REL-011: README.md's third install path (`cargo install
+  # peisear`) exercised end to end by CI, on the artefact that path
+  # actually delivers -- installed to a scratch root, then run from a
+  # directory outside the checkout, reaching an authenticated session.
+  # `FIV-005`'s own manual walk (install, confirm the assets serve) is
+  # the precedent; this is that walk as a job that runs on every push
+  # and PR, not a recollection of one performed once by hand. `$RUNNER_
+  # TEMP` is GitHub's own documented scratch directory outside
+  # `$GITHUB_WORKSPACE` -- running from there, not from a subdirectory
+  # of the checkout, is what makes this "outside the repository" and
+  # not merely "a different folder inside it."
+  test-install-walk:
+    name: cargo install walk (NFR-REL-011)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: cargo install --path, to a scratch root
+        run: cargo install --path crates/peisear --root "$HOME/install-walk"
+      - name: Walk it -- run from outside the repository, register, create a project
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/install-walk-run"
+          cd "$RUNNER_TEMP/install-walk-run"
+          "$HOME/install-walk/bin/peisear" > peisear-walk.log 2>&1 &
+          pid=$!
+          trap 'cat peisear-walk.log; kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:3000/health
+          cookie_jar=cookies.txt
+          code=$(curl -s -o /dev/null -w '%{http_code}' -c "$cookie_jar" \
+            --data-urlencode "email=walk@example.com" \
+            --data-urlencode "password=a-real-walk-password-123" \
+            --data-urlencode "display_name=Walk" \
+            http://127.0.0.1:3000/register)
+          echo "register: $code"
+          [ "$code" = "303" ] || { echo "::error::register did not redirect (303), got $code"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' -b "$cookie_jar" http://127.0.0.1:3000/projects)
+          echo "authenticated /projects: $code"
+          [ "$code" = "200" ] || { echo "::error::session from register did not authenticate, got $code"; exit 1; }
+
   # Build and test each test target individually rather than running
   # `cargo test --workspace` in one go. The combined build links many
   # large crates (sqlx + leptos + axum + wasm-smtp family) and has

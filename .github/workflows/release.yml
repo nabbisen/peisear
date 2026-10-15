@@ -166,6 +166,69 @@ jobs:
           Compress-Archive -Path "dist/peisear.exe" -DestinationPath "$name.zip" -Force
           echo "ARCHIVE_NAME=$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
+      # NFR-REL-011: the archive this job just built, extracted and run
+      # from a scratch directory, reaching an authenticated session --
+      # same shape as `image.yml`'s own "Walk it" step, not gated on
+      # `release.published` so it runs on every dispatch too. All five
+      # targets build natively on a runner that already matches their
+      # OS/arch (this file's own top comment), so the binary this step
+      # runs is directly executable here, no emulation needed. `trap`,
+      # not a line at the end of the script, for the same reason
+      # `image.yml`'s own comment gives: a failure before the last line
+      # must still leave something to diagnose with.
+      - name: Walk it -- extract, run, register, create a project (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p walk && cd walk
+          tar xzf "../${ARCHIVE_NAME}"
+          chmod +x peisear
+          ./peisear > ../peisear-walk.log 2>&1 &
+          pid=$!
+          trap 'cat ../peisear-walk.log; kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:3000/health
+          cookie_jar=cookies.txt
+          code=$(curl -s -o /dev/null -w '%{http_code}' -c "$cookie_jar" \
+            --data-urlencode "email=walk@example.com" \
+            --data-urlencode "password=a-real-walk-password-123" \
+            --data-urlencode "display_name=Walk" \
+            http://127.0.0.1:3000/register)
+          echo "register: $code"
+          [ "$code" = "303" ] || { echo "::error::register did not redirect (303), got $code"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' -b "$cookie_jar" http://127.0.0.1:3000/projects)
+          echo "authenticated /projects: $code"
+          [ "$code" = "200" ] || { echo "::error::session from register did not authenticate, got $code"; exit 1; }
+
+      - name: Walk it -- extract, run, register, create a project (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path walk | Out-Null
+          Expand-Archive -Path $env:ARCHIVE_NAME -DestinationPath walk -Force
+          Push-Location walk
+          $proc = Start-Process -FilePath .\peisear.exe -RedirectStandardOutput ..\peisear-walk-out.log -RedirectStandardError ..\peisear-walk-err.log -PassThru
+          try {
+            $ok = $false
+            for ($i = 0; $i -lt 30; $i++) {
+              try { Invoke-WebRequest -Uri http://127.0.0.1:3000/health -UseBasicParsing | Out-Null; $ok = $true; break } catch { Start-Sleep -Seconds 1 }
+            }
+            if (-not $ok) { throw "health check never came up" }
+            $body = @{ email = "walk@example.com"; password = "a-real-walk-password-123"; display_name = "Walk" }
+            $resp = Invoke-WebRequest -Uri http://127.0.0.1:3000/register -Method Post -Body $body -SessionVariable session -MaximumRedirection 0 -SkipHttpErrorCheck
+            Write-Host "register: $($resp.StatusCode)"
+            if ($resp.StatusCode -ne 303) { throw "register did not redirect (303), got $($resp.StatusCode)" }
+            $resp2 = Invoke-WebRequest -Uri http://127.0.0.1:3000/projects -WebSession $session -SkipHttpErrorCheck
+            Write-Host "authenticated /projects: $($resp2.StatusCode)"
+            if ($resp2.StatusCode -ne 200) { throw "session from register did not authenticate, got $($resp2.StatusCode)" }
+          } finally {
+            Get-Content ..\peisear-walk-out.log, ..\peisear-walk-err.log -ErrorAction SilentlyContinue
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            Pop-Location
+          }
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.target }}

@@ -161,7 +161,6 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| **0.53.0** | **The first five minutes.** Prebuilt binaries and a container image, so starting peisear does not begin with installing a compiler — **and the published signing key deleted**, which is why the security round goes first | `RFC 017` (**Accepted**, 2026-10-14), [handoffs 046](rfcs/handoffs/046-the-first-five-minutes/README.md) | **Authorized 2026-10-14 (six rounds, re-authorized 2026-10-15). In progress.** `FIV-001` **closed on the code** — rounds 1, 2 and 3 all accepted; `§10.40` and `NFR-SEC-004` stay open on `.env.example`'s own state, which **exit criterion 9 establishes at the tag** rather than anyone tracking it. **Order: `FIV-005` → `FIV-002` → `FIV-003` → `FIV-004`, with `FIV-006` any time.** `FIV-005` **closed** (three rounds) and `FIV-002` **closed** (two). **All six rounds closed** (2026-10-15). `REL-0.53.0`'s candidate is the architect's and is next. **`NFR-REL-009` and `NFR-REL-010` are both new and both `Divergent`** — archives attached to a Release and a tag on `ghcr.io` — and 0.53.0's own Release is the first thing that can close either, since neither publish path can fire from `workflow_dispatch`. `FIV-005` gates the two artefact rounds because embedding `static/` changes what an archive and an image contain — recorded 2026-10-15 after the dev team stopped to ask rather than guessing, and correcting this row's own earlier claim that it blocked nothing |
 | 0.54.0 | **The dialect seam.** `RFC 018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.55.0 | **PostgreSQL's schema.** `RFC 018` P3 — migrations ported, triggers re-implemented | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.56.0 | **The conformance suite.** `RFC 018` P4 — one suite against both backends in CI, and the operations story | `RFC 018` §6 | Authorized 2026-10-14 |
@@ -173,9 +172,11 @@ lands ahead of it, and the change is recorded here rather than argued
 from memory.
 
 **Shipped and removed from this table**: `0.52.0` (the guards
-themselves) on 2026-10-14. A row leaves when the release is cut; what
-it contained is in `CHANGELOG.md` and in the specification's own
-baseline rows, which is where release history belongs.
+themselves) on 2026-10-14; `0.53.0` (the first five minutes) on
+2026-10-15, as `REL-0.53.0`'s own candidate. A row leaves when the
+release is cut; what it contained is in `CHANGELOG.md` and in the
+specification's own baseline rows, which is where release history
+belongs.
 
 **Why `RFC 017` moved off 0.52.0, kept for the record.** `RFC 018 §8` was written when the
 answer was *"0.51.0 is documentation accuracy and 0.52.0 is `RFC

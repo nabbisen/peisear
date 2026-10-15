@@ -1,14 +1,18 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.52.0` (**nothing a user can see or run
-differently — the third release running with none; what changed is the
-checking.** `strip_line_comments` reduced from six copies to one,
-reversing `NFR-A11Y-007`'s own blind spot on five component files;
-`NFR-MNT-005` reaches `Implemented` with a measured live count of zero,
-`§10.37` closed; rule 5 (`docs_scan`) widened from matching a literal
-path to a shape, closing 64 bare-name citations of the private area it
-had never seen, `§10.39`; implementation through `0.52.0`)
+**Covers release**: `0.53.0` (**the first five minutes of installing
+and starting peisear.** The published `JWT_SECRET` fallback is
+deleted — a signing key is generated and persisted instead, startup
+refuses the `.env.example` placeholder and an empty secret, and
+`BIND_ADDR` defaults to loopback; three real install paths (archive,
+container image, `cargo install`) ship where only build-from-source
+did; `static/` is embedded into the binary, closing `§10.41`; and
+`NFR-REL-011`'s two missing CI walks — `release.yml` extracting and
+running its own archive, `cargo install` run from outside the
+checkout — are built and exercised. `NFR-REL-009` and `NFR-REL-010`
+stay `Divergent`: their publish paths cannot fire outside a real
+Release; implementation through `0.53.0`)
 **Supersedes**: [`history/peisear-0.20.0-requirements-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.20.0-requirements-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 and through it
@@ -16,7 +20,7 @@ and through it
 (on GitHub; excluded from this book, see `docs/README.md`).
 Both retained unedited as the record of their releases
 **Language**: English (normative)
-**Prepared**: 2026-07-27 · **Amended**: 2026-10-14 (0.52.0)
+**Prepared**: 2026-07-27 · **Amended**: 2026-10-15 (0.53.0)
 **Location**: `docs/specification/requirements.md`. **This document is the
 normative source of truth** — English only, placed 2026-09-24 (`DEC-020`,
 closed). See [the directory README](./README.md) for how its citations

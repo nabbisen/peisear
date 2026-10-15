@@ -11,6 +11,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.53.0] — 2026-10-15
+
+**The first five minutes of using peisear, end to end.** `RFC 017`:
+generate a signing key instead of shipping one in every copy of the
+source, give a newcomer three real ways to install it, and make the
+one documented path that was publishing an unstyled application
+publish the real thing.
+
+### Security
+
+- **The published `JWT_SECRET` fallback is gone.** An instance started
+  without `JWT_SECRET` set used to sign every session cookie with the
+  literal `config.rs` carried in the public repository. It now
+  generates 32 random bytes, persists them beside the resolved
+  database path, and fails loudly — rather than silently falling back
+  on a missing-and-unwritable or corrupted key file — if that cannot
+  be done (`FIV-001`). `BIND_ADDR` now defaults to `127.0.0.1:3000`
+  rather than every interface, so a first run is reachable from this
+  machine only until someone chooses otherwise.
+- **An instance that starts with `.env.example`'s own placeholder
+  secret now refuses to start**, naming the remedy, rather than
+  running signed by a value anyone reading this file already knows.
+  **This is reportable, not fully closed**: `.env.example` itself
+  still ships that placeholder uncommented, and `README.md`,
+  `.github/CONTRIBUTING.md` and `docs/getting-started/configuration.md`
+  all instruct a reader to copy it — so, as of this release, following
+  that documented path still fails the refusal it was just given. The
+  one-line fix to the file is the owner's to apply; `NFR-SEC-004`
+  stays **Divergent** and `requirements.md §10.40` stays open until it
+  lands and is confirmed.
+
+### Added
+
+- **Three real ways to install peisear**, replacing a page that only
+  ever described building from source:
+  `docs/getting-started/install.md` now offers a downloaded archive,
+  `docker run`, or `cargo install`, each ending at
+  `http://localhost:3000`; the original build-from-source content
+  moved intact to `docs/getting-started/build-from-source.md`
+  (`FIV-004`).
+- **A per-platform archive on every GitHub Release** — five targets
+  (`x86_64`/`aarch64` Linux, `aarch64`/`x86_64` macOS,
+  `x86_64` Windows), built natively with no cross-compilation and no
+  third-party GitHub Action, attached after the Release already
+  exists and never gating it (`FIV-002`).
+- **A container image, `ghcr.io/nabbisen/peisear`**, built from a
+  `Dockerfile` in the repository (`gcr.io/distroless/cc-debian12`,
+  no shell, no package manager) and published alongside the Release
+  the same way, with `BIND_ADDR=0.0.0.0:3000` set by the image itself
+  (`FIV-003`).
+- **One line of plain-English output after a successful bind**,
+  naming the URL to open on loopback, or warning that the instance is
+  reachable from the network otherwise — alongside the existing
+  structured log line, not instead of it (`FIV-004`).
+- **Both new publishing steps are exercised by `workflow_dispatch`
+  against a real ref and have never yet run against a real Release.**
+  `NFR-REL-009` (five archives attached) and `NFR-REL-010` (an image
+  pushed to `ghcr.io`) stay **Divergent** — shipped, dispatch-tested,
+  but their own `release: published` guard has not fired for real
+  yet. They close the first time an actual Release does.
+
+### Fixed
+
+- **`cargo install peisear` installed an application with no
+  stylesheets and no scripts.** `static/` sat outside every published
+  crate; `0.52.0`'s own `README.md` led a newcomer straight to it.
+  `static/` is now embedded into the binary at compile time
+  (`include_dir`), served with a computed `ETag` and
+  `Cache-Control: no-cache` rather than no caching header at all —
+  closing `requirements.md §10.41` (`FIV-005`).
+- **`install.md`'s caption named an empty project list; none of its
+  five screenshots showed one, and four duplicated the very next
+  page.** Replaced with a single capture of the real empty state
+  (`FIV-004`).
+- **`/today`, the screen `README.md` sells hardest, had never been
+  captured.** One new capture, one reused image, both in `README.md`
+  (`FIV-006`).
+
+### Internal
+
+- **`NFR-REL-011` moves from Partial to Implemented**: the documented
+  install paths are now each exercised end to end by CI, on the
+  artefact the path actually delivers, not by a human walk before a
+  tag. `image.yml` already walked the container path; this release
+  adds the other two — `release.yml` now extracts the archive it just
+  built and runs it to an authenticated session on every one of the
+  five targets, and a new `test-install-walk` job in `test.yml` does
+  the same for `cargo install`, run from outside the checkout, on
+  every push and pull request.
+- Both new CI steps were proven by `workflow_dispatch` against a real
+  ref before this release, the same method `FIV-002` and `FIV-003`
+  used for their own workflow changes — never taken on faith at the
+  tag.
+
 ## [0.52.0] — 2026-10-14
 
 **Nothing you can see changed, and nothing you run differently.** No

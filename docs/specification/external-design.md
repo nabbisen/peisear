@@ -2,14 +2,14 @@
 
 **Document type**: External design (basic design)
 **Document status**: Baseline
-**Covers release**: `0.52.0` (implementation through `0.52.0`; nothing
+**Covers release**: `0.53.0` (implementation through `0.53.0`; nothing
 this document describes changed — no screen, route, status code, copy
-string or state. See the `0.52.0` row below)
+string or state. See the `0.53.0` row below)
 **Supersedes**: [`history/peisear-0.19.1-external-design-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.19.1-external-design-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 retained unedited as the record of that release
 **Language**: English (normative)
-**Prepared**: 2026-10-07 · **Amended**: 2026-10-14 (0.52.0)
+**Prepared**: 2026-10-07 · **Amended**: 2026-10-15 (0.53.0)
 **Location**: `docs/specification/external-design.md`. **Normative**, English
 only, placed 2026-09-24 (`DEC-020`, closed). See
 [the directory README](./README.md) for how its citations resolve
@@ -2303,7 +2303,8 @@ entries about what is executed by nothing.
 | Version | Change |
 |---|---|
 | GUI v0.1 | Original GUI external specification, based on `0.16.0` |
-| **0.52.0 (this baseline)** | **No screen, no route, no status code, no copy string, no state.** `GRD-001`–`GRD-003` (the guard-infrastructure series this document's own sibling, `requirements.md`, carries in full) touched a shared scan helper, fifteen test-only files, and a documentation-citation guard — none of them externally observable, and none of them this document's subject. This row is short because there is nothing else to say. |
+| **0.53.0 (this baseline)** | **No screen, route, state or copy changed.** This release's subject is the first five minutes of installing and starting peisear — a generated signing key, three install paths, a container image, and `static/` embedded into the binary — none of which this document describes: it covers the running application's screens, routes and HTTP behaviour, not how a copy of it comes to be running. `GET /static/*` (§4.2) is still "Static assets", "Any" — what changed is the mechanism serving it and the response headers it now carries (an `ETag`, `Cache-Control: no-cache`), and this document has never tracked response headers at that granularity. The one place a user could notice anything is the one line of plain-English output after a successful bind, naming the URL to open — which is terminal output at startup, not a screen, the same exception `0.50.0`'s own row already drew for a startup log line. **Nothing here for this document to amend.** |
+| 0.52.0 | **No screen, no route, no status code, no copy string, no state.** `GRD-001`–`GRD-003` (the guard-infrastructure series this document's own sibling, `requirements.md`, carries in full) touched a shared scan helper, fifteen test-only files, and a documentation-citation guard — none of them externally observable, and none of them this document's subject. This row is short because there is nothing else to say. |
 | 0.51.0 | **One screen property changes, and `§1.1`'s own data-flow table gets a correction.** `§5.7`'s touch-target clause 4 — a `Grow` cluster needs no further verification — is amended: `DOC-005` found a `Grow`'d plain-text label sitting uncentred at the top of its 44 px box, and `components::grow_text` (the touch target plus `inline-flex items-center`) is the second mechanism this forced, for the 41 sites that are a bare label rather than a control already made a flex container by its own other classes. **A reader notices this on any project page** — the capacity hint beside `WORKLOAD` now sits level with it, not above — and on the sprint plan, whose own Backlog row no longer overflows a 320 px phone. Neither screen's own shape changed; what changed is a class composition underneath it. `§1.1`'s external-entities table corrected: *"backup is a file copy"* restated as what `NFR-CMP-003`'s own amendment says — the file is the unit, `.backup` while running, a plain copy once stopped. **No route, no new screen, no copy string.** |
 | 0.50.0 | **No screen, route, state or copy changed.** This release's subject is the storage contract and the process boundary, neither of which this document describes: a lock token's resolution, a commit's fsync guarantee, a startup log line, a security document's threat model, and a test-register entry. The one place a user could notice anything is the startup log, which is not a screen. **Nothing here for this document to amend.** |
 | 0.49.0 | **One word, on every screen.** The navbar brand and seven page-title suffixes read **"Issue Tracker"** since before this document existed; they read **`peisear`** now (`RFC 016`, lowercase, matching the crate). **No layout, route, state or interaction changed** — this is the one release in this document's history whose only visible change is a string, repeated. **Three screens are pictured for the first time**: the board, the list view and an issue detail now have a generated screenshot in `README.md` and `docs/getting-started/first-run.md`, captured by the same harness that drives the browser gates rather than hand-taken — **the screens themselves are unchanged**; what changed is that a reader can now see one without running the product. **Not drawn from this document**: the fixture strings and the issue-detail caption the first captures got wrong were found by looking at the pictures, not by reading this specification — this document describes the product's screens, not a documentation script's test data |

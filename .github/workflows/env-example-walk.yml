@@ -1,0 +1,70 @@
+name: Env Example Walk
+
+# REL-0.53.0 §5: the one walk nobody here can perform by reading the
+# file. `NFR-SEC-004`/`§10.40` stays open on `.env.example`'s own
+# state, and no tool in this project may read a `.env*` path -- not
+# even by routing around the rule with `git show` or a copy to an
+# intermediate file (`FIV-001` round 2's own ruling). This job never
+# reads the file either: it copies it, as the documented path
+# instructs, and reports only whether the server then runs or
+# refuses -- the job's own pass/refuse log output is the entire
+# answer.
+#
+# Deliberately `workflow_dispatch` only, no `push`/`pull_request`: for
+# as long as `.env.example` ships the published placeholder, a
+# refusal here is correct behaviour, not a failure to fix -- a job
+# that runs on every push would turn every future PR red for a reason
+# that has nothing to do with the PR. This is the one-time walk `§5`
+# asks for, not a permanent gate (`NFR-REL-011`'s own CI jobs are the
+# permanent form of "the documented paths work"; this one is about a
+# single file's content, which those jobs do not and should not read
+# either).
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag, or commit to walk.
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+jobs:
+  walk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      # The exact two commands `docs/getting-started/configuration.md`
+      # and `.github/CONTRIBUTING.md` both document.
+      - name: cp .env.example .env, then cargo run --release -p peisear
+        run: |
+          set +e
+          cp .env.example .env
+          cargo build --release -p peisear
+          ./target/release/peisear > peisear-walk.log 2>&1 &
+          pid=$!
+          started=0
+          for i in $(seq 1 15); do
+            if ! kill -0 "$pid" 2>/dev/null; then
+              break
+            fi
+            if curl -sf http://127.0.0.1:3000/health > /dev/null 2>&1; then
+              started=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$started" = "1" ]; then
+            echo "RESULT: started"
+            kill "$pid" 2>/dev/null
+          else
+            echo "RESULT: did not start (refused, or exited, or never bound -- see the log below)"
+          fi
+          echo "--- peisear-walk.log (the running binary's own stdout/stderr; .env's content is never printed by this job) ---"
+          cat peisear-walk.log
