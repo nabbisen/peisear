@@ -19,7 +19,7 @@ project communication.
 ## Development setup
 
 1. Install `rustc` **1.88 or later** — see
-   [docs/getting-started/installation.md](../docs/getting-started/installation.md).
+   [docs/getting-started/build-from-source.md](../docs/getting-started/build-from-source.md).
 2. Clone the workspace and run the test suite:
    ```bash
    cargo check --workspace

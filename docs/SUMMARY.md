@@ -5,7 +5,8 @@
 # Getting Started
 
 - [Overview](getting-started/README.md)
-- [Installation](getting-started/installation.md)
+- [Install](getting-started/install.md)
+- [Build from source](getting-started/build-from-source.md)
 - [Configuration](getting-started/configuration.md)
 - [First run](getting-started/first-run.md)
 

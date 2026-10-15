@@ -7,8 +7,10 @@ organised by what you're trying to do.
 
 You're new here and want to run peisear.
 
-- [Installation](getting-started/installation.md) — getting Rust and
-  the workspace onto a machine
+- [Install](getting-started/install.md) — a prebuilt binary, a
+  `docker run`, or `cargo install` if you already have Rust
+- [Build from source](getting-started/build-from-source.md) — for
+  contributors, or to read/change the code rather than just run it
 - [Configuration](getting-started/configuration.md) — environment
   variables and `.env`
 - [First run](getting-started/first-run.md) — build, launch, register,

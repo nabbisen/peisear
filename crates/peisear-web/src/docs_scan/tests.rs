@@ -104,7 +104,9 @@ fn rule_1b_catches_a_stale_count_in_crate_boundaries_heading() {
 #[test]
 fn rule_2_catches_a_stale_msrv_sentence() {
     let mut r = real();
-    r.installation = r.installation.replace("1.88 or later", "1.85 or later");
+    r.build_from_source = r
+        .build_from_source
+        .replace("1.88 or later", "1.85 or later");
     let v = only(run(&r), "rule 2:");
     assert!(v.iter().any(|m| m.contains("1.85")), "got {v:?}");
 }
@@ -124,7 +126,9 @@ fn rule_2_catches_a_stale_msrv_in_contributing() {
 #[test]
 fn rule_2_catches_a_stale_verify_block() {
     let mut r = real();
-    r.installation = r.installation.replace("# rustc 1.88.x", "# rustc 1.85.x");
+    r.build_from_source = r
+        .build_from_source
+        .replace("# rustc 1.88.x", "# rustc 1.85.x");
     let v = only(run(&r), "rule 2:");
     assert!(v.iter().any(|m| m.contains("rustc 1.85.x")), "got {v:?}");
 }

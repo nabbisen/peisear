@@ -78,6 +78,30 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = config.bind_addr.parse()?;
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!(%addr, "listening");
+
+    // `RFC 017` barrier 5 / `FIV-004` §2: a plain-words line on a
+    // successful bind, after the structured record above rather than
+    // in place of it -- that line is the record a log aggregator
+    // reads; this one is for whoever is watching the terminal
+    // directly, on their first run, with nobody else's output to
+    // tell the two apart by. `0.0.0.0` is correct and also the thing
+    // a first-time reader has to translate into `localhost`
+    // themselves, which is the barrier this removes -- printed only
+    // once binding has actually succeeded, so it is never shown by a
+    // process that failed to start.
+    if addr.ip().is_loopback() {
+        println!("  → http://localhost:{}", addr.port());
+    } else {
+        // Loopback stopped being the default the moment `BIND_ADDR`
+        // is set to anything else (`FIV-001`), which after this
+        // release only happens deliberately -- an operator's own
+        // choice, or the container image's own `ENV` (`FIV-003`).
+        // `0.0.0.0` itself is not a URL anyone can open, so this
+        // names the fact rather than offering a link that would not
+        // work.
+        println!("  Listening on {addr} -- reachable from the network, not just this machine.");
+    }
+
     axum::serve(listener, app).await?;
 
     Ok(())

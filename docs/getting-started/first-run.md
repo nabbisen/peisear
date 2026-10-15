@@ -1,6 +1,6 @@
 # First Run
 
-With [Rust installed](installation.md) and a [`.env`](configuration.md)
+With [Rust installed](build-from-source.md) and a [`.env`](configuration.md)
 in place, a working peisear instance is one command away.
 
 ## Launch
@@ -20,13 +20,17 @@ cargo run --release
 
 The first build compiles the full dependency graph (Leptos plus
 axum plus sqlx is roughly 300 crates); expect ~10 minutes on a
-cold cache. Subsequent runs are instant.
+cold cache. Subsequent runs are fast, not instant — a `--release`
+rebuild after you've edited something still has to recompile whatever
+you changed and relink the binary, seconds rather than minutes but not
+nothing.
 
 You should see:
 
 ```
 2026-04-24T… INFO peisear: starting peisear database=sqlite://data/app.db addr=127.0.0.1:3000
 2026-04-24T… INFO peisear: listening addr=127.0.0.1:3000
+  → http://localhost:3000
 ```
 
 Open <http://localhost:3000>.

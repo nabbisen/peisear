@@ -13,10 +13,12 @@
 //!    *count*, in the four fixed phrase shapes the documents use for it
 //!    -- `docs/README.md` included, which rule 1 itself still does not
 //!    read (it has no crate to be missing; it only ever claims a count).
-//! 2. MSRV claims, against `Cargo.toml`'s `rust-version` -- `installation.md`
-//!    and, since `DOC-004`, `.github/CONTRIBUTING.md`, which cites
-//!    `installation.md` but carried its own copy of the number and had
-//!    drifted independently.
+//! 2. MSRV claims, against `Cargo.toml`'s `rust-version` --
+//!    `build-from-source.md` (`installation.md` until `FIV-004` split
+//!    it from the Install page the MSRV sentence has nothing to do
+//!    with) and, since `DOC-004`, `.github/CONTRIBUTING.md`, which
+//!    cites it but carried its own copy of the number and had drifted
+//!    independently.
 //! 3. `deployment.md`'s *What to ship* manifest against `static/`'s actual
 //!    contents, exhaustively in both directions: nothing the manifest
 //!    lists is missing from `static/`, and nothing in `static/` is
@@ -352,7 +354,7 @@ pub(crate) struct Input<'a> {
     pub crate_boundaries: &'a str,
     pub docs_readme: &'a str,
     pub cargo_toml: &'a str,
-    pub installation: &'a str,
+    pub build_from_source: &'a str,
     pub contributing: &'a str,
     pub static_files: Vec<String>,
     pub deployment: &'a str,
@@ -431,15 +433,18 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         ),
     }
 
-    // Rule 2, live: MSRV claims match Cargo.toml -- installation.md and,
-    // since DOC-004, CONTRIBUTING.md, which cites installation.md but
-    // carries its own copy of the number and drifted independently
-    // (`DOC-004` found it at 1.85 while Cargo.toml had moved to 1.88).
-    // Reworded to the same `**X.Y or later**` shape so one parser
-    // serves both documents rather than adding a second pattern.
+    // Rule 2, live: MSRV claims match Cargo.toml -- build-from-source.md
+    // (installation.md until FIV-004 split the page; the MSRV sentence
+    // moved with it, since it's a build-time requirement, not something
+    // the Install page's three paths need) and, since DOC-004,
+    // CONTRIBUTING.md, which cites it but carries its own copy of the
+    // number and drifted independently (`DOC-004` found it at 1.85
+    // while Cargo.toml had moved to 1.88). Reworded to the same
+    // `**X.Y or later**` shape so one parser serves both documents
+    // rather than adding a second pattern.
     let msrv = rust_version_major_minor(input.cargo_toml);
     for (doc_name, doc) in [
-        ("installation.md", input.installation),
+        ("build-from-source.md", input.build_from_source),
         ("CONTRIBUTING.md", input.contributing),
     ] {
         match bold_or_later(doc) {
@@ -453,13 +458,13 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         }
     }
     for tool in ["rustc", "cargo"] {
-        match verify_block_version(input.installation, tool) {
+        match verify_block_version(input.build_from_source, tool) {
             Some(v) if v != msrv => out.push(format!(
-                "rule 2: installation.md's Verify block shows {tool} {v}.x, Cargo.toml says {msrv}"
+                "rule 2: build-from-source.md's Verify block shows {tool} {v}.x, Cargo.toml says {msrv}"
             )),
             Some(_) => {}
             None => out.push(format!(
-                "rule 2: installation.md's Verify block has no `# {tool} X.Y.x` line to check"
+                "rule 2: build-from-source.md's Verify block has no `# {tool} X.Y.x` line to check"
             )),
         }
     }
@@ -526,7 +531,7 @@ struct Real {
     crate_boundaries: String,
     docs_readme: String,
     cargo_toml: String,
-    installation: String,
+    build_from_source: String,
     contributing: String,
     static_files: Vec<String>,
     deployment: String,
@@ -545,8 +550,10 @@ fn real() -> Real {
             .expect("read crate-boundaries.md"),
         docs_readme: fs::read_to_string(root.join("docs/README.md")).expect("read docs/README.md"),
         cargo_toml: fs::read_to_string(root.join("Cargo.toml")).expect("read Cargo.toml"),
-        installation: fs::read_to_string(root.join("docs/getting-started/installation.md"))
-            .expect("read installation.md"),
+        build_from_source: fs::read_to_string(
+            root.join("docs/getting-started/build-from-source.md"),
+        )
+        .expect("read build-from-source.md"),
         contributing: fs::read_to_string(root.join(".github/CONTRIBUTING.md"))
             .expect("read CONTRIBUTING.md"),
         static_files: static_files(),
@@ -569,7 +576,7 @@ fn run(r: &Real) -> Vec<String> {
         crate_boundaries: &r.crate_boundaries,
         docs_readme: &r.docs_readme,
         cargo_toml: &r.cargo_toml,
-        installation: &r.installation,
+        build_from_source: &r.build_from_source,
         contributing: &r.contributing,
         static_files: r.static_files.clone(),
         deployment: &r.deployment,
