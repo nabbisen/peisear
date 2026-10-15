@@ -161,7 +161,7 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| **0.53.0** | **The first five minutes.** Prebuilt binaries and a container image, so starting peisear does not begin with installing a compiler — **and the published signing key deleted**, which is why the security round goes first | `RFC 017` (**Accepted**, 2026-10-14), [handoffs 046](rfcs/handoffs/046-the-first-five-minutes/README.md) | **Authorized 2026-10-14 (six rounds, re-authorized 2026-10-15). In progress.** `FIV-001` **closed on the code** — rounds 1, 2 and 3 all accepted; `§10.40` and `NFR-SEC-004` stay open on `.env.example`'s own state, which **exit criterion 9 establishes at the tag** rather than anyone tracking it. **Order: `FIV-005` → `FIV-002` → `FIV-003` → `FIV-004`, with `FIV-006` any time.** `FIV-005` **closed** (three rounds) and `FIV-002` **closed** (two). **Five of six rounds closed** — only `FIV-004` remains, and `REL-0.53.0` after it. **`NFR-REL-009` and `NFR-REL-010` are both new and both `Divergent`** — archives attached to a Release and a tag on `ghcr.io` — and 0.53.0's own Release is the first thing that can close either, since neither publish path can fire from `workflow_dispatch`. `FIV-005` gates the two artefact rounds because embedding `static/` changes what an archive and an image contain — recorded 2026-10-15 after the dev team stopped to ask rather than guessing, and correcting this row's own earlier claim that it blocked nothing |
+| **0.53.0** | **The first five minutes.** Prebuilt binaries and a container image, so starting peisear does not begin with installing a compiler — **and the published signing key deleted**, which is why the security round goes first | `RFC 017` (**Accepted**, 2026-10-14), [handoffs 046](rfcs/handoffs/046-the-first-five-minutes/README.md) | **Authorized 2026-10-14 (six rounds, re-authorized 2026-10-15). In progress.** `FIV-001` **closed on the code** — rounds 1, 2 and 3 all accepted; `§10.40` and `NFR-SEC-004` stay open on `.env.example`'s own state, which **exit criterion 9 establishes at the tag** rather than anyone tracking it. **Order: `FIV-005` → `FIV-002` → `FIV-003` → `FIV-004`, with `FIV-006` any time.** `FIV-005` **closed** (three rounds) and `FIV-002` **closed** (two). **All six rounds closed** (2026-10-15). `REL-0.53.0`'s candidate is the architect's and is next. **`NFR-REL-009` and `NFR-REL-010` are both new and both `Divergent`** — archives attached to a Release and a tag on `ghcr.io` — and 0.53.0's own Release is the first thing that can close either, since neither publish path can fire from `workflow_dispatch`. `FIV-005` gates the two artefact rounds because embedding `static/` changes what an archive and an image contain — recorded 2026-10-15 after the dev team stopped to ask rather than guessing, and correcting this row's own earlier claim that it blocked nothing |
 | 0.54.0 | **The dialect seam.** `RFC 018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.55.0 | **PostgreSQL's schema.** `RFC 018` P3 — migrations ported, triggers re-implemented | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.56.0 | **The conformance suite.** `RFC 018` P4 — one suite against both backends in CI, and the operations story | `RFC 018` §6 | Authorized 2026-10-14 |
@@ -215,8 +215,9 @@ than two.
 7. Release recommendation issued; **owner approves**.
 8. **What ships next** reconciled — the shipped row removed, the
    remaining rows' numbers and blockers correct as of the tag.
-9. **The documented start walked on the release artefact**, from a
-   clean directory, exactly as `README.md`'s Quick Start writes it —
+9. **The documented start walked on a build of the release commit**,
+   from a clean directory, exactly as `README.md`'s Quick Start writes
+   it —
    every path it offers, each one run rather than read, and what the
    first screen actually shows reported. *Added 2026-10-15.* A start
    path cannot be verified by inspecting the files it depends on;
@@ -227,6 +228,16 @@ than two.
    the first thirty seconds of doing it. **This criterion is also
    where the state of files no tool may read is established**: the
    walk either works or it does not, and nobody has to be asked.
+   *Reworded 2026-10-15, before first use.* The first draft said
+   *"on the release artefact"*, which **cannot be satisfied before the
+   tag** — the archives and the image are produced by workflows that
+   fire on `release: published`, so they do not exist until after leg
+   4. What exists beforehand is a `workflow_dispatch` build of the same
+   commit, which is what `FIV-004` actually walked. **The post-tag
+   artefacts are checked too, but that is `NFR-REL-009`'s and
+   `NFR-REL-010`'s job, not this criterion's** — a criterion that
+   cannot be met at the point it is placed is not a gate, it is a
+   contradiction.
    **Proposed by the architect 2026-10-15; awaiting the owner's
    authorization**, like criterion 8 before it. Recorded here rather
    than left implicit — a criterion that reads as settled while nobody
