@@ -232,3 +232,58 @@ it; the two actions removed, **or** a measured reason a runner needs
 one and that one pinned to a SHA; `DEC-007` unchanged at **486** and
 said to be unchanged rather than assumed; and all four gates re-run
 **after the round's last edit**.
+
+---
+
+# FIV-002 — closed at round 2, with one claim corrected
+
+**Round 2 is accepted and `FIV-002` is closed.** No round 3: the
+workflow is right, and what remains is a correction to the record,
+which is the architect's to make rather than a round's to perform.
+
+## §13 — round 1 did build against the pin; the divergence was not real
+
+Round 2's own `§2` reported, as a discovery:
+
+> *"round 1's removed `dtolnay/rust-toolchain@stable` action was
+> building the public archives against `stable`, not this project's own
+> `1.97.1` pin … the release workflow quietly didn't. Nobody had
+> measured that divergence before this round went looking."*
+
+**Checked at the review against round 1's own run log (38667002997),
+and it is not what happened.** Two lines, seconds apart, in the log the
+claim was read from:
+
+```
+info: note that the toolchain '1.97.1-x86_64-unknown-linux-gnu' is currently
+      in use (overridden by '/home/runner/work/peisear/peisear/rust-toolchain.toml')
+…
+    - 1.97.1 x86_64-unknown-linux-gnu 8bab26f4f68e0e26f0bb7960be334d5b520ea452
+…
+rustc 1.99.0 (b940084d7 2026-09-28)
+```
+
+**`rust-toolchain.toml` overrode the action, exactly as it is designed
+to.** The `rustc 1.99.0` line is the action reporting the toolchain
+*it* installed; the `cargo build` that followed used `1.97.1`, and
+rustup said so in the same log. **Round 1's archives were built with
+the project's pin.**
+
+**What was real** is the defect round 2 actually fixed: no toolchain
+was explicitly active, so rustup reached its deprecated auto-install
+path to resolve the pin. Removing the actions and naming the toolchain
+with a bare `rustup install` is the right fix, and it is right on those
+grounds alone. **The fix does not need the claim, which is why the
+claim being wrong costs nothing but the record.**
+
+**The lesson, which is the reason this section exists.** The claim was
+drawn from one line of a log whose adjacent line said the opposite.
+That is `§10.36`'s shape in its original form — a reading that cannot
+distinguish *what ran* from *what was installed* — and it arrived
+inside an otherwise exemplary round that measured three times before
+settling. **A measurement taken while chasing something else deserves
+the same second look as the one you went looking for.**
+
+*The claim also survives in two commit messages (`f7b6f10`,
+`224e390`). Those are not rewritten — history surgery costs more than
+the error does, and this section is where the record is corrected.*
