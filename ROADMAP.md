@@ -227,6 +227,11 @@ than two.
    the first thirty seconds of doing it. **This criterion is also
    where the state of files no tool may read is established**: the
    walk either works or it does not, and nobody has to be asked.
+   **Proposed by the architect 2026-10-15; awaiting the owner's
+   authorization**, like criterion 8 before it. Recorded here rather
+   than left implicit — a criterion that reads as settled while nobody
+   has agreed to it is the same defect as a status moved ahead of the
+   tree.
 
 Criterion 2 is the one that has historically failed. It is a gate,
 not an aspiration.
