@@ -3331,6 +3331,46 @@ present. One entry covering both would be satisfied by half of it.
 'release'` guard cannot fire from `workflow_dispatch`, the same
 honest gap `NFR-REL-009` carries. *Priority*: P2.
 
+**NFR-REL-011 — The documented install paths are exercised**
+Every install path `docs/getting-started/install.md` offers MUST be
+exercised end to end **by CI**, on the artefact that path actually
+delivers — the archive extracted and run, the image pulled and run,
+the installed binary run from outside the repository — each reaching
+an authenticated session. **The check is a job doing it**, not a
+person walking it before a release.
+*Source*: the owner's own reading of `0.53.0`'s three install defects,
+2026-10-15. *Status*: **Partial** — `image.yml` walks the container
+path on every run (*"Walk it — register, create a project"*, then
+volume persistence); `release.yml` builds and uploads five archives
+and **never extracts one**; `cargo install` is covered only by a
+unit-level asset test, not by running an installed binary.
+*Why this is a requirement and not a release-cycle checklist item.*
+It was first drafted as exit criterion 9 — *walk the documented start
+before every tag* — and withdrawn before first use. **A property worth
+guaranteeing is not a ritual someone performs**: a human walk varies,
+degrades, and produces prose that cannot distinguish *nothing wrong*
+from *nobody looked* (`§10.36`), which is the same argument `QA-001`
+used to retire a repeated run in favour of `test_harness_scan`. The
+property itself is not in doubt — **a reader following a written
+instruction must reach a working instance**, which is the owner's own
+*"UI/UX for users not to be confused or misunderstand"* applied to the
+first thing anyone does.
+*What it governs that its siblings do not.* `NFR-REL-009` and
+`NFR-REL-010` require the artefacts to **exist**; `NFR-CMP-002`
+requires the system to be self-hostable. **None of them requires the
+documented instructions to work.** 0.53.0 found three defects in that
+gap — an install that shipped no assets (`§10.41`), a documented copy
+that installed a published placeholder (`§10.40`), and an
+expected-output block naming an address the binary no longer binds —
+each invisible to every gate because every gate tested the product
+rather than the path a reader is told to take.
+*Closing*: `release.yml` extracting its own archive and running it, as
+`image.yml` already does for the image, and the same for an installed
+binary. **Deliberately not in 0.53.0**: changing the release workflow
+days before cutting a release is risk where the consequence is
+highest, and the gap is covered once, by hand, in `REL-0.53.0` §5.
+*Priority*: P1.
+
 **NFR-REL-008 — Published API documentation**
 The seven published crates' API documentation MUST build with no
 unresolved intra-doc links, and that MUST be enforced by an automated
@@ -6586,9 +6626,9 @@ Accepted in principle, deliberately not scheduled.
 | Security | 7 | 6 | — | — | — | 1 (`NFR-SEC-004`, `§10.40`) |
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
-| Release | 10 | 6 | 1 | — | — | 3 (1 undefined, `NFR-REL-009`, `NFR-REL-010`) |
+| Release | 11 | 6 | 2 | — | — | 3 (1 undefined, `NFR-REL-009`, `NFR-REL-010`) |
 | Compatibility | 6 | 5 | 1 | — | — | — |
-| **Non-functional total** | **68** | **52** | **5** | **0** | **2** | **9** |
+| **Non-functional total** | **69** | **52** | **6** | **0** | **2** | **9** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.

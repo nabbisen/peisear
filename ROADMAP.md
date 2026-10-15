@@ -162,7 +162,7 @@ sequence above went twenty minor versions stale.
 | Release | Theme | Governing document | State |
 |---|---|---|---|
 | **0.53.0** | **The first five minutes.** Prebuilt binaries and a container image, so starting peisear does not begin with installing a compiler — **and the published signing key deleted**, which is why the security round goes first | `RFC 017` (**Accepted**, 2026-10-14), [handoffs 046](rfcs/handoffs/046-the-first-five-minutes/README.md) | **Authorized 2026-10-14 (six rounds, re-authorized 2026-10-15). In progress.** `FIV-001` **closed on the code** — rounds 1, 2 and 3 all accepted; `§10.40` and `NFR-SEC-004` stay open on `.env.example`'s own state, which **exit criterion 9 establishes at the tag** rather than anyone tracking it. **Order: `FIV-005` → `FIV-002` → `FIV-003` → `FIV-004`, with `FIV-006` any time.** `FIV-005` **closed** (three rounds) and `FIV-002` **closed** (two). **All six rounds closed** (2026-10-15). `REL-0.53.0`'s candidate is the architect's and is next. **`NFR-REL-009` and `NFR-REL-010` are both new and both `Divergent`** — archives attached to a Release and a tag on `ghcr.io` — and 0.53.0's own Release is the first thing that can close either, since neither publish path can fire from `workflow_dispatch`. `FIV-005` gates the two artefact rounds because embedding `static/` changes what an archive and an image contain — recorded 2026-10-15 after the dev team stopped to ask rather than guessing, and correcting this row's own earlier claim that it blocked nothing |
-| 0.54.0 | **The dialect seam.** `RFC 018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet | `RFC 018` §6 | Authorized 2026-10-14 |
+| 0.54.0 | **The dialect seam.** `RFC 018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet — **plus `NFR-REL-011`'s remaining two walks**, `release.yml` extracting and running its own archive the way `image.yml` already runs its own image, and the same for an installed binary | `RFC 018` §6; `NFR-REL-011` | Authorized 2026-10-14; **the `NFR-REL-011` clause added 2026-10-15 and needs authorization.** Held out of 0.53.0 deliberately: changing the release workflow days before a tag is risk where the consequence is highest, and the gap is covered once by hand in `REL-0.53.0` §5 |
 | 0.55.0 | **PostgreSQL's schema.** `RFC 018` P3 — migrations ported, triggers re-implemented | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.56.0 | **The conformance suite.** `RFC 018` P4 — one suite against both backends in CI, and the operations story | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.57.0 | **Citations that point at nothing.** Two `docs_scan` rules over the same scanner: every `§10.N` citation in `docs/` and `rfcs/handoffs/` has a matching `### 10.N` heading, and no `RFC 0NNN` four-digit citation survives outside `docs/specification/history/` | `§10.36`'s decision (2026-10-14), and the citation-form sweep carried since 0.52.0 | **Authorized 2026-10-15.** Both are guard work, both are predicates rather than lists, and the second has been carried unplaced for two releases. Placed here rather than earlier because **guards do not displace an authorized sequence** — but ahead of `RFC 020`, because 0.52.0's own precedent is that guard infrastructure should not queue behind a feature |
@@ -215,34 +215,15 @@ than two.
 7. Release recommendation issued; **owner approves**.
 8. **What ships next** reconciled — the shipped row removed, the
    remaining rows' numbers and blockers correct as of the tag.
-9. **The documented start walked on a build of the release commit**,
-   from a clean directory, exactly as `README.md`'s Quick Start writes
-   it —
-   every path it offers, each one run rather than read, and what the
-   first screen actually shows reported. *Added 2026-10-15.* A start
-   path cannot be verified by inspecting the files it depends on;
-   three separate defects in 0.53.0 — an install that ships no assets
-   (`§10.41`), a documented copy that installs a placeholder
-   (`§10.40`), an expected-output block showing an address the binary
-   no longer binds — were each invisible to every gate and visible in
-   the first thirty seconds of doing it. **This criterion is also
-   where the state of files no tool may read is established**: the
-   walk either works or it does not, and nobody has to be asked.
-   *Reworded 2026-10-15, before first use.* The first draft said
-   *"on the release artefact"*, which **cannot be satisfied before the
-   tag** — the archives and the image are produced by workflows that
-   fire on `release: published`, so they do not exist until after leg
-   4. What exists beforehand is a `workflow_dispatch` build of the same
-   commit, which is what `FIV-004` actually walked. **The post-tag
-   artefacts are checked too, but that is `NFR-REL-009`'s and
-   `NFR-REL-010`'s job, not this criterion's** — a criterion that
-   cannot be met at the point it is placed is not a gate, it is a
-   contradiction.
-   **Proposed by the architect 2026-10-15; awaiting the owner's
-   authorization**, like criterion 8 before it. Recorded here rather
-   than left implicit — a criterion that reads as settled while nobody
-   has agreed to it is the same defect as a status moved ahead of the
-   tree.
+*There is no criterion 9.* One was drafted on 2026-10-15 — *walk the
+documented start before every tag* — and **withdrawn before first use,
+on the owner's reading of this project's own philosophy**. The property
+it wanted is real and is now `NFR-REL-011`, enforced by CI rather than
+by a person: a reader following a written instruction must reach a
+working instance. **A guarantee belongs in the specification and in a
+job that runs itself, not in a checklist someone remembers.** The
+reasoning, including what the first draft got wrong, is in that
+entry.
 
 Criterion 2 is the one that has historically failed. It is a gate,
 not an aspiration.

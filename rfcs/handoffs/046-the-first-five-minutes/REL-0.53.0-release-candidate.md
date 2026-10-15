@@ -97,7 +97,15 @@ from a round's own report:
   It passes; run it anyway, because the candidate is where that stops
   being somebody's recollection.
 
-## §5 — exit criterion 9's walk, and the one file nobody here can read
+## §5 — the one-time walk, and the one file nobody here can read
+
+*This section was written against a draft exit criterion 9, which was
+withdrawn on 2026-10-15 before first use. The walk below still happens,
+**once, for this release**, because 0.53.0 is the release that creates
+all three install paths — looking once at something new is a different
+act from looking every time at something settled. The permanent form is
+`NFR-REL-011`, which CI enforces and `0.54.0` completes.*
+
 
 **Walk the documented start on a `workflow_dispatch` build of the
 candidate commit** — all three paths in `install.md`, each run rather
@@ -125,7 +133,11 @@ did, and `§9b` was rewritten because of it.
 ## §6 — what closes *after* the tag, and is not yours
 
 `NFR-REL-009` (five archives on the Release) and `NFR-REL-010` (a
-`ghcr.io` tag) **stay `Divergent` in this candidate.** Their artefacts
+`ghcr.io` tag) **stay `Divergent` in this candidate.** `NFR-REL-011`
+(the documented paths exercised by CI) **stays `Partial`** — the
+container path is walked, the other two are `0.54.0`'s. §5's walk is
+evidence for this release, not a status change: **a human walking a
+path is not the job this entry requires.** Their artefacts
 do not exist until the Release publishes and the two workflows run.
 
 **Write them as pending with the condition stated**, and leave the
@@ -156,6 +168,7 @@ document it edits and Appendix A recomputed from its rows; `§11`'s
 candidate commit with the browser gates among them; `§5`'s three-path
 walk performed and reported verbatim, with `§10.40` and
 `NFR-SEC-004` moved **only** on what it showed; `NFR-REL-009` and
-`NFR-REL-010` left `Divergent` with their conditions stated; and a
+`NFR-REL-010` left `Divergent` and `NFR-REL-011` left `Partial`, each
+with its condition stated; and a
 recommendation to the architect — **not a tag**. The four legs are the
 architect's, on the owner's approval.
