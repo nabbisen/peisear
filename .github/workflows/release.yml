@@ -114,8 +114,19 @@ jobs:
             exit 1
           fi
 
-      - name: Install the target
-        run: rustup target add ${{ matrix.target }}
+      # Measured against a real run before this line existed: none of
+      # the five runners had an active toolchain selected, so
+      # `rustup target add` alone fell through to an undocumented
+      # auto-install rustup itself warns is deprecated ("the missing
+      # active toolchain ... has been auto-installed ... scripts
+      # relying on this behavior may stop working in the future" --
+      # https://github.com/rust-lang/rustup/issues/4836). `rustup
+      # install stable` first makes that toolchain active explicitly,
+      # the way rustup's own warning says to.
+      - name: Install the toolchain and target
+        run: |
+          rustup install stable
+          rustup target add ${{ matrix.target }}
 
       - name: Build
         run: cargo build --release --target ${{ matrix.target }} -p peisear
