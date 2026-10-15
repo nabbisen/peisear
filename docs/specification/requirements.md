@@ -3397,6 +3397,22 @@ cloud provider.
 *Source*: `KICK §7`. *Status*: **Implemented, and verified without network
 egress** (`ASSET-001`, 0.32.0). *Priority*: P1.
 
+*Amended (0.53.0, `FIV-003`)*: a container image is a second hosting
+shape this entry now covers, checked against, not assumed to inherit
+the bare binary's own verification automatically. **What carries
+over**: the image embeds the identical binary `ASSET-001` already
+verified egress-free (`static/` compiled in since `FIV-005`, SQLite
+bundled, no CDN reachable or reached) — the container boundary adds no
+new network dependency, since nothing about packaging a binary into an
+image changes what that binary does at runtime. **What was and was not
+tested here**: the image was built and walked with normal runner
+network access, not with egress to the public internet specifically
+blocked and re-measured the way `ASSET-001`'s own browser-level test
+blocked the two CDNs. The claim above rests on the binary being
+unchanged, not on a second, container-specific egress measurement —
+named as the boundary of what this round checked, not folded into the
+status as if it had been re-run.
+
 *This status rested on an untested assumption until 2026-09-08.* Measured with
 both CDNs blocked, the application rendered **unstyled**: `.btn` 44 px → 17 px,
 the type falling back to Times New Roman, the account menu unable to collapse.
