@@ -95,6 +95,11 @@ jobs:
           code=$(curl -s -o /dev/null -w '%{http_code}' -b "$COOKIE_JAR" http://localhost:3000/projects)
           echo "authenticated /projects: $code"
           [ "$code" = "200" ] || { echo "::error::session from register did not authenticate, got $code"; exit 1; }
+          # FIV-003's own README reports this as reasoned, not
+          # independently confirmed -- confirming it directly here
+          # instead of leaving that claim resting on reasoning alone.
+          echo "--- host-side $PWD/data, after a real run ---"
+          find "$PWD/data" -maxdepth 3
 
       # FIV-003 §1: the database and FIV-001's generated key live in
       # the same volume. If the volume did not actually persist the
