@@ -3202,9 +3202,28 @@ release binary **and nothing else** — no `static/` directory beside
 it. `static/`'s eight files are embedded into the binary at compile
 time (`§10.41`), so an archive that also carried a `static/` directory
 would carry the same bytes twice, once inside the binary and once
-beside it, for nothing any running instance reads. `FIV-002` verifies
-this layout by extracting the archives it builds, since this entry's
-own status rested on no release ever having shipped one.
+beside it, for nothing any running instance reads.
+
+*Amended (0.53.0, `FIV-002`)*: `.tar.gz` for the four Unix targets,
+`.zip` for Windows — the requirement was silent on format, and this
+is the near-universal convention for a Rust binary release (the same
+choice ripgrep, fd and most of the ecosystem make), not a second
+ambiguity being quietly resolved. **This entry's status now rests on
+an extraction, not an assumption**: `.github/workflows/release.yml`'s
+`workflow_dispatch` path, exercised against the `0.52.0` tag
+2026-10-15, produced five archives (`x86_64-unknown-linux-gnu`,
+`aarch64-unknown-linux-gnu`, `aarch64-apple-darwin`,
+`x86_64-apple-darwin`, `x86_64-pc-windows-msvc`), each downloaded and
+extracted: one file at the archive root in every case (`peisear` or
+`peisear.exe`), named with the `0.52.0` version suffix, no
+intermediate directory. The `x86_64-unknown-linux-gnu` binary was also
+run directly (this machine's own architecture) and answered `GET
+/health` with `200`. **Still unexercised**: the `release: published`
+upload path itself — `gh release upload`, gated on that event, cannot
+fire without a real Release, and this round does not cut one. What
+would show it working: the next real 0.53.0 (or later) Release, its
+own Actions run for this workflow showing the `Attach to Release` step
+green, and the five assets visible on the Release page afterward.
 
 **NFR-REL-003 — Release cadence**
 Releases MUST be cut at logical boundaries — a resolved RFC, a completed
