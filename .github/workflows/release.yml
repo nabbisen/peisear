@@ -114,18 +114,24 @@ jobs:
             exit 1
           fi
 
-      # Measured against a real run before this line existed: none of
-      # the five runners had an active toolchain selected, so
-      # `rustup target add` alone fell through to an undocumented
-      # auto-install rustup itself warns is deprecated ("the missing
-      # active toolchain ... has been auto-installed ... scripts
-      # relying on this behavior may stop working in the future" --
-      # https://github.com/rust-lang/rustup/issues/4836). `rustup
-      # install stable` first makes that toolchain active explicitly,
-      # the way rustup's own warning says to.
+      # Measured against two real runs before this line reached its
+      # current form. First: none of the five runners had an active
+      # toolchain selected, so `rustup target add` alone fell through
+      # to an undocumented auto-install rustup itself warns is
+      # deprecated (rust-lang/rustup#4836). Second: `rustup install
+      # stable` "fixed" that for the wrong toolchain -- this
+      # repository's own `rust-toolchain.toml` pins `1.97.1`, which
+      # `rustup target add` resolves to once it is run inside the
+      # checked-out tree, so installing `stable` (1.99.0 at measurement
+      # time) left `1.97.1` still unresolved and the same warning fired
+      # for it instead. Bare `rustup install`, with no channel named,
+      # installs whatever `rust-toolchain.toml` specifies -- the same
+      # pinned version `test.yml`'s fmt/clippy jobs already build
+      # against, so the release binary is built with the toolchain this
+      # project actually targets, not merely "whatever stable is".
       - name: Install the toolchain and target
         run: |
-          rustup install stable
+          rustup install
           rustup target add ${{ matrix.target }}
 
       - name: Build
