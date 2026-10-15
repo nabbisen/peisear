@@ -5,14 +5,20 @@
 //! `cargo install peisear` publishes no `static/` directory alongside
 //! the installed binary (`static_js_scan.rs`'s own measurement,
 //! `cargo package -p peisear --list`: seven files, none of them
-//! under `static/`) -- so a filesystem [`tower_http::services::ServeDir`]
-//! 404s on every path, on every installed copy. The content has to
-//! already be inside the binary by the time a request for it arrives.
+//! under `static/`) -- so a filesystem `tower_http::services::ServeDir`
+//! (this round's own predecessor here, dropped along with the
+//! `fs` feature that provided it) 404s on every path, on every
+//! installed copy. The content has to already be inside the binary by
+//! the time a request for it arrives.
+
+use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
+use std::sync::LazyLock;
 
 use axum::{
     body::Body,
     extract::Path,
-    http::{StatusCode, header},
+    http::{HeaderMap, StatusCode, header},
     response::{IntoResponse, Response},
 };
 use include_dir::{Dir, include_dir};
@@ -22,6 +28,78 @@ use include_dir::{Dir, include_dir};
 /// [`crate::static_js_scan`] already resolves at runtime for its own,
 /// separate reasons -- one real path, read two different ways.
 static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../static");
+
+/// One strong `ETag` per embedded file, computed once at first use and
+/// cached for the rest of the process's life (`FIV-005` round 2 `§9`:
+/// hashing 2.93 MB on every request trades bandwidth for CPU, which is
+/// not the point of caching at all). Keyed on the same relative path
+/// [`serve`] receives, so the lookup is a hash-map hit, not a second
+/// walk of the embedded tree.
+static ETAGS: LazyLock<HashMap<&'static str, String>> = LazyLock::new(|| {
+    STATIC_DIR
+        .files()
+        .map(|f| (f.path().to_str().unwrap(), etag_for(f.contents())))
+        .collect()
+});
+
+/// A strong `ETag` over `bytes`: quoted, and any byte difference
+/// changes it (`DefaultHasher`/`SipHash`, not a cryptographic hash --
+/// this tag only ever has to distinguish one build's embedded content
+/// from another's within one running process, never resist a chosen-
+/// input attacker, so std's own hasher is the whole dependency this
+/// needs).
+fn etag_for(bytes: &[u8]) -> String {
+    let mut hasher = std::collections::hash_map::DefaultHasher::new();
+    bytes.hash(&mut hasher);
+    format!("\"{:016x}\"", hasher.finish())
+}
+
+/// Does `headers`' `If-None-Match` (RFC 7232 §3.2) already name
+/// `etag`? `*` matches any existing representation -- the caller only
+/// reaches this once a file is confirmed to exist, so `*` is always a
+/// match here. Otherwise a comma-separated list of quoted tags, any
+/// one of which matching is enough.
+fn if_none_match_matches(headers: &HeaderMap, etag: &str) -> bool {
+    let Some(value) = headers
+        .get(header::IF_NONE_MATCH)
+        .and_then(|v| v.to_str().ok())
+    else {
+        return false;
+    };
+    value
+        .split(',')
+        .map(str::trim)
+        .any(|candidate| candidate == "*" || candidate == etag)
+}
+
+/// `304 Not Modified`: the `ETag` repeated so the client knows which
+/// representation was revalidated, and no body -- a body on a 304 is
+/// the defect this round exists to close, with extra steps.
+fn not_modified(etag: &str) -> Response {
+    (StatusCode::NOT_MODIFIED, [(header::ETAG, etag.to_string())]).into_response()
+}
+
+/// `200 OK` with the asset's content type, its `ETag`, and
+/// `Cache-Control: no-cache` -- **store the body, but always
+/// revalidate before using it** (`FIV-005` round 2 `§9`'s own
+/// constraint): `/static/app.css` is the same URL forever, so a
+/// `max-age` would serve a stale stylesheet against a newer page for
+/// however long it lasted, and that failure mode -- a half-styled
+/// page after an upgrade, cleared only by a hard refresh the user does
+/// not know to perform -- is worse than the slow load this round
+/// closes. `no-cache` keeps every navigation's body off the wire
+/// (via a 304) without ever risking that window.
+fn cached_response(content_type: &'static str, etag: &str, body: Body) -> Response {
+    (
+        [
+            (header::CONTENT_TYPE, content_type.to_string()),
+            (header::ETAG, etag.to_string()),
+            (header::CACHE_CONTROL, "no-cache".to_string()),
+        ],
+        body,
+    )
+        .into_response()
+}
 
 /// `GET /static/{*path}`. The embedded set is exactly what `static/`
 /// held at compile time, under the same relative paths -- so this
@@ -47,24 +125,33 @@ static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../static");
 /// never touch the filesystem** -- the whole point of this module --
 /// `#[cfg(debug_assertions)]` is compiled out of them entirely, not
 /// merely branched around at runtime.
-pub async fn serve(Path(path): Path<String>) -> Response {
+pub async fn serve(Path(path): Path<String>, headers: HeaderMap) -> Response {
     #[cfg(debug_assertions)]
     if let Some(bytes) = read_from_disk_in_debug(&path) {
-        return (
-            [(header::CONTENT_TYPE, content_type_for(&path))],
-            Body::from(bytes),
-        )
-            .into_response();
+        // Computed per request, deliberately, not cached alongside
+        // `ETAGS`: a debug build's whole point is that disk content
+        // can change between requests without a rebuild, so a cached
+        // tag here would go stale the same way the old `ServeDir` made
+        // live edits possible in the first place. Not the hot path
+        // `§9`'s "compute once" is about -- that's the embedded,
+        // production path below.
+        let etag = etag_for(&bytes);
+        if if_none_match_matches(&headers, &etag) {
+            return not_modified(&etag);
+        }
+        return cached_response(content_type_for(&path), &etag, Body::from(bytes));
     }
 
     let Some(file) = STATIC_DIR.get_file(&path) else {
         return StatusCode::NOT_FOUND.into_response();
     };
-    (
-        [(header::CONTENT_TYPE, content_type_for(&path))],
-        Body::from(file.contents()),
-    )
-        .into_response()
+    let etag = ETAGS
+        .get(path.as_str())
+        .expect("every file get_file can find has a precomputed entry in ETAGS -- both walk the same STATIC_DIR");
+    if if_none_match_matches(&headers, etag) {
+        return not_modified(etag);
+    }
+    cached_response(content_type_for(&path), etag, Body::from(file.contents()))
 }
 
 /// `static/<path>` on disk, relative to this crate's manifest --

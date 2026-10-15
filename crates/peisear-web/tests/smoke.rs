@@ -231,3 +231,46 @@ async fn every_static_asset_is_actually_servable() {
     let resp = app.server.get("/static/does-not-exist.js").await;
     assert_eq!(resp.status_code(), StatusCode::NOT_FOUND);
 }
+
+/// `FIV-005` round 2 `§10`: the installed-binary walk re-run, at the
+/// router level this time -- round 1 proved the page renders once;
+/// this asserts a second navigation does not pay for the body again.
+/// A real `GET` returns an `ETag`; echoing it back as `If-None-Match`
+/// must answer `304` with no body, the way a browser's own second
+/// navigation would.
+#[tokio::test]
+async fn a_second_navigation_does_not_refetch_the_asset_body() {
+    let app = TestApp::spawn().await;
+
+    let first = app.server.get("/static/daisyui.min.css").await;
+    assert_eq!(first.status_code(), StatusCode::OK);
+    let etag = first
+        .header(axum::http::header::ETAG)
+        .to_str()
+        .unwrap()
+        .to_string();
+    assert!(
+        !first.as_bytes().is_empty(),
+        "the first navigation must still carry the real body"
+    );
+
+    let second = app
+        .server
+        .get("/static/daisyui.min.css")
+        .add_header(
+            axum::http::header::IF_NONE_MATCH,
+            etag.parse::<axum::http::HeaderValue>().unwrap(),
+        )
+        .await;
+    assert_eq!(
+        second.status_code(),
+        StatusCode::NOT_MODIFIED,
+        "a second navigation with the first response's own ETag must be 304, not a second \
+         2.9 MB body"
+    );
+    assert!(
+        second.as_bytes().is_empty(),
+        "a 304 must carry no body -- wire bytes on the second navigation: {}",
+        second.as_bytes().len()
+    );
+}
