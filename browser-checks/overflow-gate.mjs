@@ -245,7 +245,15 @@ async function lockStamp(jar, url, what) {
   return stamp;
 }
 
-export async function createFixtures(strings) {
+// `onRegistered`, optional: `FIV-004` round 2 `§10` needs the one
+// moment between register and the rest of this function's own fixture
+// creation -- a real, empty `/projects` -- which nothing else exposes
+// a hook into. Called with `{ cookie }` (the jar's own cookie, in the
+// same `name=value` form this function already returns at the end)
+// immediately after registration succeeds and before anything else is
+// created. `undefined` by default, so every existing caller
+// (`overflow-gate.mjs`'s own gate, line ~577) is unaffected.
+export async function createFixtures(strings, onRegistered) {
   const jar = makeCookieJar();
 
   const registerRes = await jar.fetchForm(`${BASE}/register`, {
@@ -255,6 +263,10 @@ export async function createFixtures(strings) {
   });
   if (registerRes.status !== 303) {
     throw new Error(`register: expected 303, got ${registerRes.status}`);
+  }
+
+  if (onRegistered) {
+    await onRegistered({ cookie: jar.header() });
   }
 
   const teamRes = await jar.fetchForm(`${BASE}/teams`, {

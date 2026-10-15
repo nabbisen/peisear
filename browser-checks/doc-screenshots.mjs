@@ -148,22 +148,77 @@ async function main() {
     await waitForServer(`${BASE}/login`);
     log('server ready');
 
-    const { cookie, projectId, issueId, teamSlug, sprintId } = await createFixtures(PLAIN_STRINGS);
-    log(`fixtures created: project=${projectId} issue=${issueId}`);
+    mkdirSync(OUT_DIR, { recursive: true });
+    browser = await launch(VIEWPORT);
+    await browser.setViewport(VIEWPORT.width, VIEWPORT.height, false);
 
-    // Five pages (`DOCS-007` §3 dropped `/today`; `DOCS-008` §4/`DOC-005`
-    // found the sprint plan's own alignment defect in two of the three
-    // committed images rather than add a fourth page over an unfixed
-    // one). The board (the product's signature screen), the list view
-    // (the dense alternative), an issue detail (where most time is
-    // spent), the sprint plan -- `DOC-005` §5 populated both of its
-    // panels, which is the fix this capture was waiting on -- and now
-    // `/today` (`FIV-006` §2): never captured before this round,
-    // though `DOCS-004` named it a candidate in 0.49.0, and it is the
-    // one screen the README's own "am I overloaded?" and "a dashboard
-    // that is yours alone" claims point at without ever showing. Not a
-    // URL parameter away from the others -- it is the signed-in user's
-    // own page, no project or issue id in its path.
+    const written = [];
+
+    // `FIV-004` round 2 `§9`/`§10`: `install.md`'s own "What you'll
+    // see" promises "an empty project list" and then showed five
+    // screenshots, none of them empty -- the exact caption-contradicts-
+    // image defect `DOCS-006` exists to name, on the page the release
+    // produces to avoid it. The real empty state is a moment
+    // `createFixtures` already passes through, between registering and
+    // creating anything -- captured here via its own `onRegistered`
+    // hook, using the browser already launched above, rather than
+    // adding a second fixture flow or guessing a pixel-perfect fake.
+    const setCookie = async (rawCookie) => {
+      const [cookieName, cookieValue] = rawCookie.split('=');
+      await browser.send('Network.setCookie', {
+        name: cookieName, value: cookieValue, domain: '127.0.0.1', path: '/',
+      });
+    };
+    // Shared with the `/today` capture below, same reason: `<body>`'s
+    // `min-h-screen` fills the shared 1280x900 viewport regardless of
+    // how tall `#main`'s own content actually is, so a short page
+    // shows real content atop a blank gap unless the viewport shrinks
+    // to match it first. `projects_empty` has the identical shape --
+    // a near-empty state page -- found by looking at this capture's
+    // own first result, not assumed from fixing `/today`'s copy of it.
+    const shrinkViewportToContent = async () => {
+      const contentHeight = await browser.eval(
+        "Math.ceil(document.getElementById('main').getBoundingClientRect().bottom)",
+      );
+      await browser.setViewport(VIEWPORT.width, contentHeight, false);
+    };
+    const restoreViewport = () => browser.setViewport(VIEWPORT.width, VIEWPORT.height, false);
+
+    const { cookie, projectId, issueId, teamSlug, sprintId } = await createFixtures(
+      PLAIN_STRINGS,
+      async ({ cookie: earlyCookie }) => {
+        await setCookie(earlyCookie);
+        await browser.goto(`${BASE}/projects`);
+        await browser.waitForSelector('header.navbar', 5000);
+        await shrinkViewportToContent();
+        const path = join(OUT_DIR, 'projects_empty.png');
+        await browser.screenshot(path);
+        await restoreViewport();
+        const bytes = statSync(path).size;
+        written.push({ label: 'projects_empty', path, bytes });
+        log(`captured projects_empty -> ${path} (${bytes} bytes)`);
+      },
+    );
+    log(`fixtures created: project=${projectId} issue=${issueId}`);
+    // The session cookie does not change after registration (no
+    // per-request refresh), so this re-sets the identical value --
+    // kept explicit rather than assumed, since `onRegistered`'s own
+    // `earlyCookie` and this `cookie` being the same thing is a fact
+    // about this app's session handling, not a guarantee this
+    // function's own signature makes.
+    await setCookie(cookie);
+
+    // Four pages for `first-run.md`'s own walkthrough (`DOCS-007` §3
+    // dropped `/today`; `DOCS-008` §4/`DOC-005` found the sprint
+    // plan's own alignment defect rather than add a fourth page over
+    // an unfixed one) plus `/today` itself (`FIV-006` §2): never
+    // captured before that round, though `DOCS-004` named it a
+    // candidate in 0.49.0. **Not reused on `install.md`** (`FIV-004`
+    // round 2 `§10`): four of these five used to sit on both pages
+    // adjacently, the second time inside the walkthrough that
+    // explains them -- `install.md` now carries only
+    // `projects_empty.png`, captured above, and none of the five
+    // below.
     const pages = {
       board: `${BASE}/projects/${projectId}`,
       list: `${BASE}/projects/${projectId}?view=list`,
@@ -172,16 +227,6 @@ async function main() {
       today: `${BASE}/today`,
     };
 
-    mkdirSync(OUT_DIR, { recursive: true });
-
-    browser = await launch(VIEWPORT);
-    const [cookieName, cookieValue] = cookie.split('=');
-    await browser.send('Network.setCookie', {
-      name: cookieName, value: cookieValue, domain: '127.0.0.1', path: '/',
-    });
-    await browser.setViewport(VIEWPORT.width, VIEWPORT.height, false);
-
-    const written = [];
     for (const [label, url] of Object.entries(pages)) {
       await browser.goto(url);
       await browser.waitForSelector('header.navbar', 5000);
@@ -216,21 +261,12 @@ async function main() {
       // keeps the page's background filling the viewport regardless,
       // so the capture showed real content sitting atop a blank gap
       // roughly 40% of the image. Resized to the content's own
-      // measured height, after the Rhythm panel above is expanded
-      // (measuring first would crop the content this round just
-      // added back in) -- `#main`'s own bottom edge, not `body`'s,
-      // since `body` is exactly the element whose min-height was the
-      // problem. Measured per capture, not a guessed pixel constant:
-      // this page's content height moves with the account data it
-      // renders. No `clip` argument to `screenshot()` -- cdp.mjs's
-      // own comment below already warns `clip` triggers `scale: 3`,
-      // a worse defect in a README image than the whitespace this
-      // fixes, so the fix is a viewport resize, not a crop.
+      // measured height via `shrinkViewportToContent` (shared with
+      // `projects_empty` above, `FIV-004` round 2), after the Rhythm
+      // panel above is expanded -- measuring first would crop the
+      // content this round just added back in.
       if (label === 'today') {
-        const contentHeight = await browser.eval(
-          "Math.ceil(document.getElementById('main').getBoundingClientRect().bottom)",
-        );
-        await browser.setViewport(VIEWPORT.width, contentHeight, false);
+        await shrinkViewportToContent();
       }
       const path = join(OUT_DIR, `${label}.png`);
       // `DOCS-007` §2: no `clip` argument -- `cdp.mjs`'s `screenshot()`
@@ -244,7 +280,7 @@ async function main() {
         // is last in `pages` today, so nothing currently depends on
         // this, but leaving the viewport shrunk would silently affect
         // a page added after it later.
-        await browser.setViewport(VIEWPORT.width, VIEWPORT.height, false);
+        await restoreViewport();
       }
       const bytes = statSync(path).size;
       written.push({ label, path, bytes });

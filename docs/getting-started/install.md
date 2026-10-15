@@ -66,18 +66,14 @@ the database (see [Configuration](configuration.md) if you want to set
 one yourself, or need to point at a different database). Register an
 account, and you land on an empty project list:
 
-![The kanban board: issue cards in Open, In Progress and Done columns, with the project health indicators expanded to show the full breakdown](../src/assets/screenshots/board.png)
+![The empty projects page right after registering: "No projects yet," with a "Create your first project" button](../src/assets/screenshots/projects_empty.png)
 
-![The same project in list view: a filterable, sortable table of every issue](../src/assets/screenshots/list.png)
-
-![An issue's detail page: status control, priority and effort, description, and sub-issues](../src/assets/screenshots/issue_detail.png)
-
-![A sprint's plan page: an uncommitted issue in Backlog, a committed one in Sprint Items](../src/assets/screenshots/sprint_plan.png)
-
-![The personal dashboard at /today: WIP and load chips under "Right now", the Rhythm panel expanded to show throughput and stale-issue counts, and a steady sustainability reading](../src/assets/screenshots/today.png)
-
-The full walkthrough — creating a project, planning a sprint, dragging
-cards between columns — is in [First run](first-run.md).
+That's the moment this page exists to get you to — the server is up
+and you're looking at it. The walkthrough from here — creating a
+project, dragging cards between columns, planning a sprint, your own
+`/today` dashboard — is in [First run](first-run.md), with its own
+screenshots of what each of those actually looks like once there's
+something in it.
 
 ## Next
 
