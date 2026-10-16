@@ -237,7 +237,64 @@ one it was amending; this read the other documents but not all three
 carrying the sentence it had just caveated in the first. **Pass 5's
 rule is now: grep for the instruction, not for the document.**
 
-## §10 — which fix, and the owner decides
+## §10 — resolved: Option 1, applied, walked, and evidenced
+
+*Updated 2026-10-16. The fork below is closed — read this section, not
+the options.*
+
+**The owner applied the `JWT_SECRET` fix.** Reviewing the file with the
+read rule temporarily lifted found the other half still live —
+`BIND_ADDR=0.0.0.0:3000`, uncommented, after `FIV-001` moved the code
+default to loopback. **Both are now fixed**, and the file follows one
+rule instead of two corrections: *every line is commented out, each
+value shown is already the built-in default*, so a copied `.env`
+changes nothing and this file can never hand anyone a setting they did
+not choose (`be9e2fa`).
+
+**Walked, not assumed** — `Env Example Walk` against `main`,
+run [38974525616](https://github.com/nabbisen/peisear/actions/runs/38974525616):
+
+```
+RESULT: started
+  starting peisear database=sqlite://data/app.db addr=127.0.0.1:3000
+  listening addr=127.0.0.1:3000
+  → http://localhost:3000
+```
+
+**Three things that proves at once**: the documented path starts;
+it binds **loopback**, so `BIND_ADDR` is no longer overridden; and
+`README.md`'s own `#   → http://localhost:3000` is now literally what
+the binary prints.
+
+**So `§9`'s finding is closed by the file, not by caveats.**
+`README.md` and `.github/CONTRIBUTING.md` need **no change** — they
+became true. What remains is to take the caveat back out and move the
+two entries.
+
+### What round 2 now is
+
+1. **`docs/getting-started/configuration.md`** — remove the *"As of
+   0.53.0, it is not yet true"* caveat added this round. The section
+   says what it always meant again.
+2. **`CHANGELOG.md`** — the `### Security` section's second bullet
+   states the placeholder still ships and the documented path still
+   fails. **Both are now false.** Rewrite it to what shipped: the
+   refusal exists *and* the file no longer triggers it. Keep the
+   refusal in the entry — it is the durable protection, and it is what
+   makes the file's state checkable rather than assumed.
+3. **`requirements.md`** — `§10.40` **closed** and `NFR-SEC-004`
+   **`Implemented`**, on the run above and on the file's own content;
+   Appendix A recomputed from its own rows, not adjusted by the delta.
+   Appendix C's `0.53.0` baseline row drops `§10.40`/`NFR-SEC-004` from
+   what the release does not prove — `NFR-REL-009`/`NFR-REL-010` stay
+   there.
+4. **`§11`'s two items**, unchanged and still open.
+
+**Do not re-run the walk to justify the status** — it has been run,
+the output is above, and re-running it proves the same thing twice.
+Quote that run.
+
+## §10b — the options, kept for the record
 
 **Option 1 — the owner comments out `.env.example`'s `JWT_SECRET`
 line.** Then all three documents are true as written, the caveat added
@@ -250,14 +307,10 @@ carried.
 has, and the arrow in `README`'s second block goes or gains a
 condition.
 
-**Do not start until the owner has chosen** — the two are opposite
-edits to the same three files, and doing one then the other is churn
-at the candidate. The architect will relay the choice.
-
-**Either way, re-run the `Env Example Walk`** against the candidate
-and quote the run: under Option 1 it must print `RESULT: started`, and
-a status only moves on that output, never on the edit having been
-reported.
+*Option 1 was chosen and is done (`§10`). This record stays because
+the reasoning — that the two were opposite edits to the same three
+files, so guessing would have cost a round either way — is why the
+round waited rather than started.*
 
 ## §11 — two smaller ones, not blockers
 
@@ -279,9 +332,9 @@ reported.
 
 ## §12 — exit condition
 
-The owner's choice applied to **all three** documents, not one;
-`configuration.md`'s caveat removed or kept to match that choice;
-the `Env Example Walk` re-run against the candidate with its
-`RESULT:` line quoted; `§10.40` and `NFR-SEC-004` moved **only** on
-that output; `§11`'s two items each fixed or reasoned; `DEC-007`
+`configuration.md`'s caveat removed; `CHANGELOG.md`'s security
+bullet rewritten to what actually shipped; `§10.40` closed and
+`NFR-SEC-004` `Implemented`, citing run 38974525616 rather than
+re-running it; Appendix A recomputed from its rows and Appendix C's
+baseline row updated; `§11`'s two items each fixed or reasoned; `DEC-007`
 unchanged at **486**; and the gates re-run after the last edit.
