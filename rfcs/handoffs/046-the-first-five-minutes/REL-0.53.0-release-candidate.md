@@ -201,3 +201,87 @@ walk performed and reported verbatim, with `§10.40` and
 real dispatch run, with the run IDs quoted; and a
 recommendation to the architect — **not a tag**. The four legs are the
 architect's, on the owner's approval.
+
+---
+
+# REL-0.53.0 round 2 — one of three documents got the caveat
+
+The candidate is accepted on every gate (see the review). One pass-5
+miss, and it is on the front page.
+
+## §9 — `README.md` promises a URL its own commands do not reach
+
+`docs/getting-started/configuration.md` was caveated properly this
+round: *"As of 0.53.0, it is not yet true… comment out or delete that
+one line before copying the file."* Good, and exactly right.
+
+**Three documents give that instruction. One was caveated.**
+
+- `README.md:62-67` — *"To read or change it"*: `git clone`,
+  `cp .env.example .env`, `cargo run --release -p peisear`, and then
+  **`#   → http://localhost:3000`**. That arrow is false. The server
+  refuses, as this round's own walk proved.
+- `.github/CONTRIBUTING.md:28-31` — step 3 of *Development setup*, the
+  same two commands, no caveat. The round reported this file as *"read
+  in full, already current"*; it is current about everything except
+  the instruction that now fails.
+
+**This is the release whose subject is the first five minutes**, and
+its front page ends a copy-paste block with an arrow to a URL that
+block does not reach. `§10.40`'s own cause, reaching the one document
+every visitor sees.
+
+**It is also a pass-5 miss of a known shape.** `NFR-MNT-002` said *"six
+crates"* at 0.52.0 because the sweep read every document except the
+one it was amending; this read the other documents but not all three
+carrying the sentence it had just caveated in the first. **Pass 5's
+rule is now: grep for the instruction, not for the document.**
+
+## §10 — which fix, and the owner decides
+
+**Option 1 — the owner comments out `.env.example`'s `JWT_SECRET`
+line.** Then all three documents are true as written, the caveat added
+to `configuration.md` this round comes **out** again, `§10.40` closes,
+and `NFR-SEC-004` moves to `Implemented` — in this release rather than
+carried.
+
+**Option 2 — the file ships unchanged.** Then `README.md` and
+`CONTRIBUTING.md` carry the same caveat `configuration.md` already
+has, and the arrow in `README`'s second block goes or gains a
+condition.
+
+**Do not start until the owner has chosen** — the two are opposite
+edits to the same three files, and doing one then the other is churn
+at the candidate. The architect will relay the choice.
+
+**Either way, re-run the `Env Example Walk`** against the candidate
+and quote the run: under Option 1 it must print `RESULT: started`, and
+a status only moves on that output, never on the edit having been
+reported.
+
+## §11 — two smaller ones, not blockers
+
+- **`env-example-walk.yml` reintroduces the two third-party actions**
+  `FIV-002` round 2 deliberately removed — `dtolnay/rust-toolchain@stable`
+  and `Swatinem/rust-cache@v2`, both at moving refs. The risk here is
+  far lower than in `release.yml` (this job holds `contents: read` and
+  publishes nothing), but the decision was three days old and was not
+  revisited. **Use the bare `rustup install` this project adopted**,
+  or say why this workflow is the exception.
+- **The walk cannot fail, which is right today and wrong the moment
+  the file is fixed.** `set +e` and two `echo` branches: it reports,
+  it does not assert. Correct while a refusal is the expected answer.
+  **Under Option 1 it must become an assertion** — `RESULT: started`
+  or exit non-zero — or it is a permanently green job that examines
+  nothing (`§10.36`). Note also that the contributor start path it
+  walks is a **documented start path `NFR-REL-011` does not cover**;
+  that entry names `install.md`'s three. Say whether it should.
+
+## §12 — exit condition
+
+The owner's choice applied to **all three** documents, not one;
+`configuration.md`'s caveat removed or kept to match that choice;
+the `Env Example Walk` re-run against the candidate with its
+`RESULT:` line quoted; `§10.40` and `NFR-SEC-004` moved **only** on
+that output; `§11`'s two items each fixed or reasoned; `DEC-007`
+unchanged at **486**; and the gates re-run after the last edit.
