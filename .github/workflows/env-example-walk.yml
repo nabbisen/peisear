@@ -1,24 +1,33 @@
 name: Env Example Walk
 
 # REL-0.53.0 §5: the one walk nobody here can perform by reading the
-# file. `NFR-SEC-004`/`§10.40` stays open on `.env.example`'s own
-# state, and no tool in this project may read a `.env*` path -- not
-# even by routing around the rule with `git show` or a copy to an
-# intermediate file (`FIV-001` round 2's own ruling). This job never
-# reads the file either: it copies it, as the documented path
-# instructs, and reports only whether the server then runs or
-# refuses -- the job's own pass/refuse log output is the entire
-# answer.
+# file. This job never reads `.env.example` either: it copies it, as
+# the documented path instructs, and asserts on whether the server
+# then runs -- the job's own log is the entire answer, never a tool
+# here opening the file.
 #
-# Deliberately `workflow_dispatch` only, no `push`/`pull_request`: for
-# as long as `.env.example` ships the published placeholder, a
-# refusal here is correct behaviour, not a failure to fix -- a job
-# that runs on every push would turn every future PR red for a reason
-# that has nothing to do with the PR. This is the one-time walk `§5`
-# asks for, not a permanent gate (`NFR-REL-011`'s own CI jobs are the
-# permanent form of "the documented paths work"; this one is about a
-# single file's content, which those jobs do not and should not read
-# either).
+# Round 2 (0.53.0): this used to `echo` either outcome and always
+# exit 0, deliberately, because a refusal was the correct answer while
+# `.env.example` still shipped the published placeholder. The owner
+# fixed the file (every variable now commented out at its own built-in
+# default) and the walk confirmed it starts (run 38974525616, quoted
+# in `requirements.md`'s `§10.40`). **A refusal now would be a real
+# regression**, so this asserts: non-zero exit if the documented path
+# does not reach a listening server.
+#
+# No third-party action (the same convention `release.yml`/`image.yml`
+# adopted, `FIV-002` round 2 -- revisited here after the review named
+# it unrevisited rather than left on the lower-risk-so-it's-fine
+# reasoning this file carried for three days): bare `rustup install`
+# resolves `rust-toolchain.toml`'s pin, same as everywhere else.
+#
+# Still `workflow_dispatch` only, not wired to `push`/`pull_request`:
+# `NFR-REL-011`'s own two CI jobs are the permanent, continuously-run
+# form of "the documented paths work," scoped to `install.md`'s three
+# (`requirements.md`'s own note on that entry says why the
+# build-from-source path doesn't widen it). This file is a narrower,
+# deliberately separate check on one file's content, not a fourth leg
+# of that same gate.
 on:
   workflow_dispatch:
     inputs:
@@ -37,14 +46,15 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+
+      - name: Install the toolchain
+        run: rustup install
 
       # The exact two commands `docs/getting-started/configuration.md`
       # and `.github/CONTRIBUTING.md` both document.
       - name: cp .env.example .env, then cargo run --release -p peisear
         run: |
-          set +e
+          set -euo pipefail
           cp .env.example .env
           cargo build --release -p peisear
           ./target/release/peisear > peisear-walk.log 2>&1 &
@@ -62,9 +72,13 @@ jobs:
           done
           if [ "$started" = "1" ]; then
             echo "RESULT: started"
-            kill "$pid" 2>/dev/null
+            kill "$pid" 2>/dev/null || true
           else
-            echo "RESULT: did not start (refused, or exited, or never bound -- see the log below)"
+            echo "RESULT: did not start"
           fi
           echo "--- peisear-walk.log (the running binary's own stdout/stderr; .env's content is never printed by this job) ---"
           cat peisear-walk.log
+          if [ "$started" != "1" ]; then
+            echo "::error::the documented 'cp .env.example .env' path did not reach a listening server -- see the log above"
+            exit 1
+          fi

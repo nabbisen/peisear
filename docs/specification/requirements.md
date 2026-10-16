@@ -2989,8 +2989,9 @@ violating the first. The reading that makes the status mean something
 is in `§10.40`, which this amendment follows rather than precedes —
 a status set against unamended text is the ambiguity that entry is
 about.
-*Source*: project convention. *Status*: **Divergent** — half closed,
-and the half that is left is the documented path.
+*Source*: project convention. *Status*: **Implemented** (0.53.0 round
+2) — see the closing amendment below; previously **Divergent**, half
+closed, with the half that was left the documented path.
 `crates/peisear-web/src/config.rs`'s literal fallback **is** deleted:
 `JWT_SECRET` unset now generates 32 random bytes, persists them beside
 the resolved database path, and fails loudly rather than falling back
@@ -3021,7 +3022,22 @@ is. **Commenting the line out in `.env.example` ships with it or
 neither ships** — a refusal against an uncommented example file makes
 `cp .env.example .env` fail for every new user, which is `§10.40`'s
 defect inverted rather than closed. Automated scanning remains advisory
-and not yet wired. *Priority*: P0.
+and not yet wired.
+
+*Amended again (0.53.0 round 2) — closed.* The owner applied the
+one-line fix no tool here could, and went further: every variable in
+`.env.example` is now commented out, each shown at its own built-in
+default, so a copied file changes nothing and can never hand anyone a
+setting they did not choose (`be9e2fa`) — `BIND_ADDR=0.0.0.0:3000` was
+found still uncommented alongside `JWT_SECRET` and fixed in the same
+commit. **Walked, not assumed**: `Env Example Walk` against `main`,
+run [38974525616](https://github.com/nabbisen/peisear/actions/runs/38974525616) —
+`RESULT: started`, bound `127.0.0.1:3000`, printed `→
+http://localhost:3000`. The documented `cp .env.example .env` path now
+reaches a working instance; the refusal this entry's own closing
+clause named stays in the code, protecting anyone who later
+uncomments the line and types the placeholder back in by hand.
+Automated scanning remains advisory and not yet wired. *Priority*: P0.
 
 **NFR-SEC-005 — No `unsafe` code**
 Project code MUST NOT use `unsafe`. Any future use requires explicit
@@ -3408,6 +3424,22 @@ run from `$RUNNER_TEMP` — outside the checkout — to the same register
 walk was already running on every build**, so all three documented
 paths are now each exercised by a job, on every push, pull request and
 release build, not by a person walking them before a tag.
+
+*Note (0.53.0 round 2) — the build-from-source / contributor path is
+deliberately not folded in here.* `REL-0.53.0`'s review asked whether
+`NFR-REL-011` should widen to cover it, since
+`.github/workflows/env-example-walk.yml` now walks exactly that path
+too. **No.** This entry's own text names the paths
+`docs/getting-started/install.md` offers — a newcomer with no Rust and
+no prior setup — and build-from-source is a different document, for a
+different reader, who already has a toolchain and is choosing to
+build rather than install. Widening the requirement's own scope to
+absorb a fourth, differently-audienced path mid-cleanup is the kind of
+decision this project reserves for a round that proposes it on
+purpose, not one that inherits it from a workflow that happens to now
+assert on it. The walk stands on its own merit as a regression guard
+for the contributor path; it does not need this entry's authority to
+justify existing.
 *Priority*: P1.
 
 **NFR-REL-008 — Published API documentation**
@@ -6432,7 +6464,7 @@ duplicated under the rule above, not exempted from it.
 
 **Out of scope, deliberately**: `DOC-002 §5`'s own line — a `//` comment never reaches a published crate's documentation, and `crates/*/tests/` is never walked for doc comments at all, since cargo never publishes an integration-test binary to docs.rs. **Measured directly — twice, because the first two measurements of it were both wrong**: **45** occurrences across **21** files. The handoff's own estimate (16 across 11) dropped doc-comment lines inside `crates/*/tests/` from both surfaces; the round's correction of it (25 across 14) undercounted differently and transposed the two halves. Measured: **19** under `crates/*/src/` across 9 files, of which **9** are this rule's own planted fixtures in `docs_scan/tests.rs`; **26** under `crates/*/tests/` across 12 files, `peisear-web/tests/sprint_plan.rs` alone carrying 10. Reported, not swept in — and the three attempts at this one number are the clearest evidence in this entry for why a figure that decides nothing still gets measured twice.
 
-### 10.40 A P0 forbidding credentials in source, with the session signing key in source — **open**; the fallback is gone (`FIV-001`, 0.53.0), and what remains was **ruled a usability defect rather than this entry's class** by the owner on 2026-10-14; closes on `FIV-001` round 2's startup refusal; found 2026-10-14 while scoping `0.53.0`
+### 10.40 A P0 forbidding credentials in source, with the session signing key in source — **closed**, `FIV-001` + `REL-0.53.0` round 2, 0.53.0; found 2026-10-14 while scoping `0.53.0`
 
 `NFR-SEC-004` reads *"Credentials MUST NOT appear in source,
 configuration, or release archives"*, Priority **P0**, and has read
@@ -6639,6 +6671,21 @@ were: open, Divergent, waiting on the owner's one-line edit — this
 amendment is the confirmation that was missing, not a change to the
 state it confirms.
 
+*Amended again (0.53.0 round 2) — closed.* The owner's one-line edit
+landed, and widened: every variable in `.env.example` is now commented
+out at its own built-in default (`be9e2fa`), which also fixed a second
+line — `BIND_ADDR=0.0.0.0:3000`, left uncommented after `FIV-001`
+moved the code default to loopback — that nobody had been waiting on
+because nobody but the owner could see it either. **Walked again, not
+assumed from the fix landing**: `Env Example Walk` against `main`, run
+[38974525616](https://github.com/nabbisen/peisear/actions/runs/38974525616) —
+`RESULT: started`, `listening addr=127.0.0.1:3000`, `→
+http://localhost:3000`. Three things that one run confirms together:
+the documented path starts, it binds loopback, and `README.md`'s own
+printed-output line is now literally what the binary prints. This
+entry closes; `NFR-SEC-004` moves to `Implemented` (see that entry's
+own closing amendment).
+
 ### 10.41 A documented install path the published artefact cannot satisfy — **closed**, `FIV-005`, 0.53.0; found 2026-10-14 while reading the Quick Start as a newcomer
 
 *This heading was deleted by `FIV-001` round 2's own edit to `§10.40`
@@ -6810,24 +6857,27 @@ Accepted in principle, deliberately not scheduled.
 | Concurrency | 7 | 7 | — | — | — | — |
 | Accessibility | 11 | 8 | — | — | 1 | 2 unverified |
 | Language | 5 | 1 | 2 | — | 1 | 1 |
-| Security | 7 | 6 | — | — | — | 1 (`NFR-SEC-004`, `§10.40`) |
+| Security | 7 | 7 | — | — | — | — |
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
 | Release | 11 | 7 | 1 | — | — | 3 (1 undefined, `NFR-REL-009`, `NFR-REL-010`) |
 | Compatibility | 6 | 5 | 1 | — | — | — |
-| **Non-functional total** | **69** | **53** | **5** | **0** | **2** | **9** |
+| **Non-functional total** | **69** | **54** | **5** | **0** | **2** | **8** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.
 
-**Re-derived at 0.53.0: the Release row and the non-functional total,
-from each entry's own `*Status*` line, not hand-adjusted.** Only one
-cell actually moved — `NFR-REL-011` Partial → Implemented — but the
-whole row and total were re-summed from source rather than edited by
-the delta alone, per `DEC-028`'s own instruction not to trust that two
-single-cell changes can't hide a third, uncaught drift. They did not:
-Release still sums to its own total (`7+1+3=11`) and the non-functional
-total still sums to its own (`53+5+0+2+9=69`).
+**Re-derived at 0.53.0, twice, same release: the Release and Security
+rows and the non-functional total, from each entry's own `*Status*`
+line, not hand-adjusted.** The candidate moved `NFR-REL-011` (Partial
+→ Implemented); round 2 moved `NFR-SEC-004` (Divergent →
+Implemented, `§10.40` closed on the owner's fix and a second,
+previously-unwalked confirmation run). Each time the whole row and
+total were re-summed from source rather than edited by the delta
+alone, per `DEC-028`'s own instruction not to trust that a cell change
+can't hide a third, uncaught drift. They did not: Release sums to its
+own total (`7+1+3=11`), Security to its own (`7+0=7`), and the
+non-functional total to its own (`54+5+0+2+8=69`).
 
 **Three rows of this table were stale at 0.43.0, and the table is why.**
 Accessibility read 9 entries with **none** Implemented, when eleven exist and
@@ -6896,7 +6946,7 @@ let `FR-DM-002` be violated for four releases without anyone checking.
 | V3 (`V3`) | Reconciliation with implemented state through 0.19.0 |
 | 0.19.1 baseline | Consolidation into English normative requirements; identifiers assigned; §10 compliance gaps recorded |
 | 0.20.0 | Compliance pass. Nine recorded statuses corrected — five of them P0 or P1 requirements annotated as satisfied while the code did the opposite. `NFR-PRIV-002` scoped (`DEC-019`); `NFR-CMP-001` extended with the toolchain/MSRV distinction (`DEC-044`/`DEC-045`); `NFR-LANG-005` rescheduled to 0.21.0 (`DEC-022`). §10 gains a state table and six new entries, five of which close in this release. Test inventory 65 → 82 active, 0 disabled. `RSK-001` closed |
-| **0.53.0 (this baseline)** | **The first five minutes, and what still isn't proven by this candidate.** `RFC 017`, six `FIV` rounds. The published `JWT_SECRET` fallback is deleted — a key is generated and persisted beside the database, startup refuses the `.env.example` placeholder and an empty secret, `BIND_ADDR` defaults to loopback (`FIV-001`). Three real install paths ship: a per-platform archive on every Release, built natively with no third-party action (`FIV-002`); a `ghcr.io` container image running as root with the tradeoff reasoned in its own Dockerfile comment (`FIV-003`); `static/` embedded into the binary, closing `§10.41` (`FIV-005`). `install.md` replaces a page that only described building from source, and one plain-English line after a successful bind names the URL to open (`FIV-004`); `/today` is captured for the first time (`FIV-006`). `NFR-REL-011` closes: `release.yml` now extracts and runs its own archive on all five targets and a new `test-install-walk` job does the same for `cargo install`, both proven by `workflow_dispatch` before this candidate, not taken on faith at the tag. **What this release does not prove**: `NFR-REL-009` and `NFR-REL-010` stay `Divergent` — the archive-upload and image-publish steps fire only on `release: published`, which no `workflow_dispatch` run can satisfy, so they are shipped and dispatch-tested but not yet exercised by a real Release. **And `§10.40`/`NFR-SEC-004` stay open, confirmed rather than assumed**: a one-off, `workflow_dispatch`-only walk (`cp .env.example .env`, then start, without this project's own tools ever reading the file) showed the server refusing to start, naming the published placeholder — the one-line fix to `.env.example` is still the owner's to apply. `DEC-007`: **486, unchanged across the release** — no `.rs` file differs from `0.52.0`; every change here is workflow YAML, specification prose, or documentation. |
+| **0.53.0 (this baseline)** | **The first five minutes, and what still isn't proven by this candidate.** `RFC 017`, six `FIV` rounds. The published `JWT_SECRET` fallback is deleted — a key is generated and persisted beside the database, startup refuses the `.env.example` placeholder and an empty secret, `BIND_ADDR` defaults to loopback (`FIV-001`). Three real install paths ship: a per-platform archive on every Release, built natively with no third-party action (`FIV-002`); a `ghcr.io` container image running as root with the tradeoff reasoned in its own Dockerfile comment (`FIV-003`); `static/` embedded into the binary, closing `§10.41` (`FIV-005`). `install.md` replaces a page that only described building from source, and one plain-English line after a successful bind names the URL to open (`FIV-004`); `/today` is captured for the first time (`FIV-006`). `NFR-REL-011` closes: `release.yml` now extracts and runs its own archive on all five targets and a new `test-install-walk` job does the same for `cargo install`, both proven by `workflow_dispatch` before this candidate, not taken on faith at the tag. **Round 2, same release: `§10.40` closes and `NFR-SEC-004` reaches `Implemented`.** The candidate's own one-off walk (`cp .env.example .env`, then start, without this project's own tools ever reading the file) first showed a refusal naming the published placeholder — correct, and reported rather than routed around. The owner then applied the fix directly, and further: every `.env.example` variable is now commented out at its own built-in default, closing a second, previously-unnoticed line (`BIND_ADDR=0.0.0.0:3000`) in the same commit. A second walk against the fixed file started cleanly, bound loopback, and printed the exact line `README.md` already promised. **What this release does not prove**: `NFR-REL-009` and `NFR-REL-010` stay `Divergent` — the archive-upload and image-publish steps fire only on `release: published`, which no `workflow_dispatch` run can satisfy, so they are shipped and dispatch-tested but not yet exercised by a real Release. `DEC-007`: **486, unchanged across the release** — no `.rs` file differs from `0.52.0`; every change here is workflow YAML, specification prose, or documentation. |
 | **0.52.0** | **Nothing a user can see changed, and nothing they run differently — the third release running with none.** `GRD-001`–`GRD-003` accepted. Every changed `.rs` line under `crates/` since `0.51.0` is a doc comment, a `#[cfg(test)]` module, or a test file — measured directly (`git diff --name-only 0.51.0..HEAD`, then every non-blank, non-`//`/`///`/`//!` line counted per file): 33 files move, every one of them a `#[cfg(test)]` scan module or its `tests.rs`, plus `lib.rs`'s own two `#[cfg(test)]` lines. **What changed is the checking.** `strip_line_comments` existed in six copies; five truncated `xmlns="http://…"`, corrupting quote-pairing on five component files `NFR-A11Y-007`'s own guard reads — one copy now, the one that was already correct (`GRD-001`, `§10.38`). Fifteen files that were wholly tests now use `project-instructions-rust.md`'s own shape; `NFR-MNT-005` reaches `Implemented`, live count zero, measured (`GRD-002`, `§10.37` closed). `docs_scan` rule 5 matched only the literal gitignored path; this project's own house style for a private citation is the bare file name, which spelled no path at all — **64** such citations sat in published doc comments and in this document itself while the rule reported clean. Cleared by extraction, never by publishing the private file; the needle widened to a shape with no filesystem dependency (`GRD-003`, `§10.39`). **What this release does not fix**: the widened needle's own residual (nine privately-named files it cannot match by shape — stated with the number after the first statement of it undercounted, `§10.39`); 45 occurrences across 21 files left out of scope by design (`//` comments, `crates/*/tests/`); and the carried `peisear-i18n`/`peisear-core` guard-location question, **declined** rather than resolved toward either placement — the hazard the recommendation rested on is already closed by `dec_007_fs_scan`/`dec_007_ci_scan`, demonstrated by a planted test file the scan catches by name (`NFR-MNT-005`'s own amendment). `components.rs`'s own stale call-site count (136) corrected to the measured 212. **No migration, the third release running. Test inventory 442 → 451** |
 | 0.51.0 | **Documentation accuracy — and two things that are not documentation, scoped in anyway.** `DOC-001` through `DOC-007`, `RFC 019` accepted. **Two user-visible fixes**: a 44 px touch target was applied without centring its content — `grow_text()` composes the touch target plus `inline-flex items-center` for the 41 plain-text sites that needed it (`DOC-005`), distinct from `grow()`'s 171 sites, which stay as they were — and the sprint plan's own Backlog row no longer overflows a 320 px phone, a truncation gap latent since the panel was always swept empty. **The front door describes the product**: `README.md`'s hero, overview and features said *"issue tracking"*; the requirements say the aim is keeping a project — and the people in it — sustainable, and the backup bullet no longer teaches the technique `docs/operations/backup.md`'s own "The wrong way" section forbids (`DOC-003`). **The documents that describe the code now agree with it**: three documents omitted `peisear-i18n` from the crate set (`DOC-001`); nineteen citations pointed into the project's gitignored private area, closed per `RFC 019`'s own ruling that a link there is either missing documentation or a useless link (`DOC-002`); and **nine decisions a requirement cites were stated nowhere at all** — `DEC-013`, `DEC-049` named specifically, `DEC-049` amended with its presumption clause (`DOC-005 §3.1`'s own helper split) marked withdrawn rather than silently rewritten (`DOC-006`, `RFC 019 §3`). **The guards grew to match**: rule 1b now checks the crate *count*, not only the names; rule 2 reads `.github/CONTRIBUTING.md` too; rule 5 is narrowed to documents and switched on; a new `alignment_scan` caught six sites misclassified by its own first pass, the day it was written (`DOC-005`). **Test organisation reconciled in part**: nine files whose tests sat inside their own implementation moved to `src/<mod>/tests.rs`; `NFR-MNT-005`'s status stays `Divergent` — fifteen test-only files (fourteen surveyed plus the new `alignment_scan`) are an open question for the owner's `project-instructions-rust.md` (`§10.37`, `DOC-007`). **This document's own `updated_at_authority_scan` citation gets its coverage limit stated** (`NFR-CONC-003`): the needle catches only a first-column `SET updated_at =`, no live violation, widening it left undone. **This release is not documentation-only** — say so plainly, since beat one is a UI fix and a layout fix. **What this release does not fix**: `strip_line_comments` is copied into **six** scans and **five** carry a naive `split("//")` that corrupts quote-pairing on five component files carrying a URL string — the sixth, `alignment_scan`'s, is already string-aware, so the carried round is five copies adopting one that works (found measuring `DOC-005`'s own count; guard infrastructure rather than documentation); and **rule 5 cannot see the commonest form of what it bans** — it scans published doc comments too, but matches on the gitignored path itself, which a citation written as a bare review-file name never spells; the surfaces it scans carry **64** such citations across **21** files — 60 in published doc comments across 18 files, four in documents, **two of them in this one** — naming **29** files that exist only in the private area, and the rule reports clean (`§10.36`, in the guard `RFC 019` asked for). *Corrected after 0.51.0 shipped: the figures first stated here (60 across 25, 27 doc comments, 31 files) were a partial count written up as a total — the same defect in the measurement as in the rule.* **No migration, the second release running. Test inventory 431 → 442** |
 | 0.50.0 | **What a committed write means, and what leaves the process.** `NFR-CONC-001`'s own stale-page window — one whole second, reproduced directly — narrows to one millisecond: `0021` moves the seven triggers `0014`/`0017` added to millisecond-resolution `strftime`, demonstrated through the real handlers both before (fails) and after (passes) the migration. **The residual is stated, not claimed closed**: two writes inside one millisecond still share a token, and `NFR-CONC-002` gains a precision paragraph saying so. A committed write now fsyncs on every commit (`synchronous = FULL`) rather than at the next checkpoint — **measured, not assumed**, about 2 ms on a ~440 ms write path on NVMe, after a first, implausible result was read as a measurement-order artefact rather than published. **Two hazards closed while neither was yet leaking**: the database URL is redacted at the source before the startup line logs it, and `Config` no longer derives `Debug` over the session-signing key. **Data at rest joins the threat model for the first time** — the asset named, volume encryption named as the control, the owner's declined alternatives (SQLCipher, column-level encryption) on the record. **`§10.36` opens and names its own sixth-instance candidate in the same release**: a check that can be right about its assertion and still examine nothing, reintroduced while fixing a flake, caught in review before shipping — the round's clearest argument for why the entry exists. **`NFR-MNT-005`'s status corrects to `Divergent`** against 25 files and 79 in-file tests its text prohibits (`§10.37`); the rule itself — which side is wrong — is `0.51.0`'s. **One migration, the eleventh, the first since `0020` in ten releases. Test inventory 421 → 431** |

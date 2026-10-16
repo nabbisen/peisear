@@ -12,17 +12,9 @@ setups are free to inject the same variables via a process supervisor
 cp .env.example .env
 ```
 
-That's the intent — no secret to generate by hand, with `JWT_SECRET`
-created for you on first run (see below) and the defaults for
-everything else getting you to a working local instance. **As of
-0.53.0, it is not yet true**: `.env.example` still ships `JWT_SECRET`
-set to its own published placeholder, and startup refuses to run with
-it (see Operational notes, below) — so `cp .env.example .env` followed
-by a start currently fails with a named remedy rather than succeeding.
-Comment out or delete that one line before copying the file, or set
-`JWT_SECRET` to a real value, and the file does what this section
-says. (`requirements.md §10.40`, `NFR-SEC-004` — the one-line fix to
-`.env.example` itself lands in a later release.)
+That's it — no secret to generate by hand. `JWT_SECRET` is created for
+you on first run (see below); the defaults for everything else will
+get you to a working local instance.
 
 ## Full reference
 

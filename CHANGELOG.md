@@ -35,17 +35,16 @@ publish the real thing.
   image already does this for you, so this only affects a
   build-from-source or `cargo install` deployment that had no `.env`
   entry for it.
-- **An instance that starts with `.env.example`'s own placeholder
-  secret now refuses to start**, naming the remedy, rather than
-  running signed by a value anyone reading this file already knows.
-  **This is reportable, not fully closed**: `.env.example` itself
-  still ships that placeholder uncommented, and `README.md`,
-  `.github/CONTRIBUTING.md` and `docs/getting-started/configuration.md`
-  all instruct a reader to copy it — so, as of this release, following
-  that documented path still fails the refusal it was just given. The
-  one-line fix to the file is the owner's to apply; `NFR-SEC-004`
-  stays **Divergent** and `requirements.md §10.40` stays open until it
-  lands and is confirmed.
+- **An instance that starts with a published placeholder secret now
+  refuses to start**, naming the remedy, rather than running signed by
+  a value anyone reading the source already knows. `.env.example`
+  itself now ships every variable commented out, each shown at its own
+  built-in default — a copied `.env` changes nothing and can never
+  hand anyone a setting they did not choose, so the documented
+  `cp .env.example .env` path reaches a working instance, not the
+  refusal. The refusal stays: it is what makes that file's state
+  checkable rather than assumed, and it still fires for anyone who
+  uncomments the line and types the placeholder back in by hand.
 
 ### Added
 
