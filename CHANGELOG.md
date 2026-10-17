@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.53.0] — 2026-10-15
+## [0.53.0] — 2026-10-17
 
 **The first five minutes of using peisear, end to end.** `RFC 017`:
 generate a signing key instead of shipping one in every copy of the
