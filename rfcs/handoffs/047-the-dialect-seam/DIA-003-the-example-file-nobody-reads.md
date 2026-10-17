@@ -40,11 +40,30 @@ start path. The scan is the only reader it can have.
   passing is the hole this rule exists to close.**
 
 **Today the file has zero uncommented lines**, so the rule passes
-trivially on arrival. **That is the thing to be suspicious of**:
-build it, then **plant an uncommented `BIND_ADDR=0.0.0.0:3000` and
-watch it fail**, then remove it. A rule that has only ever been green
-against an empty population has been measured on zero opportunities —
-`§10.34`'s own phrase for why a different rule was argued down.
+trivially on arrival. **That is the thing to be suspicious of**: a
+rule that has only ever been green against an empty population has
+been measured on zero opportunities — `§10.34`'s own phrase for why a
+different rule was argued down.
+
+**So plant content, not a file.** `docs_scan` already takes every
+document through its `Input` struct as a `&str`
+(`docs_scan.rs:355`); add `env_example` beside the others, and the
+planted cases become ordinary unit tests:
+
+| planted content | expected |
+|---|---|
+| uncommented `BIND_ADDR=0.0.0.0:3000`, `config.rs` defaulting to loopback | **fails** |
+| the same line commented | passes |
+| an uncommented key `config.rs` does not know | **fails** |
+| the real file, via `the_repository_satisfies_the_live_rules` | passes |
+
+*This replaces an earlier instruction to edit `.env.example` and watch
+the live rule go red.* **That cannot be done here** — every file tool
+is denied on `.env*`, and the owner offering to lift the rule is not a
+reason to need it. The `Input` shape is better regardless: four cases
+instead of one, and none of them touches a committed file. **The guard
+reads what nobody here can, and these tests prove it reads it
+correctly without anyone reading it.**
 
 ## §3 — what this is not
 
@@ -60,12 +79,14 @@ against an empty population has been measured on zero opportunities —
 - `DEC-007` from a fresh block — **this moves**, by the rule's own
   tests. Account exactly.
 - The usual four, after the last edit.
-- **The plant in `§2`, shown failing and then passing.**
+- **`§2`'s four planted cases**, each shown to do what it claims.
+  **No `.env*` path is written by this round**, and none needs to be.
 
 ## §5 — exit condition
 
 Rule 7 in `docs_scan`, reusing rule 4's own default parsing; comments
 exempt and the reason written down; an unknown key failing rather than
 skipping, with each key's source crate stated; **the rule seen to fail
-against a planted uncommented override**; `DEC-007`'s delta accounted
-for.
+against planted content rather than an edited file**, with all four
+cases of `§2` demonstrated; no `.env*` path written; `DEC-007`'s delta
+accounted for.
