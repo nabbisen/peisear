@@ -230,7 +230,7 @@ pub async fn insert(
     // CAL-001). Translate the same way insert_sub_issue already
     // does, per DEC-011.
     if let Err(e) = res {
-        return Err(translate_trigger_error(e));
+        return Err(crate::dialect::translate_trigger_error(e));
     }
 
     // The 'created' event records the initial state. Storing
@@ -305,7 +305,7 @@ pub async fn insert_sub_issue(
     // Validation so the handler can render them as 400 instead
     // of 500.
     if let Err(e) = res {
-        return Err(translate_trigger_error(e));
+        return Err(crate::dialect::translate_trigger_error(e));
     }
 
     issue_events::insert_event(
@@ -368,210 +368,10 @@ pub async fn demote_to_sub_issue(
     .await;
 
     if let Err(e) = res {
-        return Err(translate_trigger_error(e));
+        return Err(crate::dialect::translate_trigger_error(e));
     }
     Ok(())
 }
-
-/// `DIA-001`: the bracketed code every known trigger `RAISE` message
-/// carries, paired with the `MessageKey` that renders the human
-/// sentence alongside it. Also the registry
-/// [`every_raise_code_is_known`] and
-/// [`every_known_code_appears_in_a_live_trigger`] both check against,
-/// so there is exactly one list to keep in sync — with whatever
-/// `sqlite_master` says a fully-migrated database's triggers actually
-/// raise (`DIA-001` round 3), not with any one migration file. `0022`
-/// is where these five currently live, having dropped and re-created
-/// `0015`/`0016`'s own four (those two are frozen byte-for-byte at
-/// their `0.53.0` content and carry the original prose forever) — but
-/// a future migration that touches these triggers again needs no
-/// change here or in the guard, only in this list and in whichever
-/// migration it lands in.
-const TRIGGER_ERROR_CODES: &[(&str, peisear_i18n::MessageKey)] = &[
-    (
-        "E_SUB_ISSUE_DEPTH",
-        peisear_i18n::MessageKey::SubIssueCannotHaveSubIssueMessage,
-    ),
-    (
-        "E_SUB_ISSUE_PROJECT_MISMATCH",
-        peisear_i18n::MessageKey::SubIssueMustShareProjectMessage,
-    ),
-    (
-        "E_ISSUE_SELF_PARENT",
-        peisear_i18n::MessageKey::IssueCannotBeOwnParentMessage,
-    ),
-    (
-        "E_ISSUE_DEMOTE_HAS_SUBISSUES",
-        peisear_i18n::MessageKey::CannotDemoteIssueWithSubIssuesMessage,
-    ),
-    (
-        "E_ISSUE_PLANNED_DATE_ORDER",
-        peisear_i18n::MessageKey::IssuePlannedEndBeforeStartMessage,
-    ),
-];
-
-/// The code inside a `[CODE]` bracket anywhere in `msg`, if one is
-/// there. **Not anchored to the start of `msg`** — measured directly
-/// against a real trigger failure before trusting this: `sqlx::Error`'s
-/// own `Display` is `"error returned from database: {0}"`
-/// (`sqlx-core`'s `error.rs`), so the bracket this function is
-/// actually asked to find never opens at position 0, only
-/// `msg.contains` would have found it. `None` for any message with no
-/// `[…]` at all, which is every `sqlx::Error` this function was never
-/// meant to translate (a constraint violation with no trigger
-/// involved, a connection error, and so on).
-fn trigger_error_code(msg: &str) -> Option<&str> {
-    let idx = msg.find('[')?;
-    let rest = &msg[idx + 1..];
-    let end = rest.find(']')?;
-    Some(&rest[..end])
-}
-
-/// Translate a raw `sqlx::Error` into the closest `StorageError` for
-/// sub-issue and planned-date trigger violations.
-///
-/// **Matches a code, never prose** (`DIA-001`, 0.54.0). Before this
-/// round, this function matched `msg.contains(english sentence)` —
-/// brittle twice over: two of the five needles were *prefixes* of the
-/// real message rather than the whole of it, so a reword landing
-/// after the matched prefix would have kept passing silently, and the
-/// coupling meant the English wording could never change without
-/// also touching this function. SQLite's `RAISE` has no
-/// machine-readable error code the way a real constraint violation
-/// does, so the code is carried *inside* the message text instead, as
-/// a `[E_CODE]` prefix no ordinary English sentence could be mistaken
-/// for — chosen over a bare word for exactly that reason.
-///
-/// **The code and the live trigger both live in
-/// `0022_trigger_error_codes.sql`, not in `0015`/`0016`** (round 2:
-/// an in-place edit to those two broke every existing `0.53.0`
-/// install, since `sqlx` refuses to re-run a migration whose
-/// checksum has changed — demonstrated, not assumed, at that round's
-/// review). `0022` drops and re-creates the five triggers this
-/// function translates, with the identical sentence
-/// [`peisear_i18n::MessageKey`] renders, now carrying the code ahead
-/// of it. `0015`/`0016` keep the original prose-only text forever,
-/// unreachable once `0022` has run, kept only because changing a
-/// byte of either breaks every database that already applied them.
-///
-/// **Not a PostgreSQL shape.** `RAISE EXCEPTION … USING ERRCODE =
-/// '…'` carries a real out-of-band code, so a future `P3` port does
-/// not need this bracket trick at all — it needs [`TRIGGER_ERROR_CODES`]'s
-/// own code strings moved to the `ERRCODE` values the Postgres
-/// triggers raise, which is exactly why the SQLite-only names chosen
-/// here (`E_SUB_ISSUE_DEPTH`, not a number) carry no SQLite-specific
-/// meaning of their own.
-fn translate_trigger_error(e: sqlx::Error) -> StorageError {
-    let msg = e.to_string();
-    if let Some(code) = trigger_error_code(&msg) {
-        for (known_code, key) in TRIGGER_ERROR_CODES {
-            if *known_code == code {
-                return StorageError::Validation(key.clone());
-            }
-        }
-    }
-    e.into()
-}
-
-/// Every `RAISE(ABORT, '…')` message's full quoted text carried by a
-/// **live trigger** in `pool`'s own `sqlite_master` — not a migration
-/// file, after `DIA-001` round 3 found the file-scoped version of
-/// this check (round 2's own `all_raise_messages`, reading
-/// `0022_trigger_error_codes.sql` alone) could not survive the next
-/// migration: a future `0023` adding an uncoded `RAISE` would reach
-/// users as a raw, untyped error while this check kept reading `0022`
-/// and staying green. `sqlite_master` is what a real, fully-migrated
-/// database actually has, regardless of which file most recently
-/// defined it, so a later migration is covered the day it lands, with
-/// nothing here to update. The full message, not only a bracketed
-/// prefix, so a `RAISE` carrying no code at all is still part of this
-/// population (`§10.39`'s own class: a needle that can only find what
-/// already matches its own shape).
-///
-/// **Any conflict action, not only `ABORT`** — SQLite's `RAISE` takes
-/// `ABORT`, `FAIL`, `ROLLBACK` or `IGNORE`, and every one of the 17 in
-/// this project's migrations is `ABORT` today. Keying on `ABORT`
-/// would have been the same `§10.39` mistake one level down from the
-/// one the paragraph above describes: a future `RAISE(FAIL, '…')`
-/// would carry no code, reach a user untyped, and leave this check
-/// green because it was looking for a word rather than for the thing.
-/// `IGNORE` takes no message and simply never matches.
-#[cfg(test)]
-async fn live_trigger_raise_messages(pool: &Pool) -> Vec<String> {
-    const ACTIONS: [&str; 3] = ["RAISE(ABORT, '", "RAISE(FAIL, '", "RAISE(ROLLBACK, '"];
-    let sqls: Vec<String> =
-        sqlx::query_scalar("SELECT sql FROM sqlite_master WHERE type = 'trigger'")
-            .fetch_all(pool)
-            .await
-            .expect("read sqlite_master");
-    let mut out = Vec::new();
-    for sql in &sqls {
-        for marker in ACTIONS {
-            let mut rest = sql.as_str();
-            while let Some(idx) = rest.find(marker) {
-                let after = &rest[idx + marker.len()..];
-                let Some(end) = after.find("')") else { break };
-                out.push(after[..end].to_string());
-                rest = &after[end..];
-            }
-        }
-    }
-    out
-}
-
-/// `DIA-001` §3/§13, direction 1: every `RAISE` message found carries
-/// a code `known` recognises. Takes `known` as a parameter, not
-/// [`TRIGGER_ERROR_CODES`] directly, so a test can plant a shrunk
-/// list against the real, live triggers without touching a committed
-/// file (the handoff's own "remove a code the translation knows"
-/// plant).
-#[cfg(test)]
-fn every_raise_code_is_known(
-    messages: &[String],
-    known: &[(&str, peisear_i18n::MessageKey)],
-) -> Vec<String> {
-    let mut out = Vec::new();
-    for msg in messages {
-        match trigger_error_code(msg) {
-            Some(code) if known.iter().any(|(c, _)| *c == code) => {}
-            Some(code) => out.push(format!(
-                "a live trigger RAISEs '{msg}', code {code}, which translate_trigger_error does not know"
-            )),
-            None => out.push(format!(
-                "a live trigger RAISEs '{msg}', which carries no [CODE] prefix"
-            )),
-        }
-    }
-    out
-}
-
-/// `DIA-001` §3/§13, direction 2: every code `known` carries appears
-/// in at least one live `RAISE` message found. This is the direction
-/// that direction 1 cannot catch on its own — a code
-/// `TRIGGER_ERROR_CODES` still lists after the trigger that used to
-/// raise it is dropped (and never re-created) would pass direction 1
-/// forever, silently dead.
-#[cfg(test)]
-fn every_known_code_appears_in_a_live_trigger(
-    messages: &[String],
-    known: &[(&str, peisear_i18n::MessageKey)],
-) -> Vec<String> {
-    let mut out = Vec::new();
-    for (code, _) in known {
-        if !messages
-            .iter()
-            .any(|m| trigger_error_code(m) == Some(*code))
-        {
-            out.push(format!(
-                "translate_trigger_error knows code {code}, which no live trigger RAISEs"
-            ));
-        }
-    }
-    out
-}
-
-#[cfg(test)]
-mod tests;
 
 pub async fn update(
     pool: &Pool,
@@ -670,7 +470,7 @@ pub async fn update_guarded(
 
     let res = match res {
         Ok(r) => r,
-        Err(e) => return Err(translate_trigger_error(e)),
+        Err(e) => return Err(crate::dialect::translate_trigger_error(e)),
     };
     if res.rows_affected() == 0 {
         return Err(StorageError::NotFound);
@@ -895,7 +695,7 @@ pub async fn update_schedule_guarded(
 
     let res = match res {
         Ok(r) => r,
-        Err(e) => return Err(translate_trigger_error(e)),
+        Err(e) => return Err(crate::dialect::translate_trigger_error(e)),
     };
     if res.rows_affected() == 0 {
         return Err(StorageError::NotFound);

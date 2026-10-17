@@ -16,7 +16,6 @@
 //! All event writes go through this module so the schema stays in
 //! one place. Read queries can be added freely; writes shouldn't be.
 
-use sqlx::Sqlite;
 use uuid::Uuid;
 
 use crate::StorageResult;
@@ -39,7 +38,7 @@ pub mod kind {
 /// have a logged-in user behind them. 0.8.0 user-driven mutations
 /// always pass `Some(actor)`.
 pub async fn insert_event(
-    tx: &mut sqlx::Transaction<'_, Sqlite>,
+    tx: &mut crate::dialect::Tx<'_>,
     issue_id: &str,
     project_id: &str,
     actor_id: Option<&str>,

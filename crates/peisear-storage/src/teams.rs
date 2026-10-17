@@ -196,7 +196,7 @@ pub async fn role_for<'e, E>(
     user_id: &str,
 ) -> StorageResult<Option<TeamRole>>
 where
-    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+    E: sqlx::Executor<'e, Database = crate::dialect::Database>,
 {
     let row: Option<(String,)> = sqlx::query_as(
         r#"
@@ -466,7 +466,7 @@ pub async fn remove_member(pool: &Pool, team_id: &str, user_id: &str) -> Storage
 /// made outside the transaction is the race `RACE-001` closed).
 pub async fn admin_count<'e, E>(executor: E, team_id: &str) -> StorageResult<i64>
 where
-    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+    E: sqlx::Executor<'e, Database = crate::dialect::Database>,
 {
     let n: i64 = sqlx::query_scalar(
         r#"

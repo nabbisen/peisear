@@ -6,10 +6,12 @@
 //! useful once a second backend (PostgreSQL, per the roadmap) is in
 //! flight; until then it is speculative infrastructure.
 //!
-//! The `Pool` alias below names the backend‑specific pool type so that a
-//! future `storage-postgres` sibling crate, or a `backend` feature flag,
-//! can swap the type without callers changing their signatures.
+//! [`Pool`] is re-exported from [`dialect`], which owns it along with
+//! everything else backend-specific (`DIA-002`, `RFC 018` P2) — this
+//! crate's own query modules keep writing `crate::Pool`/`Pool` exactly
+//! as before, so this round's seam cost every one of them nothing.
 
+pub mod dialect;
 pub mod issue_events;
 pub mod issues;
 pub mod metrics_snapshots;
@@ -30,9 +32,7 @@ pub mod user_metrics_snapshots;
 pub mod users;
 pub mod view_states;
 
-/// Active backend‑specific pool type. Swap this alias (or trait‑abstract
-/// it) when adding another backend.
-pub type Pool = sqlx::SqlitePool;
+pub use dialect::Pool;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StorageError {
@@ -141,7 +141,7 @@ pub(crate) async fn zero_rows_outcome<'e, E, T>(
     scope: Option<(&str, &str)>,
 ) -> StorageResult<Guarded<T>>
 where
-    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+    E: sqlx::Executor<'e, Database = dialect::Database>,
 {
     let sql = match scope {
         Some((col, _)) => format!("SELECT updated_at FROM {table} WHERE id = ?1 AND {col} = ?2"),

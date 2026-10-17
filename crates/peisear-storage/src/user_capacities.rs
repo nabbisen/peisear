@@ -225,7 +225,7 @@ pub async fn find<'e, E>(
     id: &str,
 ) -> StorageResult<Option<CapacityRow>>
 where
-    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+    E: sqlx::Executor<'e, Database = crate::dialect::Database>,
 {
     let row = sqlx::query_as::<_, CapacityDbRow>(
         r#"
@@ -280,7 +280,7 @@ pub async fn overlaps_existing<'e, E>(
     excluding_id: Option<&str>,
 ) -> StorageResult<Option<ConflictInfo>>
 where
-    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+    E: sqlx::Executor<'e, Database = crate::dialect::Database>,
 {
     // We bind period_start/period_end as Option<NaiveDate>; sqlx
     // turns None into NULL and the SQL expression handles it.
@@ -443,7 +443,7 @@ pub async fn update_guarded(
 /// caller opened with `BEGIN IMMEDIATE` -- so [`close_at`] can put its
 /// own read inside the same one (`RACE-001`).
 async fn update_in_tx(
-    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
+    tx: &mut crate::dialect::Tx<'_>,
     user_id: &RequesterId,
     id: &str,
     points: i64,

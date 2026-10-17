@@ -1,12 +1,22 @@
-//! SQLite connection pool.
+//! Connection pool, per active backend (`DIA-002`'s own seam: the
+//! `Pool` type lives in [`crate::dialect`], but `connect`/`migrate`'s
+//! *bodies* are what actually differ between backends, so they are
+//! cfg-gated here rather than there — `dialect.rs` owns the type and
+//! the error translation; this file owns what a connection and a
+//! migration run actually mean per backend).
 
+#[cfg(feature = "sqlite")]
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
+#[cfg(feature = "sqlite")]
 use std::{path::Path, str::FromStr, time::Duration};
 
-use crate::{Pool, StorageError, StorageResult};
+#[cfg(feature = "sqlite")]
+use crate::StorageError;
+use crate::{Pool, StorageResult};
 
 /// Build a connection pool and ensure the target DB file exists with sane
 /// pragmas. Uses WAL for better concurrent reads; `foreign_keys` on.
+#[cfg(feature = "sqlite")]
 pub async fn connect(url: &str) -> StorageResult<Pool> {
     // Ensure the parent directory exists when the URL points at a file.
     if let Some(path) = url.strip_prefix("sqlite://")
@@ -67,9 +77,39 @@ pub async fn connect(url: &str) -> StorageResult<Pool> {
 /// Run embedded migrations. The migration directory lives inside this
 /// crate so its path is relative to the crate's `CARGO_MANIFEST_DIR`,
 /// not the workspace root.
+#[cfg(feature = "sqlite")]
 pub async fn migrate(pool: &Pool) -> StorageResult<()> {
     sqlx::migrate!("./migrations").run(pool).await?;
     Ok(())
+}
+
+/// `DIA-002`: proves the seam's own compile-time half, nothing more.
+/// **Not a connection string** — the handoff's own bound on this
+/// round. `P3` writes the real `PgConnectOptions`/`PgPoolOptions`
+/// tuning (chosen against a real server, not guessed here, the same
+/// reason [`crate::dialect`]'s own doc comment gives for leaving the
+/// placeholder style and migration syntax unabstracted) and replaces
+/// this body. Until then, a build with `postgres` selected compiles
+/// and links — proving the type seam holds — and panics the moment
+/// anything actually tries to open a connection, which nothing in
+/// this project's own CI does (`DIA-002` §4: "No PostgreSQL in CI
+/// yet").
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+pub async fn connect(_url: &str) -> StorageResult<Pool> {
+    unimplemented!(
+        "PostgreSQL support is not implemented yet (DIA-002 builds the seam, not the backend) \
+         -- P3 replaces this"
+    )
+}
+
+/// See [`connect`]'s own doc comment — the same reasoning, the same
+/// bound, the same `P3` deferral.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+pub async fn migrate(_pool: &Pool) -> StorageResult<()> {
+    unimplemented!(
+        "PostgreSQL support is not implemented yet (DIA-002 builds the seam, not the backend) \
+         -- P3 replaces this"
+    )
 }
 
 #[cfg(test)]

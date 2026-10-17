@@ -20,3 +20,17 @@ thiserror                   = { workspace = true }
 tokio                       = { workspace = true }
 tracing                     = { workspace = true }
 uuid                        = { workspace = true }
+
+# `RFC 018` P2 (`DIA-002`): the dialect seam. `sqlite` is the only
+# backend with real code behind it and is the default; `postgres`
+# exists so the crate (and its `dialect::Pool` type) compiles against
+# `sqlx`'s own PostgreSQL driver with no PostgreSQL logic written yet
+# -- no query, no migration, no connection string. `sqlx` is already
+# an unconditional workspace dependency with its own `sqlite` feature
+# always on (`Cargo.toml`'s own `[workspace.dependencies]`); these two
+# features are this crate's own internal switch, not a re-statement
+# of sqlx's.
+[features]
+default = ["sqlite"]
+sqlite = []
+postgres = ["sqlx/postgres"]

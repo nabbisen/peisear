@@ -1,4 +1,5 @@
 use super::*;
+use crate::StorageError;
 use std::path::Path;
 
 /// A fresh, fully-migrated database, file-backed (not `:memory:` --

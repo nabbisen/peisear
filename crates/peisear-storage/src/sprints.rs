@@ -80,7 +80,7 @@ impl From<SprintRow> for Sprint {
 
 pub async fn find_by_id<'e, E>(executor: E, id: &str) -> StorageResult<Option<Sprint>>
 where
-    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+    E: sqlx::Executor<'e, Database = crate::dialect::Database>,
 {
     let row = sqlx::query_as::<_, SprintRow>(
         r#"
@@ -117,7 +117,7 @@ pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Spri
 /// `start` call site, not the schema level.
 pub async fn active_for_team<'e, E>(executor: E, team_id: &str) -> StorageResult<Option<Sprint>>
 where
-    E: sqlx::Executor<'e, Database = sqlx::Sqlite>,
+    E: sqlx::Executor<'e, Database = crate::dialect::Database>,
 {
     let row = sqlx::query_as::<_, SprintRow>(
         r#"
@@ -386,10 +386,7 @@ pub async fn complete_guarded(
 /// Write the record of a sprint that has just been set `completed`, on the
 /// transaction that set it. `completed_at` is already written there, which
 /// the burndown's end date reads.
-async fn capture_record(
-    tx: &mut sqlx::Transaction<'_, sqlx::Sqlite>,
-    sprint_id: &str,
-) -> StorageResult<()> {
+async fn capture_record(tx: &mut crate::dialect::Tx<'_>, sprint_id: &str) -> StorageResult<()> {
     let sprint = find_by_id(&mut **tx, sprint_id)
         .await?
         .ok_or(StorageError::NotFound)?;
@@ -716,7 +713,7 @@ pub async fn issues_in_sprint(
 /// does not use it for display (see [`summary`]) -- `complete` calls it once,
 /// inside its transaction, to write the record.
 async fn live_totals(
-    conn: &mut sqlx::SqliteConnection,
+    conn: &mut crate::dialect::Connection,
     sprint_id: &str,
 ) -> StorageResult<(i64, i64, i64, i64)> {
     // COALESCE because SUM on an empty set returns NULL.
@@ -890,7 +887,7 @@ pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<Burndow
 /// logic readable. The data volume is bounded (< 30 days × < 100
 /// issues = a few thousand rows in the worst case).
 async fn burndown_live(
-    conn: &mut sqlx::SqliteConnection,
+    conn: &mut crate::dialect::Connection,
     sprint: &Sprint,
 ) -> StorageResult<Vec<BurndownPoint>> {
     let sprint_id = sprint.id.as_str();
@@ -1089,7 +1086,7 @@ pub async fn distinct_contributors(
 /// assignee)`. Used live for sprints that are not completed, and once by
 /// `complete` to write the captured basis.
 async fn live_contributor_basis(
-    conn: &mut sqlx::SqliteConnection,
+    conn: &mut crate::dialect::Connection,
     sprint_id: &str,
 ) -> StorageResult<(i64, i64)> {
     let row: (i64, i64) = sqlx::query_as(

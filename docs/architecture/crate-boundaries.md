@@ -58,26 +58,36 @@ OIDC verification itself belongs in this crate behind a feature flag.
 
 ### `peisear-storage` — the database
 
-SQLite via sqlx today. The crate exports a public `Pool` type alias:
+SQLite via sqlx today. `sqlite` (default) and `postgres` (off by
+default, additive only when `sqlite` is disabled) are Cargo features;
+the `dialect` module (`DIA-002`, `RFC 018` P2) owns what differs
+between them — `Pool`, `Database`, `Tx`, `Connection` — and re-exports
+`Pool`:
 
 ```rust
-pub type Pool = sqlx::SqlitePool;
+pub type Pool = dialect::Pool; // sqlx::SqlitePool today
 ```
 
 The rule: **anything that reads or writes persistent state lives
 here.** Handlers never touch sqlx; they call `storage::users::find_by_id`,
 `storage::issues::list_in_project`, and friends.
 
-When a PostgreSQL backend lands, either a feature flag swaps the
-`Pool` alias or a sibling `peisear-storage-postgres` crate takes the
-same function signatures and the web crate depends on whichever is
-selected. `StorageError` is already abstract enough (`Database`,
-`Migration`, `InvalidData`, `NotFound`, `Bootstrap`, `Conflict`,
-`Validation`) to hold either backend's errors. The last two carry a
-`peisear_i18n::MessageKey` rather than a `String` — the crate depends
-on `peisear-auth`, `peisear-core`, and `peisear-i18n`, never on axum or
-any web type, so a storage-layer error can still name *what* went
-wrong without knowing how it will be rendered.
+**No PostgreSQL backend exists yet** — `postgres` selected compiles
+(`dialect::Pool` becomes `sqlx::PgPool`, proven by building with it on)
+and `pool::connect`/`migrate`'s postgres branches panic
+(`unimplemented!()`) the moment anything tries to use them, since
+nothing beyond the type seam has been written. `P3` (`RFC 018`) is
+where a real `PgConnectOptions`, a PostgreSQL migration set, and the
+placeholder-style question (`?` vs `$1, $2, …` — deliberately left
+unabstracted this round; see `dialect.rs`'s own doc comment) get
+decided against a real server, not guessed at here. `StorageError` is
+already abstract enough (`Database`, `Migration`, `InvalidData`,
+`NotFound`, `Bootstrap`, `Conflict`, `Validation`) to hold either
+backend's errors. The last two carry a `peisear_i18n::MessageKey`
+rather than a `String` — the crate depends on `peisear-auth`,
+`peisear-core`, and `peisear-i18n`, never on axum or any web type, so a
+storage-layer error can still name *what* went wrong without knowing
+how it will be rendered.
 
 ### `peisear-notify` — the notification dispatch pipeline
 
@@ -167,7 +177,7 @@ into the next, and the leaks are one-directional and explicit.
 | Per-period capacity limits | New table + queries in storage; new pages in web |
 | Project-health score | Computed query in storage; component in web |
 | AI assistant per user | New `peisear-ai` crate alongside the existing five, depending on core + async HTTP client; web wires it in |
-| **PostgreSQL backend** | Feature flag on `peisear-storage` or a sibling `…-postgres` crate. `Pool` alias and `StorageError` already in place |
+| **PostgreSQL backend** | `postgres` feature flag on `peisear-storage` exists (`DIA-002`, 0.54.0) — the type seam only, no query, migration or connection logic. `P3` fills `pool::connect`/`migrate`'s postgres branches and writes the migration set |
 | **OIDC / IDaaS** | New module inside `peisear-auth` behind a feature flag; web adds a callback handler |
 | **CI/CD + IaC** | `infra/` directory: Dockerfile, compose.yaml, GitHub Actions, Terraform |
 
