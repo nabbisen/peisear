@@ -3359,7 +3359,8 @@ the installed binary run from outside the repository — each reaching
 an authenticated session. **The check is a job doing it**, not a
 person walking it before a release.
 *Source*: the owner's own reading of `0.53.0`'s three install defects,
-2026-10-15. *Status*: **Implemented** (0.53.0) — see the amendment
+2026-10-15. *Status*: **Partial** — *corrected 2026-10-17 at
+`DEC-056` leg 3, `§10.44`.* It read `Implemented` (0.53.0) — see the amendment
 below; previously **Partial** — `image.yml` walks the container
 path on every run (*"Walk it — register, create a project"*, then
 volume persistence); `release.yml` builds and uploads five archives
@@ -3440,6 +3441,20 @@ purpose, not one that inherits it from a workflow that happens to now
 assert on it. The walk stands on its own merit as a regression guard
 for the contributor path; it does not need this entry's authority to
 justify existing.
+*Corrected 2026-10-17 — the `cargo install` job tests a near-miss.*
+This entry requires each path to be exercised **on the artefact that
+path actually delivers**. `install.md`'s Option C is
+`cargo install peisear`, which resolves `peisear-web` from crates.io;
+the CI job runs `cargo install --path crates/peisear`, which has the
+whole workspace beside it. The difference is not academic: the
+crates.io form **does not build at all** at 0.53.0 (`§10.44`), and the
+job was green throughout. **Two of three paths are genuinely
+exercised** — the archive and the image are built and run as a reader
+receives them. Option C is not, and this entry says `Partial` until it
+is. *Closing*: `FIV-007`, which moves `static/` inside its crate and
+adds `cargo publish --workspace --dry-run` as a CI job — the one
+command that builds a crate from its own package.
+
 *Priority*: P1.
 
 **NFR-REL-008 — Published API documentation**
@@ -5767,6 +5782,67 @@ remedy is the same in both cases and it is cheap: **when a rule states
 why it exists, the statement carries a measurement and a date, or it
 is a belief.**
 
+### 10.44 A crate that builds in the workspace and cannot be published — **open**, found 2026-10-17 by `0.53.0`'s own publish dry run, at leg 3
+
+`cargo publish --workspace --dry-run`, run from a detached worktree of
+the `0.53.0` tag as `DEC-056` leg 3 requires:
+
+> ```
+> error: proc macro panicked
+>   --> src/static_assets.rs:30:30
+>    |
+> 30 | static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../static");
+>    |
+>    = help: message: "…/package/peisear-web-0.53.0/../../static" is not a directory
+> error: failed to verify package tarball
+> ```
+
+**`peisear-web` 0.53.0 cannot be published.** `cargo package` extracts
+the crate to `target/package/peisear-web-0.53.0/` and compiles it
+there to verify it; `../../static` does not exist at that location,
+because `static/` sits at the **workspace** root and **Cargo cannot
+include files outside a package directory**. Measured at the tag:
+`cargo package -p peisear-web --list` → **zero** `static/` entries, and
+no `include` directive in any manifest.
+
+**And the same defect breaks the release's own headline fix.**
+`cargo install peisear` resolves `peisear-web` **from crates.io**, so
+it would build the same tarball and fail the same way. `§10.41` closed
+on *"`cargo install peisear` installs an application with no
+stylesheets"*; the remedy made the crate unbuildable from its own
+published form instead. **`§10.41` is not reopened** — its defect is
+genuinely fixed for every path that has the workspace — but the fix
+reached publication and stopped.
+
+**Why five gates and three walks missed it.** Each tested something
+adjacent:
+
+| check | what it actually exercised |
+|---|---|
+| `cargo package -p peisear --list` | the **facade**'s file list, not `peisear-web`'s, and a list, not a build |
+| `FIV-005`'s installed-binary walk | `cargo install --path`, which has the workspace beside it |
+| `NFR-REL-011`'s CI job | the same `--path`, for the same reason |
+| the archive and image walks | binaries built **in** the workspace |
+| `DEC-007`, clippy, rustdoc | the workspace, always |
+
+**Not one of them built the crate from its own package.** The single
+command that does is `cargo publish --dry-run`, and it was in no gate
+and in no handoff's gate list — including the ones the architect
+wrote. **`DEC-056` leg 3 is where it finally ran, which is the last
+possible moment and after the tag was already pushed.**
+
+**`NFR-REL-011` is wrong as a result, and is corrected with this
+entry.** Its text says each path is exercised *"on the artefact that
+path actually delivers"*. `cargo install peisear` delivers a crates.io
+tarball; the job tests `--path`. That is a near-miss of the documented
+path, and a near-miss is what this register exists to name.
+
+*Remedy*: `static/` moves inside the crate that embeds it, since no
+`include` can reach out of a package — with every scan that resolves
+it repointed. *Guard*: `cargo publish --workspace --dry-run` as a CI
+job, not a checklist line; it is a command, so it belongs where
+commands run. **Both are `FIV-007`.**
+
 ### 10.42 A finding about one checkable property, read as a verdict on all of them — **open**, raised by the owner 2026-10-15
 
 The owner, 2026-10-15: *"My concern is that outdated, nonsensical rules
@@ -6860,9 +6936,9 @@ Accepted in principle, deliberately not scheduled.
 | Security | 7 | 7 | — | — | — | — |
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
-| Release | 11 | 7 | 1 | — | — | 3 (1 undefined, `NFR-REL-009`, `NFR-REL-010`) |
+| Release | 11 | 6 | 2 | — | — | 3 (1 undefined, `NFR-REL-009`, `NFR-REL-010`) |
 | Compatibility | 6 | 5 | 1 | — | — | — |
-| **Non-functional total** | **69** | **54** | **5** | **0** | **2** | **8** |
+| **Non-functional total** | **69** | **53** | **6** | **0** | **2** | **8** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.
