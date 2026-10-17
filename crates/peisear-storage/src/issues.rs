@@ -377,14 +377,16 @@ pub async fn demote_to_sub_issue(
 /// carries, paired with the `MessageKey` that renders the human
 /// sentence alongside it. Also the registry
 /// [`every_raise_code_is_known`] and
-/// [`every_known_code_appears_in_a_migration`] both check against, so
-/// there is exactly one list to keep in sync — with
-/// `0022_trigger_error_codes.sql`'s own five `RAISE` statements, not
-/// with `0015`/`0016` (round 2: those two are frozen byte-for-byte at
-/// their `0.53.0` content and carry the original prose forever;
-/// `0022` drops and re-creates the same triggers with the coded
-/// text, and is the only migration whose `RAISE` text this registry,
-/// or the guard, should ever compare against).
+/// [`every_known_code_appears_in_a_live_trigger`] both check against,
+/// so there is exactly one list to keep in sync — with whatever
+/// `sqlite_master` says a fully-migrated database's triggers actually
+/// raise (`DIA-001` round 3), not with any one migration file. `0022`
+/// is where these five currently live, having dropped and re-created
+/// `0015`/`0016`'s own four (those two are frozen byte-for-byte at
+/// their `0.53.0` content and carry the original prose forever) — but
+/// a future migration that touches these triggers again needs no
+/// change here or in the guard, only in this list and in whichever
+/// migration it lands in.
 const TRIGGER_ERROR_CODES: &[(&str, peisear_i18n::MessageKey)] = &[
     (
         "E_SUB_ISSUE_DEPTH",
@@ -471,46 +473,47 @@ fn translate_trigger_error(e: sqlx::Error) -> StorageError {
     e.into()
 }
 
-/// Every `RAISE(ABORT, '…')` message's full quoted text in **one**
-/// migration file, not every file under `migrations/`.
-///
-/// **Why one file, after `DIA-001` round 2.** `0015`/`0016` are
-/// restored byte-for-byte to their `0.53.0` content and carry the
-/// original prose-only `RAISE` text forever — `sqlx` refuses to run a
-/// migration whose checksum has changed against a database that
-/// already applied it, so those two files cannot be touched again,
-/// ever, regardless of what their triggers say. `0022` drops and
-/// re-creates all five triggers with the coded text; once a database
-/// has run it, `0015`/`0016`'s own trigger definitions no longer
-/// exist in that database at all. **`0022` is therefore the only file
-/// whose `RAISE` text describes a live trigger** — scanning every
-/// migration for "every `RAISE` carries a known code" would fail on
-/// `0015`/`0016`'s own historical prose forever, which is a defect in
-/// the guard's own scope, not in those files. The full message, not
-/// only a bracketed prefix, so a `RAISE` carrying no code at all is
-/// still part of this population (`§10.39`'s own class: a needle that
-/// can only find what already matches its own shape).
+/// Every `RAISE(ABORT, '…')` message's full quoted text carried by a
+/// **live trigger** in `pool`'s own `sqlite_master` — not a migration
+/// file, after `DIA-001` round 3 found the file-scoped version of
+/// this check (round 2's own `all_raise_messages`, reading
+/// `0022_trigger_error_codes.sql` alone) could not survive the next
+/// migration: a future `0023` adding an uncoded `RAISE` would reach
+/// users as a raw, untyped error while this check kept reading `0022`
+/// and staying green. `sqlite_master` is what a real, fully-migrated
+/// database actually has, regardless of which file most recently
+/// defined it, so a later migration is covered the day it lands, with
+/// nothing here to update. The full message, not only a bracketed
+/// prefix, so a `RAISE` carrying no code at all is still part of this
+/// population (`§10.39`'s own class: a needle that can only find what
+/// already matches its own shape).
 #[cfg(test)]
-fn all_raise_messages(migration_file: &std::path::Path) -> Vec<String> {
+async fn live_trigger_raise_messages(pool: &Pool) -> Vec<String> {
     let marker = "RAISE(ABORT, '";
+    let sqls: Vec<String> =
+        sqlx::query_scalar("SELECT sql FROM sqlite_master WHERE type = 'trigger'")
+            .fetch_all(pool)
+            .await
+            .expect("read sqlite_master");
     let mut out = Vec::new();
-    let text = std::fs::read_to_string(migration_file)
-        .unwrap_or_else(|e| panic!("read {}: {e}", migration_file.display()));
-    let mut rest = text.as_str();
-    while let Some(idx) = rest.find(marker) {
-        let after = &rest[idx + marker.len()..];
-        let Some(end) = after.find("')") else { break };
-        out.push(after[..end].to_string());
-        rest = &after[end..];
+    for sql in &sqls {
+        let mut rest = sql.as_str();
+        while let Some(idx) = rest.find(marker) {
+            let after = &rest[idx + marker.len()..];
+            let Some(end) = after.find("')") else { break };
+            out.push(after[..end].to_string());
+            rest = &after[end..];
+        }
     }
     out
 }
 
-/// `DIA-001` §3, direction 1: every `RAISE` message found carries a
-/// code `known` recognises. Takes `known` as a parameter, not
+/// `DIA-001` §3/§13, direction 1: every `RAISE` message found carries
+/// a code `known` recognises. Takes `known` as a parameter, not
 /// [`TRIGGER_ERROR_CODES`] directly, so a test can plant a shrunk
-/// list against the real migrations without touching a committed file
-/// (the handoff's own "remove a code the translation knows" plant).
+/// list against the real, live triggers without touching a committed
+/// file (the handoff's own "remove a code the translation knows"
+/// plant).
 #[cfg(test)]
 fn every_raise_code_is_known(
     messages: &[String],
@@ -521,23 +524,24 @@ fn every_raise_code_is_known(
         match trigger_error_code(msg) {
             Some(code) if known.iter().any(|(c, _)| *c == code) => {}
             Some(code) => out.push(format!(
-                "migration RAISE message '{msg}' carries code {code}, which translate_trigger_error does not know"
+                "a live trigger RAISEs '{msg}', code {code}, which translate_trigger_error does not know"
             )),
             None => out.push(format!(
-                "migration RAISE message '{msg}' carries no [CODE] prefix"
+                "a live trigger RAISEs '{msg}', which carries no [CODE] prefix"
             )),
         }
     }
     out
 }
 
-/// `DIA-001` §3, direction 2: every code `known` carries appears in at
-/// least one `RAISE` message found. This is the direction that
-/// direction 1 cannot catch on its own — a code `TRIGGER_ERROR_CODES`
-/// still lists after its last migration reference is removed would
-/// pass direction 1 forever, silently dead.
+/// `DIA-001` §3/§13, direction 2: every code `known` carries appears
+/// in at least one live `RAISE` message found. This is the direction
+/// that direction 1 cannot catch on its own — a code
+/// `TRIGGER_ERROR_CODES` still lists after the trigger that used to
+/// raise it is dropped (and never re-created) would pass direction 1
+/// forever, silently dead.
 #[cfg(test)]
-fn every_known_code_appears_in_a_migration(
+fn every_known_code_appears_in_a_live_trigger(
     messages: &[String],
     known: &[(&str, peisear_i18n::MessageKey)],
 ) -> Vec<String> {
@@ -548,7 +552,7 @@ fn every_known_code_appears_in_a_migration(
             .any(|m| trigger_error_code(m) == Some(*code))
         {
             out.push(format!(
-                "translate_trigger_error knows code {code}, which no migration RAISEs"
+                "translate_trigger_error knows code {code}, which no live trigger RAISEs"
             ));
         }
     }

@@ -1,43 +1,52 @@
 use super::*;
 use std::path::Path;
 
-/// `0022` specifically, not the whole `migrations/` directory --
-/// `all_raise_messages`'s own doc comment says why: `0015`/`0016` are
-/// restored to their shipped `0.53.0` content and carry prose
-/// forever; `0022` is the one file whose `RAISE` text describes a
-/// live trigger (`DIA-001` round 2).
-fn trigger_error_codes_migration() -> std::path::PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations/0022_trigger_error_codes.sql")
+/// A fresh, fully-migrated database, file-backed (not `:memory:` --
+/// [`crate::pool::connect`]'s own default pool has up to 8
+/// connections, and SQLite's `:memory:` is a distinct database per
+/// connection unless a shared-cache URI is used, which nothing here
+/// needs to reach for).
+async fn migrated_pool() -> Pool {
+    let path = std::env::temp_dir().join(format!("peisear-dia001-r3-{}.db", uuid::Uuid::new_v4()));
+    let pool = crate::pool::connect(&format!("sqlite://{}", path.display()))
+        .await
+        .expect("connect");
+    crate::pool::migrate(&pool).await.expect("migrate");
+    pool
 }
 
-/// The live check: `0022`'s own `RAISE` text and the real known-code
-/// list satisfy both directions of `DIA-001` §3's guard.
-#[test]
-fn the_real_migrations_and_the_real_codes_agree_both_ways() {
-    let messages = all_raise_messages(&trigger_error_codes_migration());
+/// The live check: a real database's `sqlite_master` and the real
+/// known-code list satisfy both directions of `DIA-001` §3/§13's
+/// guard.
+#[tokio::test]
+async fn the_live_triggers_and_the_real_codes_agree_both_ways() {
+    let pool = migrated_pool().await;
+    let messages = live_trigger_raise_messages(&pool).await;
     assert!(
         !messages.is_empty(),
-        "found no RAISE messages at all -- the marker or the migrations path has drifted"
+        "found no RAISE messages at all -- the marker or sqlite_master's own shape has drifted"
     );
     let a = every_raise_code_is_known(&messages, TRIGGER_ERROR_CODES);
     assert!(a.is_empty(), "direction 1: {a:?}");
-    let b = every_known_code_appears_in_a_migration(&messages, TRIGGER_ERROR_CODES);
+    let b = every_known_code_appears_in_a_live_trigger(&messages, TRIGGER_ERROR_CODES);
     assert!(b.is_empty(), "direction 2: {b:?}");
 }
 
 /// Plant 1 (the handoff's own example): a `RAISE` with a code nothing
-/// knows. Caught by direction 1, against the real migrations' own
+/// knows. Caught by direction 1, against the real live triggers' own
 /// messages plus one planted on top -- not a committed file edit.
-#[test]
-fn direction_1_catches_a_raise_with_an_unknown_code() {
-    let mut messages = all_raise_messages(&trigger_error_codes_migration());
+#[tokio::test]
+async fn direction_1_catches_a_raise_with_an_unknown_code() {
+    let pool = migrated_pool().await;
+    let mut messages = live_trigger_raise_messages(&pool).await;
     messages.push("[E_BOGUS] this code is not in the registry".to_string());
     let v = every_raise_code_is_known(&messages, TRIGGER_ERROR_CODES);
     assert!(v.iter().any(|m| m.contains("E_BOGUS")), "got {v:?}");
 }
 
 /// A `RAISE` with no bracket at all is also direction 1's to catch --
-/// not a silent pass just because there was nothing to compare.
+/// not a silent pass just because there was nothing to compare. Pure
+/// strings, no database needed for this one case.
 #[test]
 fn direction_1_catches_a_raise_with_no_code_prefix() {
     let messages = vec!["no bracket here at all".to_string()];
@@ -50,11 +59,12 @@ fn direction_1_catches_a_raise_with_no_code_prefix() {
 
 /// Plant 2 (the handoff's own example): remove a code the translation
 /// knows. Planted on the `known` side rather than edited into
-/// `issues.rs`, against the real migrations' own messages -- the
+/// `issues.rs`, against the real live triggers' own messages -- the
 /// removed code is still raised, so direction 1 now calls it unknown.
-#[test]
-fn direction_1_catches_a_known_code_removed_from_the_registry() {
-    let messages = all_raise_messages(&trigger_error_codes_migration());
+#[tokio::test]
+async fn direction_1_catches_a_known_code_removed_from_the_registry() {
+    let pool = migrated_pool().await;
+    let messages = live_trigger_raise_messages(&pool).await;
     let shrunk: Vec<(&str, peisear_i18n::MessageKey)> = TRIGGER_ERROR_CODES
         .iter()
         .filter(|(c, _)| *c != "E_ISSUE_SELF_PARENT")
@@ -68,17 +78,22 @@ fn direction_1_catches_a_known_code_removed_from_the_registry() {
 }
 
 /// The direction that direction 1 cannot catch: a code the registry
-/// lists that no migration raises at all -- dead rather than
-/// mismatched.
-#[test]
-fn direction_2_catches_a_known_code_no_migration_raises() {
-    let messages = all_raise_messages(&trigger_error_codes_migration());
+/// lists that no live trigger raises at all -- dead rather than
+/// mismatched. This is also the shape of the review's own named gap
+/// ("a trigger dropped and never re-created"): dropping a trigger and
+/// widening the registry produce the identical observable fact, a
+/// known code nothing in `sqlite_master` raises, so one plant covers
+/// both.
+#[tokio::test]
+async fn direction_2_catches_a_known_code_no_live_trigger_raises() {
+    let pool = migrated_pool().await;
+    let messages = live_trigger_raise_messages(&pool).await;
     let mut widened: Vec<(&str, peisear_i18n::MessageKey)> = TRIGGER_ERROR_CODES.to_vec();
     widened.push((
         "E_NEVER_RAISED",
         peisear_i18n::MessageKey::IssueCannotBeOwnParentMessage,
     ));
-    let v = every_known_code_appears_in_a_migration(&messages, &widened);
+    let v = every_known_code_appears_in_a_live_trigger(&messages, &widened);
     assert!(v.iter().any(|m| m.contains("E_NEVER_RAISED")), "got {v:?}");
 }
 
@@ -87,17 +102,13 @@ fn direction_2_catches_a_known_code_no_migration_raises() {
 /// broke `trigger_error_code`'s first version (anchored at position
 /// 0) against a real trigger firing, caught only by
 /// `peisear-web`'s own integration tests. This fires a real trigger
-/// against a real in-memory database and asserts on
-/// `translate_trigger_error`'s actual output, not a string this test
-/// constructs by hand -- closing that gap at the crate that owns the
-/// function, not only at the crate two layers up that happened to
-/// exercise it end to end.
+/// against a real database and asserts on `translate_trigger_error`'s
+/// actual output, not a string this test constructs by hand --
+/// closing that gap at the crate that owns the function, not only at
+/// the crate two layers up that happened to exercise it end to end.
 #[tokio::test]
 async fn translate_trigger_error_maps_a_real_self_parent_violation() {
-    let pool = crate::pool::connect("sqlite::memory:")
-        .await
-        .expect("connect");
-    crate::pool::migrate(&pool).await.expect("migrate");
+    let pool = migrated_pool().await;
     sqlx::query(
         "INSERT INTO users (id, email, password_hash, display_name) \
          VALUES ('u', 'u@example.test', 'x', 'U')",
@@ -131,17 +142,20 @@ async fn translate_trigger_error_maps_a_real_self_parent_violation() {
     assert_eq!(key, peisear_i18n::MessageKey::IssueCannotBeOwnParentMessage);
 }
 
-/// `sqlite_master`'s own recorded SQL for a trigger -- the ground
-/// truth for "what does this database's trigger actually say," not a
-/// re-read of a migration file.
-async fn trigger_sql(pool: &Pool, name: &str) -> String {
-    sqlx::query_scalar::<_, String>(
-        "SELECT sql FROM sqlite_master WHERE type = 'trigger' AND name = ?",
-    )
-    .bind(name)
-    .fetch_one(pool)
-    .await
-    .unwrap_or_else(|e| panic!("read trigger {name} from sqlite_master: {e}"))
+/// Every trigger `sqlite_master` records, as `(name, sql)` pairs --
+/// the general form `DIA-001` §13 asks for, covering however many
+/// triggers exist rather than a hard-coded list of four. Includes
+/// triggers unrelated to this round (the `updated_at`-authority ones
+/// from `0014`/`0017`/`0021`) on purpose: the upgrade-vs-fresh
+/// comparison below is a claim about the whole schema reaching the
+/// same state, not only the five this round's own guard cares about.
+async fn all_trigger_sql(pool: &Pool) -> std::collections::BTreeMap<String, String> {
+    let rows: Vec<(String, String)> =
+        sqlx::query_as("SELECT name, sql FROM sqlite_master WHERE type = 'trigger'")
+            .fetch_all(pool)
+            .await
+            .expect("read sqlite_master triggers");
+    rows.into_iter().collect()
 }
 
 /// `DIA-001` round 2 §10/§11: the restoration's whole point, proven
@@ -157,6 +171,15 @@ async fn trigger_sql(pool: &Pool, name: &str) -> String {
 /// itself part of what this test asserts), and both must carry
 /// byte-identical trigger definitions once there -- not merely "both
 /// started," which the restoration alone would already guarantee.
+///
+/// **Round 3**: the four-name loop this test used to run is gone,
+/// replaced by comparing every trigger `sqlite_master` has in each
+/// database -- the same reasoning `live_trigger_raise_messages` used
+/// to drop its own file-scoped predecessor. The per-trigger `[E_`
+/// check that used to live here is not repeated: it is
+/// `the_live_triggers_and_the_real_codes_agree_both_ways`'s own job,
+/// against the one invariant this test exists to prove (upgraded and
+/// fresh reach the *same* state, whatever that state is).
 #[tokio::test]
 async fn an_upgrade_from_a_0_53_0_era_database_and_a_fresh_one_reach_identical_triggers() {
     let real_migrations_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("migrations");
@@ -197,32 +220,19 @@ async fn an_upgrade_from_a_0_53_0_era_database_and_a_fresh_one_reach_identical_t
         .await
         .expect("upgrade a 0.53.0-era database to 0022");
 
-    let fresh_db_path =
-        std::env::temp_dir().join(format!("peisear-dia001-fresh-{}.db", uuid::Uuid::new_v4()));
-    let fresh_pool = crate::pool::connect(&format!("sqlite://{}", fresh_db_path.display()))
-        .await
-        .expect("connect");
-    crate::pool::migrate(&fresh_pool)
-        .await
-        .expect("migrate a fresh database from empty");
+    let fresh_pool = migrated_pool().await;
 
-    for trigger in [
-        "prevent_sub_issue_nesting_insert",
-        "prevent_sub_issue_nesting_update",
-        "issues_planned_range_check_insert",
-        "issues_planned_range_check_update",
-    ] {
-        let upgraded_sql = trigger_sql(&upgraded_pool, trigger).await;
-        let fresh_sql = trigger_sql(&fresh_pool, trigger).await;
-        assert_eq!(
-            upgraded_sql, fresh_sql,
-            "trigger {trigger} differs between an upgraded 0.53.0-era database and a fresh one"
-        );
-        assert!(
-            upgraded_sql.contains("[E_"),
-            "trigger {trigger} does not carry a coded RAISE message after upgrading"
-        );
-    }
+    let upgraded_triggers = all_trigger_sql(&upgraded_pool).await;
+    let fresh_triggers = all_trigger_sql(&fresh_pool).await;
+    assert!(
+        !upgraded_triggers.is_empty(),
+        "found no triggers at all -- sqlite_master's own shape has drifted"
+    );
+    assert_eq!(
+        upgraded_triggers, fresh_triggers,
+        "the upgraded (0.53.0-era, then migrated to 0022) and fresh (migrated from empty) \
+         databases carry different triggers"
+    );
 }
 
 /// `trigger_error_code`'s own shape: the bracket is found anywhere in
