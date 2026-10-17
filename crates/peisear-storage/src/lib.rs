@@ -1,5 +1,15 @@
 //! Persistence layer.
 //!
+//! **`sqlite` is the default feature and the only one with real code
+//! behind it.** A `postgres` feature also exists (`DIA-002`, `RFC 018`
+//! P2) so this crate's types compile against `sqlx`'s own PostgreSQL
+//! driver — **it has no implementation yet**. Selecting it
+//! (`--no-default-features --features postgres`) builds and links,
+//! proving the type seam holds, and then panics the moment anything
+//! actually opens a connection: [`pool::connect`]/[`pool::migrate`]'s
+//! postgres branches are `unimplemented!()` stubs. `RFC 018` P3 is
+//! where a real implementation replaces them.
+//!
 //! The current implementation is backed by SQLite via `sqlx`. The public
 //! shape (query functions and the [`StorageError`] type) is intentionally
 //! concrete rather than trait‑abstracted — trait abstraction becomes
@@ -7,9 +17,10 @@
 //! flight; until then it is speculative infrastructure.
 //!
 //! [`Pool`] is re-exported from [`dialect`], which owns it along with
-//! everything else backend-specific (`DIA-002`, `RFC 018` P2) — this
-//! crate's own query modules keep writing `crate::Pool`/`Pool` exactly
-//! as before, so this round's seam cost every one of them nothing.
+//! everything else backend-specific — this crate's own query modules
+//! keep writing `crate::Pool`/`Pool` exactly as before, so the seam
+//! cost every one of them nothing. See [`dialect`]'s own module doc
+//! for what it owns, what it deliberately leaves unabstracted, and why.
 
 pub mod dialect;
 pub mod issue_events;

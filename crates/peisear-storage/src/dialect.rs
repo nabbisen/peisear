@@ -10,11 +10,16 @@
 //! anywhere under `src/` (every query in this crate is a runtime
 //! string, which is the only reason a dialect seam is feasible at
 //! all — a macro checks its SQL against one database at compile
-//! time, and none of this crate's ~130 production call sites do),
-//! and 148 runtime `sqlx::query`/`query_as`/`query_scalar` call sites
-//! including this crate's own tests (130 excluding them — the figure
-//! that matters for what a dialect module would need to abstract,
-//! since test helpers are not the seam).
+//! time, and none of this crate's query call sites do), and **131**
+//! runtime `sqlx::query`/`query_as`/`query_scalar` call sites in
+//! production code (`src/`, excluding `tests.rs` and `src/**/tests/`)
+//! — the figure that matters for what a dialect module would need to
+//! abstract, since test helpers are not the seam. **176** including
+//! this crate's own tests, for completeness; that is not the number
+//! above, and the two should never be quoted interchangeably (round 2,
+//! `DIA-002` §9 — an earlier draft of this sentence said 148, which
+//! was neither population, found only because the report this module
+//! shipped beside had already measured both correctly).
 //!
 //! **What this module owns, and why each piece is here rather than
 //! left where it was:**
@@ -34,7 +39,7 @@
 //!
 //! - **Placeholder style.** SQLite's runtime queries use `?`;
 //!   PostgreSQL needs `$1, $2, …`. Abstracting this for real would
-//!   mean touching every one of the ~130 production call sites named
+//!   mean touching every one of the 131 production call sites named
 //!   above — `DIA-002` §7's own stop condition — so it is named here
 //!   and left exactly as it is. `P3` is where a second real
 //!   implementation exists to abstract *against*, not guess at.
