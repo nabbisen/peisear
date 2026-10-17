@@ -374,12 +374,17 @@ pub async fn demote_to_sub_issue(
 }
 
 /// `DIA-001`: the bracketed code every known trigger `RAISE` message
-/// carries at its start, paired with the `MessageKey` that renders
-/// the human sentence following it. Also the registry
-/// [`every_migration_raise_code_is_known`] and
+/// carries, paired with the `MessageKey` that renders the human
+/// sentence alongside it. Also the registry
+/// [`every_raise_code_is_known`] and
 /// [`every_known_code_appears_in_a_migration`] both check against, so
-/// there is exactly one list to keep in sync with the eight `RAISE`
-/// statements across migrations 0015 and 0016, not two.
+/// there is exactly one list to keep in sync — with
+/// `0022_trigger_error_codes.sql`'s own five `RAISE` statements, not
+/// with `0015`/`0016` (round 2: those two are frozen byte-for-byte at
+/// their `0.53.0` content and carry the original prose forever;
+/// `0022` drops and re-creates the same triggers with the coded
+/// text, and is the only migration whose `RAISE` text this registry,
+/// or the guard, should ever compare against).
 const TRIGGER_ERROR_CODES: &[(&str, peisear_i18n::MessageKey)] = &[
     (
         "E_SUB_ISSUE_DEPTH",
@@ -423,7 +428,7 @@ fn trigger_error_code(msg: &str) -> Option<&str> {
 /// Translate a raw `sqlx::Error` into the closest `StorageError` for
 /// sub-issue and planned-date trigger violations.
 ///
-/// **Matches a code, never prose** (`DIA-001`, 0.54.0). Until this
+/// **Matches a code, never prose** (`DIA-001`, 0.54.0). Before this
 /// round, this function matched `msg.contains(english sentence)` —
 /// brittle twice over: two of the five needles were *prefixes* of the
 /// real message rather than the whole of it, so a reword landing
@@ -433,9 +438,19 @@ fn trigger_error_code(msg: &str) -> Option<&str> {
 /// machine-readable error code the way a real constraint violation
 /// does, so the code is carried *inside* the message text instead, as
 /// a `[E_CODE]` prefix no ordinary English sentence could be mistaken
-/// for — chosen over a bare word for exactly that reason. The human
-/// sentence stays in the migration and in [`peisear_i18n::MessageKey`]
-/// exactly as it was; only what this function keys on has moved.
+/// for — chosen over a bare word for exactly that reason.
+///
+/// **The code and the live trigger both live in
+/// `0022_trigger_error_codes.sql`, not in `0015`/`0016`** (round 2:
+/// an in-place edit to those two broke every existing `0.53.0`
+/// install, since `sqlx` refuses to re-run a migration whose
+/// checksum has changed — demonstrated, not assumed, at that round's
+/// review). `0022` drops and re-creates the five triggers this
+/// function translates, with the identical sentence
+/// [`peisear_i18n::MessageKey`] renders, now carrying the code ahead
+/// of it. `0015`/`0016` keep the original prose-only text forever,
+/// unreachable once `0022` has run, kept only because changing a
+/// byte of either breaks every database that already applied them.
 ///
 /// **Not a PostgreSQL shape.** `RAISE EXCEPTION … USING ERRCODE =
 /// '…'` carries a real out-of-band code, so a future `P3` port does
@@ -456,35 +471,37 @@ fn translate_trigger_error(e: sqlx::Error) -> StorageError {
     e.into()
 }
 
-/// Every `RAISE(ABORT, '…')` message's full quoted text, across every
-/// `.sql` file in this crate's `migrations/` directory — the same
-/// directory `pool::migrate`'s `sqlx::migrate!("./migrations")` runs,
-/// read as text here rather than executed. The full message, not only
-/// a bracketed prefix, so a `RAISE` carrying no code at all is part
-/// of this population too, not silently absent from it (`§10.39`'s
-/// own class: a needle that can only find what already matches its
-/// own shape).
+/// Every `RAISE(ABORT, '…')` message's full quoted text in **one**
+/// migration file, not every file under `migrations/`.
+///
+/// **Why one file, after `DIA-001` round 2.** `0015`/`0016` are
+/// restored byte-for-byte to their `0.53.0` content and carry the
+/// original prose-only `RAISE` text forever — `sqlx` refuses to run a
+/// migration whose checksum has changed against a database that
+/// already applied it, so those two files cannot be touched again,
+/// ever, regardless of what their triggers say. `0022` drops and
+/// re-creates all five triggers with the coded text; once a database
+/// has run it, `0015`/`0016`'s own trigger definitions no longer
+/// exist in that database at all. **`0022` is therefore the only file
+/// whose `RAISE` text describes a live trigger** — scanning every
+/// migration for "every `RAISE` carries a known code" would fail on
+/// `0015`/`0016`'s own historical prose forever, which is a defect in
+/// the guard's own scope, not in those files. The full message, not
+/// only a bracketed prefix, so a `RAISE` carrying no code at all is
+/// still part of this population (`§10.39`'s own class: a needle that
+/// can only find what already matches its own shape).
 #[cfg(test)]
-fn all_raise_messages(migrations_dir: &std::path::Path) -> Vec<String> {
+fn all_raise_messages(migration_file: &std::path::Path) -> Vec<String> {
     let marker = "RAISE(ABORT, '";
     let mut out = Vec::new();
-    for entry in std::fs::read_dir(migrations_dir)
-        .expect("read migrations/")
-        .flatten()
-    {
-        let path = entry.path();
-        if path.extension().is_none_or(|e| e != "sql") {
-            continue;
-        }
-        let text = std::fs::read_to_string(&path)
-            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
-        let mut rest = text.as_str();
-        while let Some(idx) = rest.find(marker) {
-            let after = &rest[idx + marker.len()..];
-            let Some(end) = after.find("')") else { break };
-            out.push(after[..end].to_string());
-            rest = &after[end..];
-        }
+    let text = std::fs::read_to_string(migration_file)
+        .unwrap_or_else(|e| panic!("read {}: {e}", migration_file.display()));
+    let mut rest = text.as_str();
+    while let Some(idx) = rest.find(marker) {
+        let after = &rest[idx + marker.len()..];
+        let Some(end) = after.find("')") else { break };
+        out.push(after[..end].to_string());
+        rest = &after[end..];
     }
     out
 }

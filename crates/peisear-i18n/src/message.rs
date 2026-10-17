@@ -2113,21 +2113,28 @@ pub enum MessageKey {
     // ---- I18N-006: peisear-storage/src/issues.rs (translate_trigger_error) ----
     /// The four trigger messages from migration 0015, unchanged
     /// (`DEC-011` — the wording is still decided once, in the
-    /// migration, not here). The rendered text still matches the
-    /// migration's own `RAISE` sentence verbatim — but `DIA-001`
-    /// (0.54.0) moved `translate_trigger_error`'s own matching onto a
-    /// bracketed `[E_CODE]` prefix ahead of each sentence, not the
-    /// sentence itself, so "the needle" is no longer an accurate way
-    /// to describe this relationship: the code is the needle now, and
-    /// the sentence below is a value these two places are kept in
-    /// sync on *by convention*, not by the matching mechanism.
+    /// migration, not here) — and `0015` itself is now frozen
+    /// byte-for-byte at its `0.53.0` content (`DIA-001` round 2):
+    /// `sqlx` refuses to re-run a migration whose checksum has
+    /// changed against a database that already applied it, which a
+    /// round 1 attempt to edit this very sentence in place
+    /// demonstrated by breaking every 0.53.0 install. The code
+    /// `translate_trigger_error` actually matches on lives in a later
+    /// migration, `0022_trigger_error_codes.sql`, which drops and
+    /// re-creates these same four triggers carrying a bracketed
+    /// `[E_CODE]` prefix ahead of the identical sentence — so "the
+    /// needle" describes `0022`'s own `RAISE` text, not `0015`'s,
+    /// even though the rendered text below still matches `0015`'s
+    /// sentence verbatim (by convention now, not by the live trigger's
+    /// own text being the same string this function reads).
     SubIssueCannotHaveSubIssueMessage,
     SubIssueMustShareProjectMessage,
     IssueCannotBeOwnParentMessage,
     CannotDemoteIssueWithSubIssuesMessage,
-    /// Migration `0016`'s trigger text (`CAL-001` §2.3), same
-    /// code-prefixed relationship as the four above (`DIA-001`) — but
-    /// not their register. The sub-issue fragments above (lowercase, no
+    /// Migration `0016`'s trigger text (`CAL-001` §2.3), frozen at its
+    /// `0.53.0` content the same way and for the same reason as the
+    /// four above, its own coded replacement also living in `0022` —
+    /// but not their register. The sub-issue fragments above (lowercase, no
     /// period) are grandfathered under no-rewording, not a house
     /// style to extend; register should follow the surface the user
     /// reads, not the mechanism (trigger vs. Rust check) that

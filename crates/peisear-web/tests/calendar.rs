@@ -186,13 +186,16 @@ async fn either_planned_column_null_is_accepted() {
     }
 }
 
-/// Test 5 -- `translate_trigger_error` maps the migration's `RAISE`
-/// text to `IssuePlannedEndBeforeStartMessage` via its bracketed
-/// `[E_ISSUE_PLANNED_DATE_ORDER]` code prefix (`DIA-001`), and the
-/// `MessageKey`'s own rendered English text still matches the
-/// migration's own human-readable sentence (`DEC-011` — one place
-/// decides the wording) even though that sentence is no longer what
-/// the matching itself keys on.
+/// Test 5 -- `translate_trigger_error` maps the live trigger's
+/// `RAISE` text to `IssuePlannedEndBeforeStartMessage` via its
+/// bracketed `[E_ISSUE_PLANNED_DATE_ORDER]` code prefix (`DIA-001`).
+/// The live trigger is `0022_trigger_error_codes.sql`'s own
+/// re-creation, not `0016`'s original (frozen byte-for-byte at its
+/// `0.53.0` content, round 2) -- but the sentence is identical in
+/// both, so the `MessageKey`'s own rendered English text still
+/// matches what a reader of either migration sees (`DEC-011` — one
+/// place decides the wording) even though that sentence is no longer
+/// what the matching itself keys on.
 #[tokio::test]
 async fn trigger_error_maps_to_message_key_with_identical_text() {
     let app = TestApp::spawn().await;

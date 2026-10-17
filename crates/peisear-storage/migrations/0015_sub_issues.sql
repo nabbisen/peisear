@@ -4,22 +4,6 @@
 -- introduce the sub-issue hierarchy (peisear-feature-spec-v2.1
 -- §8.3 / §8.4, Phase C PR1).
 --
--- ## Amended in place at `DIA-001` (0.54.0), not by a new migration
---
--- `sqlx::migrate!` checksums every applied file, so editing a
--- shipped one is ordinarily a decision, not a step -- a database
--- that already ran this file with the old `RAISE` text would see
--- a checksum mismatch and refuse to proceed. This project has no
--- production use yet (recorded 2026-10-14, the owner's own
--- ruling), so that cost is not a real one today, and the
--- alternative -- a new migration re-creating both triggers solely
--- to change five string literals -- would be worse on every other
--- axis: four duplicate `CREATE TRIGGER` statements, a
--- `DROP TRIGGER` pair ahead of them, and the five-messages table
--- in `DIA-001`'s own handoff restated a second time. The four
--- `RAISE` messages below gain a bracketed `[E_CODE]` prefix;
--- nothing else in this file changes.
---
 -- ## Design recap (spec §8.3)
 --
 -- Sub-issues use the **parent_id approach** (Linear-style):
@@ -96,13 +80,13 @@ BEFORE INSERT ON issues
 FOR EACH ROW
 WHEN NEW.parent_issue_id IS NOT NULL
 BEGIN
-    SELECT RAISE(ABORT, '[E_SUB_ISSUE_DEPTH] sub-issue cannot have a sub-issue (1-level only)')
+    SELECT RAISE(ABORT, 'sub-issue cannot have a sub-issue (1-level only)')
     WHERE EXISTS (
         SELECT 1 FROM issues
         WHERE id = NEW.parent_issue_id
           AND parent_issue_id IS NOT NULL
     );
-    SELECT RAISE(ABORT, '[E_SUB_ISSUE_PROJECT_MISMATCH] sub-issue must share project with its parent')
+    SELECT RAISE(ABORT, 'sub-issue must share project with its parent')
     WHERE NOT EXISTS (
         SELECT 1 FROM issues
         WHERE id = NEW.parent_issue_id
@@ -118,7 +102,7 @@ BEFORE UPDATE OF parent_issue_id ON issues
 FOR EACH ROW
 WHEN NEW.parent_issue_id IS NOT NULL
 BEGIN
-    SELECT RAISE(ABORT, '[E_SUB_ISSUE_DEPTH] sub-issue cannot have a sub-issue (1-level only)')
+    SELECT RAISE(ABORT, 'sub-issue cannot have a sub-issue (1-level only)')
     WHERE EXISTS (
         SELECT 1 FROM issues
         WHERE id = NEW.parent_issue_id
@@ -127,9 +111,9 @@ BEGIN
     -- An issue cannot be its own parent, even via a chain.
     -- Since we restrict to 1 level, the only loop possible is
     -- self-reference; check for it.
-    SELECT RAISE(ABORT, '[E_ISSUE_SELF_PARENT] an issue cannot be its own parent')
+    SELECT RAISE(ABORT, 'an issue cannot be its own parent')
     WHERE NEW.parent_issue_id = NEW.id;
-    SELECT RAISE(ABORT, '[E_SUB_ISSUE_PROJECT_MISMATCH] sub-issue must share project with its parent')
+    SELECT RAISE(ABORT, 'sub-issue must share project with its parent')
     WHERE NOT EXISTS (
         SELECT 1 FROM issues
         WHERE id = NEW.parent_issue_id
@@ -137,7 +121,7 @@ BEGIN
     );
     -- Cannot demote an issue that already has children — that
     -- would create a 2-level chain. Promote the children first.
-    SELECT RAISE(ABORT, '[E_ISSUE_DEMOTE_HAS_SUBISSUES] cannot demote an issue that has its own sub-issues; promote them first')
+    SELECT RAISE(ABORT, 'cannot demote an issue that has its own sub-issues; promote them first')
     WHERE EXISTS (
         SELECT 1 FROM issues
         WHERE parent_issue_id = NEW.id
