@@ -161,6 +161,7 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
+| **0.53.0** | **The first five minutes.** Prebuilt binaries, a container image and three working install paths, so starting peisear does not begin with installing a compiler — **and the published signing key deleted**, which is why the security round went first | `RFC 017` (**Accepted**, 2026-10-14), [handoffs 046](rfcs/handoffs/046-the-first-five-minutes/README.md) | **Authorized 2026-10-14. Tagged, not released.** Six rounds closed and the candidate accepted; `DEC-056` legs 1 and 2 ran, so the `0.53.0` tag exists and is pushed. **Leg 3's `cargo publish --dry-run` then failed** — `peisear-web` embeds `static/` through a path reaching outside its own package, so the crate cannot be published and `cargo install peisear` from crates.io would not build (`§10.44`). **Nothing published, no Release created.** Blocked on `FIV-007` |
 | 0.54.0 | **The dialect seam.** `RFC 018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.55.0 | **PostgreSQL's schema.** `RFC 018` P3 — migrations ported, triggers re-implemented | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.56.0 | **The conformance suite.** `RFC 018` P4 — one suite against both backends in CI, and the operations story | `RFC 018` §6 | Authorized 2026-10-14 |
@@ -172,11 +173,19 @@ lands ahead of it, and the change is recorded here rather than argued
 from memory.
 
 **Shipped and removed from this table**: `0.52.0` (the guards
-themselves) on 2026-10-14; `0.53.0` (the first five minutes) on
-2026-10-15, as `REL-0.53.0`'s own candidate. A row leaves when the
-release is cut; what it contained is in `CHANGELOG.md` and in the
-specification's own baseline rows, which is where release history
-belongs.
+themselves) on 2026-10-14. A row leaves when the release is **cut**;
+what it contained is in `CHANGELOG.md` and in the specification's own
+baseline rows, which is where release history belongs.
+
+**`0.53.0`'s row was removed on 2026-10-15 and is restored above,
+2026-10-17.** The candidate removed it under exit criterion 8, which
+says *as of the tag* — and legs 1 and 2 did run, so the tag exists.
+But `DEC-056` is four legs and leg 3 failed (`§10.44`): nothing was
+published and no Release was created. **A row leaves when the release
+is cut, not when the tag is written**, and criterion 8 is reconciled
+at the cut rather than at the first leg. Recorded rather than quietly
+restored, because for two days this table said a release had shipped
+that had not.
 
 **Why `RFC 017` moved off 0.52.0, kept for the record.** `RFC 018 §8` was written when the
 answer was *"0.51.0 is documentation accuracy and 0.52.0 is `RFC
