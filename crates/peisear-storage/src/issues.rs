@@ -373,51 +373,173 @@ pub async fn demote_to_sub_issue(
     Ok(())
 }
 
-/// Translate a raw `sqlx::Error` into the closest `StorageError`
-/// for sub-issue trigger violations. We match on the error's
-/// message text (SQLite's RAISE produces a specific string)
-/// because SQLite doesn't expose machine-readable codes for
-/// trigger-RAISE'd errors.
+/// `DIA-001`: the bracketed code every known trigger `RAISE` message
+/// carries at its start, paired with the `MessageKey` that renders
+/// the human sentence following it. Also the registry
+/// [`every_migration_raise_code_is_known`] and
+/// [`every_known_code_appears_in_a_migration`] both check against, so
+/// there is exactly one list to keep in sync with the eight `RAISE`
+/// statements across migrations 0015 and 0016, not two.
+const TRIGGER_ERROR_CODES: &[(&str, peisear_i18n::MessageKey)] = &[
+    (
+        "E_SUB_ISSUE_DEPTH",
+        peisear_i18n::MessageKey::SubIssueCannotHaveSubIssueMessage,
+    ),
+    (
+        "E_SUB_ISSUE_PROJECT_MISMATCH",
+        peisear_i18n::MessageKey::SubIssueMustShareProjectMessage,
+    ),
+    (
+        "E_ISSUE_SELF_PARENT",
+        peisear_i18n::MessageKey::IssueCannotBeOwnParentMessage,
+    ),
+    (
+        "E_ISSUE_DEMOTE_HAS_SUBISSUES",
+        peisear_i18n::MessageKey::CannotDemoteIssueWithSubIssuesMessage,
+    ),
+    (
+        "E_ISSUE_PLANNED_DATE_ORDER",
+        peisear_i18n::MessageKey::IssuePlannedEndBeforeStartMessage,
+    ),
+];
+
+/// The code inside a `[CODE]` bracket anywhere in `msg`, if one is
+/// there. **Not anchored to the start of `msg`** — measured directly
+/// against a real trigger failure before trusting this: `sqlx::Error`'s
+/// own `Display` is `"error returned from database: {0}"`
+/// (`sqlx-core`'s `error.rs`), so the bracket this function is
+/// actually asked to find never opens at position 0, only
+/// `msg.contains` would have found it. `None` for any message with no
+/// `[…]` at all, which is every `sqlx::Error` this function was never
+/// meant to translate (a constraint violation with no trigger
+/// involved, a connection error, and so on).
+fn trigger_error_code(msg: &str) -> Option<&str> {
+    let idx = msg.find('[')?;
+    let rest = &msg[idx + 1..];
+    let end = rest.find(']')?;
+    Some(&rest[..end])
+}
+
+/// Translate a raw `sqlx::Error` into the closest `StorageError` for
+/// sub-issue and planned-date trigger violations.
 ///
-/// This is brittle to RAISE message wording — keep the test
-/// for it close (storage unit tests assert on the exact
-/// translated `Validation` payload), and update both together
-/// if the migration ever changes the strings.
+/// **Matches a code, never prose** (`DIA-001`, 0.54.0). Until this
+/// round, this function matched `msg.contains(english sentence)` —
+/// brittle twice over: two of the five needles were *prefixes* of the
+/// real message rather than the whole of it, so a reword landing
+/// after the matched prefix would have kept passing silently, and the
+/// coupling meant the English wording could never change without
+/// also touching this function. SQLite's `RAISE` has no
+/// machine-readable error code the way a real constraint violation
+/// does, so the code is carried *inside* the message text instead, as
+/// a `[E_CODE]` prefix no ordinary English sentence could be mistaken
+/// for — chosen over a bare word for exactly that reason. The human
+/// sentence stays in the migration and in [`peisear_i18n::MessageKey`]
+/// exactly as it was; only what this function keys on has moved.
+///
+/// **Not a PostgreSQL shape.** `RAISE EXCEPTION … USING ERRCODE =
+/// '…'` carries a real out-of-band code, so a future `P3` port does
+/// not need this bracket trick at all — it needs [`TRIGGER_ERROR_CODES`]'s
+/// own code strings moved to the `ERRCODE` values the Postgres
+/// triggers raise, which is exactly why the SQLite-only names chosen
+/// here (`E_SUB_ISSUE_DEPTH`, not a number) carry no SQLite-specific
+/// meaning of their own.
 fn translate_trigger_error(e: sqlx::Error) -> StorageError {
     let msg = e.to_string();
-    // Known trigger messages from migrations 0015 and 0016, paired
-    // with the MessageKey that carries the same text (I18N-006 §5 —
-    // the needle text itself is unchanged, only the returned type
-    // is).
-    let known = [
-        (
-            "sub-issue cannot have a sub-issue",
-            peisear_i18n::MessageKey::SubIssueCannotHaveSubIssueMessage,
-        ),
-        (
-            "sub-issue must share project with its parent",
-            peisear_i18n::MessageKey::SubIssueMustShareProjectMessage,
-        ),
-        (
-            "an issue cannot be its own parent",
-            peisear_i18n::MessageKey::IssueCannotBeOwnParentMessage,
-        ),
-        (
-            "cannot demote an issue that has its own sub-issues",
-            peisear_i18n::MessageKey::CannotDemoteIssueWithSubIssuesMessage,
-        ),
-        (
-            "Planned end date must be on or after planned start date.",
-            peisear_i18n::MessageKey::IssuePlannedEndBeforeStartMessage,
-        ),
-    ];
-    for (needle, key) in known.into_iter() {
-        if msg.contains(needle) {
-            return StorageError::Validation(key);
+    if let Some(code) = trigger_error_code(&msg) {
+        for (known_code, key) in TRIGGER_ERROR_CODES {
+            if *known_code == code {
+                return StorageError::Validation(key.clone());
+            }
         }
     }
     e.into()
 }
+
+/// Every `RAISE(ABORT, '…')` message's full quoted text, across every
+/// `.sql` file in this crate's `migrations/` directory — the same
+/// directory `pool::migrate`'s `sqlx::migrate!("./migrations")` runs,
+/// read as text here rather than executed. The full message, not only
+/// a bracketed prefix, so a `RAISE` carrying no code at all is part
+/// of this population too, not silently absent from it (`§10.39`'s
+/// own class: a needle that can only find what already matches its
+/// own shape).
+#[cfg(test)]
+fn all_raise_messages(migrations_dir: &std::path::Path) -> Vec<String> {
+    let marker = "RAISE(ABORT, '";
+    let mut out = Vec::new();
+    for entry in std::fs::read_dir(migrations_dir)
+        .expect("read migrations/")
+        .flatten()
+    {
+        let path = entry.path();
+        if path.extension().is_none_or(|e| e != "sql") {
+            continue;
+        }
+        let text = std::fs::read_to_string(&path)
+            .unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let mut rest = text.as_str();
+        while let Some(idx) = rest.find(marker) {
+            let after = &rest[idx + marker.len()..];
+            let Some(end) = after.find("')") else { break };
+            out.push(after[..end].to_string());
+            rest = &after[end..];
+        }
+    }
+    out
+}
+
+/// `DIA-001` §3, direction 1: every `RAISE` message found carries a
+/// code `known` recognises. Takes `known` as a parameter, not
+/// [`TRIGGER_ERROR_CODES`] directly, so a test can plant a shrunk
+/// list against the real migrations without touching a committed file
+/// (the handoff's own "remove a code the translation knows" plant).
+#[cfg(test)]
+fn every_raise_code_is_known(
+    messages: &[String],
+    known: &[(&str, peisear_i18n::MessageKey)],
+) -> Vec<String> {
+    let mut out = Vec::new();
+    for msg in messages {
+        match trigger_error_code(msg) {
+            Some(code) if known.iter().any(|(c, _)| *c == code) => {}
+            Some(code) => out.push(format!(
+                "migration RAISE message '{msg}' carries code {code}, which translate_trigger_error does not know"
+            )),
+            None => out.push(format!(
+                "migration RAISE message '{msg}' carries no [CODE] prefix"
+            )),
+        }
+    }
+    out
+}
+
+/// `DIA-001` §3, direction 2: every code `known` carries appears in at
+/// least one `RAISE` message found. This is the direction that
+/// direction 1 cannot catch on its own — a code `TRIGGER_ERROR_CODES`
+/// still lists after its last migration reference is removed would
+/// pass direction 1 forever, silently dead.
+#[cfg(test)]
+fn every_known_code_appears_in_a_migration(
+    messages: &[String],
+    known: &[(&str, peisear_i18n::MessageKey)],
+) -> Vec<String> {
+    let mut out = Vec::new();
+    for (code, _) in known {
+        if !messages
+            .iter()
+            .any(|m| trigger_error_code(m) == Some(*code))
+        {
+            out.push(format!(
+                "translate_trigger_error knows code {code}, which no migration RAISEs"
+            ));
+        }
+    }
+    out
+}
+
+#[cfg(test)]
+mod tests;
 
 pub async fn update(
     pool: &Pool,

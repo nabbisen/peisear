@@ -5,6 +5,12 @@
 -- layer for the calendar surfaces CAL-002 renders later -- this
 -- migration ships alone and nothing reads these columns yet.
 --
+-- Amended in place at `DIA-001` (0.54.0) for the same reason
+-- `0015_sub_issues.sql`'s own header states in full: no production
+-- use yet, so a checksum change carries no real migration-upgrade
+-- cost, and a new migration purely to change one string literal
+-- would be worse than editing this one directly.
+--
 -- ## Two columns, not the spec's four
 --
 -- The spec (§38.1 task 2) lists `start_date`, `due_date`,
@@ -27,11 +33,17 @@
 -- ## The RAISE text is user-facing copy (`CAL-001` §2.3)
 --
 -- Per `DEC-011`, `translate_trigger_error`
--- (`peisear-storage/src/issues.rs`) matches this string as a
--- needle and returns the `MessageKey`
--- (`IssuePlannedEndBeforeStartMessage`) that renders it to the
--- user -- so this sentence, not a later web-layer rewording, is
--- where the wording gets decided. It intentionally does not name
+-- (`peisear-storage/src/issues.rs`) returns the `MessageKey`
+-- (`IssuePlannedEndBeforeStartMessage`) that renders this
+-- sentence to the user -- so this sentence, not a later
+-- web-layer rewording, is where the wording gets decided.
+-- `DIA-001` (0.54.0) moved the *matching* onto the bracketed
+-- `[E_ISSUE_PLANNED_DATE_ORDER]` code prefix below, so the
+-- sentence survives for a reader of the raw trigger text but is
+-- no longer what `translate_trigger_error` keys on -- `DEC-011`'s
+-- own point (one place decides the wording) is unchanged by
+-- that, since the sentence still lives here and nowhere else.
+-- It intentionally does not name
 -- the database columns (`planned_start_at`/`planned_end_at`) --
 -- COPY-001 fixed exactly that shape three days before this
 -- migration was written, on the capacity-period form
@@ -79,7 +91,7 @@ WHEN NEW.planned_start_at IS NOT NULL
  AND NEW.planned_end_at IS NOT NULL
  AND NEW.planned_end_at < NEW.planned_start_at
 BEGIN
-    SELECT RAISE(ABORT, 'Planned end date must be on or after planned start date.');
+    SELECT RAISE(ABORT, '[E_ISSUE_PLANNED_DATE_ORDER] Planned end date must be on or after planned start date.');
 END;
 
 CREATE TRIGGER issues_planned_range_check_update
@@ -89,7 +101,7 @@ WHEN NEW.planned_start_at IS NOT NULL
  AND NEW.planned_end_at IS NOT NULL
  AND NEW.planned_end_at < NEW.planned_start_at
 BEGIN
-    SELECT RAISE(ABORT, 'Planned end date must be on or after planned start date.');
+    SELECT RAISE(ABORT, '[E_ISSUE_PLANNED_DATE_ORDER] Planned end date must be on or after planned start date.');
 END;
 
 CREATE INDEX idx_issues_planned_window

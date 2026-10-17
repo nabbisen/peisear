@@ -2111,18 +2111,23 @@ pub enum MessageKey {
     },
 
     // ---- I18N-006: peisear-storage/src/issues.rs (translate_trigger_error) ----
-    /// The four `RAISE`-matched needle strings from migration 0015,
-    /// unchanged (`DEC-011` — the match array itself is not this
-    /// handoff's to touch, only the returned type). The rendered
-    /// text is the needle text verbatim; SQLite's trigger wording
-    /// *is* the user-facing message here.
+    /// The four trigger messages from migration 0015, unchanged
+    /// (`DEC-011` — the wording is still decided once, in the
+    /// migration, not here). The rendered text still matches the
+    /// migration's own `RAISE` sentence verbatim — but `DIA-001`
+    /// (0.54.0) moved `translate_trigger_error`'s own matching onto a
+    /// bracketed `[E_CODE]` prefix ahead of each sentence, not the
+    /// sentence itself, so "the needle" is no longer an accurate way
+    /// to describe this relationship: the code is the needle now, and
+    /// the sentence below is a value these two places are kept in
+    /// sync on *by convention*, not by the matching mechanism.
     SubIssueCannotHaveSubIssueMessage,
     SubIssueMustShareProjectMessage,
     IssueCannotBeOwnParentMessage,
     CannotDemoteIssueWithSubIssuesMessage,
-    /// Migration `0016`'s RAISE text (`CAL-001` §2.3), same
-    /// verbatim-needle relationship as the four above — but not
-    /// their register. The sub-issue fragments above (lowercase, no
+    /// Migration `0016`'s trigger text (`CAL-001` §2.3), same
+    /// code-prefixed relationship as the four above (`DIA-001`) — but
+    /// not their register. The sub-issue fragments above (lowercase, no
     /// period) are grandfathered under no-rewording, not a house
     /// style to extend; register should follow the surface the user
     /// reads, not the mechanism (trigger vs. Rust check) that

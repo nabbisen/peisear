@@ -187,9 +187,12 @@ async fn either_planned_column_null_is_accepted() {
 }
 
 /// Test 5 -- `translate_trigger_error` maps the migration's `RAISE`
-/// text to `IssuePlannedEndBeforeStartMessage`, and the rendered
-/// English text is identical to the needle `translate_trigger_error`
-/// matches against (`DEC-011`).
+/// text to `IssuePlannedEndBeforeStartMessage` via its bracketed
+/// `[E_ISSUE_PLANNED_DATE_ORDER]` code prefix (`DIA-001`), and the
+/// `MessageKey`'s own rendered English text still matches the
+/// migration's own human-readable sentence (`DEC-011` — one place
+/// decides the wording) even though that sentence is no longer what
+/// the matching itself keys on.
 #[tokio::test]
 async fn trigger_error_maps_to_message_key_with_identical_text() {
     let app = TestApp::spawn().await;
@@ -213,8 +216,8 @@ async fn trigger_error_maps_to_message_key_with_identical_text() {
     let rendered = peisear_i18n::Locale::English.render(key);
     assert_eq!(
         rendered, "Planned end date must be on or after planned start date.",
-        "the rendered MessageKey text must be the same string translate_trigger_error \
-         matched as a needle against the trigger's raw RAISE text"
+        "the rendered MessageKey text must still match the migration's own RAISE sentence, \
+         even though translate_trigger_error no longer matches on it (DIA-001)"
     );
 }
 
