@@ -194,3 +194,81 @@ from-empty migration shown to reach the same triggers; the guard
 re-stated to survive both files coexisting, with its new assertion
 reasoned; `DEC-007`'s delta accounted for; all gates re-run, including
 `publish-dry-run`.
+
+---
+
+# DIA-001 round 3 — the guard knows a filename, not the property
+
+Round 2 is accepted (see the review). The restoration is byte-exact,
+`0022` is correct, and the upgrade is proved rather than argued. **One
+small thing, and it is about durability rather than correctness.**
+
+## §12 — both checks are keyed on today's artefacts
+
+- **`all_raise_messages` reads one named file.** `trigger_error_codes_migration()`
+  returns `0022_trigger_error_codes.sql`, and both directions run
+  against that file alone.
+- **The upgrade test iterates a hard-coded list of four trigger
+  names**, asserting each one's `sqlite_master.sql` is identical
+  across the two databases and contains `[E_`.
+
+**Both are right today and neither survives the next migration.** Add
+`0023` tomorrow with a new validation trigger and an uncoded
+`RAISE(ABORT, 'some new rule')`:
+
+- `translate_trigger_error` will not recognise it, so the error reaches
+  the user as a raw `Database` error instead of a typed `Validation` —
+  **the exact defect this whole round exists to prevent**;
+- the guard reads `0022` and stays green;
+- the upgrade test checks four names that do not include it and stays
+  green.
+
+**This is `§10.39` again** — *a rule named for a subject and keyed on a
+string enforces the string.* The subject is *every live trigger that
+raises*; the string is a filename and a list of four.
+
+**Round 2's reasoning for the re-scope was sound** and is not being
+reversed: `0015`/`0016` carry uncoded prose forever by design, so a
+guard over all migration *files* would fail on them permanently. The
+conclusion that follows is not "scope to one file" but **"stop reading
+files."**
+
+## §13 — assert the end state, which you already have the machinery for
+
+The upgrade test already opens a migrated database and reads
+`sqlite_master`. Generalise it:
+
+> **Every trigger in `sqlite_master` whose SQL contains
+> `RAISE(ABORT,` must carry a code `TRIGGER_ERROR_CODES` knows** —
+> and every code it knows must appear in some live trigger.
+
+- **No filename, no name list.** `0015`/`0016`'s prose is irrelevant
+  because those triggers no longer exist after `0022` drops them —
+  which is the property the file-based guard could only approximate.
+- **A future migration is covered the day it lands**, with nobody
+  remembering to extend a list.
+- **It also catches a case neither check can see today**: a trigger
+  dropped and never re-created, leaving a code in the registry that
+  nothing raises.
+
+**Keep the planted-parameter shape** — `known` stays a parameter so a
+shrunk or widened copy can be planted without touching the committed
+`const`. That part of round 1 was right and is why these plants are
+possible at all.
+
+**Then decide what remains of the file-based guard.** My expectation is
+that `all_raise_messages` and `trigger_error_codes_migration` can both
+go, because the database answers the same question better. **If you
+find a property only the file version can check, say what it is and
+keep it** — but say it, rather than keeping both because removing code
+feels risky.
+
+## §14 — exit condition
+
+Both directions asserted against **live triggers read from a migrated
+database**, with no filename and no hard-coded name list; a planted
+shrunk and a planted widened `known` list each shown to fail; the
+four-name loop in the upgrade test replaced by the general form, with
+the identical-across-both-databases assertion kept; the file-based
+guard removed or its surviving reason stated; `DEC-007`'s delta
+accounted for; all gates re-run, `publish-dry-run` included.
