@@ -107,3 +107,90 @@ written down; the both-directions guard built and **seen to fail both
 ways**; the stale doc comment rewritten rather than deleted; every
 existing validation test green; `DEC-007`'s delta accounted for
 exactly; all gates re-run after the last edit.
+
+---
+
+# DIA-001 round 2 — the amended migrations break every 0.53.0 install
+
+Round 1's code is accepted (see the review): the codes, the registry,
+the both-directions guard and the real-trigger test are all right, and
+the `strip_prefix` bug you caught yourselves is the best thing in the
+round. **One decision has to be reversed, and it is not about the
+code.**
+
+## §8 — `sqlx` refuses to run a modified migration
+
+`0015_sub_issues.sql` and `0016_issue_planned_dates.sql` were amended
+in place. **Both shipped in 0.53.0** (`git ls-tree 0.53.0` lists them),
+and `sqlx` records every applied migration's checksum:
+
+```rust
+// sqlx-core-0.8.6/src/migrate/migrator.rs:176
+if migration.checksum != applied_migration.checksum {
+    return Err(MigrateError::VersionMismatch(migration.version));
+}
+```
+
+**Demonstrated at the review, not argued.** A database created by a
+build carrying 0.53.0's own migration text — 21 migrations applied,
+`/health` 200 — then opened by a build carrying this round's:
+
+```
+Error: migration failed: migration 15 was previously applied but has been modified
+```
+
+**It does not start.** Loud, named, and unrecoverable without manual
+surgery on someone else's database.
+
+## §9 — the precedent you cited expired three days before you cited it
+
+`§7` answers the migration question in place, on
+*"no production use yet"*. That was the owner's ruling on 2026-10-14
+**and it carried its own expiry**: *"expires at the first real
+deployment."*
+
+**0.53.0 shipped on 2026-10-17** — seven crates on crates.io, five
+archives on the Release, `ghcr.io/nabbisen/peisear` at `0.53.0` and
+`latest` — and its entire subject was making installation easy for
+someone with nothing. **Anyone can have a database now.**
+
+**The architect wrote that expiry and did not flag it when scoping
+this release**, three days after shipping the thing that triggered it.
+The citation was reasonable; the precedent was not.
+
+**And the handoff listed this as an escalation trigger**: *"If a
+migration needs rewriting rather than amending — migration history is
+append-only here; changing a shipped one is a decision, not a step."*
+`§7` reports it as *"answered rather than escalated"*. The answer was
+wrong, which is the case escalation exists for — **when a trigger
+fires, the report is the deliverable, not the decision.**
+
+## §10 — what to do instead
+
+**Restore `0015` and `0016` byte-for-byte to their 0.53.0 content**
+(`git show 0.53.0:<path>` — reading a committed file, not working
+around anything), and add **`0022`** that drops and re-creates the
+five triggers with the coded messages.
+
+- **Verify the restoration by checksum, not by eye**: a database
+  created before your change must start cleanly against the restored
+  files. The walk above is the shape; run it.
+- **`0022` is additive**, so an existing database applies it and a
+  fresh database gets the same end state by a different route.
+  **Prove both**: upgrade a 0.53.0-era database, and migrate a new one
+  from empty, and show the five triggers identical in each.
+- **The both-directions guard reads migration text.** Codes now live
+  in `0022` while `0015`/`0016` carry the original prose — **so the
+  guard must not demand that every `RAISE` carry a code**, or the
+  restored files fail it. Decide what it asserts now and say why;
+  this is the round's real design question, not the restoration.
+
+## §11 — exit condition
+
+`0015` and `0016` byte-identical to `0.53.0`, verified by comparing
+against `git show 0.53.0:<path>`; `0022` adding the coded triggers;
+**an upgrade from a 0.53.0-created database shown to start**, and a
+from-empty migration shown to reach the same triggers; the guard
+re-stated to survive both files coexisting, with its new assertion
+reasoned; `DEC-007`'s delta accounted for; all gates re-run, including
+`publish-dry-run`.
