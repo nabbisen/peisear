@@ -3315,7 +3315,7 @@ Every published GitHub Release MUST carry the five per-platform
 archives, named and laid out per `NFR-REL-002`. **The check is the
 artefact being there**, not a workflow existing that would produce it.
 *Source*: `FIV-002`'s own escalation, 2026-10-15, raised by the round
-rather than written by it. *Status*: **Divergent** — no Release has
+rather than written by it. *Status*: **Implemented** — no Release has
 ever carried one, and `0.53.0` is the first that can. *Why this
 requirement exists rather than being folded into `NFR-REL-002`.* That
 entry governs an archive's **shape if one exists**; it cannot be
@@ -3330,7 +3330,16 @@ reading the Release, not the workflow. **The upload path is
 unexercised as of 0.53.0's preparation** (`workflow_dispatch` never
 satisfies its `github.event_name == 'release'` guard), which is
 precisely why this entry is `Divergent` rather than `Implemented` on
-the strength of a green matrix. *Priority*: P2.
+the strength of a green matrix. *Closed 2026-10-17 — the first real Release.* `DEC-056`'s four legs ran
+against tag `0.53.0` (`bef4708`), the Release fired
+`.github/workflows/release.yml` on `release: published` for the first time ever,
+and the artefact is there: five archives attached to
+https://github.com/nabbisen/peisear/releases/tag/0.53.0, each
+version- and target-suffixed, flat, 7.7–9.0 MB
+(`gh release view 0.53.0 --json assets`). **Verified by reading the
+artefact, not the workflow**, which is what this entry's own check
+requires. *Status*: **Implemented** (0.53.0).
+*Priority*: P2.
 
 **NFR-REL-010 — Published container image**
 Every published GitHub Release MUST have a correspondingly-tagged image
@@ -3349,7 +3358,15 @@ present. One entry covering both would be satisfied by half of it.
 `.github/workflows/image.yml` pushes a tag, verified by pulling it.
 **The publish path is unexercised** — its `github.event_name ==
 'release'` guard cannot fire from `workflow_dispatch`, the same
-honest gap `NFR-REL-009` carries. *Priority*: P2.
+honest gap `NFR-REL-009` carries. *Closed 2026-10-17 — the first real Release.* `DEC-056`'s four legs ran
+against tag `0.53.0` (`bef4708`), the Release fired
+`.github/workflows/image.yml` on `release: published` for the first time ever,
+and the artefact is there: `ghcr.io/nabbisen/peisear` lists
+`["0.53.0","latest"]`, read anonymously from the registry's own
+`/v2/.../tags/list`. **Verified by reading the
+artefact, not the workflow**, which is what this entry's own check
+requires. *Status*: **Implemented** (0.53.0).
+*Priority*: P2.
 
 **NFR-REL-011 — The documented install paths are exercised**
 Every install path `docs/getting-started/install.md` offers MUST be
@@ -6989,9 +7006,9 @@ Accepted in principle, deliberately not scheduled.
 | Security | 7 | 7 | — | — | — | — |
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
-| Release | 11 | 7 | 1 | — | — | 3 (1 undefined, `NFR-REL-009`, `NFR-REL-010`) |
+| Release | 11 | 9 | 1 | — | — | 1 undefined |
 | Compatibility | 6 | 5 | 1 | — | — | — |
-| **Non-functional total** | **69** | **54** | **5** | **0** | **2** | **8** |
+| **Non-functional total** | **69** | **56** | **5** | **0** | **2** | **6** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.
