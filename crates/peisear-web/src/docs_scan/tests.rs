@@ -187,6 +187,79 @@ fn rule_6_catches_a_raw_url_naming_a_file_that_does_not_exist() {
     );
 }
 
+/// `DIA-003` §2's own table, case 1: an uncommented key whose value
+/// disagrees with config.rs's default fails.
+#[test]
+fn rule_7_catches_an_uncommented_default_that_disagrees_with_config_rs() {
+    let mut r = real();
+    r.env_example = format!("{}\nBIND_ADDR=0.0.0.0:3000\n", r.env_example);
+    let v = only(run(&r), "rule 7:");
+    assert!(v.iter().any(|m| m.contains("BIND_ADDR")), "got {v:?}");
+}
+
+/// `DIA-003` §2's own table, case 2: the same line, commented, passes
+/// -- a commented line is documentation, not a live override.
+#[test]
+fn rule_7_passes_the_same_line_commented() {
+    let mut r = real();
+    r.env_example = format!("{}\n# BIND_ADDR=0.0.0.0:3000\n", r.env_example);
+    let v = only(run(&r), "rule 7:");
+    assert!(v.is_empty(), "got {v:?}");
+}
+
+/// `DIA-003` §2's own table, case 3: an uncommented key no known
+/// source recognises fails, rather than being silently skipped.
+#[test]
+fn rule_7_catches_an_unrecognised_key() {
+    let mut r = real();
+    r.env_example = format!("{}\nFRONTEND_URL=https://example.com\n", r.env_example);
+    let v = only(run(&r), "rule 7:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("FRONTEND_URL") && m.contains("no known source")),
+        "got {v:?}"
+    );
+}
+
+/// `JWT_SECRET` has no default to disagree with -- the violation is
+/// the line being uncommented at all, regardless of its value. This is
+/// the shape of the original defect (`§10.40`, 0.53.0) this rule
+/// exists to make checkable.
+#[test]
+fn rule_7_catches_jwt_secret_uncommented_with_any_value() {
+    let mut r = real();
+    r.env_example = format!(
+        "{}\nJWT_SECRET=change-me-to-a-long-random-string\n",
+        r.env_example
+    );
+    let v = only(run(&r), "rule 7:");
+    assert!(v.iter().any(|m| m.contains("JWT_SECRET")), "got {v:?}");
+}
+
+/// A known key with no fixed default to compare -- required with no
+/// fallback at all (`SMTP_HOST`) -- passes rather than being flagged,
+/// since there is nothing for an uncommented value to silently
+/// override.
+#[test]
+fn rule_7_passes_a_known_key_with_no_fixed_default() {
+    let mut r = real();
+    r.env_example = format!("{}\nSMTP_HOST=smtp.example.com\n", r.env_example);
+    let v = only(run(&r), "rule 7:");
+    assert!(v.is_empty(), "got {v:?}");
+}
+
+/// `SMTP_PORT` and `RUST_LOG` do have fixed defaults, from sources
+/// other than `config.rs` -- confirms rule 7 reaches both, not just
+/// the `peisear-web` ones.
+#[test]
+fn rule_7_catches_a_mismatched_default_from_a_non_config_rs_source() {
+    let mut r = real();
+    r.env_example = format!("{}\nRUST_LOG=debug\nSMTP_PORT=587\n", r.env_example);
+    let v = only(run(&r), "rule 7:");
+    assert!(v.iter().any(|m| m.contains("RUST_LOG")), "got {v:?}");
+    assert!(v.iter().any(|m| m.contains("SMTP_PORT")), "got {v:?}");
+}
+
 #[test]
 fn the_helpers_do_what_the_rules_assume() {
     assert_eq!(short_crate_name("peisear-i18n"), "i18n");
@@ -271,6 +344,43 @@ fn the_helpers_do_what_the_rules_assume() {
     assert!(
         !raw_url_paths(&real().readme).is_empty(),
         "README.md has no raw_url_paths() match -- rule 6 would pass by matching nothing"
+    );
+    assert_eq!(
+        rust_log_default(
+            "tracing_subscriber::EnvFilter::try_from_default_env()\n    .unwrap_or_else(|_| \"info,sqlx=warn\".into())"
+        ),
+        Some("info,sqlx=warn".into())
+    );
+    assert_eq!(
+        smtp_port_default(
+            "let port = env::var(\"SMTP_PORT\").ok().and_then(|s| s.parse::<u16>().ok()).unwrap_or(465);"
+        ),
+        Some(465)
+    );
+    assert_eq!(
+        env_example_entries(
+            "# comment\nBIND_ADDR=0.0.0.0:3000\n\n# JWT_SECRET=change-me\nFOO = bar \n"
+        ),
+        vec![
+            ("BIND_ADDR".to_string(), "0.0.0.0:3000".to_string()),
+            ("FOO".to_string(), "bar".to_string()),
+        ]
+    );
+    // Same guard as rule 6's own, above: confirm each new parser finds
+    // its real target rather than only a synthetic one, so a rename or
+    // refactor in main.rs/peisear-notify that silently stops matching
+    // is a failing assertion here, not a rule that quietly checks
+    // nothing against the real sources.
+    let real = real();
+    assert_eq!(
+        rust_log_default(&real.main_rs),
+        Some("info,sqlx=warn,hyper=warn,tower_http=info".into()),
+        "main.rs's RUST_LOG fallback no longer matches rust_log_default's own pattern"
+    );
+    assert_eq!(
+        smtp_port_default(&real.notify_config_rs),
+        Some(465),
+        "peisear-notify's SMTP_PORT fallback no longer matches smtp_port_default's own pattern"
     );
 }
 

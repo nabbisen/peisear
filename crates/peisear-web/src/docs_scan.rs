@@ -35,6 +35,15 @@
 //!    cheaply the way rules 1-4's few fixed documents can, so its
 //!    functions and tests sit apart from the other four, at the end of
 //!    this file.
+//! 7. `.env.example`'s own uncommented `KEY=value` lines (`DIA-003`,
+//!    0.54.0), against each key's own source -- `config.rs` for most,
+//!    `main.rs`'s `tracing_subscriber::EnvFilter` fallback for
+//!    `RUST_LOG`, `peisear-notify`'s `SmtpConfig` for `SMTP_PORT`. No
+//!    tool here may read `.env*` directly; this rule's own test for
+//!    the real file is the only reader it has, and the live assertion
+//!    is deliberately plain -- see [`env_example_entries`]'s own doc
+//!    comment for why a key with no fixed default (`JWT_SECRET`) is
+//!    not the same case as one this rule simply does not recognise.
 //!
 //! **Rules 1 and 3 were not always this wide.** `DOCS-005` landed both as
 //! half-rules, deliberately: `README.md`'s crate count and the manifest's
@@ -314,6 +323,73 @@ fn literal_bool_default(config_rs: &str, var: &str) -> Option<bool> {
     }
 }
 
+// ---------- rule 7: .env.example vs each key's own default ----------
+
+/// `RUST_LOG`'s literal fallback in `main.rs` -- a different shape from
+/// [`literal_string_default`]'s `env::var("X").unwrap_or_else(...)`,
+/// since `tracing_subscriber::EnvFilter::try_from_default_env()` reads
+/// `RUST_LOG` itself; there is no `env::var("RUST_LOG")` call to anchor
+/// on, only the fallback that runs when that read comes back empty.
+fn rust_log_default(main_rs: &str) -> Option<String> {
+    let marker = "try_from_default_env()";
+    let idx = main_rs.find(marker)?;
+    let rest = &main_rs[idx + marker.len()..];
+    let window = &rest[..rest.len().min(120)];
+    let start = window.find('"')? + 1;
+    let after_start = &window[start..];
+    let end = after_start.find('"')?;
+    Some(after_start[..end].to_string())
+}
+
+/// `SMTP_PORT`'s literal numeric fallback in `peisear-notify`'s
+/// `SmtpConfig::from_env` -- `.unwrap_or(465)`, not a quoted string, so
+/// [`literal_string_default`] does not fit this one either.
+fn smtp_port_default(notify_config_rs: &str) -> Option<u16> {
+    let marker = "env::var(\"SMTP_PORT\")";
+    let idx = notify_config_rs.find(marker)?;
+    let rest = &notify_config_rs[idx + marker.len()..];
+    let window = &rest[..rest.len().min(200)];
+    let marker2 = ".unwrap_or(";
+    let idx2 = window.find(marker2)?;
+    let after = &window[idx2 + marker2.len()..];
+    let end = after.find(')')?;
+    after[..end].trim().parse().ok()
+}
+
+/// Every uncommented `KEY=value` line in `text` -- `.env.example`'s own
+/// shape, and the only one this rule anticipates (`DIA-003` §3): a
+/// `#`-prefixed line, after trimming, is documentation and out of
+/// scope; everything else is read as `key=value` with no quoting, no
+/// multi-line values, and no interpolation, because none of those
+/// exist in this file today and this is not a general `.env` parser.
+///
+/// **Why `JWT_SECRET` is not simply "unknown" or "no default to
+/// check."** Every other key either has a literal default this rule
+/// can compare against, or has no default *by design* (`SMTP_HOST`
+/// and its required siblings have none at all; `SMTP_TLS_MODE`
+/// derives from `SMTP_PORT` rather than naming one) -- for those, an
+/// uncommented value is not overriding anything, so there is nothing
+/// for this rule to compare and it passes. `JWT_SECRET` is neither: it
+/// has no literal default either, but its *correct* state when unset
+/// is "generate one," and that is exactly the behaviour an uncommented
+/// value silently replaces. The violation is not a mismatched value --
+/// it is the line being uncommented at all, which is what the original
+/// defect (`§10.40`, 0.53.0) actually was.
+fn env_example_entries(text: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for line in text.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            continue;
+        }
+        let Some((key, value)) = trimmed.split_once('=') else {
+            continue;
+        };
+        out.push((key.trim().to_string(), value.trim().to_string()));
+    }
+    out
+}
+
 // ---------- rule 6: README.md's absolute image URLs ----------
 
 const RAW_URL_PREFIX: &str = "https://github.com/nabbisen/peisear/raw/main/";
@@ -367,6 +443,9 @@ pub(crate) struct Input<'a> {
     pub config_rs: &'a str,
     /// Does this repo-root-relative path exist? (rule 6 only.)
     pub exists: &'a dyn Fn(&str) -> bool,
+    pub env_example: &'a str,
+    pub main_rs: &'a str,
+    pub notify_config_rs: &'a str,
 }
 
 /// Every rule breach, each a sentence saying which rule and where.
@@ -526,6 +605,77 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         }
     }
 
+    // Rule 7: every uncommented .env.example key matches its own
+    // source's default -- see env_example_entries's own doc comment
+    // for JWT_SECRET's special case and why the SMTP siblings listed
+    // alongside it are not treated the same way.
+    for (key, value) in env_example_entries(input.env_example) {
+        match key.as_str() {
+            "DATABASE_URL" | "BIND_ADDR" => match literal_string_default(input.config_rs, &key) {
+                Some(default) if default != value => out.push(format!(
+                    "rule 7: .env.example sets {key}={value}, config.rs's default is {default}"
+                )),
+                Some(_) => {}
+                None => out.push(format!(
+                    "rule 7: .env.example sets {key}, but config.rs has no literal default for it to check against"
+                )),
+            },
+            "COOKIE_SECURE" => match literal_bool_default(input.config_rs, "COOKIE_SECURE") {
+                Some(default) => {
+                    let default_str = if default { "1" } else { "0" };
+                    if default_str != value {
+                        out.push(format!(
+                            "rule 7: .env.example sets COOKIE_SECURE={value}, config.rs's default is {default_str}"
+                        ));
+                    }
+                }
+                None => out.push(
+                    "rule 7: .env.example sets COOKIE_SECURE, but config.rs has no literal default for it to check against"
+                        .into(),
+                ),
+            },
+            "RUST_LOG" => match rust_log_default(input.main_rs) {
+                Some(default) if default != value => out.push(format!(
+                    "rule 7: .env.example sets RUST_LOG={value}, main.rs's default is {default}"
+                )),
+                Some(_) => {}
+                None => out.push(
+                    "rule 7: .env.example sets RUST_LOG, but main.rs has no literal default for it to check against"
+                        .into(),
+                ),
+            },
+            "SMTP_PORT" => match smtp_port_default(input.notify_config_rs) {
+                Some(default) if default.to_string() != value => out.push(format!(
+                    "rule 7: .env.example sets SMTP_PORT={value}, peisear-notify's default is {default}"
+                )),
+                Some(_) => {}
+                None => out.push(
+                    "rule 7: .env.example sets SMTP_PORT, but peisear-notify has no literal default for it to check against"
+                        .into(),
+                ),
+            },
+            "JWT_SECRET" => out.push(
+                "rule 7: .env.example sets JWT_SECRET (uncommented) -- it has no default to \
+                 match (unset generates one on first run), so an uncommented value here is \
+                 itself the violation, not a mismatch against one"
+                    .to_string(),
+            ),
+            "SMTP_HOST" | "SMTP_USER" | "SMTP_PASSWORD" | "SMTP_FROM_ADDRESS"
+            | "SMTP_FROM_NAME" | "SMTP_TLS_MODE" => {
+                // Known to peisear-notify's SmtpConfig::from_env, and
+                // deliberately not checked: the first four are
+                // required with no fallback at all, FROM_NAME is
+                // optional with none, and TLS_MODE derives from
+                // SMTP_PORT rather than naming its own literal -- none
+                // of the six has a fixed default this rule could
+                // compare a value against.
+            }
+            other => out.push(format!(
+                "rule 7: .env.example sets {other}, which no known source recognises"
+            )),
+        }
+    }
+
     out
 }
 
@@ -542,6 +692,9 @@ struct Real {
     deployment: String,
     configuration: String,
     config_rs: String,
+    env_example: String,
+    main_rs: String,
+    notify_config_rs: String,
 }
 
 fn real() -> Real {
@@ -568,6 +721,15 @@ fn real() -> Real {
             .expect("read configuration.md"),
         config_rs: fs::read_to_string(root.join("crates/peisear-web/src/config.rs"))
             .expect("read config.rs"),
+        // `.env.example` is public, committed, and part of the
+        // documented start path -- not a `.env*` runtime config file.
+        // No tool outside a compiled test may read it (DIA-003 §1);
+        // this `fs::read_to_string` runs inside `cargo test`, the one
+        // reader this rule can have.
+        env_example: fs::read_to_string(root.join(".env.example")).expect("read .env.example"),
+        main_rs: fs::read_to_string(root.join("crates/peisear/src/main.rs")).expect("read main.rs"),
+        notify_config_rs: fs::read_to_string(root.join("crates/peisear-notify/src/config.rs"))
+            .expect("read peisear-notify's config.rs"),
     }
 }
 
@@ -588,6 +750,9 @@ fn run(r: &Real) -> Vec<String> {
         configuration: &r.configuration,
         config_rs: &r.config_rs,
         exists: &exists,
+        env_example: &r.env_example,
+        main_rs: &r.main_rs,
+        notify_config_rs: &r.notify_config_rs,
     })
 }
 
