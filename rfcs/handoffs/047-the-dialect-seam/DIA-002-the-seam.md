@@ -104,3 +104,74 @@ is P3's real inheritance; `compile_error!` guards shown to fire by
 building a forbidden combination; no `cfg` outside `peisear-storage`;
 `Cargo.lock` unmoved for the default build; `publish-dry-run` green;
 all gates re-run after the last edit.
+
+---
+
+# DIA-002 round 2 — two things the crate publishes
+
+Round 1 is accepted (see the review). The seam is right, the
+unabstracted list is the deliverable it should be, and the 82-error
+discovery was handled correctly. **Both findings are about what a
+stranger reading `docs.rs` sees.**
+
+## §9 — `dialect.rs`'s own doc comment carries a figure that is wrong
+
+It reads *"148 runtime `sqlx::query`/`query_as`/`query_scalar` call
+sites"*. Measured at the review with the round's own stated
+methodology:
+
+| population | count |
+|---|---|
+| production (`src/`, excluding `tests.rs` and `src/**/tests/`) | **131** |
+| everything under `src/` | **176** |
+
+**148 is neither.** The round's own report has 131 and 176 and is
+right; the doc comment disagrees with the report it shipped beside.
+
+**This is the round that opened by stating its counting methodology**,
+because the RFC's figure (137) and the handoff's (142) had already
+drifted apart. The methodology paragraph is good and should stay —
+**the number beside it just has to be one of the two it names.** Say
+which population the sentence means and use that figure.
+
+**It is a published doc comment.** `dialect` is a public module, so
+this reaches `docs.rs` for every 0.54.0 reader — `NFR-REL-008`'s own
+subject.
+
+## §10 — the crate's landing page names no caveat
+
+`crates/peisear-storage/src/lib.rs` has twelve `//!` lines and **zero
+mentions of `postgres`**.
+
+A reader arriving at `docs.rs/peisear-storage/0.54.0` sees that
+landing page, and a sidebar listing two features: `sqlite` (default)
+and `postgres`. **Selecting `postgres` produces a crate that compiles,
+links, and panics the moment anything opens a connection.** The
+caveats are real and well written — but they live in `dialect.rs`'s
+module doc and `pool.rs`'s function doc, which is one or two clicks
+past the place a stranger forms their expectation.
+
+**Say it at the crate root**, in the first paragraph a reader meets:
+`sqlite` is the default and the only backend with code behind it;
+`postgres` exists so the seam compiles against `sqlx`'s driver and has
+**no implementation yet** (`RFC 018` P3); selecting it builds
+something that panics on connect.
+
+**The alternative was considered at this review and is not what I am
+asking for.** A `compile_error!` under `postgres`-without-an-
+implementation would make a panicking build impossible — strictly
+safer — but it would also delete the one thing P2 exists to
+demonstrate, that the type seam compiles with the flag present.
+**Keeping the build checkable and stating the bound where it is read
+is the better trade**, and it is recorded here so nobody reopens it
+without the reason.
+
+## §11 — exit condition
+
+`dialect.rs`'s call-site figure corrected to whichever population its
+own sentence means, with the methodology paragraph kept; the crate
+root stating plainly that `postgres` has no implementation and what
+selecting it produces; `DEC-007` unchanged at **500** with the feature
+absent; `fmt`, `clippy`, `rustdoc` and `publish-dry-run` re-run after
+the last edit — `rustdoc` especially, since both changes are doc
+comments on a published crate.
