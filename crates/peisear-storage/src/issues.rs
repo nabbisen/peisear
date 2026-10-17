@@ -487,9 +487,18 @@ fn translate_trigger_error(e: sqlx::Error) -> StorageError {
 /// prefix, so a `RAISE` carrying no code at all is still part of this
 /// population (`§10.39`'s own class: a needle that can only find what
 /// already matches its own shape).
+///
+/// **Any conflict action, not only `ABORT`** — SQLite's `RAISE` takes
+/// `ABORT`, `FAIL`, `ROLLBACK` or `IGNORE`, and every one of the 17 in
+/// this project's migrations is `ABORT` today. Keying on `ABORT`
+/// would have been the same `§10.39` mistake one level down from the
+/// one the paragraph above describes: a future `RAISE(FAIL, '…')`
+/// would carry no code, reach a user untyped, and leave this check
+/// green because it was looking for a word rather than for the thing.
+/// `IGNORE` takes no message and simply never matches.
 #[cfg(test)]
 async fn live_trigger_raise_messages(pool: &Pool) -> Vec<String> {
-    let marker = "RAISE(ABORT, '";
+    const ACTIONS: [&str; 3] = ["RAISE(ABORT, '", "RAISE(FAIL, '", "RAISE(ROLLBACK, '"];
     let sqls: Vec<String> =
         sqlx::query_scalar("SELECT sql FROM sqlite_master WHERE type = 'trigger'")
             .fetch_all(pool)
@@ -497,12 +506,14 @@ async fn live_trigger_raise_messages(pool: &Pool) -> Vec<String> {
             .expect("read sqlite_master");
     let mut out = Vec::new();
     for sql in &sqls {
-        let mut rest = sql.as_str();
-        while let Some(idx) = rest.find(marker) {
-            let after = &rest[idx + marker.len()..];
-            let Some(end) = after.find("')") else { break };
-            out.push(after[..end].to_string());
-            rest = &after[end..];
+        for marker in ACTIONS {
+            let mut rest = sql.as_str();
+            while let Some(idx) = rest.find(marker) {
+                let after = &rest[idx + marker.len()..];
+                let Some(end) = after.find("')") else { break };
+                out.push(after[..end].to_string());
+                rest = &after[end..];
+            }
         }
     }
     out
