@@ -114,11 +114,7 @@ const DM_JS_RELATIVE_PATH: &str = "dm.js";
 /// directory, narrowed to the one file this guard cares about.
 fn read_dm_js() -> String {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let path = manifest_dir
-        .join("..")
-        .join("..")
-        .join("static")
-        .join(DM_JS_RELATIVE_PATH);
+    let path = manifest_dir.join("static").join(DM_JS_RELATIVE_PATH);
     fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
 }
 

@@ -48,10 +48,7 @@ fn search_js_allowlist_entry_still_matches_something() {
 /// type. See the module doc for what this does and does not check.
 #[test]
 fn every_entry_under_static_is_a_servable_asset_type() {
-    let static_dir = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
-        .join("static");
+    let static_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("static");
     let mut files = Vec::new();
     collect_all_files(&static_dir, &mut files);
     assert!(

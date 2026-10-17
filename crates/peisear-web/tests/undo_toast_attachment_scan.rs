@@ -24,14 +24,12 @@
 //! No `mod common`, no `TestApp` — nothing here renders a page or
 //! starts a server; it reads `static/*.js` the same way
 //! `static_js_scan` (`crates/peisear-web/src/static_js_scan.rs`) does,
-//! via `CARGO_MANIFEST_DIR/../../static`.
+//! via `CARGO_MANIFEST_DIR/static`.
 
 use std::path::{Path, PathBuf};
 
 fn static_file(name: &str) -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("..")
         .join("static")
         .join(name)
 }

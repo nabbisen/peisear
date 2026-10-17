@@ -152,6 +152,36 @@ jobs:
           echo "authenticated /projects: $code"
           [ "$code" = "200" ] || { echo "::error::session from register did not authenticate, got $code"; exit 1; }
 
+  # `FIV-007` / `§10.44`: the one command that builds every crate from
+  # its own package rather than from the workspace. `cargo build`,
+  # `cargo test`, `clippy`, `rustdoc` above all compile in place, where
+  # a path dependency reaching outside its crate directory (`static/`
+  # used to be two levels above `peisear-web`'s own manifest) resolves
+  # fine and the defect is invisible. `cargo package` extracts each
+  # crate to its own isolated directory and compiles *that* -- the
+  # same thing `cargo publish` does before uploading, and the only
+  # thing in this project that does. `DEC-056` leg 3 is where this
+  # first ran for real, after `0.53.0`'s own tag was already pushed;
+  # this job exists so the next regression of this shape is caught on
+  # a pull request, not after a tag.
+  #
+  # `--workspace`, not one crate at a time: a crate verified alone
+  # resolves its sibling path dependencies from whatever is already
+  # published on crates.io, which lags the workspace -- `peisear-web`
+  # alone would have pulled `peisear-auth` 0.52.0, missing the
+  # `generate_signing_key` function `FIV-001` only added in 0.53.0, and
+  # failed for a second, unrelated reason. `--workspace` builds the
+  # crates being verified against each other, in dependency order, the
+  # way a real `cargo publish --workspace` run does.
+  publish-dry-run:
+    name: cargo publish --workspace --dry-run
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo publish --workspace --dry-run
+
   # Build and test each test target individually rather than running
   # `cargo test --workspace` in one go. The combined build links many
   # large crates (sqlx + leptos + axum + wasm-smtp family) and has

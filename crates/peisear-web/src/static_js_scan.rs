@@ -217,7 +217,7 @@ fn collect_js_files(dir: &Path, out: &mut Vec<(PathBuf, String)>) {
 
 fn all_static_js_files() -> Vec<(PathBuf, String)> {
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let static_dir = manifest_dir.join("..").join("..").join("static");
+    let static_dir = manifest_dir.join("static");
     if !static_dir.is_dir() {
         panic!("read static dir {}", static_dir.display());
     }

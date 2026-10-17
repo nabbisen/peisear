@@ -10,6 +10,19 @@
 //! `fs` feature that provided it) 404s on every path, on every
 //! installed copy. The content has to already be inside the binary by
 //! the time a request for it arrives.
+//!
+//! `static/` lives **inside this crate** (`crates/peisear-web/static/`,
+//! `FIV-007`, 0.53.0), not at the workspace root. It used to be the
+//! latter, and `include_dir!`'s `../../static` reached outside
+//! `peisear-web`'s own package directory -- which builds and tests
+//! clean in the workspace, where the relative path resolves, and
+//! fails `cargo publish`'s own verification, which extracts the crate
+//! to `target/package/peisear-web-<version>/` and compiles it from
+//! there alone, where it does not (`§10.44`). Moving the directory
+//! inside the crate, and listing it in this crate's own `Cargo.toml`
+//! `include`, is what makes `cargo publish --workspace --dry-run`
+//! (now a CI job, see `test.yml`) the first gate to have ever built
+//! this crate the way crates.io does.
 
 use std::collections::HashMap;
 use std::hash::{Hash, Hasher};
@@ -23,11 +36,11 @@ use axum::{
 };
 use include_dir::{Dir, DirEntry, File, include_dir};
 
-/// `static/`'s contents at compile time, rooted the same two
-/// directories above this crate's manifest that
-/// [`crate::static_js_scan`] already resolves at runtime for its own,
-/// separate reasons -- one real path, read two different ways.
-static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/../../static");
+/// `static/`'s contents at compile time, rooted inside this crate's
+/// own manifest directory -- the same path
+/// [`crate::static_js_scan`] resolves at runtime, one real path read
+/// two different ways.
+static STATIC_DIR: Dir<'_> = include_dir!("$CARGO_MANIFEST_DIR/static");
 
 /// Every file under `dir`, recursively (`FIV-005` round 3 `§12`):
 /// [`Dir::files`] returns direct children only, while
@@ -206,7 +219,7 @@ fn read_from_disk_in_debug(path: &str) -> Option<Vec<u8>> {
         return None;
     }
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
-    let full = manifest_dir.join("../../static").join(rel);
+    let full = manifest_dir.join("static").join(rel);
     std::fs::read(full).ok()
 }
 

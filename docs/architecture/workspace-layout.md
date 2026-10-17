@@ -1,7 +1,7 @@
 # Workspace Layout
 
-peisear is a Cargo workspace containing seven published crates plus
-static assets and an `infra/` placeholder. The tree:
+peisear is a Cargo workspace containing seven published crates and an
+`infra/` directory. The tree:
 
 ```
 peisear/
@@ -61,7 +61,7 @@ peisear/
 │   │                                #   core + storage only.
 │   │
 │   ├── peisear-web/                 # HTTP surface (library only).
-│   │   └── src/
+│   │   ├── src/
 │   │       ├── lib.rs               # Public API: build_router, AppState, Config.
 │   │       ├── app.rs               # build_router(AppState) -> Router
 │   │       ├── state.rs             # AppState { db, jwt_secret, cookie_secure }
@@ -84,6 +84,25 @@ peisear/
 │   │           ├── issues.rs        # <ProjectDetailPage> (board+list),
 │   │           │                    # <IssueNewPage>, <IssueDetailPage>
 │   │           └── error_page.rs    # <ErrorPage> for non-auth errors
+│   │   └── static/                  # Embedded into the binary at
+│   │                                #   compile time (`FIV-005`), not
+│   │                                #   shipped beside it (`FIV-007`,
+│   │                                #   0.53.0 -- moved inside this
+│   │                                #   crate so `cargo publish` can
+│   │                                #   see it).
+│   │       ├── app.css              # Supplemental CSS, loaded after
+│   │       │                        #   daisyui.min.css and before
+│   │       │                        #   tailwind.css (see below).
+│   │       ├── board.js             # Kanban drag-and-drop.
+│   │       ├── calendar.js          # Calendar drag-and-drop.
+│   │       ├── daisyui.min.css      # Vendored component styles.
+│   │       ├── dm.js                # Direct-manipulation keyboard
+│   │       │                        #   fallback (issue detail, board).
+│   │       ├── plan.js              # Sprint-plan drag-and-drop.
+│   │       ├── search.js            # Global search, loaded on every
+│   │       │                        #   page (`components/layout.rs`).
+│   │       └── tailwind.css         # Self-hosted utility classes
+│   │                                #   (../operations/tailwind-local.md).
 │   │
 │   └── peisear/                     # Facade crate.
 │       ├── Cargo.toml               #   [[bin]] name = "peisear"
@@ -92,21 +111,6 @@ peisear/
 │           │                        # as peisear::{core, auth, storage, web}.
 │           └── main.rs              # Server bootstrap; the binary that
 │                                    # `cargo install peisear` ships.
-│
-├── static/
-│   ├── app.css                      # Supplemental CSS, loaded after
-│   │                                #   daisyui.min.css and before
-│   │                                #   tailwind.css (see below).
-│   ├── board.js                     # Kanban drag-and-drop.
-│   ├── calendar.js                  # Calendar drag-and-drop.
-│   ├── daisyui.min.css              # Vendored component styles.
-│   ├── dm.js                        # Direct-manipulation keyboard
-│   │                                #   fallback (issue detail, board).
-│   ├── plan.js                      # Sprint-plan drag-and-drop.
-│   ├── search.js                    # Global search, loaded on every
-│   │                                #   page (`components/layout.rs`).
-│   └── tailwind.css                 # Self-hosted utility classes
-│                                     #   (../operations/tailwind-local.md).
 │
 └── infra/
     ├── docker/
@@ -127,13 +131,18 @@ names alone tells you the module graph.
 - **Migrations** are embedded at compile time via
   `sqlx::migrate!("./migrations")` relative to the `peisear-storage`
   crate's `CARGO_MANIFEST_DIR`, so the binary ships with them baked in.
-- **Static files** (all eight under `static/`, above) are embedded
-  into the binary at compile time (`crates/peisear-web/src/
-  static_assets.rs`, via `include_dir!`, `FIV-005`, 0.53.0) and served
-  from memory, with no runtime dependency on the server's working
-  directory. `cargo install peisear` and a release archive both
-  publish the binary alone — `static/` is not a separate directory to
-  place beside it. See
+- **Static files** (all eight under `crates/peisear-web/static/`,
+  above) are embedded into the binary at compile time
+  (`crates/peisear-web/src/static_assets.rs`, via `include_dir!`,
+  `FIV-005`, 0.53.0) and served from memory, with no runtime
+  dependency on the server's working directory. `cargo install
+  peisear` and a release archive both publish the binary alone —
+  `static/` is not a separate directory to place beside it.
+  `static/` lives inside this crate, not at the workspace root
+  (`FIV-007`, 0.53.0): `include_dir!` cannot reach outside the
+  package directory it is compiled in, which `cargo publish`'s own
+  verification build enforces and nothing else in this project's
+  gates did until that command ran. See
   [../operations/deployment.md](../operations/deployment.md).
 
 ## Next

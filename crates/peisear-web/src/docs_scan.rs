@@ -228,9 +228,14 @@ fn verify_block_version(installation: &str, tool: &str) -> Option<String> {
 
 fn static_files() -> Vec<String> {
     let mut out = Vec::new();
-    for e in fs::read_dir(repo_root().join("static"))
-        .expect("static/ exists")
-        .flatten()
+    for e in fs::read_dir(
+        repo_root()
+            .join("crates")
+            .join("peisear-web")
+            .join("static"),
+    )
+    .expect("crates/peisear-web/static/ exists")
+    .flatten()
     {
         if e.path().is_file() {
             out.push(e.file_name().to_string_lossy().to_string());
