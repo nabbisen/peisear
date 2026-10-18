@@ -31,5 +31,16 @@ wrangler.local.toml
 *.db-shm
 *.db-wal
 
+# The generated JWT signing key (`FIV-001`, 0.53.0): `Config::from_env`
+# persists 32 random bytes beside the resolved database when
+# `JWT_SECRET` is unset. The database files above were already ignored;
+# this one has no extension, so nothing covered it, and a local run at
+# the repository root left a real signing key stageable by `git add -A`.
+# Matched by name anywhere, not only at `data/`, because the file lands
+# beside whatever `DATABASE_URL` resolves to (`§10.45`).
+jwt_secret
+**/jwt_secret
+data/
+
 # Custom
 *.local.json
