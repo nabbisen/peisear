@@ -76,3 +76,88 @@ service in CI with one green job proving a real connection; the
 SQLite default untouched, shown by an unchanged `DEC-007`; the
 postgres-feature suite's figure reported as it is, not as it should
 be; all gates re-run after the last edit.
+
+---
+
+# PG-001 round 2 — neither backend says the URL is for the other one
+
+Round 1 is accepted (see the review). `connect` is real, every option
+is reasoned, the CI service is green, and leaving `PgPoolOptions`'
+defaults alone with a stated reason was the right call. **One thing
+`connect` now owns and does not do.**
+
+## §7 — the most likely mistake a user will make, and what they get
+
+This release makes a second backend real, so **choosing the wrong
+`DATABASE_URL` stops being impossible and becomes the first thing
+anyone switching will get wrong.** Measured at the review, both
+directions:
+
+| build | `DATABASE_URL` | what the user gets |
+|---|---|---|
+| default (`sqlite`) | `postgres://localhost/peisear` | `Error: error returned from database: (code: 14) unable to open database file` |
+| `--features postgres` | `sqlite://data/app.db` | **a 30-second hang**, then `Database(PoolTimedOut)` |
+
+**Neither message names the real problem.** The SQLite one is a file
+error about a URL that names no file, printed *after* a startup line
+that logs `database=postgres://localhost/peisear` as if it were fine.
+The PostgreSQL one makes the reader wait half a minute to learn
+nothing — `sqlite://data/app.db` parses as a plausible host, so sqlx
+dials it and gives up on the acquire timeout.
+
+**Round 1's own report already saw half of this** and read it as a
+good sign: *"connect moved from 'cannot be reached' to 'reached, and
+correctly fails against the wrong kind of URL.'"* It is reached, and
+it does fail — but *"correctly"* is doing work there that a user
+would not recognise.
+
+## §8 — what to build
+
+**Each `connect` checks the scheme first and says which build it is.**
+One comparison before any option parsing, in both branches:
+
+- the `sqlite` branch rejects a URL whose scheme is not `sqlite`;
+- the `postgres` branch rejects one whose scheme is not `postgres` or
+  `postgresql` — **both spellings; libpq accepts either and so does
+  `PgConnectOptions`**, so rejecting `postgresql://` would be a new
+  defect.
+
+**The message names three things**: which backend this build is, what
+the URL's scheme says, and that a different build is needed —
+`DIA-002`'s own `compile_error!` text is the register to match, since
+it already tells a reader what to do next rather than only what is
+wrong.
+
+**Fail before connecting, not after.** The point is the 30 seconds as
+much as the wording.
+
+## §9 — the bound, so this does not grow
+
+**Scheme only.** Not the host, not the database name, not whether the
+server exists — those are what a connection attempt is for, and a
+`connect` that pre-validates them would be a second, worse parser.
+
+**One `StorageError` variant, or an existing one** — your call, with
+the reason. A new variant that only this check raises is defensible;
+so is reusing `Bootstrap`. Say which and why.
+
+## §10 — gates
+
+- `DEC-007`, feature absent — **this moves** by the new tests.
+  Account for the delta exactly.
+- **Both rejections tested, both spellings of `postgresql` accepted**,
+  and a correct URL still connecting on each branch — the last one
+  matters, because a scheme check that rejects everything also passes
+  a test that only checks rejection.
+- The CI PostgreSQL job still green.
+- `fmt`, `clippy` both ways, `rustdoc`, `mdbook`, `publish-dry-run`.
+
+## §11 — exit condition
+
+Both `connect` branches rejecting the other backend's scheme before
+attempting a connection; `postgres://` and `postgresql://` both
+accepted by the PostgreSQL branch; each message naming the build, the
+scheme found, and what to do; the check bounded to the scheme with
+that bound written down; a correct URL still connecting on both
+branches, shown by test; `DEC-007`'s delta accounted for; all gates
+re-run after the last edit.
