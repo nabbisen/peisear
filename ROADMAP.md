@@ -183,7 +183,20 @@ Release and `ghcr.io/nabbisen/peisear` at `0.53.0` and `latest`.
 — coded trigger errors (`0022`, matched by bracketed code rather than
 prose), the `postgres` feature publishing for the first time (no
 implementation behind it yet; `RFC 018` P3 is where one lands), and
-`docs_scan` rule 7.
+`docs_scan` rule 7. All four `DEC-056` legs: seven crates on crates.io,
+five archives on the Release, `ghcr.io/nabbisen/peisear` at `0.54.0`
+and `latest`. **The first release this project has ever asked an
+existing database to upgrade** — `0022`, walked from a real 0.53.0
+install from crates.io before the tag and again independently at
+review, with the original session's cookie still authenticating after.
+
+*This sentence was written by the candidate, before the legs ran, and
+is true only because they then succeeded.* `0.53.0`'s note two
+paragraphs down records the same thing going the other way. **A row
+leaves, and a "shipped" line lands, when the release is cut** — and
+this is the second release where the candidate did it at the
+candidate. The next `REL-` handoff states it as an exit condition
+rather than a warning in prose.
 
 **Its row was removed on 2026-10-15, restored on 2026-10-17, and
 removed again when the release was actually cut.** The candidate removed it under exit criterion 8, which

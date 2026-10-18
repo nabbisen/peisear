@@ -17,7 +17,7 @@ to say**, and that table has 0.54.0 authorized since 2026-10-14.
 | DIA-001 | [the errors that are prose](./DIA-001-the-errors-that-are-prose.md) | **P1, `RFC 018` §4.** `translate_trigger_error` matches `sqlx::Error`'s rendered string against five needles, **two of them prefixes of the real message**. A reworded trigger is a silently broken validation path. Codes raised by the database, matched on the code, with a both-directions guard between the migrations and the translation | — | **Closed** — 3 rounds |
 | DIA-002 | [the seam](./DIA-002-the-seam.md) | **P2.** A `postgres` feature off by default, a dialect module, `compile_error!` guards. **No PostgreSQL code** — this builds the place a backend would go and proves the place is empty. The list of differences *deliberately left unabstracted* is the round's real output | DIA-001 | **Closed** — 2 rounds |
 | DIA-003 | [the example file nobody reads](./DIA-003-the-example-file-nobody-reads.md) | **Carried from 0.53.0.** `.env.example` shipped two defects at once because nothing in this project reads it. `docs_scan` rule 7: every uncommented `KEY=value` must match `config.rs`'s own default | — | **Closed** — 1 round |
-| REL-0.54.0 | the release candidate | The cut, `DEC-028`, and `DEC-056`'s four legs. Written when the three rounds close | all three | **Accepted** — awaiting the owner’s approval of the four legs |
+| REL-0.54.0 | the release candidate | The cut, `DEC-028`, and `DEC-056`'s four legs. Written when the three rounds close | all three | **Shipped** — 0.54.0 released 2026-10-18 |
 
 **Status lives in the table above, not in a message.** Updated when a
 round closes, so whoever picks the next one up reads it here.
