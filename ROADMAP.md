@@ -161,7 +161,6 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| 0.54.0 | **The dialect seam.** `RFC 018` P1 + P2 — coded errors, the feature flag and the dialect module. No PostgreSQL code yet — **plus `docs_scan` rule 7**, carried from 0.53.0: every uncommented `KEY=value` in `.env.example` must match `config.rs`'s own default | `RFC 018` §6, [handoffs 047](rfcs/handoffs/047-the-dialect-seam/README.md) | **Authorized 2026-10-14; scoped 2026-10-17, three rounds.** The rule 7 clause was added at scoping and **authorized 2026-10-17** — it is the guard `0.53.0` owed after `.env.example` shipped two defects that nothing read |
 | 0.55.0 | **PostgreSQL's schema.** `RFC 018` P3 — migrations ported, triggers re-implemented | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.56.0 | **The conformance suite.** `RFC 018` P4 — one suite against both backends in CI, and the operations story | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.57.0 | **The specification checks itself.** The two citation rules — every `§10.N` citation has a matching heading, no four-digit `RFC 0NNN` outside the history directory — **plus the rest of `spec_scan`**: Appendix A's columns summed from its own rows, counts stated in prose checked against the workspace, and the status vocabulary closed to a known list. **`§10.42`**: `requirements.md` is this project's most-edited document and nothing mechanical reads it | `§10.36`'s decision (2026-10-14); `§10.42` (2026-10-15); the citation-form sweep carried since 0.52.0 | **Authorized 2026-10-15**, citation rules and `spec_scan` widening together. Both are guard work, both are predicates rather than lists, and the second has been carried unplaced for two releases. Placed here rather than earlier because **guards do not displace an authorized sequence** — but ahead of `RFC 020`, because 0.52.0's own precedent is that guard infrastructure should not queue behind a feature |
@@ -179,6 +178,12 @@ baseline rows, which is where release history belongs.
 **Shipped 2026-10-17**: `0.53.0` (the first five minutes), all four
 `DEC-056` legs, seven crates on crates.io, five archives on the
 Release and `ghcr.io/nabbisen/peisear` at `0.53.0` and `latest`.
+
+**Shipped 2026-10-18**: `0.54.0` (the dialect seam), `RFC 018` P1 + P2
+— coded trigger errors (`0022`, matched by bracketed code rather than
+prose), the `postgres` feature publishing for the first time (no
+implementation behind it yet; `RFC 018` P3 is where one lands), and
+`docs_scan` rule 7.
 
 **Its row was removed on 2026-10-15, restored on 2026-10-17, and
 removed again when the release was actually cut.** The candidate removed it under exit criterion 8, which
@@ -714,13 +719,13 @@ triggers are the real work:**
 **Schedule**: P0 and P0b (the lock-token fix and the `synchronous`
 measurement, both scheduled whether or not this backend ever ships)
 landed at **0.50.0**. P1 (coded errors) and P2 (the dialect seam, no
-PostgreSQL code yet) are **0.53.0**, after `RFC 017` (0.52.0) and this
-documentation round (0.51.0) — a storage refactor dropped into either
-would be the sprawl this schedule exists to avoid. P3 (the schema on
-PostgreSQL) is **0.54.0**; P4 (the conformance suite, both backends green
-in CI, the operations story rewritten) is **0.55.0**. **SQLite stays the
-default and loses nothing at every phase** — a condition of the
-acceptance, enforced at each gate.
+PostgreSQL code yet) were originally slated for 0.53.0, then moved one
+release later by the 0.51.0 guard-infrastructure delay recorded above
+— P1/P2 **shipped at 0.54.0**. P3 (the schema on PostgreSQL) is
+**0.55.0**; P4 (the conformance suite, both backends green in CI, the
+operations story rewritten) is **0.56.0**. **SQLite stays the default
+and loses nothing at every phase** — a condition of the acceptance,
+enforced at each gate.
 
 ### OIDC / IDaaS integration
 

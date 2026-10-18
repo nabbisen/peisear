@@ -11,6 +11,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.54.0] — 2026-10-18
+
+**The dialect seam.** `RFC 018` P1 + P2: trigger validation errors stop
+depending on the exact wording of a message, and the storage layer
+gains a place a second backend would attach — with no second backend
+written yet.
+
+### Changed
+
+- **Trigger validation errors are matched on a code, never on
+  prose.** `translate_trigger_error` used to match `sqlx::Error`'s
+  rendered string against five English sentences, two of them
+  prefixes of the real message rather than the whole of it — a
+  reworded trigger message could have kept passing a stale match
+  silently. The five triggers now carry a bracketed `[E_CODE]` prefix
+  ahead of the unchanged human sentence; a new migration,
+  `0022_trigger_error_codes.sql`, adds it without touching the two
+  already-shipped migrations that first created these triggers —
+  `sqlx` refuses to re-run a modified migration against a database
+  that already applied it, so `0015`/`0016` stay byte-identical to
+  what `0.53.0` shipped, forever.
+- **A `postgres` feature exists on `peisear-storage`, off by
+  default, with no PostgreSQL code behind it.** Not a query, not a
+  migration, not a connection string — a `dialect` module owns the
+  `Pool` type and the trigger error-code translation, both of which
+  genuinely differ by backend; everything else a second backend would
+  need (placeholder style, connection tuning, migration syntax) is
+  named and deliberately left for the round that has a real server to
+  design it against. Selecting the feature compiles and links,
+  proving the type seam holds, and panics the moment anything opens a
+  connection — stated plainly in the crate's own front page, not only
+  in the module that panics.
+
+### Added
+
+- **`docs_scan` rule 7**: every uncommented `KEY=value` line in
+  `.env.example` must match its own source's default — `config.rs`
+  for most variables, `main.rs`'s `RUST_LOG` fallback,
+  `peisear-notify`'s `SMTP_PORT` default. `JWT_SECRET` has no default
+  to match (unset generates one); an uncommented value is itself the
+  violation, which is exactly the shape of `0.53.0`'s own `§10.40`
+  defect, now checkable mechanically rather than fixed once by hand.
+
 ## [0.53.0] — 2026-10-17
 
 **The first five minutes of using peisear, end to end.** `RFC 017`:
