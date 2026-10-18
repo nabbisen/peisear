@@ -23,19 +23,28 @@ use crate::{Pool, StorageResult};
 /// `libpq` accept both and rejecting either would be a defect, not a
 /// fix). **Not a general URL parser, and deliberately not a
 /// `sqlite`-scheme check either** (`PG-001` round 3, the round 2
-/// review's own finding): `sqlx`'s own `SqliteConnectOptions::from_str`
-/// has always accepted a URL with *no* scheme at all and treated it
-/// as a bare file path — `data/app.db`, `/abs/path.db`, and, since
-/// `0.53.0` shipped an `x86_64-pc-windows-msvc` archive, a Windows
-/// `C:\...` path whose own drive-letter colon is not a scheme either.
-/// Round 2's `url_scheme` (removed) extracted whatever sat before the
-/// first `:` and required it to equal `"sqlite"` exactly — rejecting
-/// every one of those pre-`PG-001` `DATABASE_URL` shapes the moment
-/// this check landed, the thing it exists to prevent, done to the
-/// backend it was supposed to leave alone. This function is therefore
-/// asymmetric on purpose: the SQLite branch below asks only "is this
-/// unambiguously the *other* backend's URL?", never "does this look
-/// like my own?", because sqlx itself does not require the latter.
+/// review's own finding, `§12`): `sqlx-sqlite-0.8.6`'s own `FromStr`
+/// is
+///
+/// ```text
+/// url = url.trim_start_matches("sqlite://").trim_start_matches("sqlite:");
+/// ```
+///
+/// — it trims the scheme *if present* and treats whatever remains as
+/// a path, so a URL with no scheme at all has always been accepted:
+/// `data/app.db`, `/abs/path.db`, and, since `0.53.0` shipped an
+/// `x86_64-pc-windows-msvc` archive, a Windows `C:\...` path whose own
+/// drive-letter colon is not a scheme either. Round 2's `url_scheme`
+/// (removed) extracted whatever sat before the first `:` and required
+/// it to equal `"sqlite"` exactly — rejecting every one of those
+/// pre-`PG-001` `DATABASE_URL` shapes the moment this check landed,
+/// the thing it exists to prevent, done to the backend it was
+/// supposed to leave alone. **This function is therefore asymmetric
+/// on purpose, and must stay that way**: the SQLite branch below asks
+/// only "is this unambiguously the *other* backend's URL?", never
+/// "does this look like my own?", because `sqlx` itself does not
+/// require the latter — "fixing" the two branches to match would
+/// reintroduce this exact defect.
 fn is_a_postgres_url(url: &str) -> bool {
     url.starts_with("postgres://") || url.starts_with("postgresql://")
 }

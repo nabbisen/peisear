@@ -376,3 +376,46 @@ async fn connect_accepts_a_windows_style_drive_letter_path() {
         let _ = std::fs::remove_file(format!("{}{ext}", path.display()));
     }
 }
+
+/// `PG-001` round 3, `§14`'s own list: `sqlite::memory:` (no `//`) is
+/// a separate accept case from the bare-path and drive-letter ones
+/// above -- it does carry a `sqlite:` scheme, so a check that only
+/// handled the no-scheme case could still have broken this one. It
+/// never did (the deny-list only ever looks for `postgres(ql)://`),
+/// but the handoff asks for it tested explicitly rather than assumed
+/// from the other two passing.
+#[cfg(feature = "sqlite")]
+#[tokio::test]
+async fn connect_accepts_the_sqlite_colon_memory_form() {
+    let pool = connect("sqlite::memory:")
+        .await
+        .expect("sqlite::memory: must still be accepted");
+    let one: i32 = sqlx::query_scalar("SELECT 1")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(one, 1);
+}
+
+/// `PG-001` round 3, `§13`'s other half: the `postgres` branch keeps
+/// its allow-list, so a bare path -- genuinely not a PostgreSQL URL,
+/// unlike on the `sqlite` side -- must still be rejected there, named
+/// as what it actually is rather than treated as a dialect dispute.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+#[tokio::test]
+async fn connect_still_rejects_a_bare_path_on_the_postgres_branch() {
+    let started = std::time::Instant::now();
+    let err = connect("data/app.db")
+        .await
+        .expect_err("a bare path is not a PostgreSQL URL and must not be accepted");
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(1),
+        "must fail immediately, not after any connection attempt -- took {:?}",
+        started.elapsed()
+    );
+    let msg = err.to_string();
+    assert!(
+        msg.contains("postgres"),
+        "the message must name what this build expects, got: {msg}"
+    );
+}
