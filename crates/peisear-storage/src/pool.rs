@@ -15,14 +15,43 @@ use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
 use std::str::FromStr;
 
-#[cfg(feature = "sqlite")]
 use crate::StorageError;
 use crate::{Pool, StorageResult};
 
+/// The scheme a connection URL names, bounded to the part before the
+/// first `:` — not a full URL parser, deliberately (`PG-001` round 2).
+/// A build selects its dialect at compile time, so a URL naming the
+/// *other* one is a real mistake, not a hypothetical: before this
+/// check existed, a `sqlite`-feature build given a `postgres://` URL
+/// read it as a nonsense filename and failed with SQLite's own
+/// "unable to open database file", and a `postgres`-feature build
+/// given a `sqlite://` URL read it as a nonsense hostname and hung
+/// for `PgPoolOptions`'s own 30 s acquire timeout before failing —
+/// both reached, both "working", neither telling the operator what
+/// was actually wrong. Checking the scheme first, before either
+/// dialect's own parser touches the rest of the string, turns both
+/// into one immediate, named error.
+fn url_scheme(url: &str) -> &str {
+    url.split(':').next().unwrap_or(url)
+}
+
 /// Build a connection pool and ensure the target DB file exists with sane
 /// pragmas. Uses WAL for better concurrent reads; `foreign_keys` on.
+///
+/// **Checks [`url_scheme`] first** (`PG-001` round 2) — a non-`sqlite`
+/// URL given to this build is rejected immediately, named, rather
+/// than read as a nonsense filename and failed with SQLite's own
+/// "unable to open database file".
 #[cfg(feature = "sqlite")]
 pub async fn connect(url: &str) -> StorageResult<Pool> {
+    let scheme = url_scheme(url);
+    if scheme != "sqlite" {
+        return Err(StorageError::Bootstrap(format!(
+            "expected a sqlite:// URL (this build was compiled with the `sqlite` feature), got \
+             a {scheme:?} URL"
+        )));
+    }
+
     // Ensure the parent directory exists when the URL points at a file.
     if let Some(path) = url.strip_prefix("sqlite://")
         && !path.is_empty()
@@ -132,8 +161,24 @@ pub async fn migrate(pool: &Pool) -> StorageResult<()> {
 ///   round has no real server to load-test a different number
 ///   against. Per the handoff's own §5: an unchanged default with a
 ///   reason beats a tuned number without one.
+///
+/// **Checks [`url_scheme`] first** (`PG-001` round 2, same reasoning
+/// as the SQLite branch's own check) — `postgres` and `postgresql`
+/// both accepted, since PostgreSQL's own tooling accepts both and
+/// rejecting one would be a new defect, not a round 2 fix. Before
+/// this check existed, a `sqlite://` URL parsed as a nonsense
+/// hostname and hung for `PgPoolOptions`'s own 30 s acquire timeout
+/// before failing with `PoolTimedOut` — reached, but not usefully.
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
 pub async fn connect(url: &str) -> StorageResult<Pool> {
+    let scheme = url_scheme(url);
+    if scheme != "postgres" && scheme != "postgresql" {
+        return Err(StorageError::Bootstrap(format!(
+            "expected a postgres:// or postgresql:// URL (this build was compiled with the \
+             `postgres` feature), got a {scheme:?} URL"
+        )));
+    }
+
     let opts = PgConnectOptions::from_str(url)?.application_name("peisear");
 
     let pool = PgPoolOptions::new().connect_with(opts).await?;

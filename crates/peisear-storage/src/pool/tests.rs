@@ -254,3 +254,66 @@ async fn connect_opens_a_real_connection_against_a_real_postgresql_server() {
         .expect("SELECT 1 against the real connection");
     assert_eq!(one, 1);
 }
+
+/// `url_scheme` is plain string parsing, compiled regardless of which
+/// backend feature is active -- unlike `connect`, it needs no real
+/// server and no feature gate to test.
+#[test]
+fn url_scheme_reads_the_part_before_the_first_colon() {
+    assert_eq!(url_scheme("sqlite://data/app.db"), "sqlite");
+    assert_eq!(url_scheme("sqlite::memory:"), "sqlite");
+    assert_eq!(url_scheme("postgres://user@host/db"), "postgres");
+    assert_eq!(url_scheme("postgresql://user@host/db"), "postgresql");
+    assert_eq!(url_scheme("nonsense"), "nonsense");
+}
+
+/// `PG-001` round 2's own finding: before the scheme check existed, a
+/// `sqlite`-feature build given a `postgres://` URL read it as a
+/// nonsense filename and failed with SQLite's own "unable to open
+/// database file" -- reached, but not usefully. This asserts the
+/// fast, named failure instead, and that it returns promptly rather
+/// than attempting anything with the rest of the URL.
+#[cfg(feature = "sqlite")]
+#[tokio::test]
+async fn connect_rejects_a_postgres_url_immediately_rather_than_misreading_it_as_a_filename() {
+    let started = std::time::Instant::now();
+    let err = connect("postgres://user@host/db")
+        .await
+        .expect_err("a postgres:// URL must not be accepted by a sqlite-feature build");
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(1),
+        "the scheme mismatch must be caught before any network or filesystem attempt, not after \
+         one -- took {:?}",
+        started.elapsed()
+    );
+    let msg = err.to_string();
+    assert!(
+        msg.contains("sqlite") && msg.contains("postgres"),
+        "the message must name both the expected and the given scheme, got: {msg}"
+    );
+}
+
+/// `PG-001` round 2's own finding, the other direction: before the
+/// scheme check existed, a `postgres`-feature build given a
+/// `sqlite://` URL read it as a nonsense hostname and hung for
+/// `PgPoolOptions`'s own 30 s acquire timeout before failing with
+/// `PoolTimedOut` -- reached, but not usefully, and not quickly.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+#[tokio::test]
+async fn connect_rejects_a_sqlite_url_immediately_rather_than_hanging_on_it() {
+    let started = std::time::Instant::now();
+    let err = connect("sqlite://data/app.db")
+        .await
+        .expect_err("a sqlite:// URL must not be accepted by a postgres-feature build");
+    assert!(
+        started.elapsed() < std::time::Duration::from_secs(1),
+        "the scheme mismatch must be caught before any network attempt, not after a 30 s \
+         acquire timeout -- took {:?}",
+        started.elapsed()
+    );
+    let msg = err.to_string();
+    assert!(
+        msg.contains("sqlite") && msg.contains("postgres"),
+        "the message must name both the expected and the given scheme, got: {msg}"
+    );
+}
