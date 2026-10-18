@@ -250,3 +250,45 @@ rejected on the `postgres` one; `postgres://` still rejected on
 `sqlite`; the asymmetry stated in the code with `sqlx`'s own parsing
 as the reason; **accept cases tested, not only rejections**;
 `DEC-007`'s delta accounted for; all gates re-run.
+
+---
+
+# PG-001 — closed at round 3, with one correction to `§12`
+
+Round 3 is accepted (see the review) and **`PG-001` is closed.** Two
+things belong in the record rather than in a fourth round.
+
+## §16 — `§12`'s own claim was imprecise, and the architect wrote it
+
+`§12` said *"`DATABASE_URL=data/app.db` has worked in every release of
+this project."* **Conditionally true, stated unconditionally.**
+Measured at round 3's review:
+
+| `DATABASE_URL` | parent directory | result |
+|---|---|---|
+| `data/app.db` | `data/` exists | **starts** |
+| `data/app.db` | `data/` missing | `unable to open database file` |
+| `app.db` | cwd, always exists | **starts** |
+
+`connect`'s own `create_dir_all` is guarded by
+`url.strip_prefix("sqlite://")` (`pool.rs:84`), so **a schemeless path
+has never had its parent created** — long before `PG-001` existed.
+
+**The finding itself stands**: round 2 rejected the bare path outright,
+whatever its parent, and round 3 fixed that. But *"has worked in every
+release"* overstated it, and this project's own most-repeated defect
+is a claim measured in one condition and written as a general one.
+**Corrected here rather than quietly**, because the overstatement is
+in a published handoff.
+
+## §17 — the residual, recorded and deliberately not scoped
+
+`sqlite://data/app.db` creates `data/` if it is missing; `data/app.db`
+does not. **That asymmetry predates this entire series** and is not
+round 3's to fix.
+
+It is also arguably correct — auto-creating directories for a bare
+relative path is more surprising than refusing to — so this is a
+question, not a defect, and it does not get a round. **If a future
+round touches `connect`'s directory handling, decide it then**; if
+nothing does, it stays as it is, documented here.
