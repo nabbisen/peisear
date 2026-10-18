@@ -161,3 +161,92 @@ scheme found, and what to do; the check bounded to the scheme with
 that bound written down; a correct URL still connecting on both
 branches, shown by test; `DEC-007`'s delta accounted for; all gates
 re-run after the last edit.
+
+---
+
+# PG-001 round 3 — the check rejects a path that always worked
+
+Round 2 is accepted (see the review). The wrong-backend case is
+closed, both spellings of `postgresql` are accepted, and turning a
+390-second suite into a 0.00-second one is a real result. **The check
+is one case too wide.**
+
+## §12 — `url_scheme` has no notion of "no scheme"
+
+```rust
+fn url_scheme(url: &str) -> &str {
+    url.split(':').next().unwrap_or(url)
+}
+```
+
+**A URL with no colon returns the whole string**, which is never
+`"sqlite"`, so the `sqlite` branch rejects it. Measured at the review
+against this round's own build:
+
+| `DATABASE_URL` | result |
+|---|---|
+| `sqlite://:memory:` | starts |
+| `sqlite::memory:` | starts |
+| **`data/app.db`** | **`expected a sqlite:// URL`** |
+
+**`sqlx` accepts a bare path.** From `sqlx-sqlite-0.8.6`'s own
+`FromStr`:
+
+```rust
+url = url.trim_start_matches("sqlite://").trim_start_matches("sqlite:");
+```
+
+It *trims the scheme if present* and treats the rest as a path. So
+`DATABASE_URL=data/app.db` has worked in every release of this
+project, and stops working here.
+
+**The Windows edge is the one that makes it concrete.** This project
+ships an `x86_64-pc-windows-msvc` archive since 0.53.0, and
+`C:\peisearpp.db` — the most natural thing a Windows operator
+types — has scheme `"C"` under this function. `sqlx` would accept it.
+
+**`§10.45`'s neighbour**: 0.53.0 shipped installable artefacts, so
+upgrade breakage is a real cost again (`project_no_production_use_yet`
+expired). A `DATABASE_URL` that worked at 0.54.0 and fails at 0.55.0
+is a breaking change, and this one is undocumented-but-working rather
+than documented — which makes it *more* likely to be in someone's
+systemd unit, not less.
+
+## §13 — the rule each branch actually needs
+
+**They are not symmetric, and that is correct**:
+
+- **`sqlite`**: reject only when the URL *names another backend*. A
+  string with no `://` is a path — accept it, which is what `sqlx`
+  does. `postgres://…` is rejected; `data/app.db` and
+  `C:\peisearpp.db` are not.
+- **`postgres`**: keep requiring `postgres`/`postgresql`. A bare path
+  genuinely is not a PostgreSQL URL, so rejecting it there is right
+  and the message is the useful one.
+
+**Say the asymmetry out loud in the code**, with the `sqlx` quote
+above as the reason — otherwise the next reader "fixes" the
+inconsistency and reintroduces this.
+
+**Do not build a URL parser.** `§9`'s bound stands: scheme only, and
+now *the presence of a scheme* as well.
+
+## §14 — gates
+
+- `DEC-007` — **moves again**; account for it.
+- **The cases this round is about, all tested**: `data/app.db`,
+  `C:\peisearpp.db`, `sqlite://…`, `sqlite::memory:` all accepted on
+  the `sqlite` branch; `postgres://…` still rejected there; a bare
+  path still rejected on the `postgres` branch. **The accept cases
+  matter most** — round 2's tests only asserted rejection, which is
+  how a check that is too wide passes its own suite.
+- `fmt`, `clippy` both ways, `rustdoc`, `mdbook`, `publish-dry-run`,
+  CI PostgreSQL job.
+
+## §15 — exit condition
+
+A bare path and a Windows path accepted on the `sqlite` branch and
+rejected on the `postgres` one; `postgres://` still rejected on
+`sqlite`; the asymmetry stated in the code with `sqlx`'s own parsing
+as the reason; **accept cases tested, not only rejections**;
+`DEC-007`'s delta accounted for; all gates re-run.
