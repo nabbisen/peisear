@@ -18,38 +18,57 @@ use std::str::FromStr;
 use crate::StorageError;
 use crate::{Pool, StorageResult};
 
-/// The scheme a connection URL names, bounded to the part before the
-/// first `:` — not a full URL parser, deliberately (`PG-001` round 2).
-/// A build selects its dialect at compile time, so a URL naming the
-/// *other* one is a real mistake, not a hypothetical: before this
-/// check existed, a `sqlite`-feature build given a `postgres://` URL
-/// read it as a nonsense filename and failed with SQLite's own
-/// "unable to open database file", and a `postgres`-feature build
-/// given a `sqlite://` URL read it as a nonsense hostname and hung
-/// for `PgPoolOptions`'s own 30 s acquire timeout before failing —
-/// both reached, both "working", neither telling the operator what
-/// was actually wrong. Checking the scheme first, before either
-/// dialect's own parser touches the rest of the string, turns both
-/// into one immediate, named error.
-fn url_scheme(url: &str) -> &str {
+/// True if `url` begins with one of PostgreSQL's own two accepted
+/// schemes (`postgres://`, `postgresql://` — both, since `psql` and
+/// `libpq` accept both and rejecting either would be a defect, not a
+/// fix). **Not a general URL parser, and deliberately not a
+/// `sqlite`-scheme check either** (`PG-001` round 3, the round 2
+/// review's own finding): `sqlx`'s own `SqliteConnectOptions::from_str`
+/// has always accepted a URL with *no* scheme at all and treated it
+/// as a bare file path — `data/app.db`, `/abs/path.db`, and, since
+/// `0.53.0` shipped an `x86_64-pc-windows-msvc` archive, a Windows
+/// `C:\...` path whose own drive-letter colon is not a scheme either.
+/// Round 2's `url_scheme` (removed) extracted whatever sat before the
+/// first `:` and required it to equal `"sqlite"` exactly — rejecting
+/// every one of those pre-`PG-001` `DATABASE_URL` shapes the moment
+/// this check landed, the thing it exists to prevent, done to the
+/// backend it was supposed to leave alone. This function is therefore
+/// asymmetric on purpose: the SQLite branch below asks only "is this
+/// unambiguously the *other* backend's URL?", never "does this look
+/// like my own?", because sqlx itself does not require the latter.
+fn is_a_postgres_url(url: &str) -> bool {
+    url.starts_with("postgres://") || url.starts_with("postgresql://")
+}
+
+/// The leading fragment of `url` up to its first `:`, for an error
+/// message only — this is always the scheme (or, for a schemeless
+/// path, whatever sits before its own first `:`, such as a Windows
+/// drive letter), **never** anything from a userinfo or password,
+/// which can only appear after a URL's own scheme-terminating `:`.
+/// Only the PostgreSQL branch needs this: its own check is an
+/// allow-list, so a rejection has no single named "other backend" the
+/// way the SQLite branch's deny-list rejection does.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+fn leading_fragment(url: &str) -> &str {
     url.split(':').next().unwrap_or(url)
 }
 
 /// Build a connection pool and ensure the target DB file exists with sane
 /// pragmas. Uses WAL for better concurrent reads; `foreign_keys` on.
 ///
-/// **Checks [`url_scheme`] first** (`PG-001` round 2) — a non-`sqlite`
-/// URL given to this build is rejected immediately, named, rather
-/// than read as a nonsense filename and failed with SQLite's own
-/// "unable to open database file".
+/// **Rejects a PostgreSQL URL immediately** (`PG-001` round 2, fixed
+/// in round 3 — see [`is_a_postgres_url`]'s own doc comment for why
+/// this is a deny-list, not an allow-list), rather than reading it as
+/// a nonsense filename and failing with SQLite's own "unable to open
+/// database file".
 #[cfg(feature = "sqlite")]
 pub async fn connect(url: &str) -> StorageResult<Pool> {
-    let scheme = url_scheme(url);
-    if scheme != "sqlite" {
-        return Err(StorageError::Bootstrap(format!(
-            "expected a sqlite:// URL (this build was compiled with the `sqlite` feature), got \
-             a {scheme:?} URL"
-        )));
+    if is_a_postgres_url(url) {
+        return Err(StorageError::Bootstrap(
+            "this build was compiled with the `sqlite` feature, but the URL is a PostgreSQL \
+             connection string (postgres:// or postgresql://)"
+                .to_string(),
+        ));
     }
 
     // Ensure the parent directory exists when the URL points at a file.
@@ -162,20 +181,22 @@ pub async fn migrate(pool: &Pool) -> StorageResult<()> {
 ///   against. Per the handoff's own §5: an unchanged default with a
 ///   reason beats a tuned number without one.
 ///
-/// **Checks [`url_scheme`] first** (`PG-001` round 2, same reasoning
-/// as the SQLite branch's own check) — `postgres` and `postgresql`
-/// both accepted, since PostgreSQL's own tooling accepts both and
-/// rejecting one would be a new defect, not a round 2 fix. Before
-/// this check existed, a `sqlite://` URL parsed as a nonsense
-/// hostname and hung for `PgPoolOptions`'s own 30 s acquire timeout
-/// before failing with `PoolTimedOut` — reached, but not usefully.
+/// **Requires [`is_a_postgres_url`]** (`PG-001` round 2) — unlike the
+/// SQLite branch, this one *is* an allow-list, and that is still
+/// correct after round 3's fix: PostgreSQL has no bare-path form for
+/// sqlx to have ever accepted, so there is no pre-existing
+/// `DATABASE_URL` shape here to avoid breaking, only the brand-new
+/// shape this round defines. Before this check existed, a
+/// `sqlite://` URL parsed as a nonsense hostname and hung for
+/// `PgPoolOptions`'s own 30 s acquire timeout before failing with
+/// `PoolTimedOut` — reached, but not usefully.
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
 pub async fn connect(url: &str) -> StorageResult<Pool> {
-    let scheme = url_scheme(url);
-    if scheme != "postgres" && scheme != "postgresql" {
+    if !is_a_postgres_url(url) {
         return Err(StorageError::Bootstrap(format!(
-            "expected a postgres:// or postgresql:// URL (this build was compiled with the \
-             `postgres` feature), got a {scheme:?} URL"
+            "this build was compiled with the `postgres` feature, but the URL does not start \
+             with postgres:// or postgresql:// (got {:?})",
+            leading_fragment(url)
         )));
     }
 

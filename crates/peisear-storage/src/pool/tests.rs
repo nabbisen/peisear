@@ -255,16 +255,23 @@ async fn connect_opens_a_real_connection_against_a_real_postgresql_server() {
     assert_eq!(one, 1);
 }
 
-/// `url_scheme` is plain string parsing, compiled regardless of which
-/// backend feature is active -- unlike `connect`, it needs no real
-/// server and no feature gate to test.
+/// `is_a_postgres_url` is plain string parsing, compiled regardless of
+/// which backend feature is active -- unlike `connect`, it needs no
+/// real server and no feature gate to test. `PG-001` round 3: this is
+/// deliberately **not** symmetric with a `"looks like sqlite"` check
+/// -- `data/app.db` and the Windows-style path are exactly the
+/// shapes round 2's removed `url_scheme` misread as naming a scheme
+/// and rejected; this function must say `false` for both, not `true`
+/// for neither.
 #[test]
-fn url_scheme_reads_the_part_before_the_first_colon() {
-    assert_eq!(url_scheme("sqlite://data/app.db"), "sqlite");
-    assert_eq!(url_scheme("sqlite::memory:"), "sqlite");
-    assert_eq!(url_scheme("postgres://user@host/db"), "postgres");
-    assert_eq!(url_scheme("postgresql://user@host/db"), "postgresql");
-    assert_eq!(url_scheme("nonsense"), "nonsense");
+fn is_a_postgres_url_names_only_postgresqls_own_two_schemes() {
+    assert!(is_a_postgres_url("postgres://user@host/db"));
+    assert!(is_a_postgres_url("postgresql://user@host/db"));
+    assert!(!is_a_postgres_url("sqlite://data/app.db"));
+    assert!(!is_a_postgres_url("sqlite::memory:"));
+    assert!(!is_a_postgres_url("data/app.db"));
+    assert!(!is_a_postgres_url("C:\\peisear\\app.db"));
+    assert!(!is_a_postgres_url("nonsense"));
 }
 
 /// `PG-001` round 2's own finding: before the scheme check existed, a
@@ -316,4 +323,56 @@ async fn connect_rejects_a_sqlite_url_immediately_rather_than_hanging_on_it() {
         msg.contains("sqlite") && msg.contains("postgres"),
         "the message must name both the expected and the given scheme, got: {msg}"
     );
+}
+
+/// `PG-001` round 3 (the round 2 review's own finding, `§12`): `sqlx`'s
+/// own `SqliteConnectOptions::from_str` has always accepted a URL
+/// with no scheme at all and treated it as a bare file path --
+/// `DATABASE_URL=data/app.db` has worked since before `PG-001`
+/// existed. Round 2's own check read this as naming scheme `""` (the
+/// whole string, since there is no `:`) and rejected it, which round
+/// 2's tests could not have caught -- they asserted rejection only.
+/// This is the regression test for the accept case.
+#[cfg(feature = "sqlite")]
+#[tokio::test]
+async fn connect_accepts_a_bare_path_with_no_scheme_at_all() {
+    let path = std::env::temp_dir().join(format!("peisear-pg001r3-{}.db", uuid::Uuid::new_v4()));
+    let url = path.display().to_string();
+    assert!(
+        !url.contains("://"),
+        "this is the regression case -- no scheme prefix at all"
+    );
+
+    let pool = connect(&url)
+        .await
+        .expect("a schemeless bare path must be accepted, as sqlx itself always has");
+
+    pool.close().await;
+    for ext in ["", "-wal", "-shm"] {
+        let _ = std::fs::remove_file(format!("{}{ext}", path.display()));
+    }
+}
+
+/// The Windows case the review named concretely: this project has
+/// shipped an `x86_64-pc-windows-msvc` archive since `0.53.0`, and a
+/// drive-letter path (`C:\...`) has its own colon, which round 2's
+/// check read as naming scheme `"C"` and rejected. A colon is a
+/// legal filename character on this (Linux) test runner too, which
+/// is what lets this assert the same thing a real Windows run would:
+/// the drive letter's colon must not be read as a scheme.
+#[cfg(feature = "sqlite")]
+#[tokio::test]
+async fn connect_accepts_a_windows_style_drive_letter_path() {
+    let path =
+        std::env::temp_dir().join(format!("C:\\peisear-pg001r3-{}.db", uuid::Uuid::new_v4()));
+    let url = path.display().to_string();
+
+    let pool = connect(&url)
+        .await
+        .expect("a drive-letter path's own colon must not be read as a scheme");
+
+    pool.close().await;
+    for ext in ["", "-wal", "-shm"] {
+        let _ = std::fs::remove_file(format!("{}{ext}", path.display()));
+    }
 }
