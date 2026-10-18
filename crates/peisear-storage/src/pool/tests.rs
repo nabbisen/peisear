@@ -231,3 +231,26 @@ async fn the_lock_token_round_trip_preserves_milliseconds_across_both_timestamp_
         let _ = std::fs::remove_file(format!("{}{ext}", path.display()));
     }
 }
+
+/// `PG-001`'s own gate: `connect` opens a connection against a **real**
+/// server, not merely that the postgres branch compiles. Reads
+/// `DATABASE_URL` rather than hardcoding one -- CI's own
+/// `test-postgres-connection` job (`test.yml`) sets it, pointing at
+/// the job's PostgreSQL service container. Every other job runs under
+/// the default `sqlite` feature, where this function does not even
+/// compile (`#[cfg(all(feature = "postgres", not(feature = "sqlite")))]`
+/// above), so it cannot accidentally run without a server to reach.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+#[tokio::test]
+async fn connect_opens_a_real_connection_against_a_real_postgresql_server() {
+    let url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must point at a real PostgreSQL server for this test");
+
+    let pool = connect(&url).await.expect("connect");
+
+    let one: i32 = sqlx::query_scalar("SELECT 1")
+        .fetch_one(&pool)
+        .await
+        .expect("SELECT 1 against the real connection");
+    assert_eq!(one, 1);
+}

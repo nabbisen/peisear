@@ -1,14 +1,17 @@
 //! Persistence layer.
 //!
-//! **`sqlite` is the default feature and the only one with real code
-//! behind it.** A `postgres` feature also exists (`DIA-002`, `RFC 018`
-//! P2) so this crate's types compile against `sqlx`'s own PostgreSQL
-//! driver — **it has no implementation yet**. Selecting it
-//! (`--no-default-features --features postgres`) builds and links,
-//! proving the type seam holds, and then panics the moment anything
-//! actually opens a connection: [`pool::connect`]/[`pool::migrate`]'s
-//! postgres branches are `unimplemented!()` stubs. `RFC 018` P3 is
-//! where a real implementation replaces them.
+//! **`sqlite` is the default feature and the only one with a full
+//! implementation.** A `postgres` feature also exists (`DIA-002`,
+//! `RFC 018` P2) so this crate's types compile against `sqlx`'s own
+//! PostgreSQL driver. **It is partial, not absent**: [`pool::connect`]
+//! opens a real connection against a real server (`PG-001`, `RFC 018`
+//! P3's first round) — but [`pool::migrate`] is still a stub, since
+//! `PG-002` has not yet written the PostgreSQL migration set, and no
+//! query, trigger or schema has been ported either (`PG-003`,
+//! `PG-004`). Selecting the feature (`--no-default-features --features
+//! postgres`) builds, links and connects; it panics the moment
+//! anything calls [`pool::migrate`] or issues a query against a table
+//! that does not exist on the other side of that real connection.
 //!
 //! The current implementation is backed by SQLite via `sqlx`. The public
 //! shape (query functions and the [`StorageError`] type) is intentionally

@@ -43,15 +43,10 @@
 //!   above — `DIA-002` §7's own stop condition — so it is named here
 //!   and left exactly as it is. `P3` is where a second real
 //!   implementation exists to abstract *against*, not guess at.
-//! - **Connection options.** `pool::connect`'s SQLite branch tunes
-//!   WAL mode, synchronous level and busy timeout with types that
-//!   have no PostgreSQL equivalent (`SqliteConnectOptions`,
-//!   `SqliteJournalMode`). A PostgreSQL branch would need its own
-//!   tuning, decided against a real server, not invented here.
 //! - **Migration syntax.** `0001`–`0022` are SQLite SQL. PostgreSQL's
-//!   own migration set is `P3`'s to write, against real differences
-//!   (`SERIAL` vs SQLite's `INTEGER PRIMARY KEY`, trigger syntax, and
-//!   so on) rather than this round's guesses.
+//!   own migration set is `PG-002`'s to write, against real
+//!   differences (`SERIAL` vs SQLite's `INTEGER PRIMARY KEY`, trigger
+//!   syntax, and so on) rather than this round's guesses.
 //! - **Every runtime query itself.** `sqlx::query(…)`'s runtime API
 //!   does not validate SQL text against a specific database at
 //!   compile time, so SQLite-flavoured SQL compiles unchanged
@@ -217,8 +212,10 @@ pub(crate) fn trigger_error_code(msg: &str) -> Option<&str> {
 /// crate feature of its own — so it stays unconditional rather than
 /// gated, which is what keeps every caller in `issues.rs` from
 /// needing a `#[cfg]` of its own. Under `postgres`, it simply never
-/// runs, since [`crate::pool::connect`]'s own postgres branch never
-/// reaches a point where a trigger could fire.
+/// runs: [`crate::pool::connect`] opens a real connection since
+/// `PG-001`, but [`crate::pool::migrate`] is still a stub pending
+/// `PG-002`'s migration set, so no table or trigger exists for a
+/// query to fail against yet.
 pub(crate) fn translate_trigger_error(e: sqlx::Error) -> crate::StorageError {
     let msg = e.to_string();
     if let Some(code) = trigger_error_code(&msg) {

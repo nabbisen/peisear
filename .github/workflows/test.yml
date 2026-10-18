@@ -541,6 +541,45 @@ jobs:
       - run: cargo test -p peisear-storage --lib
       - run: cargo test -p peisear
 
+  # `PG-001`, `RFC 018` P3's first round: nothing in this series can be
+  # proved without a real server, so the service arrives here rather
+  # than at P4's conformance suite. One job, `postgres` feature only --
+  # the `sqlite` suite above is untouched and still the default.
+  # `postgres:17` is the current stable release; no PostgreSQL version
+  # is pinned anywhere else in this project, and `RFC 018`'s own
+  # reasoning (server stability and security first, not a scale claim)
+  # gives no reason to pick an older one.
+  test-postgres-connection:
+    name: peisear-storage (postgres feature, real connection)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: peisear_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/peisear_ci
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      # Filtered to the one test this job exists to prove green --
+      # `connect` against a real server. The rest of this crate's
+      # `--lib` suite under `postgres` is still mostly SQLite-shaped
+      # (`PG-002`/`PG-003`/`PG-004` haven't landed) and is expected to
+      # fail; that figure is reported honestly in the round's own
+      # completion package, not wired into a job this gate requires
+      # green.
+      - run: cargo test -p peisear-storage --no-default-features --features postgres --lib connect_opens_a_real_connection_against_a_real_postgresql_server
+
   build:
     name: cargo build (release-lite)
     runs-on: ubuntu-latest

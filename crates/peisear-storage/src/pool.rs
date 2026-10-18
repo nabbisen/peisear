@@ -10,6 +10,11 @@ use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, S
 #[cfg(feature = "sqlite")]
 use std::{path::Path, str::FromStr, time::Duration};
 
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+use std::str::FromStr;
+
 #[cfg(feature = "sqlite")]
 use crate::StorageError;
 use crate::{Pool, StorageResult};
@@ -83,32 +88,69 @@ pub async fn migrate(pool: &Pool) -> StorageResult<()> {
     Ok(())
 }
 
-/// `DIA-002`: proves the seam's own compile-time half, nothing more.
-/// **Not a connection string** — the handoff's own bound on this
-/// round. `P3` writes the real `PgConnectOptions`/`PgPoolOptions`
-/// tuning (chosen against a real server, not guessed here, the same
-/// reason [`crate::dialect`]'s own doc comment gives for leaving the
-/// placeholder style and migration syntax unabstracted) and replaces
-/// this body. Until then, a build with `postgres` selected compiles
-/// and links — proving the type seam holds — and panics the moment
-/// anything actually tries to open a connection, which nothing in
-/// this project's own CI does (`DIA-002` §4: "No PostgreSQL in CI
-/// yet").
+/// Build a connection pool against a real PostgreSQL server (`PG-001`,
+/// `RFC 018` P3's own first round, 0.55.0). Replaces `DIA-002`'s
+/// `unimplemented!()` stub — this is the first PostgreSQL code this
+/// project runs, proved against a real server in CI (`test.yml`'s
+/// `test-postgres-connection` job), not merely compiled.
+///
+/// **No `create_dir_all`, unlike the SQLite branch above.** A SQLite
+/// URL names a file this process may need to create; a PostgreSQL URL
+/// names a database that must already exist — `CREATE DATABASE` is an
+/// operator's action, not something a connection pool does on a
+/// caller's behalf, and no PostgreSQL equivalent of "create if
+/// missing" exists at this layer.
+///
+/// **Options evaluated against the profile this project already has
+/// (`NFR-PERF-001`: 5–30 users, one node), not guessed:**
+/// - `application_name("peisear")` — genuinely new, not a port of
+///   anything on the SQLite side, since SQLite has no concept of
+///   several applications sharing one server. `docs/operations/scaling.md`
+///   names a single shared PostgreSQL instance as an anticipated
+///   topology; an operator reading `pg_stat_activity` or the server
+///   log on that instance can now tell which connections are this
+///   project's.
+/// - `ssl_mode` — left at `PgConnectOptions`'s own default (`Prefer`:
+///   try TLS, fall back to plaintext). Already the right shape for a
+///   self-hosted deployment that may or may not have TLS configured
+///   on its own PostgreSQL server — a self-hosted install choosing
+///   `require`/`verify-full` sets it in the URL itself
+///   (`sslmode=require`), which `PgConnectOptions::from_str` already
+///   honours.
+/// - `statement_cache_capacity` — left at its default (100). This
+///   crate issues no `sqlx::query!` macros (runtime API throughout,
+///   `dialect.rs`'s own module doc), but the runtime API still
+///   benefits from statement caching, and nothing measured here gives
+///   a reason to move off the default.
+/// - `PgPoolOptions`'s own defaults (10 max connections, 0 min, 30 s
+///   acquire timeout, 10-minute idle timeout, 30-minute max lifetime)
+///   are **left unchanged, deliberately**. `max_connections(8)` on
+///   the SQLite side above carries no comment tying it to a specific
+///   number of users, so it is not a number this round can match
+///   against — but 10 is the same order of magnitude, comfortably
+///   inside `NFR-PERF-001`'s 5–30-user, single-node profile, and this
+///   round has no real server to load-test a different number
+///   against. Per the handoff's own §5: an unchanged default with a
+///   reason beats a tuned number without one.
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
-pub async fn connect(_url: &str) -> StorageResult<Pool> {
-    unimplemented!(
-        "PostgreSQL support is not implemented yet (DIA-002 builds the seam, not the backend) \
-         -- P3 replaces this"
-    )
+pub async fn connect(url: &str) -> StorageResult<Pool> {
+    let opts = PgConnectOptions::from_str(url)?.application_name("peisear");
+
+    let pool = PgPoolOptions::new().connect_with(opts).await?;
+
+    Ok(pool)
 }
 
-/// See [`connect`]'s own doc comment — the same reasoning, the same
-/// bound, the same `P3` deferral.
+/// Run the PostgreSQL migration set. **Still a stub** — `PG-002` has
+/// not landed yet, so there is no PostgreSQL migration directory to
+/// embed. [`connect`] above is real; this is not, and says so rather
+/// than silently inheriting [`connect`]'s own doc comment the way the
+/// pre-`PG-001` version of this file did for both functions alike.
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
 pub async fn migrate(_pool: &Pool) -> StorageResult<()> {
     unimplemented!(
-        "PostgreSQL support is not implemented yet (DIA-002 builds the seam, not the backend) \
-         -- P3 replaces this"
+        "PostgreSQL migrations are not implemented yet (PG-001 implements connect; PG-002 is \
+         where the migration set and this function land)"
     )
 }
 
