@@ -202,7 +202,7 @@ project, and stops working here.
 
 **The Windows edge is the one that makes it concrete.** This project
 ships an `x86_64-pc-windows-msvc` archive since 0.53.0, and
-`C:\peisearpp.db` — the most natural thing a Windows operator
+`C:\peisear\app.db` — the most natural thing a Windows operator
 types — has scheme `"C"` under this function. `sqlx` would accept it.
 
 **`§10.45`'s neighbour**: 0.53.0 shipped installable artefacts, so
@@ -219,7 +219,7 @@ systemd unit, not less.
 - **`sqlite`**: reject only when the URL *names another backend*. A
   string with no `://` is a path — accept it, which is what `sqlx`
   does. `postgres://…` is rejected; `data/app.db` and
-  `C:\peisearpp.db` are not.
+  `C:\peisear\app.db` are not.
 - **`postgres`**: keep requiring `postgres`/`postgresql`. A bare path
   genuinely is not a PostgreSQL URL, so rejecting it there is right
   and the message is the useful one.
@@ -235,7 +235,7 @@ now *the presence of a scheme* as well.
 
 - `DEC-007` — **moves again**; account for it.
 - **The cases this round is about, all tested**: `data/app.db`,
-  `C:\peisearpp.db`, `sqlite://…`, `sqlite::memory:` all accepted on
+  `C:\peisear\app.db`, `sqlite://…`, `sqlite::memory:` all accepted on
   the `sqlite` branch; `postgres://…` still rejected there; a bare
   path still rejected on the `postgres` branch. **The accept cases
   matter most** — round 2's tests only asserted rejection, which is
