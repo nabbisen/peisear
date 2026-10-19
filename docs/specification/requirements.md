@@ -803,6 +803,13 @@ navigation complexity the model avoids.
 *Source*: `SPEC §8.3`, `SPEC Appendix C`. *Acceptance*: database
 triggers reject nesting on both INSERT and UPDATE;
 `cannot_create_sub_issue_under_a_sub_issue` returns 400.
+*Amended (0.55.0, `PG-003`)*: this entry's own wording — "the database
+layer", not "the SQLite database layer" — already held for a second
+engine without needing a word changed. `migrations-postgres/0022_…`
+carries the same depth check, raising `ERRCODE 'PE001'`, asserted on
+`MessageKey` against a real server
+(`dialect::postgres_tests::eleven_triggers_exist_and_none_of_them_are_foreign_key_internals`,
+`translate_trigger_error_maps_all_four_remaining_validations`).
 *Status*: Implemented. *Priority*: P0.
 
 **FR-SUB-002 — Same-project constraint**
@@ -827,6 +834,10 @@ bracketed-code `RAISE` text (matched by `trigger_error_code`, not by the
 prose), so `0015` is where the trigger was born, not what currently defines
 it. `translate_trigger_error` itself moved to `peisear-storage::dialect` in
 the same round.
+*Amended (0.55.0, `PG-003`)*: the same project-mismatch check now
+exists on PostgreSQL too, raising `ERRCODE 'PE002'` rather than a
+bracket, asserted on the identical `MessageKey`
+(`dialect::postgres_tests::translate_trigger_error_maps_all_four_remaining_validations`).
 *Status*: Implemented. *Priority*: P1.
 
 **FR-SUB-003 — No self-parenting and no demotion with children**
@@ -845,6 +856,11 @@ read as covered. **Neither condition is reachable by any route**:
 `demote_to_sub_issue` and `promote_to_top_level` have **no handler** —
 `IssueForm` carries no `parent_issue_id` field — so the storage boundary is
 where the assertion belongs until one exists.
+*Amended (0.55.0, `PG-003`)*: both conditions now exist on PostgreSQL
+too — self-parent raises `ERRCODE 'PE003'`, demote-with-children
+raises `ERRCODE 'PE004'` — asserted on the identical `MessageKey`s
+(`dialect::postgres_tests::translate_trigger_error_maps_a_real_self_parent_violation`,
+`translate_trigger_error_maps_all_four_remaining_validations`).
 *Status*: Implemented. *Priority*: P1.
 
 **FR-SUB-004 — Independent attributes**
@@ -1435,7 +1451,15 @@ which abort when both dates are set and the end precedes the start;
 **migration `0022` (`DIA-001`, 0.54.0) `DROP`s and re-`CREATE`s both with a
 bracketed-code `RAISE` text**, same condition, so `0016` is no longer what a
 reader of the live schema would find defining them. `translate_trigger_error`
-(now in `peisear-storage::dialect`) maps that to a worded message. **Neither writing path re-checks it** — the edit
+(now in `peisear-storage::dialect`) maps that to a worded message.
+*Amended (0.55.0, `PG-003`)*: `migrations-postgres/0022_…` carries
+the same condition as a PostgreSQL trigger function, raising
+`ERRCODE 'PE005'`; `translate_trigger_error`'s PostgreSQL body reads
+that code directly (no bracket to parse on this backend) and
+produces the identical `MessageKey`
+(`dialect::postgres_tests::translate_trigger_error_maps_all_four_remaining_validations`,
+proved against a real server). The ordering constraint now lives in
+the schema on both engines, not in a handler on either. **Neither writing path re-checks it** — the edit
 form because the trigger is the authority, and the reschedule because moving
 both timestamps by one delta cannot invalidate an ordering that was already
 valid.
@@ -2237,6 +2261,21 @@ maintain it, so the lock value has exactly one authority.
 *Acceptance*: `updated_at_authority` (4 tests) and
 `peisear-web`'s `updated_at_authority_scan`. *Status*: **Implemented
 (`QA-019`, post-0.27.0)**. *Priority*: P1.
+*Amended (0.55.0, `PG-003`)*: this entry's own wording — "database
+triggers", not "SQLite triggers" — already held for a second engine.
+`migrations-postgres/0021_…` gives PostgreSQL its own single
+authority, one shared trigger function (`bump_updated_at`) reused
+across all seven tables rather than SQLite's seven separate bodies,
+each mutating `NEW` directly in a `BEFORE UPDATE` trigger rather than
+issuing a second `UPDATE` statement — a PostgreSQL-idiomatic
+simplification this schema's own shape permits, not a change to what
+the requirement asks for. **Measured, not assumed**: `clock_timestamp()`
+is used rather than `CURRENT_TIMESTAMP`/`NOW()`, because the latter
+freezes at the transaction's own start — two writes to the same row
+inside one transaction would otherwise share a lock token, the same
+defect `0021`'s SQLite half fixed at the whole-second level, now
+avoided at the transaction level too
+(`dialect::postgres_tests::two_writes_in_one_postgres_transaction_still_advance_the_lock_token`).
 
 *Decision (`DEC-013`)*: one authority rather than two conventions kept
 in step by discipline. The alternative was application code and a

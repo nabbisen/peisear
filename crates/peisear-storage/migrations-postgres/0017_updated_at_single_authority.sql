@@ -10,7 +10,11 @@
 -- guard's own bound, `§2`) — it has nothing to apply and applies
 -- cleanly for exactly that reason.
 --
--- **Until `PG-003` lands, `issues.updated_at` and
--- `projects.updated_at` are not maintained on the PostgreSQL side**
--- — `NFR-CONC-003`'s single-authority requirement is unmet there,
--- same as `user_view_states.updated_at` from `0013`'s own note.
+-- **`PG-003` update**: the bump trigger for these three columns
+-- landed in `0021_…`, alongside `0014`'s four — PostgreSQL's single
+-- migration for all seven, since there was never a whole-second
+-- defect to fix in a second step (`0014`'s own updated note carries
+-- the full reasoning). **This file stays a permanent placeholder**,
+-- the version numbers kept for the drift guard's own bound (`§2`)
+-- rather than forced to carry content that would only duplicate
+-- `0021`'s.

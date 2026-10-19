@@ -10,11 +10,17 @@
 -- says so, per the handoff's own instruction (`PG-002` §3), rather
 -- than silently providing partial trigger logic.
 --
--- **Until `PG-003` lands, nothing bumps these columns on
--- `UPDATE`** on the PostgreSQL side — an `UPDATE` changes other
--- columns but leaves `updated_at` as it was. This matches `pool::migrate`'s
--- own honesty about being partial: the schema exists, the lock
--- token's maintenance does not yet.
+-- **`PG-003` update**: the bump trigger for these four columns
+-- landed in `0021_…`, not here — PostgreSQL never had the
+-- whole-second defect that file exists to fix on SQLite (`PG-002`'s
+-- own measurement: `TIMESTAMPTZ` carries microsecond precision from
+-- the column type alone), so there was nothing to *upgrade* later
+-- and all seven bump triggers were created directly, once, in that
+-- file. **This file stays a permanent placeholder for the trigger
+-- it was going to own** — not pending anything further, the same
+-- way `0017_…` does. Before `0021_…` landed, an `UPDATE` here left
+-- `updated_at` as it was; `migrate` now installs the trigger that
+-- fixes that, by the time all 22 files have applied.
 --
 -- Porting note: `DATETIME` -> `TIMESTAMPTZ`, same reason as `0001`.
 -- `COALESCE` is standard SQL, unchanged.

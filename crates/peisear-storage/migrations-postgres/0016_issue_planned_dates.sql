@@ -3,9 +3,11 @@
 --
 -- **Triggers omitted, deliberately** — same note as `0014`/`0015`.
 -- `issues_planned_range_check_insert`/`_update` are the remaining
--- two of the five validation triggers `PG-003` ports. **Until
--- `PG-003` lands, a planned end date before a planned start date is
--- not rejected on the PostgreSQL side.**
+-- two of the five validation triggers `PG-003` ports. **`PG-003`
+-- update**: both landed in `migrations-postgres/0022_…`, sharing one
+-- function (identical logic on both paths, unlike the sub-issue
+-- pair) — this file stays a permanent placeholder, the column being
+-- the part that belongs at this version.
 --
 -- Porting note: the SQLite original types these columns `TIMESTAMP`
 -- (not `DATETIME`) — SQLite treats both as the same affinity, but

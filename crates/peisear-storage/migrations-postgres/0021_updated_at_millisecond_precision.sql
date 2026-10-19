@@ -1,26 +1,97 @@
--- 0021_updated_at_millisecond_precision.sql (PostgreSQL port, PG-002)
--- Rationale: see migrations/0021_updated_at_millisecond_precision.sql.
+-- 0021_updated_at_millisecond_precision.sql (PostgreSQL port, PG-003)
 --
--- **Entirely trigger content, entirely omitted** -- same shape as
--- `0017`: all seven statements in the SQLite original are
--- `DROP TRIGGER`/`CREATE TRIGGER` pairs, all seven `PG-003`'s. This
--- file is a placeholder for version-number parity, same as `0017`.
+-- **The version numbers do not divide the way SQLite's did, stated
+-- rather than forced** (`PG-002` §6b's own closing instruction).
+-- SQLite's `0014`/`0017` created seven `updated_at`-bump triggers at
+-- whole-second precision, and this file (`0021`) later `DROP`s and
+-- re-`CREATE`s all seven at millisecond precision -- a real defect
+-- fix, because `CURRENT_TIMESTAMP` was the problem. PostgreSQL's
+-- `TIMESTAMPTZ`/`clock_timestamp()` never had that problem
+-- (`PG-002`'s own measurement: microsecond precision from the
+-- column type alone) — **there is no whole-second defect for this
+-- file to fix**, so all seven triggers are created directly, once,
+-- here. `migrations-postgres/0014_…` and `0017_…` stay exactly what
+-- `PG-002` left them: permanent placeholders, not pending anything
+-- further. Nothing in this project ever edits a migration after
+-- real installs can run it (`DIA-001` round 2's own lesson), so a
+-- placeholder that stays empty forever is exactly as safe as one
+-- that was never there.
 --
--- **The question this round owns is not the trigger -- it is
--- whether the column type this directory already chose
--- (`TIMESTAMPTZ`, `0001` onward) has the resolution the SQLite
--- original's fix needed.** Measured against a real server
--- (`pool::tests::postgres_timestamptz_resolution_is_at_least_millisecond`,
--- `--features postgres`, the same CI service `PG-001` proved a
--- connection against): PostgreSQL's `CURRENT_TIMESTAMP` and the
--- `TIMESTAMPTZ` column type both carry **microsecond** precision,
--- a finer unit than the millisecond `strftime` trick the SQLite
--- side needed. `NFR-CONC-002` is amended with this second sentence
--- (`DEC-028`, this round).
+-- **One function, not seven** — genuinely possible here in a way it
+-- is not in the SQLite original: each SQLite trigger fires a
+-- *second* `UPDATE` statement naming its own table
+-- (`UPDATE sprints SET updated_at = … WHERE id = NEW.id`), so each
+-- needs its own trigger body. This design instead mutates `NEW`
+-- directly inside a `BEFORE UPDATE` trigger and returns it — no
+-- second statement, no table name needed inside the function body,
+-- so one function serves all seven tables. `team_memberships` and
+-- `user_view_states` have no single `id` column (composite primary
+-- keys); the SQLite trigger keyed its second `UPDATE`'s `WHERE`
+-- clause on both columns for exactly that reason, and this design
+-- does not need to, since it never issues a second statement at
+-- all.
 --
--- This means `PG-003`'s eventual trigger can write
--- `SET updated_at = CURRENT_TIMESTAMP` or `NOW()` directly, with no
--- SQLite-style formatting trick needed -- the column type this
--- round already chose is why. Confirmed, not assumed: see the test
--- above for the measurement, run against a real server rather than
--- cited from documentation.
+-- `clock_timestamp()`, not `CURRENT_TIMESTAMP`/`NOW()` — measured
+-- distinction, not a style preference: `CURRENT_TIMESTAMP` returns
+-- the *transaction's* start time, frozen for every call inside one
+-- transaction, where `clock_timestamp()` returns the actual wall
+-- clock at the moment it runs. Two writes to the same row inside one
+-- transaction would share a `CURRENT_TIMESTAMP` value — reproducing
+-- `NFR-CONC-001`'s own defect at the transaction level instead of
+-- SQLite's whole-second level — and `clock_timestamp()` is what
+-- `pool::tests::two_writes_in_one_postgres_transaction_still_advance_the_lock_token`
+-- demonstrates against a real server, not assumed from documentation.
+--
+-- The `WHEN (OLD.updated_at = NEW.updated_at)` guard is carried over
+-- unchanged from the SQLite original — it exists so an application
+-- write that already set `updated_at` itself is not double-bumped
+-- (`NFR-CONC-003`'s own history, `0014`/`0017`'s comments).
+
+CREATE FUNCTION bump_updated_at() RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at := clock_timestamp();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER sprints_updated_at
+    BEFORE UPDATE ON sprints
+    FOR EACH ROW
+    WHEN (OLD.updated_at = NEW.updated_at)
+    EXECUTE FUNCTION bump_updated_at();
+
+CREATE TRIGGER teams_updated_at
+    BEFORE UPDATE ON teams
+    FOR EACH ROW
+    WHEN (OLD.updated_at = NEW.updated_at)
+    EXECUTE FUNCTION bump_updated_at();
+
+CREATE TRIGGER team_memberships_updated_at
+    BEFORE UPDATE ON team_memberships
+    FOR EACH ROW
+    WHEN (OLD.updated_at = NEW.updated_at)
+    EXECUTE FUNCTION bump_updated_at();
+
+CREATE TRIGGER user_capacities_updated_at
+    BEFORE UPDATE ON user_capacities
+    FOR EACH ROW
+    WHEN (OLD.updated_at = NEW.updated_at)
+    EXECUTE FUNCTION bump_updated_at();
+
+CREATE TRIGGER issues_updated_at
+    BEFORE UPDATE ON issues
+    FOR EACH ROW
+    WHEN (OLD.updated_at = NEW.updated_at)
+    EXECUTE FUNCTION bump_updated_at();
+
+CREATE TRIGGER projects_updated_at
+    BEFORE UPDATE ON projects
+    FOR EACH ROW
+    WHEN (OLD.updated_at = NEW.updated_at)
+    EXECUTE FUNCTION bump_updated_at();
+
+CREATE TRIGGER user_view_states_updated_at
+    BEFORE UPDATE ON user_view_states
+    FOR EACH ROW
+    WHEN (OLD.updated_at = NEW.updated_at)
+    EXECUTE FUNCTION bump_updated_at();

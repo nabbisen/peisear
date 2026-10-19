@@ -4,10 +4,11 @@
 -- **Triggers omitted, deliberately** — same note as `0014`.
 -- `prevent_sub_issue_nesting_insert`/`_update` are two of the five
 -- validation triggers `PG-003` ports with `ERRCODE` rather than
--- `DIA-001`'s bracket (`RFC 018` §5). **Until `PG-003` lands, the
--- one-level-nesting and same-project constraints are not enforced
--- on the PostgreSQL side** — the column and its indexes exist; the
--- guard does not yet.
+-- `DIA-001`'s bracket (`RFC 018` §5). **`PG-003` update**: both
+-- triggers landed in `migrations-postgres/0022_…`, same version
+-- number as the SQLite set's own re-creation of them — this file
+-- stays a permanent placeholder for the trigger logic, the column
+-- and its indexes being the part that belongs at this version.
 --
 -- Porting note: partial indexes (`CREATE INDEX ... WHERE ...`) are
 -- supported identically in PostgreSQL; no translation needed.
