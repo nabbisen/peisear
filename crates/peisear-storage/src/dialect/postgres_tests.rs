@@ -199,8 +199,18 @@ async fn translate_trigger_error_maps_all_four_remaining_validations() {
     );
 
     // E_ISSUE_DEMOTE_HAS_SUBISSUES: demoting a parent that has children.
+    // The new parent must itself be top-level (no parent of its own),
+    // or the depth check (PE001) fires first -- same precedence the
+    // SQLite original has, checked in the same order here.
+    sqlx::query(
+        "INSERT INTO issues (id, project_id, author_id, title, status) \
+         VALUES ('i-other-top', 'p', 'u', 'T', 'open')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
     let err =
-        sqlx::query("UPDATE issues SET parent_issue_id = 'i-child-1' WHERE id = 'i-parent-1'")
+        sqlx::query("UPDATE issues SET parent_issue_id = 'i-other-top' WHERE id = 'i-parent-1'")
             .execute(&pool)
             .await
             .expect_err("demoting an issue with children must be rejected");
