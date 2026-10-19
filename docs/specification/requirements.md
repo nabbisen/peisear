@@ -2216,6 +2216,19 @@ were found comparing against as though it could not happen (`§10.36`).
 The only way to close the residual rather than shrink it again is a
 counter rather than a clock, which remains outside this requirement's
 own text.
+*Precision, PostgreSQL (0.55.0, `PG-002`)*: the ported schema types
+every `updated_at`-shaped column `TIMESTAMPTZ`, and `CURRENT_TIMESTAMP`
+measured against a real server carries **microsecond** precision —
+finer than the millisecond SQLite's own `0021` needed, confirmed by
+sampling twenty consecutive reads rather than cited from documentation
+(`pool::tests::postgres_current_timestamp_resolution_is_finer_than_a_millisecond`,
+proved in CI against a real `postgres:17` service). **No trigger
+maintains this column on the PostgreSQL side yet** — `PG-003` is where
+one does — so this is the column type's own ceiling, not yet a
+working lock token; the residual above (same-instant coincidence,
+narrower by three further orders of magnitude on this backend once
+`PG-003` lands) is restated here for the second backend, not
+corrected, per the handoff's own instruction (`PG-002` §4).
 
 **NFR-CONC-003 — `updated_at` maintained by the database**
 The application MUST NOT write `updated_at`; database triggers MUST
