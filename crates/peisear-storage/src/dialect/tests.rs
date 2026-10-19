@@ -250,3 +250,27 @@ fn trigger_error_code_finds_the_bracket_anywhere_in_the_message() {
     );
     assert_eq!(trigger_error_code("no bracket"), None);
 }
+
+/// `PG-003` round 2, `§8`/`§9`: `TRIGGER_ERROR_CODES`'s own
+/// `MessageKey`s, in order, equal the one shared list both backends'
+/// tables are checked against -- not each other, which the mutually
+/// exclusive `sqlite`/`postgres` features never allow in one test
+/// anyway.
+#[test]
+fn trigger_error_codes_match_the_shared_validation_list() {
+    assert!(message_keys_match_the_shared_list(TRIGGER_ERROR_CODES));
+}
+
+/// `§10`'s own instruction: the new assertion seen to fail, not just
+/// written. A sixth entry added to this table alone, with no matching
+/// entry in the shared list, must be caught -- planted on a cloned
+/// copy, never on the committed `const`.
+#[test]
+fn a_sixth_entry_added_to_only_this_table_is_caught() {
+    let mut widened = TRIGGER_ERROR_CODES.to_vec();
+    widened.push((
+        "E_PLANTED",
+        peisear_i18n::MessageKey::IssueCannotBeOwnParentMessage,
+    ));
+    assert!(!message_keys_match_the_shared_list(&widened));
+}

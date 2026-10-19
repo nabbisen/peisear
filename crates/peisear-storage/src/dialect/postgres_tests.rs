@@ -272,3 +272,27 @@ async fn two_writes_in_one_postgres_transaction_still_advance_the_lock_token() {
          CURRENT_TIMESTAMP would have frozen both at the transaction's own start time"
     );
 }
+
+/// `PG-003` round 2, `§8`/`§9`: `TRIGGER_ERROR_CODES_POSTGRES`'s own
+/// `MessageKey`s, in order, equal the one shared list both backends'
+/// tables are checked against. No database needed -- plain data,
+/// same as the SQLite side's own equivalent.
+#[test]
+fn trigger_error_codes_postgres_match_the_shared_validation_list() {
+    assert!(message_keys_match_the_shared_list(
+        TRIGGER_ERROR_CODES_POSTGRES
+    ));
+}
+
+/// `§10`'s own instruction, the PostgreSQL side: the new assertion
+/// seen to fail, not just written. A sixth entry added to this table
+/// alone, with no matching entry in the shared list, must be caught.
+#[test]
+fn a_sixth_entry_added_to_only_this_table_is_caught() {
+    let mut widened = TRIGGER_ERROR_CODES_POSTGRES.to_vec();
+    widened.push((
+        "ZZ997",
+        peisear_i18n::MessageKey::IssueCannotBeOwnParentMessage,
+    ));
+    assert!(!message_keys_match_the_shared_list(&widened));
+}

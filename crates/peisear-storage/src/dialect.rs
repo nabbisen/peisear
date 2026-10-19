@@ -115,6 +115,52 @@ pub type Tx<'c> = sqlx::Transaction<'c, Database>;
 /// and reading what still failed after those two landed.
 pub type Connection = <Database as sqlx::Database>::Connection;
 
+/// The one fact both backends' own code tables encode (`PG-003`
+/// round 2, `§8`/`§9`): **"these five validations exist, in this
+/// order, mapping to these five `MessageKey`s."** `sqlite` and
+/// `postgres` are mutually exclusive features, so no single test can
+/// ever hold both [`TRIGGER_ERROR_CODES`] and `TRIGGER_ERROR_CODES_POSTGRES`
+/// in scope at once to compare them directly — round 1 read that as
+/// meaning the fact itself could not be guarded, and settled for
+/// "kept in sync by hand." **The features are exclusive; the fact is
+/// not.** A `MessageKey` is backend-agnostic (`peisear_i18n` is a
+/// dependency either way), so it lives here, unconditionally, and
+/// each backend's own test asserts its table's keys equal *this* —
+/// never the other backend's table, which the mutual exclusion would
+/// not allow anyway, and does not need to: a sixth validation added
+/// to one backend's table without a matching entry here now fails
+/// that backend's own build the next time its test runs, on both
+/// sides, independently.
+///
+/// **Test-only**: this cross-checks two `const`s' own consistency
+/// with each other, not a value anything at runtime reads, so it
+/// lives beside the tests that are its only callers rather than in
+/// the production build either backend ships.
+#[cfg(test)]
+pub(crate) const VALIDATION_MESSAGE_KEYS: &[peisear_i18n::MessageKey] = &[
+    peisear_i18n::MessageKey::SubIssueCannotHaveSubIssueMessage,
+    peisear_i18n::MessageKey::SubIssueMustShareProjectMessage,
+    peisear_i18n::MessageKey::IssueCannotBeOwnParentMessage,
+    peisear_i18n::MessageKey::CannotDemoteIssueWithSubIssuesMessage,
+    peisear_i18n::MessageKey::IssuePlannedEndBeforeStartMessage,
+];
+
+/// True if `known`'s own `MessageKey`s, in order, equal
+/// [`VALIDATION_MESSAGE_KEYS`] — the comparison the shared list
+/// exists to make possible. Takes `known` as a parameter rather than
+/// reading [`TRIGGER_ERROR_CODES`]/`TRIGGER_ERROR_CODES_POSTGRES`
+/// directly, the same reason [`every_raise_code_is_known`] does: a
+/// test can plant a widened copy without touching a committed table.
+#[cfg(test)]
+pub(crate) fn message_keys_match_the_shared_list(
+    known: &[(&str, peisear_i18n::MessageKey)],
+) -> bool {
+    known
+        .iter()
+        .map(|(_, k)| k)
+        .eq(VALIDATION_MESSAGE_KEYS.iter())
+}
+
 /// `DIA-001`: the bracketed code every known trigger `RAISE` message
 /// carries, paired with the `MessageKey` that renders the human
 /// sentence alongside it. Also the registry
@@ -139,15 +185,9 @@ pub type Connection = <Database as sqlx::Database>::Connection;
 /// there), not two spellings of the same identifier, so merging them
 /// into one struct would be the "leaky abstraction" `dialect.rs`'s
 /// own module doc already declined for the both-directions guard.
-///
-/// **No mechanical drift guard between the two tables is possible**:
-/// the `sqlite`/`postgres` features are mutually exclusive (this
-/// file's own `compile_error!`s), so no test can reference both
-/// `const`s at once to compare them. Kept in sync by hand instead —
-/// both lists are five entries long, both ordered
-/// depth / project-mismatch / self-parent / demote / planned-date,
-/// so a reviewer can diff them by eye at either file. If a sixth
-/// validation ever needs a code, add it to both in the same change.
+/// **The ordered list of `MessageKey`s the two tables must agree on
+/// is `VALIDATION_MESSAGE_KEYS`** (test-only, so not a doc-linkable
+/// item here), not each other.
 #[cfg(feature = "sqlite")]
 pub(crate) const TRIGGER_ERROR_CODES: &[(&str, peisear_i18n::MessageKey)] = &[
     (
