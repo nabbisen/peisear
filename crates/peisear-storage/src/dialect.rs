@@ -43,17 +43,15 @@
 //!   above — `DIA-002` §7's own stop condition — so it is named here
 //!   and left exactly as it is. `P3` is where a second real
 //!   implementation exists to abstract *against*, not guess at.
-//! - **Migration syntax.** `0001`–`0022` are SQLite SQL. PostgreSQL's
-//!   own migration set is `PG-002`'s to write, against real
-//!   differences (`SERIAL` vs SQLite's `INTEGER PRIMARY KEY`, trigger
-//!   syntax, and so on) rather than this round's guesses.
 //! - **Every runtime query itself.** `sqlx::query(…)`'s runtime API
 //!   does not validate SQL text against a specific database at
 //!   compile time, so SQLite-flavoured SQL compiles unchanged
-//!   regardless of which feature is active; it would only fail at
-//!   *runtime*, against a real PostgreSQL server, which `pool::connect`'s
-//!   `unimplemented!()` postgres branch (below) never lets a caller
-//!   reach.
+//!   regardless of which feature is active. `pool::migrate` (`PG-002`)
+//!   now applies a real, ported PostgreSQL schema — `?` placeholders
+//!   and SQLite date functions are `PG-004`'s, 295 occurrences across
+//!   20 files — so every one of those queries now fails at *runtime*
+//!   against the real server `pool::connect` (`PG-001`) reaches,
+//!   rather than never reaching a point where failing was possible.
 //!
 //! **No `#[cfg(feature = "postgres")]` anywhere outside this module
 //! and `pool.rs`.** Five files (`lib.rs`, `teams.rs`, `sprints.rs`,

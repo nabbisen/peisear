@@ -4,14 +4,16 @@
 //! implementation.** A `postgres` feature also exists (`DIA-002`,
 //! `RFC 018` P2) so this crate's types compile against `sqlx`'s own
 //! PostgreSQL driver. **It is partial, not absent**: [`pool::connect`]
-//! opens a real connection against a real server (`PG-001`, `RFC 018`
-//! P3's first round) — but [`pool::migrate`] is still a stub, since
-//! `PG-002` has not yet written the PostgreSQL migration set, and no
-//! query, trigger or schema has been ported either (`PG-003`,
-//! `PG-004`). Selecting the feature (`--no-default-features --features
-//! postgres`) builds, links and connects; it panics the moment
-//! anything calls [`pool::migrate`] or issues a query against a table
-//! that does not exist on the other side of that real connection.
+//! opens a real connection against a real server (`PG-001`), and
+//! [`pool::migrate`] applies a real, ported migration set
+//! (`PG-002`, `migrations-postgres/`) — but none of this schema's
+//! eleven triggers exist on the PostgreSQL side yet (`PG-003`), and
+//! no query has been ported either (`PG-004`), so every runtime
+//! query still fails against a schema it was never written for.
+//! Selecting the feature (`--no-default-features --features
+//! postgres`) builds, links, connects and migrates; it fails the
+//! moment a query reaches a table shape or a constraint only the
+//! omitted triggers would have enforced.
 //!
 //! The current implementation is backed by SQLite via `sqlx`. The public
 //! shape (query functions and the [`StorageError`] type) is intentionally
@@ -29,6 +31,8 @@ pub mod dialect;
 pub mod issue_events;
 pub mod issues;
 pub mod metrics_snapshots;
+#[cfg(test)]
+mod migration_drift;
 pub mod notifications;
 #[cfg(test)]
 mod optimistic_lock_guards;

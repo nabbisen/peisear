@@ -419,3 +419,61 @@ async fn connect_still_rejects_a_bare_path_on_the_postgres_branch() {
         "the message must name what this build expects, got: {msg}"
     );
 }
+
+/// `PG-002`'s own gate (§5): "the migration suite applied cleanly
+/// on both... a fresh PostgreSQL database... reaching the same
+/// version number." Reads `DATABASE_URL`, same convention as
+/// `connect_opens_a_real_connection_against_a_real_postgresql_server`
+/// -- CI's service container, not a local one.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+#[tokio::test]
+async fn migrate_reaches_version_22_from_a_fresh_database() {
+    let url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must point at a real PostgreSQL server for this test");
+    let pool = connect(&url).await.expect("connect");
+
+    migrate(&pool).await.expect("migrate");
+
+    let version: i64 = sqlx::query_scalar("SELECT MAX(version) FROM _sqlx_migrations")
+        .fetch_one(&pool)
+        .await
+        .expect("read _sqlx_migrations");
+    assert_eq!(
+        version, 22,
+        "expected the same version number the SQLite set reaches"
+    );
+}
+
+/// `PG-002` §4 / `0021`'s own placeholder note: `NFR-CONC-001`'s
+/// defect (two writes to the same row in the same second sharing an
+/// optimistic-lock token) was SQLite's whole-second `CURRENT_TIMESTAMP`;
+/// the fix there was a `strftime` trick down to milliseconds.
+/// PostgreSQL's own `CURRENT_TIMESTAMP` is measured here, against a
+/// real server, rather than assumed from documentation: twenty
+/// samples, checking that at least one carries a microsecond
+/// remainder not a multiple of 1000 -- proof of resolution finer
+/// than the millisecond the SQLite fix needed, not merely "probably
+/// fine".
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+#[tokio::test]
+async fn postgres_current_timestamp_resolution_is_finer_than_a_millisecond() {
+    let url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must point at a real PostgreSQL server for this test");
+    let pool = connect(&url).await.expect("connect");
+
+    let mut samples = Vec::new();
+    for _ in 0..20 {
+        let micros: i64 =
+            sqlx::query_scalar("SELECT EXTRACT(MICROSECONDS FROM CURRENT_TIMESTAMP)::bigint")
+                .fetch_one(&pool)
+                .await
+                .expect("read CURRENT_TIMESTAMP's microseconds");
+        samples.push(micros);
+    }
+
+    let sub_millisecond = samples.iter().any(|m| m % 1000 != 0);
+    assert!(
+        sub_millisecond,
+        "expected at least one of 20 samples to carry sub-millisecond precision, got: {samples:?}"
+    );
+}

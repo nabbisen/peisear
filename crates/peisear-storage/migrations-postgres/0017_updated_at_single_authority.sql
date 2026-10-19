@@ -1,0 +1,16 @@
+-- 0017_updated_at_single_authority.sql (PostgreSQL port, PG-002)
+-- Rationale: see migrations/0017_updated_at_single_authority.sql.
+--
+-- **Entirely trigger content, entirely omitted.** The SQLite
+-- original creates three bump triggers (`issues_updated_at`,
+-- `projects_updated_at`, `user_view_states_updated_at`) and nothing
+-- else — no column, no index, no data. All three are `PG-003`'s,
+-- the same as `0014`'s four. This file exists as a placeholder so
+-- the two migration sets keep the same version numbers (the drift
+-- guard's own bound, `§2`) — it has nothing to apply and applies
+-- cleanly for exactly that reason.
+--
+-- **Until `PG-003` lands, `issues.updated_at` and
+-- `projects.updated_at` are not maintained on the PostgreSQL side**
+-- — `NFR-CONC-003`'s single-authority requirement is unmet there,
+-- same as `user_view_states.updated_at` from `0013`'s own note.

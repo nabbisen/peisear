@@ -216,17 +216,37 @@ pub async fn connect(url: &str) -> StorageResult<Pool> {
     Ok(pool)
 }
 
-/// Run the PostgreSQL migration set. **Still a stub** — `PG-002` has
-/// not landed yet, so there is no PostgreSQL migration directory to
-/// embed. [`connect`] above is real; this is not, and says so rather
-/// than silently inheriting [`connect`]'s own doc comment the way the
-/// pre-`PG-001` version of this file did for both functions alike.
+/// Run the PostgreSQL migration set (`PG-002`, `RFC 018` P3). A
+/// second, separate embed — `migrations-postgres/`, not
+/// `migrations/` — behind the same `cfg` that already selects which
+/// `connect` body compiles; **two directories, two `migrate!`
+/// calls**, chosen over a single parameterised embed because
+/// `sqlx::migrate!`'s path argument must be a string literal known
+/// at compile time, not a runtime choice — the `cfg` is what makes
+/// the choice, once, at compile time, the same way it already does
+/// for [`connect`] above.
+///
+/// **Partial, honestly**: `migrations-postgres/` mirrors every
+/// SQLite migration's version number and intent, but omits every
+/// `CREATE TRIGGER`/`DROP TRIGGER` statement — all 11 of this
+/// schema's triggers are `PG-003`'s (`RFC 018` §5's own framing),
+/// not this round's. A PostgreSQL database this function has
+/// migrated has every table, column and index the SQLite one has,
+/// and **none of the triggers** — no `updated_at` bump, no sub-issue
+/// nesting guard, no planned-date ordering guard. See each ported
+/// file's own header for exactly what it omits and why.
+///
+/// **The drift guard** between the two directories is
+/// `migration_drift::mismatches` (test-only, so not a doc-linkable
+/// item here) — a filename-level comparison (version number and
+/// description both present in both directories), never SQL
+/// semantics, per the handoff's own bound
+/// (`PG-002` §2: "propose it; do not build a comparison that reads
+/// SQL semantics").
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
-pub async fn migrate(_pool: &Pool) -> StorageResult<()> {
-    unimplemented!(
-        "PostgreSQL migrations are not implemented yet (PG-001 implements connect; PG-002 is \
-         where the migration set and this function land)"
-    )
+pub async fn migrate(pool: &Pool) -> StorageResult<()> {
+    sqlx::migrate!("./migrations-postgres").run(pool).await?;
+    Ok(())
 }
 
 #[cfg(test)]

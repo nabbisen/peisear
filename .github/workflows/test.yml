@@ -550,7 +550,7 @@ jobs:
   # reasoning (server stability and security first, not a scale claim)
   # gives no reason to pick an older one.
   test-postgres-connection:
-    name: peisear-storage (postgres feature, real connection)
+    name: peisear-storage (postgres feature, real server)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -571,14 +571,17 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      # Filtered to the one test this job exists to prove green --
-      # `connect` against a real server. The rest of this crate's
-      # `--lib` suite under `postgres` is still mostly SQLite-shaped
-      # (`PG-002`/`PG-003`/`PG-004` haven't landed) and is expected to
-      # fail; that figure is reported honestly in the round's own
-      # completion package, not wired into a job this gate requires
-      # green.
+      # Each filtered to one test this job exists to prove green
+      # against a real server -- `PG-001`'s connection,  `PG-002`'s
+      # migration-to-version-22 and timestamp-precision measurement.
+      # The rest of this crate's `--lib` suite under `postgres` is
+      # still mostly SQLite-shaped (`PG-003`/`PG-004` haven't landed)
+      # and is expected to fail; that figure is reported honestly in
+      # the round's own completion package, not wired into a job this
+      # gate requires green.
       - run: cargo test -p peisear-storage --no-default-features --features postgres --lib connect_opens_a_real_connection_against_a_real_postgresql_server
+      - run: cargo test -p peisear-storage --no-default-features --features postgres --lib migrate_reaches_version_22_from_a_fresh_database
+      - run: cargo test -p peisear-storage --no-default-features --features postgres --lib postgres_current_timestamp_resolution_is_finer_than_a_millisecond
 
   build:
     name: cargo build (release-lite)

@@ -1,0 +1,10 @@
+-- 0022_trigger_error_codes.sql (PostgreSQL port, PG-002)
+-- Rationale: see migrations/0022_trigger_error_codes.sql.
+--
+-- **Entirely trigger content, entirely omitted** -- same shape as
+-- `0017`/`0021`. The SQLite original drops and re-creates the four
+-- validation triggers `0015`/`0016` first created, this time with
+-- bracketed-code `RAISE` text. `PG-003` carries the five codes as
+-- `ERRCODE` rather than `DIA-001`'s bracket (`RFC 018` §5's own
+-- framing) -- a different mechanism entirely, not this file's
+-- bracket trick translated. Placeholder for version-number parity.

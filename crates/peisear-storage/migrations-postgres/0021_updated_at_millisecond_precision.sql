@@ -1,0 +1,26 @@
+-- 0021_updated_at_millisecond_precision.sql (PostgreSQL port, PG-002)
+-- Rationale: see migrations/0021_updated_at_millisecond_precision.sql.
+--
+-- **Entirely trigger content, entirely omitted** -- same shape as
+-- `0017`: all seven statements in the SQLite original are
+-- `DROP TRIGGER`/`CREATE TRIGGER` pairs, all seven `PG-003`'s. This
+-- file is a placeholder for version-number parity, same as `0017`.
+--
+-- **The question this round owns is not the trigger -- it is
+-- whether the column type this directory already chose
+-- (`TIMESTAMPTZ`, `0001` onward) has the resolution the SQLite
+-- original's fix needed.** Measured against a real server
+-- (`pool::tests::postgres_timestamptz_resolution_is_at_least_millisecond`,
+-- `--features postgres`, the same CI service `PG-001` proved a
+-- connection against): PostgreSQL's `CURRENT_TIMESTAMP` and the
+-- `TIMESTAMPTZ` column type both carry **microsecond** precision,
+-- a finer unit than the millisecond `strftime` trick the SQLite
+-- side needed. `NFR-CONC-002` is amended with this second sentence
+-- (`DEC-028`, this round).
+--
+-- This means `PG-003`'s eventual trigger can write
+-- `SET updated_at = CURRENT_TIMESTAMP` or `NOW()` directly, with no
+-- SQLite-style formatting trick needed -- the column type this
+-- round already chose is why. Confirmed, not assumed: see the test
+-- above for the measurement, run against a real server rather than
+-- cited from documentation.
