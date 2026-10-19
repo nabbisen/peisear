@@ -62,8 +62,28 @@ constructs appear in query strings**, and those are this round's:
 | construct | files under `src/` |
 |---|---|
 | `datetime(` / `strftime` | `metrics_snapshots.rs`, `user_metrics_snapshots.rs`, `user_burnout.rs`, `project_health.rs`, `personal_metrics.rs` |
-| `ON CONFLICT` | 3 |
-| `INSERT OR REPLACE` | 1 |
+| `ON CONFLICT` | **5 occurrences, 3 files** — `notifications.rs`, `sprints.rs`, `view_states.rs` |
+| `INSERT OR REPLACE` | **1**, `sprints.rs:406` |
+
+*Re-measured at `PG-002`'s review, because both this table and
+`PG-002`'s were built from one command that searched migrations and
+`src/` together.* **`PG-002`'s report concluded these constructs were
+a false positive from prose in `0009`. They are not** — the prose
+match is real but separate, and the SQL below is real too:
+
+- **`ON CONFLICT … DO UPDATE` is valid in both engines** (SQLite since
+  3.24), so those five are likely to port unchanged. **Check, do not
+  assume** — the column-list spelling differs between the two call
+  styles already in use here (`ON CONFLICT(col)` and
+  `ON CONFLICT (col)`).
+- **`INSERT OR REPLACE` is SQLite-only and has no PostgreSQL
+  equivalent.** `sprints.rs:406`'s `INSERT OR REPLACE INTO
+  sprint_records` must become an explicit `INSERT … ON CONFLICT …
+  DO UPDATE`, and **the two are not equivalent**: `INSERT OR REPLACE`
+  deletes the conflicting row and inserts a new one, firing delete
+  triggers and resetting unlisted columns to their defaults;
+  `ON CONFLICT DO UPDATE` updates in place. **Say which semantics the
+  record actually needs** before choosing the rewrite.
 
 **The date functions are the hard half, not the placeholders.**
 `strftime`/`datetime()` have no identical PostgreSQL spelling, and

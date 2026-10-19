@@ -16,10 +16,18 @@ SQLite-specific constructs, counted by the files that contain them:
 |---|---|
 | `datetime(` | 5 |
 | `RAISE(ABORT` | 5 — **`PG-003`'s**, not this round's |
-| `ON CONFLICT` | 3 |
+| `ON CONFLICT` | 3 — **in `src/`, not here** |
 | `strftime` | 1 |
-| `INSERT OR REPLACE` | 1 |
-| `INTEGER PRIMARY KEY` | 1 |
+| `INSERT OR REPLACE` | 1 — **in `src/`, not here** |
+| `INTEGER PRIMARY KEY` | 1 — **in `src/`, not here** |
+
+*Corrected at `PG-002`'s review.* **Three of those rows are not
+migration content at all.** The command behind this table searched
+`migrations/*.sql` **and** `src/*.rs` together and the result was
+printed under a heading about migrations — a combined count presented
+as one population, which is this project's most-repeated defect and
+was the architect's here. In the migrations alone all three are
+**zero**. Where they really live is in `§3`'s own note below.
 
 **`strftime` and `datetime(` are not cosmetic.** They are in
 `0021_updated_at_millisecond_precision.sql`, which is the
@@ -50,7 +58,12 @@ comparison that reads SQL semantics** — that is a different project.
 
 - **Not the triggers.** `PG-003`. Port the schema around them and say
   which migrations are left incomplete pending that round.
-- **Not the queries.** `PG-004`, 295 placeholders.
+- **Not the queries.** `PG-004`, 295 placeholders — **and the three
+  constructs this handoff's own table misfiled.** Measured at
+  `PG-002`'s review: `ON CONFLICT` appears **5 times across 3 files**
+  (`notifications.rs`, `sprints.rs`, `view_states.rs`) and
+  `INSERT OR REPLACE` **once**, at `sprints.rs:406`. All in query
+  strings, all `PG-004`'s.
 - **Not a rewrite of the SQLite set.** `0015`/`0016` are byte-frozen
   (`DIA-001` round 2, and `0.53.0` shipped them). **The SQLite
   directory does not change in this round at all** — if you find

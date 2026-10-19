@@ -86,9 +86,40 @@ assertion, two pools.**
 - **If `ERRCODE` cannot carry the five codes** without inventing a
   class. Bring what you found.
 
+## §6b — the two placeholder migrations must not ship
+
+*Added at `PG-002`'s review.* `migrations-postgres/0021_…` and
+`0022_…` exist for version-number parity and are **comment-only —
+zero executable statements**, measured. `PG-002` says so plainly,
+which is why this is a note and not a finding against it.
+
+**They are a checksum trap the moment anyone runs them.** `sqlx`
+stores each applied migration's checksum and refuses to run when one
+changes (`MigrateError::VersionMismatch`) — the defect `DIA-001` round
+2 was reversed for, demonstrated then against a real 0.53.0 database.
+**Filling these two files in this round changes their checksums.**
+
+**Safe today, and only today**: no PostgreSQL database exists outside
+CI's own ephemeral service, so there is nothing to break. **That stops
+being true the moment 0.55.0 ships.**
+
+So: **this round fills them, and the release must not cut while either
+is still a placeholder.** Stated here as a gate rather than left to
+the ordering holding — if `PG-003` were to slip past the cut, 0.55.0
+would publish two migrations that a later release then modifies under
+anyone who ran them.
+
+**If you fill them and the version numbers no longer make sense** —
+if PostgreSQL's trigger content does not divide the way SQLite's did
+between `0021` and `0022` — **say so rather than forcing content into
+a file to keep a number.** The drift guard compares filenames, so the
+numbers must stay; what goes in them is yours.
+
 ## §7 — exit condition
 
-Eleven triggers on PostgreSQL; the five codes carried as `ERRCODE`
+**Neither `migrations-postgres/0021_…` nor `0022_…` left as a
+comment-only placeholder** (`§6b`); eleven triggers on PostgreSQL; the
+five codes carried as `ERRCODE`
 rather than a bracket; a PostgreSQL `translate_trigger_error` sibling
 reading the code out of band; the both-directions guard working on
 both catalogues and seen to fail both ways on each; **the five
