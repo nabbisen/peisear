@@ -126,3 +126,94 @@ both catalogues and seen to fail both ways on each; **the five
 validations rejected identically on both backends, asserted on
 `MessageKey`**; `FR-SUB-001..003` and `NFR-CONC-003` checked and
 reported; all gates re-run.
+
+---
+
+# PG-003 round 2 — the features are exclusive; the facts are not
+
+Round 1 is accepted (see the review). The eleven triggers are real and
+measured, `ERRCODE` carries the five codes properly, both plants fire
+on both catalogues, and the placeholders are gone. **One constraint
+was accepted that did not have to be.**
+
+## §8 — "no test can reference both `const`s" is true, and the wrong conclusion
+
+`dialect.rs:145` says it plainly, which is why this is a finding
+against the design and not against the honesty:
+
+> *"so no test can reference both `const`s at once to compare them.
+> Kept in sync by hand instead — both lists are five entries long,
+> both ordered … so a reviewer can diff them by eye at either file.
+> If a sixth validation ever needs a code, add it to both in the same
+> change."*
+
+**The premise is correct**: `TRIGGER_ERROR_CODES` is
+`#[cfg(feature = "sqlite")]`, `TRIGGER_ERROR_CODES_POSTGRES` is
+`#[cfg(all(feature = "postgres", not(feature = "sqlite")))]`, and the
+`compile_error!` guards make the two features mutually exclusive, so
+no compilation sees both.
+
+**The conclusion does not follow.** The *features* are exclusive; the
+*fact they both encode* is not. **"These five validations exist, in
+this order, mapping to these five `MessageKey`s" is one fact, and it
+is currently written twice.**
+
+**What that costs.** Add a sixth validation to SQLite only, and:
+
+- SQLite's guard passes — its registry and `sqlite_master` agree;
+- PostgreSQL's guard passes — its registry and `pg_trigger` agree;
+- the five-validations test covers the five that exist on both;
+- **nothing fails**, and the two backends silently enforce different
+  rules.
+
+`RFC 018` §5's whole premise is *"the only way to know they agree is
+to run the same tests against both."* Each half is guarded against
+its own engine. **The halves are not guarded against each other.**
+
+## §9 — one list, two vocabularies
+
+**Hoist the shared fact into an unconditional `const`** — the ordered
+list of the five `MessageKey`s, with no `cfg` on it at all, since a
+`MessageKey` is backend-agnostic and `peisear-i18n` is a dependency
+either way.
+
+Then each backend's table is checked against **that one list**, under
+its own feature:
+
+- the SQLite build asserts `TRIGGER_ERROR_CODES`'s keys equal it, in
+  order;
+- the PostgreSQL build asserts the same of `TRIGGER_ERROR_CODES_POSTGRES`.
+
+**Neither test needs to see the other's `const`**, which is what made
+this look impossible — and a sixth validation added to one side now
+fails the other side's build the next time it runs.
+
+**Keep both code vocabularies exactly as they are.** `E_SUB_ISSUE_DEPTH`
+and `PE001` are genuinely different things — a bracket in a message
+and an out-of-band `SQLSTATE` — and `DIA-002`'s own lesson is not to
+abstract a difference that is real. **The codes stay two; the list of
+validations becomes one.**
+
+**Delete the "diff them by eye" paragraph** when the guard lands; a
+comment telling a reader to do by hand what a test now does is worse
+than no comment.
+
+## §10 — gates
+
+- `DEC-007`, feature absent — **moves** by the SQLite-side assertion.
+  Account for it.
+- **The new assertion seen to fail**, on at least one side: plant a
+  sixth entry in one table without touching the shared list, watch it
+  fail, restore. A guard never seen to fail is `§10.36`.
+- `fmt`, `clippy` both ways, `rustdoc` **under both features** (this
+  round already adopted that; keep it), `mdbook`, `publish-dry-run`,
+  the CI PostgreSQL job.
+
+## §11 — exit condition
+
+One unconditional list of the five validations' `MessageKey`s; each
+backend's table asserted against it under its own feature, with
+neither test referencing the other's `const`; both code vocabularies
+unchanged; the "diff by eye" paragraph removed; the assertion shown to
+fail against a planted sixth entry; `DEC-007`'s delta accounted for;
+all gates re-run.
