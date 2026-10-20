@@ -240,6 +240,19 @@ pub async fn for_user_in_project(
             END) AS recent_done_count,
             SUM(CASE
                 WHEN status IN ('open', 'in_progress')
+                  -- `PG-004`: deliberately **not** cast to `double
+                  -- precision`, unlike the same formula in
+                  -- `issue_events`, `project_health` and `user_burnout`.
+                  -- `EXTRACT(EPOCH FROM …)` returns `NUMERIC` on
+                  -- PostgreSQL whatever its argument's type, and those
+                  -- three select the result into a column `sqlx`
+                  -- decodes as `f64`, which fails without the cast
+                  -- (`ColumnDecode`, caught by CI's real server, never
+                  -- by a local gate). Here it is only ever compared
+                  -- inside this `AND`, never decoded into a Rust type,
+                  -- and PostgreSQL resolves the numeric/float
+                  -- comparison itself. **If this expression ever moves
+                  -- into a select list, it needs the cast.**
                   AND EXTRACT(EPOCH FROM (now() -
                       COALESCE(
                           (SELECT MAX(e.occurred_at)
@@ -371,6 +384,19 @@ pub async fn for_user_global(
             END) AS recent_done_count,
             SUM(CASE
                 WHEN status IN ('open', 'in_progress')
+                  -- `PG-004`: deliberately **not** cast to `double
+                  -- precision`, unlike the same formula in
+                  -- `issue_events`, `project_health` and `user_burnout`.
+                  -- `EXTRACT(EPOCH FROM …)` returns `NUMERIC` on
+                  -- PostgreSQL whatever its argument's type, and those
+                  -- three select the result into a column `sqlx`
+                  -- decodes as `f64`, which fails without the cast
+                  -- (`ColumnDecode`, caught by CI's real server, never
+                  -- by a local gate). Here it is only ever compared
+                  -- inside this `AND`, never decoded into a Rust type,
+                  -- and PostgreSQL resolves the numeric/float
+                  -- comparison itself. **If this expression ever moves
+                  -- into a select list, it needs the cast.**
                   AND EXTRACT(EPOCH FROM (now() -
                       COALESCE(
                           (SELECT MAX(e.occurred_at)
