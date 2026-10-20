@@ -63,37 +63,60 @@ it. If propagating it turns out to need a different shape — say,
 because `default-features = false` on a workspace-table edge reaches
 further than expected — **bring that, do not improvise it.**
 
-## §3 — the release question this opens, and who answers it
+## §3 — the passthrough is test infrastructure, not an install path
 
-A passthrough that exists and is not documented is a feature only a
-reader of `Cargo.toml` can find. A passthrough that **is** documented
-becomes an install path, and `NFR-REL-011` requires every documented
-install path to be exercised by CI. That requirement exists because
-of `§10.41` — a documented install path the published artefact could
-not satisfy — which this project has already paid for once.
+A passthrough that is documented as a way to run peisear becomes an
+install path, and `NFR-REL-011` then requires CI to walk it. **That
+walk would certify something false.** Measured at `c98739a`:
 
-So the honest options are two, and they are not symmetric:
+| | Against SQLite | Against PostgreSQL after this series |
+|---|---|---|
+| `peisear-storage` unit tests | 31 | 48 |
+| `peisear-web` integration tests | **309** | **26** (`CON-003`'s lock tests) |
 
-1. **Document `cargo install peisear --no-default-features --features
-   postgres` and walk it in CI** — install, start it against the CI
-   PostgreSQL service, hit the health endpoint. One new path, one new
-   walk, both cheap because the service container already exists for
-   the storage job.
-2. **Ship the passthrough undocumented**, so no install path is added
-   and `NFR-REL-011` is untouched.
+**283 integration tests would never have run against PostgreSQL**,
+and the storage modules they are the *only* coverage for are the
+ones where being wrong is worst:
 
-**Not an option: document it and do not walk it.** That is `§10.41`
-exactly.
+- `personal_metrics.rs`, `user_burnout.rs`, `project_health.rs`,
+  `metrics_snapshots.rs`, `user_metrics_snapshots.rs`, `issues.rs`,
+  `sprints.rs` — **zero unit tests, every one of them.**
+- `sprints.rs:1148` computes `NFR-PRIV-007`'s contributor floor with
+  `COUNT(DISTINCT i.assignee_id)`; `project_health.rs:202` does the
+  same for active assignees; `issues.rs:897`'s `project_workload`
+  is the sole source for `NFR-PRIV-001`'s (**P0**) capacity
+  visibility.
+- The tests that prove those two privacy controls hold —
+  `aggregate_privacy` (13) and `workload_privacy` (5) — are
+  integration tests, and they stay SQLite-only after this series.
 
-**The architect recommends (1)** and has put it to the owner with
-this series. **Do not act on it until the series README's State
-column says it is authorized.** If it is not, do (2) and say so in
-`scaling.md` in place of the *"once that passthrough exists"*
-paragraph.
+**This is not a claim that the translations are wrong.** `PG-004`
+did this part carefully: the date primitives have equivalence tests,
+and `capture_record`'s `INSERT OR REPLACE` → `ON CONFLICT DO UPDATE`
+rewrite has `recapturing_a_sprint_record_still_bumps_captured_at`
+proving the `captured_at` semantics it changes. The claim is the
+project's own standing one: **a check that was never run is not
+evidence.** Two P0 privacy controls are enforced by SQL that was
+rewritten for a second backend, and nothing we would ship verifies
+them on it.
 
-**Out of scope either way**: a second set of per-platform release
-archives, and a second container tag. Five targets do not become ten
-in the release that first makes the backend selectable.
+So this round **adds the feature and documents no install path.**
+`NFR-REL-011` is not engaged; there is no second archive set and no
+second container tag.
+
+**Silence is not the alternative, though.** `peisear` and
+`peisear-web` are published crates, so a `[features]` section is
+public API and docs.rs lists it whether we mention it or not. An
+unexplained feature is worse for a reader than either answer. The
+status paragraph is written in `CON-004` with the rest of the
+documentation; this round does not touch `scaling.md`.
+
+**Take the one real benefit the walk would have given.** Booting the
+server against PostgreSQL proves more than any unit suite does, and
+it does not require documenting anything. Add it to the job that
+already has the service container: build with the passthrough, start
+the binary against PostgreSQL with `JWT_SECRET` set, hit the health
+endpoint, stop. **A CI job, not an install path.**
 
 ## §4 — gates
 
@@ -103,7 +126,12 @@ in the release that first makes the backend selectable.
   `cargo tree -p peisear -f "{p} {f}"` both show the same feature set
   as at `c98739a`. A passthrough that quietly changes the default
   build is the one failure mode here that reaches every user.
-- `DEC-007` — unchanged. This round adds no test and removes none.
+- **The boot smoke green**: the binary built with the passthrough,
+  started against the CI PostgreSQL service, health endpoint 200.
+  Quote the job, not a summary of it.
+- `DEC-007` — unchanged. This round adds no `cargo test` test; the
+  boot smoke is a CI step, not a test in the per-crate block. If
+  that turns out to be the wrong home for it, say so.
 - `publish-dry-run`. A `[features]` section changes what `cargo
   package` resolves; `0.53.0`'s leg 3 is why that gate exists.
 - `fmt`, `clippy`, `rustdoc`, `mdbook`.
@@ -114,8 +142,11 @@ in the release that first makes the backend selectable.
   `default-features = false` on these edges reach further than the
   backend choice.
 - **If the default build's resolved features move at all.** Stop.
-- **The §3 question is the owner's, relayed through the architect.**
-  Do not pick an option.
+- **If the boot smoke fails.** That is a finding about the backend,
+  and a valuable one — it would be the first time peisear itself ran
+  on PostgreSQL. Report it; do not fix it inside this round.
+- **If you find yourself writing a line telling someone how to run
+  peisear on PostgreSQL.** That is §3's whole subject. Stop.
 
 ## §6 — exit condition
 
@@ -123,6 +154,7 @@ in the release that first makes the backend selectable.
 `default-features = false` on both `peisear-storage` edges;
 `cargo build -p peisear --no-default-features --features postgres`
 green with its command quoted; the default build's resolved feature
-set shown unchanged against `c98739a`; `DEC-007` unchanged; the §3
-question answered by the owner before any documentation changes, and
-`scaling.md` left alone until it is.
+set shown unchanged against `c98739a`; the boot smoke running in the
+job that already has the service container; `DEC-007` unchanged;
+**no install path documented and `scaling.md` untouched** — the
+status paragraph is `CON-004`'s.

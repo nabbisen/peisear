@@ -105,7 +105,46 @@ will reach both; they are named here so they are not rediscovered:
 - `docs/security/hardening.md:163` — *"`NFR-CMP-003`'s …"*, the
   key-file-with-the-database claim.
 
-## §4 — gates
+## §4 — what `scaling.md` must say now, and must not
+
+`CON-001` adds the feature passthrough and deliberately documents no
+install path (`CON-001` §3: two **P0** privacy controls are enforced
+by SQL rewritten for PostgreSQL, and the tests proving them —
+`aggregate_privacy`, `workload_privacy` — stay SQLite-only after this
+series). But `peisear` and `peisear-web` are published crates, so the
+`[features]` section is public API and docs.rs lists it regardless.
+**An unexplained feature is worse for a reader than either answer**,
+so the status is documented here even though the path is not.
+
+`scaling.md:110–117` currently says there is *"any way to reach the
+feature from the published `peisear` binary at all"* missing, and
+describes *"the path once that passthrough exists"*. After
+`CON-001` the first half is no longer true and the second has
+arrived. Replace both with what is true:
+
+- The feature is **selectable at build time** on `peisear` and
+  `peisear-web`.
+- **Running peisear on PostgreSQL is not a supported configuration
+  at 0.56.0**, in those words or clearer ones.
+- **Why**, as a property rather than a count: the storage crate's own
+  suite and the optimistic-locking tests run against both backends;
+  no other integration test does. A count would be truer today and
+  wrong by the next release — and `spec_scan` (0.57.0) is going to
+  start checking counts stated in prose.
+- The release artefacts are unchanged: same five archives, same
+  single container tag, `cargo install peisear` still SQLite.
+- What would earn support: the full integration suite on both
+  backends. **Not scheduled**, and say so rather than implying a
+  date.
+
+**Do not write an install command.** Not in `scaling.md`, not in
+`README.md`, not in `docs/getting-started/`, not as an aside. A
+reader who compiles a non-default feature from a page that says *not
+supported* has made an informed choice; a reader following a
+documented command has been told it works. That difference is the
+whole of `CON-001` §3.
+
+## §5 — gates
 
 - `mdbook build`, and the new sections **read back as an operator**,
   not as an author — the discipline `DEC-028`'s pass 5 uses.
@@ -120,10 +159,14 @@ will reach both; they are named here so they are not rediscovered:
 - `DEC-007` unchanged: this round should add no test. If it adds
   one, say why.
 
-## §5 — escalate rather than deciding
+## §6 — escalate rather than deciding
 
 - **The `NFR-CMP-003` sibling question in §3 is the owner's.**
   Propose, do not decide.
+- **If `scaling.md`'s honest status paragraph reads as if it is
+  hiding something.** It should read as a project that knows exactly
+  what it has proven. If it cannot be written that way, the problem
+  is the scope, not the paragraph — bring it.
 - **If writing the PostgreSQL backup section turns up a property
   peisear does not actually have** — some assumption in the code
   about a single file — stop. That is a finding about the backend,
@@ -132,7 +175,7 @@ will reach both; they are named here so they are not rediscovered:
   rather than documented.** It might be; `RFC 020`'s first-run
   wizard is 0.58.0 and is where that would live. Not here.
 
-## §6 — exit condition
+## §7 — exit condition
 
 `backup.md` carrying a PostgreSQL section whose every command has
 been run, and saying plainly which sections are about which backend;
@@ -141,5 +184,7 @@ operator meets it rather than only in the error; `NFR-CMP-003`
 scoped to the SQLite backend with nothing it required dropped; the
 PostgreSQL sibling question proposed to the owner rather than
 answered; `external-design.md:210` and `hardening.md:163` reconciled;
-`DEC-028`'s five passes complete with Appendix A recomputed; all
-gates re-run.
+`scaling.md` stating the feature's status as a property, naming
+PostgreSQL as an unsupported configuration at 0.56.0, and carrying
+**no install command anywhere**; `DEC-028`'s five passes complete
+with Appendix A recomputed; all gates re-run.

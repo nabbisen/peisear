@@ -161,7 +161,7 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| 0.56.0 | **The conformance suite.** `RFC 018` P4 — one suite against both backends in CI, and the operations story | `RFC 018` §6; handoffs [`049-one-suite-two-backends`](rfcs/handoffs/049-one-suite-two-backends/README.md) | **Authorized 2026-10-14**; scoped 2026-10-20 into four rounds. **One clause awaits the owner**: the feature passthrough. Scoping measured that no command line builds `peisear-web` or `peisear` against PostgreSQL, so P4’s own gate — which names the **lock** tests, and they live in `peisear-web` — is unreachable without it. The passthrough is therefore proposed as in-scope, the same shape as `PG-004` in 0.55.0. What needs authorizing is whether it becomes a **documented** install path (`cargo install peisear --no-default-features --features postgres`, walked by CI under `NFR-REL-011`) or ships undocumented. Document-and-not-walk is `§10.41` and is not offered. No second archive set, no second container tag, either way |
+| 0.56.0 | **The conformance suite.** `RFC 018` P4 — one suite against both backends in CI, and the operations story | `RFC 018` §6; handoffs [`049-one-suite-two-backends`](rfcs/handoffs/049-one-suite-two-backends/README.md) | **Authorized 2026-10-14**; scoped 2026-10-20 into four rounds. **The feature passthrough is in scope as a prerequisite**, not an addition: scoping measured that no command line builds `peisear-web` or `peisear` against PostgreSQL, and P4’s gate names the **lock** tests, which live in `peisear-web`. The gate is unreachable without it — the same shape as `PG-004` in 0.55.0. **It is test infrastructure and no install path is documented**: after this series 26 of 309 integration tests run against PostgreSQL, and the 283 that do not are the only coverage for `sprints.rs`, `issues.rs`, `project_health.rs` and the three metrics modules — all with zero unit tests, two of them carrying **P0** privacy controls (`NFR-PRIV-007`’s contributor floor, `NFR-PRIV-001`’s capacity visibility) whose proving tests stay SQLite-only. Documenting a path would engage `NFR-REL-011`, whose walk would certify that. So: same five archives, same single container tag, `cargo install peisear` still SQLite, plus a **CI boot smoke** against the service container. `scaling.md` states the status honestly, since the feature is public API on docs.rs regardless |
 | 0.57.0 | **The specification checks itself.** The two citation rules — every `§10.N` citation has a matching heading, no four-digit `RFC 0NNN` outside the history directory — **plus the rest of `spec_scan`**: Appendix A's columns summed from its own rows, counts stated in prose checked against the workspace, and the status vocabulary closed to a known list. **`§10.42`**: `requirements.md` is this project's most-edited document and nothing mechanical reads it | `§10.36`'s decision (2026-10-14); `§10.42` (2026-10-15); the citation-form sweep carried since 0.52.0 | **Authorized 2026-10-15**, citation rules and `spec_scan` widening together. Both are guard work, both are predicates rather than lists, and the second has been carried unplaced for two releases. Placed here rather than earlier because **guards do not displace an authorized sequence** — but ahead of `RFC 020`, because 0.52.0's own precedent is that guard infrastructure should not queue behind a feature |
 | 0.58.0 | **The first thing it says.** `RFC 020` — a first run with no configuration asks five questions with working defaults and writes the `.env` it describes, so the file and the explanation cannot disagree. Skipped when configuration exists or stdin is not a terminal | `RFC 020` (**Accepted**, 2026-10-15) | **Authorized 2026-10-15.** Placement follows the note authorized with the 0.57.0 row: behind `RFC 018`'s phases, and behind the citation guard on 0.52.0's precedent that guard work does not queue behind a feature. **Handoffs are not written yet** and are not due until 0.57.0 is cut (Release cycle, entry criterion 3) |
 
@@ -751,6 +751,26 @@ release later by the 0.51.0 guard-infrastructure delay recorded above
 both backends green in CI, the operations story rewritten) is
 **0.56.0**. **SQLite stays the default and loses nothing at every
 phase** — a condition of the acceptance, enforced at each gate.
+
+**P4 does not make PostgreSQL a supported deployment, and that is
+deliberate.** It makes the backend selectable at build time, proves
+the storage crate's own suite and the optimistic-locking tests
+against it, and writes the operations story. It leaves 283 of
+`peisear-web`'s 309 integration tests never having run against
+PostgreSQL — among them `aggregate_privacy` and `workload_privacy`,
+which are the only tests anywhere proving `NFR-PRIV-007`'s
+contributor floor and `NFR-PRIV-001`'s (**P0**) capacity
+visibility, both enforced by SQL that `PG-004` rewrote per backend.
+No release documents an install path while that is true, because
+`NFR-REL-011` would then require CI to walk it and the walk would
+certify an unverified P0 control.
+
+**What would earn it — a P5, not scheduled**: the full
+`peisear-web` integration suite against both backends, after which
+a documented and walked `cargo install` path, and only then the
+question of a second archive set and container tag. Writing it down
+here so the step is taken deliberately rather than reached by drift
+from a passthrough that already exists.
 
 ### OIDC / IDaaS integration
 

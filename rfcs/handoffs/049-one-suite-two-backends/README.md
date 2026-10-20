@@ -15,7 +15,7 @@ anyone can tell.
 
 | ID | Handoff | Subject | Blocked on | State |
 |---|---|---|---|---|
-| CON-001 | [the backend nobody can select](./CON-001-the-backend-nobody-can-select.md) | The feature passthrough. **Measured: no command line builds `peisear-web` or `peisear` against PostgreSQL** — both CLI forms hit `dialect.rs:89`'s `compile_error!`. Everything else here is blocked on it. **Carries one question for the owner** (§3) | — | **Next** |
+| CON-001 | [the backend nobody can select](./CON-001-the-backend-nobody-can-select.md) | The feature passthrough. **Measured: no command line builds `peisear-web` or `peisear` against PostgreSQL** — both CLI forms hit `dialect.rs:89`'s `compile_error!`. Everything else here is blocked on it. Adds the feature and a **CI boot smoke**; documents no install path (§3) | — | **Next** |
 | CON-002 | [the suite that runs whole](./CON-002-the-suite-that-runs-whole.md) | **48 tests compile under `postgres`; CI runs 31 by name.** And a `--lib` name filter that matches nothing exits 0 — measured — so those lines cannot tell *green* from *examined nothing*. `§10.46` | CON-001 (partly) | Not started |
 | CON-003 | [the lock tests on both backends](./CON-003-the-lock-tests-on-both-backends.md) | P4's gate says *storage **and lock*** tests. The 26 lock tests are in `peisear-web`, and `TestApp::spawn` hardcodes a `sqlite://` tempdir. **Isolation across 26 tests on one server is the round** | CON-001 | Not started |
 | CON-004 | [the operations story](./CON-004-the-operations-story.md) | `backup.md` is wholly SQLite and never says so; **`JWT_SECRET` is mandatory on PostgreSQL and no document says it**; `NFR-CMP-003` restated for the SQLite backend | — (written last by choice) | Not started |
@@ -25,7 +25,7 @@ anyone can tell.
 
 ---
 
-## One thing needs the owner's authorization before `CON-001` acts
+## The passthrough is in scope, and it is test infrastructure
 
 `ROADMAP.md`'s 0.56.0 row is *"one suite against both backends in
 CI, and the operations story"*. **The feature passthrough is not in
@@ -34,28 +34,49 @@ it** — `scaling.md` calls it *"not yet scheduled"*.
 Scoping found it is not an addition for convenience. It is a
 **prerequisite discovered by measurement**: P4's gate names the lock
 tests, the lock tests live in `peisear-web`, and `peisear-web`
-cannot select the backend. The gate is unreachable without it. That
-is the same shape as `PG-004` in the last series — a gap in the
-phase table found by measuring rather than by reading it.
+cannot select the backend. The gate is unreachable without it — the
+same shape as `PG-004` in the last series, a gap in the phase table
+found by measuring rather than by reading it.
 
-The passthrough itself is therefore proposed as in-scope. What needs
-an answer is **what it means for the release**, because a documented
-install path pulls in `NFR-REL-011`'s CI walk:
+**What it does not become is an install path.** Measured at
+`c98739a`:
 
-1. **Document `cargo install peisear --no-default-features --features
-   postgres` and walk it in CI** — recommended. The service
-   container already exists for the storage job.
-2. **Ship it undocumented** — no new install path, `NFR-REL-011`
-   untouched.
+| | SQLite | PostgreSQL, after this series |
+|---|---|---|
+| `peisear-storage` unit tests | 31 | 48 |
+| `peisear-web` integration tests | **309** | **26** |
 
-**Document-and-not-walk is not an option**; that is `§10.41`, which
-this project has already paid for once.
+The 283 that would not run are the only coverage that exists for
+`personal_metrics.rs`, `user_burnout.rs`, `project_health.rs`,
+`metrics_snapshots.rs`, `user_metrics_snapshots.rs`, `issues.rs` and
+`sprints.rs` — **every one of which has zero unit tests.** Two of
+them carry **P0** privacy controls enforced in SQL that `PG-004`
+rewrote: `NFR-PRIV-007`'s contributor floor
+(`sprints.rs:1148`, `COUNT(DISTINCT i.assignee_id)`) and
+`NFR-PRIV-001`'s capacity visibility (`issues.rs:897`,
+`project_workload`). The tests that prove them —
+`aggregate_privacy`, `workload_privacy` — stay SQLite-only.
 
-`CON-001` §3 carries this in full and tells the round to wait.
-**Neither option adds a second archive set or a second container
-tag.** Five release targets do not become ten here.
+Nothing here says the translations are wrong; `PG-004` was careful
+and its own equivalence tests show it. It says what this project
+already holds: **a check that was never run is not evidence.**
+Documenting an install path would engage `NFR-REL-011`, and the walk
+it requires would certify a configuration in which a P0 privacy
+control is unverified.
 
----
+So: **the feature ships, no install path is documented, no second
+archive set, no second container tag.** `CON-004` §4 writes the
+status honestly in `scaling.md` — the feature is public API on
+docs.rs whether we mention it or not, and an unexplained feature is
+worse for a reader than either answer. The one real benefit a walk
+would have had is taken without the claim: `CON-001` adds a **CI
+boot smoke** — build with the passthrough, start against the service
+container, hit the health endpoint — which is more than any unit
+suite proves and documents nothing.
+
+What would earn a documented, walked install path is the full
+integration suite on both backends. That is a later release and is
+**not scheduled**.
 
 ## What this series is not
 
@@ -63,6 +84,11 @@ tag.** Five release targets do not become ten here.
 lock tests"*. `CON-003` takes the 26 lock tests in three files. If
 the mechanism makes the rest cheap, that is a finding to report, not
 a round to start.
+
+**Not a supported PostgreSQL deployment.** The section above is not
+a caveat on the release, it is the release's own claim: the backend
+becomes buildable and better tested, and it does not become
+something an operator is invited to run.
 
 **Not a data migration.** There is still no way to carry an existing
 SQLite installation into PostgreSQL, `peisear migrate` does not
