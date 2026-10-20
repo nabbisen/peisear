@@ -332,23 +332,39 @@ async fn sprints_delete_guard_refuses_a_stale_millisecond_token_and_accepts_the_
     cleanup(&path);
 }
 
-// `CON-002` (`RFC 018` P4): `user_capacities::insert` -- this test's
-// own seed step -- opens `pool.begin_with("BEGIN IMMEDIATE")`, SQLite
-// transaction-mode syntax with no PostgreSQL equivalent spelling
-// (`syntax error at or near "IMMEDIATE"`, measured in CI). Fourteen
-// production call sites across `user_capacities.rs` (3), `issues.rs`
-// (4), `sprints.rs` (5) and `teams.rs` (2) share this pattern (`grep
-// -c 'pool\.begin_with\("BEGIN IMMEDIATE"\)'` per file) -- not a fixture,
-// and not decided here: `BEGIN IMMEDIATE`'s own role is taking
-// SQLite's write lock before a check that would otherwise race
-// (`RACE-00x`/`STORE-00x`'s own subject), and PostgreSQL's MVCC model
-// may or may not need an equivalent at all. Escalated as a finding,
-// not fixed as a helper; ignored here rather than silently excluded,
-// so it stays visible in every run until it is.
+// `CON-002` found that `user_capacities::insert` -- this test's own
+// seed step -- opened `pool.begin_with("BEGIN IMMEDIATE")` directly,
+// SQLite transaction-mode syntax with no PostgreSQL equivalent
+// spelling (`syntax error at or near "IMMEDIATE"`, measured in CI),
+// shared by fourteen production call sites across `user_capacities.rs`
+// (3), `issues.rs` (4), `sprints.rs` (5) and `teams.rs` (2). `CON-005`
+// closed it: every one of the fourteen now opens its transaction
+// through `dialect::begin_guarded` and takes whichever lock its own
+// classified shape needs (`dialect`'s own module doc).
+//
+// **A second, unrelated defect, found the moment that one was out of
+// the way**: `migrations-postgres/0009_user_capacities.sql`'s `points`
+// column is `INTEGER` (PostgreSQL's own 4-byte type), a mechanical
+// port of the SQLite migration's own `INTEGER` -- which in SQLite is
+// a type *affinity*, not a fixed width, and holds any integer value
+// transparently. Every Rust binding of this column is `i64`
+// (`user_capacities::insert`'s own `points: i64` parameter, carried
+// through `overlaps_existing`'s `ConflictInfo`), so the first real
+// round-trip read against PostgreSQL -- this test's own legitimate
+// edit, through `update_guarded` -- decodes it and fails:
+// `ColumnDecode { index: "points", source: "mismatched types; Rust
+// type i64 (as SQL type INT8) is not compatible with SQL type INT4"
+// }`. Escalated in this round's own completion package, not fixed
+// here: changing a shipped migration's column type is `DEC-056`/
+// append-only-migration territory, outside `CON-005`'s own mandate.
+// `#[ignore]`d again, for this new reason -- not the one `CON-005`
+// closed.
 #[cfg_attr(
     all(feature = "postgres", not(feature = "sqlite")),
-    ignore = "CON-002 finding: user_capacities::insert uses SQLite's BEGIN IMMEDIATE, \
-              no PostgreSQL equivalent yet -- see the round's own completion package"
+    ignore = "found by CON-005: migrations-postgres/0009's user_capacities.points is \
+              INTEGER (4-byte), every Rust binding is i64 -- a mechanical port of SQLite's \
+              own INTEGER type AFFINITY, not its fixed width. See the round's own \
+              completion package."
 )]
 #[tokio::test]
 async fn user_capacities_delete_guard_refuses_a_stale_millisecond_token_and_accepts_the_current_one()

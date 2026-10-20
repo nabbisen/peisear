@@ -269,11 +269,16 @@ pub async fn delete_guarded(
 /// starts on different sprints of one team both saw no active sprint
 /// and both started, leaving two -- a state this function's own rule
 /// says cannot exist, and one [`active_for_team`]'s deterministic pick
-/// would then have hidden. It opens `BEGIN IMMEDIATE` (the reasoning
-/// for `IMMEDIATE` over a deferred `BEGIN` is in
-/// `user_capacities`'s module docs) so the second start waits, sees the
-/// first, and is refused. Starts in different teams contend only for
-/// the database's one write lock, briefly.
+/// would then have hidden. On SQLite it opens `BEGIN IMMEDIATE` (the
+/// reasoning for `IMMEDIATE` over a deferred `BEGIN` is in
+/// `user_capacities`'s module docs); on PostgreSQL it locks every
+/// sprint row in this team before reading any of them (`CON-005`
+/// Group B -- "no other sprint in this team is active" is a predicate
+/// over sibling rows that already exist, so locking the whole scoped
+/// set is sufficient, unlike `user_capacities`'s own range check).
+/// Either way the second start waits, sees the first, and is refused.
+/// Starts in different teams contend only for the database's one
+/// write lock (SQLite) or disjoint row sets (PostgreSQL), briefly.
 pub async fn start(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
     start_guarded(pool, sprint_id, None)
         .await
@@ -281,15 +286,23 @@ pub async fn start(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
 }
 
 /// [`start`], applied only if the sprint still carries `expected` as its
-/// `updated_at` (`RACE-002`). The stamp comes from the same read, inside
-/// the same `BEGIN IMMEDIATE` transaction, as the state checks below, and
+/// `updated_at` (`RACE-002`). The stamp comes from the locked read,
+/// inside the same guarded transaction, as the state checks below, and
 /// is answered first -- the order the handler's own comparison had.
 pub async fn start_guarded(
     pool: &Pool,
     sprint_id: &str,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
+    // `CON-005` Group B: `team_id` is immutable once a sprint exists,
+    // so this first read needs no lock -- only the second, below,
+    // needs to be trusted for `status`/`updated_at`.
+    let team_id = find_by_id(&mut *tx, sprint_id)
+        .await?
+        .ok_or(StorageError::NotFound)?
+        .team_id;
+    crate::dialect::lock_scope(&mut tx, "sprints", "team_id", &team_id, "id").await?;
     let sprint = find_by_id(&mut *tx, sprint_id)
         .await?
         .ok_or(StorageError::NotFound)?;
@@ -342,16 +355,30 @@ pub async fn complete(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
 
 /// [`complete`], applied only if the sprint still carries `expected` as
 /// its `updated_at` (`RACE-002`). Like [`start_guarded`] it reads and
-/// writes under one `BEGIN IMMEDIATE` transaction; that also makes two
+/// writes under one guarded transaction; that also makes two
 /// simultaneous completes a single one (the second sees `Completed`),
 /// where before both passed and both wrote `completed_at`.
+///
+/// **Not a Group A site, on PostgreSQL** (`CON-005` round 1 review
+/// §4: round 1 proposed Group A's row lock for this function, and
+/// that was wrong). `capture_record`'s own three aggregate reads
+/// (`live_totals`, `burndown_live`, `live_contributor_basis`) are
+/// three separate statements over `sprint_issues JOIN issues`, so a
+/// lock on this sprint's own row alone does not stop
+/// `issues::update_status_guarded` — which touches `issues` only,
+/// never `sprints` — from committing *between* them, mixing a
+/// `completed_count` counted before that change with a
+/// `contributor_count` counted after, and `contributor_count` is
+/// `NFR-PRIV-007`'s suppression basis. So this locks **both** the
+/// sprint row and the issue set `capture_record` is about to
+/// aggregate over, in that order, before any of those three reads.
 pub async fn complete_guarded(
     pool: &Pool,
     sprint_id: &str,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-    let sprint = find_by_id(&mut *tx, sprint_id)
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
+    let sprint = find_by_id_for_update(&mut tx, sprint_id)
         .await?
         .ok_or(StorageError::NotFound)?;
     if !stamp_matches(expected, sprint.updated_at) {
@@ -382,6 +409,11 @@ pub async fn complete_guarded(
     .bind(sprint_id)
     .execute(&mut *tx)
     .await?;
+    // `CON-005` Group D: lock the issue set before any of
+    // `capture_record`'s own three aggregate reads, in a deterministic
+    // order (round 1 review §4's own requirement for any mechanism
+    // that locks a set rather than a single row).
+    lock_issue_set_for_sprint(&mut tx, sprint_id).await?;
     // Capture what the sprint reports, in this same transaction (`DEC-054`).
     // Inside it are: the status `UPDATE` above, the reads of current
     // membership and issue state that `live_totals` and `burndown_live` make,
@@ -391,6 +423,72 @@ pub async fn complete_guarded(
     capture_record(&mut tx, sprint_id).await?;
     tx.commit().await?;
     Ok(Guarded::Written(()))
+}
+
+/// Same as [`find_by_id`], but locks the row first on PostgreSQL
+/// (`CON-005` Group D). [`complete_guarded`] holds this lock across
+/// several more statements than a plain read needs, so it cannot
+/// share [`find_by_id`] itself with every other, unlocked caller the
+/// way the rest of this module does.
+async fn find_by_id_for_update(
+    tx: &mut crate::dialect::Tx<'_>,
+    id: &str,
+) -> StorageResult<Option<Sprint>> {
+    let query = format!(
+        r#"
+        SELECT id, team_id, name, goal, starts_on, ends_on,
+               status, started_at, completed_at, created_at, updated_at
+        FROM sprints
+        WHERE id = ?1
+        {}
+        "#,
+        crate::dialect::for_update()
+    );
+    let row = sqlx::query_as::<_, SprintRow>(&crate::dialect::sql(&query))
+        .bind(id)
+        .fetch_optional(&mut **tx)
+        .await?;
+    Ok(row.map(Sprint::from))
+}
+
+/// `CON-005` Group D: lock every issue row `capture_record` is about
+/// to aggregate over, before it reads any of them — a no-op on
+/// SQLite, where `BEGIN IMMEDIATE` already holds the whole-database
+/// write lock. Locks `issues`, not `sprint_issues`: membership cannot
+/// change here regardless, since [`add_issue_if_status`] and
+/// [`remove_issue_if_status`] both lock this same sprint row first
+/// (`CON-005` Group A) and [`complete_guarded`] is already holding
+/// it; what this additionally excludes is a concurrent guarded
+/// *issue* write (`issues::update_status_guarded` and siblings, which
+/// never touch `sprints` at all) landing between two of
+/// `capture_record`'s own three aggregate statements.
+#[cfg(feature = "sqlite")]
+pub(crate) async fn lock_issue_set_for_sprint(
+    _tx: &mut crate::dialect::Tx<'_>,
+    _sprint_id: &str,
+) -> StorageResult<()> {
+    Ok(())
+}
+
+/// PostgreSQL's own body of [`lock_issue_set_for_sprint`] (above).
+/// Locked in `id` order — the deterministic order round 1's own
+/// review required of any mechanism that locks a set. `pub(crate)`,
+/// not private: `CON-005`'s own concurrency tests call it directly to
+/// simulate the window `complete_guarded` holds it, rather than
+/// duplicating this query's text.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+pub(crate) async fn lock_issue_set_for_sprint(
+    tx: &mut crate::dialect::Tx<'_>,
+    sprint_id: &str,
+) -> StorageResult<()> {
+    sqlx::query(
+        "SELECT i.id FROM sprint_issues si JOIN issues i ON i.id = si.issue_id \
+         WHERE si.sprint_id = $1 ORDER BY i.id FOR UPDATE OF i",
+    )
+    .bind(sprint_id)
+    .fetch_all(&mut **tx)
+    .await?;
+    Ok(())
 }
 
 /// Write the record of a sprint that has just been set `completed`, on the
@@ -489,19 +587,25 @@ pub async fn reopen(pool: &Pool, sprint_id: &str) -> StorageResult<()> {
 }
 
 /// [`reopen`], applied only if the sprint still carries `expected` as its
-/// `updated_at` (`RACE-002`). One `BEGIN IMMEDIATE` transaction holds: the
+/// `updated_at` (`RACE-002`). One guarded transaction holds: the
 /// stamp and status reads, the check that the team has no other active sprint
 /// (`FR-SPR-002` binds reopen exactly as it binds [`start`] -- and non-atomically
 /// this is the defect that left six active sprints, `RACE-001`), the status
 /// write, and the two deletes. A sprint that is not `completed` is refused with
 /// `SprintNotCompletedMessage`; another active sprint with
-/// `OtherSprintActiveInTeamMessage`, the words `start` uses.
+/// `OtherSprintActiveInTeamMessage`, the words `start` uses. Same
+/// `CON-005` Group B mechanism as [`start_guarded`].
 pub async fn reopen_guarded(
     pool: &Pool,
     sprint_id: &str,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
+    let team_id = find_by_id(&mut *tx, sprint_id)
+        .await?
+        .ok_or(StorageError::NotFound)?
+        .team_id;
+    crate::dialect::lock_scope(&mut tx, "sprints", "team_id", &team_id, "id").await?;
     let sprint = find_by_id(&mut *tx, sprint_id)
         .await?
         .ok_or(StorageError::NotFound)?;
@@ -557,11 +661,12 @@ pub async fn reopen_guarded(
 /// between it and the `INSERT` left an issue in a sprint the request would
 /// have refused. Neither route carries an optimistic lock (a deliberate
 /// choice, not this function's to change), so there is no stamp to move.
-/// The status read and the insert now share one `BEGIN IMMEDIATE`
-/// transaction -- see `user_capacities`'s module docs for why `IMMEDIATE`
-/// -- and [`start_guarded`] / [`complete_guarded`] take the same lock, so
-/// they serialise. A vanished sprint is `NotFound`; a status outside
-/// `allowed` is [`StorageError::Conflict`] carrying `refusal`.
+/// The status read and the insert now share one guarded transaction --
+/// see `user_capacities`'s module docs for why -- and [`start_guarded`]
+/// / [`complete_guarded`] take the same sprint-row lock, so they
+/// serialise (`CON-005` Group A). A vanished sprint is `NotFound`; a
+/// status outside `allowed` is [`StorageError::Conflict`] carrying
+/// `refusal`.
 pub async fn add_issue_if_status(
     pool: &Pool,
     sprint_id: &str,
@@ -569,11 +674,21 @@ pub async fn add_issue_if_status(
     allowed: &[SprintStatus],
     refusal: peisear_i18n::MessageKey,
 ) -> StorageResult<()> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-    let sprint = find_by_id(&mut *tx, sprint_id)
-        .await?
-        .ok_or(StorageError::NotFound)?;
-    if !allowed.contains(&sprint.status) {
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
+    // `CON-005` Group A: only `status` is needed, and locking this one
+    // row is what serialises against `start_guarded`/`complete_guarded`
+    // (both of which also lock this sprint's own row), so this reads
+    // directly rather than through `find_by_id`.
+    let query = format!(
+        "SELECT status FROM sprints WHERE id = ?1 {}",
+        crate::dialect::for_update()
+    );
+    let status: Option<String> = sqlx::query_scalar(&crate::dialect::sql(&query))
+        .bind(sprint_id)
+        .fetch_optional(&mut *tx)
+        .await?;
+    let status = status.ok_or(StorageError::NotFound)?;
+    if !allowed.contains(&SprintStatus::from_storage_str(&status)) {
         return Err(StorageError::Conflict(refusal));
     }
     sqlx::query(&crate::dialect::sql(
@@ -622,9 +737,9 @@ pub async fn add_issue(pool: &Pool, sprint_id: &str, issue_id: &str) -> StorageR
 /// `plan_remove` reads the sprint's status and refuses on it; that read is
 /// on the pool, so a `start` landing between it and the delete removed an
 /// issue from a sprint that was no longer plannable. The status read and the
-/// delete share one `BEGIN IMMEDIATE` transaction (see `user_capacities`'s
-/// module docs for why `IMMEDIATE`); [`start_guarded`] and
-/// [`complete_guarded`] take the same lock.
+/// delete share one guarded transaction (see `user_capacities`'s
+/// module docs for why); [`start_guarded`] and
+/// [`complete_guarded`] take the same sprint-row lock (`CON-005` Group A).
 ///
 /// An issue that is in no sprint is still not an error -- nothing to
 /// remove, as [`remove_issue`] always was.
@@ -634,18 +749,21 @@ pub async fn remove_issue_if_status(
     allowed: &[SprintStatus],
     refusal: peisear_i18n::MessageKey,
 ) -> StorageResult<()> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-    let status: Option<String> = sqlx::query_scalar(&crate::dialect::sql(
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
+    let query = format!(
         r#"
         SELECT s.status
         FROM sprint_issues si
         JOIN sprints s ON s.id = si.sprint_id
         WHERE si.issue_id = ?1
+        {}
         "#,
-    ))
-    .bind(issue_id)
-    .fetch_optional(&mut *tx)
-    .await?;
+        crate::dialect::for_update()
+    );
+    let status: Option<String> = sqlx::query_scalar(&crate::dialect::sql(&query))
+        .bind(issue_id)
+        .fetch_optional(&mut *tx)
+        .await?;
     let Some(status) = status else {
         return Ok(());
     };

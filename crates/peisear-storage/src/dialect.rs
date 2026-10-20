@@ -32,6 +32,12 @@
 //!   prefix; PostgreSQL's `RAISE EXCEPTION … USING ERRCODE = '…'`
 //!   would carry a real one, needing a different translation
 //!   function entirely, not a parameter on this one.
+//! - **The transaction seam** (`CON-005`) — `begin_guarded`,
+//!   `for_update`, `lock_scope` and `user_capacities`'s own
+//!   advisory-lock wrapper (all `pub(crate)`, not doc-linkable here)
+//!   replace the fourteen call sites that used to open
+//!   `pool.begin_with("BEGIN IMMEDIATE")` directly, a literal valid
+//!   on SQLite and a syntax error on PostgreSQL.
 //!
 //! **What this module deliberately does not own — left unabstracted
 //! for `P3`, not forgotten (§3's own warning: a guess written into a
@@ -311,6 +317,170 @@ pub(crate) fn stale_guard(n: u32) -> String {
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
 pub(crate) fn stale_guard(n: u32) -> String {
     format!("updated_at = ${n}")
+}
+
+/// `CON-005`: the transaction seam `BEGIN IMMEDIATE` itself needed.
+/// Fourteen production call sites opened `pool.begin_with("BEGIN
+/// IMMEDIATE")` directly — SQLite-only syntax, a syntax error on
+/// PostgreSQL (`42601`), found by `CON-002` reaching one of them in a
+/// real `postgres` CI run for the first time. Every one of the
+/// fourteen now opens its transaction through [`begin_guarded`]
+/// instead, and takes whichever of [`for_update`], [`lock_scope`] or
+/// `user_capacities`'s own advisory-lock wrapper its own classified
+/// shape needs (`CON-005` round 1's own classification, accepted with
+/// one correction in review): a single row that already exists and
+/// races only against itself, a sibling set that already exists
+/// scoped by a shared key, or a predicate against a row that may not
+/// exist at all. **SQLite's own branch of every one of these
+/// functions is `BEGIN IMMEDIATE` or a no-op, byte for byte, unmoved
+/// by this round** — the SQLite path loses nothing, `RFC 018`'s own
+/// condition at every phase.
+#[cfg(feature = "sqlite")]
+pub(crate) async fn begin_guarded(pool: &Pool) -> crate::StorageResult<Tx<'static>> {
+    Ok(pool.begin_with("BEGIN IMMEDIATE").await?)
+}
+
+/// PostgreSQL's own body of [`begin_guarded`] (above). A plain
+/// transaction — the lock comes from whichever of [`for_update`],
+/// [`lock_scope`] or the advisory lock the call site asks for next,
+/// not from how the transaction itself is opened; PostgreSQL's MVCC
+/// has no mode analogous to `BEGIN IMMEDIATE`'s upfront write lock.
+///
+/// **`SET LOCAL lock_timeout = '5s'`, required, not optional**
+/// (`CON-005` round 1 §4, accepted in review): every lock this seam
+/// takes is PostgreSQL's first real lock-wait in this crate, and left
+/// unbounded a blocked transaction would hang rather than fail — a
+/// failure mode [`pool::connect`]'s own `busy_timeout(5s)` already
+/// rules out for SQLite. The number matches that one rather than
+/// inventing a second to justify. Checked against whether this
+/// changes what an error means to a caller, not assumed: neither
+/// backend's [`crate::StorageError`] carries a busy/timeout-specific
+/// variant, so a SQLite busy timeout and PostgreSQL's `55P03`
+/// (`lock_not_available`) both already land on the same
+/// `StorageError::Database(...)` a caller gets on contention today —
+/// a new bound on this backend, not a new meaning for the error it
+/// produces.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+pub(crate) async fn begin_guarded(pool: &Pool) -> crate::StorageResult<Tx<'static>> {
+    let mut tx = pool.begin().await?;
+    sqlx::query("SET LOCAL lock_timeout = '5s'")
+        .execute(&mut *tx)
+        .await?;
+    Ok(tx)
+}
+
+/// `CON-005` Group A/D: PostgreSQL's row-lock clause, spliced onto
+/// the end of a `SELECT` a call site already issues as its lead read
+/// inside a transaction [`begin_guarded`] opened — for a guarded
+/// write that races only against another write of the *same* row,
+/// which already exists (an `insert` always precedes any caller of
+/// this). The empty string on SQLite: `BEGIN IMMEDIATE` already holds
+/// the whole-database write lock before this statement would run, so
+/// there is nothing for a row-level clause to add there, and SQLite
+/// has no `FOR UPDATE` syntax to spell regardless.
+#[cfg(feature = "sqlite")]
+pub(crate) fn for_update() -> &'static str {
+    ""
+}
+
+/// PostgreSQL's own body of [`for_update`] (above).
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+pub(crate) fn for_update() -> &'static str {
+    " FOR UPDATE"
+}
+
+/// `CON-005` Group B: lock every row of `table` sharing `key`'s value
+/// in `column`, before any of them is read — for an aggregate
+/// predicate over sibling rows that **all already exist** (a team's
+/// sprints, a team's memberships), scoped by a shared key the self
+/// row is always a member of. A no-op on SQLite, matching
+/// [`for_update`]'s own reasoning: `BEGIN IMMEDIATE` already holds
+/// the lock this would otherwise take. `table`/`column` are call-site
+/// literals, never attacker- or user-influenced text — only `key`
+/// carries a caller's value, and it is bound, never interpolated.
+///
+/// **Locks in `order_by`'s own order** (`CON-005` round 1 review §4's
+/// own requirement): the one deadlock shape a mechanism that locks a
+/// *set*, rather than a single row, introduces is two transactions
+/// acquiring an overlapping set's rows in different orders. Nothing
+/// in this crate's schema lets two different scopes' row-sets
+/// overlap today (`sprints`/`team_memberships` are both partitioned
+/// by `team_id`, so two different keys lock disjoint rows), but a
+/// deterministic order costs nothing and is asked for regardless of
+/// whether today's schema can reach the shape it prevents. Not
+/// hardcoded to `id`: `team_memberships` has no such column (its
+/// primary key is `(team_id, user_id)`), found by this function's own
+/// first real run against a server, not read from the schema first —
+/// `42703`, `column "id" does not exist`.
+#[cfg(feature = "sqlite")]
+pub(crate) async fn lock_scope(
+    _tx: &mut Tx<'_>,
+    _table: &str,
+    _column: &str,
+    _key: &str,
+    _order_by: &str,
+) -> crate::StorageResult<()> {
+    Ok(())
+}
+
+/// PostgreSQL's own body of [`lock_scope`] (above).
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+pub(crate) async fn lock_scope(
+    tx: &mut Tx<'_>,
+    table: &str,
+    column: &str,
+    key: &str,
+    order_by: &str,
+) -> crate::StorageResult<()> {
+    let sql = format!("SELECT 1 FROM {table} WHERE {column} = $1 ORDER BY {order_by} FOR UPDATE");
+    sqlx::query(&sql).bind(key).execute(&mut **tx).await?;
+    Ok(())
+}
+
+/// `CON-005` Group C: `user_capacities`'s own advisory lock, scoped by
+/// `user_id`. The one group of the three whose predicate
+/// (`overlaps_existing`'s range check) can hold against a row that
+/// does not exist yet — a user with zero existing capacity rows has
+/// nothing for [`for_update`]/[`lock_scope`] to lock, so this is the
+/// one mechanism of the three named in the handoff that does not
+/// depend on a row existing to anchor a lock to. A no-op on SQLite,
+/// same reasoning as the two above.
+///
+/// **The two-key form, not `pg_advisory_xact_lock(bigint)`**
+/// (`CON-005` round 1 review §3, "a better answer than I would have
+/// given"): `classid` reserves this crate's own slice of PostgreSQL's
+/// advisory-lock keyspace, so a future second use of an advisory lock
+/// elsewhere in this crate cannot collide with this one by picking an
+/// overlapping key by accident. `1` is this round's own reservation;
+/// the next one must pick a different `classid`, not reuse this one
+/// for an unrelated scope. `hashtext` is PostgreSQL's own built-in
+/// string hash, applied to the id the lock is actually scoped by —
+/// collisions are possible (it is a 32-bit hash) but only ever cost a
+/// false *contention* (two different users' saves briefly serialising
+/// against each other), never a false *pass*, so a collision changes
+/// nothing about correctness, only about how often two unrelated
+/// users wait on each other.
+#[cfg(feature = "sqlite")]
+pub(crate) async fn lock_user_capacity_scope(
+    _tx: &mut Tx<'_>,
+    _user_id: &str,
+) -> crate::StorageResult<()> {
+    Ok(())
+}
+
+/// PostgreSQL's own body of [`lock_user_capacity_scope`] (above).
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+pub(crate) async fn lock_user_capacity_scope(
+    tx: &mut Tx<'_>,
+    user_id: &str,
+) -> crate::StorageResult<()> {
+    const CLASSID: i32 = 1;
+    sqlx::query("SELECT pg_advisory_xact_lock($1, hashtext($2))")
+        .bind(CLASSID)
+        .bind(user_id)
+        .execute(&mut **tx)
+        .await?;
+    Ok(())
 }
 
 /// The one fact both backends' own code tables encode (`PG-003`

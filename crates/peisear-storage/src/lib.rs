@@ -14,23 +14,42 @@
 //! for why the two numbers differ) plus the handful of genuinely
 //! backend-specific queries (date functions, the optimistic-lock
 //! guard, `sprint_records`'s upsert) are translated or rewritten per
-//! backend (`PG-004`). What PostgreSQL does **not** yet have is the
-//! conformance suite proving it against this crate's own lock and
-//! storage tests (`NFR-CMP-003`, `P4`). **`cargo test --features
-//! postgres --lib` still fails outside the targeted modules CI runs,
-//! for two separate reasons, not one** (`§10.47`, correcting what
-//! this paragraph said through `0.55.0`): a handful of test *helpers*
-//! hardcode a `sqlite://` pool (`CON-002` fixed what could transfer,
-//! and named the two whose own subject cannot); and, unrelated to any
-//! test helper, **every guarded write opens `BEGIN IMMEDIATE`**,
-//! SQLite-only transaction-mode syntax, a syntax error on PostgreSQL
-//! (`CON-005`) — no guarded write executes on that backend today.
-//! "Every production *query* runs against it too," above, still
-//! holds — a transaction-control statement is not a query, and
-//! `PG-004`'s placeholder and date-function work is real — but the
-//! further gloss this paragraph used to give the remaining suite
-//! failures, that they were not because a production query is wrong,
-//! answered only the first cause and was silent on the second.
+//! backend (`PG-004`). **As of `CON-005`, every guarded write runs
+//! against it too**: the fourteen call sites that used to open
+//! SQLite's `BEGIN IMMEDIATE` directly, a syntax error on PostgreSQL,
+//! now open their transaction through `dialect`'s own seam and take
+//! whichever lock their own classified shape needs — a row that
+//! already exists, a sibling set that already exists, or (`user_
+//! capacities`'s own range check) an advisory lock that does not
+//! depend on one existing at all. What PostgreSQL still does **not**
+//! have is the conformance suite proving it against every one of this
+//! crate's own lock and storage tests at once (`NFR-CMP-003`, `P4`):
+//! `cargo test --features postgres --lib` compiles 50 (46 inherited
+//! from `CON-002`'s own population plus four concurrency tests
+//! `CON-005` adds, one per mechanism, never quoted as 46 — the two
+//! populations are not the same claim). Two of those 50 are `#[cfg]`-
+//! excluded under `postgres` and named in their own doc comments,
+//! because their subject — `sqlite_master`'s own statistics table, a
+//! millisecond-vs-whole-second duality that is itself an artefact of
+//! SQLite's own clock resolution — has no PostgreSQL equivalent to
+//! transfer to (`CON-002`). Of the 48 that run, 47 pass; the 48th is
+//! `#[ignore]`d, visibly, not excluded — `migrations-postgres/0009`'s
+//! `user_capacities.points` is `INTEGER` (PostgreSQL's fixed 4-byte
+//! type), a mechanical port of SQLite's own same-named but unbounded
+//! type *affinity*, found by `CON-005` the moment the column's first
+//! real round-trip read became reachable at all. Escalated, not
+//! fixed: a shipped migration's column type is `DEC-056`/append-only
+//! territory, outside this round's own mandate.
+//!
+//! **`§10.47`'s own history, corrected in two steps**: `0.55.0` said
+//! the remaining suite failures were *"not because a production query
+//! is wrong,"* true of *query* narrowly but silent on a second,
+//! unexamined cause — every guarded write's own `BEGIN IMMEDIATE`.
+//! `CON-005` round 1 corrected this paragraph to name that cause
+//! while it was still true; this paragraph now states what `CON-005`
+//! round 2 made true instead, rather than leaving the round-1
+//! correction to go stale as this round's own description of the
+//! present.
 //!
 //! The public shape (query functions and the [`StorageError`] type) is
 //! intentionally concrete rather than trait‑abstracted — trait
@@ -45,6 +64,8 @@
 //! cost every one of them nothing. See [`dialect`]'s own module doc
 //! for what it owns, what it deliberately leaves unabstracted, and why.
 
+#[cfg(all(test, feature = "postgres", not(feature = "sqlite")))]
+mod con005_transaction_seam_tests;
 pub mod dialect;
 pub mod issue_events;
 pub mod issues;

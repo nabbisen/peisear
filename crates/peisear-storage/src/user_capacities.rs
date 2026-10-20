@@ -43,21 +43,27 @@
 //! twelve simultaneous open-ended saves stored six overlapping rows
 //! (`tests/capacity_atomicity.rs` fails on the old code every run).
 //!
-//! It is closed now. [`insert`] and [`update`] each open the
-//! transaction with `BEGIN IMMEDIATE` (`Pool::begin_with`), which takes
-//! SQLite's write lock *before* the check, run the check through that
-//! same transaction, write, and commit. Two saves for the same user
-//! therefore cannot both read before either writes: the second waits
-//! for the first (up to the pool's 5 s busy timeout), then sees its row
-//! and is refused. A plain `pool.begin()` would not do this — it starts
-//! a deferred transaction that takes the lock only at the first write,
-//! so both could still read first.
+//! It is closed now. [`insert`], [`update`] and [`close_at`] each open
+//! their transaction through `dialect::begin_guarded`, take
+//! the lock `dialect::lock_user_capacity_scope` scopes to
+//! this user (both `pub(crate)`, not doc-linkable here), run the
+//! check through that same transaction, write, and commit. Two saves for the same user therefore cannot both read
+//! before either writes: the second waits for the first (up to
+//! SQLite's 5 s busy timeout, or PostgreSQL's matching `lock_timeout`
+//! — `CON-005`), then sees its row and is refused.
 //!
-//! The application-level check is kept, not replaced by a trigger or
-//! index: overlap is a range predicate that no unique index expresses,
-//! and the check is what produces the useful error above. A backend
-//! without `BEGIN IMMEDIATE` would need an equivalent lock or an
-//! exclusion constraint.
+//! **Why this is not a row lock, on either backend** (`CON-005`
+//! round 1 review §3): overlap is a range predicate that no unique
+//! index expresses, and — the sharper reason — a user with no
+//! existing capacity row yet has no row for `SELECT … FOR UPDATE` to
+//! lock at all, so two concurrent first-ever inserts for the same
+//! user would take no lock and both succeed. SQLite's `BEGIN
+//! IMMEDIATE` sidesteps this by locking the whole database rather
+//! than a row; PostgreSQL's own equivalent is an advisory lock scoped
+//! to the user, for the same reason — neither depends on a row
+//! existing to anchor to. The application-level check is kept, not
+//! replaced by a trigger or index, for the reason stated above: it is
+//! what produces the useful error.
 
 use chrono::{DateTime, NaiveDate, Utc};
 use peisear_auth::jwt::RequesterId;
@@ -338,10 +344,15 @@ pub async fn insert(
             peisear_i18n::MessageKey::PeriodStartMustPrecedeEndMessage,
         ));
     }
-    // `BEGIN IMMEDIATE`: take the write lock before the check, so the
-    // check and the INSERT cannot interleave with another save (see
-    // the module docs). Returning early drops `tx`, which rolls back.
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    // `BEGIN IMMEDIATE` on SQLite / an advisory lock scoped to this
+    // user on PostgreSQL (`CON-005` Group C — `overlaps_existing` is a
+    // range predicate no row lock can anchor to when this user has no
+    // existing capacity row yet): take the lock before the check, so
+    // the check and the INSERT cannot interleave with another save
+    // (see the module docs). Returning early drops `tx`, which rolls
+    // back.
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
+    crate::dialect::lock_user_capacity_scope(&mut tx, user_id.as_str()).await?;
     if let Some(conflict) =
         overlaps_existing(&mut *tx, user_id, period_start, period_end, None).await?
     {
@@ -409,8 +420,8 @@ pub async fn update(
 /// [`update`], applied only if the row still carries `expected` as its
 /// `updated_at` (`RACE-002`). This is several statements -- the stamp,
 /// the overlap check, the write -- so the comparison is made inside the
-/// `BEGIN IMMEDIATE` transaction that already holds the write lock from
-/// the check to the commit (`CAP-001`): nothing can move the stamp
+/// guarded transaction that already holds the lock from
+/// the check to the commit (`CAP-001`, `CON-005`): nothing can move the stamp
 /// between the read below and the `UPDATE`. A stale stamp is answered
 /// before the overlap check, as the handler's own comparison always was.
 #[allow(clippy::too_many_arguments)]
@@ -424,8 +435,9 @@ pub async fn update_guarded(
     note: Option<&str>,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
-    // Same `BEGIN IMMEDIATE` shape as `insert`.
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    // Same shape as `insert` (`CON-005` Group C).
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
+    crate::dialect::lock_user_capacity_scope(&mut tx, user_id.as_str()).await?;
     let current = find(&mut *tx, user_id, id)
         .await?
         .ok_or(StorageError::NotFound)?
@@ -440,9 +452,9 @@ pub async fn update_guarded(
     Ok(Guarded::Written(()))
 }
 
-/// The overlap check and the write of [`update`], on a transaction the
-/// caller opened with `BEGIN IMMEDIATE` -- so [`close_at`] can put its
-/// own read inside the same one (`RACE-001`).
+/// The overlap check and the write of [`update`], on a guarded
+/// transaction the caller already opened -- so [`close_at`] can put
+/// its own read inside the same one (`RACE-001`).
 async fn update_in_tx(
     tx: &mut crate::dialect::Tx<'_>,
     user_id: &RequesterId,
@@ -545,7 +557,7 @@ pub async fn delete_guarded(
 /// `find` the row on the pool and then `update` it with the `points` and
 /// `note` it had just read, so an edit landing between the two was
 /// overwritten with the stale values. The `find` and the write now share
-/// one `BEGIN IMMEDIATE` transaction (see the module docs).
+/// one guarded transaction (see the module docs).
 pub async fn close_at(
     pool: &Pool,
     user_id: &RequesterId,
@@ -567,7 +579,9 @@ pub async fn close_at_guarded(
     new_period_end: NaiveDate,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    // Same shape as `insert` (`CON-005` Group C).
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
+    crate::dialect::lock_user_capacity_scope(&mut tx, user_id.as_str()).await?;
     let row = find(&mut *tx, user_id, id)
         .await?
         .ok_or(StorageError::NotFound)?;

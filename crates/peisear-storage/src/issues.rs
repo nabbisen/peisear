@@ -392,8 +392,8 @@ type PriorIssueState = (String, Option<i64>, Option<String>, DateTime<Utc>);
 /// [`update`], applied only if the issue still carries `expected` as its
 /// `updated_at` (`RACE-002`).
 ///
-/// **All four guarded issue writes open `BEGIN IMMEDIATE`, not the
-/// deferred `BEGIN` they used to.** A deferred transaction takes its
+/// **All four guarded issue writes open SQLite's `BEGIN IMMEDIATE`, not
+/// the deferred `BEGIN` they used to.** A deferred transaction takes its
 /// read snapshot at the first `SELECT` and only tries for the write lock
 /// at the first write; if another writer committed in between, SQLite
 /// fails the upgrade at once (`SQLITE_BUSY_SNAPSHOT`, which the busy
@@ -401,7 +401,10 @@ type PriorIssueState = (String, Option<i64>, Option<String>, DateTime<Utc>);
 /// holding one stamp did not silently overwrite each other here -- the
 /// loser was answered with a server error instead of the conflict it was
 /// owed. Taking the write lock first makes the loser wait, read the
-/// winner's stamp, and be refused as `Stale`.
+/// winner's stamp, and be refused as `Stale`. PostgreSQL has no deferred
+/// transaction mode to avoid; each of these four locks the row it is
+/// about to read with `FOR UPDATE` instead, for the same effect
+/// (`CON-005`).
 pub async fn update_guarded(
     pool: &Pool,
     id: &str,
@@ -410,23 +413,29 @@ pub async fn update_guarded(
     fields: IssueFields<'_>,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
 
     // Read the previous values inside the same transaction so we
     // can diff and emit one event per changed field. SELECT
     // first, UPDATE second, COMMIT once — the previous read is
     // self-consistent with the write, and (`RACE-002`) so is the stamp.
-    let prev: Option<PriorIssueState> = sqlx::query_as(&crate::dialect::sql(
+    // `CON-005` Group A: this row already exists and races only
+    // against another write of itself, so PostgreSQL's own lock is
+    // this lead `SELECT`'s own `FOR UPDATE`, spliced on below.
+    let query = format!(
         r#"
         SELECT status, effort, assignee_id, updated_at
         FROM issues
         WHERE id = ?1 AND project_id = ?2
+        {}
         "#,
-    ))
-    .bind(id)
-    .bind(project_id)
-    .fetch_optional(&mut *tx)
-    .await?;
+        crate::dialect::for_update()
+    );
+    let prev: Option<PriorIssueState> = sqlx::query_as(&crate::dialect::sql(&query))
+        .bind(id)
+        .bind(project_id)
+        .fetch_optional(&mut *tx)
+        .await?;
 
     let Some((prev_status, prev_effort, prev_assignee, current_updated_at)) = prev else {
         return Err(StorageError::NotFound);
@@ -540,7 +549,7 @@ pub async fn update_status(
 
 /// [`update_status`], applied only if the issue still carries `expected`
 /// as its `updated_at` (`RACE-002`; see [`update_guarded`] for why the
-/// transaction is `BEGIN IMMEDIATE`). On success returns the *new* stamp,
+/// transaction is guarded). On success returns the *new* stamp,
 /// as before -- the caller's next lock value.
 pub async fn update_status_guarded(
     pool: &Pool,
@@ -550,18 +559,22 @@ pub async fn update_status_guarded(
     status: IssueStatus,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<DateTime<Utc>>> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
 
-    let prev: Option<(String, DateTime<Utc>)> = sqlx::query_as(&crate::dialect::sql(
+    // `CON-005` Group A, same reasoning as `update_guarded`.
+    let query = format!(
         r#"
         SELECT status, updated_at FROM issues
         WHERE id = ?1 AND project_id = ?2
+        {}
         "#,
-    ))
-    .bind(id)
-    .bind(project_id)
-    .fetch_optional(&mut *tx)
-    .await?;
+        crate::dialect::for_update()
+    );
+    let prev: Option<(String, DateTime<Utc>)> = sqlx::query_as(&crate::dialect::sql(&query))
+        .bind(id)
+        .bind(project_id)
+        .fetch_optional(&mut *tx)
+        .await?;
 
     let Some((prev_status, current_updated_at)) = prev else {
         return Err(StorageError::NotFound);
@@ -662,19 +675,23 @@ pub async fn update_schedule_guarded(
     planned_end_at: Option<DateTime<Utc>>,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<DateTime<Utc>>> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
 
-    let current_updated_at: DateTime<Utc> = sqlx::query_scalar(&crate::dialect::sql(
+    // `CON-005` Group A, same reasoning as `update_guarded`.
+    let query = format!(
         r#"
         SELECT updated_at FROM issues
         WHERE id = ?1 AND project_id = ?2
+        {}
         "#,
-    ))
-    .bind(id)
-    .bind(project_id)
-    .fetch_optional(&mut *tx)
-    .await?
-    .ok_or(StorageError::NotFound)?;
+        crate::dialect::for_update()
+    );
+    let current_updated_at: DateTime<Utc> = sqlx::query_scalar(&crate::dialect::sql(&query))
+        .bind(id)
+        .bind(project_id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or(StorageError::NotFound)?;
     if !stamp_matches(expected, current_updated_at) {
         return Ok(Guarded::Stale { current_updated_at });
     }
@@ -737,19 +754,22 @@ pub async fn delete_guarded(
     actor_id: &str,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
 
     // Read the previous status / current state so we can record
     // it in the deletion event. After the DELETE, the cascade
     // SET NULL on issue_id loses the link, but the project_id and
-    // event metadata still tell the story.
-    let prev: Option<(String, DateTime<Utc>)> = sqlx::query_as(&crate::dialect::sql(
-        r#"SELECT status, updated_at FROM issues WHERE id = ?1 AND project_id = ?2"#,
-    ))
-    .bind(id)
-    .bind(project_id)
-    .fetch_optional(&mut *tx)
-    .await?;
+    // event metadata still tell the story. `CON-005` Group A, same
+    // reasoning as `update_guarded`.
+    let query = format!(
+        "SELECT status, updated_at FROM issues WHERE id = ?1 AND project_id = ?2 {}",
+        crate::dialect::for_update()
+    );
+    let prev: Option<(String, DateTime<Utc>)> = sqlx::query_as(&crate::dialect::sql(&query))
+        .bind(id)
+        .bind(project_id)
+        .fetch_optional(&mut *tx)
+        .await?;
 
     let Some((prev_status, current_updated_at)) = prev else {
         return Err(StorageError::NotFound);

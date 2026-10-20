@@ -382,19 +382,27 @@ pub async fn add_member(
 /// admin's role to anything else while they are the team's last admin
 /// is refused with [`StorageError::Conflict`]
 /// (`MessageKey::LastAdminDemotionError`). The check and the write are
-/// one `BEGIN IMMEDIATE` transaction, as in `user_capacities::insert`
-/// (`CAP-001`; the reasoning for `IMMEDIATE` over a deferred `BEGIN`
-/// is in that module's docs): when this check ran on the pool ahead of
+/// one guarded transaction, as in `user_capacities::insert`
+/// (`CAP-001`): when this check ran on the pool ahead of
 /// the write, two admins demoting each other at once both saw two
 /// admins and both proceeded, leaving a team no remaining member could
 /// repair -- appointing an admin requires being one.
+///
+/// **`CON-005` Group B**: `admin_count` is an aggregate over sibling
+/// `team_memberships` rows that all already exist (every admin a
+/// team has was already a membership row before this call), so
+/// locking the whole team-scoped set on PostgreSQL is sufficient --
+/// unlike `user_capacities`'s own range check, there is no "zero rows
+/// to lock" case here: a team being checked for its last admin always
+/// has at least that one admin's own row.
 pub async fn update_role(
     pool: &Pool,
     team_id: &str,
     user_id: &str,
     new_role: TeamRole,
 ) -> StorageResult<()> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
+    crate::dialect::lock_scope(&mut tx, "team_memberships", "team_id", team_id, "user_id").await?;
     if !matches!(new_role, TeamRole::Admin)
         && matches!(
             role_for(&mut *tx, team_id, user_id).await?,
@@ -430,11 +438,13 @@ pub async fn update_role(
 /// team's last admin -- including an admin removing themselves -- is
 /// refused with [`StorageError::Conflict`]
 /// (`MessageKey::LastAdminRemovalError`), checked and written in one
-/// `BEGIN IMMEDIATE` transaction; see [`update_role`]. The schema does
+/// guarded transaction; see [`update_role`], including its `CON-005`
+/// Group B reasoning. The schema does
 /// not enforce this (it would need a trigger); this function is where
 /// the rule lives, so a caller cannot forget it.
 pub async fn remove_member(pool: &Pool, team_id: &str, user_id: &str) -> StorageResult<()> {
-    let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
+    let mut tx = crate::dialect::begin_guarded(pool).await?;
+    crate::dialect::lock_scope(&mut tx, "team_memberships", "team_id", team_id, "user_id").await?;
     if matches!(
         role_for(&mut *tx, team_id, user_id).await?,
         Some(TeamRole::Admin)
