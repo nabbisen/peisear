@@ -88,7 +88,7 @@ pub async fn projects_by_name(
     let pattern = format!("%{}%", escape_like_meta(q));
     let limit = limit.min(MAX_LIMIT);
 
-    let rows: Vec<(String, String)> = sqlx::query_as(
+    let rows: Vec<(String, String)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT p.id, p.name
         FROM projects p
@@ -103,7 +103,7 @@ pub async fn projects_by_name(
         ORDER BY p.updated_at DESC, p.rowid DESC
         LIMIT ?3
         "#,
-    )
+    ))
     .bind(&pattern)
     .bind(user_id)
     .bind(limit)
@@ -144,8 +144,9 @@ pub async fn open_issues_by_title(
     let pattern = format!("%{}%", escape_like_meta(q));
     let limit = limit.min(MAX_LIMIT);
 
-    let rows: Vec<(String, String, String, String, Option<String>)> = sqlx::query_as(
-        r#"
+    let rows: Vec<(String, String, String, String, Option<String>)> =
+        sqlx::query_as(&crate::dialect::sql(
+            r#"
         SELECT i.id, i.project_id, p.name AS project_name, i.title,
                parent.title AS parent_title
         FROM issues i
@@ -163,12 +164,12 @@ pub async fn open_issues_by_title(
         ORDER BY i.updated_at DESC, i.rowid DESC
         LIMIT ?3
         "#,
-    )
-    .bind(&pattern)
-    .bind(user_id)
-    .bind(limit)
-    .fetch_all(pool)
-    .await?;
+        ))
+        .bind(&pattern)
+        .bind(user_id)
+        .bind(limit)
+        .fetch_all(pool)
+        .await?;
 
     Ok(rows
         .into_iter()

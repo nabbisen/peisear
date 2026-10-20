@@ -145,7 +145,7 @@ pub async fn effective_row_for_user(
     user_id: &RequesterId,
 ) -> StorageResult<Option<CapacityRow>> {
     let today = chrono::Utc::now().date_naive();
-    let row = sqlx::query_as::<_, CapacityDbRow>(
+    let row = sqlx::query_as::<_, CapacityDbRow>(&crate::dialect::sql(
         r#"
         SELECT id, user_id, points, period_start, period_end, note, created_at, updated_at
         FROM user_capacities
@@ -155,7 +155,7 @@ pub async fn effective_row_for_user(
         ORDER BY created_at DESC, rowid DESC
         LIMIT 1
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .bind(today)
     .fetch_optional(pool)
@@ -176,7 +176,7 @@ pub async fn effective_for_user_on_date(
     user_id: &SubjectId,
     on_date: NaiveDate,
 ) -> StorageResult<Option<i64>> {
-    let rows: Vec<(i64,)> = sqlx::query_as(
+    let rows: Vec<(i64,)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT points FROM user_capacities
         WHERE user_id = ?1
@@ -185,7 +185,7 @@ pub async fn effective_for_user_on_date(
         ORDER BY created_at DESC, rowid DESC
         LIMIT 1
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .bind(on_date)
     .fetch_all(pool)
@@ -198,7 +198,7 @@ pub async fn effective_for_user_on_date(
 /// `NULL period_start` (the open-beginning default) sorts first.
 /// Used by the `/settings` UI to render the capacity table.
 pub async fn list_for_user(pool: &Pool, user_id: &RequesterId) -> StorageResult<Vec<CapacityRow>> {
-    let rows = sqlx::query_as::<_, CapacityDbRow>(
+    let rows = sqlx::query_as::<_, CapacityDbRow>(&crate::dialect::sql(
         r#"
         SELECT id, user_id, points, period_start, period_end, note, created_at, updated_at
         FROM user_capacities
@@ -209,7 +209,7 @@ pub async fn list_for_user(pool: &Pool, user_id: &RequesterId) -> StorageResult<
             created_at ASC,
             rowid ASC
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .fetch_all(pool)
     .await?;
@@ -227,13 +227,13 @@ pub async fn find<'e, E>(
 where
     E: sqlx::Executor<'e, Database = crate::dialect::Database>,
 {
-    let row = sqlx::query_as::<_, CapacityDbRow>(
+    let row = sqlx::query_as::<_, CapacityDbRow>(&crate::dialect::sql(
         r#"
         SELECT id, user_id, points, period_start, period_end, note, created_at, updated_at
         FROM user_capacities
         WHERE id = ?1 AND user_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(user_id.as_str())
     .fetch_optional(executor)
@@ -289,8 +289,9 @@ where
     // naturally as "they overlap iff neither ends-before nor
     // starts-after holds".
     let exclude_id = excluding_id.unwrap_or("");
-    let row: Option<(String, Option<NaiveDate>, Option<NaiveDate>, i64)> = sqlx::query_as(
-        r#"
+    let row: Option<(String, Option<NaiveDate>, Option<NaiveDate>, i64)> =
+        sqlx::query_as(&crate::dialect::sql(
+            r#"
         SELECT id, period_start, period_end, points
         FROM user_capacities
         WHERE user_id = ?1
@@ -302,13 +303,13 @@ where
         ORDER BY created_at ASC, rowid ASC
         LIMIT 1
         "#,
-    )
-    .bind(user_id.as_str())
-    .bind(exclude_id)
-    .bind(period_start)
-    .bind(period_end)
-    .fetch_optional(executor)
-    .await?;
+        ))
+        .bind(user_id.as_str())
+        .bind(exclude_id)
+        .bind(period_start)
+        .bind(period_end)
+        .fetch_optional(executor)
+        .await?;
 
     Ok(row.map(|(id, ps, pe, points)| ConflictInfo {
         id,
@@ -361,13 +362,13 @@ pub async fn insert(
     }
 
     let id = Uuid::new_v4().to_string();
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO user_capacities
             (id, user_id, points, period_start, period_end, note)
         VALUES (?, ?, ?, ?, ?, ?)
         "#,
-    )
+    ))
     .bind(&id)
     .bind(user_id.as_str())
     .bind(points)
@@ -470,13 +471,13 @@ async fn update_in_tx(
         ));
     }
 
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE user_capacities
         SET points = ?3, period_start = ?4, period_end = ?5, note = ?6
         WHERE id = ?1 AND user_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(user_id.as_str())
     .bind(points)
@@ -507,18 +508,21 @@ pub async fn delete_guarded(
     id: &str,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
-    let res = sqlx::query(
+    let query = format!(
         r#"
         DELETE FROM user_capacities
         WHERE id = ?1 AND user_id = ?2
-          AND (?3 IS NULL OR julianday(updated_at) = julianday(?3))
+          AND (?3 IS NULL OR {})
         "#,
-    )
-    .bind(id)
-    .bind(user_id.as_str())
-    .bind(expected)
-    .execute(pool)
-    .await?;
+        crate::dialect::stale_guard(3)
+    );
+    let sql = crate::dialect::sql(&query);
+    let res = sqlx::query(&sql)
+        .bind(id)
+        .bind(user_id.as_str())
+        .bind(expected)
+        .execute(pool)
+        .await?;
     if res.rows_affected() == 0 {
         return zero_rows_outcome(
             pool,

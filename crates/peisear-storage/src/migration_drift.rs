@@ -18,6 +18,17 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 
+/// Filenames allowed to exist only in `migrations-postgres/`, with no
+/// SQLite counterpart expected (`PG-004`). Every other migration in
+/// this crate ports content SQLite already has; these add schema
+/// SQLite does not need, because SQLite already provides the same
+/// thing implicitly — a placeholder on the SQLite side would claim a
+/// port that never happened. `0023` adds a surrogate `rowid` column
+/// (`GENERATED ALWAYS AS IDENTITY`) standing in for SQLite's own
+/// implicit `rowid`, which nine production queries' `ORDER BY`
+/// tiebreaks rely on and PostgreSQL has no equivalent for.
+const POSTGRES_ONLY: &[&str] = &["0023_rowid_surrogate_for_ordering.sql"];
+
 /// Every `.sql` filename directly under `dir`, sorted. Not
 /// recursive — this crate's migration directories are flat.
 fn sql_filenames(dir: &Path) -> BTreeSet<String> {
@@ -46,6 +57,9 @@ pub(crate) fn mismatches(sqlite_dir: &Path, postgres_dir: &Path) -> Vec<String> 
         ));
     }
     for name in postgres.difference(&sqlite) {
+        if POSTGRES_ONLY.contains(&name.as_str()) {
+            continue;
+        }
         out.push(format!(
             "{name}: in migrations-postgres/, missing from migrations/"
         ));

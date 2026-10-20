@@ -39,7 +39,7 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Proj
     // Personal project ownership is unchanged by 0.14.0:
     // `owner_id = user_id`. Team projects are reached via the
     // membership join below.
-    let rows = sqlx::query_as::<_, ProjectRow>(
+    let rows = sqlx::query_as::<_, ProjectRow>(&crate::dialect::sql(
         r#"
         SELECT DISTINCT p.id, p.owner_id, p.name, p.description,
             p.wip_limit_default, p.team_id, p.created_at, p.updated_at
@@ -51,7 +51,7 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Proj
          OR (p.team_id IS NOT NULL AND m.user_id = ?1)
         ORDER BY p.updated_at DESC, p.rowid DESC
         "#,
-    )
+    ))
     .bind(user_id)
     .fetch_all(pool)
     .await?;
@@ -60,7 +60,7 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Proj
 
 /// All projects belonging to a given team.
 pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Project>> {
-    let rows = sqlx::query_as::<_, ProjectRow>(
+    let rows = sqlx::query_as::<_, ProjectRow>(&crate::dialect::sql(
         r#"
         SELECT id, owner_id, name, description,
             wip_limit_default, team_id, created_at, updated_at
@@ -68,7 +68,7 @@ pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Proj
         WHERE team_id = ?1
         ORDER BY updated_at DESC, rowid DESC
         "#,
-    )
+    ))
     .bind(team_id)
     .fetch_all(pool)
     .await?;
@@ -80,7 +80,7 @@ pub async fn find_accessible(
     project_id: &str,
     user_id: &str,
 ) -> StorageResult<Project> {
-    let row = sqlx::query_as::<_, ProjectRow>(
+    let row = sqlx::query_as::<_, ProjectRow>(&crate::dialect::sql(
         r#"
         SELECT p.id, p.owner_id, p.name, p.description,
             p.wip_limit_default, p.team_id, p.created_at, p.updated_at
@@ -93,7 +93,7 @@ pub async fn find_accessible(
              OR (p.team_id IS NOT NULL AND m.user_id = ?2)
           )
         "#,
-    )
+    ))
     .bind(project_id)
     .bind(user_id)
     .fetch_optional(pool)
@@ -109,12 +109,12 @@ pub async fn insert(
     description: &str,
     team_id: Option<&str>,
 ) -> StorageResult<()> {
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO projects (id, owner_id, name, description, team_id)
         VALUES (?1, ?2, ?3, ?4, ?5)
         "#,
-    )
+    ))
     .bind(id)
     .bind(owner_id)
     .bind(name)
@@ -154,21 +154,24 @@ pub async fn update_guarded(
     description: &str,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
-    let res = sqlx::query(
+    let query = format!(
         r#"
         UPDATE projects
         SET name = ?3, description = ?4
         WHERE id = ?1 AND owner_id = ?2
-          AND (?5 IS NULL OR julianday(updated_at) = julianday(?5))
+          AND (?5 IS NULL OR {})
         "#,
-    )
-    .bind(id)
-    .bind(owner_id)
-    .bind(name)
-    .bind(description)
-    .bind(expected)
-    .execute(pool)
-    .await?;
+        crate::dialect::stale_guard(5)
+    );
+    let sql = crate::dialect::sql(&query);
+    let res = sqlx::query(&sql)
+        .bind(id)
+        .bind(owner_id)
+        .bind(name)
+        .bind(description)
+        .bind(expected)
+        .execute(pool)
+        .await?;
     if res.rows_affected() == 0 {
         return zero_rows_outcome(pool, "projects", id, Some(("owner_id", owner_id))).await;
     }
@@ -203,18 +206,21 @@ pub async fn delete_guarded(
     owner_id: &str,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
-    let res = sqlx::query(
+    let query = format!(
         r#"
         DELETE FROM projects
         WHERE id = ?1 AND owner_id = ?2
-          AND (?3 IS NULL OR julianday(updated_at) = julianday(?3))
+          AND (?3 IS NULL OR {})
         "#,
-    )
-    .bind(id)
-    .bind(owner_id)
-    .bind(expected)
-    .execute(pool)
-    .await?;
+        crate::dialect::stale_guard(3)
+    );
+    let sql = crate::dialect::sql(&query);
+    let res = sqlx::query(&sql)
+        .bind(id)
+        .bind(owner_id)
+        .bind(expected)
+        .execute(pool)
+        .await?;
     if res.rows_affected() == 0 {
         return zero_rows_outcome(pool, "projects", id, Some(("owner_id", owner_id))).await;
     }

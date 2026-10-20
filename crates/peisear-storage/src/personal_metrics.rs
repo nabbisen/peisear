@@ -58,6 +58,9 @@ async fn active_estimation_skew(
     } else {
         ""
     };
+    // `PG-004` §3: the same `now() + ?N::interval` equivalence as
+    // `user_burnout`'s own relative-time filters.
+    #[cfg(feature = "sqlite")]
     let sql = format!(
         r#"
         SELECT id, effort, created_at, updated_at
@@ -70,6 +73,20 @@ async fn active_estimation_skew(
           {project_clause}
         "#
     );
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    let sql = format!(
+        r#"
+        SELECT id, effort, created_at, updated_at
+        FROM issues
+        WHERE assignee_id = $1
+          AND status = 'done'
+          AND effort IS NOT NULL
+          AND effort > 0
+          AND updated_at >= now() + $2::interval
+          {project_clause}
+        "#
+    );
+    let sql = crate::dialect::sql(&sql);
     let mut q = sqlx::query_as::<_, (String, i64, String, String)>(&sql)
         .bind(user_id.as_str())
         .bind(format!("-{} days", window_days));
@@ -138,13 +155,13 @@ pub async fn for_user_in_project(
     user_id: &SubjectId,
     project_id: &str,
 ) -> StorageResult<Option<PersonalMetrics>> {
-    let user_row: Option<(String, Option<i64>)> = sqlx::query_as(
+    let user_row: Option<(String, Option<i64>)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT u.display_name, u.wip_limit
         FROM users u
         WHERE u.id = ?1
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .fetch_optional(pool)
     .await?;
@@ -157,11 +174,11 @@ pub async fn for_user_in_project(
     // user has no row covering today (i.e., no capacity set).
     let capacity_points = crate::user_capacities::effective_for_user(pool, user_id).await?;
 
-    let project_default: Option<i64> = sqlx::query_scalar(
+    let project_default: Option<i64> = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT wip_limit_default FROM projects WHERE id = ?1
         "#,
-    )
+    ))
     .bind(project_id)
     .fetch_optional(pool)
     .await?
@@ -175,8 +192,12 @@ pub async fn for_user_in_project(
     //
     // long_stale_count uses the COALESCE(event_time, updated_at)
     // pattern so legacy issues are treated as 0.7.0 did.
-    let row: (i64, Option<i64>, i64, i64) = sqlx::query_as(
-        r#"
+    // `PG-004` §3: `now() + ?N::interval` for the relative-time
+    // filter, `EXTRACT(EPOCH FROM (now() - X)) / 86400.0` for the
+    // age-diff -- the same two equivalences as `user_burnout`'s and
+    // `issue_events`'s own siblings, combined in one query here.
+    #[cfg(feature = "sqlite")]
+    const WIP_QUERY: &str = r#"
         SELECT
             SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END)
                 AS current_wip,
@@ -203,14 +224,43 @@ pub async fn for_user_in_project(
             END) AS long_stale_count
         FROM issues
         WHERE assignee_id = ?1 AND project_id = ?2
-        "#,
-    )
-    .bind(user_id.as_str())
-    .bind(project_id)
-    .bind(format!("-{} days", PERSONAL_ACTIVITY_WINDOW_DAYS))
-    .bind(PERSONAL_ACTIVITY_WINDOW_DAYS)
-    .fetch_one(pool)
-    .await?;
+        "#;
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const WIP_QUERY: &str = r#"
+        SELECT
+            SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END)
+                AS current_wip,
+            SUM(CASE
+                WHEN status IN ('open', 'in_progress') THEN effort
+                ELSE NULL
+            END) AS in_flight_points,
+            SUM(CASE
+                WHEN status = 'done' AND updated_at >= now() + $3::interval
+                THEN 1 ELSE 0
+            END) AS recent_done_count,
+            SUM(CASE
+                WHEN status IN ('open', 'in_progress')
+                  AND EXTRACT(EPOCH FROM (now() -
+                      COALESCE(
+                          (SELECT MAX(e.occurred_at)
+                           FROM issue_events e
+                           WHERE e.issue_id = issues.id
+                             AND e.event_type = 'status_changed'),
+                          updated_at
+                      )
+                  )) / 86400.0 >= $4
+                THEN 1 ELSE 0
+            END) AS long_stale_count
+        FROM issues
+        WHERE assignee_id = $1 AND project_id = $2
+        "#;
+    let row: (i64, Option<i64>, i64, i64) = sqlx::query_as(&crate::dialect::sql(WIP_QUERY))
+        .bind(user_id.as_str())
+        .bind(project_id)
+        .bind(format!("-{} days", PERSONAL_ACTIVITY_WINDOW_DAYS))
+        .bind(PERSONAL_ACTIVITY_WINDOW_DAYS)
+        .fetch_one(pool)
+        .await?;
 
     let (current_wip, in_flight_points, recent_done_count, long_stale_count) = row;
 
@@ -253,13 +303,13 @@ pub async fn for_user_global(
     pool: &Pool,
     user_id: &SubjectId,
 ) -> StorageResult<Option<PersonalMetrics>> {
-    let user_row: Option<(String, Option<i64>)> = sqlx::query_as(
+    let user_row: Option<(String, Option<i64>)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT u.display_name, u.wip_limit
         FROM users u
         WHERE u.id = ?1
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .fetch_optional(pool)
     .await?;
@@ -275,8 +325,10 @@ pub async fn for_user_global(
     // defaults don't compose into a global cap.
     let effective_wip_limit = user_wip_limit.unwrap_or(DEFAULT_WIP_LIMIT);
 
-    let row: (i64, Option<i64>, i64, i64) = sqlx::query_as(
-        r#"
+    // `PG-004` §3: the same pair of equivalences as
+    // `for_user_in_project`'s own identically-shaped query above.
+    #[cfg(feature = "sqlite")]
+    const WIP_QUERY: &str = r#"
         SELECT
             SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END)
                 AS current_wip,
@@ -303,13 +355,42 @@ pub async fn for_user_global(
             END) AS long_stale_count
         FROM issues
         WHERE assignee_id = ?1
-        "#,
-    )
-    .bind(user_id.as_str())
-    .bind(format!("-{} days", PERSONAL_ACTIVITY_WINDOW_DAYS))
-    .bind(PERSONAL_ACTIVITY_WINDOW_DAYS)
-    .fetch_one(pool)
-    .await?;
+        "#;
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const WIP_QUERY: &str = r#"
+        SELECT
+            SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END)
+                AS current_wip,
+            SUM(CASE
+                WHEN status IN ('open', 'in_progress') THEN effort
+                ELSE NULL
+            END) AS in_flight_points,
+            SUM(CASE
+                WHEN status = 'done' AND updated_at >= now() + $2::interval
+                THEN 1 ELSE 0
+            END) AS recent_done_count,
+            SUM(CASE
+                WHEN status IN ('open', 'in_progress')
+                  AND EXTRACT(EPOCH FROM (now() -
+                      COALESCE(
+                          (SELECT MAX(e.occurred_at)
+                           FROM issue_events e
+                           WHERE e.issue_id = issues.id
+                             AND e.event_type = 'status_changed'),
+                          updated_at
+                      )
+                  )) / 86400.0 >= $3
+                THEN 1 ELSE 0
+            END) AS long_stale_count
+        FROM issues
+        WHERE assignee_id = $1
+        "#;
+    let row: (i64, Option<i64>, i64, i64) = sqlx::query_as(&crate::dialect::sql(WIP_QUERY))
+        .bind(user_id.as_str())
+        .bind(format!("-{} days", PERSONAL_ACTIVITY_WINDOW_DAYS))
+        .bind(PERSONAL_ACTIVITY_WINDOW_DAYS)
+        .fetch_one(pool)
+        .await?;
 
     let (current_wip, in_flight_points, recent_done_count, long_stale_count) = row;
 

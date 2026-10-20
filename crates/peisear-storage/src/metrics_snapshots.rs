@@ -95,7 +95,7 @@ pub async fn insert(
     score_value: u8,
 ) -> StorageResult<()> {
     let id = Uuid::new_v4().to_string();
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO metrics_snapshots (
             id, project_id,
@@ -106,7 +106,7 @@ pub async fn insert(
             score_value
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .bind(raw.total_issues)
@@ -140,8 +140,11 @@ pub async fn recent_for_project(
     min_days_ago: i64,
     max_days_ago: i64,
 ) -> StorageResult<Vec<Snapshot>> {
-    let rows = sqlx::query_as::<_, SnapshotRow>(
-        r#"
+    // `PG-004` §3: the same `now() + ?N::interval` equivalence as
+    // `user_burnout`'s own relative-time filters, applied twice (a
+    // two-sided window) here.
+    #[cfg(feature = "sqlite")]
+    const QUERY: &str = r#"
         SELECT
             total_issues, done_issues, oldest_in_flight_age_days,
             recent_activity_count, in_flight_issues,
@@ -153,13 +156,27 @@ pub async fn recent_for_project(
           AND captured_at <= datetime('now', ?2)
           AND captured_at >= datetime('now', ?3)
         ORDER BY captured_at ASC, rowid ASC
-        "#,
-    )
-    .bind(project_id)
-    .bind(format!("-{} days", min_days_ago))
-    .bind(format!("-{} days", max_days_ago))
-    .fetch_all(pool)
-    .await?;
+        "#;
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const QUERY: &str = r#"
+        SELECT
+            total_issues, done_issues, oldest_in_flight_age_days,
+            recent_activity_count, in_flight_issues,
+            top_assignee_in_flight_issues, long_stale_in_flight_issues,
+            wip_violators, active_assignees,
+            score_value, captured_at
+        FROM metrics_snapshots
+        WHERE project_id = $1
+          AND captured_at <= now() + $2::interval
+          AND captured_at >= now() + $3::interval
+        ORDER BY captured_at ASC, rowid ASC
+        "#;
+    let rows = sqlx::query_as::<_, SnapshotRow>(&crate::dialect::sql(QUERY))
+        .bind(project_id)
+        .bind(format!("-{} days", min_days_ago))
+        .bind(format!("-{} days", max_days_ago))
+        .fetch_all(pool)
+        .await?;
 
     Ok(rows.into_iter().map(Snapshot::from).collect())
 }
@@ -175,7 +192,7 @@ pub async fn recent_for_project(
 /// some database writes but at the cost of incomplete trend lines
 /// for projects that go quiet for a while. Keep it simple.
 pub async fn projects_with_recent_issue_activity(pool: &Pool) -> StorageResult<Vec<String>> {
-    let rows: Vec<(String,)> = sqlx::query_as(
+    let rows: Vec<(String,)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT DISTINCT p.id
         FROM projects p
@@ -183,7 +200,7 @@ pub async fn projects_with_recent_issue_activity(pool: &Pool) -> StorageResult<V
             SELECT 1 FROM issues i WHERE i.project_id = p.id
         )
         "#,
-    )
+    ))
     .fetch_all(pool)
     .await?;
     Ok(rows.into_iter().map(|(id,)| id).collect())

@@ -72,13 +72,13 @@ struct TeamRoleRow {
 
 /// Find a team by its id. None if missing.
 pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Team>> {
-    let row = sqlx::query_as::<_, TeamRow>(
+    let row = sqlx::query_as::<_, TeamRow>(&crate::dialect::sql(
         r#"
             SELECT id, name, slug, description, created_at, updated_at
             FROM teams
             WHERE id = ?1
             "#,
-    )
+    ))
     .bind(id)
     .fetch_optional(pool)
     .await?;
@@ -87,13 +87,13 @@ pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<Team>> {
 
 /// Find a team by URL slug. The hot lookup for `/teams/{slug}`.
 pub async fn find_by_slug(pool: &Pool, slug: &str) -> StorageResult<Option<Team>> {
-    let row = sqlx::query_as::<_, TeamRow>(
+    let row = sqlx::query_as::<_, TeamRow>(&crate::dialect::sql(
         r#"
             SELECT id, name, slug, description, created_at, updated_at
             FROM teams
             WHERE slug = ?1
             "#,
-    )
+    ))
     .bind(slug)
     .fetch_optional(pool)
     .await?;
@@ -103,7 +103,7 @@ pub async fn find_by_slug(pool: &Pool, slug: &str) -> StorageResult<Option<Team>
 /// Teams the user is a member of, alphabetised by name. Used
 /// for the user nav and `/teams` page.
 pub async fn teams_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<(Team, TeamRole)>> {
-    let rows = sqlx::query_as::<_, TeamRoleRow>(
+    let rows = sqlx::query_as::<_, TeamRoleRow>(&crate::dialect::sql(
         r#"
         SELECT t.id, t.name, t.slug, t.description, t.created_at, t.updated_at, m.role
         FROM teams t
@@ -111,7 +111,7 @@ pub async fn teams_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<(Te
         WHERE m.user_id = ?1
         ORDER BY t.name COLLATE NOCASE ASC
         "#,
-    )
+    ))
     .bind(user_id)
     .fetch_all(pool)
     .await?;
@@ -147,8 +147,9 @@ pub async fn members_of_team(
     team_id: &str,
 ) -> StorageResult<Vec<(String, String, String, TeamRole, DateTime<Utc>)>> {
     // Returns (user_id, display_name, email, role, joined_at).
-    let rows: Vec<(String, String, String, String, DateTime<Utc>)> = sqlx::query_as(
-        r#"
+    let rows: Vec<(String, String, String, String, DateTime<Utc>)> =
+        sqlx::query_as(&crate::dialect::sql(
+            r#"
         SELECT u.id, u.display_name, u.email, m.role, m.joined_at
         FROM team_memberships m
         JOIN users u ON u.id = m.user_id
@@ -162,10 +163,10 @@ pub async fn members_of_team(
             END,
             u.display_name COLLATE NOCASE ASC
         "#,
-    )
-    .bind(team_id)
-    .fetch_all(pool)
-    .await?;
+        ))
+        .bind(team_id)
+        .fetch_all(pool)
+        .await?;
 
     Ok(rows
         .into_iter()
@@ -198,12 +199,12 @@ pub async fn role_for<'e, E>(
 where
     E: sqlx::Executor<'e, Database = crate::dialect::Database>,
 {
-    let row: Option<(String,)> = sqlx::query_as(
+    let row: Option<(String,)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT role FROM team_memberships
         WHERE team_id = ?1 AND user_id = ?2
         "#,
-    )
+    ))
     .bind(team_id)
     .bind(user_id)
     .fetch_optional(executor)
@@ -218,12 +219,12 @@ pub async fn membership(
     team_id: &str,
     user_id: &str,
 ) -> StorageResult<Option<TeamMembership>> {
-    let row: Option<(String, DateTime<Utc>, DateTime<Utc>)> = sqlx::query_as(
+    let row: Option<(String, DateTime<Utc>, DateTime<Utc>)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT role, joined_at, updated_at FROM team_memberships
         WHERE team_id = ?1 AND user_id = ?2
         "#,
-    )
+    ))
     .bind(team_id)
     .bind(user_id)
     .fetch_optional(pool)
@@ -273,12 +274,12 @@ pub async fn insert(
     let id = Uuid::new_v4().to_string();
     let mut tx = pool.begin().await?;
 
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO teams (id, name, slug, description)
         VALUES (?, ?, ?, ?)
         "#,
-    )
+    ))
     .bind(&id)
     .bind(name)
     .bind(slug)
@@ -286,12 +287,12 @@ pub async fn insert(
     .execute(&mut *tx)
     .await?;
 
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO team_memberships (team_id, user_id, role)
         VALUES (?, ?, 'admin')
         "#,
-    )
+    ))
     .bind(&id)
     .bind(creator_user_id)
     .execute(&mut *tx)
@@ -307,12 +308,12 @@ pub async fn update_team(
     name: &str,
     description: Option<&str>,
 ) -> StorageResult<()> {
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE teams SET name = ?2, description = ?3
         WHERE id = ?1
         "#,
-    )
+    ))
     .bind(team_id)
     .bind(name)
     .bind(description)
@@ -349,12 +350,12 @@ pub async fn add_member(
             },
         ));
     }
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO team_memberships (team_id, user_id, role)
         VALUES (?, ?, ?)
         "#,
-    )
+    ))
     .bind(team_id)
     .bind(user_id)
     .bind(role.as_str())
@@ -405,12 +406,12 @@ pub async fn update_role(
             peisear_i18n::MessageKey::LastAdminDemotionError,
         ));
     }
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE team_memberships SET role = ?3
         WHERE team_id = ?1 AND user_id = ?2
         "#,
-    )
+    ))
     .bind(team_id)
     .bind(user_id)
     .bind(new_role.as_str())
@@ -443,12 +444,12 @@ pub async fn remove_member(pool: &Pool, team_id: &str, user_id: &str) -> Storage
             peisear_i18n::MessageKey::LastAdminRemovalError,
         ));
     }
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         DELETE FROM team_memberships
         WHERE team_id = ?1 AND user_id = ?2
         "#,
-    )
+    ))
     .bind(team_id)
     .bind(user_id)
     .execute(&mut *tx)
@@ -468,12 +469,12 @@ pub async fn admin_count<'e, E>(executor: E, team_id: &str) -> StorageResult<i64
 where
     E: sqlx::Executor<'e, Database = crate::dialect::Database>,
 {
-    let n: i64 = sqlx::query_scalar(
+    let n: i64 = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT COUNT(*) FROM team_memberships
         WHERE team_id = ?1 AND role = 'admin'
         "#,
-    )
+    ))
     .bind(team_id)
     .fetch_one(executor)
     .await?;
@@ -488,11 +489,11 @@ pub async fn assign_project_to_team(
     project_id: &str,
     team_id: &str,
 ) -> StorageResult<()> {
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE projects SET team_id = ?2 WHERE id = ?1
         "#,
-    )
+    ))
     .bind(project_id)
     .bind(team_id)
     .execute(pool)
@@ -506,11 +507,11 @@ pub async fn assign_project_to_team(
 /// Detach a project from its team — turn it back into a
 /// personal project (`team_id = NULL`).
 pub async fn unassign_project(pool: &Pool, project_id: &str) -> StorageResult<()> {
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE projects SET team_id = NULL WHERE id = ?1
         "#,
-    )
+    ))
     .bind(project_id)
     .execute(pool)
     .await?;

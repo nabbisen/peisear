@@ -61,6 +61,19 @@
 //! passes by building with `postgres` selected and reading what
 //! still failed, not a conditional-compilation block of their own.
 //! None of the fourteen occurrences carries a `#[cfg]`.
+//!
+//! **Amended (`PG-004`) — the placeholder gap above is closed.**
+//! [`sql`] rewrites `?N` / bare `?` to `$N`, a parser rather than a
+//! guess, so none of the roughly 289 production call sites (measured
+//! 2026-10-20, excluding comment lines — `295` above was the
+//! 2026-10-18 figure before that exclusion) needed hand-editing into
+//! two spellings. A handful of queries still carry a genuine
+//! per-backend difference no placeholder rewrite reaches — SQLite's
+//! date functions, its implicit `rowid`, `INSERT OR REPLACE` — and
+//! those are named and justified at each call site rather than guessed
+//! at here; [`stale_guard`] is the one such difference that lives in
+//! this module, since (like the trigger-code translation above) it is
+//! reused across more than one call site.
 
 #[cfg(all(feature = "sqlite", feature = "postgres"))]
 compile_error!(
@@ -114,6 +127,180 @@ pub type Tx<'c> = sqlx::Transaction<'c, Database>;
 /// above fix, found the same way: building with `postgres` selected
 /// and reading what still failed after those two landed.
 pub type Connection = <Database as sqlx::Database>::Connection;
+
+/// `PG-004`: the mechanical half of the queries round. SQLite's runtime
+/// queries write `?N` (a numbered placeholder, reusable — the same
+/// number may appear twice, binding the same value twice) or a bare
+/// `?` (a positional placeholder, one per occurrence, in binding
+/// order); PostgreSQL needs `$N` for both, numbered. This function is
+/// the one place that difference is paid, so none of the 295 `?N` and
+/// 8 bare `?` occurrences across `src/` (measured 2026-10-18,
+/// `rfcs/handoffs/048-the-postgresql-schema/PG-004-the-queries.md`
+/// §1) had to be hand-edited into two spellings.
+///
+/// **The call-site shape is always the same two lines**, on both
+/// backends:
+///
+/// ```ignore
+/// let sql = dialect::sql(r#"SELECT ... WHERE id = ?1"#);
+/// sqlx::query(&sql).bind(id).execute(pool).await?;
+/// ```
+///
+/// Not one token, as `PG-004` §2 first asked for: `sqlx::query`'s own
+/// `Query<'q, DB, A>` borrows its SQL text for exactly `'q`, so a
+/// function returning the rewritten text could not also return the
+/// `Query` built from it without either leaking the rewrite on every
+/// call (unbounded, with traffic) or caching it behind a lock (paid
+/// on every query, including SQLite's, for PostgreSQL's benefit alone).
+/// Binding the rewritten text to a name first, then borrowing it, pays
+/// nothing extra and already has one precedent in this crate —
+/// `sprints::burndown`'s own dynamically-built `IN (...)` query binds
+/// its text to `done_events_query` before `sqlx::query_as` borrows it,
+/// for the same reason.
+///
+/// Identity on SQLite: every production query is already written in
+/// its own native syntax, so there is nothing to translate on that
+/// branch, and [`sql`] exists so the two-line call-site shape above
+/// compiles unchanged regardless of which backend is selected — no
+/// `#[cfg(feature = "postgres")]` needed at any of the roughly 295
+/// call sites this round touches, continuing the rule this module's
+/// own doc comment states for everywhere outside it and `pool.rs`.
+#[cfg(feature = "sqlite")]
+pub(crate) fn sql(text: &str) -> std::borrow::Cow<'_, str> {
+    std::borrow::Cow::Borrowed(text)
+}
+
+/// PostgreSQL's own body of [`sql`] (above): rewrites every `?N` /
+/// bare-`?` placeholder in `text` to PostgreSQL's `$N` form, skipping
+/// single-quoted string literals and `--` line comments, both of
+/// which are real in this crate's query text (`sprints.rs`'s own
+/// `ORDER BY` comments, `teams.rs`'s `'admin'` literal) — a `?`
+/// inside either must not become a bind placeholder. `/* */` block
+/// comments and a `?` inside a string literal are handled the same
+/// way but are not reachable in this crate's own query text today:
+/// `grep -c '/\*' src/*.rs` and
+/// `grep -nE "'[^']*\?[^']*'" src/*.rs` both return zero, checked
+/// 2026-10-20, and [`postgres_tests`]'s own tests exercise both
+/// anyway, since the parser does not get to assume its input stays
+/// this shape.
+///
+/// A numbered `?N` copies its digits verbatim — SQLite and
+/// PostgreSQL both allow the same number to appear more than once,
+/// binding the same value each time (`optimistic_lock_guards.rs`'s
+/// own `(?N IS NULL OR ...)` pattern relies on exactly this), so
+/// there is no renumbering to do, only the leading character. A bare
+/// `?` carries no number of its own — SQLite assigns it the next
+/// position in binding order — so this function counts bare `?`
+/// occurrences as it finds them, left to right, and gives each the
+/// next unused number. Measured 2026-10-18: no query in this crate
+/// mixes the two forms, so there is no ordering question between a
+/// bare `?`'s assigned number and a `?N`'s own — but this function
+/// does not assume that either; it numbers bare occurrences
+/// independently of whatever digits a `?N` nearby already spelled
+/// out, which is only wrong if the two are mixed, a shape
+/// [`postgres_tests`] also names and this crate does not have.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+pub(crate) fn sql(text: &str) -> std::borrow::Cow<'_, str> {
+    if !text.as_bytes().contains(&b'?') {
+        return std::borrow::Cow::Borrowed(text);
+    }
+    let bytes = text.as_bytes();
+    let mut out: Vec<u8> = Vec::with_capacity(text.len() + 8);
+    let mut i = 0usize;
+    let mut next_bare = 0u32;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\'' => {
+                out.push(b'\'');
+                i += 1;
+                loop {
+                    match bytes.get(i) {
+                        None => break,
+                        Some(b'\'') if bytes.get(i + 1) == Some(&b'\'') => {
+                            out.extend_from_slice(b"''");
+                            i += 2;
+                        }
+                        Some(b'\'') => {
+                            out.push(b'\'');
+                            i += 1;
+                            break;
+                        }
+                        Some(&c) => {
+                            out.push(c);
+                            i += 1;
+                        }
+                    }
+                }
+            }
+            b'-' if bytes.get(i + 1) == Some(&b'-') => {
+                while i < bytes.len() && bytes[i] != b'\n' {
+                    out.push(bytes[i]);
+                    i += 1;
+                }
+            }
+            b'/' if bytes.get(i + 1) == Some(&b'*') => {
+                out.extend_from_slice(b"/*");
+                i += 2;
+                while i < bytes.len() && !(bytes[i] == b'*' && bytes.get(i + 1) == Some(&b'/')) {
+                    out.push(bytes[i]);
+                    i += 1;
+                }
+                if i < bytes.len() {
+                    out.extend_from_slice(b"*/");
+                    i += 2;
+                }
+            }
+            b'?' => {
+                i += 1;
+                let digit_start = i;
+                while bytes.get(i).is_some_and(u8::is_ascii_digit) {
+                    i += 1;
+                }
+                out.push(b'$');
+                if i > digit_start {
+                    out.extend_from_slice(&bytes[digit_start..i]);
+                } else {
+                    next_bare += 1;
+                    out.extend_from_slice(next_bare.to_string().as_bytes());
+                }
+            }
+            c => {
+                out.push(c);
+                i += 1;
+            }
+        }
+    }
+    std::borrow::Cow::Owned(
+        String::from_utf8(out).expect("rewriting ASCII punctuation cannot break UTF-8 boundaries"),
+    )
+}
+
+/// `PG-004` §3: the optimistic-lock guard's own stale-check fragment,
+/// always `updated_at` against the placeholder numbered `n` — five
+/// call sites, three entities (`projects::update_guarded`,
+/// `projects::delete_guarded`, `sprints::update_guarded`,
+/// `sprints::delete_guarded`, `user_capacities::delete_guarded`).
+/// SQLite compares both sides through `julianday(...)`, which parses
+/// both text and numeric forms of a timestamp into one canonical
+/// value — `projects::update_guarded`'s own doc comment states why: a
+/// SQLite-only concern, since `updated_at` is `TEXT` there and the
+/// column's own stored format and the bound `expected`'s encoded
+/// format are not guaranteed to agree byte-for-byte.
+#[cfg(feature = "sqlite")]
+pub(crate) fn stale_guard(n: u32) -> String {
+    format!("julianday(updated_at) = julianday(?{n})")
+}
+
+/// PostgreSQL's own body of [`stale_guard`] (above): plain equality,
+/// no function needed. `updated_at` is a native `TIMESTAMPTZ` there,
+/// and the bound `expected: Option<DateTime<Utc>>` is encoded the
+/// same way by `sqlx`'s own PostgreSQL driver — never text, so there
+/// is no format to reconcile and nothing for a wrapping function to
+/// normalise.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+pub(crate) fn stale_guard(n: u32) -> String {
+    format!("updated_at = ${n}")
+}
 
 /// The one fact both backends' own code tables encode (`PG-003`
 /// round 2, `§8`/`§9`): **"these five validations exist, in this

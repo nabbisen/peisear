@@ -274,3 +274,22 @@ fn a_sixth_entry_added_to_only_this_table_is_caught() {
     ));
     assert!(!message_keys_match_the_shared_list(&widened));
 }
+
+/// `PG-004` §2: [`sql`] is identity on SQLite -- every production
+/// query is already written in its own native syntax, so the
+/// two-line call-site shape (`let sql = dialect::sql(...)`) costs
+/// nothing on this backend.
+#[test]
+fn sql_is_identity_on_sqlite() {
+    let text = "SELECT * FROM issues WHERE id = ?1 AND (?2 IS NULL OR status = ?2)";
+    assert_eq!(sql(text), text);
+    assert!(matches!(sql(text), std::borrow::Cow::Borrowed(_)));
+}
+
+/// `PG-004` §3: SQLite's own [`stale_guard`] keeps the `julianday`
+/// wrapping that normalises `TEXT`-stored timestamps before comparing
+/// them.
+#[test]
+fn stale_guard_wraps_both_sides_in_julianday_on_sqlite() {
+    assert_eq!(stale_guard(6), "julianday(updated_at) = julianday(?6)");
+}

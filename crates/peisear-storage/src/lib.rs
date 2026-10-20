@@ -1,19 +1,22 @@
 //! Persistence layer.
 //!
-//! **`sqlite` is the default feature and the only one with a full
-//! implementation.** A `postgres` feature also exists (`DIA-002`,
-//! `RFC 018` P2) so this crate's types compile against `sqlx`'s own
-//! PostgreSQL driver. **It is partial, not absent**: [`pool::connect`]
-//! opens a real connection against a real server (`PG-001`), and
-//! [`pool::migrate`] applies a real, ported migration set
-//! (`PG-002`, `migrations-postgres/`) — but none of this schema's
-//! eleven triggers exist on the PostgreSQL side yet (`PG-003`), and
-//! no query has been ported either (`PG-004`), so every runtime
-//! query still fails against a schema it was never written for.
-//! Selecting the feature (`--no-default-features --features
-//! postgres`) builds, links, connects and migrates; it fails the
-//! moment a query reaches a table shape or a constraint only the
-//! omitted triggers would have enforced.
+//! **`sqlite` is the default feature.** A `postgres` feature also
+//! exists (`DIA-002`, `RFC 018` P3) so this crate's types compile
+//! against `sqlx`'s own PostgreSQL driver — and, as of `PG-004`,
+//! every production query runs against it too: [`pool::connect`]
+//! opens a real connection (`PG-001`), [`pool::migrate`] applies a
+//! real, ported migration set (`PG-002`, `migrations-postgres/`),
+//! the eleven triggers exist and raise the same five validations
+//! (`PG-003`), and the roughly 289 placeholder-carrying call sites
+//! plus the handful of genuinely backend-specific queries (date
+//! functions, the optimistic-lock guard, `sprint_records`'s upsert)
+//! are translated or rewritten per backend (`PG-004`). What
+//! PostgreSQL does **not** yet have is the conformance suite proving
+//! it against this crate's own lock and storage tests (`NFR-CMP-003`,
+//! `P4`) — several of this crate's own test *helpers* still hardcode
+//! a `sqlite://` pool, so `cargo test --features postgres --lib`
+//! still fails outside the targeted modules CI runs, not because a
+//! production query is wrong.
 //!
 //! The current implementation is backed by SQLite via `sqlx`. The public
 //! shape (query functions and the [`StorageError`] type) is intentionally
@@ -165,6 +168,7 @@ where
         Some((col, _)) => format!("SELECT updated_at FROM {table} WHERE id = ?1 AND {col} = ?2"),
         None => format!("SELECT updated_at FROM {table} WHERE id = ?1"),
     };
+    let sql = dialect::sql(&sql);
     let mut q = sqlx::query_scalar::<_, chrono::DateTime<chrono::Utc>>(&sql).bind(id);
     if let Some((_, value)) = scope {
         q = q.bind(value);

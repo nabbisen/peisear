@@ -573,17 +573,27 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       # Each filtered to the tests this job exists to prove green
       # against a real server -- `PG-001`'s connection, `PG-002`'s
-      # migration-to-version-22 and timestamp-precision measurement,
+      # migration-to-version-23 and timestamp-precision measurement,
       # `PG-003`'s eleven triggers, both-directions guard and five
-      # validations (one filter, `dialect::postgres_tests::`, covers
-      # all eight of that module's tests). The rest of this crate's
-      # `--lib` suite under `postgres` is still mostly SQLite-shaped
-      # (`PG-004` hasn't landed) and is expected to fail; that figure
-      # is reported honestly in the round's own completion package,
-      # not wired into a job this gate requires green.
+      # validations, `PG-004`'s placeholder parser, `stale_guard` and
+      # date-function equivalences (one filter, `dialect::postgres_tests::`,
+      # covers every test in that module). `PG-004` makes every
+      # *production* query executable on both backends; it does not
+      # touch this crate's own test *helpers*, several of which still
+      # hardcode a `sqlite://` pool (`P4`'s conformance suite is where
+      # that gets fixed). The rest of this crate's `--lib` suite under
+      # `postgres` therefore still fails for that reason, not a broken
+      # query; that figure is reported honestly in the round's own
+      # completion package, not wired into a job this gate requires
+      # green.
       - run: cargo test -p peisear-storage --no-default-features --features postgres --lib connect_opens_a_real_connection_against_a_real_postgresql_server
-      - run: cargo test -p peisear-storage --no-default-features --features postgres --lib migrate_reaches_version_22_from_a_fresh_database
+      - run: cargo test -p peisear-storage --no-default-features --features postgres --lib migrate_reaches_version_23_from_a_fresh_database
       - run: cargo test -p peisear-storage --no-default-features --features postgres --lib postgres_current_timestamp_resolution_is_finer_than_a_millisecond
+      # `PG-004`: every production query executable on both backends.
+      # One module-path filter, same as `PG-003`'s precedent, covers
+      # the mechanical placeholder parser, `stale_guard`, and the four
+      # date-function/relative-time/sprint-record-recapture
+      # equivalence tests this round added to the same module.
       - run: "cargo test -p peisear-storage --no-default-features --features postgres --lib dialect::postgres_tests:: -- --test-threads=1"
 
   build:

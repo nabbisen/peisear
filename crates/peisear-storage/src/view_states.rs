@@ -41,13 +41,13 @@ pub async fn get(
     user_id: &RequesterId,
     view_key: &str,
 ) -> StorageResult<Option<String>> {
-    let row: Option<(String,)> = sqlx::query_as(
+    let row: Option<(String,)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT state_json
         FROM user_view_states
         WHERE user_id = ?1 AND view_key = ?2
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .bind(view_key)
     .fetch_optional(pool)
@@ -70,14 +70,14 @@ pub async fn upsert(
     view_key: &str,
     state_json: &str,
 ) -> StorageResult<()> {
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO user_view_states (user_id, view_key, state_json)
         VALUES (?1, ?2, ?3)
         ON CONFLICT (user_id, view_key) DO UPDATE
         SET state_json = excluded.state_json
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .bind(view_key)
     .bind(state_json)
@@ -91,12 +91,12 @@ pub async fn upsert(
 /// is not an error.
 #[allow(dead_code)]
 pub async fn delete(pool: &Pool, user_id: &RequesterId, view_key: &str) -> StorageResult<()> {
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         DELETE FROM user_view_states
         WHERE user_id = ?1 AND view_key = ?2
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .bind(view_key)
     .execute(pool)

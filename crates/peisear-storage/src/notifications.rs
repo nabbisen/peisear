@@ -65,13 +65,13 @@ pub async fn insert(
     let id = Uuid::new_v4().to_string();
     let dispatched_str = new.dispatched_via.join(",");
 
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO notifications
             (id, user_id, kind, severity, title, body, payload_json, dispatched_via)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         "#,
-    )
+    ))
     .bind(&id)
     .bind(user_id.as_str())
     .bind(new.kind)
@@ -130,7 +130,7 @@ pub async fn recent_for_user(
     user_id: &RequesterId,
     limit: i64,
 ) -> StorageResult<Vec<Notification>> {
-    let rows = sqlx::query_as::<_, NotificationRow>(
+    let rows = sqlx::query_as::<_, NotificationRow>(&crate::dialect::sql(
         r#"
         SELECT id, user_id, kind, severity, title, body, payload_json,
                created_at, read_at, dispatched_via
@@ -139,7 +139,7 @@ pub async fn recent_for_user(
         ORDER BY created_at DESC, rowid DESC
         LIMIT ?2
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .bind(limit)
     .fetch_all(pool)
@@ -150,13 +150,13 @@ pub async fn recent_for_user(
 
 /// Count of unread notifications. Used by the nav badge.
 pub async fn unread_count_for_user(pool: &Pool, user_id: &RequesterId) -> StorageResult<i64> {
-    let n: i64 = sqlx::query_scalar(
+    let n: i64 = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT COUNT(*)
         FROM notifications
         WHERE user_id = ?1 AND read_at IS NULL
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .fetch_one(pool)
     .await?;
@@ -167,13 +167,13 @@ pub async fn unread_count_for_user(pool: &Pool, user_id: &RequesterId) -> Storag
 /// keep their original `read_at` (the UPDATE filters on `read_at
 /// IS NULL`).
 pub async fn mark_read(pool: &Pool, user_id: &RequesterId, id: &str) -> StorageResult<()> {
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE notifications
         SET read_at = CURRENT_TIMESTAMP
         WHERE id = ?1 AND user_id = ?2 AND read_at IS NULL
         "#,
-    )
+    ))
     .bind(id)
     .bind(user_id.as_str())
     .execute(pool)
@@ -184,9 +184,9 @@ pub async fn mark_read(pool: &Pool, user_id: &RequesterId, id: &str) -> StorageR
         // /mark-read on click, and re-clicking shouldn't 404.
         // We still verify the row exists at all so a typo
         // doesn't silently succeed.
-        let exists: i64 = sqlx::query_scalar(
+        let exists: i64 = sqlx::query_scalar(&crate::dialect::sql(
             r#"SELECT COUNT(*) FROM notifications WHERE id = ?1 AND user_id = ?2"#,
-        )
+        ))
         .bind(id)
         .bind(user_id.as_str())
         .fetch_one(pool)
@@ -201,13 +201,13 @@ pub async fn mark_read(pool: &Pool, user_id: &RequesterId, id: &str) -> StorageR
 /// Mark all of this user's unread notifications as read in one
 /// query. Used by the inbox "mark all read" button.
 pub async fn mark_all_read(pool: &Pool, user_id: &RequesterId) -> StorageResult<i64> {
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE notifications
         SET read_at = CURRENT_TIMESTAMP
         WHERE user_id = ?1 AND read_at IS NULL
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .execute(pool)
     .await?;
@@ -225,13 +225,13 @@ pub async fn last_dispatched_at_for_user_kind(
     user_id: &SubjectId,
     kind: &str,
 ) -> StorageResult<Option<DateTime<Utc>>> {
-    let ts: Option<DateTime<Utc>> = sqlx::query_scalar(
+    let ts: Option<DateTime<Utc>> = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT MAX(created_at)
         FROM notifications
         WHERE user_id = ?1 AND kind = ?2
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .bind(kind)
     .fetch_optional(pool)
@@ -246,13 +246,13 @@ pub async fn preferences_for_user(
     pool: &Pool,
     user_id: &RequesterId,
 ) -> StorageResult<Vec<Preference>> {
-    let rows: Vec<(String, String, String, String)> = sqlx::query_as(
+    let rows: Vec<(String, String, String, String)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT user_id, kind, channels, min_severity
         FROM notification_preferences
         WHERE user_id = ?1
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .fetch_all(pool)
     .await?;
@@ -283,13 +283,13 @@ pub async fn preference_for_user_kind(
     user_id: &SubjectId,
     kind: &str,
 ) -> StorageResult<Option<Preference>> {
-    let row: Option<(String, String, String, String)> = sqlx::query_as(
+    let row: Option<(String, String, String, String)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT user_id, kind, channels, min_severity
         FROM notification_preferences
         WHERE user_id = ?1 AND kind = ?2
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .bind(kind)
     .fetch_optional(pool)
@@ -350,12 +350,12 @@ pub async fn delete_user_facing_preferences(
     user_id: &RequesterId,
 ) -> StorageResult<()> {
     for k in peisear_core::notifications::kind::all_user_facing() {
-        sqlx::query(
+        sqlx::query(&crate::dialect::sql(
             r#"
             DELETE FROM notification_preferences
             WHERE user_id = ?1 AND kind = ?2
             "#,
-        )
+        ))
         .bind(user_id.as_str())
         .bind(*k)
         .execute(pool)
@@ -382,7 +382,7 @@ pub async fn upsert_preference(
     chans.dedup();
     let chans_str = chans.join(",");
 
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO notification_preferences (user_id, kind, channels, min_severity)
         VALUES (?1, ?2, ?3, ?4)
@@ -390,7 +390,7 @@ pub async fn upsert_preference(
             channels = excluded.channels,
             min_severity = excluded.min_severity
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .bind(kind)
     .bind(&chans_str)
@@ -404,13 +404,13 @@ pub async fn upsert_preference(
 /// opt-in?" Implemented as a sentinel row with kind = '_global'.
 /// Returns true if the row exists.
 pub async fn global_acknowledged(pool: &Pool, user_id: &RequesterId) -> StorageResult<bool> {
-    let n: i64 = sqlx::query_scalar(
+    let n: i64 = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT COUNT(*)
         FROM notification_preferences
         WHERE user_id = ?1 AND kind = ?2
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .bind(peisear_core::notifications::kind::GLOBAL)
     .fetch_one(pool)
@@ -435,14 +435,14 @@ pub async fn set_global_acknowledged(
     } else {
         "in_app"
     };
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO notification_preferences (user_id, kind, channels, min_severity)
         VALUES (?1, ?2, ?3, 'info')
         ON CONFLICT(user_id, kind) DO UPDATE SET
             channels = excluded.channels
         "#,
-    )
+    ))
     .bind(user_id.as_str())
     .bind(peisear_core::notifications::kind::GLOBAL)
     .bind(channels)

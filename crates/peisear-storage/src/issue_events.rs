@@ -47,14 +47,14 @@ pub async fn insert_event(
     new_value: Option<&str>,
 ) -> StorageResult<()> {
     let event_id = Uuid::new_v4().to_string();
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO issue_events
             (id, issue_id, project_id, actor_id, event_type,
              previous_value, new_value)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
         "#,
-    )
+    ))
     .bind(event_id)
     .bind(issue_id)
     .bind(project_id)
@@ -82,8 +82,15 @@ pub async fn days_since_last_status_change_per_in_flight_issue(
     pool: &crate::Pool,
     project_id: &str,
 ) -> StorageResult<Vec<(String, f64)>> {
-    let rows: Vec<(String, f64)> = sqlx::query_as(
-        r#"
+    // `PG-004` §3: SQLite's `julianday('now') - julianday(X)` has no
+    // identical PostgreSQL spelling -- `EXTRACT(EPOCH FROM (now() - X))
+    // / 86400.0` is the equivalent (an `INTERVAL`'s total seconds,
+    // divided down to fractional days), proved equal rather than
+    // assumed: `dialect::postgres_tests::age_in_days_matches_julianday_within_a_tenth_of_a_day`
+    // seeds a known elapsed time and asserts both backends' own
+    // arithmetic against it.
+    #[cfg(feature = "sqlite")]
+    const QUERY: &str = r#"
         SELECT
             i.id AS issue_id,
             julianday('now') - julianday(MAX(e.occurred_at)) AS days
@@ -94,11 +101,24 @@ pub async fn days_since_last_status_change_per_in_flight_issue(
         WHERE i.project_id = ?1
           AND i.status IN ('open', 'in_progress')
         GROUP BY i.id
-        "#,
-    )
-    .bind(project_id)
-    .fetch_all(pool)
-    .await?;
+        "#;
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const QUERY: &str = r#"
+        SELECT
+            i.id AS issue_id,
+            EXTRACT(EPOCH FROM (now() - MAX(e.occurred_at))) / 86400.0 AS days
+        FROM issues i
+        JOIN issue_events e
+            ON e.issue_id = i.id
+           AND e.event_type = 'status_changed'
+        WHERE i.project_id = $1
+          AND i.status IN ('open', 'in_progress')
+        GROUP BY i.id
+        "#;
+    let rows: Vec<(String, f64)> = sqlx::query_as(&crate::dialect::sql(QUERY))
+        .bind(project_id)
+        .fetch_all(pool)
+        .await?;
     Ok(rows)
 }
 
@@ -127,7 +147,7 @@ pub async fn in_progress_seconds_for_issue(
 ) -> StorageResult<Option<f64>> {
     // Pull the timeline plus the issue's current status, so we can
     // tell whether the last open in_progress window is still open.
-    let timeline: Vec<(String, String)> = sqlx::query_as(
+    let timeline: Vec<(String, String)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT new_value AS status, occurred_at
         FROM issue_events
@@ -135,7 +155,7 @@ pub async fn in_progress_seconds_for_issue(
           AND event_type = 'status_changed'
         ORDER BY occurred_at ASC, rowid ASC
         "#,
-    )
+    ))
     .bind(issue_id)
     .fetch_all(pool)
     .await?;
@@ -145,11 +165,12 @@ pub async fn in_progress_seconds_for_issue(
     }
 
     // Pull current status to know whether we're still in_progress.
-    let current_status: Option<String> =
-        sqlx::query_scalar(r#"SELECT status FROM issues WHERE id = ?1"#)
-            .bind(issue_id)
-            .fetch_optional(pool)
-            .await?;
+    let current_status: Option<String> = sqlx::query_scalar(&crate::dialect::sql(
+        r#"SELECT status FROM issues WHERE id = ?1"#,
+    ))
+    .bind(issue_id)
+    .fetch_optional(pool)
+    .await?;
 
     let mut total_seconds = 0.0_f64;
     let mut window_start: Option<chrono::NaiveDateTime> = None;

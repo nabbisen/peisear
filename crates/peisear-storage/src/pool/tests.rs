@@ -422,12 +422,17 @@ async fn connect_still_rejects_a_bare_path_on_the_postgres_branch() {
 
 /// `PG-002`'s own gate (§5): "the migration suite applied cleanly
 /// on both... a fresh PostgreSQL database... reaching the same
-/// version number." Reads `DATABASE_URL`, same convention as
+/// version number." No longer the same number as SQLite's own
+/// highest, since `PG-004`'s `0023` is named, reasoned exception:
+/// a surrogate `rowid` column PostgreSQL needs and SQLite already
+/// has for free, so there is nothing for `migrations/0023` to port
+/// (`migration_drift.rs`'s own `POSTGRES_ONLY` list, not a drift).
+/// Reads `DATABASE_URL`, same convention as
 /// `connect_opens_a_real_connection_against_a_real_postgresql_server`
 /// -- CI's service container, not a local one.
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
 #[tokio::test]
-async fn migrate_reaches_version_22_from_a_fresh_database() {
+async fn migrate_reaches_version_23_from_a_fresh_database() {
     let url = std::env::var("DATABASE_URL")
         .expect("DATABASE_URL must point at a real PostgreSQL server for this test");
     let pool = connect(&url).await.expect("connect");
@@ -439,8 +444,9 @@ async fn migrate_reaches_version_22_from_a_fresh_database() {
         .await
         .expect("read _sqlx_migrations");
     assert_eq!(
-        version, 22,
-        "expected the same version number the SQLite set reaches"
+        version, 23,
+        "expected PostgreSQL's own highest version, one ahead of SQLite's 22 \
+         for PG-004's named-exception 0023"
     );
 }
 

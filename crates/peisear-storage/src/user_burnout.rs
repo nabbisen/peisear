@@ -63,10 +63,12 @@ pub async fn for_user(
 ) -> StorageResult<Option<UserBurnoutSignals>> {
     // Confirm the user exists (defensive — callers usually have
     // already done so via auth, but it's cheap to check).
-    let exists: Option<(String,)> = sqlx::query_as(r#"SELECT id FROM users WHERE id = ?1"#)
-        .bind(user_id.as_str())
-        .fetch_optional(pool)
-        .await?;
+    let exists: Option<(String,)> = sqlx::query_as(&crate::dialect::sql(
+        r#"SELECT id FROM users WHERE id = ?1"#,
+    ))
+    .bind(user_id.as_str())
+    .fetch_optional(pool)
+    .await?;
     if exists.is_none() {
         return Ok(None);
     }
@@ -117,8 +119,12 @@ async fn consecutive_overload_days(pool: &Pool, user_id: &SubjectId) -> StorageR
 /// (pre-0.8.0) issues don't disappear from the query — same
 /// fallback pattern as `project_health`.
 async fn oldest_assigned_stalled_days(pool: &Pool, user_id: &SubjectId) -> StorageResult<i64> {
-    let row: Option<(Option<f64>,)> = sqlx::query_as(
-        r#"
+    // `PG-004` §3: the same `julianday('now') - julianday(X)` ->
+    // `EXTRACT(EPOCH FROM (now() - X)) / 86400.0` equivalence as
+    // `issue_events::days_since_last_status_change_per_in_flight_issue`,
+    // proved the same way.
+    #[cfg(feature = "sqlite")]
+    const QUERY: &str = r#"
         SELECT MAX(
             julianday('now') - julianday(
                 COALESCE(
@@ -133,11 +139,28 @@ async fn oldest_assigned_stalled_days(pool: &Pool, user_id: &SubjectId) -> Stora
         FROM issues i
         WHERE i.assignee_id = ?1
           AND i.status IN ('open', 'in_progress')
-        "#,
-    )
-    .bind(user_id.as_str())
-    .fetch_optional(pool)
-    .await?;
+        "#;
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const QUERY: &str = r#"
+        SELECT MAX(
+            EXTRACT(EPOCH FROM (now() -
+                COALESCE(
+                    (SELECT MAX(e.occurred_at)
+                     FROM issue_events e
+                     WHERE e.issue_id = i.id
+                       AND e.event_type = 'status_changed'),
+                    i.updated_at
+                )
+            )) / 86400.0
+        )
+        FROM issues i
+        WHERE i.assignee_id = $1
+          AND i.status IN ('open', 'in_progress')
+        "#;
+    let row: Option<(Option<f64>,)> = sqlx::query_as(&crate::dialect::sql(QUERY))
+        .bind(user_id.as_str())
+        .fetch_optional(pool)
+        .await?;
 
     Ok(row
         .and_then(|(d,)| d)
@@ -181,8 +204,15 @@ async fn estimation_drift_for_user(
     // event whose new_value is 'done', or `updated_at` as a
     // fallback. The COALESCE keeps legacy issues in the query
     // rather than dropping them.
-    let rows: Vec<(String, i64, String)> = sqlx::query_as(
-        r#"
+    // `PG-004` §3: SQLite's `datetime('now', ?N)` takes a modifier
+    // string (`"-N days"`, bound below unchanged) and has no identical
+    // PostgreSQL function; PostgreSQL's own `now() + ?N::interval`
+    // accepts the *same* modifier string, cast through its own
+    // interval parser, so the bound value needs no change, only the
+    // SQL spelling around it -- proved by
+    // `dialect::postgres_tests::a_relative_time_filter_matches_sqlites_own_window`.
+    #[cfg(feature = "sqlite")]
+    const QUERY: &str = r#"
         SELECT
             i.id,
             i.effort,
@@ -200,12 +230,32 @@ async fn estimation_drift_for_user(
           AND i.effort IS NOT NULL
           AND i.effort > 0
           AND i.updated_at >= datetime('now', ?2)
-        "#,
-    )
-    .bind(user_id.as_str())
-    .bind(format!("-{} days", DRIFT_WINDOW_DAYS))
-    .fetch_all(pool)
-    .await?;
+        "#;
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const QUERY: &str = r#"
+        SELECT
+            i.id,
+            i.effort,
+            COALESCE(
+                (SELECT MAX(e.occurred_at)
+                 FROM issue_events e
+                 WHERE e.issue_id = i.id
+                   AND e.event_type = 'status_changed'
+                   AND e.new_value = 'done'),
+                i.updated_at
+            ) AS closed_at
+        FROM issues i
+        WHERE i.assignee_id = $1
+          AND i.status = 'done'
+          AND i.effort IS NOT NULL
+          AND i.effort > 0
+          AND i.updated_at >= now() + $2::interval
+        "#;
+    let rows: Vec<(String, i64, String)> = sqlx::query_as(&crate::dialect::sql(QUERY))
+        .bind(user_id.as_str())
+        .bind(format!("-{} days", DRIFT_WINDOW_DAYS))
+        .fetch_all(pool)
+        .await?;
 
     if rows.is_empty() {
         return Ok(None);
@@ -306,8 +356,18 @@ async fn cognitive_switching_for_user(
     // module is about *the user*'s rhythm, and switches are
     // attributed to whoever moved the issue. The actor field on
     // events is exactly that.
-    let rows: Vec<(String, i64)> = sqlx::query_as(
-        r#"
+    // `PG-004` §3: `DATE(x)` -> `x::date` (`PG-002`'s own convention
+    // for the migrations), here cast back on to `::text` as well --
+    // SQLite's `DATE()` returns `TEXT`, and this function's own return
+    // type keeps `day: String` on both backends rather than carrying a
+    // `#[cfg]` into its signature. PostgreSQL's default `datestyle`
+    // renders a `date::text` cast as `YYYY-MM-DD`, the same shape
+    // SQLite's `DATE()` already produces, proved equal rather than
+    // assumed by `dialect::postgres_tests::date_cast_to_text_matches_sqlites_date_function`.
+    // The relative-time filter is the same `now() + ?N::interval`
+    // equivalence as `oldest_assigned_stalled_days`'s sibling above.
+    #[cfg(feature = "sqlite")]
+    const QUERY: &str = r#"
         SELECT
             DATE(e.occurred_at) AS day,
             COUNT(*) AS switches_on_day
@@ -318,12 +378,25 @@ async fn cognitive_switching_for_user(
           AND e.occurred_at >= datetime('now', ?2)
         GROUP BY day
         ORDER BY day ASC
-        "#,
-    )
-    .bind(user_id.as_str())
-    .bind(format!("-{} days", SWITCHING_WINDOW_DAYS))
-    .fetch_all(pool)
-    .await?;
+        "#;
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const QUERY: &str = r#"
+        SELECT
+            (e.occurred_at::date::text) AS day,
+            COUNT(*) AS switches_on_day
+        FROM issue_events e
+        WHERE e.actor_id = $1
+          AND e.event_type = 'status_changed'
+          AND e.new_value = 'in_progress'
+          AND e.occurred_at >= now() + $2::interval
+        GROUP BY day
+        ORDER BY day ASC
+        "#;
+    let rows: Vec<(String, i64)> = sqlx::query_as(&crate::dialect::sql(QUERY))
+        .bind(user_id.as_str())
+        .bind(format!("-{} days", SWITCHING_WINDOW_DAYS))
+        .fetch_all(pool)
+        .await?;
 
     let total_events: i64 = rows.iter().map(|(_, n)| n).sum();
     if total_events < SWITCHING_MIN_EVENTS {

@@ -59,6 +59,22 @@ fn a_file_only_in_postgres_is_caught() {
     std::fs::remove_dir_all(&dir).unwrap();
 }
 
+/// `PG-004`'s named exception: `0023_rowid_surrogate_for_ordering.sql`
+/// exists only in `migrations-postgres/` and must not be reported --
+/// unlike `a_file_only_in_postgres_is_caught`'s own planted file,
+/// whose different name proves this is a narrow, named exception,
+/// not a direction the guard stopped checking.
+#[test]
+fn the_named_postgres_only_file_is_not_flagged() {
+    let found = mismatches(&real_sqlite_dir(), &real_postgres_dir());
+    assert!(
+        !found
+            .iter()
+            .any(|m| m.contains("0023_rowid_surrogate_for_ordering.sql")),
+        "the named exception must not be reported: {found:?}"
+    );
+}
+
 /// Two directories with the same filenames agree, even if this test
 /// cannot see their contents -- which is exactly `§2`'s bound: the
 /// guard is filename-level, and says so by not noticing a content

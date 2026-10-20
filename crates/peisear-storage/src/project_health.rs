@@ -68,8 +68,11 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
     // touch (long-stale's event-aware clock). Folded below into
     // every in-flight-derived count *and* its membership, from
     // this one evaluation.
-    let in_flight_rows: Vec<(String, Option<String>, f64, f64)> = sqlx::query_as(
-        r#"
+    // `PG-004` §3: the same `julianday` age-diff equivalence as
+    // `issue_events::days_since_last_status_change_per_in_flight_issue`,
+    // applied twice in this one query.
+    #[cfg(feature = "sqlite")]
+    const IN_FLIGHT_QUERY: &str = r#"
         SELECT
             id,
             assignee_id,
@@ -86,11 +89,31 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
         FROM issues
         WHERE project_id = ?1
           AND status IN ('open', 'in_progress')
-        "#,
-    )
-    .bind(project_id)
-    .fetch_all(pool)
-    .await?;
+        "#;
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const IN_FLIGHT_QUERY: &str = r#"
+        SELECT
+            id,
+            assignee_id,
+            EXTRACT(EPOCH FROM (now() - created_at)) / 86400.0 AS age_days,
+            EXTRACT(EPOCH FROM (now() -
+                COALESCE(
+                    (SELECT MAX(e.occurred_at)
+                     FROM issue_events e
+                     WHERE e.issue_id = issues.id
+                       AND e.event_type = 'status_changed'),
+                    updated_at
+                )
+            )) / 86400.0 AS staleness_days
+        FROM issues
+        WHERE project_id = $1
+          AND status IN ('open', 'in_progress')
+        "#;
+    let in_flight_rows: Vec<(String, Option<String>, f64, f64)> =
+        sqlx::query_as(&crate::dialect::sql(IN_FLIGHT_QUERY))
+            .bind(project_id)
+            .fetch_all(pool)
+            .await?;
 
     let in_flight_issues = in_flight_rows.len() as i64;
     let in_flight_issue_ids: Vec<String> =
@@ -123,12 +146,12 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
     // this plus `in_flight_issues` rather than a third `COUNT(*)` —
     // `IssueStatus` is exhaustively open/in_progress/done, so every
     // issue is in exactly one of the two sets already fetched.
-    let done_issue_ids: Vec<String> = sqlx::query_scalar(
+    let done_issue_ids: Vec<String> = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT id FROM issues
         WHERE project_id = ?1 AND status = 'done'
         "#,
-    )
+    ))
     .bind(project_id)
     .fetch_all(pool)
     .await?;
@@ -141,23 +164,36 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
     // "recent"; a freshly-created in-flight issue is in
     // `in_flight_issue_ids` but only "recent" if young enough) —
     // its own fetch, matching the original `OR` condition exactly.
-    let recent_activity_issue_ids: Vec<String> = sqlx::query_scalar(
-        r#"
+    // `PG-004` §3: the same `now() + ?N::interval` equivalence as
+    // `user_burnout`'s own relative-time filters -- `$2` reused twice,
+    // same as `?2` was.
+    #[cfg(feature = "sqlite")]
+    const RECENT_ACTIVITY_QUERY: &str = r#"
         SELECT id FROM issues
         WHERE project_id = ?1
           AND (
               created_at >= datetime('now', ?2)
               OR (status = 'done' AND updated_at >= datetime('now', ?2))
           )
-        "#,
-    )
-    .bind(project_id)
-    .bind(format!("-{} days", ACTIVITY_WINDOW_DAYS))
-    .fetch_all(pool)
-    .await?;
+        "#;
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const RECENT_ACTIVITY_QUERY: &str = r#"
+        SELECT id FROM issues
+        WHERE project_id = $1
+          AND (
+              created_at >= now() + $2::interval
+              OR (status = 'done' AND updated_at >= now() + $2::interval)
+          )
+        "#;
+    let recent_activity_issue_ids: Vec<String> =
+        sqlx::query_scalar(&crate::dialect::sql(RECENT_ACTIVITY_QUERY))
+            .bind(project_id)
+            .bind(format!("-{} days", ACTIVITY_WINDOW_DAYS))
+            .fetch_all(pool)
+            .await?;
     let recent_activity_count = recent_activity_issue_ids.len() as i64;
 
-    let active_assignees: i64 = sqlx::query_scalar(
+    let active_assignees: i64 = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT COUNT(DISTINCT assignee_id)
         FROM issues
@@ -165,7 +201,7 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
           AND status IN ('open', 'in_progress')
           AND assignee_id IS NOT NULL
         "#,
-    )
+    ))
     .bind(project_id)
     .fetch_one(pool)
     .await?;
@@ -178,7 +214,7 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
     // DEFAULT_WIP_LIMIT). The system default is read from core
     // and bound as a parameter so the SQL stays in sync if the
     // const changes.
-    let wip_violators: i64 = sqlx::query_scalar(
+    let wip_violators: i64 = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT COUNT(*)
         FROM (
@@ -196,7 +232,7 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
             HAVING current_wip > effective_limit
         )
         "#,
-    )
+    ))
     .bind(project_id)
     .bind(peisear_core::personal_metrics::DEFAULT_WIP_LIMIT)
     .fetch_one(pool)

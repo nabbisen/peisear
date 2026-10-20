@@ -64,7 +64,7 @@ pub async fn insert(
     snapshot: NewUserSnapshot,
 ) -> StorageResult<()> {
     let id = Uuid::new_v4().to_string();
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO user_metrics_snapshots (
             id, user_id,
@@ -72,7 +72,7 @@ pub async fn insert(
             effective_wip_limit, over_wip_limit
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         "#,
-    )
+    ))
     .bind(id)
     .bind(user_id.as_str())
     .bind(snapshot.current_wip)
@@ -128,8 +128,10 @@ pub async fn recent_for_user(
     user_id: &SubjectId,
     window_days: i64,
 ) -> StorageResult<Vec<UserSnapshot>> {
-    let rows = sqlx::query_as::<_, UserSnapshotRow>(
-        r#"
+    // `PG-004` §3: the same `now() + ?N::interval` equivalence as
+    // `user_burnout`'s own relative-time filters.
+    #[cfg(feature = "sqlite")]
+    const QUERY: &str = r#"
         SELECT
             user_id, current_wip, in_flight_points, capacity_points,
             over_capacity, effective_wip_limit, over_wip_limit,
@@ -138,12 +140,23 @@ pub async fn recent_for_user(
         WHERE user_id = ?1
           AND captured_at >= datetime('now', ?2)
         ORDER BY captured_at ASC, rowid ASC
-        "#,
-    )
-    .bind(user_id.as_str())
-    .bind(format!("-{} days", window_days))
-    .fetch_all(pool)
-    .await?;
+        "#;
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const QUERY: &str = r#"
+        SELECT
+            user_id, current_wip, in_flight_points, capacity_points,
+            over_capacity, effective_wip_limit, over_wip_limit,
+            captured_at
+        FROM user_metrics_snapshots
+        WHERE user_id = $1
+          AND captured_at >= now() + $2::interval
+        ORDER BY captured_at ASC, rowid ASC
+        "#;
+    let rows = sqlx::query_as::<_, UserSnapshotRow>(&crate::dialect::sql(QUERY))
+        .bind(user_id.as_str())
+        .bind(format!("-{} days", window_days))
+        .fetch_all(pool)
+        .await?;
 
     Ok(rows.into_iter().map(UserSnapshot::from).collect())
 }

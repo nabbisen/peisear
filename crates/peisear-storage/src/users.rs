@@ -46,13 +46,13 @@ impl From<UserRow> for User {
 }
 
 pub async fn find_by_email(pool: &Pool, email: &str) -> StorageResult<Option<User>> {
-    let row = sqlx::query_as::<_, UserRow>(
+    let row = sqlx::query_as::<_, UserRow>(&crate::dialect::sql(
         r#"
         SELECT id, email, password_hash, display_name, wip_limit, created_at
         FROM users
         WHERE email = ?1
         "#,
-    )
+    ))
     .bind(email)
     .fetch_optional(pool)
     .await?;
@@ -60,13 +60,13 @@ pub async fn find_by_email(pool: &Pool, email: &str) -> StorageResult<Option<Use
 }
 
 pub async fn find_by_id(pool: &Pool, id: &str) -> StorageResult<Option<User>> {
-    let row = sqlx::query_as::<_, UserRow>(
+    let row = sqlx::query_as::<_, UserRow>(&crate::dialect::sql(
         r#"
         SELECT id, email, password_hash, display_name, wip_limit, created_at
         FROM users
         WHERE id = ?1
         "#,
-    )
+    ))
     .bind(id)
     .fetch_optional(pool)
     .await?;
@@ -80,12 +80,12 @@ pub async fn insert(
     password_hash: &str,
     display_name: &str,
 ) -> StorageResult<()> {
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO users (id, email, password_hash, display_name)
         VALUES (?1, ?2, ?3, ?4)
         "#,
-    )
+    ))
     .bind(id)
     .bind(email)
     .bind(password_hash)
@@ -103,13 +103,13 @@ pub async fn set_wip_limit(
     user_id: &str,
     wip_limit: Option<i64>,
 ) -> StorageResult<()> {
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE users
         SET wip_limit = ?2
         WHERE id = ?1
         "#,
-    )
+    ))
     .bind(user_id)
     .bind(wip_limit)
     .execute(pool)

@@ -86,7 +86,7 @@ impl IssueRow {
 /// worse; do not build anything on it that needs more.
 /// [`list_all_in_project`] orders identically.
 pub async fn list_in_project(pool: &Pool, project_id: &str) -> StorageResult<Vec<Issue>> {
-    let rows = sqlx::query_as::<_, IssueRow>(
+    let rows = sqlx::query_as::<_, IssueRow>(&crate::dialect::sql(
         r#"
         SELECT id, project_id, author_id, title, description,
                status, priority, effort, assignee_id, parent_issue_id,
@@ -97,7 +97,7 @@ pub async fn list_in_project(pool: &Pool, project_id: &str) -> StorageResult<Vec
           AND parent_issue_id IS NULL
         ORDER BY created_at DESC, rowid DESC
         "#,
-    )
+    ))
     .bind(project_id)
     .fetch_all(pool)
     .await?;
@@ -110,7 +110,7 @@ pub async fn list_in_project(pool: &Pool, project_id: &str) -> StorageResult<Vec
 /// numbers — sub-issues represent real assigned work even if
 /// they're not shown on the kanban.
 pub async fn list_all_in_project(pool: &Pool, project_id: &str) -> StorageResult<Vec<Issue>> {
-    let rows = sqlx::query_as::<_, IssueRow>(
+    let rows = sqlx::query_as::<_, IssueRow>(&crate::dialect::sql(
         r#"
         SELECT id, project_id, author_id, title, description,
                status, priority, effort, assignee_id, parent_issue_id,
@@ -120,7 +120,7 @@ pub async fn list_all_in_project(pool: &Pool, project_id: &str) -> StorageResult
         WHERE project_id = ?1
         ORDER BY created_at DESC, rowid DESC
         "#,
-    )
+    ))
     .bind(project_id)
     .fetch_all(pool)
     .await?;
@@ -135,7 +135,7 @@ pub async fn list_all_in_project(pool: &Pool, project_id: &str) -> StorageResult
 /// Empty vec if the parent has no children. The parent itself
 /// is not included.
 pub async fn list_sub_issues_of(pool: &Pool, parent_issue_id: &str) -> StorageResult<Vec<Issue>> {
-    let rows = sqlx::query_as::<_, IssueRow>(
+    let rows = sqlx::query_as::<_, IssueRow>(&crate::dialect::sql(
         r#"
         SELECT id, project_id, author_id, title, description,
                status, priority, effort, assignee_id, parent_issue_id,
@@ -145,7 +145,7 @@ pub async fn list_sub_issues_of(pool: &Pool, parent_issue_id: &str) -> StorageRe
         WHERE parent_issue_id = ?1
         ORDER BY created_at ASC, rowid ASC
         "#,
-    )
+    ))
     .bind(parent_issue_id)
     .fetch_all(pool)
     .await?;
@@ -153,7 +153,7 @@ pub async fn list_sub_issues_of(pool: &Pool, parent_issue_id: &str) -> StorageRe
 }
 
 pub async fn find(pool: &Pool, issue_id: &str, project_id: &str) -> StorageResult<Issue> {
-    let row = sqlx::query_as::<_, IssueRow>(
+    let row = sqlx::query_as::<_, IssueRow>(&crate::dialect::sql(
         r#"
         SELECT id, project_id, author_id, title, description,
                status, priority, effort, assignee_id, parent_issue_id,
@@ -162,7 +162,7 @@ pub async fn find(pool: &Pool, issue_id: &str, project_id: &str) -> StorageResul
         FROM issues
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(issue_id)
     .bind(project_id)
     .fetch_optional(pool)
@@ -203,14 +203,14 @@ pub async fn insert(
     // commits.
     let mut tx = pool.begin().await?;
 
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO issues
             (id, project_id, author_id, title, description, status, priority,
              effort, assignee_id, planned_start_at, planned_end_at)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .bind(author_id)
@@ -279,14 +279,14 @@ pub async fn insert_sub_issue(
 ) -> StorageResult<()> {
     let mut tx = pool.begin().await?;
 
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO issues
             (id, project_id, author_id, title, description, status, priority,
              effort, assignee_id, parent_issue_id)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .bind(author_id)
@@ -330,13 +330,13 @@ pub async fn insert_sub_issue(
 ///
 /// No-op if the issue is already top-level.
 pub async fn promote_to_top_level(pool: &Pool, id: &str, project_id: &str) -> StorageResult<()> {
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE issues
         SET parent_issue_id = NULL
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .execute(pool)
@@ -354,13 +354,13 @@ pub async fn demote_to_sub_issue(
     project_id: &str,
     new_parent_id: &str,
 ) -> StorageResult<()> {
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE issues
         SET parent_issue_id = ?3
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .bind(new_parent_id)
@@ -416,13 +416,13 @@ pub async fn update_guarded(
     // can diff and emit one event per changed field. SELECT
     // first, UPDATE second, COMMIT once — the previous read is
     // self-consistent with the write, and (`RACE-002`) so is the stamp.
-    let prev: Option<PriorIssueState> = sqlx::query_as(
+    let prev: Option<PriorIssueState> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT status, effort, assignee_id, updated_at
         FROM issues
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .fetch_optional(&mut *tx)
@@ -444,7 +444,7 @@ pub async fn update_guarded(
     // the timestamp the way it once was; it stays combined because
     // splitting it would still cost an extra event-diff read for no
     // benefit.
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE issues
         SET title = ?3, description = ?4, status = ?5, priority = ?6,
@@ -454,7 +454,7 @@ pub async fn update_guarded(
             planned_end_at = ?10
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .bind(fields.title)
@@ -552,12 +552,12 @@ pub async fn update_status_guarded(
 ) -> StorageResult<Guarded<DateTime<Utc>>> {
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
-    let prev: Option<(String, DateTime<Utc>)> = sqlx::query_as(
+    let prev: Option<(String, DateTime<Utc>)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT status, updated_at FROM issues
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .fetch_optional(&mut *tx)
@@ -570,13 +570,13 @@ pub async fn update_status_guarded(
         return Ok(Guarded::Stale { current_updated_at });
     }
 
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE issues
         SET status = ?3
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .bind(status.as_str())
@@ -595,12 +595,12 @@ pub async fn update_status_guarded(
     // new lock. The `prev_status` fetch above already establishes
     // the row exists; this `NotFound` path is defensive, matching
     // the shape `RETURNING` had.
-    let new_updated_at: DateTime<Utc> = sqlx::query_scalar(
+    let new_updated_at: DateTime<Utc> = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT updated_at FROM issues
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .fetch_optional(&mut *tx)
@@ -664,12 +664,12 @@ pub async fn update_schedule_guarded(
 ) -> StorageResult<Guarded<DateTime<Utc>>> {
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
 
-    let current_updated_at: DateTime<Utc> = sqlx::query_scalar(
+    let current_updated_at: DateTime<Utc> = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT updated_at FROM issues
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .fetch_optional(&mut *tx)
@@ -679,13 +679,13 @@ pub async fn update_schedule_guarded(
         return Ok(Guarded::Stale { current_updated_at });
     }
 
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE issues
         SET planned_start_at = ?3, planned_end_at = ?4
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .bind(planned_start_at)
@@ -704,12 +704,12 @@ pub async fn update_schedule_guarded(
     // Same reasoning as `update_status`: a same-transaction read
     // after the `AFTER` trigger has advanced `updated_at` is the one
     // way to hand the caller the real new lock value.
-    let new_updated_at: DateTime<Utc> = sqlx::query_scalar(
+    let new_updated_at: DateTime<Utc> = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT updated_at FROM issues
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .fetch_optional(&mut *tx)
@@ -743,9 +743,9 @@ pub async fn delete_guarded(
     // it in the deletion event. After the DELETE, the cascade
     // SET NULL on issue_id loses the link, but the project_id and
     // event metadata still tell the story.
-    let prev: Option<(String, DateTime<Utc>)> = sqlx::query_as(
+    let prev: Option<(String, DateTime<Utc>)> = sqlx::query_as(&crate::dialect::sql(
         r#"SELECT status, updated_at FROM issues WHERE id = ?1 AND project_id = ?2"#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .fetch_optional(&mut *tx)
@@ -775,12 +775,12 @@ pub async fn delete_guarded(
     )
     .await?;
 
-    let res = sqlx::query(
+    let res = sqlx::query(&crate::dialect::sql(
         r#"
         DELETE FROM issues
         WHERE id = ?1 AND project_id = ?2
         "#,
-    )
+    ))
     .bind(id)
     .bind(project_id)
     .execute(&mut *tx)
@@ -859,13 +859,13 @@ pub async fn list_assignee_candidates(
     pool: &Pool,
     project_id: &str,
 ) -> StorageResult<Vec<peisear_core::AssigneeOption>> {
-    sqlx::query_as::<_, (String, String)>(&format!(
+    sqlx::query_as::<_, (String, String)>(&crate::dialect::sql(&format!(
         r#"
         WITH {CANDIDATE_SET_CTE}
         SELECT id, display_name FROM candidates
         ORDER BY display_name ASC
         "#,
-    ))
+    )))
     .bind(project_id)
     .fetch_all(pool)
     .await?
@@ -902,8 +902,17 @@ pub async fn project_workload(
     // "the row whose period covers today, most recently created".
     // The correlated sub-select keeps the per-user join tractable
     // even with the period filter.
-    sqlx::query_as::<_, (String, String, Option<i64>, Option<i64>, i64)>(&format!(
-        r#"
+    // `PG-004` §3: `date('now')` -> `CURRENT_DATE` (`PG-002`'s own
+    // convention for the migrations) -- a pure token swap with no
+    // bind parameter involved, so it is spliced into the same
+    // `format!` template rather than duplicating this whole query.
+    #[cfg(feature = "sqlite")]
+    const TODAY: &str = "date('now')";
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const TODAY: &str = "CURRENT_DATE";
+    sqlx::query_as::<_, (String, String, Option<i64>, Option<i64>, i64)>(&crate::dialect::sql(
+        &format!(
+            r#"
         WITH {CANDIDATE_SET_CTE}
         SELECT
             u.id,
@@ -911,8 +920,8 @@ pub async fn project_workload(
             (SELECT uc.points
              FROM user_capacities uc
              WHERE uc.user_id = u.id
-               AND (uc.period_start IS NULL OR uc.period_start <= date('now'))
-               AND (uc.period_end   IS NULL OR uc.period_end   >= date('now'))
+               AND (uc.period_start IS NULL OR uc.period_start <= {TODAY})
+               AND (uc.period_end   IS NULL OR uc.period_end   >= {TODAY})
              ORDER BY uc.created_at DESC, uc.rowid DESC
              LIMIT 1
             ) AS capacity_points,
@@ -936,6 +945,7 @@ pub async fn project_workload(
         GROUP BY u.id, u.display_name
         ORDER BY u.display_name ASC
         "#,
+        ),
     ))
     .bind(project_id)
     .fetch_all(pool)
@@ -1003,7 +1013,7 @@ pub async fn planned_for_user(
     from: DateTime<Utc>,
     to: DateTime<Utc>,
 ) -> StorageResult<Vec<Issue>> {
-    let rows = sqlx::query_as::<_, IssueRow>(&format!(
+    let rows = sqlx::query_as::<_, IssueRow>(&crate::dialect::sql(&format!(
         r#"
         SELECT id, project_id, author_id, title, description,
                status, priority, effort, assignee_id, parent_issue_id,
@@ -1015,7 +1025,7 @@ pub async fn planned_for_user(
           AND {PLANNED_WINDOW_OVERLAP_PREDICATE}
         ORDER BY planned_start_at ASC, rowid ASC
         "#,
-    ))
+    )))
     .bind(user_id)
     .bind(from)
     .bind(to)
@@ -1035,7 +1045,7 @@ pub async fn planned_for_project(
     from: DateTime<Utc>,
     to: DateTime<Utc>,
 ) -> StorageResult<Vec<Issue>> {
-    let rows = sqlx::query_as::<_, IssueRow>(&format!(
+    let rows = sqlx::query_as::<_, IssueRow>(&crate::dialect::sql(&format!(
         r#"
         SELECT id, project_id, author_id, title, description,
                status, priority, effort, assignee_id, parent_issue_id,
@@ -1047,7 +1057,7 @@ pub async fn planned_for_project(
           AND {PLANNED_WINDOW_OVERLAP_PREDICATE}
         ORDER BY planned_start_at ASC, rowid ASC
         "#,
-    ))
+    )))
     .bind(project_id)
     .bind(from)
     .bind(to)

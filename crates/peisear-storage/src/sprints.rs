@@ -82,14 +82,14 @@ pub async fn find_by_id<'e, E>(executor: E, id: &str) -> StorageResult<Option<Sp
 where
     E: sqlx::Executor<'e, Database = crate::dialect::Database>,
 {
-    let row = sqlx::query_as::<_, SprintRow>(
+    let row = sqlx::query_as::<_, SprintRow>(&crate::dialect::sql(
         r#"
         SELECT id, team_id, name, goal, starts_on, ends_on,
                status, started_at, completed_at, created_at, updated_at
         FROM sprints
         WHERE id = ?1
         "#,
-    )
+    ))
     .bind(id)
     .fetch_optional(executor)
     .await?;
@@ -97,7 +97,7 @@ where
 }
 
 pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Sprint>> {
-    let rows = sqlx::query_as::<_, SprintRow>(
+    let rows = sqlx::query_as::<_, SprintRow>(&crate::dialect::sql(
         r#"
         SELECT id, team_id, name, goal, starts_on, ends_on,
                status, started_at, completed_at, created_at, updated_at
@@ -105,7 +105,7 @@ pub async fn list_for_team(pool: &Pool, team_id: &str) -> StorageResult<Vec<Spri
         WHERE team_id = ?1
         ORDER BY starts_on DESC, created_at DESC, rowid DESC
         "#,
-    )
+    ))
     .bind(team_id)
     .fetch_all(pool)
     .await?;
@@ -119,7 +119,7 @@ pub async fn active_for_team<'e, E>(executor: E, team_id: &str) -> StorageResult
 where
     E: sqlx::Executor<'e, Database = crate::dialect::Database>,
 {
-    let row = sqlx::query_as::<_, SprintRow>(
+    let row = sqlx::query_as::<_, SprintRow>(&crate::dialect::sql(
         r#"
         SELECT id, team_id, name, goal, starts_on, ends_on,
                status, started_at, completed_at, created_at, updated_at
@@ -128,7 +128,7 @@ where
         ORDER BY started_at DESC, rowid DESC
         LIMIT 1
         "#,
-    )
+    ))
     .bind(team_id)
     .fetch_optional(executor)
     .await?;
@@ -149,12 +149,12 @@ pub async fn insert(
         ));
     }
     let id = Uuid::new_v4().to_string();
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO sprints (id, team_id, name, goal, starts_on, ends_on)
         VALUES (?, ?, ?, ?, ?, ?)
         "#,
-    )
+    ))
     .bind(&id)
     .bind(team_id)
     .bind(name)
@@ -196,22 +196,29 @@ pub async fn update_guarded(
             peisear_i18n::MessageKey::SprintEndDateMustBeOnOrAfterStartMessage,
         ));
     }
-    let res = sqlx::query(
+    // `PG-004` §3: `dialect::stale_guard` carries the one backend
+    // difference (SQLite's `julianday` normalisation vs PostgreSQL's
+    // plain equality); the rest of the query is identical, so it is
+    // spliced into one `format!` rather than duplicated whole.
+    let query = format!(
         r#"
         UPDATE sprints
         SET name = ?2, goal = ?3, starts_on = ?4, ends_on = ?5
         WHERE id = ?1
-          AND (?6 IS NULL OR julianday(updated_at) = julianday(?6))
+          AND (?6 IS NULL OR {})
         "#,
-    )
-    .bind(id)
-    .bind(name)
-    .bind(goal)
-    .bind(starts_on)
-    .bind(ends_on)
-    .bind(expected)
-    .execute(pool)
-    .await?;
+        crate::dialect::stale_guard(6)
+    );
+    let sql = crate::dialect::sql(&query);
+    let res = sqlx::query(&sql)
+        .bind(id)
+        .bind(name)
+        .bind(goal)
+        .bind(starts_on)
+        .bind(ends_on)
+        .bind(expected)
+        .execute(pool)
+        .await?;
     if res.rows_affected() == 0 {
         return zero_rows_outcome(pool, "sprints", id, None).await;
     }
@@ -233,17 +240,20 @@ pub async fn delete_guarded(
     id: &str,
     expected: Option<DateTime<Utc>>,
 ) -> StorageResult<Guarded<()>> {
-    let res = sqlx::query(
+    let query = format!(
         r#"
         DELETE FROM sprints
         WHERE id = ?1
-          AND (?2 IS NULL OR julianday(updated_at) = julianday(?2))
+          AND (?2 IS NULL OR {})
         "#,
-    )
-    .bind(id)
-    .bind(expected)
-    .execute(pool)
-    .await?;
+        crate::dialect::stale_guard(2)
+    );
+    let sql = crate::dialect::sql(&query);
+    let res = sqlx::query(&sql)
+        .bind(id)
+        .bind(expected)
+        .execute(pool)
+        .await?;
     if res.rows_affected() == 0 {
         return zero_rows_outcome(pool, "sprints", id, None).await;
     }
@@ -308,13 +318,13 @@ pub async fn start_guarded(
             },
         ));
     }
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE sprints
         SET status = 'active', started_at = CURRENT_TIMESTAMP
         WHERE id = ?1
         "#,
-    )
+    ))
     .bind(sprint_id)
     .execute(&mut *tx)
     .await?;
@@ -362,13 +372,13 @@ pub async fn complete_guarded(
             ));
         }
     }
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE sprints
         SET status = 'completed', completed_at = CURRENT_TIMESTAMP
         WHERE id = ?1
         "#,
-    )
+    ))
     .bind(sprint_id)
     .execute(&mut *tx)
     .await?;
@@ -386,7 +396,10 @@ pub async fn complete_guarded(
 /// Write the record of a sprint that has just been set `completed`, on the
 /// transaction that set it. `completed_at` is already written there, which
 /// the burndown's end date reads.
-async fn capture_record(tx: &mut crate::dialect::Tx<'_>, sprint_id: &str) -> StorageResult<()> {
+pub(crate) async fn capture_record(
+    tx: &mut crate::dialect::Tx<'_>,
+    sprint_id: &str,
+) -> StorageResult<()> {
     let sprint = find_by_id(&mut **tx, sprint_id)
         .await?
         .ok_or(StorageError::NotFound)?;
@@ -397,35 +410,64 @@ async fn capture_record(tx: &mut crate::dialect::Tx<'_>, sprint_id: &str) -> Sto
 
     // A stale record cannot be here (`reopen` deletes it), but replacing is
     // the right answer if one were: the record is what the sprint reports *now*.
-    sqlx::query("DELETE FROM sprint_burndown_points WHERE sprint_id = ?1")
-        .bind(sprint_id)
-        .execute(&mut **tx)
-        .await?;
-    sqlx::query(
-        r#"
+    sqlx::query(&crate::dialect::sql(
+        "DELETE FROM sprint_burndown_points WHERE sprint_id = ?1",
+    ))
+    .bind(sprint_id)
+    .execute(&mut **tx)
+    .await?;
+    // `PG-004` §3: `INSERT OR REPLACE` has no PostgreSQL equivalent,
+    // and the two are not interchangeable -- `OR REPLACE` deletes the
+    // conflicting row and re-inserts, so a column this `INSERT`
+    // doesn't list (`captured_at`) reverts to its `DEFAULT
+    // CURRENT_TIMESTAMP` on every capture, which is the semantics
+    // this function's own comment above already names: "the record is
+    // what the sprint reports *now*". `ON CONFLICT ... DO UPDATE`
+    // updates in place instead, so it must name that reset explicitly
+    // or `captured_at` would freeze at the first capture and never
+    // move again -- `dialect::postgres_tests::recapturing_a_sprint_record_still_bumps_captured_at`
+    // proves the SET list's own `captured_at = CURRENT_TIMESTAMP`
+    // keeps that semantics, not just the row values.
+    #[cfg(feature = "sqlite")]
+    const QUERY: &str = r#"
         INSERT OR REPLACE INTO sprint_records
             (sprint_id, committed_points, completed_points, committed_count, completed_count,
              contributor_count, had_unassigned_contributor)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-        "#,
-    )
-    .bind(sprint_id)
-    .bind(committed_points)
-    .bind(completed_points)
-    .bind(committed_count)
-    .bind(completed_count)
-    .bind(contributor_count)
-    .bind(i64::from(unassigned > 0))
-    .execute(&mut **tx)
-    .await?;
+        "#;
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const QUERY: &str = r#"
+        INSERT INTO sprint_records
+            (sprint_id, committed_points, completed_points, committed_count, completed_count,
+             contributor_count, had_unassigned_contributor)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (sprint_id) DO UPDATE SET
+            committed_points = excluded.committed_points,
+            completed_points = excluded.completed_points,
+            committed_count = excluded.committed_count,
+            completed_count = excluded.completed_count,
+            contributor_count = excluded.contributor_count,
+            had_unassigned_contributor = excluded.had_unassigned_contributor,
+            captured_at = CURRENT_TIMESTAMP
+        "#;
+    sqlx::query(&crate::dialect::sql(QUERY))
+        .bind(sprint_id)
+        .bind(committed_points)
+        .bind(completed_points)
+        .bind(committed_count)
+        .bind(completed_count)
+        .bind(contributor_count)
+        .bind(i64::from(unassigned > 0))
+        .execute(&mut **tx)
+        .await?;
     for p in points {
-        sqlx::query(
+        sqlx::query(&crate::dialect::sql(
             r#"
             INSERT INTO sprint_burndown_points
                 (sprint_id, day, cumulative_committed, cumulative_completed)
             VALUES (?1, ?2, ?3, ?4)
             "#,
-        )
+        ))
         .bind(sprint_id)
         .bind(p.day)
         .bind(p.cumulative_committed)
@@ -480,24 +522,28 @@ pub async fn reopen_guarded(
             },
         ));
     }
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         UPDATE sprints
         SET status = 'active', completed_at = NULL
         WHERE id = ?1
         "#,
-    )
+    ))
     .bind(sprint_id)
     .execute(&mut *tx)
     .await?;
-    sqlx::query("DELETE FROM sprint_burndown_points WHERE sprint_id = ?1")
-        .bind(sprint_id)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM sprint_records WHERE sprint_id = ?1")
-        .bind(sprint_id)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query(&crate::dialect::sql(
+        "DELETE FROM sprint_burndown_points WHERE sprint_id = ?1",
+    ))
+    .bind(sprint_id)
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(&crate::dialect::sql(
+        "DELETE FROM sprint_records WHERE sprint_id = ?1",
+    ))
+    .bind(sprint_id)
+    .execute(&mut *tx)
+    .await?;
     tx.commit().await?;
     Ok(Guarded::Written(()))
 }
@@ -530,7 +576,7 @@ pub async fn add_issue_if_status(
     if !allowed.contains(&sprint.status) {
         return Err(StorageError::Conflict(refusal));
     }
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO sprint_issues (issue_id, sprint_id)
         VALUES (?1, ?2)
@@ -538,7 +584,7 @@ pub async fn add_issue_if_status(
             sprint_id = excluded.sprint_id,
             assigned_at = CURRENT_TIMESTAMP
         "#,
-    )
+    ))
     .bind(issue_id)
     .bind(sprint_id)
     .execute(&mut *tx)
@@ -552,7 +598,7 @@ pub async fn add_issue_if_status(
 /// invariant). Returns Ok regardless of whether this was a
 /// fresh add or a move.
 pub async fn add_issue(pool: &Pool, sprint_id: &str, issue_id: &str) -> StorageResult<()> {
-    sqlx::query(
+    sqlx::query(&crate::dialect::sql(
         r#"
         INSERT INTO sprint_issues (issue_id, sprint_id)
         VALUES (?1, ?2)
@@ -560,7 +606,7 @@ pub async fn add_issue(pool: &Pool, sprint_id: &str, issue_id: &str) -> StorageR
             sprint_id = excluded.sprint_id,
             assigned_at = CURRENT_TIMESTAMP
         "#,
-    )
+    ))
     .bind(issue_id)
     .bind(sprint_id)
     .execute(pool)
@@ -589,14 +635,14 @@ pub async fn remove_issue_if_status(
     refusal: peisear_i18n::MessageKey,
 ) -> StorageResult<()> {
     let mut tx = pool.begin_with("BEGIN IMMEDIATE").await?;
-    let status: Option<String> = sqlx::query_scalar(
+    let status: Option<String> = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT s.status
         FROM sprint_issues si
         JOIN sprints s ON s.id = si.sprint_id
         WHERE si.issue_id = ?1
         "#,
-    )
+    ))
     .bind(issue_id)
     .fetch_optional(&mut *tx)
     .await?;
@@ -606,10 +652,12 @@ pub async fn remove_issue_if_status(
     if !allowed.contains(&SprintStatus::from_storage_str(&status)) {
         return Err(StorageError::Conflict(refusal));
     }
-    sqlx::query(r#"DELETE FROM sprint_issues WHERE issue_id = ?1"#)
-        .bind(issue_id)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query(&crate::dialect::sql(
+        r#"DELETE FROM sprint_issues WHERE issue_id = ?1"#,
+    ))
+    .bind(issue_id)
+    .execute(&mut *tx)
+    .await?;
     tx.commit().await?;
     Ok(())
 }
@@ -624,10 +672,12 @@ pub async fn remove_issue_if_status(
 /// (carry-over moves issues out of it). `plan_remove` uses
 /// [`remove_issue_if_status`] because a plan is only editable while planned.
 pub async fn remove_issue(pool: &Pool, issue_id: &str) -> StorageResult<()> {
-    sqlx::query(r#"DELETE FROM sprint_issues WHERE issue_id = ?1"#)
-        .bind(issue_id)
-        .execute(pool)
-        .await?;
+    sqlx::query(&crate::dialect::sql(
+        r#"DELETE FROM sprint_issues WHERE issue_id = ?1"#,
+    ))
+    .bind(issue_id)
+    .execute(pool)
+    .await?;
     Ok(())
 }
 
@@ -646,7 +696,7 @@ pub async fn remove_issue(pool: &Pool, issue_id: &str) -> StorageResult<()> {
 /// parent's row. The single query keeps the round-trip count
 /// at one whether the issue is top-level or sub.
 pub async fn sprint_for_issue(pool: &Pool, issue_id: &str) -> StorageResult<Option<String>> {
-    let row: Option<(String,)> = sqlx::query_as(
+    let row: Option<(String,)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT sprint_id FROM sprint_issues
         WHERE issue_id = ?1
@@ -656,7 +706,7 @@ pub async fn sprint_for_issue(pool: &Pool, issue_id: &str) -> StorageResult<Opti
            )
         LIMIT 1
         "#,
-    )
+    ))
     .bind(issue_id)
     .fetch_optional(pool)
     .await?;
@@ -680,8 +730,9 @@ pub async fn issues_in_sprint(
     sprint_id: &str,
 ) -> StorageResult<Vec<(String, String, String, Option<i64>, String)>> {
     // Returns (issue_id, project_id, title, effort, status).
-    let mut rows: Vec<(String, String, String, Option<i64>, String)> = sqlx::query_as(
-        r#"
+    let mut rows: Vec<(String, String, String, Option<i64>, String)> =
+        sqlx::query_as(&crate::dialect::sql(
+            r#"
         SELECT i.id, i.project_id, i.title, i.effort, i.status
         FROM sprint_issues si
         JOIN issues i ON i.id = si.issue_id
@@ -693,10 +744,10 @@ pub async fn issues_in_sprint(
         -- `IssueStatus::lifecycle_rank`. Do not put it back here.
         ORDER BY si.assigned_at ASC, si.rowid ASC
         "#,
-    )
-    .bind(sprint_id)
-    .fetch_all(pool)
-    .await?;
+        ))
+        .bind(sprint_id)
+        .fetch_all(pool)
+        .await?;
     // Grouped Open, In progress, Done. `sort_by_key` is stable, and that
     // is load-bearing: it keeps the query's `assigned_at` order inside each
     // status. A status string that does not parse cannot occur (the column
@@ -717,7 +768,7 @@ async fn live_totals(
     sprint_id: &str,
 ) -> StorageResult<(i64, i64, i64, i64)> {
     // COALESCE because SUM on an empty set returns NULL.
-    let row: (i64, i64, i64, i64) = sqlx::query_as(
+    let row: (i64, i64, i64, i64) = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT
             COALESCE(SUM(COALESCE(i.effort, 0)), 0)
@@ -733,7 +784,7 @@ async fn live_totals(
         JOIN issues i ON i.id = si.issue_id
         WHERE si.sprint_id = ?1
         "#,
-    )
+    ))
     .bind(sprint_id)
     .fetch_one(conn)
     .await?;
@@ -762,13 +813,13 @@ pub async fn summary(pool: &Pool, sprint_id: &str) -> StorageResult<SprintSummar
     let (committed_points, completed_points, committed_count, completed_count) = match sprint.status
     {
         SprintStatus::Completed => {
-            let row: Option<(i64, i64, i64, i64)> = sqlx::query_as(
+            let row: Option<(i64, i64, i64, i64)> = sqlx::query_as(&crate::dialect::sql(
                 r#"
                 SELECT committed_points, completed_points, committed_count, completed_count
                 FROM sprint_records
                 WHERE sprint_id = ?1
                 "#,
-            )
+            ))
             .bind(sprint_id)
             .fetch_optional(pool)
             .await?;
@@ -833,22 +884,23 @@ pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<Burndow
         let mut conn = pool.acquire().await?;
         return burndown_live(&mut conn, &sprint).await;
     }
-    let has_record: Option<i64> =
-        sqlx::query_scalar("SELECT 1 FROM sprint_records WHERE sprint_id = ?1")
-            .bind(sprint_id)
-            .fetch_optional(pool)
-            .await?;
+    let has_record: Option<i64> = sqlx::query_scalar(&crate::dialect::sql(
+        "SELECT 1 FROM sprint_records WHERE sprint_id = ?1",
+    ))
+    .bind(sprint_id)
+    .fetch_optional(pool)
+    .await?;
     if has_record.is_none() {
         return Err(missing_record(sprint_id));
     }
-    let rows: Vec<(NaiveDate, i64, i64)> = sqlx::query_as(
+    let rows: Vec<(NaiveDate, i64, i64)> = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT day, cumulative_committed, cumulative_completed
         FROM sprint_burndown_points
         WHERE sprint_id = ?1
         ORDER BY day ASC
         "#,
-    )
+    ))
     .bind(sprint_id)
     .fetch_all(pool)
     .await?;
@@ -891,7 +943,7 @@ async fn burndown_live(
     sprint: &Sprint,
 ) -> StorageResult<Vec<BurndownPoint>> {
     let sprint_id = sprint.id.as_str();
-    let issues: Vec<BurndownIssueRow> = sqlx::query_as(
+    let issues: Vec<BurndownIssueRow> = sqlx::query_as(&crate::dialect::sql(
         r#"
             SELECT i.id, i.effort, i.status, si.assigned_at, i.updated_at
             FROM sprint_issues si
@@ -899,7 +951,7 @@ async fn burndown_live(
             WHERE si.sprint_id = ?1
             ORDER BY si.assigned_at ASC, si.rowid ASC
             "#,
-    )
+    ))
     .bind(sprint_id)
     .fetch_all(&mut *conn)
     .await?;
@@ -946,7 +998,8 @@ async fn burndown_live(
         "#,
         placeholders
     );
-    let mut q = sqlx::query_as::<_, (String, DateTime<Utc>)>(&done_events_query);
+    let done_events_sql = crate::dialect::sql(&done_events_query);
+    let mut q = sqlx::query_as::<_, (String, DateTime<Utc>)>(&done_events_sql);
     for id in &issue_ids {
         q = q.bind(id);
     }
@@ -1056,13 +1109,13 @@ pub async fn distinct_contributors(
         };
         let (known, unassigned) = match sprint.status {
             SprintStatus::Completed => {
-                let row: Option<(i64, i64)> = sqlx::query_as(
+                let row: Option<(i64, i64)> = sqlx::query_as(&crate::dialect::sql(
                     r#"
                     SELECT contributor_count, had_unassigned_contributor
                     FROM sprint_records
                     WHERE sprint_id = ?1
                     "#,
-                )
+                ))
                 .bind(id)
                 .fetch_optional(pool)
                 .await?;
@@ -1089,7 +1142,7 @@ async fn live_contributor_basis(
     conn: &mut crate::dialect::Connection,
     sprint_id: &str,
 ) -> StorageResult<(i64, i64)> {
-    let row: (i64, i64) = sqlx::query_as(
+    let row: (i64, i64) = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT
             COUNT(DISTINCT i.assignee_id) AS known,
@@ -1100,7 +1153,7 @@ async fn live_contributor_basis(
         WHERE si.sprint_id = ?1
           AND i.status = 'done'
         "#,
-    )
+    ))
     .bind(sprint_id)
     .fetch_one(conn)
     .await?;
@@ -1116,7 +1169,7 @@ pub async fn recent_completed_for_team(
     limit: i64,
 ) -> StorageResult<Vec<(Sprint, SprintSummary)>> {
     let sprints: Vec<Sprint> = {
-        let rows = sqlx::query_as::<_, SprintRow>(
+        let rows = sqlx::query_as::<_, SprintRow>(&crate::dialect::sql(
             r#"
             SELECT id, team_id, name, goal, starts_on, ends_on,
                    status, started_at, completed_at, created_at, updated_at
@@ -1125,7 +1178,7 @@ pub async fn recent_completed_for_team(
             ORDER BY completed_at DESC, rowid DESC
             LIMIT ?2
             "#,
-        )
+        ))
         .bind(team_id)
         .bind(limit)
         .fetch_all(pool)
@@ -1265,7 +1318,7 @@ pub async fn backlog_for_team(
     team_id: &str,
     filter: BacklogFilter,
 ) -> StorageResult<Vec<BacklogRow>> {
-    let rows = sqlx::query_as::<_, BacklogIssueRow>(
+    let rows = sqlx::query_as::<_, BacklogIssueRow>(&crate::dialect::sql(
         r#"
         SELECT i.id, i.project_id, i.author_id, i.title, i.description,
                i.status, i.priority, i.effort, i.assignee_id,
@@ -1295,7 +1348,7 @@ pub async fn backlog_for_team(
         -- `Priority::severity_rank`. Do not put it back here.
         ORDER BY p.name ASC, i.created_at DESC, i.rowid DESC
         "#,
-    )
+    ))
     .bind(team_id)
     .bind(filter.project_id.as_deref())
     .bind(filter.priority.map(|p| p.as_str()))
@@ -1350,11 +1403,12 @@ pub async fn active_sprints_overlapping(
     from: DateTime<Utc>,
     to: DateTime<Utc>,
 ) -> StorageResult<Vec<Sprint>> {
-    let team_id: Option<Option<String>> =
-        sqlx::query_scalar(r#"SELECT team_id FROM projects WHERE id = ?1"#)
-            .bind(project_id)
-            .fetch_optional(pool)
-            .await?;
+    let team_id: Option<Option<String>> = sqlx::query_scalar(&crate::dialect::sql(
+        r#"SELECT team_id FROM projects WHERE id = ?1"#,
+    ))
+    .bind(project_id)
+    .fetch_optional(pool)
+    .await?;
     // Outer `Option`: does the project row exist. Inner `Option`:
     // is `team_id` NULL (a personal project). `.flatten()` collapses
     // "no row" and "row, but no team" into the same outcome — no

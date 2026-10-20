@@ -296,3 +296,298 @@ fn a_sixth_entry_added_to_only_this_table_is_caught() {
     ));
     assert!(!message_keys_match_the_shared_list(&widened));
 }
+
+/// `PG-004` §2: [`sql`]'s own parser, each edge named in the handoff
+/// and in this round's evidence, exercised without a server -- plain
+/// data in, plain data out. The plain, reachable cases first.
+
+#[test]
+fn a_numbered_placeholder_copies_its_digits_verbatim() {
+    assert_eq!(sql("WHERE id = ?1 AND x = ?2"), "WHERE id = $1 AND x = $2");
+}
+
+#[test]
+fn a_reused_number_stays_the_same_number_on_both_occurrences() {
+    // `optimistic_lock_guards.rs`'s own shape: the same bind value
+    // compared twice, same `?N` both times -- PostgreSQL allows a
+    // `$N` to repeat the same way, so this is a verbatim digit copy,
+    // not a renumbering.
+    assert_eq!(
+        sql("AND (?6 IS NULL OR julianday(updated_at) = julianday(?6))"),
+        "AND ($6 IS NULL OR julianday(updated_at) = julianday($6))"
+    );
+}
+
+#[test]
+fn bare_placeholders_are_numbered_left_to_right_in_binding_order() {
+    assert_eq!(sql("VALUES (?, ?, ?)"), "VALUES ($1, $2, $3)");
+}
+
+#[test]
+fn a_query_with_no_placeholder_at_all_is_returned_unchanged() {
+    assert_eq!(sql("SELECT 1"), "SELECT 1");
+}
+
+#[test]
+fn an_unchanged_query_borrows_rather_than_allocates() {
+    assert!(matches!(sql("SELECT 1"), std::borrow::Cow::Borrowed(_)));
+}
+
+#[test]
+fn a_rewritten_query_is_owned() {
+    assert!(matches!(sql("?1"), std::borrow::Cow::Owned(_)));
+}
+
+/// A `--` line comment containing a `?` is real in this crate's own
+/// query text (`sprints.rs`'s `ORDER BY` comments) and must not
+/// become a bind placeholder.
+#[test]
+fn a_question_mark_inside_a_line_comment_is_left_alone() {
+    assert_eq!(
+        sql("-- what status did this start in?\nWHERE id = ?1"),
+        "-- what status did this start in?\nWHERE id = $1"
+    );
+}
+
+/// A string literal containing a `?` does not occur in this crate's
+/// query text today (`grep -nE "'[^']*\?[^']*'" src/*.rs`, zero
+/// matches, checked 2026-10-20) -- the parser is not allowed to
+/// assume that stays true.
+#[test]
+fn a_question_mark_inside_a_string_literal_is_left_alone() {
+    assert_eq!(
+        sql("WHERE note = 'what status?' AND id = ?1"),
+        "WHERE note = 'what status?' AND id = $1"
+    );
+}
+
+/// An escaped `''` inside a string literal must not be read as the
+/// literal's own closing quote -- `'admin'`-style literals are real
+/// here (`teams.rs`), an escaped quote inside one is not, but the
+/// scanner's quote-tracking must survive it regardless.
+#[test]
+fn an_escaped_quote_inside_a_string_literal_does_not_end_it_early() {
+    assert_eq!(
+        sql("WHERE note = 'it''s a trap? ?1' AND id = ?2"),
+        "WHERE note = 'it''s a trap? ?1' AND id = $2"
+    );
+}
+
+/// A `/* */` block comment does not occur in this crate's query text
+/// today (`grep -c '/\*' src/*.rs` outside this very doc comment,
+/// zero matches, checked 2026-10-20) -- named and tested anyway.
+#[test]
+fn a_question_mark_inside_a_block_comment_is_left_alone() {
+    assert_eq!(
+        sql("/* what status? */ WHERE id = ?1"),
+        "/* what status? */ WHERE id = $1"
+    );
+}
+
+/// `??` does not occur in this crate's query text today (`grep '??'
+/// src/*.rs`, zero matches, checked 2026-10-20) -- two back-to-back
+/// bare placeholders, not one unrecognised token, since SQL has no
+/// `??` operator for this parser to mistake it for.
+#[test]
+fn back_to_back_bare_placeholders_are_each_numbered_independently() {
+    assert_eq!(sql("(??)"), "($1$2)");
+}
+
+/// A mix of `?N` and bare `?` in one query does not occur in this
+/// crate's query text today (measured 2026-10-18, `PG-004`
+/// handoff §1) -- named rather than silently relied on: a bare `?`'s
+/// assigned number is independent of any `?N` nearby, which is only
+/// correct because the two forms never share a query here.
+#[test]
+fn a_bare_placeholder_numbers_independently_of_a_nearby_numbered_one_this_crate_never_mixes() {
+    assert_eq!(sql("?1, ?"), "$1, $1");
+}
+
+/// `PG-004` §3: PostgreSQL's own [`stale_guard`] is plain equality --
+/// no function wrapping needed, since `updated_at` is never `TEXT`
+/// there.
+#[test]
+fn stale_guard_is_plain_equality_on_postgres() {
+    assert_eq!(stale_guard(6), "updated_at = $6");
+}
+
+/// `PG-004` §3: `EXTRACT(EPOCH FROM (now() - X)) / 86400.0` against a
+/// timestamp a known distance in the past -- the equivalence
+/// `issue_events`, `user_burnout`, `project_health` and
+/// `personal_metrics` all lean on for SQLite's
+/// `julianday('now') - julianday(X)`. A tenth of a day's tolerance
+/// (~144 seconds) absorbs the real wall-clock time this test itself
+/// takes to run, not a claim the two formulas round differently.
+#[tokio::test]
+async fn age_in_days_matches_julianday_within_a_tenth_of_a_day() {
+    let pool = migrated_pool().await;
+    let five_days_ago = chrono::Utc::now() - chrono::Duration::days(5);
+    let days: f64 =
+        sqlx::query_scalar("SELECT EXTRACT(EPOCH FROM (now() - $1::timestamptz)) / 86400.0")
+            .bind(five_days_ago)
+            .fetch_one(&pool)
+            .await
+            .expect("query");
+    assert!(
+        (days - 5.0).abs() < 0.1,
+        "expected ~5.0 days elapsed, got {days}"
+    );
+}
+
+/// `PG-004` §3: `now() + ?N::interval`, bound the *same* modifier
+/// string SQLite's `datetime('now', ?N)` already takes (`"-N days"`),
+/// against known-age timestamps on both sides of a 7-day window.
+#[tokio::test]
+async fn a_relative_time_filter_matches_sqlites_own_window() {
+    let pool = migrated_pool().await;
+
+    let within: bool = sqlx::query_scalar("SELECT ($1::timestamptz >= now() + $2::interval)")
+        .bind(chrono::Utc::now() - chrono::Duration::days(3))
+        .bind("-7 days")
+        .fetch_one(&pool)
+        .await
+        .expect("query");
+    assert!(
+        within,
+        "a timestamp 3 days old must be inside a 7-day window"
+    );
+
+    let outside: bool = sqlx::query_scalar("SELECT ($1::timestamptz >= now() + $2::interval)")
+        .bind(chrono::Utc::now() - chrono::Duration::days(10))
+        .bind("-7 days")
+        .fetch_one(&pool)
+        .await
+        .expect("query");
+    assert!(
+        !outside,
+        "a timestamp 10 days old must be outside a 7-day window"
+    );
+}
+
+/// `PG-004` §3: `x::date::text`, against SQLite's `DATE(x)` -- both
+/// must render `YYYY-MM-DD` for `user_burnout::cognitive_switching_for_user`'s
+/// own `GROUP BY day` to mean the same thing on both backends.
+#[tokio::test]
+async fn date_cast_to_text_matches_sqlites_date_function() {
+    use chrono::TimeZone;
+
+    let pool = migrated_pool().await;
+    let ts = chrono::Utc.with_ymd_and_hms(2026, 3, 7, 23, 59, 0).unwrap();
+    let day: String = sqlx::query_scalar("SELECT ($1::timestamptz::date::text)")
+        .bind(ts)
+        .fetch_one(&pool)
+        .await
+        .expect("query");
+    assert_eq!(day, "2026-03-07");
+}
+
+/// `PG-004` §3: `sprints::capture_record`'s own `ON CONFLICT ... DO
+/// UPDATE` names `captured_at = CURRENT_TIMESTAMP` explicitly in its
+/// `SET` list -- without it, a second capture would leave the first
+/// capture's `captured_at` untouched, since `DO UPDATE` only touches
+/// columns its own `SET` list names (unlike SQLite's `INSERT OR
+/// REPLACE`, which reset every unlisted column to its `DEFAULT` by
+/// deleting and re-inserting). Two real captures, in two real
+/// transactions -- `now()` is frozen per-transaction, so this would
+/// not catch a same-transaction staleness bug, only the one this SQL
+/// actually has: a `SET` list that forgot the column.
+#[tokio::test]
+async fn recapturing_a_sprint_record_still_bumps_captured_at() {
+    let pool = migrated_pool().await;
+    let user_id = uuid::Uuid::new_v4().to_string();
+    crate::users::insert(
+        &pool,
+        &user_id,
+        &format!("{user_id}@example.test"),
+        "not-a-real-hash",
+        "PG-004 Recapture Tester",
+    )
+    .await
+    .expect("insert user");
+    let team_id = crate::teams::insert(
+        &pool,
+        "PG-004 recapture team",
+        &format!("pg-004-recapture-{user_id}"),
+        None,
+        &user_id,
+    )
+    .await
+    .expect("insert team");
+    let sprint_id = crate::sprints::insert(
+        &pool,
+        &team_id,
+        "PG-004 recapture sprint",
+        None,
+        chrono::Utc::now().date_naive(),
+        chrono::Utc::now().date_naive(),
+    )
+    .await
+    .expect("insert sprint");
+
+    let mut tx = pool.begin().await.expect("begin");
+    crate::sprints::capture_record(&mut tx, &sprint_id)
+        .await
+        .expect("first capture");
+    tx.commit().await.expect("commit");
+
+    let first: chrono::DateTime<chrono::Utc> =
+        sqlx::query_scalar("SELECT captured_at FROM sprint_records WHERE sprint_id = $1")
+            .bind(&sprint_id)
+            .fetch_one(&pool)
+            .await
+            .expect("read first captured_at");
+
+    let mut tx = pool.begin().await.expect("begin");
+    crate::sprints::capture_record(&mut tx, &sprint_id)
+        .await
+        .expect("second capture");
+    tx.commit().await.expect("commit");
+
+    let second: chrono::DateTime<chrono::Utc> =
+        sqlx::query_scalar("SELECT captured_at FROM sprint_records WHERE sprint_id = $1")
+            .bind(&sprint_id)
+            .fetch_one(&pool)
+            .await
+            .expect("read second captured_at");
+
+    assert!(
+        second > first,
+        "a second capture must bump captured_at forward, got first={first:?} second={second:?}"
+    );
+}
+
+/// `PG-004` §3: "the column-list spelling differs between the two
+/// call styles already in use here (`ON CONFLICT(col)` and
+/// `ON CONFLICT (col)`)... Check, do not assume." Both already
+/// appear unchanged in production SQL (`sprints.rs`'s own
+/// `ON CONFLICT(issue_id)`, `view_states.rs`'s own
+/// `ON CONFLICT (user_id, view_key)`); this proves the space is
+/// insignificant directly, on a throwaway table, rather than through
+/// one production path exercising only one spelling.
+#[tokio::test]
+async fn on_conflicts_column_list_parses_the_same_with_or_without_a_leading_space() {
+    let pool = migrated_pool().await;
+    sqlx::query("CREATE TEMP TABLE pg_004_on_conflict_spelling (id INT PRIMARY KEY, n INT)")
+        .execute(&pool)
+        .await
+        .expect("create temp table");
+    sqlx::query(
+        "INSERT INTO pg_004_on_conflict_spelling (id, n) VALUES (1, 1) \
+         ON CONFLICT(id) DO UPDATE SET n = excluded.n",
+    )
+    .execute(&pool)
+    .await
+    .expect("insert, no-space spelling");
+    sqlx::query(
+        "INSERT INTO pg_004_on_conflict_spelling (id, n) VALUES (1, 2) \
+         ON CONFLICT (id) DO UPDATE SET n = excluded.n",
+    )
+    .execute(&pool)
+    .await
+    .expect("upsert, spaced spelling");
+    let n: i32 = sqlx::query_scalar("SELECT n FROM pg_004_on_conflict_spelling WHERE id = 1")
+        .fetch_one(&pool)
+        .await
+        .expect("read back");
+    assert_eq!(n, 2, "both spellings must act on the same conflict target");
+}
