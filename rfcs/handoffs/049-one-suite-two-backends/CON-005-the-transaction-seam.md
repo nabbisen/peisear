@@ -133,6 +133,80 @@ the architect has proposed a change that measurement refuted; a
 fourteen-site edit chosen from reasoning alone is the same bet at
 higher stakes.
 
+## §3a — round 1's classification, as accepted and corrected
+
+Round 1 classified all fourteen and recommended a mechanism per
+group. **Accepted, with one site moved.** Round 2 implements this
+table, not §3's open question.
+
+| Group | Sites | Mechanism |
+|---|---|---|
+| **A** — one row, already existing, nothing to guard but itself | **6**: `issues::update_guarded` (413), `update_status_guarded` (553), `update_schedule_guarded` (665), `delete_guarded` (740), `sprints::add_issue_if_status` (572), `remove_issue_if_status` (637) | `SELECT … FOR UPDATE` on that row, first statement after a plain `begin()` |
+| **B** — an aggregate over siblings that all exist, scoped by a shared key | **4**: `sprints::start_guarded` (292), `reopen_guarded` (504), `teams::update_role` (397), `remove_member` (437) | `SELECT … FOR UPDATE` over the scoped set (`team_id`) |
+| **C** — a predicate against a row that may not exist, over a possibly empty set | **3**: `user_capacities::insert` (344), `update_guarded` (428), `close_at_guarded` (570) | `pg_advisory_xact_lock(classid, objid)`, two-key form with a reserved `classid`, keyed on `user_id` |
+| **D** — one row plus the set it aggregates over | **1**: `sprints::complete_guarded` (353) | §3b |
+
+**The SQLite branch of every one is `BEGIN IMMEDIATE`, byte for
+byte, untouched.**
+
+`SERIALIZABLE` is declined for all fourteen, on round 1's own
+reasoning: every guarantee here is reachable with a blocking lock
+that reproduces `BEGIN IMMEDIATE`'s shape and is then answered by the
+stamp/status/conflict check already written, so adopting it would buy
+nothing and surface a new error class.
+
+**`SET LOCAL lock_timeout = '5s'` on the `postgres` branch is
+required**, not optional, and lives in the seam rather than at any
+call site. It matches SQLite's already-shipped `busy_timeout` rather
+than inventing a number; round 1 checked the thing that mattered and
+found `StorageError` has no busy/timeout variant on either backend,
+so a SQLite busy timeout and PostgreSQL's `55P03` both already land
+on `StorageError::Database`. **Nothing becomes newly visible to a
+user, so this is not an `NFR-CONC-*` question.**
+
+## §3b — `sprints::complete_guarded` is not a Group A site
+
+Group A's mechanism would **weaken a guarantee the SQLite path has
+and this module's own doc comment states.** `complete_guarded` holds
+its transaction across four reads of state a sprint-row lock does not
+cover:
+
+1. the sprint row — locked
+2. stamp + status check, then `UPDATE sprints SET status='completed'`
+3. `live_totals` — `SUM(i.effort)`, `SUM(CASE WHEN i.status='done')`,
+   `COUNT(*)` over `sprint_issues si JOIN issues i`
+4. `burndown_live` — a second read of the same issue rows
+5. `live_contributor_basis` — `COUNT(DISTINCT i.assignee_id)`, same join
+6. write `sprint_records` and the burndown series
+
+**3, 4 and 5 are three separate statements**, so under READ COMMITTED
+each takes its own snapshot. `issues::update_status_guarded` touches
+`issues` only — it never reads or locks `sprints` (`issues.rs:553`–
+`600`) — so under Group A's mechanism it can commit **between steps 3
+and 5**. The persisted record then mixes two states:
+`completed_count` from before the change, `contributor_count` from
+after. **`contributor_count` is `NFR-PRIV-007`'s suppression basis**,
+so the tear lands on a **P0** privacy control, not on a wrong total.
+
+The module already says what the transaction is for: *"a crash or **a
+competing writer** cannot leave a `completed` sprint without its
+record."* `BEGIN IMMEDIATE` excludes that writer; a sprint-row lock
+does not.
+
+**The candidate — evaluate it, it is not prescribed**: Group B's
+shape at a different scope, `SELECT … FOR UPDATE` over `issues`
+joined through `sprint_issues WHERE sprint_id = ?`, so a concurrent
+guarded issue write on any member issue serialises against the
+capture. Group C's empty-set objection does not apply: a sprint with
+no issues has trivially stable aggregates, and the only way to add
+one is `add_issue_if_status`, a Group A site that takes the
+sprint-row lock.
+
+**Deterministic lock order is required.** This is the first site to
+lock a *set*, and two captures over overlapping issue sets acquiring
+rows in different scan orders is the one deadlock shape these
+mechanisms introduce. `lock_timeout` is the backstop, not the answer.
+
 ## §4 — gates
 
 - **The guarantee, proven, not the syntax.** For each mechanism
@@ -140,6 +214,12 @@ higher stakes.
   passes with it, on PostgreSQL. A check never seen to fail is not
   evidence, and "it no longer syntax-errors" is not the guarantee
   `BEGIN IMMEDIATE` was there for.
+- **For `complete_guarded`, that test is the torn read specifically**
+  — a concurrent guarded issue write landing between the aggregate
+  statements, shown to corrupt the captured record without the
+  mechanism and not with it. Not merely that the transaction opens.
+- **`lock_timeout` seen to apply**: a blocked transaction failing
+  rather than hanging, demonstrated once.
 - The five `optimistic_lock_guards` tests green on **both** backends
   with **no `#[ignore]` left** — `CON-002`'s ignore exists to be
   deleted by this round.
@@ -170,15 +250,13 @@ higher stakes.
 
 ## §6 — exit condition
 
-All fourteen sites classified by what they guard, with the
-classification reported before the broad edit; one home in
+All fourteen sites implemented per §3a/§3b, the classification
+having been reported and reviewed before the broad edit (round 1); one home in
 `dialect` for the transaction seam and no `begin_with` literal
 outside it; for every mechanism adopted, a test seen to fail
 without it; the five guard tests green on both backends with
 `CON-002`'s `#[ignore]` deleted; the unfiltered `postgres` suite at
 46 passed, 0 ignored; `DEC-007`'s SQLite side unmoved except for
-tests this round adds, stated; `lib.rs`'s crate-root claim
-corrected and `CHANGELOG.md`'s `[0.55.0]` section left untouched;
-`§10.47` opened citing `§10.42`, naming the missed review bound as
-well as the overstated claim; `CON-004` told what `scaling.md` must
+tests this round adds, stated; `lock_timeout` in the seam and seen to apply;
+deterministic lock order wherever a set is locked; `CON-004` told what `scaling.md` must
 now say; all gates re-run after the last edit.
