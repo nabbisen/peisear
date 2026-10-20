@@ -161,7 +161,6 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| 0.55.0 | **A second backend that runs.** `RFC 018` P3 — the connection and pool options, 22 migrations ported, 11 triggers re-implemented — **plus the queries**, which the RFC's phase table has no home for: 295 `?N` placeholders and the SQLite date functions, measured 2026-10-18 | `RFC 018` §6, [handoffs 048](rfcs/handoffs/048-the-postgresql-schema/README.md) | **Authorized 2026-10-14; scoped 2026-10-18, four rounds; queries clause authorized 2026-10-20.** The reason it needed its own word: P3's own gate (*"the migration suite applies cleanly on both"*) is satisfiable with every query still broken, and P4's gate assumes they work, so the 295 fall between the two phases. Scoping it here is cheaper than P4 discovering it |
 | 0.56.0 | **The conformance suite.** `RFC 018` P4 — one suite against both backends in CI, and the operations story | `RFC 018` §6 | Authorized 2026-10-14 |
 | 0.57.0 | **The specification checks itself.** The two citation rules — every `§10.N` citation has a matching heading, no four-digit `RFC 0NNN` outside the history directory — **plus the rest of `spec_scan`**: Appendix A's columns summed from its own rows, counts stated in prose checked against the workspace, and the status vocabulary closed to a known list. **`§10.42`**: `requirements.md` is this project's most-edited document and nothing mechanical reads it | `§10.36`'s decision (2026-10-14); `§10.42` (2026-10-15); the citation-form sweep carried since 0.52.0 | **Authorized 2026-10-15**, citation rules and `spec_scan` widening together. Both are guard work, both are predicates rather than lists, and the second has been carried unplaced for two releases. Placed here rather than earlier because **guards do not displace an authorized sequence** — but ahead of `RFC 020`, because 0.52.0's own precedent is that guard infrastructure should not queue behind a feature |
 | 0.58.0 | **The first thing it says.** `RFC 020` — a first run with no configuration asks five questions with working defaults and writes the `.env` it describes, so the file and the explanation cannot disagree. Skipped when configuration exists or stdin is not a terminal | `RFC 020` (**Accepted**, 2026-10-15) | **Authorized 2026-10-15.** Placement follows the note authorized with the 0.57.0 row: behind `RFC 018`'s phases, and behind the citation guard on 0.52.0's precedent that guard work does not queue behind a feature. **Handoffs are not written yet** and are not due until 0.57.0 is cut (Release cycle, entry criterion 3) |
@@ -178,6 +177,18 @@ baseline rows, which is where release history belongs.
 **Shipped 2026-10-17**: `0.53.0` (the first five minutes), all four
 `DEC-056` legs, seven crates on crates.io, five archives on the
 Release and `ghcr.io/nabbisen/peisear` at `0.53.0` and `latest`.
+
+**Shipped 2026-10-20**: `0.55.0` (a second backend that runs) —
+`RFC 018` P3 and the queries its own phase table had no home for, in
+four rounds. All four `DEC-056` legs: seven crates on crates.io, five
+archives on the Release, `ghcr.io/nabbisen/peisear` at `0.55.0`.
+**Nothing an existing SQLite operator runs moved** — the migration
+count was 22 before the candidate and 22 after, walked from a real
+0.54.0 install. **What it does not deliver**: `peisear` has no
+`[features]` section, so every archive, the image and
+`cargo install peisear` build SQLite only; the backend is real code
+reachable by building `peisear-storage` yourself, and `RFC 018` P4 is
+where the conformance suite and the operations story land.
 
 **Shipped 2026-10-18**: `0.54.0` (the dialect seam), `RFC 018` P1 + P2
 — coded trigger errors (`0022`, matched by bracketed code rather than

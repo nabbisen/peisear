@@ -15,7 +15,7 @@ conformance suite still ahead at P4.
 | PG-002 | [the schema](./PG-002-the-schema.md) | 22 migrations ported; the `migrate!` embed made dialect-aware; a drift guard between the two sets proposed. **`0021`'s millisecond token is the dangerous one** — `NFR-CONC-001`/`-002`'s subject, measured down from one second at 0.50.0 | PG-001 | **Closed** — 1 round |
 | PG-003 | [the triggers](./PG-003-the-triggers.md) | 11 triggers, `RFC 018` §5's *"the real work"*. The five codes carried as `ERRCODE` rather than `DIA-001`'s bracket; a PostgreSQL `translate_trigger_error` sibling; **the five validations rejected identically on both backends, asserted on `MessageKey`** | PG-002 | **Closed** — 2 rounds |
 | PG-004 | [the queries](./PG-004-the-queries.md) | **295 `?N` placeholders and the SQLite date functions.** Not in the RFC's phase table — see below | PG-003 | **Closed** — 1 round |
-| REL-0.55.0 | [the release candidate](./REL-0.55.0-release-candidate.md) | The cut, `DEC-028`, `DEC-056`. Written when the four rounds close | all four | **Accepted** — awaiting the owner’s approval of the four legs |
+| REL-0.55.0 | [the release candidate](./REL-0.55.0-release-candidate.md) | The cut, `DEC-028`, `DEC-056`. Written when the four rounds close | all four | **Shipped** — 0.55.0 released 2026-10-20 |
 
 **Status lives in the table above, not in a message.**
 
