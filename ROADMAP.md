@@ -772,6 +772,20 @@ question of a second archive set and container tag. Writing it down
 here so the step is taken deliberately rather than reached by drift
 from a passthrough that already exists.
 
+**P5 also carries the dead driver.** `peisear-storage`'s
+`sqlite = []` is an empty feature: it gates `#[cfg(feature =
+"sqlite")]` and not the dependency, because `sqlx`'s own `sqlite`
+feature is unconditional in `[workspace.dependencies]`. Measured at
+`f0cd461`, a `--no-default-features --features postgres` build of
+`peisear` links the bundled SQLite C library — 387 distinct
+`sqlite3_*` symbols in the binary — and needs a C toolchain to
+compile it, on a build that will never open a SQLite file. It is
+pre-existing and documented in `peisear-storage/Cargo.toml`'s own
+comment; `CON-001` made it reachable rather than causing it, and it
+harms nobody while no install path exists. **It stops being
+cosmetic the day P5 documents one**, so it is a condition of P5 and
+not a loose end.
+
 ### OIDC / IDaaS integration
 
 Land the OIDC verifier alongside the JWT code in `peisear-auth`

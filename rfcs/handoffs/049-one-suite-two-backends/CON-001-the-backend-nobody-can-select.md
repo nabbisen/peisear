@@ -101,11 +101,25 @@ default.
 
 **Measured on this shape** in a detached worktree at `da30573`:
 `cargo build -p peisear --no-default-features --features postgres`
-finishes; the postgres resolution contains no `sqlite`; the default
-resolved-feature diff against `da30573` is six lines, all three
-crates showing `default,sqlite` where they previously showed
-nothing, with no third-party crate moving. **The gates are still the
-round's to run.**
+finishes; **no `sqlite` on the `peisear-storage`, `peisear-web` or
+`peisear-notify` nodes**; the default resolved-feature diff against
+`da30573` is six lines, all three crates showing `default,sqlite`
+where they previously showed nothing, with no third-party crate
+moving. **The gates are still the round's to run.**
+
+**Corrected 2026-10-20**: this paragraph first said *"the postgres
+resolution contains no `sqlite`"*, and round 2 repeated it. That is
+false of the resolution as a whole — `sqlx` carries `sqlite`,
+`sqlx-sqlite` and `libsqlite3-sys` with `bundled` in a `postgres`
+build, and the built binary contains 387 distinct `sqlite3_*`
+symbols. The scoped claim above is what was measured.
+`peisear-storage`'s `sqlite = []` is an empty feature: it gates the
+`cfg` and not the driver, since `sqlx`'s own `sqlite` is
+unconditional at `Cargo.toml:51`. Pre-existing and documented in
+`peisear-storage/Cargo.toml`'s own comment; **made reachable** by
+this round, because before it no PostgreSQL binary could be built at
+all. Not this round's to fix — `ROADMAP.md`'s **P5** carries it and
+`CON-004` opens the register entry.
 
 ## §3 — the passthrough is test infrastructure, not an install path
 

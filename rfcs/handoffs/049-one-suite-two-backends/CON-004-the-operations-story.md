@@ -144,7 +144,35 @@ supported* has made an informed choice; a reader following a
 documented command has been told it works. That difference is the
 whole of `CON-001` §3.
 
-## §5 — gates
+## §5 — one register entry from `CON-001`
+
+`CON-001` round 2 measured something its own scope could not fix,
+and `requirements.md` is amended here because this round already
+amends it. **Open it as a class, not an incident:**
+
+*A feature named for a backend that gates the `cfg` and not the
+driver.* `peisear-storage`'s `sqlite = []` is empty — it drives
+`#[cfg(feature = "sqlite")]` correctly and gates no dependency,
+because `sqlx`'s own `sqlite` feature is unconditional in
+`[workspace.dependencies]` (`Cargo.toml:51`). A `--no-default-features
+--features postgres` build of `peisear` therefore compiles and links
+the bundled SQLite C library: `sqlx-sqlite`, `libsqlite3-sys` with
+`bundled`, and **387 distinct `sqlite3_*` symbols in the binary**.
+
+**State it as what it is**: pre-existing, documented honestly in
+`peisear-storage/Cargo.toml`'s own comment, harming no user while
+PostgreSQL is not a supported deployment, and **becoming a defect
+the moment an install path is documented** — which is `ROADMAP.md`'s
+P5, where it is also recorded. Do not write it up as a defect
+`CON-001` introduced; it did not.
+
+**Do not fix it here.** `sqlx` is a real dependency of
+`peisear-storage` alone (in `peisear-web` it is a dev-dependency),
+so gating is plausible and would ripple into that dev-dependency and
+the SQLite-hardcoded integration tests. That is a round with a
+measurement, not a clause in this one.
+
+## §6 — gates
 
 - `mdbook build`, and the new sections **read back as an operator**,
   not as an author — the discipline `DEC-028`'s pass 5 uses.
@@ -159,7 +187,7 @@ whole of `CON-001` §3.
 - `DEC-007` unchanged: this round should add no test. If it adds
   one, say why.
 
-## §6 — escalate rather than deciding
+## §7 — escalate rather than deciding
 
 - **The `NFR-CMP-003` sibling question in §3 is the owner's.**
   Propose, do not decide.
@@ -175,7 +203,7 @@ whole of `CON-001` §3.
   rather than documented.** It might be; `RFC 020`'s first-run
   wizard is 0.58.0 and is where that would live. Not here.
 
-## §7 — exit condition
+## §8 — exit condition
 
 `backup.md` carrying a PostgreSQL section whose every command has
 been run, and saying plainly which sections are about which backend;
@@ -184,6 +212,8 @@ operator meets it rather than only in the error; `NFR-CMP-003`
 scoped to the SQLite backend with nothing it required dropped; the
 PostgreSQL sibling question proposed to the owner rather than
 answered; `external-design.md:210` and `hardening.md:163` reconciled;
+the `CON-001` register entry opened as a class, stated as
+pre-existing and not as something `CON-001` introduced;
 `scaling.md` stating the feature's status as a property, naming
 PostgreSQL as an unsupported configuration at 0.56.0, and carrying
 **no install command anywhere**; `DEC-028`'s five passes complete
