@@ -16,10 +16,11 @@ anyone can tell.
 | ID | Handoff | Subject | Blocked on | State |
 |---|---|---|---|---|
 | CON-001 | [the backend nobody can select](./CON-001-the-backend-nobody-can-select.md) | The feature passthrough. **Measured: no command line builds `peisear-web` or `peisear` against PostgreSQL** — both CLI forms hit `dialect.rs:89`'s `compile_error!`. Everything else here is blocked on it. Adds the feature and a **CI boot smoke**; documents no install path (§3) | — | **Closed** — 2 rounds. Round 1 stopped correctly (§1’s census was two crates; the answer is three); round 2 implemented the corrected shape, and CI booted `peisear` against a real PostgreSQL server for the first time. One claim of the architect’s was retracted in review — the postgres build *does* carry the SQLite driver; recorded on `ROADMAP.md`’s P5 and in `CON-004` §5 |
-| CON-002 | [the suite that runs whole](./CON-002-the-suite-that-runs-whole.md) | **48 tests compile under `postgres`; CI runs 31 by name.** And a `--lib` name filter that matches nothing exits 0 — measured — so those lines cannot tell *green* from *examined nothing*. `§10.46` | CON-001 (partly) | **Next** |
-| CON-003 | [the lock tests on both backends](./CON-003-the-lock-tests-on-both-backends.md) | P4's gate says *storage **and lock*** tests. The 26 lock tests are in `peisear-web`, and `TestApp::spawn` hardcodes a `sqlite://` tempdir. **Isolation across 26 tests on one server is the round** | CON-001 | Not started |
+| CON-002 | [the suite that runs whole](./CON-002-the-suite-that-runs-whole.md) | **48 tests compile under `postgres`; CI ran 31 by name.** And a `--lib` name filter that matches nothing exits 0 — measured — so those lines cannot tell *green* from *examined nothing*. `§10.46` | CON-001 | **Closed** — 1 round. Unfiltered suite in CI, four name-filtered lines deleted, 46 of 48 running with the two SQLite-specific exceptions named and gated. **Escalated a production defect that reshapes the series** — see `CON-005` |
+| CON-005 | [the transaction seam](./CON-005-the-transaction-seam.md) | **Fourteen production call sites open `pool.begin_with("BEGIN IMMEDIATE")`** — a syntax error on PostgreSQL, so no guarded write runs there at all. It compiles, which is why every earlier gate passed. The seam belongs in `dialect`; the mechanism is per-site and not decided | CON-002 | **Next** |
+| CON-003 | [the lock tests on both backends](./CON-003-the-lock-tests-on-both-backends.md) | P4's gate says *storage **and lock*** tests. The 26 lock tests are in `peisear-web`, and `TestApp::spawn` hardcodes a `sqlite://` tempdir. **Isolation across 26 tests on one server is the round** | CON-001, CON-005 | Not started |
 | CON-004 | [the operations story](./CON-004-the-operations-story.md) | `backup.md` is wholly SQLite and never says so; **`JWT_SECRET` is mandatory on PostgreSQL and no document says it**; `NFR-CMP-003` restated for the SQLite backend | — (written last by choice) | Not started |
-| REL-0.56.0 | not written | The cut, `DEC-028`, `DEC-056`. Written when the four rounds close | all four | Not written |
+| REL-0.56.0 | not written | The cut, `DEC-028`, `DEC-056`. Written when the five rounds close | all five | Not written |
 
 **Status lives in the table above, not in a message.**
 
@@ -101,9 +102,11 @@ and `CON-001` is the one where getting it wrong would reach every
 user at once — a passthrough that quietly moves the default build's
 resolved features is this series' worst outcome.
 
-**Not open to a fifth round.** Anything else found goes to the
-architect and waits, with the standing exception: a defect that
-**blocks the release** is not a scope question.
+**It was not open to a fifth round, and `CON-005` is one.** The
+standing exception applied exactly as written: `CON-002` found that
+no guarded write executes on PostgreSQL, which blocks `CON-003`'s own
+gate, so it was never a scope question. Everything *else* found still
+goes to the architect and waits.
 
 ---
 

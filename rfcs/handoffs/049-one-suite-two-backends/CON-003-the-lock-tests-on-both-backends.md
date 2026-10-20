@@ -1,8 +1,12 @@
 # CON-003 — the lock tests on both backends
 
-**0.56.0, `RFC 018` P4, round 3 of 4.** Blocked on `CON-001`: these
-tests live in `peisear-web`, which cannot select the backend until
-that round lands.
+**0.56.0, `RFC 018` P4.** Blocked on `CON-001` (these tests live in
+`peisear-web`, which could not select the backend until that round
+landed) and now on **`CON-005`**: `CON-002` found that all fourteen
+guarded-write call sites open `pool.begin_with("BEGIN IMMEDIATE")`,
+which is a syntax error on PostgreSQL. Every one of the 26 lock
+tests below exercises a guarded write. **This round cannot start
+until `CON-005` closes.**
 
 P4's gate names *"the same storage **and lock** tests against both
 backends."* `CON-002` does the storage half inside
@@ -52,6 +56,17 @@ isolation is the whole round.** The two shapes worth considering:
    eleven triggers would have to be schema-scoped, and `search_path`
    is per-connection — across a pool that is a property you have to
    keep proving rather than one you have.
+
+**`CON-002` has already shipped a fourth shape, and this round
+owns retiring it.** `optimistic_lock_guards::migrated_pool`'s
+PostgreSQL body deletes three roots by fixed id (`'t'`, `'p'`,
+`'u'`) before every test, which reproduces what a fresh SQLite file
+gave for free — but only because CI passes `-- --test-threads=1`.
+Run those five tests in parallel and one deletes the rows another is
+asserting on. It is correct today and correct for the reason this
+round is told not to rely on. **Whatever isolation mechanism this
+round builds, apply it there too and delete the delete-by-fixed-id
+reset.** One mechanism for the crate, not two.
 
 **A third shape exists and is a trap**: one shared database,
 truncated between tests, leaning on the `-- --test-threads=1` that
@@ -110,11 +125,15 @@ wrong.
   outside noise.
 - **If the mechanism tempts you into the other 30 files.** Report
   it; do not take it.
+- **If `CON-005`'s transaction seam turns out not to be enough** for
+  a lock test to hold through the router. That is the same class of
+  finding `CON-002` escalated and goes the same way.
 
 ## §6 — exit condition
 
 All 26 lock tests running against both backends from one set of
-assertions; isolation on PostgreSQL enforced by the fixture rather
+assertions; `optimistic_lock_guards`'s delete-by-fixed-id reset
+replaced by this round's own isolation mechanism; isolation on PostgreSQL enforced by the fixture rather
 than by a test-runner flag, with the chosen shape justified against
 §2's three; the SQLite run unchanged in count, names and timing;
 the PostgreSQL half wired into CI without a name filter; the other

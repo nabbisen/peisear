@@ -131,6 +131,13 @@ arrived. Replace both with what is true:
   no other integration test does. A count would be truer today and
   wrong by the next release — and `spec_scan` (0.57.0) is going to
   start checking counts stated in prose.
+- **The hard fact `CON-005` added, which must be in there**: until
+  `CON-005` closes, no guarded write executes on PostgreSQL at all —
+  fourteen production call sites open SQLite's `BEGIN IMMEDIATE`. If
+  `CON-005` closes before this round, say what it replaced it with
+  and that the guarantee is now proven on both backends; if it does
+  not, say the backend cannot take a write. **Either way the reader
+  learns it here, not from a syntax error.**
 - The release artefacts are unchanged: same five archives, same
   single container tag, `cargo install peisear` still SQLite.
 - What would earn support: the full integration suite on both
