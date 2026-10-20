@@ -335,9 +335,10 @@ async fn sprints_delete_guard_refuses_a_stale_millisecond_token_and_accepts_the_
 // `CON-002` (`RFC 018` P4): `user_capacities::insert` -- this test's
 // own seed step -- opens `pool.begin_with("BEGIN IMMEDIATE")`, SQLite
 // transaction-mode syntax with no PostgreSQL equivalent spelling
-// (`syntax error at or near "IMMEDIATE"`, measured in CI). Thirteen
-// production call sites across `user_capacities.rs`, `issues.rs`,
-// `sprints.rs` and `teams.rs` share this pattern -- not a fixture,
+// (`syntax error at or near "IMMEDIATE"`, measured in CI). Fourteen
+// production call sites across `user_capacities.rs` (3), `issues.rs`
+// (4), `sprints.rs` (5) and `teams.rs` (2) share this pattern (`grep
+// -c 'pool\.begin_with\("BEGIN IMMEDIATE"\)'` per file) -- not a fixture,
 // and not decided here: `BEGIN IMMEDIATE`'s own role is taking
 // SQLite's write lock before a check that would otherwise race
 // (`RACE-00x`/`STORE-00x`'s own subject), and PostgreSQL's MVCC model
