@@ -176,6 +176,7 @@ in CI's `peisear-web --lib` step). Each rule has a test that breaks it.
 | Every archive is linked from `CHANGELOG.md`, and every relative link there resolves | same | in place |
 | No markdown file links to a changelog section that is not in the file it names | same | in place |
 | The workspace version has a dated section | same | in place |
+| Every released version (a real `git tag`) has a section somewhere | same | in place, since `REL-0.55.0` round 2 |
 | ~~From 0.41.0, a dated section opens with `### Highlights`~~ | **nothing — withdrawn 2026-09-25 before it took effect** | **not a rule** |
 | **The tag's message carries the release-notes link** | **nobody — the release procedure above, by hand** | **not checked** |
 | **The Release's title is the bare `X.Y.Z`** | **nobody — by hand, and it drifted for seven releases before anyone wrote it down** | **not checked** |

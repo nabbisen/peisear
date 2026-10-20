@@ -21,6 +21,18 @@
 //!    that is in that file.
 //! 6. **The workspace version has a section in `CHANGELOG.md` and it is
 //!    dated.**
+//! 7. **Every released version — every real `git tag` — has a section
+//!    somewhere**, `CHANGELOG.md` or an archive (`REL-0.55.0` round 2,
+//!    `§10`: `b002284` removed `## [0.54.0]`'s heading while rewriting the
+//!    section above it, and rules 1-6 all passed on the file that
+//!    produced — none of them ask which versions *ought* to have a
+//!    section, only whether the ones present are arranged consistently).
+//!    Tags, never a hand-maintained list: the tag is the fact a release
+//!    happened, and a list is a second place to forget one. This rule
+//!    survives a future changelog archive unchanged — `homes` (rule 1's
+//!    own map of every version to the file it lives in) already looks in
+//!    both places, so widening where releases are recorded needs no
+//!    change here.
 //!
 //! **Every rule above is about the arrangement being self-consistent**, not
 //! about how a section is written. A rule requiring a section to open with a
@@ -33,7 +45,9 @@
 //! nothing here goes to the network; that a tag's message carries the link --
 //! that is the release procedure, done by hand; whether a section's *content*
 //! is any good; and links written in anything but inline markdown form
-//! `[text](target)` (reference-style definitions are not read).
+//! `[text](target)` (reference-style definitions are not read). Rule 7 reads
+//! local `git tag` output (via [`released_tags`]) -- the same class of read as
+//! every file this module already reads, not the network either.
 //!
 //! The rules are a pure function of text ([`violations`]) so each can be
 //! **planted** by editing the real files in memory: a rule never seen to fail
@@ -223,6 +237,13 @@ pub(crate) struct Input<'a> {
     pub exists: &'a dyn Fn(&str) -> bool,
     /// `(repo-relative path, text)` of every other markdown file.
     pub docs: Vec<(String, String)>,
+    /// Every version this repository has tagged as released (`git tag`,
+    /// not a hand-maintained list — `REL-0.55.0` round 2, `§10`: a tag is
+    /// the fact that a release happened, and a list is a second place to
+    /// forget one). Read by [`real`], outside this pure function, so a
+    /// test can plant any list without touching the real repository's
+    /// own tags.
+    pub released_versions: Vec<Version>,
 }
 
 /// Every rule breach, each a sentence saying which rule and where.
@@ -370,6 +391,19 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         Some(s) if !s.dated => out.push(format!("rule 6: the section for {} has no date", s.label)),
         Some(_) => {}
     }
+
+    // Rule 7: every released version (a real tag) has a section somewhere —
+    // CHANGELOG.md or an archive. `homes` (rule 1, above) already maps every
+    // version either file names to where it lives; a released version
+    // missing from it is a version that lost its notes.
+    for v in &input.released_versions {
+        if !homes.contains_key(v) {
+            out.push(format!(
+                "rule 7: tag {}.{}.{} has no section in CHANGELOG.md or an archive",
+                v.0, v.1, v.2
+            ));
+        }
+    }
     out
 }
 
@@ -435,6 +469,28 @@ struct Real {
     archives: Vec<(String, String)>,
     docs: Vec<(String, String)>,
     version: Version,
+    released_versions: Vec<Version>,
+}
+
+/// Every tag this repository carries that parses as a bare `X.Y.Z` (every
+/// release tag this project has ever cut has; nothing else does). Local
+/// `git tag`, not the network — the same class of read as this module's own
+/// file reads, and the honest source `REL-0.55.0` round 2 asked for: the tag
+/// is the fact a release happened, so a hand-maintained list is a second
+/// place to forget one.
+fn released_tags() -> Vec<Version> {
+    let output = std::process::Command::new("git")
+        .arg("tag")
+        .arg("--list")
+        .current_dir(repo_root())
+        .output()
+        .expect("run git tag --list");
+    assert!(output.status.success(), "git tag --list failed");
+    String::from_utf8(output.stdout)
+        .expect("git tag --list output is UTF-8")
+        .lines()
+        .filter_map(parse_version)
+        .collect()
 }
 
 fn real() -> Real {
@@ -456,6 +512,7 @@ fn real() -> Real {
         archives,
         docs: other_markdown(),
         version: workspace_version(),
+        released_versions: released_tags(),
     }
 }
 
@@ -468,6 +525,7 @@ fn run(r: &Real) -> Vec<String> {
         workspace_version: r.version,
         exists: &exists,
         docs: r.docs.clone(),
+        released_versions: r.released_versions.clone(),
     })
 }
 

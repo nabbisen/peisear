@@ -56,6 +56,8 @@ tests are untouched, and the feature stays off unless chosen.
   (single-file database) is deliberately left describing SQLite alone
   — P4's own requirement to amend, not this release's.
 
+## [0.54.0] — 2026-10-18
+
 **The dialect seam.** `RFC 018` P1 + P2: trigger validation errors stop
 depending on the exact wording of a message, and the storage layer
 gains a place a second backend would attach — with no second backend

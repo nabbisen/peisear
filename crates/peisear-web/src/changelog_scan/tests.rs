@@ -179,6 +179,24 @@ fn the_released_version_must_have_a_dated_section() {
     );
 }
 
+/// `REL-0.55.0` round 2, `§10`: the exact defect this round found, planted
+/// rather than only described. `b002284` removed `## [0.54.0] — 2026-10-18`
+/// but left that section's own body in place, now unlabelled under the
+/// following heading — reproduced here by removing only the heading line,
+/// the same shape, not a stand-in for it.
+#[test]
+fn a_release_tag_with_no_heading_in_either_file_is_found() {
+    let mut r = real();
+    let before = r.changelog.clone();
+    r.changelog = r.changelog.replacen("## [0.54.0] — 2026-10-18\n\n", "", 1);
+    assert_ne!(r.changelog, before, "0.54.0's heading must exist to remove");
+    let v = only(run(&r), "rule 7");
+    assert!(
+        v.iter().any(|m| m.contains("0.54.0")),
+        "a released version missing its section must be reported, got {v:?}"
+    );
+}
+
 #[test]
 fn the_helpers_do_what_the_rules_assume() {
     assert_eq!(slug("[0.40.0] — 2026-09-25"), "0400--2026-09-25");
