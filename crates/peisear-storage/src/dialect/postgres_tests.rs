@@ -422,12 +422,18 @@ fn stale_guard_is_plain_equality_on_postgres() {
 async fn age_in_days_matches_julianday_within_a_tenth_of_a_day() {
     let pool = migrated_pool().await;
     let five_days_ago = chrono::Utc::now() - chrono::Duration::days(5);
-    let days: f64 =
-        sqlx::query_scalar("SELECT EXTRACT(EPOCH FROM (now() - $1::timestamptz)) / 86400.0")
-            .bind(five_days_ago)
-            .fetch_one(&pool)
-            .await
-            .expect("query");
+    // `EXTRACT(EPOCH FROM ...)` returns `NUMERIC` on PostgreSQL,
+    // always -- regardless of its argument -- so the result needs an
+    // explicit `::double precision` cast before `sqlx` can decode it
+    // into an `f64`; caught here, not assumed, which is why every
+    // production occurrence of this formula carries the same cast.
+    let days: f64 = sqlx::query_scalar(
+        "SELECT (EXTRACT(EPOCH FROM (now() - $1::timestamptz)) / 86400.0)::double precision",
+    )
+    .bind(five_days_ago)
+    .fetch_one(&pool)
+    .await
+    .expect("query");
     assert!(
         (days - 5.0).abs() < 0.1,
         "expected ~5.0 days elapsed, got {days}"
@@ -567,26 +573,32 @@ async fn recapturing_a_sprint_record_still_bumps_captured_at() {
 #[tokio::test]
 async fn on_conflicts_column_list_parses_the_same_with_or_without_a_leading_space() {
     let pool = migrated_pool().await;
+    // A `TEMP TABLE` is scoped to the physical connection that
+    // created it, not to the pool -- `PgPool`'s own `.execute(&pool)`
+    // may hand each call a different pooled connection, so every
+    // statement below shares one connection acquired explicitly,
+    // caught here rather than assumed.
+    let mut conn = pool.acquire().await.expect("acquire a connection");
     sqlx::query("CREATE TEMP TABLE pg_004_on_conflict_spelling (id INT PRIMARY KEY, n INT)")
-        .execute(&pool)
+        .execute(&mut *conn)
         .await
         .expect("create temp table");
     sqlx::query(
         "INSERT INTO pg_004_on_conflict_spelling (id, n) VALUES (1, 1) \
          ON CONFLICT(id) DO UPDATE SET n = excluded.n",
     )
-    .execute(&pool)
+    .execute(&mut *conn)
     .await
     .expect("insert, no-space spelling");
     sqlx::query(
         "INSERT INTO pg_004_on_conflict_spelling (id, n) VALUES (1, 2) \
          ON CONFLICT (id) DO UPDATE SET n = excluded.n",
     )
-    .execute(&pool)
+    .execute(&mut *conn)
     .await
     .expect("upsert, spaced spelling");
     let n: i32 = sqlx::query_scalar("SELECT n FROM pg_004_on_conflict_spelling WHERE id = 1")
-        .fetch_one(&pool)
+        .fetch_one(&mut *conn)
         .await
         .expect("read back");
     assert_eq!(n, 2, "both spellings must act on the same conflict target");

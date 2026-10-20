@@ -88,7 +88,11 @@ pub async fn days_since_last_status_change_per_in_flight_issue(
     // divided down to fractional days), proved equal rather than
     // assumed: `dialect::postgres_tests::age_in_days_matches_julianday_within_a_tenth_of_a_day`
     // seeds a known elapsed time and asserts both backends' own
-    // arithmetic against it.
+    // arithmetic against it. `EXTRACT(EPOCH FROM ...)` returns
+    // `NUMERIC` on PostgreSQL regardless of its argument -- a
+    // real-server run caught `sqlx` refusing to decode that into
+    // `f64` before this reached review, so the division's result
+    // carries an explicit `::double precision` cast.
     #[cfg(feature = "sqlite")]
     const QUERY: &str = r#"
         SELECT
@@ -106,7 +110,7 @@ pub async fn days_since_last_status_change_per_in_flight_issue(
     const QUERY: &str = r#"
         SELECT
             i.id AS issue_id,
-            EXTRACT(EPOCH FROM (now() - MAX(e.occurred_at))) / 86400.0 AS days
+            (EXTRACT(EPOCH FROM (now() - MAX(e.occurred_at))) / 86400.0)::double precision AS days
         FROM issues i
         JOIN issue_events e
             ON e.issue_id = i.id

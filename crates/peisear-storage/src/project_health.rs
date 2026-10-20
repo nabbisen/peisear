@@ -70,7 +70,11 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
     // this one evaluation.
     // `PG-004` §3: the same `julianday` age-diff equivalence as
     // `issue_events::days_since_last_status_change_per_in_flight_issue`,
-    // applied twice in this one query.
+    // applied twice in this one query. `EXTRACT(EPOCH FROM ...)`
+    // returns `NUMERIC` on PostgreSQL regardless of its argument's own
+    // type -- a real-server run caught `sqlx` refusing to decode that
+    // into `f64` before this reached review, so both columns carry an
+    // explicit `::double precision` cast.
     #[cfg(feature = "sqlite")]
     const IN_FLIGHT_QUERY: &str = r#"
         SELECT
@@ -95,8 +99,8 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
         SELECT
             id,
             assignee_id,
-            EXTRACT(EPOCH FROM (now() - created_at)) / 86400.0 AS age_days,
-            EXTRACT(EPOCH FROM (now() -
+            (EXTRACT(EPOCH FROM (now() - created_at)) / 86400.0)::double precision AS age_days,
+            (EXTRACT(EPOCH FROM (now() -
                 COALESCE(
                     (SELECT MAX(e.occurred_at)
                      FROM issue_events e
@@ -104,7 +108,7 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
                        AND e.event_type = 'status_changed'),
                     updated_at
                 )
-            )) / 86400.0 AS staleness_days
+            )) / 86400.0)::double precision AS staleness_days
         FROM issues
         WHERE project_id = $1
           AND status IN ('open', 'in_progress')

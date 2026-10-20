@@ -122,7 +122,11 @@ async fn oldest_assigned_stalled_days(pool: &Pool, user_id: &SubjectId) -> Stora
     // `PG-004` §3: the same `julianday('now') - julianday(X)` ->
     // `EXTRACT(EPOCH FROM (now() - X)) / 86400.0` equivalence as
     // `issue_events::days_since_last_status_change_per_in_flight_issue`,
-    // proved the same way.
+    // proved the same way. `EXTRACT(EPOCH FROM ...)` returns `NUMERIC`
+    // on PostgreSQL regardless of its argument, caught by a real-server
+    // run before review -- the division's own result carries an
+    // explicit `::double precision` cast so `MAX(...)` and `sqlx`'s
+    // decode into `f64` both see a plain float.
     #[cfg(feature = "sqlite")]
     const QUERY: &str = r#"
         SELECT MAX(
@@ -143,7 +147,7 @@ async fn oldest_assigned_stalled_days(pool: &Pool, user_id: &SubjectId) -> Stora
     #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
     const QUERY: &str = r#"
         SELECT MAX(
-            EXTRACT(EPOCH FROM (now() -
+            (EXTRACT(EPOCH FROM (now() -
                 COALESCE(
                     (SELECT MAX(e.occurred_at)
                      FROM issue_events e
@@ -151,7 +155,7 @@ async fn oldest_assigned_stalled_days(pool: &Pool, user_id: &SubjectId) -> Stora
                        AND e.event_type = 'status_changed'),
                     i.updated_at
                 )
-            )) / 86400.0
+            )) / 86400.0)::double precision
         )
         FROM issues i
         WHERE i.assignee_id = $1
