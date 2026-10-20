@@ -10,21 +10,35 @@ the PostgreSQL backend.** Neither can `peisear`. That is this round.
 
 ---
 
-## §1 — measured, 2026-10-20, at `c98739a`
+## §1 — measured, 2026-10-20, at `c98739a`; corrected 2026-10-20 after round 1
 
-`peisear-storage` publishes the feature pair. The two crates above it
-do not, and their dependency edge carries `default-features` on:
+**Three crates, not two.** The first version of this section listed
+`peisear` and `peisear-web` as the crates lacking a `[features]`
+section and scoped the round to exactly those two. That census
+enumerated the **direct** edges to `peisear-storage` and never asked
+what else sat on the path. Round 1 traced it and found
+`peisear-notify`, which both `peisear` and `peisear-web` depend on
+unconditionally, and which depends on `peisear-storage`
+unconditionally in turn. **It stopped rather than improvising, which
+was right** — see `§5`'s stop condition, which it invoked verbatim.
 
-| Crate | `[features]` section | `peisear-storage` edge |
+The corrected population — and this one *is* the whole of it, every
+workspace member checked:
+
+| Crate | `[features]` at `c98739a` | `peisear-storage` edge |
 |---|---|---|
 | `peisear-storage` | `default = ["sqlite"]`, `sqlite`, `postgres` | — |
 | `peisear-web` | **none** | `{ workspace = true }` — defaults on |
 | `peisear` | **none** | `{ workspace = true }` — defaults on |
+| `peisear-notify` | **none** | `{ workspace = true }` — defaults on |
+
+No other workspace crate names `peisear-storage` at all.
 
 `dialect.rs:89` makes the two features a `compile_error!` when both
-are on. So the defaults-on edge is not merely unhelpful, it is
-fatal — enabling `postgres` from above adds it to `sqlite` rather
-than replacing it. Both CLI forms were run and both fail:
+are on, so Cargo's feature unification is what bites: *any*
+unconditional edge anywhere on the path merges `sqlite` into an
+explicitly requested `postgres` and produces the one combination the
+crate refuses. Both CLI forms fail, as quoted:
 
 ```
 $ cargo check -p peisear-web --features peisear-storage/postgres
@@ -33,35 +47,65 @@ $ cargo check -p peisear-web --no-default-features --features peisear-storage/po
 error: peisear-storage: `sqlite` and `postgres` are alternatives, not additions.
 ```
 
-The second is the interesting one: `--no-default-features` applies to
-`peisear-web`, which has no features to turn off, so it does nothing
-to the edge underneath.
+The second is the instructive one: `--no-default-features` applies
+to `peisear-web`, which has no features to turn off, so it does
+nothing to any edge underneath.
 
 **There is no command line that builds `peisear-web` or `peisear`
 against PostgreSQL.** Not a flag we forgot to document — one that
 cannot be written.
 
 **`docs/operations/scaling.md` already says this, correctly**
-(lines 110–117: *"any way to reach the feature from the published
-`peisear` binary at all"*, and that selecting `postgres` means
-building from a modified `Cargo.toml`). Nothing published is
-misleading, and **this round is not a correction of a claim.** It is
-the prerequisite that paragraph describes as missing.
+(lines 110–117). Nothing published is misleading, and this round is
+not a correction of a claim. It is the prerequisite that paragraph
+describes as missing.
 
 ## §2 — the change
 
-A `[features]` section on `peisear-web` and on `peisear`, each
-mirroring the pair below it, and `default-features = false` on the
-`peisear-storage` edge so that selecting one really does deselect the
-other. `peisear`'s `postgres` must also carry `peisear-web/postgres`,
-or the facade and the library disagree about the backend.
+Each of the three crates gets a `[features]` section mirroring
+`peisear-storage`'s pair — `default = ["sqlite"]`, `sqlite`,
+`postgres` — forwarding to **every backend-carrying crate it depends
+on directly**: `peisear-notify` to `peisear-storage`; `peisear-web`
+to both; `peisear` to all three.
 
-**Mirror the pair; do not invent a third shape.** `peisear-storage`
-already decided that the two are alternatives and that `sqlite` is
-the default. This round propagates that decision; it does not revisit
-it. If propagating it turns out to need a different shape — say,
-because `default-features = false` on a workspace-table edge reaches
-further than expected — **bring that, do not improvise it.**
+**The `default-features = false` goes on the three
+`[workspace.dependencies]` entries, not on the member edges:**
+
+```toml
+[workspace.dependencies]
+peisear-storage = { version = "0", path = "crates/peisear-storage", default-features = false }
+peisear-notify  = { version = "0", path = "crates/peisear-notify",  default-features = false }
+peisear-web     = { version = "0", path = "crates/peisear-web",     default-features = false }
+```
+
+Members stay on `{ workspace = true }` throughout. Cargo refuses
+`default-features = false` as a member-level override of an
+inherited entry (*"cannot override workspace's
+`default-features`"*), so the alternative is a full `{ version,
+path, default-features = false }` in three manifests — which works,
+but duplicates the path three times and opts those edges out of
+future workspace changes.
+
+**The real reason is the failure mode, not the tidiness.** A crate
+added later that depends on `peisear-storage` and forgets to forward
+features would, under the member-edge shape, silently pull `sqlite`
+and break the PostgreSQL build with *"alternatives, not additions"*
+— an error naming neither the new crate nor the cause, which is
+exactly what cost round 1 its `cargo tree -i` hunt. Under the
+workspace shape it gets *"no storage backend selected. Enable
+exactly one…"*: loud, local, true.
+
+Each crate keeps its own `default = ["sqlite"]`, so an external
+consumer of `peisear-web` or `peisear-notify` still gets SQLite by
+default.
+
+**Measured on this shape** in a detached worktree at `da30573`:
+`cargo build -p peisear --no-default-features --features postgres`
+finishes; the postgres resolution contains no `sqlite`; the default
+resolved-feature diff against `da30573` is six lines, all three
+crates showing `default,sqlite` where they previously showed
+nothing, with no third-party crate moving. **The gates are still the
+round's to run.**
 
 ## §3 — the passthrough is test infrastructure, not an install path
 
@@ -139,8 +183,10 @@ endpoint, stop. **A CI job, not an install path.**
 ## §5 — escalate rather than deciding
 
 - **If the mirrored shape does not work** — anything that makes
-  `default-features = false` on these edges reach further than the
-  backend choice.
+  `default-features = false` on these entries reach further than the
+  backend choice. Round 1 invoked this correctly and §1/§2 are
+  rewritten because of it; invoke it again if a fourth crate or a
+  fourth shape appears.
 - **If the default build's resolved features move at all.** Stop.
 - **If the boot smoke fails.** That is a finding about the backend,
   and a valuable one — it would be the first time peisear itself ran
@@ -150,8 +196,11 @@ endpoint, stop. **A CI job, not an install path.**
 
 ## §6 — exit condition
 
-`peisear-web` and `peisear` each carry the feature pair;
-`default-features = false` on both `peisear-storage` edges;
+`peisear`, `peisear-web` and `peisear-notify` each carry the feature
+pair, each forwarding to every backend-carrying crate it depends on
+directly; `default-features = false` on the three
+`[workspace.dependencies]` entries, with every member still on
+`{ workspace = true }`;
 `cargo build -p peisear --no-default-features --features postgres`
 green with its command quoted; the default build's resolved feature
 set shown unchanged against `c98739a`; the boot smoke running in the
