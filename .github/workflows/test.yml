@@ -498,7 +498,14 @@ jobs:
     name: peisear-web / lib (structural guards)
     runs-on: ubuntu-latest
     steps:
+      # `fetch-depth: 0`, not the default shallow clone: `changelog_scan`'s
+      # own rule 7 (`REL-0.55.0` round 2) reads every release tag via
+      # `git tag --list`, and a shallow checkout carries none of them --
+      # found the hard way, by this exact job failing on a planted
+      # defect that `released_versions` could not see, not by foresight.
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --lib

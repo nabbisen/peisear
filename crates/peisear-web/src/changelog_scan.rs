@@ -486,11 +486,25 @@ fn released_tags() -> Vec<Version> {
         .output()
         .expect("run git tag --list");
     assert!(output.status.success(), "git tag --list failed");
-    String::from_utf8(output.stdout)
+    let versions: Vec<Version> = String::from_utf8(output.stdout)
         .expect("git tag --list output is UTF-8")
         .lines()
         .filter_map(parse_version)
-        .collect()
+        .collect();
+    // A shallow checkout (`actions/checkout`'s own default) sees no tags at
+    // all and `git tag --list` still exits 0 with empty output -- rule 7
+    // would then silently check nothing, exactly the gap this round found
+    // in CI (`test.yml`'s own job now requests `fetch-depth: 0` for
+    // this reason). This project has released far more than zero
+    // versions, so an empty list here means the checkout, not reality --
+    // panic loudly rather than let the rule pass by proving nothing.
+    assert!(
+        !versions.is_empty(),
+        "git tag --list returned no parseable version tags -- this checkout \
+         is almost certainly shallow (needs fetch-depth: 0), not a repository \
+         with zero releases"
+    );
+    versions
 }
 
 fn real() -> Real {
