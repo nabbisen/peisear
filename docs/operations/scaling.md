@@ -88,30 +88,41 @@ The headline signs:
 - You need point-in-time recovery, replication, or a managed
   backup story that SQLite can't satisfy
 
-**This is the PostgreSQL line.** peisear's storage layer is
-designed for it — `sqlx` is the abstraction, and the type boundary
-(the `Pool` alias, `StorageError`) is ready — but the port is
-larger than the abstraction suggests: eleven triggers and eight
-`RAISE(ABORT)` error messages carry real requirements and do not
-survive a port in any direct form, only the date arithmetic
-(`julianday`, `datetime('now', …)` modifiers) does. See
+**This is the PostgreSQL line, and as of 0.55.0 it has real code
+behind it.** `peisear-storage` publishes a `postgres` Cargo feature
+(off by default, mutually exclusive with `sqlite`) with a real
+connection, a ported migration set, the schema's eleven triggers and
+every production query — the port the previous paragraph warned was
+larger than the type boundary suggests: the eleven triggers and five
+validation codes they carry are re-implemented, not merely compiled
+against, and the date arithmetic (`julianday`, `datetime('now', …)`
+modifiers) is rewritten per backend where PostgreSQL has no identical
+spelling. See
 [ROADMAP.md](https://github.com/nabbisen/peisear/blob/main/ROADMAP.md#postgresql-backend)
-for the full assessment, the schedule, and why the reason is
-stability and security, not scale.
+for what shipped in which release and why the reason was stability
+and security, not scale.
 
-The path is:
+**What this does not yet give you**: a conformance suite proving this
+crate's own storage and lock tests against a real PostgreSQL server as
+a whole (`RFC 018` P4, not yet started); a way to carry an *existing*
+SQLite installation's data across — the feature is a second backend to
+start fresh with, not a converter, and `peisear migrate` does not
+exist; and, today, **any way to reach the feature from the published
+`peisear` binary at all** — the `peisear` crate depends on
+`peisear-storage` with no feature pass-through, so every released
+archive, container image and `cargo install peisear` builds against
+`sqlite` only. Selecting `postgres` currently means building
+`peisear-storage` into your own binary, or building this project from
+a modified `Cargo.toml` — not an operation flag on a release. The path
+once that passthrough exists:
 
-1. Land the PostgreSQL backend code (planned; see the ROADMAP
-   link above). When this lands, it will ship as a feature flag
-   in `peisear-storage`.
-2. Stand up a PostgreSQL instance.
-3. Migrate data with `pg_dump`-equivalent tooling against the
-   SQLite file. We expect to ship a `peisear migrate` command for
-   this.
+1. Stand up a PostgreSQL instance.
+2. Start a fresh peisear instance against it and re-enter data, or
+   wait for a data-copy tool — not yet scheduled.
 
-Today, **the PostgreSQL backend is not yet implemented**. If you
-need it, that's the most useful operator feedback we can get; an
-issue describing your scale and timeline is welcome.
+If you need either path sooner — the binary passthrough or the
+existing-data copy — that's the most useful operator feedback we can
+get; an issue describing your scale and timeline is welcome.
 
 ## What the background task does under load
 

@@ -119,10 +119,12 @@ Two more, about the shape of the code rather than the product:
 > **One workspace, seven thin crates.** `i18n`, `core`, `auth`,
 > `storage`, `notify`, `web`, and a `peisear` facade, each with a
 > single clear job — so a new backend or identity provider has a
-> well-bounded place to land. A PostgreSQL backend is scheduled; see
+> well-bounded place to land. A PostgreSQL backend now has real code
+> behind it, off by default and not yet reachable from the published
+> binary; see
 > [ROADMAP.md](https://github.com/nabbisen/peisear/blob/main/ROADMAP.md#postgresql-backend)
-> for what it actually requires, which is more than the crate split
-> alone suggests.
+> for what shipped, what didn't, and what it actually required, which
+> was more than the crate split alone suggested.
 
 ---
 

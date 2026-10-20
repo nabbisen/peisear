@@ -64,15 +64,26 @@
 //!
 //! **Amended (`PG-004`) — the placeholder gap above is closed.**
 //! [`sql`] rewrites `?N` / bare `?` to `$N`, a parser rather than a
-//! guess, so none of the roughly 289 production call sites (measured
-//! 2026-10-20, excluding comment lines — `295` above was the
-//! 2026-10-18 figure before that exclusion) needed hand-editing into
-//! two spellings. A handful of queries still carry a genuine
-//! per-backend difference no placeholder rewrite reaches — SQLite's
-//! date functions, its implicit `rowid`, `INSERT OR REPLACE` — and
-//! those are named and justified at each call site rather than guessed
-//! at here; [`stale_guard`] is the one such difference that lives in
-//! this module, since (like the trigger-code translation above) it is
+//! guess, so none of this crate's production call sites needed
+//! hand-editing into two spellings: **284** at the round's own close
+//! (measured 2026-10-20, excluding comment lines), down from **289**
+//! measured earlier in the same round and **295** the round opened
+//! with (2026-10-18, before excluding comment lines) — the five-site
+//! drop from 289 to 284 is [`stale_guard`] moving each guard's second
+//! `?N` occurrence into a function call, not five placeholders left
+//! untranslated. **284 is the number this file's own count should
+//! ever be checked against; 289 and 295 are both superseded, named
+//! here only so a reader who finds either elsewhere knows which round
+//! produced it and why it changed** — the same discipline this
+//! module's own opening paragraph already states for a different
+//! pair of numbers (131 vs. 176): the two should never be quoted
+//! interchangeably. A handful of queries still carry a genuine
+//! per-backend difference no
+//! placeholder rewrite reaches — SQLite's date functions, its
+//! implicit `rowid`, `INSERT OR REPLACE` — and those are named and
+//! justified at each call site rather than guessed at here;
+//! [`stale_guard`] is the one such difference that lives in this
+//! module, since (like the trigger-code translation above) it is
 //! reused across more than one call site.
 
 #[cfg(all(feature = "sqlite", feature = "postgres"))]

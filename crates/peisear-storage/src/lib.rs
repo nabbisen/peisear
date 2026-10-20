@@ -7,22 +7,26 @@
 //! opens a real connection (`PG-001`), [`pool::migrate`] applies a
 //! real, ported migration set (`PG-002`, `migrations-postgres/`),
 //! the eleven triggers exist and raise the same five validations
-//! (`PG-003`), and the roughly 289 placeholder-carrying call sites
-//! plus the handful of genuinely backend-specific queries (date
-//! functions, the optimistic-lock guard, `sprint_records`'s upsert)
-//! are translated or rewritten per backend (`PG-004`). What
-//! PostgreSQL does **not** yet have is the conformance suite proving
-//! it against this crate's own lock and storage tests (`NFR-CMP-003`,
-//! `P4`) — several of this crate's own test *helpers* still hardcode
-//! a `sqlite://` pool, so `cargo test --features postgres --lib`
-//! still fails outside the targeted modules CI runs, not because a
-//! production query is wrong.
+//! (`PG-003`), and the 284 placeholder-carrying call sites (measured
+//! at `PG-004`'s own close — not the 289 an earlier measurement in
+//! this same round found, before five sites moved their second
+//! occurrence into a function call; see [`dialect`]'s own module doc
+//! for why the two numbers differ) plus the handful of genuinely
+//! backend-specific queries (date functions, the optimistic-lock
+//! guard, `sprint_records`'s upsert) are translated or rewritten per
+//! backend (`PG-004`). What PostgreSQL does **not** yet have is the
+//! conformance suite proving it against this crate's own lock and
+//! storage tests (`NFR-CMP-003`, `P4`) — several of this crate's own
+//! test *helpers* still hardcode a `sqlite://` pool, so `cargo test
+//! --features postgres --lib` still fails outside the targeted
+//! modules CI runs, not because a production query is wrong.
 //!
-//! The current implementation is backed by SQLite via `sqlx`. The public
-//! shape (query functions and the [`StorageError`] type) is intentionally
-//! concrete rather than trait‑abstracted — trait abstraction becomes
-//! useful once a second backend (PostgreSQL, per the roadmap) is in
-//! flight; until then it is speculative infrastructure.
+//! The public shape (query functions and the [`StorageError`] type) is
+//! intentionally concrete rather than trait‑abstracted — trait
+//! abstraction becomes useful once a second backend's own conformance
+//! suite exists to abstract *against* (`P4`, above); until then it
+//! would be speculative infrastructure, guessing at a shape nothing
+//! has proven yet.
 //!
 //! [`Pool`] is re-exported from [`dialect`], which owns it along with
 //! everything else backend-specific — this crate's own query modules

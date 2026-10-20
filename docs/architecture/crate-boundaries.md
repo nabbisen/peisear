@@ -72,16 +72,22 @@ The rule: **anything that reads or writes persistent state lives
 here.** Handlers never touch sqlx; they call `storage::users::find_by_id`,
 `storage::issues::list_in_project`, and friends.
 
-**No PostgreSQL backend exists yet** — `postgres` selected compiles
-(`dialect::Pool` becomes `sqlx::PgPool`, proven by building with it on)
-and `pool::connect`/`migrate`'s postgres branches panic
-(`unimplemented!()`) the moment anything tries to use them, since
-nothing beyond the type seam has been written. `P3` (`RFC 018`) is
-where a real `PgConnectOptions`, a PostgreSQL migration set, and the
-placeholder-style question (`?` vs `$1, $2, …` — deliberately left
-unabstracted this round; see `dialect.rs`'s own doc comment) get
-decided against a real server, not guessed at here. `StorageError` is
-already abstract enough (`Database`, `Migration`, `InvalidData`,
+**The PostgreSQL backend has real code behind it as of 0.55.0**
+(`RFC 018` P3 plus the queries, `PG-001`–`PG-004`): a real
+`PgConnectOptions`-backed connection, a ported migration set
+(`migrations-postgres/`), the schema's eleven triggers, and every
+production query — a parser translates SQLite's `?N`/bare-`?`
+placeholders to PostgreSQL's `$N` mechanically, and the handful of
+genuinely backend-specific constructs (date functions, the
+optimistic-lock guard, one upsert) are rewritten per backend and
+justified at their own call sites. **Still off by default and not yet
+proven as a whole**: selecting `postgres` is additive, mutually
+exclusive with `sqlite`, and an operator who does not choose it sees
+no change; `RFC 018` P4, the conformance suite proving this crate's
+own storage and lock tests against both backends, has not run, and
+several of this crate's own test *helpers* still hardcode a
+`sqlite://` pool. `StorageError` is already abstract enough
+(`Database`, `Migration`, `InvalidData`,
 `NotFound`, `Bootstrap`, `Conflict`, `Validation`) to hold either
 backend's errors. The last two carry a `peisear_i18n::MessageKey`
 rather than a `String` — the crate depends on `peisear-auth`,
@@ -177,7 +183,7 @@ into the next, and the leaks are one-directional and explicit.
 | Per-period capacity limits | New table + queries in storage; new pages in web |
 | Project-health score | Computed query in storage; component in web |
 | AI assistant per user | New `peisear-ai` crate alongside the existing five, depending on core + async HTTP client; web wires it in |
-| **PostgreSQL backend** | `postgres` feature flag on `peisear-storage` exists (`DIA-002`, 0.54.0) — the type seam only, no query, migration or connection logic. `P3` fills `pool::connect`/`migrate`'s postgres branches and writes the migration set |
+| **PostgreSQL backend** | `postgres` feature flag on `peisear-storage` (`DIA-002`, 0.54.0, the type seam) has real code behind it as of 0.55.0 — connection, migration set, triggers and every production query (`RFC 018` P3 plus the queries, `PG-001`–`PG-004`). What remains lands here too: `P4`'s conformance suite, proving this crate's own storage and lock tests against both backends |
 | **OIDC / IDaaS** | New module inside `peisear-auth` behind a feature flag; web adds a callback handler |
 | **CI/CD + IaC** | `infra/` directory: Dockerfile, compose.yaml, GitHub Actions, Terraform |
 

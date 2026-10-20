@@ -11,7 +11,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.54.0] — 2026-10-18
+## [0.55.0] — 2026-10-20
+
+**A second backend that runs.** `RFC 018` P3, plus the queries, a gap
+its own phase table had no home for — four rounds (`PG-001`–`PG-004`).
+The `postgres` feature `0.54.0` published with `unimplemented!()`
+behind it now has real code: a connection, a ported schema, eleven
+triggers, and every production query. **Nothing an existing SQLite
+operator runs has moved** — the default build, its migrations and its
+tests are untouched, and the feature stays off unless chosen.
+
+### Added
+
+- **`peisear-storage`'s `postgres` feature now has real code behind
+  every part of it.** `pool::connect`/`migrate` open a real connection
+  and apply a real, ported migration set (`migrations-postgres/`, 23
+  files — one of them, `0023`, adds a surrogate `rowid` column
+  PostgreSQL needs and SQLite already has implicitly, so nine
+  production queries' own `ORDER BY ..., rowid` tiebreak stays
+  byte-identical on both backends). The schema's eleven triggers exist
+  on PostgreSQL too, raising the same five validations via `ERRCODE`
+  rather than SQLite's bracketed message prefix, both translated to
+  the same `MessageKey`. Every production query runs: a parser
+  (`dialect::sql`) translates SQLite's `?N`/bare-`?` placeholders to
+  PostgreSQL's `$N` mechanically, and a handful of genuinely
+  backend-specific constructs — SQLite's date functions, the
+  optimistic-lock guard's text/numeric timestamp normalisation,
+  `sprint_records`'s upsert — are rewritten per backend and justified
+  at each call site.
+- **A migration-drift guard between `migrations/` and
+  `migrations-postgres/`** (filename-level: the two sets must name the
+  same migrations, with one named, tested exception for `0023`, which
+  ports nothing — SQLite has no equivalent to port) runs under every
+  feature, not only the one currently selected.
+- **A PostgreSQL service container joins CI**, running a targeted set
+  of real-server tests — the connection, the migration set reaching
+  its own highest version, timestamp precision, the trigger-and-query
+  guards above. **What this release does not prove**: this crate's
+  own test *suite* still fails under the `postgres` feature outside
+  that targeted set, because several test *helpers* hardcode a
+  `sqlite://` pool, not because a production query is wrong; there is
+  no conformance suite yet proving this crate's full storage and lock
+  tests pass against both backends (`RFC 018` P4); and `NFR-CMP-003`
+  (single-file database) is deliberately left describing SQLite alone
+  — P4's own requirement to amend, not this release's.
 
 **The dialect seam.** `RFC 018` P1 + P2: trigger validation errors stop
 depending on the exact wording of a message, and the storage layer

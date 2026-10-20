@@ -700,8 +700,8 @@ users on a single node is unchanged and PostgreSQL does not widen it.
   '%…%'`, `LISTEN`/`NOTIFY` for the notification dispatcher instead of
   in-process polling, richer types, read replicas.
 
-**The contracts underneath the type boundary are not ready, and the
-triggers are the real work:**
+**The contracts underneath the type boundary are implemented as of
+0.55.0, and the triggers were the real work:**
 
 - **Eleven `CREATE TRIGGER` statements** across four migrations carry
   two requirement families — `NFR-CONC-003` (`updated_at` has exactly
@@ -709,14 +709,15 @@ triggers are the real work:**
   invariants enforced at the database layer, not only in application
   code, two triggers; two more validate planned dates). `FR-SUB-001` is
   explicit that application-level enforcement is not sufficient, so
-  these must be **ported, not replaced** — two implementations of one
-  invariant, on two engines, verified by running the same tests against
-  both in CI.
-- `issues::translate_trigger_error` string-matches SQLite `RAISE`
-  message text to produce validation errors; it does not survive a port
-  in any form and is brittle today. Replaced by coded errors, raised by
-  both backends and translated on the code — worth doing even if
-  PostgreSQL never ships.
+  these were **ported, not replaced** (`PG-003`, 0.55.0) — two
+  implementations of one invariant, on two engines, each verified by
+  its own real-server tests; `P4`'s conformance suite is where the same
+  tests run against both in CI as one suite, not yet done.
+- `issues::translate_trigger_error` used to string-match SQLite `RAISE`
+  message text to produce validation errors, which would not have
+  survived a port in any form. Replaced by coded errors (`PG-003`) —
+  `ERRCODE` on PostgreSQL, a bracketed prefix on SQLite — raised by
+  both backends and translated on the code, not the prose.
 - SQLite's `CURRENT_TIMESTAMP` **was** whole-second, which would have
   given the two backends different concurrency characteristics on the
   same code. **Closed already**: `0021` (`STORE-001`, 0.50.0) moved the
@@ -734,11 +735,11 @@ measurement, both scheduled whether or not this backend ever ships)
 landed at **0.50.0**. P1 (coded errors) and P2 (the dialect seam, no
 PostgreSQL code yet) were originally slated for 0.53.0, then moved one
 release later by the 0.51.0 guard-infrastructure delay recorded above
-— P1/P2 **shipped at 0.54.0**. P3 (the schema on PostgreSQL) is
-**0.55.0**; P4 (the conformance suite, both backends green in CI, the
-operations story rewritten) is **0.56.0**. **SQLite stays the default
-and loses nothing at every phase** — a condition of the acceptance,
-enforced at each gate.
+— P1/P2 **shipped at 0.54.0**; P3 plus the queries gap scoping found
+(`PG-001`–`PG-004`) **shipped at 0.55.0**. P4 (the conformance suite,
+both backends green in CI, the operations story rewritten) is
+**0.56.0**. **SQLite stays the default and loses nothing at every
+phase** — a condition of the acceptance, enforced at each gate.
 
 ### OIDC / IDaaS integration
 
