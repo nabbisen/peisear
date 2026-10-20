@@ -137,3 +137,84 @@ root's unproven half intact; both specifications amended under
 `DEC-028` with Appendix A recomputed from its rows and `NFR-CMP-003`
 deliberately untouched; every §5 gate re-measured; and a
 recommendation to the architect — **not a tag**.
+
+---
+
+# REL-0.55.0 round 2 — 0.54.0's release notes are gone
+
+The candidate is accepted on every gate (see the review) and its §2
+walk holds. **One blocker, and it is not in the code.**
+
+## §9 — the changelog lost a released version
+
+`CHANGELOG.md`'s headings now read **`[Unreleased]` → `[0.55.0]` →
+`[0.53.0]`.** At the `0.54.0` tag they read `[Unreleased]` →
+`[0.54.0]` → `[0.53.0]`.
+
+**`b002284` — this candidate — removed `## [0.54.0] — 2026-10-18`**
+(`git log -S`), and with it that section's entire body. The only
+surviving mention of the version anywhere in the file is a passing
+clause inside `0.55.0`'s own prose. **There is no archive file**; this
+project has never had one.
+
+**What is not damaged, and why.** The `0.54.0` tag's own message links
+to `blob/0.54.0/CHANGELOG.md`, pinned to the tag — so a reader
+following the released link still gets the real notes, and the GitHub
+Release body carries its own copy. **The project's own
+"pin the link to the tag, never to `main`" rule is what saved this**
+(`docs/development/changelog-and-releases.md`). The damage is confined
+to `main`'s canonical file — which is also the file that document
+calls *"the only place release notes are written."*
+
+**How §1 produced it**: the step is *"`## [Unreleased]` → `## [0.55.0]
+— <date>`"*, and a rename of the heading **below** `[Unreleased]`
+rather than an insertion above `[0.54.0]` consumes the previous
+section. 0.54.0's own candidate did the same step correctly, so this
+is a slip, not a misunderstanding.
+
+**Restore it from the tag, not from memory**: `git show
+0.54.0:CHANGELOG.md`, lifting the section between `[0.55.0]` and
+`[0.53.0]` byte-for-byte. **Verify by checksum**, the way `DIA-001`
+round 2 verified its own restoration — a release-notes section
+restored approximately is worse than one restored visibly late.
+
+## §10 — the guard that would have caught it, and did not exist
+
+`changelog_scan` passed **8/8** on a file that had just lost a
+release. It checks each section's own shape — heading form, ISO date,
+slug, series — and **never asks which versions ought to have a
+section at all.** `§10.36`'s question, on the document that is this
+project's only record of what each release did.
+
+**The check is cheap and exact**: every `X.Y.Z` tag in the repository
+has a matching `## [X.Y.Z]` heading. Measured at this review, that
+rule fails on exactly one tag today — `0.54.0` — and would have
+failed the moment `b002284` was written.
+
+- **Tags, not a hand-maintained list.** The tag is the fact that a
+  release happened; a list would be a second place to forget.
+- **It must survive an archive.** This project keeps *"the archive of
+  older series"* as a named future (`DEC-055`), so when one exists the
+  rule reads *"a section in `CHANGELOG.md` **or** in the archive"* —
+  **write the rule so that extension is a widening, not a rewrite**,
+  and say how.
+- **Seen to fail before trusted**: with `0.54.0` restored, delete it
+  again in a scratch copy, watch the rule go red, restore. A guard
+  never seen to fail is `§10.36` twice over.
+
+**If reading git tags from a test is not available** — the scan reads
+files, not a repository — **say so and bring the shape you reached.**
+A rule over `git tag` output captured at build time, or over the
+versions `Cargo.lock`/the changelog itself already names, may be the
+honest compromise; what is not acceptable is a hand-written list of
+versions.
+
+## §11 — exit condition
+
+`## [0.54.0] — 2026-10-18`'s section restored **byte-for-byte from the
+tag**, verified by checksum, sitting between `[0.55.0]` and
+`[0.53.0]`; a scan rule asserting every release tag has a section,
+written so an archive widens it rather than replaces it; that rule
+**seen to fail** against a deleted section and then pass; `DEC-007`'s
+delta accounted for; every gate re-run — and `§2`'s walk **not**
+repeated, since nothing in this round touches a migration.
