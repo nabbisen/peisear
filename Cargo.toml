@@ -36,9 +36,18 @@ documentation   = "https://docs.rs/peisear"
 peisear-i18n                = { version = "0", path = "crates/peisear-i18n" }
 peisear-core                = { version = "0", path = "crates/peisear-core" }
 peisear-auth                = { version = "0", path = "crates/peisear-auth" }
-peisear-storage             = { version = "0", path = "crates/peisear-storage" }
-peisear-notify              = { version = "0", path = "crates/peisear-notify" }
-peisear-web                 = { version = "0", path = "crates/peisear-web" }
+# `default-features = false` here, not on each member's own edge
+# (`CON-001`, `RFC 018` P4): Cargo refuses the latter as a
+# member-level override of an inherited entry, and a crate added
+# later that forgets to forward features gets a loud, local "no
+# storage backend selected" at its own site instead of "alternatives,
+# not additions" at a distance. Every member still depends on these
+# three via plain `{ workspace = true }`; each crate's own
+# `default = ["sqlite"]` is unaffected, so an external consumer of
+# `peisear-web`/`peisear-notify` alone still gets SQLite by default.
+peisear-storage             = { version = "0", path = "crates/peisear-storage", default-features = false }
+peisear-notify              = { version = "0", path = "crates/peisear-notify", default-features = false }
+peisear-web                 = { version = "0", path = "crates/peisear-web", default-features = false }
 
 # ─── Web / runtime ───────────────────────────────────────────────────
 axum                        = { version = "0.8", features = ["macros"] }

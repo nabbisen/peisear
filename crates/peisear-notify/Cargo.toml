@@ -9,6 +9,16 @@ license.workspace       = true
 authors.workspace       = true
 repository.workspace    = true
 
+# Mirrors `peisear-storage`'s own pair (`CON-001`, `RFC 018` P4):
+# `sqlite`/`postgres` are alternatives, `sqlite` is the default, and
+# this crate propagates that choice rather than deciding it again --
+# `dispatch.rs`/`edge.rs` use backend-selected storage types
+# (`Pool`, `StorageError`, `users::find_by_id`) directly.
+[features]
+default = ["sqlite"]
+sqlite = ["peisear-storage/sqlite"]
+postgres = ["peisear-storage/postgres"]
+
 [dependencies]
 peisear-core                = { workspace = true }
 peisear-i18n                = { workspace = true }

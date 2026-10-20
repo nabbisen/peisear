@@ -24,6 +24,16 @@ documentation.workspace = true
 name = "peisear"
 path = "src/main.rs"
 
+# Mirrors `peisear-storage`'s own pair (`CON-001`, `RFC 018` P4),
+# forwarded to every backend-carrying crate this facade depends on
+# directly, or the facade's own edge and one resolved transitively
+# through `peisear-web`/`peisear-notify` could disagree about the
+# backend.
+[features]
+default = ["sqlite"]
+sqlite = ["peisear-storage/sqlite", "peisear-web/sqlite", "peisear-notify/sqlite"]
+postgres = ["peisear-storage/postgres", "peisear-web/postgres", "peisear-notify/postgres"]
+
 [dependencies]
 peisear-core                = { workspace = true }
 peisear-auth                = { workspace = true }

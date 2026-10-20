@@ -16,6 +16,15 @@ repository.workspace    = true
 [lib]
 path = "src/lib.rs"
 
+# Mirrors `peisear-storage`'s own pair (`CON-001`, `RFC 018` P4):
+# `sqlite`/`postgres` are alternatives, `sqlite` is the default, and
+# this crate propagates that choice to every backend-carrying crate
+# it depends on directly rather than deciding it again.
+[features]
+default = ["sqlite"]
+sqlite = ["peisear-storage/sqlite", "peisear-notify/sqlite"]
+postgres = ["peisear-storage/postgres", "peisear-notify/postgres"]
+
 [dependencies]
 peisear-core                = { workspace = true }
 peisear-auth                = { workspace = true }

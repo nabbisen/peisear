@@ -602,6 +602,24 @@ jobs:
       # date-function/relative-time/sprint-record-recapture
       # equivalence tests this round added to the same module.
       - run: "cargo test -p peisear-storage --no-default-features --features postgres --lib dialect::postgres_tests:: -- --test-threads=1"
+      # `CON-001` (`RFC 018` P4): the one real benefit an install walk
+      # would have given, without documenting an install path -- build
+      # `peisear` with the passthrough and boot it against this job's
+      # own service container. Not a test in the per-crate DEC-007
+      # block (this job already carries real-server steps outside it);
+      # a CI step proving the first real start of peisear on
+      # PostgreSQL, nothing more claimed.
+      - name: cargo build -p peisear --no-default-features --features postgres
+        run: cargo build -p peisear --no-default-features --features postgres
+      - name: Boot smoke -- start against the service container, hit /health, stop
+        run: |
+          set -euo pipefail
+          export JWT_SECRET="ci-postgres-boot-smoke-not-a-real-secret-$(date +%s)"
+          ./target/debug/peisear > peisear-boot-smoke.log 2>&1 &
+          pid=$!
+          trap 'cat peisear-boot-smoke.log; kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:3000/health
 
   build:
     name: cargo build (release-lite)
