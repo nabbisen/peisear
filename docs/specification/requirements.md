@@ -6040,6 +6040,38 @@ knows about and still have no rule for the one its own code
 invents.** When a release adds a file that holds a secret, the
 ignore rule is part of that change, not a thing someone notices later.
 
+### 10.46 A list of test names cannot tell *green* from *examined nothing* — **closed**, `CON-002`, 0.56.0; found 2026-10-20 while scoping the same round
+
+The PostgreSQL CI job ran four `- run:` lines, each a `cargo test
+--lib <exact name>` or `<module path>::`. **Measured**: `cargo test -p
+peisear-storage --lib a-test-name-that-does-not-exist-anywhere` prints
+*"0 passed; 0 failed; 0 ignored"* and **exits 0**. So each of those
+four lines stops examining anything the moment its own target is
+renamed, moved or deleted, and the job stays green — **`§10.36`'s own
+class**, a check that cannot distinguish *nothing wrong* from *nothing
+examined*, found inside the very round `RFC 018` P4 opened to prove
+both backends green on one suite.
+
+**Not four defects — one shape, the same four times.** The contrast
+that bounds it: `cargo test -p peisear-web --test
+<file-that-does-not-exist>` **exits 101**, because a missing `--test`
+target is a build error, not an empty filter. The ~35 other
+PostgreSQL-free invocations in this project's CI use exactly that
+form and are unaffected; the exposure was these four lines only,
+measured before concluding it was CI-wide.
+
+**Closed by removing the name, not by adding a check for it.** The
+four filtered lines are replaced with one unfiltered `cargo test -p
+peisear-storage --no-default-features --features postgres --lib` —
+there is no longer a name for anything to drift from. 46 of the 48
+tests that compile under `postgres` now run there; the remaining two
+(`pool::tests`'s own SQLite-specific pair — `sqlite_stat1`'s
+query-planner statistics, and the whole-second-vs-millisecond
+timestamp duality `0021` exists to fix, neither of which has a
+PostgreSQL equivalent to assert) are named and `#[cfg(feature =
+"sqlite")]`-gated in their own doc comments, a bounded claim rather
+than a silent exclusion.
+
 ### 10.42 A finding about one checkable property, read as a verdict on all of them — **open**, raised by the owner 2026-10-15
 
 The owner, 2026-10-15: *"My concern is that outdated, nonsensical rules

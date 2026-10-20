@@ -578,30 +578,18 @@ jobs:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      # Each filtered to the tests this job exists to prove green
-      # against a real server -- `PG-001`'s connection, `PG-002`'s
-      # migration-to-version-23 and timestamp-precision measurement,
-      # `PG-003`'s eleven triggers, both-directions guard and five
-      # validations, `PG-004`'s placeholder parser, `stale_guard` and
-      # date-function equivalences (one filter, `dialect::postgres_tests::`,
-      # covers every test in that module). `PG-004` makes every
-      # *production* query executable on both backends; it does not
-      # touch this crate's own test *helpers*, several of which still
-      # hardcode a `sqlite://` pool (`P4`'s conformance suite is where
-      # that gets fixed). The rest of this crate's `--lib` suite under
-      # `postgres` therefore still fails for that reason, not a broken
-      # query; that figure is reported honestly in the round's own
-      # completion package, not wired into a job this gate requires
-      # green.
-      - run: cargo test -p peisear-storage --no-default-features --features postgres --lib connect_opens_a_real_connection_against_a_real_postgresql_server
-      - run: cargo test -p peisear-storage --no-default-features --features postgres --lib migrate_reaches_version_23_from_a_fresh_database
-      - run: cargo test -p peisear-storage --no-default-features --features postgres --lib postgres_current_timestamp_resolution_is_finer_than_a_millisecond
-      # `PG-004`: every production query executable on both backends.
-      # One module-path filter, same as `PG-003`'s precedent, covers
-      # the mechanical placeholder parser, `stale_guard`, and the four
-      # date-function/relative-time/sprint-record-recapture
-      # equivalence tests this round added to the same module.
-      - run: "cargo test -p peisear-storage --no-default-features --features postgres --lib dialect::postgres_tests:: -- --test-threads=1"
+      # `CON-002` (`RFC 018` P4): the whole `--lib` suite, unfiltered --
+      # a name filter that matches nothing exits 0 (measured: `cargo
+      # test -p peisear-storage --lib a-name-that-does-not-exist` ->
+      # "0 passed; 0 failed", exit 0), so the four lines this replaces
+      # could not tell green from examined nothing the day any of
+      # their names moved. 46 tests compile and run here -- two fewer
+      # than the 48 that compile, `pool::tests`' own SQLite-specific
+      # pair (`sqlite_stat1`/the whole-second-vs-millisecond timestamp
+      # duality, neither of which exists on this backend) stays
+      # `#[cfg(feature = "sqlite")]`-gated, named in their own doc
+      # comments rather than silently excluded.
+      - run: "cargo test -p peisear-storage --no-default-features --features postgres --lib -- --test-threads=1"
       # `CON-001` (`RFC 018` P4): the one real benefit an install walk
       # would have given, without documenting an install path -- build
       # `peisear` with the passthrough and boot it against this job's

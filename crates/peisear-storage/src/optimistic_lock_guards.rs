@@ -44,6 +44,14 @@ use crate::{Guarded, Pool, pool, projects, sprints, user_capacities};
 use chrono::{DateTime, NaiveDate, Utc};
 use peisear_auth::jwt::{RequesterId, issue, verify};
 
+/// `CON-002` (`RFC 018` P4): a fresh, fully-migrated database. SQLite's
+/// own brand-new temp file made reusing fixed literal ids ('u', 'p',
+/// 't') across this file's five tests safe regardless of order — a
+/// shared, persistent PostgreSQL database (the CI service container,
+/// `dialect::postgres_tests::migrated_pool`'s own convention) does
+/// not, so the PostgreSQL body below resets those same three rows
+/// before every test runs. See [`cleanup`] for the other half.
+#[cfg(feature = "sqlite")]
 async fn migrated_pool() -> (Pool, std::path::PathBuf) {
     let path = std::env::temp_dir().join(format!("peisear-store002-{}.db", uuid::Uuid::new_v4()));
     let url = format!("sqlite://{}", path.display());
@@ -52,6 +60,41 @@ async fn migrated_pool() -> (Pool, std::path::PathBuf) {
     (pool, path)
 }
 
+/// PostgreSQL's own body of [`migrated_pool`] (above). Deletes the
+/// three roots this file's own tests ever seed — team `'t'`, project
+/// `'p'`, user `'u'` — relying on this schema's own `ON DELETE CASCADE`
+/// for what each one owns (sprints and their issues/records,
+/// `team_memberships`, `user_capacities`), the same way a fresh SQLite
+/// file discarded them. Order between the three deletes does not
+/// matter: PostgreSQL resolves cascades correctly regardless of which
+/// statement triggers them.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+async fn migrated_pool() -> (Pool, std::path::PathBuf) {
+    let url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must point at a real PostgreSQL server for this test");
+    let pool = pool::connect(&url).await.expect("connect");
+    pool::migrate(&pool).await.expect("migrate");
+    sqlx::query("DELETE FROM teams WHERE id = 't'")
+        .execute(&pool)
+        .await
+        .expect("reset team 't' left by an earlier test");
+    sqlx::query("DELETE FROM projects WHERE id = 'p'")
+        .execute(&pool)
+        .await
+        .expect("reset project 'p' left by an earlier test");
+    sqlx::query("DELETE FROM users WHERE id = 'u'")
+        .execute(&pool)
+        .await
+        .expect("reset user 'u' left by an earlier test");
+    (pool, std::path::PathBuf::new())
+}
+
+/// The SQLite half of this file's own cleanup: removes the temp file
+/// [`migrated_pool`] created, plus its WAL/SHM siblings. A no-op on
+/// PostgreSQL — `path` is an empty placeholder there (see
+/// `migrated_pool`'s postgres body above), and `remove_file` on it
+/// simply fails and is discarded, the same way a missing file already
+/// was.
 fn cleanup(path: &std::path::Path) {
     for ext in ["", "-wal", "-shm"] {
         let _ = std::fs::remove_file(format!("{}{ext}", path.display()));

@@ -2,6 +2,18 @@ use super::*;
 
 /// `PERF-002`: a used install gains statistics when its connections close,
 /// and not before -- so nothing runs at startup or on a request.
+///
+/// **SQLite-only** (`CON-002`, `RFC 018` P4): the subject is
+/// `sqlite_master`/`sqlite_stat1`, SQLite's own query-planner
+/// statistics mechanism, which PostgreSQL has no equivalent of in the
+/// same shape (`pg_stats`/`ANALYZE` are a structurally different
+/// catalogue). Gating the pool construction to read `DATABASE_URL`
+/// would not let this test assert the same thing on the other
+/// backend — it would just query a table that does not exist. Left
+/// uncompiled under `postgres` rather than guessed at; `§5`'s own
+/// stop condition ("if making a helper backend-agnostic changes what a
+/// test asserts").
+#[cfg(feature = "sqlite")]
 #[tokio::test]
 async fn statistics_appear_when_a_used_pool_closes_and_not_before() {
     let path = std::env::temp_dir().join(format!("peisear-perf002-{}.db", uuid::Uuid::new_v4()));
@@ -91,6 +103,20 @@ async fn statistics_appear_when_a_used_pool_closes_and_not_before() {
 /// millisecond shape `0021`'s trigger produces on the row's first
 /// `UPDATE`. A decoder that only handles one would break every row
 /// on one side of that boundary.
+///
+/// **SQLite-only** (`CON-002`, `RFC 018` P4): the two shapes this test
+/// exists to round-trip are themselves a SQLite-only artefact — its
+/// `CURRENT_TIMESTAMP` default is whole-second, so every row starts
+/// in one shape and only moves to millisecond on its first `UPDATE`.
+/// PostgreSQL's own `CURRENT_TIMESTAMP` is microsecond from the
+/// `INSERT` onward (measured directly,
+/// `postgres_current_timestamp_resolution_is_finer_than_a_millisecond`,
+/// below), so there is no whole-second shape to produce there at
+/// all — gating this test's pool construction to the other backend
+/// would not exercise the boundary it names, only a single shape that
+/// never changes. Left uncompiled under `postgres` rather than
+/// trivialised; `§5`'s own stop condition.
+#[cfg(feature = "sqlite")]
 #[tokio::test]
 async fn the_lock_token_round_trip_preserves_milliseconds_across_both_timestamp_shapes() {
     use chrono::{DateTime, Utc};
