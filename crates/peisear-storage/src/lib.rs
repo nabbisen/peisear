@@ -16,10 +16,21 @@
 //! guard, `sprint_records`'s upsert) are translated or rewritten per
 //! backend (`PG-004`). What PostgreSQL does **not** yet have is the
 //! conformance suite proving it against this crate's own lock and
-//! storage tests (`NFR-CMP-003`, `P4`) — several of this crate's own
-//! test *helpers* still hardcode a `sqlite://` pool, so `cargo test
-//! --features postgres --lib` still fails outside the targeted
-//! modules CI runs, not because a production query is wrong.
+//! storage tests (`NFR-CMP-003`, `P4`). **`cargo test --features
+//! postgres --lib` still fails outside the targeted modules CI runs,
+//! for two separate reasons, not one** (`§10.47`, correcting what
+//! this paragraph said through `0.55.0`): a handful of test *helpers*
+//! hardcode a `sqlite://` pool (`CON-002` fixed what could transfer,
+//! and named the two whose own subject cannot); and, unrelated to any
+//! test helper, **every guarded write opens `BEGIN IMMEDIATE`**,
+//! SQLite-only transaction-mode syntax, a syntax error on PostgreSQL
+//! (`CON-005`) — no guarded write executes on that backend today.
+//! "Every production *query* runs against it too," above, still
+//! holds — a transaction-control statement is not a query, and
+//! `PG-004`'s placeholder and date-function work is real — but the
+//! further gloss this paragraph used to give the remaining suite
+//! failures, that they were not because a production query is wrong,
+//! answered only the first cause and was silent on the second.
 //!
 //! The public shape (query functions and the [`StorageError`] type) is
 //! intentionally concrete rather than trait‑abstracted — trait

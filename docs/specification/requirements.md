@@ -6128,6 +6128,35 @@ bounds matter as much as the rules — **a scan that tries to read a
 status word is `REQ-003`'s rejected design rebuilt**, and must be
 refused on the same evidence.
 
+### 10.47 A review accepted a claim's bound without testing it — **open**, `CON-005`, 0.56.0; found 2026-10-20 in `CON-002`'s own review
+
+`§10.42`'s own class, found inside the series its first instance was
+written about. `0.55.0`'s `lib.rs` crate-root docs and
+`CHANGELOG.md`'s `[0.55.0]` section both said the remaining
+PostgreSQL suite failures were *"not because a production query is
+wrong."* Read narrowly, *"every production query runs"* survives — a
+transaction-control statement is not a query, and `PG-004`'s own
+placeholder and date-function work held. **The explanatory clause did
+not**: it was measured only against the failures whose cause was a
+`sqlite://` test helper, and asserted as the cause of *all* of them.
+There was a second cause in production code — fourteen call sites
+open SQLite's `BEGIN IMMEDIATE`, a syntax error on PostgreSQL, so no
+guarded write ran there at all — and it was not examined before the
+sentence was written.
+
+**This is not only the round's overstated claim; it is the review's
+missed bound.** The architect accepted `PG-004`'s claim in review
+without testing it, which is where a finding about one checkable
+property, read as a verdict on all of them, should have been caught.
+Recorded here for that reason, not only for the sentence it is about.
+
+**What moved and what did not.** `lib.rs`'s crate-root doc is
+corrected (above, this round). `CHANGELOG.md`'s already-shipped
+`[0.55.0]` section is left exactly as written — shipped history is not
+rewritten, `0.53.0`'s own precedent — and `[0.56.0]`'s own section
+states the correction when it is written. Closes when `CON-005`'s
+transaction seam does.
+
 ### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; seven instances
 
 Seven times the architect recorded a status that the shipped code contradicted.
