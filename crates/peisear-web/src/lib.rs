@@ -45,6 +45,8 @@ mod one_encoder_scan;
 mod prose_scan;
 #[cfg(test)]
 mod scan_support;
+#[cfg(test)]
+mod spec_scan;
 pub mod state;
 pub mod static_assets;
 #[cfg(test)]
