@@ -164,17 +164,26 @@ different database name, so there is nothing new to configure:
 
 ```bash
 psql "$DATABASE_URL" -c "CREATE DATABASE peisear_restored"
-pg_restore --dbname "${DATABASE_URL%/*}/peisear_restored" "peisear-2026-04-23.dump"
+pg_restore --dbname "<your own DATABASE_URL, with peisear_restored in place of the database name>" "peisear-2026-04-23.dump"
 ```
 
-(`bash`'s own `${VAR%/*}` strips everything from the last `/` onward —
-swap in your shell's own equivalent if it isn't `bash`.)
+**If `DATABASE_URL` carries query parameters** (`?sslmode=require`,
+say — the normal shape against a managed provider, and the one case
+this pattern must not be automated past): keep them, changing only the
+database-name segment. A blind `bash` string transform like
+`${DATABASE_URL%/*}/peisear_restored` drops everything from the last
+`/` onward — the database name **and** the query parameters together
+— and the restore then connects with neither, which can simply fail
+rather than fail loudly. Build the new connection string by hand for
+this reason, not by habit.
 
 Both commands were run against this project's own CI service container
 (`postgres:17`) before this section was written, including a full
 round trip — seed a row, dump, create a fresh database, restore into
 it, confirm the row reads back — not merely typed and assumed to
-work.
+work. **That server's own `DATABASE_URL` carries no query parameters**,
+so the round trip proves the dump/restore mechanism itself, not this
+particular shape of connection string against one that has them.
 
 **No generated signing-key file exists on this backend to back up.**
 `JWT_SECRET` must already be set explicitly for peisear to have started
