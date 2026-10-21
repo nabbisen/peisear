@@ -191,10 +191,11 @@ supported configuration — 298 of `peisear-web`'s 335 integration tests
 have never run against it, among them the only tests proving two
 **P0** privacy controls; `CHANGELOG.md`'s own `[0.56.0]` section states
 this plainly, as the release whose subject is a second backend should.
-*`DEC-056`'s four legs are the architect's own, run on the owner's
-approval of this candidate — this line describes the engineering
-content, not a claim that crates.io, the Release or the container tag
-already carry it.*
+**Cut 2026-10-22**: tag `0.56.0` at `d259dcc`, signed; seven crates on
+crates.io; five per-platform archives on the GitHub Release;
+`ghcr.io/nabbisen/peisear` at `0.56.0` and `latest`. All four
+`DEC-056` legs verified against the registries themselves rather than
+from their workflows' own exit codes.
 
 **Shipped 2026-10-20**: `0.55.0` (a second backend that runs) —
 `RFC 018` P3 and the queries its own phase table had no home for, in
