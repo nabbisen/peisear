@@ -155,6 +155,16 @@ pub type Connection = <Database as sqlx::Database>::Connection;
 /// `rfcs/handoffs/048-the-postgresql-schema/PG-004-the-queries.md`
 /// §1) had to be hand-edited into two spellings.
 ///
+/// **`pub`, not `pub(crate)`, since `CON-003`**: `peisear-web`'s own
+/// lock-test files hold raw `sqlx::query`/`query_as` calls written in
+/// SQLite's own `?N` syntax directly (reading a row back to assert on
+/// it, bypassing this crate's own query functions on purpose, the
+/// same reason `optimistic_lock_guards.rs`'s own tests do). Those
+/// calls need the identical translation every production call site
+/// already gets; duplicating this function's own logic in a second
+/// crate for the same reason `PG-004` wrote it once here would be the
+/// exact defect this function exists to prevent, just moved.
+///
 /// **The call-site shape is always the same two lines**, on both
 /// backends:
 ///
@@ -183,7 +193,7 @@ pub type Connection = <Database as sqlx::Database>::Connection;
 /// call sites this round touches, continuing the rule this module's
 /// own doc comment states for everywhere outside it and `pool.rs`.
 #[cfg(feature = "sqlite")]
-pub(crate) fn sql(text: &str) -> std::borrow::Cow<'_, str> {
+pub fn sql(text: &str) -> std::borrow::Cow<'_, str> {
     std::borrow::Cow::Borrowed(text)
 }
 
@@ -217,7 +227,7 @@ pub(crate) fn sql(text: &str) -> std::borrow::Cow<'_, str> {
 /// out, which is only wrong if the two are mixed, a shape
 /// [`postgres_tests`] also names and this crate does not have.
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
-pub(crate) fn sql(text: &str) -> std::borrow::Cow<'_, str> {
+pub fn sql(text: &str) -> std::borrow::Cow<'_, str> {
     if !text.as_bytes().contains(&b'?') {
         return std::borrow::Cow::Borrowed(text);
     }

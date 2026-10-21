@@ -249,5 +249,112 @@ pub async fn migrate(pool: &Pool) -> StorageResult<()> {
     Ok(())
 }
 
+/// `CON-003`: PostgreSQL's own answer to the isolation a fresh SQLite
+/// temp file already gives every `TestApp::spawn` for free. One
+/// server, many tests -- a database per test is the unconditional
+/// guarantee the round's own §2 chose over a shared schema
+/// (`search_path` is per-connection, a property to keep proving
+/// rather than one you have) or a shared, truncated database
+/// (correctness would depend on `test.yml`'s own `--test-threads=1`
+/// rather than on the fixture itself). Not `#[cfg(test)]`: it has to
+/// be visible to `peisear-web`'s own integration-test binaries, a
+/// separate crate that compiles this one in ordinary (non-test) mode.
+///
+/// Holds the pool so `Drop` can close it before the database it
+/// names is dropped -- see `Drop`'s own doc comment for why that is
+/// `Option` and why cleanup is best-effort.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+pub struct TestDatabase {
+    pool: Option<Pool>,
+    name: String,
+    admin_url: String,
+}
+
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+impl TestDatabase {
+    /// The pool connected to this test's own database. Clone it
+    /// freely (`sqlx::Pool` is a cheap, reference-counted handle);
+    /// keep the `TestDatabase` itself alive for exactly as long as
+    /// the test needs its database to exist.
+    pub fn pool(&self) -> &Pool {
+        self.pool
+            .as_ref()
+            .expect("TestDatabase pool taken before use")
+    }
+}
+
+/// Create and migrate a fresh, uniquely-named database on the server
+/// named by `DATABASE_URL`, for one test's exclusive use. Panics on
+/// any failure -- there is no legitimate way for a test to recover
+/// from being unable to set up its own fixture, the same convention
+/// `TestApp::spawn`'s SQLite body already uses.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+pub async fn connect_isolated_test_database() -> TestDatabase {
+    let admin_url = std::env::var("DATABASE_URL")
+        .expect("DATABASE_URL must point at a real PostgreSQL server for this test");
+    let admin_opts = PgConnectOptions::from_str(&admin_url)
+        .expect("parse DATABASE_URL for the admin connection");
+    let admin_pool = PgPoolOptions::new()
+        .connect_with(admin_opts.clone())
+        .await
+        .expect("connect the admin pool used to create an isolated test database");
+
+    // No hyphens (unlike `Uuid`'s default `Display`) and well under
+    // PostgreSQL's 63-byte identifier limit.
+    let name = format!("peisear_it_{}", uuid::Uuid::new_v4().simple());
+    sqlx::query(&format!(r#"CREATE DATABASE "{name}""#))
+        .execute(&admin_pool)
+        .await
+        .expect("create this test's own isolated database");
+    admin_pool.close().await;
+
+    let pool = PgPoolOptions::new()
+        .connect_with(admin_opts.database(&name))
+        .await
+        .expect("connect to the isolated test database just created");
+    migrate(&pool)
+        .await
+        .expect("migrate the isolated test database");
+
+    TestDatabase {
+        pool: Some(pool),
+        name,
+        admin_url,
+    }
+}
+
+/// Best-effort cleanup: closes this test's own pool, then drops the
+/// database, inside a detached task -- `Drop` cannot be `async`, and
+/// nothing in this project's CI needs the result, since the whole
+/// service container (every database it holds, with it) is discarded
+/// at the end of the job regardless. A long-lived local server
+/// accumulates `peisear_it_*` databases across local runs the same
+/// way a cancelled local run can leave a `peisear-web-it-*` directory
+/// under `/tmp` -- `tests/common/server.rs`'s own doc comment names
+/// that trade-off for SQLite; this is the same trade-off for
+/// PostgreSQL, not a new one.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+impl Drop for TestDatabase {
+    fn drop(&mut self) {
+        let Some(pool) = self.pool.take() else {
+            return;
+        };
+        let name = self.name.clone();
+        let admin_url = self.admin_url.clone();
+        tokio::spawn(async move {
+            pool.close().await;
+            let Ok(opts) = PgConnectOptions::from_str(&admin_url) else {
+                return;
+            };
+            let Ok(admin_pool) = PgPoolOptions::new().connect_with(opts).await else {
+                return;
+            };
+            let _ = sqlx::query(&format!(r#"DROP DATABASE IF EXISTS "{name}""#))
+                .execute(&admin_pool)
+                .await;
+        });
+    }
+}
+
 #[cfg(test)]
 mod tests;

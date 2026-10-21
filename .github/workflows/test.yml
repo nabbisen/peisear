@@ -590,6 +590,32 @@ jobs:
       # `#[cfg(feature = "sqlite")]`-gated, named in their own doc
       # comments rather than silently excluded.
       - run: "cargo test -p peisear-storage --no-default-features --features postgres --lib -- --test-threads=1"
+      # `CON-003` (`RFC 018` P4): the lock half of "the same storage
+      # **and lock** tests against both backends" -- the storage half
+      # is the `--lib` line above, from `CON-002`. These three files
+      # are the ones that, measured, actually are lock tests
+      # (`CON-003` §1); the other ~30 files in `peisear-web/tests/`
+      # are out of scope and untouched here. **Three explicit `--test
+      # <target>` selectors, not a name filter** -- `CON-002`'s own
+      # `§10.46` is the reason: a selector that names nothing exits 0,
+      # and `cargo test --test <file-that-does-not-exist>` exits 101,
+      # so a typo or a renamed file fails loudly here rather than
+      # silently reading as "examined nothing, so green."
+      # `optimistic_lock_guards`'s own PostgreSQL tests (inside the
+      # `--lib` line above) share this round's isolation mechanism
+      # too -- see `peisear-storage::pool::TestDatabase`.
+      #
+      # Three separate steps, not one `cargo test` call naming all
+      # three `--test` targets: `cargo test` stops after the first
+      # target that fails (no `--no-fail-fast` here, deliberately --
+      # this job's every other line already relies on fail-fast to
+      # stop the job promptly), so one target's failure would have
+      # silently skipped the other two rather than reporting them.
+      # Found by running it the other way first and measuring exactly
+      # that: only `board_card_lock_value` ran at all.
+      - run: "cargo test -p peisear-web --no-default-features --features postgres --test optimistic_lock -- --test-threads=1"
+      - run: "cargo test -p peisear-web --no-default-features --features postgres --test optimistic_lock_atomicity -- --test-threads=1"
+      - run: "cargo test -p peisear-web --no-default-features --features postgres --test board_card_lock_value -- --test-threads=1"
       # `CON-001` (`RFC 018` P4): the one real benefit an install walk
       # would have given, without documenting an install path -- build
       # `peisear` with the passthrough and boot it against this job's

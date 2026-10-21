@@ -218,6 +218,27 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
     // DEFAULT_WIP_LIMIT). The system default is read from core
     // and bound as a parameter so the SQL stays in sync if the
     // const changes.
+    //
+    // `CON-003` §3b: `HAVING` repeats both the `SUM` and the
+    // `COALESCE` in full rather than referencing their own `SELECT`-
+    // list aliases (`current_wip`, `effective_limit`). PostgreSQL
+    // resolves an output-column name for `ORDER BY` and `GROUP BY`
+    // (the `GROUP BY u.id, effective_limit` just below still does)
+    // but not for `WHERE` or `HAVING`, which are logically evaluated
+    // before the `SELECT` list's own names exist -- SQLite accepts
+    // the alias form; PostgreSQL rejected it with `ERROR: column
+    // "current_wip" does not exist`, found only once this crate's own
+    // conformance suite could run a query this shape against a real
+    // server (`postgres_tests::wip_violators_counts_a_user_over_their_effective_limit`,
+    // below in this same file's own test module).
+    //
+    // **One observation, not acted on here**: the `FROM ( … )`
+    // subquery below carries no alias of its own, which SQLite
+    // allows outright and which some PostgreSQL majors have required
+    // (a derived table needs a name). `postgres:17` -- the only
+    // version this project runs against -- accepts it; whether an
+    // earlier major would is unmeasured and out of scope while no
+    // release declares a supported PostgreSQL version range at all.
     let wip_violators: i64 = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         SELECT COUNT(*)
@@ -233,7 +254,8 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
                 ON i.assignee_id = u.id
                AND i.project_id = ?1
             GROUP BY u.id, effective_limit
-            HAVING current_wip > effective_limit
+            HAVING SUM(CASE WHEN i.status = 'in_progress' THEN 1 ELSE 0 END)
+                 > COALESCE(u.wip_limit, p.wip_limit_default, ?2)
         )
         "#,
     ))

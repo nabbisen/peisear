@@ -46,11 +46,18 @@ use peisear_auth::jwt::{RequesterId, issue, verify};
 
 /// `CON-002` (`RFC 018` P4): a fresh, fully-migrated database. SQLite's
 /// own brand-new temp file made reusing fixed literal ids ('u', 'p',
-/// 't') across this file's five tests safe regardless of order — a
-/// shared, persistent PostgreSQL database (the CI service container,
-/// `dialect::postgres_tests::migrated_pool`'s own convention) does
-/// not, so the PostgreSQL body below resets those same three rows
-/// before every test runs. See [`cleanup`] for the other half.
+/// 't') across this file's five tests safe regardless of order.
+///
+/// `CON-003` retired this function's own earlier PostgreSQL body,
+/// which reset three fixed-id rows by hand before every test and
+/// depended on `test.yml`'s `--test-threads=1` to stay correct —
+/// exactly the isolation shape that round's own handoff named as a
+/// fourth, pre-existing instance of the problem it was written to
+/// solve everywhere else. The PostgreSQL body below now uses the same
+/// database-per-test mechanism `peisear-web`'s own lock tests use
+/// (`pool::connect_isolated_test_database`), so this file keeps its
+/// fixed literal ids for the same reason SQLite's temp file let it
+/// use them in the first place: nothing else can be in the database.
 #[cfg(feature = "sqlite")]
 async fn migrated_pool() -> (Pool, std::path::PathBuf) {
     let path = std::env::temp_dir().join(format!("peisear-store002-{}.db", uuid::Uuid::new_v4()));
@@ -60,46 +67,33 @@ async fn migrated_pool() -> (Pool, std::path::PathBuf) {
     (pool, path)
 }
 
-/// PostgreSQL's own body of [`migrated_pool`] (above). Deletes the
-/// three roots this file's own tests ever seed — team `'t'`, project
-/// `'p'`, user `'u'` — relying on this schema's own `ON DELETE CASCADE`
-/// for what each one owns (sprints and their issues/records,
-/// `team_memberships`, `user_capacities`), the same way a fresh SQLite
-/// file discarded them. Order between the three deletes does not
-/// matter: PostgreSQL resolves cascades correctly regardless of which
-/// statement triggers them.
+/// PostgreSQL's own body of [`migrated_pool`] (above). See its doc
+/// comment for why this no longer resets fixed-id rows in a shared
+/// database. [`cleanup`]'s own postgres body is a no-op: the returned
+/// [`pool::TestDatabase`]'s `Drop` does the cleanup once the test
+/// function's local variable goes out of scope.
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
-async fn migrated_pool() -> (Pool, std::path::PathBuf) {
-    let url = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL must point at a real PostgreSQL server for this test");
-    let pool = pool::connect(&url).await.expect("connect");
-    pool::migrate(&pool).await.expect("migrate");
-    sqlx::query("DELETE FROM teams WHERE id = 't'")
-        .execute(&pool)
-        .await
-        .expect("reset team 't' left by an earlier test");
-    sqlx::query("DELETE FROM projects WHERE id = 'p'")
-        .execute(&pool)
-        .await
-        .expect("reset project 'p' left by an earlier test");
-    sqlx::query("DELETE FROM users WHERE id = 'u'")
-        .execute(&pool)
-        .await
-        .expect("reset user 'u' left by an earlier test");
-    (pool, std::path::PathBuf::new())
+async fn migrated_pool() -> (Pool, pool::TestDatabase) {
+    let test_database = pool::connect_isolated_test_database().await;
+    let pool = test_database.pool().clone();
+    (pool, test_database)
 }
 
 /// The SQLite half of this file's own cleanup: removes the temp file
-/// [`migrated_pool`] created, plus its WAL/SHM siblings. A no-op on
-/// PostgreSQL — `path` is an empty placeholder there (see
-/// `migrated_pool`'s postgres body above), and `remove_file` on it
-/// simply fails and is discarded, the same way a missing file already
-/// was.
+/// [`migrated_pool`] created, plus its WAL/SHM siblings.
+#[cfg(feature = "sqlite")]
 fn cleanup(path: &std::path::Path) {
     for ext in ["", "-wal", "-shm"] {
         let _ = std::fs::remove_file(format!("{}{ext}", path.display()));
     }
 }
+
+/// A no-op on PostgreSQL — every call site keeps one shape across
+/// both backends, but the real cleanup is [`pool::TestDatabase`]'s
+/// own `Drop`, which runs when the test function's `_db` local
+/// finally goes out of scope, not at this call.
+#[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+fn cleanup(_db: &pool::TestDatabase) {}
 
 /// A real `RequesterId` — obtainable only from [`verify`], so a test that
 /// needs one goes through [`issue`] first, exactly as a login would.

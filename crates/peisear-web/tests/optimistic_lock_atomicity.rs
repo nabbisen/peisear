@@ -132,19 +132,20 @@ where
 }
 
 async fn stamp(app: &TestApp, table: &str, id: &str) -> String {
-    let (updated_at,): (DateTime<Utc>,) =
-        sqlx::query_as(&format!("SELECT updated_at FROM {table} WHERE id = ?1"))
-            .bind(id)
-            .fetch_one(&app.db)
-            .await
-            .expect("read updated_at");
+    let (updated_at,): (DateTime<Utc>,) = sqlx::query_as(&peisear_storage::dialect::sql(&format!(
+        "SELECT updated_at FROM {table} WHERE id = ?1"
+    )))
+    .bind(id)
+    .fetch_one(&app.db)
+    .await
+    .expect("read updated_at");
     updated_at.to_rfc3339()
 }
 
 async fn column(app: &TestApp, table: &str, col: &str, id: &str) -> String {
-    let (v,): (String,) = sqlx::query_as(&format!(
+    let (v,): (String,) = sqlx::query_as(&peisear_storage::dialect::sql(&format!(
         "SELECT CAST({col} AS TEXT) FROM {table} WHERE id = ?1"
-    ))
+    )))
     .bind(id)
     .fetch_one(&app.db)
     .await
@@ -704,12 +705,13 @@ async fn a_guarded_write_matches_the_stamp_the_trigger_wrote() {
     let (app, user_id) = app_with_user().await;
     let project_id = create_personal_project(&app.db, &user_id, "P").await;
     let read = |app: Arc<TestApp>, id: String| async move {
-        let (t,): (DateTime<Utc>,) =
-            sqlx::query_as("SELECT updated_at FROM projects WHERE id = ?1")
-                .bind(id)
-                .fetch_one(&app.db)
-                .await
-                .unwrap();
+        let (t,): (DateTime<Utc>,) = sqlx::query_as(&peisear_storage::dialect::sql(
+            "SELECT updated_at FROM projects WHERE id = ?1",
+        ))
+        .bind(id)
+        .fetch_one(&app.db)
+        .await
+        .unwrap();
         t
     };
 
@@ -796,12 +798,13 @@ async fn a_guarded_write_tells_a_missing_row_from_a_moved_one() {
         .await
         .expect("row");
     let current = {
-        let (t,): (DateTime<Utc>,) =
-            sqlx::query_as("SELECT updated_at FROM user_capacities WHERE id = ?1")
-                .bind(&row)
-                .fetch_one(&app.db)
-                .await
-                .unwrap();
+        let (t,): (DateTime<Utc>,) = sqlx::query_as(&peisear_storage::dialect::sql(
+            "SELECT updated_at FROM user_capacities WHERE id = ?1",
+        ))
+        .bind(&row)
+        .fetch_one(&app.db)
+        .await
+        .unwrap();
         t
     };
     let long_ago = current - chrono::Duration::days(1);

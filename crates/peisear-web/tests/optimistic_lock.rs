@@ -658,11 +658,13 @@ async fn sprint_reopen_with_stale_timestamp_returns_409() {
         "stale client_updated_at on /reopen must 409 (got {})",
         resp.status_code()
     );
-    let status: String = sqlx::query_scalar("SELECT status FROM sprints WHERE id = ?1")
-        .bind(&sprint_id)
-        .fetch_one(&app.db)
-        .await
-        .unwrap();
+    let status: String = sqlx::query_scalar(&peisear_storage::dialect::sql(
+        "SELECT status FROM sprints WHERE id = ?1",
+    ))
+    .bind(&sprint_id)
+    .fetch_one(&app.db)
+    .await
+    .unwrap();
     assert_eq!(status, "completed", "a refused reopen changes nothing");
 }
 
@@ -1055,23 +1057,26 @@ async fn capacity_delete_walls_off_another_user() {
 /// production handler writes into the form's hidden input via
 /// `chrono::DateTime::to_rfc3339()`.
 async fn read_issue_updated_at(app: &TestApp, issue_id: &str) -> String {
-    let (updated_at,): (DateTime<Utc>,) =
-        sqlx::query_as(r#"SELECT updated_at FROM issues WHERE id = ?1"#)
-            .bind(issue_id)
-            .fetch_one(&app.db)
-            .await
-            .expect("read updated_at");
+    let (updated_at,): (DateTime<Utc>,) = sqlx::query_as(&peisear_storage::dialect::sql(
+        r#"SELECT updated_at FROM issues WHERE id = ?1"#,
+    ))
+    .bind(issue_id)
+    .fetch_one(&app.db)
+    .await
+    .expect("read updated_at");
     updated_at.to_rfc3339()
 }
 
 /// Read an issue's current `status` column directly from the DB,
 /// so a rejection test can assert the mutation did not apply.
 async fn read_issue_status(app: &TestApp, issue_id: &str) -> String {
-    let (status,): (String,) = sqlx::query_as(r#"SELECT status FROM issues WHERE id = ?1"#)
-        .bind(issue_id)
-        .fetch_one(&app.db)
-        .await
-        .expect("read issue status");
+    let (status,): (String,) = sqlx::query_as(&peisear_storage::dialect::sql(
+        r#"SELECT status FROM issues WHERE id = ?1"#,
+    ))
+    .bind(issue_id)
+    .fetch_one(&app.db)
+    .await
+    .expect("read issue status");
     status
 }
 
@@ -1079,23 +1084,26 @@ async fn read_issue_status(app: &TestApp, issue_id: &str) -> String {
 /// own demonstration asserts this rather than only the status code, so a
 /// lock that returns 409 but still lets the write through is caught too.
 async fn read_issue_title(app: &TestApp, issue_id: &str) -> String {
-    let (title,): (String,) = sqlx::query_as(r#"SELECT title FROM issues WHERE id = ?1"#)
-        .bind(issue_id)
-        .fetch_one(&app.db)
-        .await
-        .expect("read issue title");
+    let (title,): (String,) = sqlx::query_as(&peisear_storage::dialect::sql(
+        r#"SELECT title FROM issues WHERE id = ?1"#,
+    ))
+    .bind(issue_id)
+    .fetch_one(&app.db)
+    .await
+    .expect("read issue title");
     title
 }
 
 /// Read project's current updated_at as RFC3339, parallel to
 /// `read_issue_updated_at`.
 async fn read_project_updated_at(app: &TestApp, project_id: &str) -> String {
-    let (updated_at,): (DateTime<Utc>,) =
-        sqlx::query_as(r#"SELECT updated_at FROM projects WHERE id = ?1"#)
-            .bind(project_id)
-            .fetch_one(&app.db)
-            .await
-            .expect("read project updated_at");
+    let (updated_at,): (DateTime<Utc>,) = sqlx::query_as(&peisear_storage::dialect::sql(
+        r#"SELECT updated_at FROM projects WHERE id = ?1"#,
+    ))
+    .bind(project_id)
+    .fetch_one(&app.db)
+    .await
+    .expect("read project updated_at");
     updated_at.to_rfc3339()
 }
 
@@ -1244,12 +1252,13 @@ async fn post_schedule_move(
 /// format as RFC3339, matching what the production handler
 /// puts in form hidden inputs.
 async fn read_sprint_updated_at(app: &TestApp, sprint_id: &str) -> String {
-    let (updated_at,): (DateTime<Utc>,) =
-        sqlx::query_as(r#"SELECT updated_at FROM sprints WHERE id = ?1"#)
-            .bind(sprint_id)
-            .fetch_one(&app.db)
-            .await
-            .expect("read sprint updated_at");
+    let (updated_at,): (DateTime<Utc>,) = sqlx::query_as(&peisear_storage::dialect::sql(
+        r#"SELECT updated_at FROM sprints WHERE id = ?1"#,
+    ))
+    .bind(sprint_id)
+    .fetch_one(&app.db)
+    .await
+    .expect("read sprint updated_at");
     updated_at.to_rfc3339()
 }
 
@@ -1258,11 +1267,13 @@ async fn read_sprint_updated_at(app: &TestApp, sprint_id: &str) -> String {
 /// from the team name is fragile (special chars, dedup), so
 /// we just look it up.
 async fn read_team_slug(app: &TestApp, team_id: &str) -> String {
-    let (slug,): (String,) = sqlx::query_as(r#"SELECT slug FROM teams WHERE id = ?1"#)
-        .bind(team_id)
-        .fetch_one(&app.db)
-        .await
-        .expect("read team slug");
+    let (slug,): (String,) = sqlx::query_as(&peisear_storage::dialect::sql(
+        r#"SELECT slug FROM teams WHERE id = ?1"#,
+    ))
+    .bind(team_id)
+    .fetch_one(&app.db)
+    .await
+    .expect("read team slug");
     slug
 }
 
@@ -1286,12 +1297,13 @@ async fn create_capacity_row(app: &TestApp, user_id: &str, points: i64) -> Strin
 
 /// Read a capacity row's `updated_at`, RFC3339-formatted.
 async fn read_capacity_updated_at(app: &TestApp, row_id: &str) -> String {
-    let (updated_at,): (DateTime<Utc>,) =
-        sqlx::query_as(r#"SELECT updated_at FROM user_capacities WHERE id = ?1"#)
-            .bind(row_id)
-            .fetch_one(&app.db)
-            .await
-            .expect("read capacity updated_at");
+    let (updated_at,): (DateTime<Utc>,) = sqlx::query_as(&peisear_storage::dialect::sql(
+        r#"SELECT updated_at FROM user_capacities WHERE id = ?1"#,
+    ))
+    .bind(row_id)
+    .fetch_one(&app.db)
+    .await
+    .expect("read capacity updated_at");
     updated_at.to_rfc3339()
 }
 

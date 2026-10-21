@@ -605,21 +605,33 @@ async fn on_conflicts_column_list_parses_the_same_with_or_without_a_leading_spac
 }
 
 /// `CON-006`'s own deliverable: no column in this crate's schema
-/// carries PostgreSQL's fixed 4-byte `integer` type, read from the
-/// live, migrated server rather than the migration files -- the same
-/// shape `PG-003`'s own live-trigger check already uses, so the next
-/// mechanical port of a SQLite `INTEGER` (a type *affinity* of no
-/// fixed width, unlike PostgreSQL's own same-named type) cannot
+/// carries a PostgreSQL integer type narrower than `bigint`, read
+/// from the live, migrated server rather than the migration files --
+/// the same shape `PG-003`'s own live-trigger check already uses, so
+/// the next mechanical port of a SQLite `INTEGER` (a type *affinity*
+/// of no fixed width, unlike PostgreSQL's own same-named type) cannot
 /// reintroduce this invisibly. `table_schema = 'public'` excludes
-/// PostgreSQL's own system catalogues, which carry `integer` columns
-/// of their own that this crate does not own and must not be asked to
-/// change.
+/// PostgreSQL's own system catalogues, which carry narrow integer
+/// columns of their own that this crate does not own and must not be
+/// asked to change.
+///
+/// **`CON-003` §3a item 1**: checks `data_type IN ('integer',
+/// 'smallint')`, not `'integer'` alone. `CON-006`'s own invariant was
+/// *every integer column is 8-byte*; its predicate tested only
+/// `integer`, so a `smallint` (`int2`) column would have passed this
+/// test and failed identically at the same `ColumnDecode` the moment
+/// something read it into `i64` -- the architect's own wording was
+/// narrower than the architect's own invariant. Bound, so the next
+/// reader does not have to re-derive it: `integer` and `smallint` are
+/// the only PostgreSQL integer types narrower than `bigint`;
+/// `numeric`/`decimal` can also fail an `i64` decode but are not
+/// integer columns and are out of this predicate's own scope.
 #[tokio::test]
-async fn no_column_in_this_schemas_own_tables_is_a_four_byte_integer() {
+async fn no_column_in_this_schemas_own_tables_is_narrower_than_eight_bytes() {
     let pool = migrated_pool().await;
     let offenders: Vec<(String, String)> = sqlx::query_as(
         "SELECT table_name, column_name FROM information_schema.columns \
-         WHERE table_schema = 'public' AND data_type = 'integer' \
+         WHERE table_schema = 'public' AND data_type IN ('integer', 'smallint') \
          ORDER BY table_name, column_name",
     )
     .fetch_all(&pool)
@@ -627,7 +639,7 @@ async fn no_column_in_this_schemas_own_tables_is_a_four_byte_integer() {
     .expect("read information_schema.columns");
     assert!(
         offenders.is_empty(),
-        "found column(s) still declared as PostgreSQL's 4-byte `integer`, where this \
+        "found column(s) narrower than PostgreSQL's 8-byte `bigint`, where this \
          crate's own Rust layer binds every integer column as `i64`: {offenders:?}"
     );
 }
@@ -681,4 +693,96 @@ async fn issues_find_returns_a_real_issue_with_a_non_null_effort() {
         .await
         .expect("issues::find must return the issue it just read, not fail to decode it");
     assert_eq!(issue.effort, Some(5));
+}
+
+/// `CON-003` §3b's own named gate: `project_health::for_project`'s
+/// `wip_violators` sub-query used to reference its own `SELECT`-list
+/// aliases (`current_wip`, `effective_limit`) inside `HAVING`, which
+/// PostgreSQL rejects (`ERROR: column "current_wip" does not exist`)
+/// though SQLite accepts it -- found only once this crate's own
+/// conformance suite could run this shape of query against a real
+/// server, since `project_health` has no unit tests of its own and
+/// the only thing that reached it before this test was
+/// `board_card_lock_value.rs`'s own board-page render, by accident of
+/// what that page happens to show.
+///
+/// Two users, to prove the comparison direction as well as the
+/// decode: `over` has a WIP limit of 1 and two `in_progress` issues
+/// (violating), `at_limit` has a limit of 2 and exactly two
+/// `in_progress` issues (`current_wip == effective_limit`, not
+/// `>`, so not a violation). A fix that merely stopped panicking but
+/// inverted or loosened the comparison would still pass a test that
+/// only checked "some count comes back"; this one would not.
+#[tokio::test]
+async fn wip_violators_counts_a_user_over_their_effective_limit_but_not_one_at_it() {
+    let pool = migrated_pool().await;
+
+    let over_id = uuid::Uuid::new_v4().to_string();
+    crate::users::insert(
+        &pool,
+        &over_id,
+        &format!("{over_id}@example.test"),
+        "x",
+        "Over",
+    )
+    .await
+    .expect("seed over-limit user");
+    crate::users::set_wip_limit(&pool, &over_id, Some(1))
+        .await
+        .expect("set over-limit user's wip_limit");
+
+    let at_limit_id = uuid::Uuid::new_v4().to_string();
+    crate::users::insert(
+        &pool,
+        &at_limit_id,
+        &format!("{at_limit_id}@example.test"),
+        "x",
+        "AtLimit",
+    )
+    .await
+    .expect("seed at-limit user");
+    crate::users::set_wip_limit(&pool, &at_limit_id, Some(2))
+        .await
+        .expect("set at-limit user's wip_limit");
+
+    let project_id = uuid::Uuid::new_v4().to_string();
+    crate::projects::insert(&pool, &project_id, &over_id, "Project", "", None)
+        .await
+        .expect("seed project");
+
+    for (owner, n) in [(&over_id, 2), (&at_limit_id, 2)] {
+        for i in 0..n {
+            let issue_id = uuid::Uuid::new_v4().to_string();
+            crate::issues::insert(
+                &pool,
+                &issue_id,
+                &project_id,
+                owner,
+                crate::issues::IssueFields {
+                    title: &format!("Issue {i} for {owner}"),
+                    description: "",
+                    status: peisear_core::IssueStatus::InProgress,
+                    priority: peisear_core::Priority::Medium,
+                    effort: None,
+                    assignee_id: Some(owner),
+                    planned_start_at: None,
+                    planned_end_at: None,
+                },
+            )
+            .await
+            .expect("seed in-progress issue");
+        }
+    }
+
+    let raw = crate::project_health::for_project(&pool, &project_id)
+        .await
+        .expect(
+            "for_project must not fail to decode wip_violators -- this is the HAVING query \
+             CON-003 §3b fixed",
+        );
+    assert_eq!(
+        raw.wip_violators, 1,
+        "exactly one user (two in_progress issues against a limit of one) must count; the \
+         user at their limit (two against two) must not"
+    );
 }
