@@ -19,7 +19,7 @@ anyone can tell.
 | CON-002 | [the suite that runs whole](./CON-002-the-suite-that-runs-whole.md) | **48 tests compile under `postgres`; CI ran 31 by name.** And a `--lib` name filter that matches nothing exits 0 — measured — so those lines cannot tell *green* from *examined nothing*. `§10.46` | CON-001 | **Closed** — 1 round. Unfiltered suite in CI, four name-filtered lines deleted, 46 of 48 running with the two SQLite-specific exceptions named and gated. **Escalated a production defect that reshapes the series** — see `CON-005` |
 | CON-005 | [the transaction seam](./CON-005-the-transaction-seam.md) | **Fourteen production call sites open `pool.begin_with("BEGIN IMMEDIATE")`** — a syntax error on PostgreSQL, so no guarded write runs there at all. It compiles, which is why every earlier gate passed. The seam belongs in `dialect`; the mechanism is per-site and not decided | CON-002 | **Closed** — 3 rounds. All fourteen sites, the seam in one home, and **all four mechanisms proven necessary by a test seen to fail without them**. Round 3’s own first attempt passed while reverted; it investigated rather than taking the green, and reported it |
 | CON-006 | [the integer that is four bytes](./CON-006-the-integer-that-is-four-bytes.md) | `migrations-postgres` declares `INTEGER` (4-byte) where Rust decodes `i64`. **`issues.effort` is one of them, so no issue can be read on PostgreSQL at all.** Fix the invariant — every integer column `BIGINT` — and assert it against the live schema | CON-005 | **Closed** — 1 round. Every integer column `BIGINT`, a no-allow-list predicate over `information_schema` seen red with all 28 offenders named and green after, and the `SUM(int8)→numeric` second-order defect its own widening caused found by CI and fixed in the same round |
-| CON-003 | [the lock tests on both backends](./CON-003-the-lock-tests-on-both-backends.md) | P4's gate says *storage **and lock*** tests. The 26 lock tests are in `peisear-web`, and `TestApp::spawn` hardcodes a `sqlite://` tempdir. **Isolation across 26 tests on one server is the round** | — (all three closed) | **Next** |
+| CON-003 | [the lock tests on both backends](./CON-003-the-lock-tests-on-both-backends.md) | P4's gate says *storage **and lock*** tests. The 26 lock tests are in `peisear-web`, and `TestApp::spawn` hardcodes a `sqlite://` tempdir. **Isolation across 26 tests on one server is the round** | — | **Round 2** — isolation built and proven (database-per-test, applied to `optimistic_lock_guards` too), 36 of 37 green on both backends. Blocked on a `project_health` query PostgreSQL rejects; `§3b` answers it: fix inline, one `HAVING` in the crate |
 | CON-004 | [the operations story](./CON-004-the-operations-story.md) | `backup.md` is wholly SQLite and never says so; **`JWT_SECRET` is mandatory on PostgreSQL and no document says it**; `NFR-CMP-003` restated for the SQLite backend | — (written last by choice) | Not started |
 | REL-0.56.0 | not written | The cut, `DEC-028`, `DEC-056`. Written when the six rounds close | all six | Not written |
 
@@ -46,9 +46,9 @@ found by measuring rather than by reading it.
 | | SQLite | PostgreSQL, after this series |
 |---|---|---|
 | `peisear-storage` unit tests | 31 | 48 |
-| `peisear-web` integration tests | **309** | **26** |
+| `peisear-web` integration tests | **335** | **37** |
 
-The 283 that would not run are the only coverage that exists for
+The 298 that would not run are the only coverage that exists for
 `personal_metrics.rs`, `user_burnout.rs`, `project_health.rs`,
 `metrics_snapshots.rs`, `user_metrics_snapshots.rs`, `issues.rs` and
 `sprints.rs` — **every one of which has zero unit tests.** Two of
@@ -83,7 +83,7 @@ integration suite on both backends. That is a later release and is
 ## What this series is not
 
 **Not the other 30 integration files.** P4's words are *"storage and
-lock tests"*. `CON-003` takes the 26 lock tests in three files. If
+lock tests"*. `CON-003` takes the 37 lock tests in three files. If
 the mechanism makes the rest cheap, that is a finding to report, not
 a round to start.
 

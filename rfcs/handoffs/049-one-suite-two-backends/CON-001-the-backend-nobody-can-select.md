@@ -130,9 +130,9 @@ walk would certify something false.** Measured at `c98739a`:
 | | Against SQLite | Against PostgreSQL after this series |
 |---|---|---|
 | `peisear-storage` unit tests | 31 | 48 |
-| `peisear-web` integration tests | **309** | **26** (`CON-003`'s lock tests) |
+| `peisear-web` integration tests | **335** | **37** (`CON-003`’s lock tests) |
 
-**283 integration tests would never have run against PostgreSQL**,
+**298 integration tests would never have run against PostgreSQL**,
 and the storage modules they are the *only* coverage for are the
 ones where being wrong is worst:
 

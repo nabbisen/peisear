@@ -23,9 +23,25 @@ actually exercises `NFR-CONC-001`/`-002` through a running router.
 | File | Tests |
 |---|---|
 | `crates/peisear-web/tests/optimistic_lock.rs` | 22 |
-| `crates/peisear-web/tests/optimistic_lock_atomicity.rs` | 3 |
+| `crates/peisear-web/tests/optimistic_lock_atomicity.rs` | **14** |
 | `crates/peisear-web/tests/board_card_lock_value.rs` | 1 |
-| **total** | **26** |
+| **total** | **37** |
+
+**Corrected 2026-10-21, by round 1.** This table first said 3 and 26.
+Most of `optimistic_lock_atomicity.rs`'s tests are declared
+`#[tokio::test(flavor = "multi_thread", worker_threads = 4)]`, and the
+architect counted them with a literal search for the bare
+`#[tokio::test]`, which matches none of them. **Count tests with the
+runner, not with a grep over source text**: `cargo test -p peisear-web
+--test optimistic_lock_atomicity` prints `14 passed`.
+
+The same error ran through the whole series' arithmetic: the
+integration-suite total was published as **309** and is **335**
+(`capacity_atomicity` 1→4, `optimistic_lock_atomicity` 3→14,
+`race_guards` 7→18, `sprint_record` 10→11). `ROADMAP.md`, `CON-001`
+§3 and this series' README are corrected. **The install-path decision
+those figures supported is unchanged and slightly strengthened** —
+298 of 335 unrun, not 283 of 309.
 
 **These three files, and no others.** P4's words are *"storage and
 lock tests"*, and the other 30 files in `crates/peisear-web/tests/`
@@ -53,7 +69,7 @@ isolation is the whole round.** The two shapes worth considering:
 1. **A database per test.** Connect as the service user, `CREATE
    DATABASE peisear_it_<unique>`, migrate it, drop it at the end.
    Closest to what SQLite gives, and the isolation is unconditional.
-   Cost: 26 creates and 26 migration runs of 23 migrations.
+   Cost: 37 creates and 37 migration runs of 23 migrations.
 2. **A schema per test.** Cheaper, but migrations and the schema's
    eleven triggers would have to be schema-scoped, and `search_path`
    is per-connection — across a pool that is a property you have to
@@ -87,7 +103,7 @@ wrong.
 
 ## §3 — what must stay true
 
-- **The SQLite path does not move.** Same 26 tests, same assertions,
+- **The SQLite path does not move.** Same 37 tests, same assertions,
   same tempdir fixture, same timings within noise. A round that
   finds itself rewriting what a lock test asserts has left its
   scope — the subject here is *where the database is*, not *what is
@@ -120,8 +136,15 @@ test's own comment. Bound: those two are the only integer types
 narrower than `bigint`; `numeric`/`decimal` would also fail an `i64`
 decode but are not integer columns and are out of scope here.
 
-**2. `migrations-postgres/`'s in-place expiry is not yet in the
-tree.** `CON-006` amended eight shipped migration files in place,
+**2. `migrations-postgres/`'s in-place expiry — already in the tree;
+this item was written in error.** `docs/development/migrations.md`
+was *created* by `CON-006`'s own commit `214d8db` and its `## The
+expiry` section already states the condition. The architect asserted
+an absence without running the search that would have established
+it, in a handoff written against the very commit that added the file.
+Nothing is owed; the item stands only as a record of the mistake.
+
+**Superseded text:** `CON-006` amended eight shipped migration files in place,
 correctly — the append-only rule's measured reason is a recorded
 checksum on a database that cannot exist while no install path is
 documented. **That expiry currently lives only in a review.** State
@@ -132,10 +155,62 @@ precedent for `migrations/`. If this round does not touch
 `docs/development/`, hand it to `CON-004`; if neither does,
 `REL-0.56.0` must.
 
+## §3b — round 1's §4 question, answered: fix it inline
+
+**Fix `project_health::wip_violators` in this round.** Not a new
+round, and the reason is a measurement, not a preference.
+
+```
+$ grep -rn 'HAVING' crates/peisear-storage/src/*.rs
+project_health.rs:236:            HAVING current_wip > effective_limit
+```
+
+**One `HAVING` in the entire crate, and it is this one.** The thing
+that justified spinning `CON-005` and `CON-006` out was scale —
+fourteen call sites, then a schema-wide pattern — and it is absent
+here. A one-line mechanical fix that unblocks this round's own exit
+condition does not earn a round of its own; leaving the round open
+over it would cost the series more than the scope costs.
+
+The fix is the known one: **repeat the expressions in `HAVING`**
+rather than their `SELECT`-list aliases. PostgreSQL resolves
+output-column names for `ORDER BY` and `GROUP BY` but not for `WHERE`
+or `HAVING`, which is why `GROUP BY u.id, effective_limit` works in
+the same query and the `HAVING` does not.
+
+**It needs a test, because `project_health` has none.** The module has
+zero unit tests, so nothing but `board_card_lock_value.rs` would
+catch a regression — and that file is in this round's population by
+accident of what it renders, not by design. Either assert the query
+directly in `postgres_tests`, or state in the round that the board
+page is the only thing standing behind it. **Say which.**
+
+**Do not claim the class is closed.** `HAVING` is bounded at one
+occurrence; *"a `SELECT`-list alias used where PostgreSQL forbids
+it"* is not, because the same mistake in a `WHERE` clause cannot be
+found by grepping for a keyword. **This round renders three of the
+project's thirty-three integration files against PostgreSQL**, and
+the remaining thirty are where any sibling defect would still be
+hiding. That closure belongs to `ROADMAP.md`'s P5, and the round
+should say so rather than imply `project_health` was the last one.
+
+**One observation for the record, not a fix.** The same query's
+`FROM ( … )` subquery carries no alias, which SQLite allows and
+older PostgreSQL majors reject. `postgres:17` accepted it — the
+error that surfaced was the `HAVING` one, not a missing-alias one —
+so whether this query works on earlier majors is **unknown and not
+measured here.** Note it; it becomes a real question the day a
+supported PostgreSQL version range is declared, which no release
+does yet.
+
 ## §4 — gates
 
-- All 26 green on **both** backends, with both commands quoted and
-  both test counts shown.
+- All 37 green on **both** backends, with both commands quoted and
+  both test counts shown — `board_card_lock_value.rs` included, which
+  means §3b's fix landing in this round.
+- **`project_health::wip_violators` covered by something**, named
+  explicitly: either its own assertion in `postgres_tests` or a
+  stated reliance on the board page.
 - The SQLite run unchanged: 26 tests, same names.
 - `test.yml` runs the PostgreSQL half in the job that already has
   the service container. **Not by name** — `CON-002`'s `§10.46` is
@@ -163,7 +238,7 @@ precedent for `migrations/`. If this round does not touch
 
 ## §6 — exit condition
 
-All 26 lock tests running against both backends from one set of
+All 37 lock tests running against both backends from one set of
 assertions; `optimistic_lock_guards`'s delete-by-fixed-id reset
 replaced by this round's own isolation mechanism; isolation on PostgreSQL enforced by the fixture rather
 than by a test-runner flag, with the chosen shape justified against
