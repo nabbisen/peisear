@@ -137,8 +137,23 @@ State column says when the answer has arrived. Until then:
   so the specification's silence about PostgreSQL is a recorded
   decision rather than a gap. **Silence with no record is the one
   outcome that is not acceptable.**
-- If **unanswered**: everything else in this round can be done, and
-  this is the last edit. Do not block the rest on it; do not guess it.
+- If **unanswered**: everything else in this round can be done and
+  this is the last edit — **but the record is still required.** Add,
+  under `NFR-CMP-003`'s own amendment block, a paragraph naming the
+  proposed sibling entry, its full text, the date it went to the
+  owner, and that it is **undecided at the cut** — noting that
+  `backup.md` already says all of it and what is open is whether the
+  specification should require it. Do not add `NFR-CMP-007` itself,
+  do not touch Appendix A, and do not write it into `[0.56.0]`'s
+  notes as a decision. Do not block the rest on it; do not guess it.
+
+  **Corrected 2026-10-22, after round 1.** This case first said only
+  *"do not block the rest on it; do not guess it"* and said nothing
+  about the record — which reaches the same outcome case 2 calls
+  unacceptable, a specification silent about PostgreSQL with no trace
+  of why. Round 1 followed this case exactly as written and is not at
+  fault for where it led. The three cases now differ in what they
+  decide, not in whether they leave a record.
 
 ## §7 — the gate table, re-measured against the candidate commit
 
