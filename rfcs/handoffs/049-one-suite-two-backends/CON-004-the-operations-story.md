@@ -151,6 +151,30 @@ supported* has made an informed choice; a reader following a
 documented command has been told it works. That difference is the
 whole of `CON-001` §3.
 
+## §4a — two things carried in, neither this round's subject
+
+**1. A citation slip in `project_health.rs`.** `CON-003`'s new
+comment cites its own test as
+`postgres_tests::wip_violators_counts_a_user_over_their_effective_limit`
+— the real symbol ends `…_but_not_one_at_it` — and locates it *"below
+in this same file's own test module"*, while it lives in
+`dialect/postgres_tests.rs` and `project_health.rs` has no test
+module at all. One line. Worth fixing because it ships in the crate's
+docs and it is exactly what `0.57.0`'s `spec_scan` is being built to
+catch — **and because the architect made the same mistake one round
+earlier** (`issues::find_by_id` for `issues::find`), so it is a
+two-instance habit rather than a typo.
+
+**2. `scaling.md` has a better fact to state than when §4 was
+written.** That section was drafted when PostgreSQL could not take a
+write and could not read an issue. Both now work, `RFC 018` P4's own
+gate is met for the suite the RFC named, and the honest status is
+*better* than the draft assumes — **re-read §4 against the tree
+before writing it**, rather than transcribing a paragraph written
+three rounds ago. What has not changed is the conclusion: 37 of 335
+integration tests run against PostgreSQL, the P0 privacy tests are
+still SQLite-only, and **it is still not a supported configuration.**
+
 ## §5 — one register entry from `CON-001`
 
 `CON-001` round 2 measured something its own scope could not fix,
