@@ -1,12 +1,14 @@
 # CON-003 — the lock tests on both backends
 
-**0.56.0, `RFC 018` P4.** Blocked on `CON-001` (these tests live in
-`peisear-web`, which could not select the backend until that round
-landed) and now on **`CON-005`**: `CON-002` found that all fourteen
-guarded-write call sites open `pool.begin_with("BEGIN IMMEDIATE")`,
-which is a syntax error on PostgreSQL. Every one of the 26 lock
-tests below exercises a guarded write. **This round cannot start
-until `CON-005` closes.**
+**0.56.0, `RFC 018` P4. Unblocked — this is the next round.**
+
+Three rounds stood in front of it and all three are closed.
+`CON-001` gave `peisear-web` a way to select the backend at all;
+`CON-005` replaced the fourteen `BEGIN IMMEDIATE` call sites with a
+seam whose four mechanisms are each proven necessary; `CON-006`
+widened every integer column to `BIGINT`, without which no issue
+could be read on PostgreSQL. **This is the first round in the series
+that can actually run.**
 
 P4's gate names *"the same storage **and lock** tests against both
 backends."* `CON-002` does the storage half inside
@@ -99,6 +101,36 @@ wrong.
   token round-trip at the storage layer; this round proves the same
   thing through the router, which is a different claim and is the
   one `NFR-CONC-001`/`-002` are written about.
+
+## §3a — two small things this round carries
+
+Neither is this round's subject; both belong to whoever next touches
+these files, and that is this round.
+
+**1. The conformance predicate is narrower than its own invariant.**
+`CON-006` added
+`dialect::postgres_tests::no_column_in_this_schemas_own_tables_is_a_four_byte_integer`,
+which tests `data_type = 'integer'`. **`smallint` would pass it and
+fail identically** — `int2` decoded into `i64` is the same
+`ColumnDecode` error. The invariant was *every integer column is
+8-byte*; the predicate was specified narrower than that, which was
+the architect's wording, not the round's. One word:
+`data_type IN ('integer', 'smallint')`, with the reason in the
+test's own comment. Bound: those two are the only integer types
+narrower than `bigint`; `numeric`/`decimal` would also fail an `i64`
+decode but are not integer columns and are out of scope here.
+
+**2. `migrations-postgres/`'s in-place expiry is not yet in the
+tree.** `CON-006` amended eight shipped migration files in place,
+correctly — the append-only rule's measured reason is a recorded
+checksum on a database that cannot exist while no install path is
+documented. **That expiry currently lives only in a review.** State
+it in `docs/development/`'s migration guidance: `migrations-postgres/`
+becomes append-only on the same terms as `migrations/` the day
+`ROADMAP.md`'s P5 documents an install path, and `CON-006` is not a
+precedent for `migrations/`. If this round does not touch
+`docs/development/`, hand it to `CON-004`; if neither does,
+`REL-0.56.0` must.
 
 ## §4 — gates
 
