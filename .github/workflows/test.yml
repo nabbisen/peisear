@@ -634,6 +634,55 @@ jobs:
           trap 'cat peisear-boot-smoke.log; kill "$pid" 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null && break; sleep 1; done
           curl -sf http://127.0.0.1:3000/health
+      # `CON-004` (`RFC 018` P4): `docs/operations/backup.md`'s own
+      # PostgreSQL section documents a pg_dump/psql/pg_restore round
+      # trip -- an untested command in an operations document is the
+      # same defect class as a documented install path nobody walked
+      # (`§10.41`). Proves the exact commands that document names, not
+      # a paraphrase of them, against this job's own service
+      # container. A scratch database of its own (`backup_doc_check*`),
+      # not `peisear_ci` -- this has nothing to do with this crate's
+      # own schema and should not depend on, or disturb, whatever state
+      # the steps above left there.
+      - name: Install a pg_dump/pg_restore matching the service container's own major version
+        # Measured: the runner's own default `postgresql-client` is
+        # 16.x; this job's service container is `postgres:17` (above),
+        # and `pg_dump` refuses to dump from a newer server than its
+        # own version -- "aborting because of server version mismatch"
+        # -- a real check, not a CI quirk, and the reason this step
+        # exists rather than assuming whatever ships on the runner
+        # matches whatever this job pins as a service. The runner's
+        # own default apt sources carry no `-17` package at all
+        # (measured: `apt-get install postgresql-client-17` ->
+        # "Unable to locate package" before this step added the PGDG
+        # repository), so the official repository is added first, the
+        # same way <https://www.postgresql.org/download/linux/ubuntu/>
+        # documents.
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          . /etc/os-release
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt ${VERSION_CODENAME}-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client-17
+      - name: backup.md's own PostgreSQL commands, proved against a real server
+        run: |
+          set -euo pipefail
+          export PATH="/usr/lib/postgresql/17/bin:$PATH"
+          export PGPASSWORD=postgres
+          psql -h localhost -U postgres -d postgres -c "DROP DATABASE IF EXISTS backup_doc_check"
+          psql -h localhost -U postgres -d postgres -c "CREATE DATABASE backup_doc_check"
+          DATABASE_URL="postgres://postgres:postgres@localhost:5432/backup_doc_check"
+          psql "$DATABASE_URL" -c "CREATE TABLE t (id int); INSERT INTO t VALUES (42);"
+          pg_dump "$DATABASE_URL" --format=custom --file="peisear-$(date +%F).dump"
+          psql -h localhost -U postgres -d postgres -c "DROP DATABASE IF EXISTS peisear_restored"
+          psql "$DATABASE_URL" -c "CREATE DATABASE peisear_restored"
+          pg_restore --dbname "${DATABASE_URL%/*}/peisear_restored" "peisear-$(date +%F).dump"
+          result=$(psql --dbname "${DATABASE_URL%/*}/peisear_restored" -t -c "SELECT id FROM t")
+          echo "restored row: $result"
+          [ "$(echo "$result" | tr -d '[:space:]')" = "42" ] || { echo "::error::restored row did not read back 42"; exit 1; }
 
   build:
     name: cargo build (release-lite)

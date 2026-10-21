@@ -3696,12 +3696,12 @@ checked**, and the requirement said Implemented.
 CDNs blocked: identical rendering, three stylesheets, 44 px controls, no
 overflow.
 
-**NFR-CMP-003 — Single-file database**
-Persistent state MUST reside in a single SQLite file. Taken while
-peisear runs, a backup of that file MUST go through SQLite's own
-`.backup` command; taken while it is stopped, a plain file copy of it
-is correct. `docs/operations/backup.md` MUST state and keep stating
-that distinction.
+**NFR-CMP-003 — Single-file database (SQLite backend)**
+On the SQLite backend, persistent state MUST reside in a single file.
+Taken while peisear runs, a backup of that file MUST go through
+SQLite's own `.backup` command; taken while it is stopped, a plain
+file copy of it is correct. `docs/operations/backup.md` MUST state and
+keep stating that distinction.
 *Source*: `KICK §2.3`. *Status*: Implemented. *Priority*: P2.
 *Amended (0.51.0)*: the previous wording — *"so that backup is a file
 copy"* — was imprecise in exactly the direction `backup.md`'s own "The
@@ -3725,6 +3725,29 @@ now a directory copy; its online backup is `.backup` for the database
 plus a plain `cp` of the key file, which carries no live-coordination
 requirement because it is written once and never modified after
 generation.
+*Amended (0.56.0) — scoped to the SQLite backend, and the sibling
+question raised, not answered*: `RFC 018` P4 restates this entry's own
+title and opening sentence as what the requirement has always actually
+described — a property of the SQLite backend specifically — now that a
+second backend (`CON-001`–`CON-003`, this release) has real code and a
+real CI service behind it; everything required above is unchanged and
+applies to the SQLite backend exactly as written. **What, if anything,
+this entry requires of the PostgreSQL backend's persistent state is
+not decided here.** PostgreSQL is not a supported configuration at
+0.56.0 (`docs/operations/scaling.md`) — nothing runs against it outside
+CI's own recreated-per-run service container, and a backup requirement
+written for a configuration nobody operates would describe nothing
+real. Proposed, for the owner to decide, not assumed: the day a
+PostgreSQL install path is documented (`ROADMAP.md`'s P5), this entry
+should gain a PostgreSQL clause reading *"the operator's own instance,
+backed up by the operator's own means (`pg_dump`, WAL archiving, or a
+managed provider's own snapshot), and `docs/operations/backup.md` MUST
+say so"* — peisear coordinates nothing for a server it did not start
+and does not own, the same posture `NFR-CMP-002`'s own self-hosting
+requirement already takes toward the operating system underneath it.
+Silence on PostgreSQL until P5 is deliberate, named here so it is
+raised rather than rediscovered, not an oversight this entry already
+has one of (`§10.34`'s own class).
 
 **NFR-CMP-004 — Forward-only migrations**
 Schema migrations MUST be forward-only and numbered sequentially. A
@@ -6128,7 +6151,7 @@ bounds matter as much as the rules — **a scan that tries to read a
 status word is `REQ-003`'s rejected design rebuilt**, and must be
 refused on the same evidence.
 
-### 10.47 A review accepted a claim's bound without testing it — **open**, `CON-005`, 0.56.0; found 2026-10-20 in `CON-002`'s own review
+### 10.47 A review accepted a claim's bound without testing it — **closed**, `CON-005`, 0.56.0; found 2026-10-20 in `CON-002`'s own review
 
 `§10.42`'s own class, found inside the series its first instance was
 written about. `0.55.0`'s `lib.rs` crate-root docs and
@@ -6156,6 +6179,12 @@ corrected (above, this round). `CHANGELOG.md`'s already-shipped
 rewritten, `0.53.0`'s own precedent — and `[0.56.0]`'s own section
 states the correction when it is written. Closes when `CON-005`'s
 transaction seam does.
+
+**Closed, 0.56.0** (found while recomputing this document for
+`CON-004`, not this round's own subject): `CON-005` closed at
+`e0ca773` — all fourteen call sites carry the seam, all four
+mechanisms proven necessary by a test seen to fail without them. The
+entry's own named condition is met.
 
 ### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; seven instances
 
@@ -7142,6 +7171,67 @@ self-hostability and no-CDN-dependency are unaffected by where
 `static/` lives relative to the binary, and embedding makes the
 self-contained claim strictly truer, not conditionally so.
 
+### 10.48 A feature named for a backend gates the `cfg`, not the driver — **open, pre-existing, becomes a defect at P5**, `CON-004`, 0.56.0; found by `CON-001`, 2026-10-20
+
+`peisear-storage`'s `sqlite = []` is an empty Cargo feature: it drives
+`#[cfg(feature = "sqlite")]` correctly throughout the crate, but gates
+no *dependency*, because `sqlx`'s own `sqlite` feature is
+unconditional in `[workspace.dependencies]` (`Cargo.toml:60`) rather
+than forwarded from either backend feature. Measured at `f0cd461`: a
+`--no-default-features --features postgres` build of `peisear` still
+compiles and links the bundled SQLite C library — `sqlx-sqlite`,
+`libsqlite3-sys` with `bundled`, **387 distinct `sqlite3_*` symbols in
+the binary** — and needs a C toolchain to produce a build that will
+never open a SQLite file.
+
+**Opened as a class, not an incident, per `CON-004`'s own instruction**:
+*a feature named for a backend that selects behaviour (the `cfg`)
+without also selecting the dependency footprint that backend implies.*
+A reader who builds `--features postgres` expecting a lean,
+PostgreSQL-only binary gets the opposite of what the feature's own name
+promises, silently — nothing fails, nothing warns, the binary simply
+carries a driver it will never use.
+
+**Pre-existing, not introduced by `CON-001`.** `CON-001` made the
+`postgres` feature reachable from `peisear`/`peisear-web` for the first
+time; it did not create the asymmetry, which was already true the
+moment `peisear-storage` declared `postgres = ["sqlx/postgres"]`
+without a matching `sqlite = ["sqlx/sqlite"]`. Already documented
+honestly in `peisear-storage/Cargo.toml`'s own comment before this
+entry existed.
+
+**Harms nobody today, and `requirements.md` says precisely when that
+stops being true.** PostgreSQL is not a supported configuration at
+0.56.0 (`NFR-CMP-003`'s own 0.56.0 amendment, above; `docs/operations/scaling.md`);
+nobody is handed a production binary built with this feature, so the
+extra ~387 symbols and the C-toolchain requirement cost a reader
+nothing they did not already have. **It stops being cosmetic the day
+`ROADMAP.md`'s P5 documents an install path** for the `postgres`
+feature — at that point a reader following a documented, supported
+build command inherits an unnecessary dependency and build
+requirement silently, which is the same shape of confusion `NFR-CMP-003`'s
+own proposal above exists to avoid for backups. Recorded in both
+places for the same reason, not duplicated by accident: `ROADMAP.md`'s
+P5 section already states this as one of P5's own conditions; this
+entry is the formal register copy, so the fact survives even if
+`ROADMAP.md`'s own P5 section is ever rewritten past it.
+
+**Not fixed here.** `sqlx` is a real, non-dev dependency of
+`peisear-storage`; in `peisear-web` it is a **dev**-dependency,
+declared separately (`Cargo.toml:63`, `{ workspace = true }`) rather
+than forwarded through `peisear-storage`'s own feature, and used
+directly by several integration tests' own raw-SQL helpers (`CON-003`,
+this series). Gating `sqlx`'s own `sqlite`/`postgres` features per
+backend in `peisear-storage` is plausible but does not by itself reach
+this second, independent declaration — confirmed, not assumed:
+`crates/peisear-web/Cargo.toml` names `sqlx` once, under
+`[dev-dependencies]`, with no feature list of its own to narrow. That
+is a round with its own measurement, not a clause of this one.
+
+**Closes** when P5's own work gates the dependency per backend, or is
+withdrawn if P5 is itself withdrawn — tracked alongside `ROADMAP.md`'s
+own P5 section, not ahead of it.
+
 ## 11. Deferred and future requirements
 
 Accepted in principle, deliberately not scheduled.
@@ -7204,8 +7294,8 @@ it is in progress, not deferred.
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
 | Release | 11 | 9 | 1 | — | — | 1 undefined |
-| Compatibility | 6 | 5 | 1 | — | — | — |
-| **Non-functional total** | **69** | **56** | **5** | **0** | **2** | **6** |
+| Compatibility | 6 | 6 | — | — | — | — |
+| **Non-functional total** | **69** | **57** | **4** | **0** | **2** | **6** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.
@@ -7224,6 +7314,18 @@ trust that a cell change can't hide a third, uncaught drift. They did
 not: Release sums to its own total (`7+1+3=11`), Security to its own
 (`7+0=7`), and the non-functional total to its own
 (`54+5+0+2+8=69`).
+
+**Re-derived again at 0.56.0, one row: Compatibility, triggered by
+`CON-004`'s own `NFR-CMP-003` amendment.** The table read `6 | 5 | 1`
+(five Implemented, one Partial); all six `NFR-CMP` entries' own
+`*Status*` lines read **Implemented**, none Partial — a fourth stale
+cell this table did not know it had, caught only because this round's
+own edit happened to touch the same requirement. Corrected to `6 | 6 |
+—`, and the non-functional total moved with it, re-summed from its own
+eight other rows plus the corrected one, not patched by the delta
+alone: `57+4+0+2+6=69`. **The other eight non-functional rows were not
+re-derived this round** — the same bound the 0.43.0 sweep already
+states above applies here too; they are left as they stood.
 
 **Three rows of this table were stale at 0.43.0, and the table is why.**
 Accessibility read 9 entries with **none** Implemented, when eleven exist and

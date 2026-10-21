@@ -167,6 +167,12 @@ that brings back the database without the key file it was running
 against still works (a new key is generated on the next start), but
 invalidates every session that existed at backup time.
 
+**This whole generated-file mechanism is the SQLite backend's.**
+`NFR-CMP-003` is scoped to it explicitly as of 0.56.0. PostgreSQL has
+no database file to generate a key beside — `JWT_SECRET` MUST be set
+explicitly there, or the server refuses to start; see
+[`../operations/scaling.md`](../operations/scaling.md).
+
 **Setting `JWT_SECRET` explicitly still works and still wins** — for a
 multi-instance deployment sharing one secret, or an operator who
 prefers to manage it themselves. Keep it out of source control if you

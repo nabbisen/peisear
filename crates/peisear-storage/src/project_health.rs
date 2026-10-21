@@ -229,8 +229,9 @@ pub async fn for_project(pool: &Pool, project_id: &str) -> StorageResult<Project
     // the alias form; PostgreSQL rejected it with `ERROR: column
     // "current_wip" does not exist`, found only once this crate's own
     // conformance suite could run a query this shape against a real
-    // server (`postgres_tests::wip_violators_counts_a_user_over_their_effective_limit`,
-    // below in this same file's own test module).
+    // server (`dialect::postgres_tests::wip_violators_counts_a_user_over_their_effective_limit_but_not_one_at_it`,
+    // in `dialect/postgres_tests.rs` -- this file has no test module
+    // of its own).
     //
     // **One observation, not acted on here**: the `FROM ( … )`
     // subquery below carries no alias of its own, which SQLite
