@@ -139,6 +139,23 @@ finds itself editing them has left its scope.
 - `DEC-007` — the SQLite side must not move. 515.
 - `fmt`, `clippy` both ways, `rustdoc`, `mdbook`,
   `publish-dry-run`; `test.yml`'s own gate if touched.
+- **Quote result lines verbatim; do not sum them in prose.** Five
+  published figures across the last three rounds were off by one or
+  two — job counts twice, a declaration count, and both failure
+  counts in `CON-005` round 3 — while the measured substance under
+  each was right every time. `48 passed; 4 failed; 1 ignored` is
+  already in the output and cannot be miscounted; `gh run view`
+  prints the job total. A published number is a claim here, so paste
+  it rather than adding it up.
+- **`CON-005`'s leftovers are this round's to clear**: the remaining
+  `#[ignore]` in `optimistic_lock_guards/tests.rs`, and the tolerated
+  `Err(StorageError::Database(_))` arm in
+  `user_capacities_insert_with_overlapping_periods_exactly_one_wins`,
+  whose own comment says to delete it and tighten the assertion to
+  `Err(Conflict(_))` once this round lands. **A second path into the
+  same defect** — `overlaps_existing`'s conflict read, not the plain
+  row read — which is further evidence for §1's "class, not
+  instance" reading.
 
 ## §5 — escalate rather than deciding
 
@@ -164,6 +181,7 @@ no-`integer`-columns predicate in the conformance suite, **seen red
 before the fix and green after**; `migration_drift` green with no new
 exception; `issues::find_by_id` seen to return an issue against
 PostgreSQL; the unfiltered `postgres` suite at 50 passed, 0 ignored,
-with `CON-005`'s `#[ignore]` deleted; the 0/1-flag question raised
+with `CON-005`'s `#[ignore]` deleted and its tolerated
+`Database(_)` arm replaced by `Conflict(_)`; the 0/1-flag question raised
 and not taken; `migrations/` untouched; `DEC-007` at 515; all gates
 re-run after the last edit.
