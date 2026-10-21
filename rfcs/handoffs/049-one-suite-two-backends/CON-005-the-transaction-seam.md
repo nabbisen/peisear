@@ -207,6 +207,60 @@ lock a *set*, and two captures over overlapping issue sets acquiring
 rows in different scan orders is the one deadlock shape these
 mechanisms introduce. `lock_timeout` is the backstop, not the answer.
 
+## §3c — round 3: the proof the four tests do not give
+
+Round 2 implemented all fourteen sites and proved **Group D**
+empirically — `lock_issue_set_for_sprint` reverted, CI red on exactly
+that one test with exactly the named assertion, restored, CI green.
+That is the standard. It argued the other three were proven *by
+construction*, since their tests "mechanically cannot pass if the
+corresponding `dialect` function were reverted."
+
+**That argument is false for Groups A and B, and it can be shown
+without running anything.** All four tests assert the same thing —
+`!waiter.is_finished()` after 300 ms, i.e. *the waiter blocked*. But
+blocking is a side effect, not the guarantee:
+
+- **Group A.** Revert `for_update()` to `""` and
+  `issues::update_guarded`'s lead `SELECT` no longer blocks — but it
+  then reaches `UPDATE issues SET … WHERE id = ?1`, which takes the
+  row lock the holder is holding. **The waiter blocks anyway and the
+  test still passes.**
+- **Group B.** Revert `lock_scope` and `teams::update_role` reads
+  `admin_count` unblocked — then updates the target membership row,
+  which is inside the `team_id` scope the holder locked. **Blocks
+  anyway; test still passes.**
+- **Group C** does distinguish: with the advisory lock removed,
+  `user_capacities::insert` reads with no lock and inserts a new row
+  that conflicts with nothing, so the waiter *finishes* and the
+  assertion fails. Accepted as evidence.
+
+**The mechanisms are almost certainly right. The tests do not show
+it.** Under READ COMMITTED without `for_update()`, two
+`update_guarded` calls both read the same stamp, both pass
+`stamp_matches`, and the second's `UPDATE … WHERE id` — whose `WHERE`
+carries no stamp — overwrites the first: **a lost update**, which is
+the guarantee `BEGIN IMMEDIATE` was there for. Without `lock_scope`,
+two `start_guarded` calls on different sprints in one team both read
+`active_for_team` as empty and both write: **two active sprints.**
+
+**So round 3 replaces blocking with the guarantee**, for A, B and C:
+
+| Group | The test | Without the mechanism |
+|---|---|---|
+| A | two concurrent `update_guarded` with the same `expected` stamp | both `Written` — one change silently lost. Exactly one must be `Written`, the other `Stale` |
+| B | two concurrent `start_guarded` on two `Planned` sprints in one team | both start — two `Active` sprints in one team. Exactly one must succeed |
+| C | two concurrent `insert`s of overlapping periods for a user with **no** existing rows | both written — `CAP-001`'s own defect. Exactly one `Written`, the other `Conflict` |
+
+**Each one shown red with its mechanism reverted and green with it
+restored**, the way Group D was. Keep the blocking tests too if they
+are cheap — they are not wrong, they are just not sufficient.
+
+**If a guarantee test passes with its mechanism reverted**, that is
+the more interesting outcome: the mechanism is unnecessary and those
+call-site edits should be reverted rather than kept for the look of
+it. Report it; do not quietly keep the code.
+
 ## §4 — gates
 
 - **The guarantee, proven, not the syntax.** For each mechanism
@@ -220,6 +274,9 @@ mechanisms introduce. `lock_timeout` is the backstop, not the answer.
   mechanism and not with it. Not merely that the transaction opens.
 - **`lock_timeout` seen to apply**: a blocked transaction failing
   rather than hanging, demonstrated once.
+- **Round 3 specifically**: the three guarantee tests of §3c, each
+  seen red with its own mechanism reverted and green with it
+  restored. Blocking is not the guarantee.
 - The five `optimistic_lock_guards` tests green on **both** backends
   with **no `#[ignore]` left** — `CON-002`'s ignore exists to be
   deleted by this round.
