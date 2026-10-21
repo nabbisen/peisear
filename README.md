@@ -120,8 +120,11 @@ Two more, about the shape of the code rather than the product:
 > `storage`, `notify`, `web`, and a `peisear` facade, each with a
 > single clear job — so a new backend or identity provider has a
 > well-bounded place to land. A PostgreSQL backend now has real code
-> behind it, off by default and not yet reachable from the published
-> binary; see
+> behind it, selectable at build time (`--features postgres`) and
+> proven against a real server in CI — **not yet a supported
+> configuration**, and not reachable from any published archive,
+> container image, or `cargo install peisear`, which all still build
+> SQLite only; see
 > [ROADMAP.md](https://github.com/nabbisen/peisear/blob/main/ROADMAP.md#postgresql-backend)
 > for what shipped, what didn't, and what it actually required, which
 > was more than the crate split alone suggested.

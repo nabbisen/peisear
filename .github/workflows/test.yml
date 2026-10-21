@@ -668,19 +668,32 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends postgresql-client-17
       - name: backup.md's own PostgreSQL commands, proved against a real server
+        # `REL-0.56.0` §4 (found in `CON-004`'s own review): `backup.md`
+        # tells an operator to build the restore target by hand and
+        # keep `DATABASE_URL`'s own query parameters (`?sslmode=...`,
+        # the normal shape against a managed provider) -- this step's
+        # own `DATABASE_URL` carried none, so it proved the dump/
+        # restore mechanism without ever proving the case the document
+        # exists to warn about. Now carries `?sslmode=disable`
+        # (harmless against this container, which speaks no TLS) and
+        # builds the restore target the same way the document says:
+        # the database-name segment changes, the query string survives
+        # unmodified, written explicitly rather than by a generic
+        # string transform -- the thing `${DATABASE_URL%/*}` got wrong.
         run: |
           set -euo pipefail
           export PATH="/usr/lib/postgresql/17/bin:$PATH"
           export PGPASSWORD=postgres
           psql -h localhost -U postgres -d postgres -c "DROP DATABASE IF EXISTS backup_doc_check"
           psql -h localhost -U postgres -d postgres -c "CREATE DATABASE backup_doc_check"
-          DATABASE_URL="postgres://postgres:postgres@localhost:5432/backup_doc_check"
+          DATABASE_URL="postgres://postgres:postgres@localhost:5432/backup_doc_check?sslmode=disable"
           psql "$DATABASE_URL" -c "CREATE TABLE t (id int); INSERT INTO t VALUES (42);"
           pg_dump "$DATABASE_URL" --format=custom --file="peisear-$(date +%F).dump"
           psql -h localhost -U postgres -d postgres -c "DROP DATABASE IF EXISTS peisear_restored"
           psql "$DATABASE_URL" -c "CREATE DATABASE peisear_restored"
-          pg_restore --dbname "${DATABASE_URL%/*}/peisear_restored" "peisear-$(date +%F).dump"
-          result=$(psql --dbname "${DATABASE_URL%/*}/peisear_restored" -t -c "SELECT id FROM t")
+          RESTORE_TARGET="postgres://postgres:postgres@localhost:5432/peisear_restored?sslmode=disable"
+          pg_restore --dbname "$RESTORE_TARGET" "peisear-$(date +%F).dump"
+          result=$(psql --dbname "$RESTORE_TARGET" -t -c "SELECT id FROM t")
           echo "restored row: $result"
           [ "$(echo "$result" | tr -d '[:space:]')" = "42" ] || { echo "::error::restored row did not read back 42"; exit 1; }
 

@@ -11,6 +11,121 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.56.0] — 2026-10-22
+
+**The claim that both backends work, made by something that would
+notice if they did not — plus the operations story a second backend
+implies.** `RFC 018` P4, the phase's own last one. Scoped as four
+rounds; six closed, because two production defects the series' own
+widening surfaced earned rounds of their own rather than being folded
+into the ones that found them. **Nothing an existing SQLite operator
+runs has moved** — the default build, its migrations, and every test
+that already ran are untouched.
+
+### Added
+
+- **Every guarded write now executes on PostgreSQL.** Fourteen
+  production call sites opened SQLite's own `BEGIN IMMEDIATE` — a
+  syntax error there, so no guarded write ran on PostgreSQL at all
+  before this release, though it compiled and every earlier gate
+  passed. `dialect`'s own transaction seam (`begin_guarded`, plus a
+  per-site mechanism — a row lock, a sibling-set lock, or an advisory
+  lock, chosen by what each site actually guards) replaces all
+  fourteen, and all four mechanisms are proven necessary by a test
+  seen to fail without them, on a real server.
+- **Every integer column in `migrations-postgres/` is `BIGINT`.**
+  PostgreSQL's `INTEGER` is a fixed 4-byte type; this crate's own Rust
+  layer binds every integer column as `i64`. A mechanical port of
+  SQLite's own `INTEGER` (a type *affinity* of no fixed width) had
+  carried the mismatch into eight shipped migration files, `issues.effort`
+  among them — no issue could be read on PostgreSQL at all before this
+  release. A no-allow-list conformance predicate over
+  `information_schema.columns` now asserts it, seen red with every
+  offender named before the fix and green after. Fixed the same
+  round: `SUM(int4)` promotes to `int8` on PostgreSQL, but `SUM(int8)`
+  promotes to `numeric` — widening `effort` had silently broken four
+  existing `SUM(effort)` queries, caught by the real-server suite, not
+  a local gate.
+- **The storage suite and the 37 lock tests run against both
+  backends, in CI, on every push.** `peisear_storage::pool::TestDatabase`
+  gives PostgreSQL the isolation a fresh SQLite temp file already gave
+  for free — a database created and migrated for one test alone, not a
+  shared schema or a shared, truncated database whose correctness
+  would depend on a test-runner flag. Replaces the one place this
+  project's own `--test-threads=1` reset-by-hand shape had survived
+  since the suite first ran under the `postgres` feature
+  (`optimistic_lock_guards`). Twelve test helpers that read a row
+  straight back to assert on it, writing raw SQLite-style `?`
+  placeholders never exercised against a real server before this
+  release made that possible, are fixed the same way every production
+  query already is (`dialect::sql`, now `pub` for exactly this
+  cross-crate reason).
+- **`peisear`/`peisear-web` can select the `postgres` feature.**
+  `peisear-storage`'s own feature existed since `0.54.0` with no way
+  to reach it from the published binary; a CI boot smoke now starts
+  `peisear` against a real PostgreSQL server for the first time.
+  **This is not an install path** — see "What this release does not
+  prove," below.
+- **`docs/operations/backup.md` has a PostgreSQL section.** The
+  backup unit is the operator's own instance, backed up by the
+  operator's own means — peisear coordinates nothing for a server it
+  did not start. Every command in it (`pg_dump`/`psql`/`pg_restore`)
+  was run against a real server before being written down, including
+  a full round trip, and the same commands are now a permanent CI
+  step rather than a one-time proof. `docs/operations/scaling.md`
+  restates the feature's status as a property rather than a count that
+  would be wrong by the next release, and names the `JWT_SECRET`
+  fact below next to the connection string. `NFR-CMP-003` (the
+  single-file-database requirement) is retitled and scoped to say *the
+  SQLite backend* explicitly — nothing it required is loosened.
+
+### Fixed
+
+- **`JWT_SECRET` is mandatory on PostgreSQL, and peisear now says so
+  before a reader meets it as a startup refusal.** PostgreSQL's own
+  connection string has no filesystem path to generate a signing-key
+  file beside, unlike SQLite's. The refusal itself was already
+  correct; nothing documented it until this release.
+- **A `SELECT`-list alias used inside `HAVING`**, which PostgreSQL
+  does not resolve the way it resolves one in `ORDER BY`/`GROUP BY`,
+  broke `project_health`'s own WIP-violator count on PostgreSQL —
+  found only because this release is the first to render any
+  `peisear-web` page against a real server at all. Fixed, and covered
+  by `project_health`'s first unit test.
+- **`0.55.0`'s own crate-root doc overstated a measurement.** It said
+  the remaining PostgreSQL suite failures were *"not because a
+  production query is wrong"* — true narrowly (a transaction-control
+  statement is not a query) but read, and accepted in review, as
+  covering all of them. The real second cause was the fourteen
+  `BEGIN IMMEDIATE` call sites above. `[0.55.0]`'s own section here is
+  unchanged — shipped history is not rewritten — and `lib.rs`'s own
+  doc comment already carries the correction.
+
+### What this release does not prove
+
+- **298 of 335 `peisear-web` integration tests have never run against
+  PostgreSQL**, among them the only tests proving `NFR-PRIV-007`'s
+  contributor floor and `NFR-PRIV-001`'s capacity visibility — both
+  **P0** privacy controls, enforced by SQL this release rewrote per
+  backend.
+- **The alias-in-`HAVING` class above is closed at one occurrence, not
+  as a class.** The same mistake in a `WHERE` clause cannot be found
+  by grepping a keyword, and thirty of the thirty-three integration
+  files above have never rendered against PostgreSQL at all.
+- **A `--features postgres` build still links SQLite's own bundled C
+  driver** (387 `sqlite3_*` symbols) — `peisear-storage`'s `sqlite = []`
+  feature gates the `cfg`, not `sqlx`'s own dependency, which is
+  unconditional at the workspace level. Harmless while PostgreSQL is
+  unsupported; becomes a real defect the day an install path is
+  documented.
+- **No supported PostgreSQL version range is declared.** This release
+  runs against `postgres:17` only; whether its queries hold on an
+  earlier major is unmeasured.
+- **Running peisear on PostgreSQL is still not a supported
+  configuration.** Same five archives, same single container tag,
+  `cargo install peisear` still builds SQLite only, and no document
+  anywhere gives an install command for the other backend.
+
 ## [0.55.0] — 2026-10-20
 
 **A second backend that runs.** `RFC 018` P3, plus the queries, a gap

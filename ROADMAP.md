@@ -161,7 +161,6 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| 0.56.0 | **The conformance suite.** `RFC 018` P4 — one suite against both backends in CI, and the operations story | `RFC 018` §6; handoffs [`049-one-suite-two-backends`](rfcs/handoffs/049-one-suite-two-backends/README.md) | **Authorized 2026-10-14**; scoped 2026-10-20 into four rounds. **The feature passthrough is in scope as a prerequisite**, not an addition: scoping measured that no command line builds `peisear-web` or `peisear` against PostgreSQL, and P4’s gate names the **lock** tests, which live in `peisear-web`. The gate is unreachable without it — the same shape as `PG-004` in 0.55.0. **It is test infrastructure and no install path is documented**: after this series 37 of 335 integration tests run against PostgreSQL, and the 298 that do not are the only coverage for `sprints.rs`, `issues.rs`, `project_health.rs` and the three metrics modules — all with zero unit tests, two of them carrying **P0** privacy controls (`NFR-PRIV-007`’s contributor floor, `NFR-PRIV-001`’s capacity visibility) whose proving tests stay SQLite-only. Documenting a path would engage `NFR-REL-011`, whose walk would certify that. So: same five archives, same single container tag, `cargo install peisear` still SQLite, plus a **CI boot smoke** against the service container. `scaling.md` states the status honestly, since the feature is public API on docs.rs regardless |
 | 0.57.0 | **The specification checks itself.** The two citation rules — every `§10.N` citation has a matching heading, no four-digit `RFC 0NNN` outside the history directory — **plus the rest of `spec_scan`**: Appendix A's columns summed from its own rows, counts stated in prose checked against the workspace, and the status vocabulary closed to a known list. **`§10.42`**: `requirements.md` is this project's most-edited document and nothing mechanical reads it | `§10.36`'s decision (2026-10-14); `§10.42` (2026-10-15); the citation-form sweep carried since 0.52.0 | **Authorized 2026-10-15**, citation rules and `spec_scan` widening together. Both are guard work, both are predicates rather than lists, and the second has been carried unplaced for two releases. Placed here rather than earlier because **guards do not displace an authorized sequence** — but ahead of `RFC 020`, because 0.52.0's own precedent is that guard infrastructure should not queue behind a feature . **One design input from `CON-004` (2026-10-21)**: a `file:line` citation is the most fragile form this project uses — `Cargo.toml:51` for the workspace `sqlx` entry was correct when written and became `:60` because `CON-001` added a comment block above it, with nothing touching the cited fact. A `§10.N` citation breaks only on a rename; a line citation breaks on any edit above it. Prefer a symbol or section anchor in anything durable, and if line citations stay, they are what the scan most needs to check |
 | 0.58.0 | **The first thing it says.** `RFC 020` — a first run with no configuration asks five questions with working defaults and writes the `.env` it describes, so the file and the explanation cannot disagree. Skipped when configuration exists or stdin is not a terminal | `RFC 020` (**Accepted**, 2026-10-15) | **Authorized 2026-10-15.** Placement follows the note authorized with the 0.57.0 row: behind `RFC 018`'s phases, and behind the citation guard on 0.52.0's precedent that guard work does not queue behind a feature. **Handoffs are not written yet** and are not due until 0.57.0 is cut (Release cycle, entry criterion 3) |
 
@@ -177,6 +176,25 @@ baseline rows, which is where release history belongs.
 **Shipped 2026-10-17**: `0.53.0` (the first five minutes), all four
 `DEC-056` legs, seven crates on crates.io, five archives on the
 Release and `ghcr.io/nabbisen/peisear` at `0.53.0` and `latest`.
+
+**Shipped 2026-10-22**: `0.56.0` (the conformance suite and the
+operations story) — `RFC 018` P4, in six rounds (`CON-001`, `CON-002`,
+`CON-005`, `CON-006`, `CON-003`, `CON-004`; scoped as four, two more
+earned rounds of their own after production defects the series' own
+widening surfaced). Both backends now green on `peisear-storage`'s own
+suite and the 37 lock tests, in CI, on every push; `NFR-CMP-003`
+restated for the SQLite backend. **Nothing an existing SQLite operator
+runs moved** — `DEC-007` at 515 unchanged across the whole series,
+`migrations/` byte-identical to `0.55.0`, walked from a real `0.55.0`
+install. **What it does not deliver**: PostgreSQL is still not a
+supported configuration — 298 of `peisear-web`'s 335 integration tests
+have never run against it, among them the only tests proving two
+**P0** privacy controls; `CHANGELOG.md`'s own `[0.56.0]` section states
+this plainly, as the release whose subject is a second backend should.
+*`DEC-056`'s four legs are the architect's own, run on the owner's
+approval of this candidate — this line describes the engineering
+content, not a claim that crates.io, the Release or the container tag
+already carry it.*
 
 **Shipped 2026-10-20**: `0.55.0` (a second backend that runs) —
 `RFC 018` P3 and the queries its own phase table had no home for, in
