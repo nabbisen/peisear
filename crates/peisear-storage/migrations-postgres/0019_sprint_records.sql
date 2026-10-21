@@ -28,21 +28,23 @@
 --   `sprints` has no `status = 'completed'` rows, so both
 --   backfill statements run as before: real SQL, zero rows
 --   affected.
+-- - `INTEGER` -> `BIGINT` throughout (`CON-006`, amended in place):
+--   see `0001`'s porting note for the general reason.
 
 CREATE TABLE sprint_records (
     sprint_id        TEXT PRIMARY KEY REFERENCES sprints(id) ON DELETE CASCADE,
-    committed_points INTEGER NOT NULL,
-    completed_points INTEGER NOT NULL,
-    committed_count  INTEGER NOT NULL,
-    completed_count  INTEGER NOT NULL,
+    committed_points BIGINT NOT NULL,
+    completed_points BIGINT NOT NULL,
+    committed_count  BIGINT NOT NULL,
+    completed_count  BIGINT NOT NULL,
     captured_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE sprint_burndown_points (
     sprint_id            TEXT NOT NULL REFERENCES sprints(id) ON DELETE CASCADE,
     day                  DATE NOT NULL,
-    cumulative_committed INTEGER NOT NULL,
-    cumulative_completed INTEGER NOT NULL,
+    cumulative_committed BIGINT NOT NULL,
+    cumulative_completed BIGINT NOT NULL,
     PRIMARY KEY (sprint_id, day)
 );
 

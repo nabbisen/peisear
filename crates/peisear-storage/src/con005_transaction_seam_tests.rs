@@ -786,12 +786,15 @@ async fn sprints_start_guarded_on_two_sprints_in_one_team_exactly_one_wins() {
 ///   so **both land**: two overlapping rows for the same user,
 ///   `CAP-001`'s own original defect.
 ///
-/// **The loser's exact error is not asserted as `Conflict(_)` alone**
-/// -- see the comment on that match below. `CON-006` (open) means the
-/// conflict read itself can fail to decode `points` before it gets the
-/// chance to build a clean `Conflict`; this test tolerates that one,
-/// already-escalated shape without hiding it, so it keeps proving the
-/// lock rather than failing on a defect a different round owns.
+/// **The loser's exact error is asserted as `Conflict(_)`**, tightened
+/// here by `CON-006`: before this round, `overlaps_existing`'s own
+/// conflict-info read could fail to decode `points` (`INTEGER` against
+/// this crate's own `i64` binding) before it ever got the chance to
+/// build a clean `Conflict`, so this test used to tolerate an
+/// `Err(StorageError::Database(_))` arm too. `CON-006` fixed the
+/// invariant the column belonged to, so the tolerance is deleted, not
+/// carried forward as a backwards-compatibility shim for a defect that
+/// no longer exists.
 #[tokio::test]
 async fn user_capacities_insert_with_overlapping_periods_exactly_one_wins() {
     let pool = migrated_pool().await;
@@ -858,21 +861,8 @@ async fn user_capacities_insert_with_overlapping_periods_exactly_one_wins() {
     } else {
         &result_a
     };
-    match loser {
-        Err(StorageError::Conflict(_)) => {}
-        // `CON-006` (open, not this round's to fix): `overlaps_existing`'s own
-        // conflict-info read decodes the conflicting row's `points` column, which
-        // is `INTEGER` on PostgreSQL against this crate's own `i64` binding -- the
-        // same defect `CON-005` round 2 found and escalated, reached here through
-        // a second code path (the conflict read, not the plain row read). Tolerated
-        // so this test still proves the lock rather than failing on an unrelated,
-        // already-escalated defect; once `CON-006` lands, delete this arm and
-        // tighten the assertion above to require `Err(Conflict(_))` specifically.
-        Err(StorageError::Database(_)) => {}
-        other => panic!(
-            "the losing insert must fail as a conflict (or, until CON-006 lands, the \
-             known points/int4 decode defect reached through the conflict read); \
-             got {other:?}"
-        ),
-    }
+    assert!(
+        matches!(loser, Err(StorageError::Conflict(_))),
+        "the losing insert must fail as a conflict, got {loser:?}"
+    );
 }

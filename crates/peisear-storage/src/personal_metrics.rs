@@ -230,10 +230,10 @@ pub async fn for_user_in_project(
         SELECT
             SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END)
                 AS current_wip,
-            SUM(CASE
+            CAST(SUM(CASE
                 WHEN status IN ('open', 'in_progress') THEN effort
                 ELSE NULL
-            END) AS in_flight_points,
+            END) AS BIGINT) AS in_flight_points,
             SUM(CASE
                 WHEN status = 'done' AND updated_at >= now() + $3::interval
                 THEN 1 ELSE 0
@@ -374,10 +374,10 @@ pub async fn for_user_global(
         SELECT
             SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END)
                 AS current_wip,
-            SUM(CASE
+            CAST(SUM(CASE
                 WHEN status IN ('open', 'in_progress') THEN effort
                 ELSE NULL
-            END) AS in_flight_points,
+            END) AS BIGINT) AS in_flight_points,
             SUM(CASE
                 WHEN status = 'done' AND updated_at >= now() + $2::interval
                 THEN 1 ELSE 0

@@ -44,6 +44,7 @@
 # Development
 
 - [Changelog, release notes and tags](development/changelog-and-releases.md)
+- [Migrations](development/migrations.md)
 - [wasm-smtp STARTTLS extension request](wasm-smtp-starttls-extension-request.md)
 
 # Specification

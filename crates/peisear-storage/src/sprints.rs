@@ -889,10 +889,10 @@ async fn live_totals(
     let row: (i64, i64, i64, i64) = sqlx::query_as(&crate::dialect::sql(
         r#"
         SELECT
-            COALESCE(SUM(COALESCE(i.effort, 0)), 0)
+            CAST(COALESCE(SUM(COALESCE(i.effort, 0)), 0) AS BIGINT)
                 AS committed_points,
-            COALESCE(SUM(CASE WHEN i.status = 'done'
-                              THEN COALESCE(i.effort, 0) ELSE 0 END), 0)
+            CAST(COALESCE(SUM(CASE WHEN i.status = 'done'
+                              THEN COALESCE(i.effort, 0) ELSE 0 END), 0) AS BIGINT)
                 AS completed_points,
             COUNT(*)
                 AS committed_count,

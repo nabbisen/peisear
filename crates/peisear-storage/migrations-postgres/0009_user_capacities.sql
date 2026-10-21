@@ -20,11 +20,15 @@
 --   COLUMN` both run as before: a no-op `INSERT` (zero rows
 --   selected) and a real `DROP COLUMN` on a column with no data to
 --   lose either way.
+-- - `INTEGER` -> `BIGINT` (`CON-006`, amended in place): the
+--   original measured failure -- the first test ever to round-trip
+--   this column against a real server. See `0001`'s porting note
+--   for the general reason.
 
 CREATE TABLE user_capacities (
     id            TEXT PRIMARY KEY,
     user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    points        INTEGER NOT NULL CHECK (points >= 0),
+    points        BIGINT NOT NULL CHECK (points >= 0),
     period_start  DATE,
     period_end    DATE,
     note          TEXT,

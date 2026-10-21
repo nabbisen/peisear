@@ -343,29 +343,22 @@ async fn sprints_delete_guard_refuses_a_stale_millisecond_token_and_accepts_the_
 // classified shape needs (`dialect`'s own module doc).
 //
 // **A second, unrelated defect, found the moment that one was out of
-// the way**: `migrations-postgres/0009_user_capacities.sql`'s `points`
-// column is `INTEGER` (PostgreSQL's own 4-byte type), a mechanical
-// port of the SQLite migration's own `INTEGER` -- which in SQLite is
-// a type *affinity*, not a fixed width, and holds any integer value
-// transparently. Every Rust binding of this column is `i64`
-// (`user_capacities::insert`'s own `points: i64` parameter, carried
-// through `overlaps_existing`'s `ConflictInfo`), so the first real
+// the way, by `CON-005`, closed here by `CON-006`**: `migrations-
+// postgres/0009_user_capacities.sql`'s `points` column was `INTEGER`
+// (PostgreSQL's own 4-byte type), a mechanical port of the SQLite
+// migration's own `INTEGER` -- which in SQLite is a type *affinity*,
+// not a fixed width, and holds any integer value transparently.
+// Every Rust binding of this column is `i64` (`user_capacities::
+// insert`'s own `points: i64` parameter, carried through
+// `overlaps_existing`'s `ConflictInfo`), so the first real
 // round-trip read against PostgreSQL -- this test's own legitimate
-// edit, through `update_guarded` -- decodes it and fails:
+// edit, through `update_guarded` -- used to decode it and fail:
 // `ColumnDecode { index: "points", source: "mismatched types; Rust
 // type i64 (as SQL type INT8) is not compatible with SQL type INT4"
-// }`. Escalated in this round's own completion package, not fixed
-// here: changing a shipped migration's column type is `DEC-056`/
-// append-only-migration territory, outside `CON-005`'s own mandate.
-// `#[ignore]`d again, for this new reason -- not the one `CON-005`
-// closed.
-#[cfg_attr(
-    all(feature = "postgres", not(feature = "sqlite")),
-    ignore = "found by CON-005: migrations-postgres/0009's user_capacities.points is \
-              INTEGER (4-byte), every Rust binding is i64 -- a mechanical port of SQLite's \
-              own INTEGER type AFFINITY, not its fixed width. See the round's own \
-              completion package."
-)]
+// }`. `CON-006` fixed the invariant -- every integer column in
+// `migrations-postgres/` is now `BIGINT` -- rather than this one
+// column, so the `#[ignore]` `CON-005` left here is deleted, not
+// widened.
 #[tokio::test]
 async fn user_capacities_delete_guard_refuses_a_stale_millisecond_token_and_accepts_the_current_one()
  {

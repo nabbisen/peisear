@@ -603,3 +603,82 @@ async fn on_conflicts_column_list_parses_the_same_with_or_without_a_leading_spac
         .expect("read back");
     assert_eq!(n, 2, "both spellings must act on the same conflict target");
 }
+
+/// `CON-006`'s own deliverable: no column in this crate's schema
+/// carries PostgreSQL's fixed 4-byte `integer` type, read from the
+/// live, migrated server rather than the migration files -- the same
+/// shape `PG-003`'s own live-trigger check already uses, so the next
+/// mechanical port of a SQLite `INTEGER` (a type *affinity* of no
+/// fixed width, unlike PostgreSQL's own same-named type) cannot
+/// reintroduce this invisibly. `table_schema = 'public'` excludes
+/// PostgreSQL's own system catalogues, which carry `integer` columns
+/// of their own that this crate does not own and must not be asked to
+/// change.
+#[tokio::test]
+async fn no_column_in_this_schemas_own_tables_is_a_four_byte_integer() {
+    let pool = migrated_pool().await;
+    let offenders: Vec<(String, String)> = sqlx::query_as(
+        "SELECT table_name, column_name FROM information_schema.columns \
+         WHERE table_schema = 'public' AND data_type = 'integer' \
+         ORDER BY table_name, column_name",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect("read information_schema.columns");
+    assert!(
+        offenders.is_empty(),
+        "found column(s) still declared as PostgreSQL's 4-byte `integer`, where this \
+         crate's own Rust layer binds every integer column as `i64`: {offenders:?}"
+    );
+}
+
+/// `CON-006` §4's own named gate: not just that a column decodes, but
+/// that `issues::find` -- the handoff's own prose says `find_by_id`,
+/// which `issues.rs` does not have; the real function is `find` --
+/// actually returns a real issue against PostgreSQL, carrying a
+/// **non-null** `effort`. A `NULL` would decode identically
+/// regardless of the column's width, so it would not have reached
+/// `user_capacities.points`'s own failure shape at all; this needs a
+/// real value to be the read this round's own defect was about.
+#[tokio::test]
+async fn issues_find_returns_a_real_issue_with_a_non_null_effort() {
+    let pool = migrated_pool().await;
+    let user_id = uuid::Uuid::new_v4().to_string();
+    crate::users::insert(
+        &pool,
+        &user_id,
+        &format!("{user_id}@example.test"),
+        "x",
+        "U",
+    )
+    .await
+    .expect("seed user");
+    let project_id = uuid::Uuid::new_v4().to_string();
+    crate::projects::insert(&pool, &project_id, &user_id, "Project", "", None)
+        .await
+        .expect("seed project");
+    let issue_id = uuid::Uuid::new_v4().to_string();
+    crate::issues::insert(
+        &pool,
+        &issue_id,
+        &project_id,
+        &user_id,
+        crate::issues::IssueFields {
+            title: "An issue with effort set",
+            description: "",
+            status: peisear_core::IssueStatus::Open,
+            priority: peisear_core::Priority::Medium,
+            effort: Some(5),
+            assignee_id: None,
+            planned_start_at: None,
+            planned_end_at: None,
+        },
+    )
+    .await
+    .expect("seed issue");
+
+    let issue = crate::issues::find(&pool, &issue_id, &project_id)
+        .await
+        .expect("issues::find must return the issue it just read, not fail to decode it");
+    assert_eq!(issue.effort, Some(5));
+}

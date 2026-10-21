@@ -945,10 +945,10 @@ pub async fn project_workload(
              ORDER BY uc.created_at DESC, uc.rowid DESC
              LIMIT 1
             ) AS capacity_points,
-            COALESCE(SUM(CASE
+            CAST(COALESCE(SUM(CASE
                 WHEN i.status IN ('open', 'in_progress') THEN i.effort
                 ELSE NULL
-            END), 0) AS in_flight_points,
+            END), 0) AS BIGINT) AS in_flight_points,
             COALESCE(SUM(CASE
                 WHEN i.status IN ('open', 'in_progress') THEN 1
                 ELSE 0

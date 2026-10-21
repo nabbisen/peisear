@@ -13,6 +13,19 @@
 -- key enforcement is unconditional and always on, so the comment in
 -- the SQLite original about enabling it in `pool.rs` has nothing to
 -- port.
+--
+-- `INTEGER` -> `BIGINT` (`CON-006`, amended in place -- see that
+-- round's own handoff §3 for why an already-shipped
+-- `migrations-postgres/` file may still be edited): SQLite's
+-- `INTEGER` is a type *affinity* of no fixed width and stores any
+-- integer value; this project's own Rust layer binds every such
+-- column as `i64` uniformly. PostgreSQL's `INTEGER` is a real,
+-- fixed 4-byte `int4`, which `i64` does not fit. `issues.position`
+-- is dropped again by `0018`, so this edit does not change the live
+-- schema's own column set -- it is made anyway, for the same
+-- byte-for-byte historical fidelity this file's own header already
+-- states as its reason for porting a column at all before dropping
+-- it.
 
 CREATE TABLE users (
     id           TEXT PRIMARY KEY NOT NULL,
@@ -53,7 +66,7 @@ CREATE TABLE issues (
                   CHECK (status IN ('open', 'in_progress', 'done')),
     priority    TEXT NOT NULL DEFAULT 'medium'
                   CHECK (priority IN ('low', 'medium', 'high', 'urgent')),
-    position    INTEGER NOT NULL DEFAULT 0,
+    position    BIGINT NOT NULL DEFAULT 0,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
