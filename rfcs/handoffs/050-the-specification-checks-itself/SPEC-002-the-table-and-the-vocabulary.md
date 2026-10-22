@@ -97,6 +97,24 @@ Statuses are written as prose — *"Implemented via snapshot tables"*,
 whole string. A closed set of leading tokens with a documented
 status→column mapping is the deliverable.
 
+## §3a — one item carried in from `SPEC-001`
+
+**24 register numbers exist in two forms at once.** Measured:
+`requirements.md` has 45 `### 10.N` heading entries and 28 rows in an
+older compact register, and 24 numbers appear in both. For each of
+those 24, a status can change in one place and not the other —
+`§10.34`'s class, two homes for one fact.
+
+It is pre-existing and it is not a citation-rule concern, so
+`SPEC-001` left it here. **Say whether this round's vocabulary work
+can cheaply check that a row and its heading agree on status.** If it
+can, do it. If it cannot, record the 24 as a known unchecked
+population, in the rule's own doc comment, with a pointer to whoever
+retires the duplication.
+
+**Do not restructure the register.** The series README rules that
+out and it is not lifted.
+
 ## §4 — two checks, and the second is the valuable one
 
 **(a) The table's own arithmetic** — each total row equals the sum of

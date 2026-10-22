@@ -27,12 +27,48 @@ times**.
 The thirteen in `docs/` are all in `requirements.md` and
 `external-design.md` — **both live, normative documents.**
 
-**And none of the four headings ever existed.** Checked against
-history, not assumed: `git log -S'### 10.N '` over
-`requirements.md` returns nothing for all four, and a broader search
-for any heading form returns nothing either. So this is **not**
-`§10.41`'s shape (a heading deleted and its body absorbed). These are
-citations to register numbers that were never written.
+**No `### 10.N` heading was ever written for them.** Checked against
+history: `git log -S'### 10.N '` over `requirements.md` returns
+nothing for all four, and a broader search for any heading form
+returns nothing either. So this is **not** `§10.41`'s shape (a
+heading deleted and its body absorbed).
+
+**Corrected 2026-10-22, by round 1 — the entries themselves do
+exist.** This section first concluded *"citations to register numbers
+that were never written."* `requirements.md:4355`–`:4376` carries an
+older compact register (`| §10.N description | status |`) and all
+four are in it, dated, with their closing handoff named. The
+architect searched for headings, found none, and then wrote a
+conclusion about *entries* — an absence established by a search
+narrower than the claim. Round 1 looked in the document and found it.
+
+**Measured, so the shape is not in doubt**: 45 heading entries, 28
+compact rows, **24 in both forms**, **4 table-only** (these four),
+21 heading-only. This is a migration that is **24 of 28 complete**,
+and these four are the stragglers.
+
+## §1a — the fix, decided after round 1: promote the four
+
+**Write the four `### 10.N` entries from the content already in their
+table rows and their citing sentences. Rule 1 stays strict — a
+heading or nothing.**
+
+This is not §2's forbidden invention. That prohibition is against
+minting an entry so a citation resolves; here the entry exists,
+dated, naming its closing handoff, and what is missing is the form
+the register has used since `§10.29`. Their 24 neighbours were
+promoted the same way. **Promoting finishes a migration; it does not
+manufacture a record.**
+
+The alternative — teaching rule 1 that a compact row also defines a
+number — was considered and rejected: it blesses two forms of
+register entry permanently, and a reader following a citation to a
+one-line row gets less than one following it to an entry.
+
+**Budget: each table row plus what its own citing sentences say, and
+nothing more.** If a promotion tempts you into reconstructing a
+defect's history from the handoff it names, stop — §2's invention
+clause still applies.
 
 ## §2 — the fix is not mechanical, and must not be made so
 
@@ -72,10 +108,23 @@ count.
 
 ## §4 — rule 2 is green today, which is the problem
 
-Four-digit `RFC 0NNN` references: **43 occurrences**, `RFC 0001`
-through `RFC 0005`, **every one inside
-`docs/specification/history/`.** Measured repo-wide across `*.md` and
-`*.rs`.
+Four-digit `RFC 0NNN` references: **45 occurrences over tracked
+files** at scoping time, `RFC 0001` through `RFC 0005`.
+
+**Corrected 2026-10-22.** This first said *"43 occurrences, every one
+inside `docs/specification/history/`."* Both halves were wrong: the
+count was taken over the working tree rather than tracked files, and
+**two of the occurrences were in this handoff's own `§4`**, where the
+architect wrote *"`RFC 0001` through `RFC 0005`"* — a census-taking
+document instantiating the pattern it counts. Round 1 hit the
+identical problem from the other side, in its own `rfcs/` count, and
+reported it.
+
+**The population matters more than the number.** Scoped to
+maintained `docs/` plus published doc comments, rule 2 is green. It
+must **not** widen to all of `crates/**/*.rs`: `spec_scan/tests.rs`
+legitimately carries five planted `RFC 0017` references, and a rule
+that flags its own fixtures is worse than no rule.
 
 So rule 2 passes the day it is written. **A check never seen to fail
 is not evidence** — plant it: put a four-digit reference into a live

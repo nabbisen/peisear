@@ -14,7 +14,7 @@ precedent that guard work does not queue behind a feature.
 
 | ID | Handoff | Subject | Blocked on | State |
 |---|---|---|---|---|
-| SPEC-001 | [the citation that resolves](./SPEC-001-the-citation-that-resolves.md) | The two citation rules. **Rule 1 is already red: thirteen citations in live normative documents to four `§10.N` numbers that never existed.** Rule 2 is green and must be planted to be trusted | — | **Next** |
+| SPEC-001 | [the citation that resolves](./SPEC-001-the-citation-that-resolves.md) | The two citation rules. **Rule 1 is already red: thirteen citations in live normative documents to four `§10.N` numbers that never existed.** Rule 2 is green and must be planted to be trusted | — | **Round 2** — both rules planted and proven; rule 2’s first design found **23 real IETF citations** it would have flagged. The four dangling numbers resolved to one judgement each, escalated correctly: `§1a` answers it — promote them, finishing a 24-of-28 migration |
 | SPEC-002 | [the table and the vocabulary](./SPEC-002-the-table-and-the-vocabulary.md) | Appendix A summed from its own rows **and** checked against the entries; the status vocabulary closed. Two measured traps, both of which caught the architect while scoping | SPEC-001 (module only) | Not started |
 | SPEC-003 | [the counts nothing can check](./SPEC-003-the-counts-nothing-can-check.md) | *"Counts stated in prose checked against the workspace"* — **not mechanically decidable as written**, because a dated measurement and a present-tense claim look identical. A design question, not three more rules | SPEC-001 (module only) | Not started |
 | REL-0.57.0 | not written | The cut, `DEC-028`, `DEC-056`. Written when the three rounds close | all three | Not written |
@@ -34,12 +34,19 @@ corrected a pattern the architect used wrongly first.
   `§10.22` ×1, `§10.23` ×2, `§10.24` ×8. **Thirteen are in
   `requirements.md` and `external-design.md`**; three are in closed
   handoffs, which `SPEC-001` §3 scopes out with its reason.
-- **None of the four headings ever existed.** `git log -S` over
-  `requirements.md` finds no commit that added any of them, so this
-  is not `§10.41`'s deleted-heading shape — they were never written.
-- **43** four-digit `RFC 0NNN` references, **all** inside
-  `docs/specification/history/`. Rule 2 passes the day it is
-  written, which is why `SPEC-001` §4 requires it planted.
+- **No `### 10.N` heading was ever written for the four** — but
+  **the entries exist**, in an older compact register at
+  `requirements.md:4355`–`:4376`, dated and naming their closing
+  handoff. Round 1 found that; the architect had searched for
+  headings and concluded about entries. Measured: 45 heading
+  entries, 28 compact rows, **24 in both forms**, 4 table-only.
+  A migration **24 of 28 complete**, and `SPEC-001` §1a finishes it.
+- **45** four-digit `RFC 0NNN` references over tracked files, of
+  which **two were in `SPEC-001`’s own text** — a census-taking
+  document instantiating the pattern it counts, which round 1 hit
+  independently from the other side. Rule 2 is green **as scoped**
+  (maintained `docs/` plus published doc comments) and passes the
+  day it is written, which is why `SPEC-001` §4 requires it planted.
 - **168 requirement entries** — 99 `FR-*`, 69 `NFR-*` — matching
   Appendix A's own totals, whose arithmetic is also consistent.
 - **180 `*Status*` lines against those 168 entries.** Five entries
