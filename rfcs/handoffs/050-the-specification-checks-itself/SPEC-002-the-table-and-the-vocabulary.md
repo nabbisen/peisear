@@ -115,6 +115,26 @@ retires the duplication.
 **Do not restructure the register.** The series README rules that
 out and it is not lifted.
 
+## §3b — a second item carried in: one wrong number
+
+`SPEC-001` round 2's promoted `§10.20` says *"one of **three**
+defects found in three days by a headless-browser inspection."* The
+document says **four**, twice, and Appendix C's 0.32.0 row enumerates
+them: `§10.18`, `§10.20`, `§10.19`, and the 314 px empty-anchor
+overlap (`§10.21`).
+
+`§10.21` was later closed as *"not a defect, my own measurement
+artefact"*, so three survived as defects — which is probably the
+reasoning. **Write what reconciles the two**: *"one of four reported,
+one later withdrawn as a measurement artefact (`§10.21`)"*, or simply
+four. One clause either way.
+
+**Record it in `SPEC-003`'s own evidence while you are here.** A bare
+number in prose, contradicting the same document's other statement of
+itself, with no marker and no date for a rule to key on, is exactly
+the case `SPEC-003` argues cannot be checked mechanically — found in
+this series, one round after the handoff predicted the shape.
+
 ## §4 — two checks, and the second is the valuable one
 
 **(a) The table's own arithmetic** — each total row equals the sum of
