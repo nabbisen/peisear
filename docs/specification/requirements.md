@@ -7245,6 +7245,43 @@ is a round with its own measurement, not a clause of this one.
 withdrawn if P5 is itself withdrawn — tracked alongside `ROADMAP.md`'s
 own P5 section, not ahead of it.
 
+### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
+
+**Promoted from this document's own older compact register**
+(`SPEC-001` round 2): the project toolbar could not wrap below 390 px
+— one of three defects found in three days by a headless-browser
+inspection, none reachable by any discipline already in use at the
+time. `BROWSER-001`'s own overflow gate (`DEC-048`) was watched red on
+this defect before being trusted, restored and rebuilt before the
+next. Its own mechanism — a row that cannot wrap — recurs on a header
+shape later found to pass the overflow gate while still being worth
+recording (`§10.27`).
+
+### 10.22 The touch-target guard was bypassable three ways — **closed**, `TT-004` rounds 1–3, 0.32.0
+
+**Promoted from this document's own older compact register**
+(`SPEC-001` round 2). Each of the three bypasses was demonstrated by
+planting it and watching the guard stay green, the same discipline
+this series' own `§10.46`/`§10.48` and `CON-005`/`CON-006` were later
+held to.
+
+### 10.23 The product's CSS is loaded from two CDNs at runtime — **closed**, `ASSET-001`, 0.32.0
+
+**Promoted from this document's own older compact register**
+(`SPEC-001` round 2): Tailwind and DaisyUI vendored into `static/`,
+verified with both CDNs blocked.
+
+### 10.24 The board's columns overflow at 320 px on an unbreakable issue title — **closed**, `LAYOUT-003`, 0.33.0
+
+**Promoted from this document's own older compact register**
+(`SPEC-001` round 2): `min-w-0` and a break opportunity
+(`break-words`), each alone insufficient — the same two-part fix
+`§10.25`'s own table (`the box`/`the content`, above) names for every
+site this shape recurred at, one of thirteen surfaces this release's
+own fixture found overflowing on unbreakable user text, in three
+shapes with non-interchangeable remedies. `BROWSER-001`'s overflow
+gate was watched red on this defect specifically before being trusted.
+
 ## 11. Deferred and future requirements
 
 Accepted in principle, deliberately not scheduled.

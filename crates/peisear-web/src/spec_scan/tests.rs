@@ -115,46 +115,21 @@ fn rule_1_is_green_on_the_real_tree_for_every_heading_that_exists() {
     }
 }
 
-/// `SPEC-001` §2, measured 2026-10-22 at this round's own commit:
-/// every `§10.N` citation in `docs/` to a number with no
-/// `### 10.N` heading, named exactly rather than asserted away.
-/// **All four are the same outcome** (`SPEC-001` §2 case 2: a real,
-/// already-closed defect, described in `requirements.md`'s own older
-/// compact `§10.N | description | status` table — a format that
-/// predates the `### 10.N` heading convention every neighbouring
-/// number eventually received — never promoted to it. Escalated to
-/// the architect rather than resolved here (`SPEC-001` §7: "writing a
-/// new §10.N entry is a specification change"), so this test names the
-/// known, current, bounded set rather than asserting the rule is
-/// clean — a claim this round cannot make honestly yet. It fails
-/// loudly, not silently, the moment a *new* dangling citation appears,
-/// or the moment these four are resolved and this list needs shrinking
-/// to empty.
+/// `SPEC-001` round 2: the thirteen `docs/` citations to `§10.20`,
+/// `§10.22`, `§10.23` and `§10.24` that round 1 found and the
+/// architect's own review resolved -- all four were real, already-
+/// closed defects recorded only in `requirements.md`'s own older
+/// compact `§10.N | description | status` table, never promoted to
+/// the `### 10.N` heading convention every neighbouring number
+/// eventually received. Promoted (content kept to what the table row
+/// and its own citing sentences already said, per the review's own
+/// budget), so rule 1 asserts clean now rather than naming a known,
+/// bounded, pending set -- the claim round 1 could not honestly make.
 #[test]
-fn rule_1_s_known_pending_violations_are_exactly_these_and_no_others() {
+fn rule_1_is_clean_on_the_real_tree() {
     let input = real_input();
-    let mut v = only(violations(&input), "rule 1");
-    v.sort();
-    let mut expected: Vec<String> = Vec::new();
-    for n in [20u32, 22, 23, 24] {
-        // Count every occurrence by path, matching SPEC-001's own
-        // census: each citation gets its own violation line.
-        for (path, text) in &input.maintained_docs {
-            for c in section_citations(text) {
-                if c == n {
-                    expected.push(format!(
-                        "rule 1: {path} cites §10.{n}, which has no ### 10.{n} heading in requirements.md"
-                    ));
-                }
-            }
-        }
-    }
-    expected.sort();
-    assert_eq!(
-        v, expected,
-        "rule 1's real-tree violations changed -- either a new dangling citation appeared, \
-         or §10.20/22/23/24 were resolved and this pending list needs updating to reflect it"
-    );
+    let v = only(violations(&input), "rule 1");
+    assert!(v.is_empty(), "rule 1 found real dangling citations: {v:?}");
 }
 
 // ---------- rule 1's own excluded population: rfcs/, counted not enforced ----------
