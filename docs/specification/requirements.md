@@ -1187,9 +1187,11 @@ forms, which was the right answer from the wrong needle.
 non-empty basis is **not** sufficient for a basis link to render, because
 `human_explanation` returns `None` for `Good` and `Insufficient`, and a basis
 link only exists on an explanation row. **Found by running the test and
-reading the failure**, not by reasoning about it. *Status*: **Partially implemented (`HLT-001`,
+reading the failure**, not by reasoning about it. *Status*: **Partial (`HLT-001`,
 post-0.28.0) — two of three limbs.** Basis and calculation ship; **history is
-deferred.** *Priority*: P2.
+deferred.** *Priority*: P2. *Spelling normalised (`SPEC-002`): this line read
+"Partially implemented" until now, the same status as every other `Partial`
+entry spelled a second way.*
 
 *Amended (RFC 008 §2, owner-approved 2026-08-27)*: this read *each* indicator
 MUST offer a route to its basis. **WIP compliance is excepted**, because its
@@ -7248,10 +7250,17 @@ own P5 section, not ahead of it.
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
 **Promoted from this document's own older compact register**
-(`SPEC-001` round 2): the project toolbar could not wrap below 390 px
-— one of three defects found in three days by a headless-browser
-inspection, none reachable by any discipline already in use at the
-time. `BROWSER-001`'s own overflow gate (`DEC-048`) was watched red on
+(`SPEC-001` round 2). *Corrected (`SPEC-002`): round 2 wrote "one of
+three"; Appendix C's own 0.32.0 row says four, twice.* The project
+toolbar could not wrap below 390 px — one of **four** defects
+reported in three days by a headless-browser inspection (`§10.18`,
+`§10.20`, `§10.19`, and a 314 px empty-anchor overlap), one of them
+(`§10.21`) later withdrawn as *"not a defect, my own measurement
+artefact,"* leaving three as the defects that survived — which is
+probably where "three" came from, but the document states four and
+this entry did not say which count it meant. None reachable by any
+discipline already in use at the time. `BROWSER-001`'s own overflow
+gate (`DEC-048`) was watched red on
 this defect before being trusted, restored and rebuilt before the
 next. Its own mechanism — a row that cannot wrap — recurs on a header
 shape later found to pass the overflow gate while still being worth
