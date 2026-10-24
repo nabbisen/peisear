@@ -203,12 +203,18 @@ jobs:
           got=$(cargo test -p peisear-web --test updated_at_authority -- --list 2>/dev/null | grep -c ': test$')
           cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
             | awk '/^SPEC-005-CITATION updated_at_authority /{print $3}')
+          count=0
           for cited in $cited_list; do
+            count=$((count + 1))
             if [ "$cited" != "$got" ]; then
               echo "::error::updated_at_authority: requirements.md cites $cited tests, cargo test --test updated_at_authority -- --list finds $got"
               exit 1
             fi
           done
+          if [ "$count" != "1" ]; then
+            echo "::error::updated_at_authority: expected 1 citation in requirements.md, print_test_count_citations_for_ci found $count -- has the citation moved, or the print test been renamed?"
+            exit 1
+          fi
           echo "updated_at_authority: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-aggregate-privacy:
@@ -226,12 +232,18 @@ jobs:
           got=$(cargo test -p peisear-web --test aggregate_privacy -- --list 2>/dev/null | grep -c ': test$')
           cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
             | awk '/^SPEC-005-CITATION aggregate_privacy /{print $3}')
+          count=0
           for cited in $cited_list; do
+            count=$((count + 1))
             if [ "$cited" != "$got" ]; then
               echo "::error::aggregate_privacy: requirements.md cites $cited tests, cargo test --test aggregate_privacy -- --list finds $got"
               exit 1
             fi
           done
+          if [ "$count" != "1" ]; then
+            echo "::error::aggregate_privacy: expected 1 citation in requirements.md, print_test_count_citations_for_ci found $count -- has the citation moved, or the print test been renamed?"
+            exit 1
+          fi
           echo "aggregate_privacy: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-smoke:
@@ -288,12 +300,18 @@ jobs:
           got=$(cargo test -p peisear-web --test view_state -- --list 2>/dev/null | grep -c ': test$')
           cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
             | awk '/^SPEC-005-CITATION view_state /{print $3}')
+          count=0
           for cited in $cited_list; do
+            count=$((count + 1))
             if [ "$cited" != "$got" ]; then
               echo "::error::view_state: requirements.md cites $cited tests, cargo test --test view_state -- --list finds $got"
               exit 1
             fi
           done
+          if [ "$count" != "1" ]; then
+            echo "::error::view_state: expected 1 citation in requirements.md, print_test_count_citations_for_ci found $count -- has the citation moved, or the print test been renamed?"
+            exit 1
+          fi
           echo "view_state: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-search:
@@ -320,12 +338,18 @@ jobs:
           got=$(cargo test -p peisear-web --test optimistic_lock -- --list 2>/dev/null | grep -c ': test$')
           cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
             | awk '/^SPEC-005-CITATION optimistic_lock /{print $3}')
+          count=0
           for cited in $cited_list; do
+            count=$((count + 1))
             if [ "$cited" != "$got" ]; then
               echo "::error::optimistic_lock: requirements.md cites $cited tests, cargo test --test optimistic_lock -- --list finds $got"
               exit 1
             fi
           done
+          if [ "$count" != "1" ]; then
+            echo "::error::optimistic_lock: expected 1 citation in requirements.md, print_test_count_citations_for_ci found $count -- has the citation moved, or the print test been renamed?"
+            exit 1
+          fi
           echo "optimistic_lock: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-response-outcomes:
@@ -352,12 +376,18 @@ jobs:
           got=$(cargo test -p peisear-web --test issue_edit_url -- --list 2>/dev/null | grep -c ': test$')
           cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
             | awk '/^SPEC-005-CITATION issue_edit_url /{print $3}')
+          count=0
           for cited in $cited_list; do
+            count=$((count + 1))
             if [ "$cited" != "$got" ]; then
               echo "::error::issue_edit_url: requirements.md cites $cited tests, cargo test --test issue_edit_url -- --list finds $got"
               exit 1
             fi
           done
+          if [ "$count" != "1" ]; then
+            echo "::error::issue_edit_url: expected 1 citation in requirements.md, print_test_count_citations_for_ci found $count -- has the citation moved, or the print test been renamed?"
+            exit 1
+          fi
           echo "issue_edit_url: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-status-segment:
@@ -537,12 +567,18 @@ jobs:
           got=$(cargo test -p peisear-web --test chart_equivalence -- --list 2>/dev/null | grep -c ': test$')
           cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
             | awk '/^SPEC-005-CITATION chart_equivalence /{print $3}')
+          count=0
           for cited in $cited_list; do
+            count=$((count + 1))
             if [ "$cited" != "$got" ]; then
               echo "::error::chart_equivalence: requirements.md cites $cited tests, cargo test --test chart_equivalence -- --list finds $got"
               exit 1
             fi
           done
+          if [ "$count" != "1" ]; then
+            echo "::error::chart_equivalence: expected 1 citation in requirements.md, print_test_count_citations_for_ci found $count -- has the citation moved, or the print test been renamed?"
+            exit 1
+          fi
           echo "chart_equivalence: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-inbox-refinements:
@@ -593,12 +629,18 @@ jobs:
           got=$(cargo test -p peisear-web --test undo_toast_attachment_scan -- --list 2>/dev/null | grep -c ': test$')
           cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
             | awk '/^SPEC-005-CITATION undo_toast_attachment_scan /{print $3}')
+          count=0
           for cited in $cited_list; do
+            count=$((count + 1))
             if [ "$cited" != "$got" ]; then
               echo "::error::undo_toast_attachment_scan: requirements.md cites $cited tests, cargo test --test undo_toast_attachment_scan -- --list finds $got"
               exit 1
             fi
           done
+          if [ "$count" != "2" ]; then
+            echo "::error::undo_toast_attachment_scan: expected 2 citations in requirements.md (this name is cited twice), print_test_count_citations_for_ci found $count -- has a citation moved, or the print test been renamed?"
+            exit 1
+          fi
           echo "undo_toast_attachment_scan: requirements.md's own citation(s) ($cited_list) match the runner ($got)"
 
   # `QA-005`: every structural guard this project has built --
