@@ -512,3 +512,50 @@ fn rule_2_is_green_on_the_real_tree_regression_guard_for_spec_002_edits() {
     let input = real_input();
     assert!(only(violations(&input), "rule 2").is_empty());
 }
+
+// ---------- SPEC-003: the one population surveyed as a Shape B candidate ----------
+
+#[test]
+fn test_count_citations_finds_both_bold_and_plain_counts_across_a_line_break() {
+    let text = "*Acceptance*: `view_state` test crate (5 tests), more.\n`x` test crate (**21**\ntests), `y` (4 tests).";
+    let v = test_count_citations(text);
+    assert_eq!(
+        v,
+        vec![
+            ("view_state".to_string(), 5),
+            ("x".to_string(), 21),
+            ("y".to_string(), 4),
+        ]
+    );
+}
+
+/// `SPEC-003` §2: surveying `requirements.md`'s own numeric claims found
+/// one narrow, recurring, already-in-use citation shape that is cheaply
+/// and precisely checkable -- `` `name` ... (N tests) `` beside an
+/// `*Acceptance*:` line, naming how many tests in a given integration
+/// test binary back a requirement. **Three of these eight citations are
+/// currently wrong** (`view_state` read 5, is 9; `aggregate_privacy`
+/// read 12, is 13; `optimistic_lock` read 21, is 22 -- all three
+/// verified with `cargo test --test <name> -- --list`, never a grep
+/// over `#[test]`, and all three fixed in `requirements.md` directly as
+/// part of this round). This test asserts the population this round
+/// examined, so a ninth citation added later is noticed rather than
+/// silently missed by a stale list.
+#[test]
+fn test_count_citations_population_is_exactly_these_eight() {
+    let input = real_input();
+    let v = test_count_citations(&input.requirements);
+    assert_eq!(
+        v,
+        vec![
+            ("view_state".to_string(), 9),
+            ("issue_edit_url".to_string(), 3),
+            ("undo_toast_attachment_scan".to_string(), 4),
+            ("aggregate_privacy".to_string(), 13),
+            ("optimistic_lock".to_string(), 22),
+            ("updated_at_authority".to_string(), 4),
+            ("chart_equivalence".to_string(), 5),
+            ("undo_toast_attachment_scan".to_string(), 4),
+        ]
+    );
+}
