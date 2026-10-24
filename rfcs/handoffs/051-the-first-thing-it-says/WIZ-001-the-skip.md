@@ -111,6 +111,33 @@ cheapest route; if something else is simpler, say what and why.
   or with the environment set, starts exactly as it does today, with
   the same output. State the before/after startup lines.
 
+## §4a — round 2: an absence assertion must prove something ran
+
+Round 1's cases 1 and 2 close this correctly: after their poll loop
+they run a bare `curl -sf .../health` under `set -euo pipefail`, so a
+server that never came up fails the step. **Case 4 does not.** It
+waits for the server's own `listening` line in a loop and then falls
+through without asserting it arrived, so if the binary fails to start
+the log has neither `listening` nor the stub line and the absence
+check passes having proven nothing.
+
+**One line, after the loop:**
+
+```sh
+grep -q 'listening' peisear.log || {
+  echo "::error::case 4: the server never reached 'listening' -- nothing was proven about the stub line"
+  exit 1
+}
+```
+
+**Case 3 needs nothing** — a presence assertion is self-proving.
+
+**And plant the other direction.** Round 1 planted
+`should_run_wizard` returning `true`, which exercises the
+false-positive path. This needs the false-*negative* path: make the
+binary fail to start under case 4's own conditions and watch the step
+go red. The same class as `SPEC-005` round 1, one release ago.
+
 ## §5 — escalate rather than deciding
 
 - **If a pty cannot be arranged on the runner.** Bring it. A skip
