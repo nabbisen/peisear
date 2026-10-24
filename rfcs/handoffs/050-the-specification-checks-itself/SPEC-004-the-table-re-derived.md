@@ -1,8 +1,6 @@
 # SPEC-004 — the table re-derived
 
-**0.57.0, added after `SPEC-002`.** Written for one of three possible
-answers to a question that has been open since 0.43.0. **Do not start
-it until the series README's State column says that answer arrived.**
+**0.57.0, added after `SPEC-002`. Unblocked — start it.**
 
 `SPEC-002` built rule (b) — Appendix A's cells against the 168 real
 entries — and it is **red in nine areas, twenty cells**. The table is
@@ -10,16 +8,37 @@ stale; the rule is right. This round makes the table true.
 
 ---
 
-## §1 — the question this round is conditional on
+## §1 — the question was already answered, by the authorization
 
-`requirements.md:7409`, written at 0.43.0 and never answered:
+`requirements.md:7409`, written at 0.43.0:
 
 > *"Whether this table should be kept, derived from the entries by a
 > scan, or dropped is the owner's decision."*
 
-**This round is written for "keep it."** If the answer is *derive it*
-or *drop it*, this handoff is replaced rather than amended — the work
-is different in each case, and the architect writes the replacement.
+**The architect treated that as a live blocker and raised it three
+times. It was not one**, and `ROADMAP.md`'s own 0.57.0 row — which
+the owner authorized on 2026-10-15 — says why, verbatim:
+
+> *"**plus the rest of `spec_scan`**: **Appendix A's columns summed
+> from its own rows**, counts stated in prose checked against the
+> workspace, and the status vocabulary closed to a known list."*
+
+**You cannot sum the columns of a table you dropped, and a table you
+generate needs no such check.** Summing Appendix A's columns from its
+own rows presupposes the table is kept and hand-written. So *keep* is
+what this release was authorized to do, and re-deriving the nine
+stale rows is the work that row describes rather than an addition to
+it.
+
+**Decided: keep it, and re-derive.** The architect's own reasoning,
+for the record: checking beats generating here — the document stays a
+human artefact and the guard becomes the thing that cannot be
+skipped, which is this project's idiom in sixteen other scans — and
+dropping loses the only place a reader sees the shape of 168
+requirements at once.
+
+**The longer question remains the owner's**, and this round must not
+close it by silence. See §3's third item.
 
 ## §2 — what is already known, so none of it is rediscovered
 
@@ -79,6 +98,27 @@ reads as the only one that went the other way, and it did not.
 **Withdraw the note as superseded, with its date and the reason** —
 do not delete it silently; `§10.47`'s convention is to leave the
 original and record the correction beneath it.
+
+## §3a — re-point the open question, do not delete it
+
+`requirements.md:7409`'s sentence currently reads as an open
+question. After this round it would be half-true: *keep* is settled
+for 0.57.0, and whether the table should exist at all in some later
+release is not.
+
+**Record both, in that sentence's own place:**
+
+- The decision taken here, with its reason — `ROADMAP.md`'s 0.57.0
+  row authorizes summing Appendix A's columns from its own rows,
+  which presupposes keeping it, so *keep* was already authorized;
+  re-derived by `SPEC-004`, and guarded by rule (b) from here.
+- That **dropping it, or generating it, remains the owner's to
+  choose** in a later release, and that rule (b) is what makes either
+  choice cheap to act on later — a table known to be true is easier
+  to delete or replace than one nobody trusts.
+
+**Do not delete the original sentence.** `§10.47`'s convention: leave
+what was written and record the resolution beneath it.
 
 ## §4 — what re-deriving means, and what it must not become
 
@@ -143,5 +183,6 @@ reason recorded beneath the original; **no entry's status changed to
 make a cell match**; rule (b) flipped from its known-violations
 assertion to clean; rule (a) and the population assertion still
 green; the 0.43.0 re-derivation note extended to name these nine
-areas and this round; `DEC-007` reconciled; all gates re-run after
+areas and this round, and its own open question re-pointed per §3a
+rather than deleted; `DEC-007` reconciled; all gates re-run after
 the last edit.
