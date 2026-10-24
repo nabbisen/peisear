@@ -14,8 +14,8 @@ container, so that is built and proven first, on a stub.
 
 | ID | Handoff | Subject | Blocked on | State |
 |---|---|---|---|---|
-| WIZ-001 | [the skip](./WIZ-001-the-skip.md) | **Not the wizard.** `std::io::IsTerminal` plus *configuration already exists*, proven by a CI walk over four cases including a real pty — with a stub body that prints one line. *"A wizard that blocks a `docker run` is an outage"* | — | **Round 2** — predicates, ordering and the pty proof all right, and the `script` buffering find is real work. Cases 1 and 2 prove the server answered; **case 4 does not** — it waits for `listening` and never asserts it arrived. `§4a` |
-| WIZ-002 | [the wizard](./WIZ-002-the-wizard.md) | Two questions, two statements, and `env_file()` as a **pure function** so the written file can be tested as a string. **Carries one question for the owner** (§1) | WIZ-001 | Not started |
+| WIZ-001 | [the skip](./WIZ-001-the-skip.md) | **Not the wizard.** `std::io::IsTerminal` plus *configuration already exists*, proven by a CI walk over four cases including a real pty — with a stub body that prints one line. *"A wizard that blocks a `docker run` is an outage"* | — | **Closed** — 2 rounds. Four cases green with case 3 through a real pty and case 4 now unable to pass on a server that never started; the plant reproduced in review in both directions. **The safety floor is in place before the feature exists** |
+| WIZ-002 | [the wizard](./WIZ-002-the-wizard.md) | Two questions, two statements, and `env_file()` as a **pure function** so the written file can be tested as a string. **Carries one question for the owner** (§1) | WIZ-001 | **Next** — §2’s writer is independent of the question count; build it first |
 | WIZ-003 | [what the documents are for now](./WIZ-003-what-the-documents-are-for-now.md) | `RFC 020`'s own test of itself — *prevented or merely moved?* — answered honestly for all three defects, plus re-pointing three documents | WIZ-002 | Not started |
 | REL-0.58.0 | not written | The cut, `DEC-028`, `DEC-056`. Written when the three rounds close | all three | Not written |
 

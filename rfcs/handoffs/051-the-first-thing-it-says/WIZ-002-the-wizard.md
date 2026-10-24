@@ -49,9 +49,16 @@ opposite of what this release is for.
 
 **`ROADMAP.md`'s own rule**: *"a row that changes after authorization
 is re-authorized, not quietly edited."* So the row's *"five
-questions"* is the owner's to confirm or override. **Do not start §2
-until the series README's State column says it is settled.** The rest
-of this handoff is written for two.
+questions"* is the owner's to confirm or override. The rest of this
+handoff is written for two.
+
+**Do not build the question list until the answer arrives — but do
+not idle either.** `§2`'s writer is independent of how many questions
+feed it: `env_file(&Answers) -> String`, the round trip through
+`dotenvy` to `Config`, and the planted print/write disagreement can
+all be built and proven against an `Answers` carrying the four
+variables, whatever the wizard ends up asking. Start there, and add
+the prompts last.
 
 ## §2 — the writer is a pure function, and that is not a style choice
 
