@@ -428,53 +428,23 @@ fn a_real_entry_count_disagreeing_with_the_table_is_caught() {
     );
 }
 
-/// `SPEC-002` §4(b), §6: checked on the real tree, rule (b) disagrees
-/// with Appendix A in nine areas, none of them a vocabulary problem --
-/// the vocabulary closure above is green on its own. Each is a row this
-/// document's own narrative (`requirements.md:7394`-`:7409`) already
-/// admits was never re-derived, or was re-derived before an entry it
-/// covers changed again afterward (`Privacy`'s own `NFR-PRIV-005`/`-007`/
-/// `-008`, all now `Met`/`Implemented`, dated at or after the 0.43.0
-/// re-derivation the Divergent cell still reflects). **Asserted as the
-/// known, exact, bounded set rather than claimed clean** -- the same
-/// honest alternative `SPEC-001` round 1 used for a citation population
-/// this round is not authorised to fix by rewriting the table
-/// (`SPEC-002` §6: "stop and report the disagreement with both numbers;
-/// do not edit the table to match"). Escalated in full in this round's
-/// own completion report.
+/// `SPEC-004`: the nine areas `SPEC-002` found rule (b) disagreeing
+/// on are re-derived from their own entries and the table rewritten to
+/// match -- `NFR-A11Y-009` corrected to `Deferred` first, which is why
+/// Accessibility needed no cell change, only the entry fix. Both grand
+/// totals recomputed from their sixteen/nine member rows, not adjusted
+/// by the deltas (`§10`'s own first row: two compensating cell errors
+/// left a total looking right). Rule (b) is now clean on the real
+/// tree -- the same flip `SPEC-001` round 2 made for rule 1, once a
+/// known, bounded violation set had an authorised fix rather than an
+/// open escalation.
 #[test]
-fn rule_b_s_known_pending_disagreements_are_exactly_these_and_no_others() {
+fn rule_b_is_clean_on_the_real_tree() {
     let input = real_input();
     let v = only(appendix_violations(&input.requirements), "rule b");
-    let expected: BTreeSet<&str> = [
-        "rule b: Sub-issues's own entries mapped to Implemented number 10, Appendix A says 9",
-        "rule b: Sub-issues's own entries mapped to Partial number 0, Appendix A says 1",
-        "rule b: Sprints's own entries mapped to Implemented number 4, Appendix A says 3",
-        "rule b: Sprints's own entries mapped to Specified number 0, Appendix A says 1",
-        "rule b: Sprint planning's own entries mapped to Implemented number 4, Appendix A says 0",
-        "rule b: Sprint planning's own entries mapped to Specified number 1, Appendix A says 5",
-        "rule b: Health's own entries mapped to Implemented number 8, Appendix A says 5",
-        "rule b: Health's own entries mapped to Partial number 1, Appendix A says 2",
-        "rule b: Health's own entries mapped to Divergent number 0, Appendix A says 2",
-        "rule b: Notifications's own entries mapped to Implemented number 9, Appendix A says 6",
-        "rule b: Notifications's own entries mapped to Partial number 0, Appendix A says 1",
-        "rule b: Notifications's own entries mapped to Specified number 0, Appendix A says 2",
-        "rule b: Calendar's own entries mapped to Implemented number 8, Appendix A says 1",
-        "rule b: Calendar's own entries mapped to Specified number 0, Appendix A says 7",
-        "rule b: Privacy's own entries mapped to Implemented number 8, Appendix A says 6",
-        "rule b: Privacy's own entries mapped to Divergent number 0, Appendix A says 2",
-        "rule b: Accessibility's own entries mapped to Deferred number 0, Appendix A says 1",
-        "rule b: Accessibility's own entries mapped to Divergent number 3, Appendix A says 2",
-        "rule b: Language's own entries mapped to Implemented number 2, Appendix A says 1",
-        "rule b: Language's own entries mapped to Partial number 1, Appendix A says 2",
-    ]
-    .into_iter()
-    .collect();
-    let actual: BTreeSet<&str> = v.iter().map(String::as_str).collect();
-    assert_eq!(
-        actual, expected,
-        "rule b's real-tree result changed -- either a real fix landed (shrink the \
-         expected set and say so in the report) or a new disagreement appeared"
+    assert!(
+        v.is_empty(),
+        "rule b found real table/entry disagreements: {v:?}"
     );
 }
 
