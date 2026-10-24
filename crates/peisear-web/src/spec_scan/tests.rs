@@ -559,3 +559,21 @@ fn test_count_citations_population_is_exactly_these_eight() {
         ]
     );
 }
+
+/// `SPEC-005`: the CI step's own source of the cited counts. Run with
+/// `--nocapture --exact`, this prints one `SPEC-005-CITATION <name>
+/// <n>` line per citation `test_count_citations` finds in the real
+/// `requirements.md` -- `spec_scan::test_count_citations` is the one
+/// definition of the citation shape; the CI step parses this test's
+/// stdout rather than re-implementing that pattern in shell. Asserts
+/// nothing itself (the comparison happens in the step, against each
+/// binary's own `cargo test -- --list`) -- a deliberately unusual
+/// shape for a `#[test]`, chosen over a new public API or a second
+/// parser per `SPEC-005` §6.
+#[test]
+fn print_test_count_citations_for_ci() {
+    let input = real_input();
+    for (name, n) in test_count_citations(&input.requirements) {
+        println!("SPEC-005-CITATION {name} {n}");
+    }
+}

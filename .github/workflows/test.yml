@@ -196,6 +196,20 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test updated_at_authority -- --test-threads=1
+      # SPEC-005: see test-peisear-web-view-state's own comment.
+      - name: SPEC-005 -- requirements.md's own test-count citation matches the runner
+        run: |
+          set -eu
+          got=$(cargo test -p peisear-web --test updated_at_authority -- --list 2>/dev/null | grep -c ': test$')
+          cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
+            | awk '/^SPEC-005-CITATION updated_at_authority /{print $3}')
+          for cited in $cited_list; do
+            if [ "$cited" != "$got" ]; then
+              echo "::error::updated_at_authority: requirements.md cites $cited tests, cargo test --test updated_at_authority -- --list finds $got"
+              exit 1
+            fi
+          done
+          echo "updated_at_authority: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-aggregate-privacy:
     name: peisear-web / aggregate_privacy
@@ -205,6 +219,20 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test aggregate_privacy -- --test-threads=1
+      # SPEC-005: see test-peisear-web-view-state's own comment.
+      - name: SPEC-005 -- requirements.md's own test-count citation matches the runner
+        run: |
+          set -eu
+          got=$(cargo test -p peisear-web --test aggregate_privacy -- --list 2>/dev/null | grep -c ': test$')
+          cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
+            | awk '/^SPEC-005-CITATION aggregate_privacy /{print $3}')
+          for cited in $cited_list; do
+            if [ "$cited" != "$got" ]; then
+              echo "::error::aggregate_privacy: requirements.md cites $cited tests, cargo test --test aggregate_privacy -- --list finds $got"
+              exit 1
+            fi
+          done
+          echo "aggregate_privacy: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-smoke:
     name: peisear-web / smoke
@@ -233,6 +261,19 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test breadcrumb -- --test-threads=1
 
+  # `SPEC-005`: `requirements.md`'s own `*Acceptance*: \`name\` (N
+  # tests)` citations, checked against the binary they name --
+  # `SPEC-003` found three of eight already wrong by running this
+  # same comparison by hand. A CI step, not a `cargo test` test,
+  # because spawning `cargo` from inside `cargo test` would contend
+  # for the package-cache lock and rebuild binaries this job has
+  # already built -- `0.56.0`'s boot smoke and `backup.md` step are
+  # the same idiom for the same reason. `spec_scan::test_count_
+  # citations` stays the one definition of the citation shape: this
+  # step reads `print_test_count_citations_for_ci`'s own stdout
+  # rather than re-parsing `requirements.md` in shell. This comment
+  # is written once; the other six jobs with a citation point back
+  # here.
   test-peisear-web-view-state:
     name: peisear-web / view_state
     runs-on: ubuntu-latest
@@ -241,6 +282,19 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test view_state -- --test-threads=1
+      - name: SPEC-005 -- requirements.md's own test-count citation matches the runner
+        run: |
+          set -eu
+          got=$(cargo test -p peisear-web --test view_state -- --list 2>/dev/null | grep -c ': test$')
+          cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
+            | awk '/^SPEC-005-CITATION view_state /{print $3}')
+          for cited in $cited_list; do
+            if [ "$cited" != "$got" ]; then
+              echo "::error::view_state: requirements.md cites $cited tests, cargo test --test view_state -- --list finds $got"
+              exit 1
+            fi
+          done
+          echo "view_state: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-search:
     name: peisear-web / search
@@ -259,6 +313,20 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test optimistic_lock -- --test-threads=1
+      # SPEC-005: see test-peisear-web-view-state's own comment.
+      - name: SPEC-005 -- requirements.md's own test-count citation matches the runner
+        run: |
+          set -eu
+          got=$(cargo test -p peisear-web --test optimistic_lock -- --list 2>/dev/null | grep -c ': test$')
+          cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
+            | awk '/^SPEC-005-CITATION optimistic_lock /{print $3}')
+          for cited in $cited_list; do
+            if [ "$cited" != "$got" ]; then
+              echo "::error::optimistic_lock: requirements.md cites $cited tests, cargo test --test optimistic_lock -- --list finds $got"
+              exit 1
+            fi
+          done
+          echo "optimistic_lock: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-response-outcomes:
     name: peisear-web / response_outcomes
@@ -277,6 +345,20 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test issue_edit_url -- --test-threads=1
+      # SPEC-005: see test-peisear-web-view-state's own comment.
+      - name: SPEC-005 -- requirements.md's own test-count citation matches the runner
+        run: |
+          set -eu
+          got=$(cargo test -p peisear-web --test issue_edit_url -- --list 2>/dev/null | grep -c ': test$')
+          cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
+            | awk '/^SPEC-005-CITATION issue_edit_url /{print $3}')
+          for cited in $cited_list; do
+            if [ "$cited" != "$got" ]; then
+              echo "::error::issue_edit_url: requirements.md cites $cited tests, cargo test --test issue_edit_url -- --list finds $got"
+              exit 1
+            fi
+          done
+          echo "issue_edit_url: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-status-segment:
     name: peisear-web / status_segment
@@ -448,6 +530,20 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test chart_equivalence -- --test-threads=1
+      # SPEC-005: see test-peisear-web-view-state's own comment.
+      - name: SPEC-005 -- requirements.md's own test-count citation matches the runner
+        run: |
+          set -eu
+          got=$(cargo test -p peisear-web --test chart_equivalence -- --list 2>/dev/null | grep -c ': test$')
+          cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
+            | awk '/^SPEC-005-CITATION chart_equivalence /{print $3}')
+          for cited in $cited_list; do
+            if [ "$cited" != "$got" ]; then
+              echo "::error::chart_equivalence: requirements.md cites $cited tests, cargo test --test chart_equivalence -- --list finds $got"
+              exit 1
+            fi
+          done
+          echo "chart_equivalence: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
   test-peisear-web-inbox-refinements:
     name: peisear-web / inbox_refinements
@@ -488,6 +584,22 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p peisear-web --test undo_toast_attachment_scan -- --test-threads=1
+      # SPEC-005: see test-peisear-web-view-state's own comment. This
+      # name is cited twice in requirements.md; the loop below checks
+      # both against the runner, not only the first.
+      - name: SPEC-005 -- requirements.md's own test-count citation matches the runner
+        run: |
+          set -eu
+          got=$(cargo test -p peisear-web --test undo_toast_attachment_scan -- --list 2>/dev/null | grep -c ': test$')
+          cited_list=$(cargo test -p peisear-web --lib spec_scan::tests::print_test_count_citations_for_ci -- --exact --nocapture 2>/dev/null \
+            | awk '/^SPEC-005-CITATION undo_toast_attachment_scan /{print $3}')
+          for cited in $cited_list; do
+            if [ "$cited" != "$got" ]; then
+              echo "::error::undo_toast_attachment_scan: requirements.md cites $cited tests, cargo test --test undo_toast_attachment_scan -- --list finds $got"
+              exit 1
+            fi
+          done
+          echo "undo_toast_attachment_scan: requirements.md's own citation(s) ($cited_list) match the runner ($got)"
 
   # `QA-005`: every structural guard this project has built --
   # prose_scan, static_js_scan, test_harness_scan, dec_007_scan --

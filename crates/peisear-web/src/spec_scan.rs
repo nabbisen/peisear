@@ -130,23 +130,26 @@
 //!   is a property ("no file violates this") rather than a count of
 //!   named things. Nothing new needed here -- the shape already
 //!   exists and already works.
-//! - **One narrow, already-used annotation, surveyed but not wired
-//!   up.** [`test_count_citations`] finds every `` `name` ... (N
-//!   tests) `` citation beside an `*Acceptance*:` line -- eight of
-//!   them, naming six distinct integration-test binaries. **Three were
-//!   wrong** when checked against `cargo test --test <name> --
-//!   --list` -- never a grep over `#[test]`, which agreed here but is
-//!   not the trusted method: `view_state` read 5, is 9;
-//!   `aggregate_privacy` read 12, is 13; `optimistic_lock` read 21, is
-//!   22. Fixed directly in `requirements.md` as part of this round.
-//!   **Not turned into a standing CI rule**: doing so would
-//!   mean a test spawning `cargo test -- --list` as a child process,
-//!   a pattern this codebase has never used (every existing scan
-//!   reads text; `changelog_scan` is the one exception and it shells
-//!   to `git`, not `cargo`), with real nested-invocation and CI-cost
-//!   questions a three-citation fix does not need answered to ship.
-//!   Proposed to the architect, not decided -- `SPEC-003`'s own
-//!   completion report.
+//! - **One narrow, already-used annotation, surveyed in `SPEC-003`
+//!   and wired up in `SPEC-005`.** [`test_count_citations`] finds
+//!   every `` `name` ... (N tests) `` citation beside an
+//!   `*Acceptance*:` line -- eight of them, naming six distinct
+//!   integration-test binaries. **Three were wrong** when checked
+//!   against `cargo test --test <name> -- --list` -- never a grep
+//!   over `#[test]`, which agreed here but is not the trusted method:
+//!   `view_state` read 5, is 9; `aggregate_privacy` read 12, is 13;
+//!   `optimistic_lock` read 21, is 22. Fixed directly in
+//!   `requirements.md` in `SPEC-003`. **Checked by a CI step, not a
+//!   `cargo test` test** -- `SPEC-003` balked at spawning `cargo`
+//!   from inside `cargo test` (nested invocation contends for the
+//!   package-cache lock and would rebuild binaries a job has already
+//!   built), and `SPEC-005`'s review agreed and placed the comparison
+//!   in `test.yml` instead, the same idiom `0.56.0`'s boot smoke and
+//!   `backup.md` step already use for a check that must run a
+//!   process. [`tests::print_test_count_citations_for_ci`] is the
+//!   one seam between the two: a `#[test]` that prints this
+//!   function's own output, read by the step rather than
+//!   re-implemented in shell.
 //! - **Everything else stays Shape C, and is written down as such
 //!   rather than quietly left unmentioned.** The vast majority of
 //!   `requirements.md`'s own numeric claims are already dated by this
