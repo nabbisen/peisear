@@ -78,6 +78,44 @@ job and why in the step's own comment.
   legitimately reads `5` there and `9` at `:658`. A round that
   "fixes" that table has misread the whole of `SPEC-003`.
 
+## §4a — round 2: the step must know how many citations it expected
+
+Round 1's step compares each citation to the runner in a `for` loop
+over the extracted list. **An empty list skips the loop and reaches
+the success message.** Proven in review by running the step's own
+logic with a filter that matches nothing:
+
+```
+view_state: requirements.md own citation () matches the runner (9)
+STEP EXIT=0
+```
+
+Reachable three ways, all realistic: the print test renamed or
+deleted (`cargo test --lib <filter matching nothing>` **exits 0** —
+the property `CON-002` measured and `§10.46` exists for); the
+citation removed from `requirements.md`; or the document reflowed,
+since these citations span line breaks.
+
+**This is `§10.46`'s class one layer up, in the release built to
+close it.**
+
+**Assert the population before comparing it**, per job, by exact
+count rather than merely non-empty:
+
+| Job | Citations expected |
+|---|---|
+| `undo_toast_attachment_scan` | **2** — cited twice |
+| the other six | **1** each |
+
+An exact count also catches a citation being *added* for a name
+without anyone noticing, which is the same class one step on.
+`SPEC-003`'s real-tree test already fixes the total at eight; this
+makes each job's share equally explicit.
+
+**Plant the absence, not another wrong number.** Round 1's proof
+exercised the mismatch path, which is why it could not catch this.
+Rename the filter, watch a step go red, restore.
+
 ## §5 — gates
 
 - **The step seen red**: plant a wrong number in a citation, watch
