@@ -185,10 +185,11 @@ status and no column for another, and three wrong test counts of
 eight — all four found and fixed in this release. **Nothing a user
 runs moved** — every file this release touches is the guard module
 itself, its own tests, `test.yml`, and the two specification documents.
-*`DEC-056`'s four legs are the architect's own, run on the owner's
-approval of this candidate — this line describes the engineering
-content, not a claim that crates.io, the Release or the container tag
-already carry it.*
+**Cut 2026-10-24**: tag `0.57.0` at `12c94a2`, signed; seven crates on
+crates.io; five per-platform archives on the GitHub Release;
+`ghcr.io/nabbisen/peisear` at `0.57.0` and `latest`. All four
+`DEC-056` legs verified against the registries themselves rather than
+from their workflows' own exit codes.
 
 **Shipped 2026-10-17**: `0.53.0` (the first five minutes), all four
 `DEC-056` legs, seven crates on crates.io, five archives on the
