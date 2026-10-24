@@ -81,11 +81,13 @@
 //! **Vocabulary**: [`status_column`] closes the leading status token to
 //! the five Appendix A columns (Implemented, Partial, Specified,
 //! Deferred, Divergent), with its own mapping and reasoning in its doc
-//! comment -- `Met`/`Met at` → Implemented is the one line in it that
-//! is proposed, not decided (`SPEC-002` §6); the rest are small,
-//! directly-justified calls, each checked against the entry's own text
-//! and, where the document states its own convention
-//! (`NFR-A11Y-001`/`:7404`-`:7405`), matched to it rather than guessed.
+//! comment -- `Met`/`Met at` → Implemented was raised in `SPEC-002` §6
+//! as a proposal rather than a decision, and `SPEC-002`'s own review
+//! found it already settled in the document's own words since 0.43.0;
+//! the rest are small, directly-justified calls, each checked against
+//! the entry's own text and, where the document states its own
+//! convention (`NFR-A11Y-001`, as of `SPEC-003`'s own edits
+//! `:7409`-`:7410`), matched to it rather than guessed.
 //!
 //! **Rule (b) is red on the real tree**, and is asserted as the known,
 //! exact, bounded set rather than claimed clean -- see
@@ -105,6 +107,60 @@
 //! there, the five columns above here), so there is no cheap reuse of
 //! [`status_column`] for them. Recorded, not built -- see
 //! [`tests::the_24_dual_register_numbers_are_a_recorded_not_a_checked_population`].
+//!
+//! `SPEC-003` asked a different question of the same document: can a
+//! scan tell a dated measurement (*"295 occurrences, measured
+//! 2026-10-18"* -- true forever) from a present-tense claim (*"23
+//! files"* -- true only while nothing changes)? **In isolation, no --
+//! the two read identically.** `§10.34`/`REQ-003` already tried this
+//! for a harder, adjacent question (does a requirement's *status*
+//! still match the shipped code?) and the answer there was no, with
+//! the evidence: four candidate text rules run against six historical
+//! instances scored at best 4 of 6, one rule's zero false positives
+//! were on zero opportunities, and two of the six needed a human
+//! reading code against prose. That investigation is this module's own
+//! precedent for not attempting a general version of the same thing
+//! for counts.
+//!
+//! **Three shapes, not one rule:**
+//!
+//! - **A predicate already checked.** [`status_column`]'s own
+//!   `NFR-MNT-005` is the model: *"live count zero, measured"* is
+//!   enforced today by `test_harness_scan`, continuously, because it
+//!   is a property ("no file violates this") rather than a count of
+//!   named things. Nothing new needed here -- the shape already
+//!   exists and already works.
+//! - **One narrow, already-used annotation, surveyed but not wired
+//!   up.** [`test_count_citations`] finds every `` `name` ... (N
+//!   tests) `` citation beside an `*Acceptance*:` line -- eight of
+//!   them, naming six distinct integration-test binaries. **Three were
+//!   wrong** when checked against `cargo test --test <name> --
+//!   --list` -- never a grep over `#[test]`, which agreed here but is
+//!   not the trusted method: `view_state` read 5, is 9;
+//!   `aggregate_privacy` read 12, is 13; `optimistic_lock` read 21, is
+//!   22. Fixed directly in `requirements.md` as part of this round.
+//!   **Not turned into a standing CI rule**: doing so would
+//!   mean a test spawning `cargo test -- --list` as a child process,
+//!   a pattern this codebase has never used (every existing scan
+//!   reads text; `changelog_scan` is the one exception and it shells
+//!   to `git`, not `cargo`), with real nested-invocation and CI-cost
+//!   questions a three-citation fix does not need answered to ship.
+//!   Proposed to the architect, not decided -- `SPEC-003`'s own
+//!   completion report.
+//! - **Everything else stays Shape C, and is written down as such
+//!   rather than quietly left unmentioned.** The vast majority of
+//!   `requirements.md`'s own numeric claims are already dated by this
+//!   project's existing, informal, long-used convention -- an inline
+//!   version marker (*"measured 0.40.0"*, *"Amended (0.52.0)"*), a
+//!   defect-class `### 10.N` entry's own closure line, or Appendix C's
+//!   per-release row -- which already does the job a new formal
+//!   annotation would duplicate. `§9.2`'s own `*"This list is known to
+//!   be badly incomplete. Audited 2026-08-26; not yet corrected,
+//!   deliberately"*` is this project's own best existing example of
+//!   the discipline Shape C asks for: date the snapshot, say it is
+//!   one, move on. **No scan reads any of this**, and that is the
+//!   correct, honest state for prose this project already knows how
+//!   to date without a parser's help.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -544,7 +600,9 @@ fn governing_status_token(body: &str) -> Option<String> {
 ///   Implemented, matching the document's own convention rather than
 ///   a guess: `NFR-A11Y-001`'s own body is `Audited (...) -- no
 ///   structural failure found, with the qualification below`, and
-///   `requirements.md`'s own 0.43.0 note (`:7404`-`:7405`) names that
+///   `requirements.md`'s own 0.43.0 note (`:7409`-`:7410`, as of
+///   `SPEC-003`'s own edits; line citations in this document drift,
+///   per its own README) names that
 ///   exact entry as one of Accessibility's own Divergent two, for the
 ///   residual gap its own text admits ("What it cannot establish").
 ///   `NFR-A11Y-005`'s `Measured and repaired` carries the same shape
@@ -568,8 +626,9 @@ fn governing_status_token(body: &str) -> Option<String> {
 /// - `Met`, `Met at` → **Implemented**. `SPEC-002` §6 raised this as a
 ///   proposal rather than a decision; `SPEC-002`'s own review found
 ///   the question was already settled, in the document's own words,
-///   since 0.43.0 -- `requirements.md:7406`: *"`Met` is counted as
-///   `Implemented`."* Confirmed, not proposed, as of that review.
+///   since 0.43.0 -- `requirements.md:7409` as of `SPEC-003`'s own
+///   edits: *"`Met` is counted as `Implemented`."* Confirmed, not
+///   proposed, as of that review.
 fn status_column(token: &str) -> Option<&'static str> {
     match token {
         "Implemented" | "Expired at" => Some("Implemented"),
@@ -798,6 +857,70 @@ fn check_grand_total(
             total_row.cells, sums
         ));
     }
+}
+
+// =====================================================================
+// `SPEC-003`: the one numeric-claim shape surveyed as a Shape B
+// candidate. Not wired into `violations` -- see the module doc.
+// =====================================================================
+
+/// Every `` `name` ... (N tests) `` citation in `text`, in document
+/// order: a backtick-quoted identifier followed, within a short span
+/// that may cross one line break and may bold-wrap the digits, by `(N
+/// tests)` or `(N test)`. Each tuple is `(name, n)`.
+///
+/// Deliberately narrow: this is the exact shape `requirements.md`
+/// already uses for its own `*Acceptance*: \`crate\` (N tests)`
+/// citations, not a general "count near an identifier" matcher. A
+/// citation that drops the parenthetical count to continue a list --
+/// *"`optimistic_lock` test crate (21 tests), `optimistic_lock_atomicity`
+/// (14), `board_keyboard`, `confirmation`"* -- is not found by this
+/// function; its own count was checked by hand for this round
+/// (`cargo test --test optimistic_lock_atomicity -- --list`: 14,
+/// matching) rather than taught to a parser for one occurrence.
+pub(crate) fn test_count_citations(text: &str) -> Vec<(String, u32)> {
+    let mut out = Vec::new();
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    while let Some(tick) = text[i..].find('`') {
+        let name_start = i + tick + 1;
+        let Some(name_end_rel) = text[name_start..].find('`') else {
+            break;
+        };
+        let name_end = name_start + name_end_rel;
+        let name = &text[name_start..name_end];
+        if !name.is_empty() && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
+            let after = &text[name_end + 1..];
+            let window_end = (name_end + 1 + 60).min(bytes.len());
+            let mut we = window_end;
+            while we < bytes.len() && !text.is_char_boundary(we) {
+                we += 1;
+            }
+            let window = &text[name_end + 1..we];
+            if let Some(paren) = window.find('(') {
+                let rest = &window[paren + 1..];
+                let digits: String = rest
+                    .trim_start_matches('*')
+                    .chars()
+                    .take_while(|c| c.is_ascii_digit())
+                    .collect();
+                if !digits.is_empty() {
+                    let after_digits = &rest.trim_start_matches('*')[digits.len()..];
+                    let after_digits = after_digits.trim_start_matches('*').trim_start();
+                    if after_digits.starts_with("test") && !window[..paren].contains('`') {
+                        // Nothing else between the name and the count --
+                        // not a different identifier's own citation.
+                        if let Ok(n) = digits.parse() {
+                            out.push((name.to_string(), n));
+                        }
+                    }
+                }
+            }
+            let _ = after;
+        }
+        i = name_end + 1;
+    }
+    out
 }
 
 #[cfg(test)]

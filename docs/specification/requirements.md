@@ -655,10 +655,11 @@ List filter and sort state MUST persist across navigation. The URL is
 the primary carrier; a per-user server-side default is secondary.
 *Rationale*: `SPEC §5.3` — returning from a detail screen to a list that
 has forgotten its filter breaks the user's train of thought.
-*Source*: `SPEC §5.3`. *Acceptance*: `view_state` test crate (5 tests),
-including that an explicit filter becomes the user's default and that a
-URL parameter overrides the saved default. *Status*: Implemented.
-*Priority*: P2.
+*Source*: `SPEC §5.3`. *Acceptance*: `view_state` test crate (**9**
+tests, corrected `SPEC-003`: this read 5, drifted as tests were added
+without the citation moving), including that an explicit filter
+becomes the user's default and that a URL parameter overrides the
+saved default. *Status*: Implemented. *Priority*: P2.
 *A second carrier added beside it at 0.48.0, deliberately outside this
 requirement's scope.* `NAV-002` appends a **`#fragment`** to the sprint
 plan's two move redirects, so a reader returns to the row they acted on
@@ -2052,7 +2053,8 @@ data. Where a team is small enough that an aggregate resolves to one
 person, the aggregate SHOULD be suppressed.
 *Rationale*: `SPEC §11.5.3` — a workload chip covering exactly one
 member is that member's personal data wearing an aggregate's clothing.
-*Source*: `SPEC §11.5.3`. *Acceptance*: `aggregate_privacy` (12 tests).
+*Source*: `SPEC §11.5.3`. *Acceptance*: `aggregate_privacy` (13 tests,
+corrected `SPEC-003`: this read 12).
 *Status*: **Implemented (`QA-016`, `QA-017`, post-0.27.0)** — the first
 instance of this requirement ever to ship. *Priority*: P2.
 *Scope correction (0.20.0)*: a suppression was added to the workload chips
@@ -2159,12 +2161,13 @@ routes. `PRIV-001` corrects it.
 Every mutation of an entity owned by a single record MUST carry the
 client's observed `updated_at` and MUST be rejected with 409 if it does
 not match the stored value.
-*Source*: `SPEC §21.4.2`. *Acceptance*: `optimistic_lock` test crate (**21**
+*Source*: `SPEC §21.4.2`. *Acceptance*: `optimistic_lock` test crate (**22**
 tests), `optimistic_lock_atomicity` (**14**), `board_keyboard`,
 `confirmation`. *Count corrected 0.45.0*: this read **16**, the figure at
 0.20.0, and drifted as `DM-TEST-001` and `CAL-004` each added a path-agreement
 test. All four counts re-measured by running the crates; the other three were
-right. *Status*: Implemented (0.20.0); **extended to all four
+right. *Corrected again (`SPEC-003`): this read 21, drifted by one more
+test since 0.45.0.* *Status*: Implemented (0.20.0); **extended to all four
 destructive deletes at 0.27.0**; **made atomic at 0.39.0** (`RACE-002`).
 *Priority*: P0.
 *Extension (0.39.0, `RACE-002`) — the comparison happens inside the write.*
