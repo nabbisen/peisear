@@ -1432,6 +1432,16 @@ to the authenticated user, across all their projects.
 `personal_calendar_renders_only_my_issues`.
 *Priority*: P2.
 *Correction (0.40.0, `REQ-001`)*: read *Specified (RFC 002, target 0.21.0)*.
+*Withdrawn (`SPEC-004`): superseded.* `/today/calendar` is a real route
+(`app.rs`, handler in `handlers/calendar.rs`) and the entry's own named
+test, `personal_calendar_renders_only_my_issues`, passes against the
+tree today. This entry's own four siblings (`FR-CAL-002`, `-004`,
+`-005`, `-008`) each carry the identical note and all four went
+`Specified` → `Met` at this same `REQ-001`; this one read as the single
+exception that went the other way, and the tree says it did not. The
+status above (`Met`) is correct; the correction note is the stale
+artefact, left in place rather than deleted, per this document's own
+convention for a claim that no longer holds (`§10.47`).
 
 **FR-CAL-002 — Project calendar**
 The system MUST provide `/projects/{id}/calendar`, showing the
@@ -2944,8 +2954,11 @@ here.
 The system SHOULD provide list navigation shortcuts (`j` / `k` for
 movement, `Enter` for detail), which MUST NOT intercept keystrokes while
 focus is in a text input.
-*Source*: `BRIEF §3.4`, `SPEC §32`. *Status*: Not implemented —
-Phase E. *Priority*: P3.
+*Source*: `BRIEF §3.4`, `SPEC §32`. *Status*: Deferred — Phase E.
+*Corrected (`SPEC-004`): this read "Not implemented", which a text
+rule reads as Divergent; the document's own 0.43.0 re-derivation note
+already named this entry as Accessibility's Deferred one. The prose
+was wrong, not the rule.* *Priority*: P3.
 
 ### 5.4 Language, tone, and locale — `NFR-LANG`
 
@@ -7335,29 +7348,29 @@ it is in progress, not deferred.
 | Navigation | 5 | 5 | — | — | — | — |
 | Projects | 4 | 4 | — | — | — | — |
 | Issues | 7 | 7 | — | — | — | — |
-| Sub-issues | 10 | 9 | 1 | — | — | — |
+| Sub-issues | 10 | 10 | — | — | — | — |
 | Teams | 5 | 5 | — | — | — | — |
-| Sprints | 4 | 3 | — | 1 | — | — |
-| Sprint planning | 5 | — | — | 5 | — | — |
-| Health | 9 | 5 | 2 | — | — | 1 (+1 unimplemented) |
+| Sprints | 4 | 4 | — | — | — | — |
+| Sprint planning | 5 | 4 | — | 1 | — | — |
+| Health | 9 | 8 | 1 | — | — | — |
 | Personal | 8 | 8 | — | — | — | — |
-| Notifications | 9 | 6 | 1 | 2 | — | — |
+| Notifications | 9 | 9 | — | — | — | — |
 | Search | 4 | 4 | — | — | — | — |
-| Calendar | 8 | 1 | — | 7 | — | — |
+| Calendar | 8 | 8 | — | — | — | — |
 | Settings | 3 | 3 | — | — | — | — |
 | API | 6 | 5 | — | 1 | — | — |
 | Direct manipulation | 7 | 7 | — | — | — | — |
-| **Functional total** | **99** | **77** | **4** | **16** | **0** | **2** |
-| Privacy | 8 | 6 | — | — | — | 2 unimplemented |
+| **Functional total** | **99** | **96** | **1** | **2** | **0** | **0** |
+| Privacy | 8 | 8 | — | — | — | — |
 | Concurrency | 7 | 7 | — | — | — | — |
-| Accessibility | 11 | 8 | — | — | 1 | 2 unverified |
-| Language | 5 | 1 | 2 | — | 1 | 1 |
+| Accessibility | 11 | 8 | — | — | 1 | 2 (residual, unguarded) |
+| Language | 5 | 2 | 1 | — | 1 | 1 |
 | Security | 7 | 7 | — | — | — | — |
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
 | Release | 11 | 9 | 1 | — | — | 1 undefined |
 | Compatibility | 6 | 6 | — | — | — | — |
-| **Non-functional total** | **69** | **57** | **4** | **0** | **2** | **6** |
+| **Non-functional total** | **69** | **60** | **3** | **0** | **2** | **4** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.
@@ -7412,6 +7425,35 @@ in Accessibility's last column, and `NFR-A11Y-009` is the Deferred one.
 **Whether this table should be kept, derived from the entries by a scan, or
 dropped is the owner's decision** — it is recorded as an open question in the
 0.43.0 candidate rather than settled here.
+
+**Re-derived at `SPEC-004` (0.57.0), nine rows: Sub-issues, Sprints,
+Sprint planning, Health, Notifications, Calendar, Privacy,
+Accessibility and Language — each counted from every one of its
+entries' own *governing* status, the last `*Status*:` line in the
+entry's own body (`SPEC-002`'s own decision, for entries amended in
+place rather than re-stated).** Seven of the nine had never been
+re-derived since this document existed; Privacy and Accessibility
+were, at 0.43.0, and drifted afterward — `NFR-PRIV-005`/`-007`/`-008`
+all closed to `Met`/`Implemented` since, and `NFR-A11Y-009`'s own
+status read `Not implemented`, a text rule's Divergent, when this
+same paragraph already named it the Deferred one; fixed in the entry
+itself (`Deferred — Phase E.`) rather than in the rule. Both grand
+totals re-summed from their sixteen and nine member rows respectively,
+not adjusted by the deltas, per `DEC-028`'s own standing instruction:
+functional `99 | 96 | 1 | 2 | 0 | 0`, non-functional `69 | 60 | 3 | 0 |
+2 | 4`. `spec_scan`'s own rule (b) checks every cell above against the
+168 entries directly from here on, which is what makes the next
+answer to the question above cheap to act on, whichever way it goes.
+
+**That question is answered for 0.57.0, and only for 0.57.0: *keep*.**
+`ROADMAP.md`'s own 0.57.0 row authorises *"Appendix A's columns summed
+from its own rows"*, which presupposes a table that exists and is
+hand-written — generating it needs no such check, and dropping it
+leaves nothing to sum. **Whether to drop this table or generate it
+instead remains open for a later release**; a table a scan has just
+verified true is cheaper to delete or replace than one nobody
+trusted, so this round leaves that choice easier to make, not harder,
+for whoever makes it.
 
 **`FR-DM` at 0.26.0 needs its row read carefully.** Five Implemented and two
 Partial does **not** mean five of seven behaviours work everywhere. It means

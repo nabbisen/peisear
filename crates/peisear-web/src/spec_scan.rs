@@ -86,19 +86,21 @@
 //! found it already settled in the document's own words since 0.43.0;
 //! the rest are small, directly-justified calls, each checked against
 //! the entry's own text and, where the document states its own
-//! convention (`NFR-A11Y-001`, as of `SPEC-003`'s own edits
-//! `:7409`-`:7410`), matched to it rather than guessed.
+//! convention (`NFR-A11Y-001`, as of `SPEC-004`'s own edits
+//! `:7422`-`:7423` -- this project's own README names a `file:line`
+//! citation its most fragile form, and this doc comment has already
+//! drifted twice), matched to it rather than guessed.
 //!
-//! **Rule (b) is red on the real tree**, and is asserted as the known,
-//! exact, bounded set rather than claimed clean -- see
-//! [`tests::rule_b_s_known_pending_disagreements_are_exactly_these_and_no_others`]
-//! for the population and why: nine areas where Appendix A's own cell
-//! disagrees with what the entries currently say, none of them a
-//! vocabulary gap (the vocabulary closure is itself green on the real
-//! tree, see
-//! [`tests::every_real_entry_s_governing_status_is_in_the_closed_vocabulary`]).
-//! `SPEC-002` §6 is explicit that this is a finding to report, not a
-//! bug in the rule to fix by editing the table.
+//! **`SPEC-002` found rule (b) red in nine areas; `SPEC-004` re-derived
+//! all nine from their own entries and rewrote the table, and rule (b)
+//! is now clean on the real tree** -- see
+//! [`tests::rule_b_is_clean_on_the_real_tree`]. `SPEC-002` §6 was
+//! explicit that the red result was a finding to report, not a bug in
+//! the rule to fix by editing the table; `SPEC-004` is that report
+//! acted on, once the architect's review resolved the one thing
+//! `SPEC-002` itself could not -- whether to keep the table at all
+//! (`requirements.md`'s own re-pointed note, where `§3a` of
+//! `SPEC-004`'s handoff asked it to be recorded).
 //!
 //! **One population this round leaves deliberately unchecked**: 24
 //! `§10.N` numbers exist in both `requirements.md`'s older compact
@@ -603,8 +605,8 @@ fn governing_status_token(body: &str) -> Option<String> {
 ///   Implemented, matching the document's own convention rather than
 ///   a guess: `NFR-A11Y-001`'s own body is `Audited (...) -- no
 ///   structural failure found, with the qualification below`, and
-///   `requirements.md`'s own 0.43.0 note (`:7409`-`:7410`, as of
-///   `SPEC-003`'s own edits; line citations in this document drift,
+///   `requirements.md`'s own 0.43.0 note (`:7422`-`:7423`, as of
+///   `SPEC-004`'s own edits; line citations in this document drift,
 ///   per its own README) names that
 ///   exact entry as one of Accessibility's own Divergent two, for the
 ///   residual gap its own text admits ("What it cannot establish").
@@ -629,7 +631,7 @@ fn governing_status_token(body: &str) -> Option<String> {
 /// - `Met`, `Met at` → **Implemented**. `SPEC-002` §6 raised this as a
 ///   proposal rather than a decision; `SPEC-002`'s own review found
 ///   the question was already settled, in the document's own words,
-///   since 0.43.0 -- `requirements.md:7409` as of `SPEC-003`'s own
+///   since 0.43.0 -- `requirements.md:7422` as of `SPEC-004`'s own
 ///   edits: *"`Met` is counted as `Implemented`."* Confirmed, not
 ///   proposed, as of that review.
 fn status_column(token: &str) -> Option<&'static str> {
