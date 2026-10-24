@@ -161,7 +161,6 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| 0.57.0 | **The specification checks itself.** The two citation rules — every `§10.N` citation has a matching heading, no four-digit `RFC 0NNN` outside the history directory — **plus the rest of `spec_scan`**: Appendix A's columns summed from its own rows, counts stated in prose checked against the workspace, and the status vocabulary closed to a known list. **`§10.42`**: `requirements.md` is this project's most-edited document and nothing mechanical reads it | `§10.36`'s decision (2026-10-14); `§10.42` (2026-10-15); the citation-form sweep carried since 0.52.0; handoffs [`050-the-specification-checks-itself`](rfcs/handoffs/050-the-specification-checks-itself/README.md) | **Authorized 2026-10-15**, citation rules and `spec_scan` widening together. Both are guard work, both are predicates rather than lists, and the second has been carried unplaced for two releases. Placed here rather than earlier because **guards do not displace an authorized sequence** — but ahead of `RFC 020`, because 0.52.0's own precedent is that guard infrastructure should not queue behind a feature . **One design input from `CON-004` (2026-10-21)**: a `file:line` citation is the most fragile form this project uses — `Cargo.toml:51` for the workspace `sqlx` entry was correct when written and became `:60` because `CON-001` added a comment block above it, with nothing touching the cited fact. A `§10.N` citation breaks only on a rename; a line citation breaks on any edit above it. Prefer a symbol or section anchor in anything durable, and if line citations stay, they are what the scan most needs to check. **Scoped 2026-10-22 into three rounds.** Rule 1 is already red: **sixteen citations to four `§10.N` numbers that never existed** — thirteen of them in `requirements.md` and `external-design.md`, and `git log -S` finds no commit that ever added any of the four headings, so this is not `§10.41`’s deleted-heading shape. Rule 2 is green at 43 occurrences, all inside `history/`, and must be **planted** to be trusted. The prose-count rule is **not mechanically decidable as written** — a dated measurement and a present-tense claim are indistinguishable in prose — so `SPEC-003` carries it as a design question rather than three more rules. **Two traps measured while scoping**: `NFR-A11Y` defeats the obvious ID pattern (the architect used it and got 58 non-functional entries against Appendix A’s 69), and there are 180 `*Status*` lines against 168 entries, nine of them on `NFR-CMP-006` alone — **175 by the field marker `*Status*:`, which is the count that matters; the architect’s 180 included the bare word in prose**. **The fragile-citation class demonstrated a second time**: `SPEC-002`’s review had a doc comment cite `requirements.md:7406`, and `SPEC-003`’s own edits moved the sentence to `:7409` — drift inside one round, caused by the round citing it. Measured: **37 `file:line` citations** (32 in the two specifications, 5 in published doc comments), most bare basenames a rule would have to resolve first. **The fix is a convention, not a cleverer rule** — cite the file plus a quoted phrase and check the phrase is present, closing the class rather than detecting its symptoms. Thirty-seven conversions each need the citation read and a phrase chosen, so it is **a round’s subject of its own and not 0.57.0’s** |
 | 0.58.0 | **The first thing it says.** `RFC 020` — a first run with no configuration asks five questions with working defaults and writes the `.env` it describes, so the file and the explanation cannot disagree. Skipped when configuration exists or stdin is not a terminal | `RFC 020` (**Accepted**, 2026-10-15) | **Authorized 2026-10-15.** Placement follows the note authorized with the 0.57.0 row: behind `RFC 018`'s phases, and behind the citation guard on 0.52.0's precedent that guard work does not queue behind a feature. **Handoffs are not written yet** and are not due until 0.57.0 is cut (Release cycle, entry criterion 3) |
 
 **This is order, not dates.** A row's number changes when something
@@ -172,6 +171,24 @@ from memory.
 themselves) on 2026-10-14. A row leaves when the release is **cut**;
 what it contained is in `CHANGELOG.md` and in the specification's own
 baseline rows, which is where release history belongs.
+
+**Shipped 2026-10-24**: `0.57.0` (the specification checks itself) —
+`§10.42`'s own argument, acted on, in five rounds (`SPEC-001`–`SPEC-005`,
+two of them added after the series was scoped as three). `spec_scan`
+reads `requirements.md` and `external-design.md` mechanically for the
+first time: the two citation rules, Appendix A checked against its own
+rows and against the 168 real entries, the status vocabulary closed,
+and eight test-count citations held to the runner. **The first reading
+found more wrong than expected**: thirteen dangling `§10.N` citations,
+nine stale Appendix A areas, a vocabulary with two spellings of one
+status and no column for another, and three wrong test counts of
+eight — all four found and fixed in this release. **Nothing a user
+runs moved** — every file this release touches is the guard module
+itself, its own tests, `test.yml`, and the two specification documents.
+*`DEC-056`'s four legs are the architect's own, run on the owner's
+approval of this candidate — this line describes the engineering
+content, not a claim that crates.io, the Release or the container tag
+already carry it.*
 
 **Shipped 2026-10-17**: `0.53.0` (the first five minutes), all four
 `DEC-056` legs, seven crates on crates.io, five archives on the
