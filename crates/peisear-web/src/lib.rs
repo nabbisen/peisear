@@ -57,6 +57,7 @@ mod test_harness_scan;
 mod touch_target_scan;
 #[cfg(test)]
 mod updated_at_authority_scan;
+pub mod wizard;
 
 pub use app::build_router;
 pub use config::Config;

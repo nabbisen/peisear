@@ -7,8 +7,10 @@
 //! this crate re-exports.
 
 use peisear::storage::pool;
-use peisear::web::{AppState, Config, build_router, jobs};
+use peisear::web::{AppState, Config, build_router, jobs, wizard};
+use std::io::IsTerminal;
 use std::net::SocketAddr;
+use std::path::Path;
 use std::process::ExitCode;
 
 /// `FIV-001` round 2, `§10`: `main` returning `Result<(), Box<dyn
@@ -41,6 +43,24 @@ async fn main() -> ExitCode {
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
+    // `WIZ-001`: the wizard, not yet built (`WIZ-002`'s own subject) --
+    // only the skip/run detection, so the property that matters most
+    // (`RFC 020` §3: "a wizard that blocks a `docker run` is an
+    // outage") is proven before there is anything to prompt with.
+    // `Config::from_env` below calls `dotenvy::dotenv()` again; doing
+    // so twice is harmless, since the second call sets nothing a
+    // variable here has not already read.
+    let configuration_exists = wizard::configuration_exists(
+        Path::new(".env").exists(),
+        std::env::var("DATABASE_URL").is_ok(),
+        std::env::var("JWT_SECRET").is_ok(),
+        std::env::var("BIND_ADDR").is_ok(),
+        std::env::var("COOKIE_SECURE").is_ok(),
+    );
+    if wizard::should_run_wizard(std::io::stdin().is_terminal(), configuration_exists) {
+        wizard::run_wizard_stub();
+    }
+
     let config = Config::from_env()?;
     // `SEC-001` §1: redacted at the source, not inline here, so a future
     // second startup line that also wants to name the database cannot

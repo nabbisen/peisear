@@ -152,6 +152,100 @@ jobs:
           echo "authenticated /projects: $code"
           [ "$code" = "200" ] || { echo "::error::session from register did not authenticate, got $code"; exit 1; }
 
+  # `WIZ-001`: the one property this whole release depends on -- "a
+  # wizard that blocks a `docker run` is an outage" (`RFC 020` §3).
+  # `.env`/`.env.example` are behind a standing deny rule on file
+  # tools here, so this follows `env-example-walk.yml`'s own idiom:
+  # never opens either file, only asserts on the running binary's own
+  # log and whether it answers `/health`. Four cases, `WIZ-001` §3's
+  # own table. The terminal cases use `script -qec` for a real pty --
+  # the only genuinely new machinery this round needed, and the one
+  # thing a piped `curl`-style check cannot exercise: `IsTerminal`
+  # reads the child's own stdin, which `script` gives it even though
+  # this job's own stdin is piped.
+  test-wizard-skip:
+    name: wizard skip/run detection (WIZ-001)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build -p peisear
+      - name: Case 1 -- stdin piped, no configuration -- stub absent, server starts
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wiz-case-1"
+          cd "$RUNNER_TEMP/wiz-case-1"
+          env -u DATABASE_URL -u JWT_SECRET -u BIND_ADDR -u COOKIE_SECURE \
+            "$GITHUB_WORKSPACE/target/debug/peisear" < /dev/null > peisear.log 2>&1 &
+          pid=$!
+          trap 'cat peisear.log; kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:3000/health
+          if grep -q 'first-run wizard would start here' peisear.log; then
+            echo "::error::stub line present in the piped/no-configuration case -- the wizard ran where it must not"
+            exit 1
+          fi
+      - name: Case 2 -- stdin piped, configuration present -- stub absent, server starts
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wiz-case-2"
+          cd "$RUNNER_TEMP/wiz-case-2"
+          env -u DATABASE_URL -u BIND_ADDR -u COOKIE_SECURE \
+            JWT_SECRET="ci-wizard-case-2-not-a-real-secret-$(date +%s)" \
+            "$GITHUB_WORKSPACE/target/debug/peisear" < /dev/null > peisear.log 2>&1 &
+          pid=$!
+          trap 'cat peisear.log; kill "$pid" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null && break; sleep 1; done
+          curl -sf http://127.0.0.1:3000/health
+          if grep -q 'first-run wizard would start here' peisear.log; then
+            echo "::error::stub line present in the piped/configured case -- the wizard ran where it must not"
+            exit 1
+          fi
+      - name: Case 3 -- stdin a terminal (pty), no configuration -- stub present
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wiz-case-3"
+          cd "$RUNNER_TEMP/wiz-case-3"
+          trap 'cat peisear.log 2>/dev/null; pkill -f "target/debug/peisear" 2>/dev/null || true' EXIT
+          # `-f`/`--flush`: `script` otherwise buffers the typescript
+          # file's own writes separately from what it echoes live to
+          # this step's own console -- measured directly, the stub
+          # line below appeared in this step's live output well before
+          # `peisear.log` itself (read by `grep`, further down) held
+          # it, without `-f`.
+          env -u DATABASE_URL -u JWT_SECRET -u BIND_ADDR -u COOKIE_SECURE \
+            script -qfec "$GITHUB_WORKSPACE/target/debug/peisear" peisear.log < /dev/null &
+          found=0
+          for i in $(seq 1 10); do
+            grep -q 'first-run wizard would start here' peisear.log 2>/dev/null && { found=1; break; }
+            sleep 1
+          done
+          if [ "$found" != "1" ]; then
+            echo "::error::stub line absent in the terminal/no-configuration case -- the wizard did not run where it must"
+            exit 1
+          fi
+      - name: Case 4 -- stdin a terminal (pty), configuration present -- stub absent
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wiz-case-4"
+          cd "$RUNNER_TEMP/wiz-case-4"
+          trap 'cat peisear.log 2>/dev/null; pkill -f "target/debug/peisear" 2>/dev/null || true' EXIT
+          env -u DATABASE_URL -u BIND_ADDR -u COOKIE_SECURE \
+            JWT_SECRET="ci-wizard-case-4-not-a-real-secret-$(date +%s)" \
+            script -qfec "$GITHUB_WORKSPACE/target/debug/peisear" peisear.log < /dev/null &
+          # Absence can't be polled for directly; wait for the
+          # server's own "listening" line instead -- by the time
+          # startup has completed, the wizard has already run or not.
+          for i in $(seq 1 10); do
+            grep -q 'listening' peisear.log 2>/dev/null && break
+            sleep 1
+          done
+          if grep -q 'first-run wizard would start here' peisear.log; then
+            echo "::error::stub line present in the terminal/configured case -- the wizard ran where it must not"
+            exit 1
+          fi
+
   # `FIV-007` / `§10.44`: the one command that builds every crate from
   # its own package rather than from the workspace. `cargo build`,
   # `cargo test`, `clippy`, `rustdoc` above all compile in place, where
