@@ -45,6 +45,16 @@ answer is that it stays unchecked. **Say so in the rule's own doc
 comment**, so the next reader knows the gap is known rather than
 missed — the distinction `§10.36` is entirely about.
 
+**Found in this very series, one round after this handoff was
+written — `SPEC-002` §3b.** `SPEC-001` round 2's promoted `§10.20`
+entry wrote *"one of **three** defects found in three days"*; the
+same document's own Appendix C 0.32.0 row says **four**, and names
+them. No marker on either number, no date on either number, and
+nothing mechanical could have told which one was current — the
+exact shape this section describes, arriving on schedule rather than
+as a hypothetical. Fixed in `requirements.md` directly (`SPEC-002`);
+recorded here as the evidence this section's own argument needed.
+
 ## §3 — what the architect recommends, to be argued with
 
 1. **Prefer turning a count into a predicate** wherever the sentence
