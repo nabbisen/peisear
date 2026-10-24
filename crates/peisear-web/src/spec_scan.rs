@@ -565,14 +565,11 @@ fn governing_status_token(body: &str) -> Option<String> {
 ///   names for every other entry in that column -- a design decision,
 ///   not a specification one, since it adds no new column and changes
 ///   no entry's own words.
-/// - `Met`, `Met at` → **Implemented**, **proposed, not decided**.
-///   `SPEC-002` §6's own first escalation: whether "Met" means the
-///   same thing as "Implemented" is a statement about what nineteen
-///   requirements' own acceptance actually claims, which this round
-///   is not positioned to settle unilaterally. Mapped here so the
-///   rule is buildable and testable against a concrete answer; the
-///   owner's own answer may change this one line and nothing else in
-///   the module.
+/// - `Met`, `Met at` → **Implemented**. `SPEC-002` §6 raised this as a
+///   proposal rather than a decision; `SPEC-002`'s own review found
+///   the question was already settled, in the document's own words,
+///   since 0.43.0 -- `requirements.md:7406`: *"`Met` is counted as
+///   `Implemented`."* Confirmed, not proposed, as of that review.
 fn status_column(token: &str) -> Option<&'static str> {
     match token {
         "Implemented" | "Expired at" => Some("Implemented"),
