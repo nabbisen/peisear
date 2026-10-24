@@ -241,6 +241,15 @@ jobs:
             grep -q 'listening' peisear.log 2>/dev/null && break
             sleep 1
           done
+          # The loop above falls through, not fails, if "listening"
+          # never arrives -- without this, a binary that failed to
+          # start (bad DATABASE_URL, script not launching it, anything)
+          # leaves no stub line and no "listening" line, and the
+          # absence check below would pass having proven nothing.
+          grep -q 'listening' peisear.log || {
+            echo "::error::case 4: the server never reached 'listening' -- nothing was proven about the stub line"
+            exit 1
+          }
           if grep -q 'first-run wizard would start here' peisear.log; then
             echo "::error::stub line present in the terminal/configured case -- the wizard ran where it must not"
             exit 1
