@@ -11,6 +11,107 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.57.0] — 2026-10-24
+
+**`requirements.md` is this project's most-edited document, and until
+this release nothing mechanical had ever read it.** `spec_scan` is a
+new guard module, following `docs_scan`'s own shape, that does: two
+citation rules, Appendix A checked both internally and against the
+168 real requirement entries, a closed status vocabulary, and eight
+test-count citations held to the test runner. **The first reading
+found more wrong than anyone expected** — all four findings below were
+measured, not assumed, and all four are fixed in this release.
+**Nothing a user runs changed**: every file this release touches is
+`crates/peisear-web/src/spec_scan*`, a handful of `tests.rs` files,
+`.github/workflows/test.yml`, and the two specification documents
+themselves.
+
+### Added
+
+- **`spec_scan`, a mechanical reader for `requirements.md` and
+  `external-design.md`.** Two citation rules (every `§10.N` citation
+  resolves to a real heading; no four-digit `RFC 0NNN` reference
+  outside the frozen history directory); Appendix A's own arithmetic,
+  checked row by row and at both grand totals; Appendix A checked
+  against the 168 real requirement entries, area by area and column
+  by column, with the rule asserting the population it examined (168
+  entries, 25 area segments) so a narrower-matching pattern fails
+  loudly rather than passing quiet; a closed status vocabulary mapping
+  every entry's own governing status to one of Appendix A's five
+  columns; and an extractor for this document's own
+  `` `name` (N tests) `` acceptance citations.
+- **Seven CI steps**, one per cited integration-test binary, checking
+  each citation against `cargo test --test <name> -- --list` — never
+  a grep over `#[test]` — in the same job that already builds that
+  binary, so the marginal cost is one `--list` per target rather than
+  a rebuild. Each asserts its own expected citation count before
+  comparing, so a renamed extractor or a removed citation fails loudly
+  rather than passing on an empty, vacuously-true comparison.
+
+### Fixed
+
+- **Thirteen `§10.N` citations in `requirements.md` and
+  `external-design.md` pointed at four numbers with no heading.** All
+  four had real entries in an older compact register — dated, naming
+  their closing handoffs — just never promoted to the heading
+  convention every neighbouring number eventually received. Promoted,
+  content budgeted to the table row and its own citing sentences; rule
+  1 is clean on the real tree.
+- **Nine of Appendix A's twenty-five areas were stale** — some never
+  re-derived since the document existed, two re-derived once and
+  drifted since. Calendar's row read `Specified: 7` while all eight of
+  its entries read `Met` or `Implemented`. Re-derived from the 168
+  entries' own governing status; both grand totals recomputed from
+  their member rows rather than adjusted by the deltas:
+  `99 | 96 | 1 | 2 | 0 | 0` (functional), `69 | 60 | 3 | 0 | 2 | 4`
+  (non-functional). Two entries' own stale prose, found while
+  re-deriving, corrected first: `NFR-A11Y-009` read "Not implemented"
+  when the document's own 0.43.0 note already called it the Deferred
+  one; `FR-CAL-001` carried a correction note the running application
+  itself contradicts (its route exists, its named test passes),
+  withdrawn as superseded and left in place per this document's own
+  convention — the original is never rewritten, the correction is
+  recorded beneath it.
+- **The status vocabulary had drifted**: `Partial` and `Partially
+  implemented` named the same status; `Met` (thirty-one entries) had
+  no column in Appendix A at all. The one spelling normalised; `Met`
+  confirmed, not merely proposed, as a synonym for `Implemented` —
+  the document's own 0.43.0 note already said so in as many words.
+- **Three of eight test-count citations were wrong, live, on the
+  tree**: `view_state` read 5, is 9; `aggregate_privacy` read 12, is
+  13; `optimistic_lock` read 21, is 22 — each verified with the test
+  runner and corrected directly.
+
+### What this release does not prove
+
+- **A requirement's status is not checked against the shipped code.**
+  `§10.34`/`REQ-003` measured four candidate text rules against six
+  historical instances of exactly this; the best scored 4 of 6 and was
+  argued down by its own authors, because its zero false positives
+  were on zero opportunities. Nothing here changes that finding —
+  `spec_scan` reads the vocabulary a status uses, never whether that
+  status still matches the running application.
+- **Most prose counts stay unchecked, by design.** A dated measurement
+  and a present-tense claim are indistinguishable in isolation; this
+  project's own long-used convention of dating a measurement inline is
+  what actually keeps the bulk of them honest, and only the one narrow,
+  already-in-use `` `name` (N tests) `` shape is held to the runner.
+- **Twenty-four `§10.N` numbers exist in both an older compact register
+  and the full heading form**, and could drift against each other with
+  nothing here to notice — the two forms use unrelated vocabularies, so
+  there is no cheap reuse of the status-vocabulary check for them.
+  Recorded as a known, unchecked population rather than built.
+- **Thirty-seven `file:line` citations remain this project's most
+  fragile citation form.** The class demonstrated itself twice during
+  this very release — once inside a single round, caused by that
+  round's own edits to the file it cited. Not fixed here; recorded for
+  a later release to take on deliberately.
+- **`optimistic_lock_atomicity`'s own test count sits outside the
+  extractor's pattern**, by decision rather than oversight — it is
+  cited in a list-continuation shape the extractor does not match, and
+  the population this release holds to the runner is eight citations,
+  not nine.
+
 ## [0.56.0] — 2026-10-22
 
 **The claim that both backends work, made by something that would
