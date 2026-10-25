@@ -109,11 +109,56 @@ pub fn resolve_prompt_answer(raw_line: &str, default: &str) -> String {
     }
 }
 
+/// Resolves the database question's own raw answer, or says why it
+/// cannot be used — checked before it is written anywhere, per round
+/// 3's own review: an unconditional `sqlite://` prefix turned the
+/// *documented* `sqlite://data/app.db` form into
+/// `sqlite://sqlite://data/app.db`, which creates a directory
+/// literally named `sqlite:`, **writes a generated signing key inside
+/// it**, and only then fails to start — the opposite of *"every
+/// question has a working default"* holding for an answer that is
+/// not the default.
+///
+/// - An answer already carrying a scheme (`sqlite://`, `postgres://`)
+///   is taken as given, never re-prefixed.
+/// - An answer with none is prefixed with `sqlite://`, as before.
+/// - Either way, the result must have a filesystem path for a
+///   generated signing key to sit beside
+///   ([`crate::config::database_file_path`]) — `None` covers both an
+///   in-memory target and a backend this build does not have.
+///   `peisear_storage::pool::connect`'s own deny-list already refuses
+///   a PostgreSQL URL on a SQLite build; this restates that refusal
+///   by name before a secret is ever generated against the answer,
+///   rather than inventing a second rule.
+fn validate_database_answer(raw: &str) -> Result<String, String> {
+    let database_url = if raw.contains("://") {
+        raw.to_string()
+    } else {
+        format!("sqlite://{raw}")
+    };
+    if database_url.starts_with("postgres://") || database_url.starts_with("postgresql://") {
+        return Err(format!(
+            "{database_url} is a PostgreSQL connection string, and this build only has the sqlite backend."
+        ));
+    }
+    if crate::config::database_file_path(&database_url).is_none() {
+        return Err(format!(
+            "{database_url} has no file for peisear to store data in (an in-memory database is not supported here)."
+        ));
+    }
+    Ok(database_url)
+}
+
 /// Asks `RFC 020` §1's own two questions and returns the answers —
 /// the one place in this module real I/O happens, and generic over
 /// `BufRead`/`Write` rather than hardcoding `io::stdin()`/`io::stdout()`
 /// so a test can hand it an in-memory buffer instead of the process's
 /// real, shared streams.
+///
+/// **Re-asks rather than failing** when [`validate_database_answer`]
+/// rejects an answer — the operator is sitting at the prompt, and
+/// correcting it immediately is the one thing this wizard can do that
+/// a startup error later cannot.
 pub fn run_wizard<R: BufRead, W: Write>(mut input: R, mut output: W) -> io::Result<Answers> {
     writeln!(output)?;
     writeln!(
@@ -122,11 +167,17 @@ pub fn run_wizard<R: BufRead, W: Write>(mut input: R, mut output: W) -> io::Resu
     )?;
     writeln!(output)?;
 
-    write!(output, "  Where should the database live?  [data/app.db] ")?;
-    output.flush()?;
-    let mut line = String::new();
-    input.read_line(&mut line)?;
-    let database_url = format!("sqlite://{}", resolve_prompt_answer(&line, "data/app.db"));
+    let database_url = loop {
+        write!(output, "  Where should the database live?  [data/app.db] ")?;
+        output.flush()?;
+        let mut line = String::new();
+        input.read_line(&mut line)?;
+        let raw = resolve_prompt_answer(&line, "data/app.db");
+        match validate_database_answer(&raw) {
+            Ok(url) => break url,
+            Err(reason) => writeln!(output, "    {reason} Try again.")?,
+        }
+    };
 
     writeln!(
         output,
