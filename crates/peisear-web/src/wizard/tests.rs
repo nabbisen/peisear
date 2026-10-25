@@ -177,6 +177,79 @@ fn run_wizard_uses_typed_answers_when_given() {
     assert_eq!(answers.bind_addr, "0.0.0.0:8080");
 }
 
+// ---------- WIZ-002 round 4: the database answer is validated, not blindly prefixed ----------
+
+#[test]
+fn validate_database_answer_prefixes_a_bare_path() {
+    assert_eq!(
+        validate_database_answer("data/app.db"),
+        Ok("sqlite://data/app.db".to_string())
+    );
+}
+
+/// The round 3 review's own first measured case: the *documented*
+/// `sqlite://…` form, typed exactly as `configuration.md` shows it,
+/// must not be prefixed a second time.
+#[test]
+fn validate_database_answer_takes_an_already_prefixed_sqlite_url_as_given() {
+    assert_eq!(
+        validate_database_answer("sqlite://custom/path.db"),
+        Ok("sqlite://custom/path.db".to_string())
+    );
+}
+
+/// The review's second measured case: a bare `:memory:` answer
+/// prefixes to `sqlite://:memory:`, which has no filesystem path for
+/// a generated key and must be refused, not written.
+#[test]
+fn validate_database_answer_refuses_an_in_memory_target() {
+    assert!(validate_database_answer(":memory:").is_err());
+    assert!(validate_database_answer("sqlite://:memory:").is_err());
+}
+
+/// The review's third measured case: a PostgreSQL connection string,
+/// refused by name -- restating `pool::connect`'s own deny-list
+/// rather than letting it through to a build that cannot use it.
+#[test]
+fn validate_database_answer_refuses_a_postgres_url_and_names_it() {
+    let err = validate_database_answer("postgres://u:p@host/db").unwrap_err();
+    assert!(err.contains("PostgreSQL"), "got {err:?}");
+    let err = validate_database_answer("postgresql://u:p@host/db").unwrap_err();
+    assert!(err.contains("PostgreSQL"), "got {err:?}");
+}
+
+/// All three of the review's own measured shapes, end to end through
+/// `run_wizard` itself: each bad first answer is rejected and the
+/// wizard re-asks in the same session, accepting a corrected second
+/// answer rather than failing the whole run.
+#[test]
+fn run_wizard_takes_the_documented_sqlite_url_form_without_double_prefixing() {
+    let input = io::Cursor::new(b"sqlite://data/app.db\n\n".to_vec());
+    let mut output = Vec::new();
+    let answers = run_wizard(input, &mut output).expect("wizard runs to completion");
+    assert_eq!(answers.database_url, "sqlite://data/app.db");
+}
+
+#[test]
+fn run_wizard_re_asks_on_a_bare_in_memory_answer_and_accepts_the_retry() {
+    let input = io::Cursor::new(b":memory:\ndata/app.db\n\n".to_vec());
+    let mut output = Vec::new();
+    let answers = run_wizard(input, &mut output).expect("wizard runs to completion");
+    assert_eq!(answers.database_url, "sqlite://data/app.db");
+    let text = String::from_utf8(output).expect("valid utf-8");
+    assert!(text.contains("Try again"), "got {text:?}");
+}
+
+#[test]
+fn run_wizard_re_asks_on_a_postgres_url_and_names_the_reason() {
+    let input = io::Cursor::new(b"postgres://u:p@host/db\ndata/app.db\n\n".to_vec());
+    let mut output = Vec::new();
+    let answers = run_wizard(input, &mut output).expect("wizard runs to completion");
+    assert_eq!(answers.database_url, "sqlite://data/app.db");
+    let text = String::from_utf8(output).expect("valid utf-8");
+    assert!(text.contains("PostgreSQL"), "got {text:?}");
+}
+
 #[test]
 fn run_wizard_prints_both_questions() {
     let input = io::Cursor::new(b"\n\n".to_vec());
