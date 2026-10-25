@@ -6664,12 +6664,23 @@ Five instances, all measured, all from the last two releases:
 | 3 | The self-path test passed vacuously after a rename — an absent path is trivially absent | Fixed in `DOCS-008` §3 |
 | 4 | A redactor exercised only on input with nothing to redact | Avoided in `SEC-001` §1, by instruction |
 | 5 | The round-trip test stopped catching truncation while a flake was being fixed — both sides of the comparison lost the same digits | `REG-001` §2, **introduced after this class was named** |
+| 6 | `docs_scan` rule 4's own `config.rs` lookup anchors on literal text (`env::var("DATABASE_URL")`); sharing a constant between `config.rs` and `wizard::env_file` moved that literal, and the `if let` consuming the lookup's `Option` simply did not match — zero violations, nothing examined | Found running the full suite after the change, before shipping it (`WIZ-002`); reverted, and the rule now asserts each lookup itself succeeded rather than trusting it |
 
 **Instance 5 is the one worth stating plainly.** The class was already written
 down and under review when a careful round reintroduced it anyway, while
 fixing something else. The rule is not "remember this"; it is a question to
 ask of a green check: **what did it examine, and how would I know if the
 answer were nothing?**
+
+**Instance 6 is the first of the six caught by the change that would have
+caused it, before that change shipped, rather than after.** And the refactor
+it broke was itself the better code: sharing one constant between a writer
+and a reader is a real improvement over two independent literals that could
+drift, and it was blocked only by a guard that reads source text rather than
+a shared symbol. **That is a cost of this project's own text-reading guards,
+worth recording rather than a reason to decline the refactor forever** —
+the next guard of this shape should expect to need the same population
+assertion rule 4 now carries, not avoid the literal it reads.
 
 **Decided 2026-10-14, at `FIV-001` round 3's review — the register
 gets a guard, and it is a citation check rather than a numbering
