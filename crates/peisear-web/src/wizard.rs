@@ -1,21 +1,12 @@
 //! The first-run wizard (`RFC 020`, `WIZ-001`–`WIZ-003`).
 //!
-//! `WIZ-001` ships only the skip/run detection and a stub body:
-//! [`run_wizard_stub`] prints one line and returns. `WIZ-002` replaces
-//! that body with the real two-question wizard; the predicate below is
-//! already the property this whole series depends on, and it is
-//! proven in CI against the real binary rather than only read.
-//!
-//! **`WIZ-002` is half-built, deliberately.** `ROADMAP.md`'s
-//! authorized row says the wizard asks five questions; `RFC 020` §1's
-//! own sketch asks two. That disagreement is the owner's to settle,
-//! not this round's, so the prompts themselves — and `main.rs`'s own
-//! call to [`run_wizard_stub`] — are not built yet. [`Answers`] and
-//! [`env_file`] are independent of the question count (both take and
-//! write the two variables either sketch agrees on, `DATABASE_URL`
-//! and `BIND_ADDR`) and are built and proven here, per the round's own
-//! handoff §1: *"do not build the question list until the answer
-//! arrives — but do not idle either."*
+//! `WIZ-001` shipped the skip/run detection. `WIZ-002` is this
+//! module's own subject: two questions (`RFC 020` §1's sketch),
+//! three statements (`§1a`'s correction — the cookie flag is not
+//! silent), and a `.env` that says exactly what the statements said.
+
+use std::io::{self, BufRead, Write};
+use std::path::Path;
 
 /// Whether the wizard should run at all, stated as the one predicate
 /// `WIZ-001` §2 asks for rather than two scattered `if`s.
@@ -54,22 +45,19 @@ pub fn configuration_exists(
     dot_env_exists || database_url_set || jwt_secret_set || bind_addr_set || cookie_secure_set
 }
 
-/// `WIZ-001`'s own stub body. `WIZ-002` replaces this with the real
-/// two-question wizard that writes `.env`; printing one line and
-/// returning is enough to prove the skip/run detection in CI before
-/// the feature it guards exists.
+/// `WIZ-001`'s own stub body, kept for what it proved and no longer
+/// called from `main.rs`: [`run_wizard`] is the real body now.
 pub fn run_wizard_stub() {
     println!("(first-run wizard would start here)");
 }
 
-/// The two answers the wizard's own sketch (`RFC 020` §1) asks for —
-/// `database_url` and `bind_addr` — independent of whether the owner
-/// settles on two questions or five: every sketch on record asks at
-/// least these two. `JWT_SECRET` and `COOKIE_SECURE` are deliberately
-/// absent: the former is **generated**, never answered
-/// (`config::resolve_generated_jwt_secret`, private), and the latter
-/// is correct at its default and not written at all, so `.env` never
-/// pins a value the wizard did not actually ask about.
+/// `RFC 020` §1's own two answers — `database_url` (already in the
+/// `sqlite://…` form [`crate::config::Config::from_env`] reads, not
+/// the bare path the question asks for) and `bind_addr`. `JWT_SECRET`
+/// is absent: it is **generated**, never answered. `COOKIE_SECURE` is
+/// absent too, for a different reason (`§1a`): it is written, but at
+/// its own built-in default, commented — never a value the wizard
+/// asked about.
 pub struct Answers {
     pub database_url: String,
     pub bind_addr: String,
@@ -80,27 +68,123 @@ pub struct Answers {
 /// content is an ordinary string assertion, never a read of a real
 /// `.env` (`WIZ-002` §2: nobody in this pipeline may open one).
 ///
-/// **Nothing is written that `answers` did not carry.** Exactly two
-/// lines, `DATABASE_URL` and `BIND_ADDR` — the same two literals
-/// [`crate::config::Config::from_env`] reads. **Not a shared
-/// constant, deliberately**: `docs_scan` rule 4 locates
-/// `config.rs`'s own default by searching for the literal text
-/// `env::var("DATABASE_URL")`, and a constant in its place would have
-/// made that search -- an existing, independently useful guard --
-/// find nothing and silently stop checking (found by running it after
-/// trying the constant first). A rename on *this* side is still
-/// caught, by this module's own round-trip test parsing this
-/// function's output for the same literal; a rename on `config.rs`'s
-/// side is not caught here, and is this
-/// round's one named, accepted gap -- closed naturally once a real
-/// `.env` this function wrote is round-tripped through a real running
-/// `peisear`, which needs the prompts `WIZ-002` §1 is still waiting
-/// on.
+/// **Three lines, two of them live.** `DATABASE_URL` and `BIND_ADDR`
+/// are the two literals [`crate::config::Config::from_env`] reads —
+/// **not a shared constant, deliberately**: `docs_scan` rule 4
+/// locates `config.rs`'s own default by searching for the literal
+/// text `env::var("DATABASE_URL")`, and a constant in its place broke
+/// that search silently (`§10.36`, round 1's own finding, fixed in
+/// round 2 by making rule 4 assert the lookup itself before trusting
+/// it — recorded there, not repeated here as a reason to keep
+/// `wizard.rs` and `config.rs` apart; round 2 found the better fix).
+/// The third, `COOKIE_SECURE`, is **commented, at its built-in
+/// default** (`§1a`): not pinning a value lets a future release
+/// change the default without this file silently overriding it, the
+/// same reason `0.53.0` commented every line of `.env.example`.
 pub fn env_file(answers: &Answers) -> String {
     format!(
-        "DATABASE_URL={}\nBIND_ADDR={}\n",
+        "DATABASE_URL={}\nBIND_ADDR={}\n# COOKIE_SECURE=0   # set to 1 when peisear is served over HTTPS\n",
         answers.database_url, answers.bind_addr,
     )
+}
+
+/// `WIZ-002` §2's own thin shell: writes [`env_file`]'s text to
+/// `path`. Nothing here is unit-tested beyond what `env_file` itself
+/// already proves as a string; the real write is exercised in CI
+/// (`WIZ-001`'s own idiom), never by a test opening `.env` back.
+pub fn write_env_file(path: &Path, answers: &Answers) -> io::Result<()> {
+    std::fs::write(path, env_file(answers))
+}
+
+/// What one line of raw prompt input resolves to against its own
+/// default — pure, so `RFC 020` §1's first property (*"every question
+/// has a working default, so holding enter is a complete answer"*)
+/// is tested without a real stdin.
+pub fn resolve_prompt_answer(raw_line: &str, default: &str) -> String {
+    let trimmed = raw_line.trim();
+    if trimmed.is_empty() {
+        default.to_string()
+    } else {
+        trimmed.to_string()
+    }
+}
+
+/// Asks `RFC 020` §1's own two questions and returns the answers —
+/// the one place in this module real I/O happens, and generic over
+/// `BufRead`/`Write` rather than hardcoding `io::stdin()`/`io::stdout()`
+/// so a test can hand it an in-memory buffer instead of the process's
+/// real, shared streams.
+pub fn run_wizard<R: BufRead, W: Write>(mut input: R, mut output: W) -> io::Result<Answers> {
+    writeln!(output)?;
+    writeln!(
+        output,
+        "  No configuration found. Setting up a new instance."
+    )?;
+    writeln!(output)?;
+
+    write!(output, "  Where should the database live?  [data/app.db] ")?;
+    output.flush()?;
+    let mut line = String::new();
+    input.read_line(&mut line)?;
+    let database_url = format!("sqlite://{}", resolve_prompt_answer(&line, "data/app.db"));
+
+    writeln!(
+        output,
+        "  What address should it listen on?  [127.0.0.1:3000]"
+    )?;
+    writeln!(
+        output,
+        "    (press enter to keep it private to this machine)"
+    )?;
+    output.flush()?;
+    let mut line = String::new();
+    input.read_line(&mut line)?;
+    let bind_addr = resolve_prompt_answer(&line, "127.0.0.1:3000");
+
+    Ok(Answers {
+        database_url,
+        bind_addr,
+    })
+}
+
+/// The generated key's own display path for `database_url`, or
+/// `None` for the one case `RFC 020` §1's two questions can produce
+/// deliberately — an in-memory database has no filesystem path for a
+/// key file to sit beside. Thin, `pub` wrapper around
+/// `crate::config`'s own `pub(crate)` parsing (`database_file_path`,
+/// `jwt_secret_path`): `main.rs`, in the `peisear` binary crate, is
+/// outside `peisear_web` and cannot reach a `pub(crate)` item there
+/// directly, and this module is the natural place for the one caller
+/// that needs it, not a reason to widen `config`'s own public surface.
+pub fn jwt_secret_display_path(database_url: &str) -> Option<String> {
+    let db_path = crate::config::database_file_path(database_url)?;
+    Some(
+        crate::config::jwt_secret_path(&db_path)
+            .display()
+            .to_string(),
+    )
+}
+
+/// The three statements that follow the two questions — pure, so
+/// `RFC 020` §1's own exact wording is tested as a string. `jwt_path`
+/// is `None` only in the edge case the two questions cannot produce
+/// deliberately (`database_url` pointing at an in-memory database,
+/// which has no filesystem path for a key file to sit beside) —
+/// everything a real wizard run writes always has one.
+pub fn wizard_statements(jwt_path: Option<&str>, env_path: &str) -> String {
+    let mut s = String::new();
+    if let Some(path) = jwt_path {
+        s.push_str(&format!(
+            "\n  A signing key has been generated and saved to {path}.\n  Back it up with the database.\n"
+        ));
+    }
+    s.push_str(
+        "\n  Cookies are not marked Secure. Set COOKIE_SECURE=1 when peisear is served over HTTPS.\n",
+    );
+    s.push_str(&format!(
+        "\n  Written to {env_path} — edit it any time, or delete it to start over.\n"
+    ));
+    s
 }
 
 #[cfg(test)]

@@ -182,11 +182,11 @@ jobs:
           trap 'cat peisear.log; kill "$pid" 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null && break; sleep 1; done
           curl -sf http://127.0.0.1:3000/health
-          if grep -q 'first-run wizard would start here' peisear.log; then
-            echo "::error::stub line present in the piped/no-configuration case -- the wizard ran where it must not"
+          if grep -q 'No configuration found' peisear.log; then
+            echo "::error::the wizard ran in the piped/no-configuration case -- the wizard must not run where stdin is not a terminal"
             exit 1
           fi
-      - name: Case 2 -- stdin piped, configuration present -- stub absent, server starts
+      - name: Case 2 -- stdin piped, configuration present -- wizard absent, server starts
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/wiz-case-2"
@@ -198,11 +198,11 @@ jobs:
           trap 'cat peisear.log; kill "$pid" 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null && break; sleep 1; done
           curl -sf http://127.0.0.1:3000/health
-          if grep -q 'first-run wizard would start here' peisear.log; then
-            echo "::error::stub line present in the piped/configured case -- the wizard ran where it must not"
+          if grep -q 'No configuration found' peisear.log; then
+            echo "::error::the wizard ran in the piped/configured case -- the wizard must not run where stdin is not a terminal"
             exit 1
           fi
-      - name: Case 3 -- stdin a terminal (pty), no configuration -- stub present
+      - name: Case 3 -- stdin a terminal (pty), no configuration -- wizard runs, server starts
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/wiz-case-3"
@@ -210,22 +210,44 @@ jobs:
           trap 'cat peisear.log 2>/dev/null; pkill -f "target/debug/peisear" 2>/dev/null || true' EXIT
           # `-f`/`--flush`: `script` otherwise buffers the typescript
           # file's own writes separately from what it echoes live to
-          # this step's own console -- measured directly, the stub
-          # line below appeared in this step's live output well before
-          # `peisear.log` itself (read by `grep`, further down) held
-          # it, without `-f`.
+          # this step's own console -- measured directly, the wizard's
+          # own output below appeared in this step's live output well
+          # before `peisear.log` itself (read by `grep`, further down)
+          # held it, without `-f`.
+          #
+          # `WIZ-002`: the real wizard reads two lines of input, so
+          # `< /dev/null` (round 1's own stub needed nothing) now
+          # blocks forever -- the pty's own slave side does not reach
+          # EOF just because `script`'s own stdin did (measured: a
+          # 10s `timeout` run hung). Two blank lines, fed through a
+          # here-string so they become real bytes on the pty rather
+          # than a closed stdin, answer both questions with their
+          # defaults and let the wizard -- and the server after it --
+          # proceed exactly as a human pressing enter twice would.
           env -u DATABASE_URL -u JWT_SECRET -u BIND_ADDR -u COOKIE_SECURE \
-            script -qfec "$GITHUB_WORKSPACE/target/debug/peisear" peisear.log < /dev/null &
+            script -qfec "$GITHUB_WORKSPACE/target/debug/peisear" peisear.log <<< $'\n\n' &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null 2>&1 && break; sleep 1; done
+          curl -sf http://127.0.0.1:3000/health
+          # The health check answering does not mean the typescript
+          # file already holds the wizard's own earlier output --
+          # measured directly, `grep` right here missed lines `cat`
+          # moments later (in the trap) showed were already there.
+          # Poll rather than check once, the same allowance case 4's
+          # own "listening" wait already makes.
           found=0
           for i in $(seq 1 10); do
-            grep -q 'first-run wizard would start here' peisear.log 2>/dev/null && { found=1; break; }
-            sleep 1
+            grep -q 'No configuration found' peisear.log 2>/dev/null && { found=1; break; }
+            sleep 0.5
           done
           if [ "$found" != "1" ]; then
-            echo "::error::stub line absent in the terminal/no-configuration case -- the wizard did not run where it must"
+            echo "::error::the wizard's own intro is absent in the terminal/no-configuration case -- the wizard did not run where it must"
             exit 1
           fi
-      - name: Case 4 -- stdin a terminal (pty), configuration present -- stub absent
+          if ! grep -q 'Written to .env' peisear.log; then
+            echo "::error::the wizard ran but its own closing line (the .env it wrote) is missing"
+            exit 1
+          fi
+      - name: Case 4 -- stdin a terminal (pty), configuration present -- wizard absent
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/wiz-case-4"
@@ -244,14 +266,14 @@ jobs:
           # The loop above falls through, not fails, if "listening"
           # never arrives -- without this, a binary that failed to
           # start (bad DATABASE_URL, script not launching it, anything)
-          # leaves no stub line and no "listening" line, and the
+          # leaves no wizard output and no "listening" line, and the
           # absence check below would pass having proven nothing.
           grep -q 'listening' peisear.log || {
-            echo "::error::case 4: the server never reached 'listening' -- nothing was proven about the stub line"
+            echo "::error::case 4: the server never reached 'listening' -- nothing was proven about the wizard's own absence"
             exit 1
           }
-          if grep -q 'first-run wizard would start here' peisear.log; then
-            echo "::error::stub line present in the terminal/configured case -- the wizard ran where it must not"
+          if grep -q 'No configuration found' peisear.log; then
+            echo "::error::the wizard ran in the terminal/configured case -- the wizard must not run where configuration already exists"
             exit 1
           fi
 
