@@ -15,7 +15,7 @@ container, so that is built and proven first, on a stub.
 | ID | Handoff | Subject | Blocked on | State |
 |---|---|---|---|---|
 | WIZ-001 | [the skip](./WIZ-001-the-skip.md) | **Not the wizard.** `std::io::IsTerminal` plus *configuration already exists*, proven by a CI walk over four cases including a real pty — with a stub body that prints one line. *"A wizard that blocks a `docker run` is an outage"* | — | **Closed** — 2 rounds. Four cases green with case 3 through a real pty and case 4 now unable to pass on a server that never started; the plant reproduced in review in both directions. **The safety floor is in place before the feature exists** |
-| WIZ-002 | [the wizard](./WIZ-002-the-wizard.md) | Two questions, two statements, and `env_file()` as a **pure function** so the written file can be tested as a string. **Carries one question for the owner** (§1) | WIZ-001 | **Round 3 — blocked on the owner.** `env_file`, its round trip, and `docs_scan` rule 4’s population assertion are all accepted; the three plants were proven load-bearing against the pre-fix tree in review. **Only the prompts remain, and they need the question count settled** |
+| WIZ-002 | [the wizard](./WIZ-002-the-wizard.md) | Two questions, two statements, and `env_file()` as a **pure function** so the written file can be tested as a string. **Carries one question for the owner** (§1) | WIZ-001 | **Round 3.** `env_file`, its round trip, and `docs_scan` rule 4’s population assertion all accepted. **`§1a` corrects the architect’s own recommendation**: `COOKIE_SECURE` was to be left out and must not be — a silent security default in a file the operator keeps. Two questions, **three** statements, the flag written commented at its default |
 | WIZ-003 | [what the documents are for now](./WIZ-003-what-the-documents-are-for-now.md) | `RFC 020`'s own test of itself — *prevented or merely moved?* — answered honestly for all three defects, plus re-pointing three documents | WIZ-002 | Not started |
 | REL-0.58.0 | not written | The cut, `DEC-028`, `DEC-056`. Written when the three rounds close | all three | Not written |
 
@@ -41,14 +41,34 @@ So *"five"* is the **documented** set, not the surface, and the
 surface is twelve.
 
 **The architect recommends two questions** — where the database
-lives, what address it listens on — plus two **statements**: that a
-signing key was generated and where, and that `.env` was written and
-where. `JWT_SECRET` is generated rather than chosen; `COOKIE_SECURE`
-is correct at its default and answering it requires knowing whether a
-reverse proxy terminates TLS, which is precisely what the reader this
-wizard exists for does not yet know; `RUST_LOG` has a working
-default. Asking all five makes it the *"configuration UI"* `RFC 020`
-§3 forbids.
+lives, what address it listens on — plus **three statements**: the
+signing key generated and where, **the cookie flag**, and the `.env`
+written and where.
+
+**Corrected 2026-10-25, after the owner asked for this to be reviewed
+against the project's philosophy.** The first version recommended
+two statements and left `COOKIE_SECURE` out, on the grounds that it
+is *"correct at its default and wrong to ask about."* The first half
+is true; the conclusion was wrong. `COOKIE_SECURE` sets the `Secure`
+flag on the session cookie, so at its default of `false` the cookie
+travels over plain HTTP — correct on `127.0.0.1`, wrong behind TLS,
+which is every real deployment. **And the wizard writes a file the
+operator keeps**, so that version would have configured an instance
+and said nothing about a security control being off, leaving the flag
+to be discovered by reading `configuration.md` — the *"read the
+documentation"* step this release exists to remove.
+
+**Still two questions**, so still not a configuration UI. The flag
+becomes a statement and a **commented line at its built-in default**,
+which is the convention `0.53.0` already chose for `.env.example`
+*"so a copied file … can never hand anyone a setting they did not
+choose"* — visible and editable without pinning a default a future
+release might improve. `WIZ-002` §1a carries it.
+
+`JWT_SECRET` is generated rather than chosen; `RUST_LOG` has a
+working default and no wrong setting. Asking all five makes it the
+*"configuration UI"* `RFC 020` §3 forbids; saying three things costs
+one sentence and no question.
 
 `ROADMAP.md`'s own rule — *"a row that changes after authorization is
 re-authorized, not quietly edited"* — is why this is an ask and not

@@ -32,20 +32,80 @@ sketch:
 2. *What address should it listen on?* — `[127.0.0.1:3000]`, with the
    note that enter keeps it private to this machine
 
-and **two statements**, not questions:
+and **three statements**, not questions:
 
 - the signing key was generated, and where it is, and to back it up
   with the database
+- **that cookies are not marked `Secure`, and to set
+  `COOKIE_SECURE=1` when peisear is served over HTTPS** — see §1a,
+  which is a correction to this handoff's first version
 - the `.env` was written, and where
 
-**Why not five.** `JWT_SECRET` is generated, not chosen — asking
-would invite a weak answer. `COOKIE_SECURE` is correct at its default
-and wrong to ask about: answering it requires knowing whether a
-reverse proxy terminates TLS, which the reader this wizard exists for
-does not yet know. `RUST_LOG` is an observability knob with a working
-default. Asking all five makes it the *"configuration UI"* `RFC 020`
-§3 forbids, and asking about TLS termination on a first run is the
-opposite of what this release is for.
+**Why not five questions.** `JWT_SECRET` is generated, not chosen —
+asking would invite a weak answer. `RUST_LOG` is an observability
+knob with a working default and no wrong setting. And
+`COOKIE_SECURE` is not a question either, for the reason §1a gives —
+but it is **not silent**, which is where this handoff was wrong.
+Asking all five makes it the *"configuration UI"* `RFC 020` §3
+forbids; saying three things costs one sentence and no question.
+
+## §1a — the correction: a silent security default is not a default
+
+**This handoff first said `COOKIE_SECURE` is *"correct at its default
+and wrong to ask about"* and left it out entirely.** The first half
+is true and the conclusion was wrong.
+
+`COOKIE_SECURE` sets the `Secure` flag on the session cookie
+(`config.rs:41` → `state.rs:9` → `handlers/auth.rs:72`/`:116`). At
+its default of `false` the cookie is **sent over plain HTTP**.
+Correct for a first run on `127.0.0.1`; wrong for every deployment
+behind TLS, which is every real one.
+
+**And the wizard writes a file the operator keeps.** So the version
+this handoff first specified would configure an instance, write two
+lines, describe two lines — and say nothing at all about a security
+control being off. The file and the explanation would agree, and both
+would be silent. **That is `RFC 020`'s own claim satisfied in letter
+and defeated in substance**: the operator still has to read
+`configuration.md` to discover the flag exists, which is the *"read
+the documentation"* step this release exists to remove.
+
+**The fix uses a convention this project already chose, for this
+exact reason.** `requirements.md`'s own `0.53.0` amendment:
+*"every variable in `.env.example` is now commented out, each shown
+at its own built-in default, so a copied file changes nothing and can
+never hand anyone a setting they did not choose."*
+
+So `env_file` writes it **commented, at its built-in default**:
+
+```
+DATABASE_URL=…
+BIND_ADDR=…
+# COOKIE_SECURE=0   # set to 1 when peisear is served over HTTPS
+```
+
+Visible and editable, **without pinning** a default a future release
+might improve — which is precisely why 0.53.0 chose commenting over
+writing values.
+
+**Word the statement unconditionally.** Not *"because this instance
+listens on loopback"* — the operator may have just changed
+`BIND_ADDR` to `0.0.0.0`, and then that clause is false. *"Cookies
+are not marked `Secure`. Set `COOKIE_SECURE=1` when peisear is served
+over HTTPS."* is true whatever they answered.
+
+**This changes one accepted test.** Round 1's *"nothing else is
+written — exactly two lines"* becomes *"exactly two uncommented
+lines, plus the one commented `COOKIE_SECURE` line"*. Update it
+deliberately and say so; a test loosened quietly is worse than the
+gap it was hiding.
+
+**`COOKIE_SECURE` was the only silent one, and that is measured.**
+`DATABASE_URL` is asked; `BIND_ADDR` is asked and the sketch already
+carries its own security sentence (*"press enter to keep it private
+to this machine"*); `JWT_SECRET` is stated. Of the four variables
+`Config::from_env` reads, this was the one with a security-relevant
+default and no sentence anywhere in the wizard.
 
 **`ROADMAP.md`'s own rule**: *"a row that changes after authorization
 is re-authorized, not quietly edited."* So the row's *"five
