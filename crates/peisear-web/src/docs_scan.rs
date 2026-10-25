@@ -572,27 +572,42 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         }
     }
 
-    // Rule 4, live: documented defaults match config.rs.
+    // Rule 4, live: documented defaults match config.rs. Each lookup
+    // against config.rs's own literal text is asserted present before
+    // it is trusted -- `WIZ-002`'s own review: `None` here used to
+    // make the `if let` below simply not match, so a refactor that
+    // moved the literal (a shared constant, a different call shape)
+    // left this rule reporting zero violations while reading nothing,
+    // `§10.36`'s own class.
     for var in ["DATABASE_URL", "BIND_ADDR"] {
-        if let (Some(actual), Some(documented)) = (
-            literal_string_default(input.config_rs, var),
-            table_default(input.configuration, var),
-        ) && actual != documented
+        let Some(actual) = literal_string_default(input.config_rs, var) else {
+            out.push(format!(
+                "rule 4: no literal default found in config.rs for {var} -- has the call shape changed?"
+            ));
+            continue;
+        };
+        if let Some(documented) = table_default(input.configuration, var)
+            && actual != documented
         {
             out.push(format!(
                 "rule 4: configuration.md documents {var}'s default as `{documented}`, config.rs's is `{actual}`"
             ));
         }
     }
-    if let (Some(actual), Some(documented)) = (
-        literal_bool_default(input.config_rs, "COOKIE_SECURE"),
-        table_default(input.configuration, "COOKIE_SECURE"),
-    ) {
-        let actual_str = if actual { "1" } else { "0" };
-        if actual_str != documented {
-            out.push(format!(
-                "rule 4: configuration.md documents COOKIE_SECURE's default as `{documented}`, config.rs's is `{actual_str}`"
-            ));
+    match literal_bool_default(input.config_rs, "COOKIE_SECURE") {
+        None => out.push(
+            "rule 4: no literal default found in config.rs for COOKIE_SECURE -- has the call shape changed?"
+                .into(),
+        ),
+        Some(actual) => {
+            if let Some(documented) = table_default(input.configuration, "COOKIE_SECURE") {
+                let actual_str = if actual { "1" } else { "0" };
+                if actual_str != documented {
+                    out.push(format!(
+                        "rule 4: configuration.md documents COOKIE_SECURE's default as `{documented}`, config.rs's is `{actual_str}`"
+                    ));
+                }
+            }
         }
     }
 

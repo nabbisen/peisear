@@ -173,6 +173,56 @@ fn rule_4_catches_a_documented_boolean_default_that_does_not_match_config_rs() {
     assert!(v.iter().any(|m| m.contains("COOKIE_SECURE")), "got {v:?}");
 }
 
+/// `WIZ-002`'s own review, `§10.36`'s class: `literal_string_default`/
+/// `literal_bool_default` anchor on `config.rs`'s own literal text
+/// (`env::var("DATABASE_URL")`), and a refactor that moves that
+/// literal -- a shared constant, a different call shape -- used to
+/// make the lookup return `None`, which the `if let` above simply did
+/// not match: zero violations, nothing examined. These three plant
+/// exactly that shape, one call site at a time, and must see rule 4
+/// name the missing variable rather than go quiet.
+#[test]
+fn rule_4_reports_rather_than_silently_skips_when_database_url_s_literal_moves() {
+    let mut r = real();
+    r.config_rs = r
+        .config_rs
+        .replace("env::var(\"DATABASE_URL\")", "env::var(DATABASE_URL_VAR)");
+    let v = only(run(&r), "rule 4:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("DATABASE_URL") && m.contains("call shape")),
+        "got {v:?}"
+    );
+}
+
+#[test]
+fn rule_4_reports_rather_than_silently_skips_when_bind_addr_s_literal_moves() {
+    let mut r = real();
+    r.config_rs = r
+        .config_rs
+        .replace("env::var(\"BIND_ADDR\")", "env::var(BIND_ADDR_VAR)");
+    let v = only(run(&r), "rule 4:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("BIND_ADDR") && m.contains("call shape")),
+        "got {v:?}"
+    );
+}
+
+#[test]
+fn rule_4_reports_rather_than_silently_skips_when_cookie_secure_s_literal_moves() {
+    let mut r = real();
+    r.config_rs = r
+        .config_rs
+        .replace("env::var(\"COOKIE_SECURE\")", "env::var(COOKIE_SECURE_VAR)");
+    let v = only(run(&r), "rule 4:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("COOKIE_SECURE") && m.contains("call shape")),
+        "got {v:?}"
+    );
+}
+
 #[test]
 fn rule_6_catches_a_raw_url_naming_a_file_that_does_not_exist() {
     let mut r = real();
