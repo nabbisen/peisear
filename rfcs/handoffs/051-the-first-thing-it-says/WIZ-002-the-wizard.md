@@ -60,6 +60,46 @@ all be built and proven against an `Answers` carrying the four
 variables, whatever the wizard ends up asking. Start there, and add
 the prompts last.
 
+## §1a — round 2, first and unblocked: `docs_scan`'s rule 4 goes silent
+
+Round 1 tried sharing `DATABASE_URL`/`BIND_ADDR` constants between
+`config.rs` and `wizard.rs` — the better code, since a rename either
+side would become a compile error. **It broke `docs_scan` rule 4, and
+the rule did not say so.**
+
+`literal_string_default` anchors on the literal text
+`env::var("<VAR>")` and returns `None` when it is not found; its
+caller is `if let (Some(actual), Some(documented)) = (…) && actual !=
+documented`, so **`None` pushes no violation.** Three variables share
+that path — `DATABASE_URL`, `BIND_ADDR`, and `COOKIE_SECURE` through
+`literal_bool_default`. A refactor that changes the call shape leaves
+rule 4 reporting zero while checking nothing.
+
+**`§10.36`'s class**, which is **open** in the register and framed as
+*"a question to ask of every green check"*. Asked here of a check
+nobody had asked it of.
+
+**Fix it by asserting the population**, the move `spec_scan` made in
+0.57.0: a lookup rule 4 expects to succeed returning `None` is itself
+a violation —
+
+```
+rule 4: no literal default found in config.rs for DATABASE_URL --
+has the call shape changed?
+```
+
+**Planted through `docs_scan`'s own `Input`** — change the call shape
+in the input, watch rule 4 go red rather than quiet. No file on disk
+is touched; that is what `Input` is for.
+
+**Record the instance under `§10.36`**, not a new `§10.N` and not
+`§10.39`, which is closed. Say in it that the refactor the round
+wanted was *correct*, and is blocked only by a guard that reads
+source text — **a cost of text-reading guards worth recording**, not
+a reason to avoid the refactor forever.
+
+**This does not wait on the owner. Do it first.**
+
 ## §2 — the writer is a pure function, and that is not a style choice
 
 **`.env` is behind a standing deny rule on file tools** — nobody in
