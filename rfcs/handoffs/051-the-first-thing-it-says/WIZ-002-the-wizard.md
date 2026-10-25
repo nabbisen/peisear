@@ -112,6 +112,24 @@ is re-authorized, not quietly edited."* So the row's *"five
 questions"* is the owner's to confirm or override. The rest of this
 handoff is written for two.
 
+**Still unanswered as of 2026-10-25, and round 3's report is wrong
+about it.** That report opens *"The owner answered `§1`: two
+questions, three statements."* The owner's actual words were *"Your
+recommendation is almost approved. However, review it carefully with
+my fundamental philosophy beforehand"* — an instruction to find a
+flaw, which produced `§1a`'s correction, and **the corrected
+recommendation has not been approved either.**
+
+Part of this is the architect's: the reply to the owner ended *"the
+ask is now: two questions and three statements"*, and `§1a` reads as
+a specification rather than a proposal.
+
+**What follows from it**: `WIZ-003` and `REL-0.58.0` must not cite an
+owner answer that does not exist, and **`REL-0.58.0` cannot cut until
+the owner confirms the count or re-authorizes the row** —
+`ROADMAP.md`'s own rule, which is why this was an ask. `§10.34`'s
+family: a status asserted ahead of the thing it describes.
+
 **Do not build the question list until the answer arrives — but do
 not idle either.** `§2`'s writer is independent of how many questions
 feed it: `env_file(&Answers) -> String`, the round trip through
@@ -159,6 +177,56 @@ source text — **a cost of text-reading guards worth recording**, not
 a reason to avoid the refactor forever.
 
 **This does not wait on the owner. Do it first.**
+
+## §1b — round 4: validate the answer, do not prefix it blindly
+
+`wizard.rs:129` prefixes the database answer unconditionally:
+`format!("sqlite://{}", …)`. **The prefixing is right** — the prompt
+shows a bare path and the file must carry the `sqlite://` form
+`Config::from_env` reads. **Doing it unconditionally is not.**
+Measured against the real binary:
+
+| Answer | Becomes | What happens |
+|---|---|---|
+| `sqlite://data/app.db` — **the documented form** | `sqlite://sqlite://data/app.db` | creates a directory named `sqlite:`, **writes a generated signing key to `./sqlite:/data/jwt_secret`**, then fails: `unable to open database file (code: 14)` |
+| `:memory:` | `sqlite://:memory:` | refuses at startup — no filesystem path to persist a key beside |
+| `postgres://u:p@host/db` | `sqlite://postgres://…` | same class as the first |
+
+**The first row is the likely one.** Anyone who has read
+`configuration.md` knows the variable takes `sqlite://…`, and a
+prompt showing a bare path invites pasting the form they know. The
+result is not a clean refusal: **a real key is persisted where the
+operator will never look** — while `backup.md` tells them it lives
+beside the database — and then the server exits.
+
+**`:memory:` is the same defect, and round 3 treated its symptom**:
+omitting the signing-key statement is graceful, but the `.env` it
+still writes cannot boot.
+
+**The fix, one step before the answer becomes an `Answers`:**
+
+1. **If the answer already contains `://`, take it as given** rather
+   than prefixing — and **refuse a scheme this build cannot use**,
+   naming it. `pool::connect`'s own deny-list already refuses
+   `postgres://` on a SQLite build, so this restates an existing
+   refusal rather than inventing a rule.
+2. Otherwise prefix it, as today.
+3. **Either way, if the result has no filesystem path for the key**
+   (`config::database_file_path` → `None`), **say so and ask
+   again.** The predicate exists and this round already exposed a
+   wrapper around it.
+
+**Re-ask; do not refuse the run.** The one thing a wizard can do
+that a startup error cannot is let the operator correct the answer
+while they are still sitting there.
+
+**Never write an unusable `DATABASE_URL` into `.env`.** The key is
+generated downstream in `Config::from_env`, so the only place to stop
+it is here.
+
+**Plant all three shapes in-memory.** `run_wizard` is already generic
+over `BufRead`/`Write`: feed the answer, assert the wizard re-asks
+and names the reason. No filesystem.
 
 ## §2 — the writer is a pure function, and that is not a style choice
 
