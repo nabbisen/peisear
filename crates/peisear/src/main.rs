@@ -43,22 +43,26 @@ async fn main() -> ExitCode {
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    // `WIZ-001`: the wizard, not yet built (`WIZ-002`'s own subject) --
-    // only the skip/run detection, so the property that matters most
-    // (`RFC 020` §3: "a wizard that blocks a `docker run` is an
-    // outage") is proven before there is anything to prompt with.
-    // `Config::from_env` below calls `dotenvy::dotenv()` again; doing
-    // so twice is harmless, since the second call sets nothing a
-    // variable here has not already read.
+    // `WIZ-002`: the real wizard. `Config::from_env` below calls
+    // `dotenvy::dotenv()` again once this writes `.env`; doing so
+    // twice is harmless -- the second call finds the file this one
+    // just wrote, in the same cwd, and loads it normally.
+    let env_path = Path::new(".env");
     let configuration_exists = wizard::configuration_exists(
-        Path::new(".env").exists(),
+        env_path.exists(),
         std::env::var("DATABASE_URL").is_ok(),
         std::env::var("JWT_SECRET").is_ok(),
         std::env::var("BIND_ADDR").is_ok(),
         std::env::var("COOKIE_SECURE").is_ok(),
     );
     if wizard::should_run_wizard(std::io::stdin().is_terminal(), configuration_exists) {
-        wizard::run_wizard_stub();
+        let answers = wizard::run_wizard(std::io::stdin().lock(), std::io::stdout())?;
+        wizard::write_env_file(env_path, &answers)?;
+        let jwt_path = wizard::jwt_secret_display_path(&answers.database_url);
+        print!(
+            "{}",
+            wizard::wizard_statements(jwt_path.as_deref(), &env_path.display().to_string())
+        );
     }
 
     let config = Config::from_env()?;

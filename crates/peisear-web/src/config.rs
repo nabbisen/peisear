@@ -222,7 +222,12 @@ fn resolve_jwt_secret(env_value: Option<&str>, database_url: &str) -> Result<Str
 /// step with it rather than reimplemented differently. `None` for
 /// `sqlite::memory:`, `sqlite://:memory:`, or any URL with no
 /// filesystem path: there is nothing to put a key file beside.
-fn database_file_path(database_url: &str) -> Option<PathBuf> {
+///
+/// `pub(crate)`, not `pub`: `wizard::run_wizard` reuses this and
+/// [`jwt_secret_path`] to tell the operator where the key it is about
+/// to generate will live, without a second implementation of the same
+/// parsing to keep in step.
+pub(crate) fn database_file_path(database_url: &str) -> Option<PathBuf> {
     let path = database_url.strip_prefix("sqlite://")?;
     if path.is_empty() || path == ":memory:" {
         return None;
@@ -231,7 +236,7 @@ fn database_file_path(database_url: &str) -> Option<PathBuf> {
 }
 
 /// The generated key's own path, beside `database_path`.
-fn jwt_secret_path(database_path: &Path) -> PathBuf {
+pub(crate) fn jwt_secret_path(database_path: &Path) -> PathBuf {
     match database_path.parent() {
         Some(parent) if !parent.as_os_str().is_empty() => parent.join(JWT_SECRET_FILE_NAME),
         _ => PathBuf::from(JWT_SECRET_FILE_NAME),
