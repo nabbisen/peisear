@@ -50,7 +50,15 @@ on **its** defaults rather than the operator's settings — measured,
 product tells you where its data is cannot ship while it tells you
 something false about it.**
 
-### The count itself
+### The count itself — settled
+
+**Answered 2026-10-28: two questions plus three statements.** The
+owner accepted the architect's recommendation and `ROADMAP.md`'s row
+is re-authorized to say so, with the reasoning recorded there. **The
+implementation already matches**, so nothing in this round changes
+because of it — confirm the row reads two-and-three and move on.
+
+**The history, which this round must not re-import:**
 
 **The owner has not settled the question count.** The implementation
 asks **two** questions and prints **three** statements;
@@ -60,9 +68,9 @@ questions"*.
 `ROADMAP.md`'s own rule: *"a row that changes after authorization is
 re-authorized, not quietly edited."*
 
-**Do not start this round until the series README's State column says
-the answer has arrived.** Do not edit the row to match the code, and
-do not change the code to five questions on this handoff's word —
+The answer has arrived; the row is re-authorized. What stands from
+the original instruction is only this: do not change the code to five
+questions, and do not treat the row's earlier wording as live —
 `WIZ-002` §1a argues two questions plus three statements on the
 owner's own philosophy, and that argument is the proposal, not the
 decision.

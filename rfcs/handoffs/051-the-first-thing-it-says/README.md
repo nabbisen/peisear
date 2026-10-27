@@ -19,13 +19,31 @@ container, so that is built and proven first, on a stub.
 | WIZ-003 | [what the documents are for now](./WIZ-003-what-the-documents-are-for-now.md) | `RFC 020`'s own test of itself — *prevented or merely moved?* — answered honestly for all three defects, plus re-pointing three documents | WIZ-002 | **Closed** — 1 round. `first-run.md` checked against the real binary line for line in review. **One of three defects prevented**, reasoned from primary sources and written plainly; the SMTP gap reported, not taken |
 | WIZ-004 | [the skip that agrees with the loader](./WIZ-004-the-skip-that-agrees-with-the-loader.md) | **The wizard says *“No configuration found”* when a `.env` sits in an ancestor directory, then writes a second one and shadows it** — measured. Detection is cwd-only; `dotenvy` searches ancestors. The standing exception applies: a defect that blocks the release is not a scope question | — | **Closed** — 1 round. Detection now asks the loader; the ancestor-`.env` case reproduced in review, binding the parent’s **3999** with no wizard and no second file. CI case 5 asserts the address, not just the absence |
 | WIZ-005 | [the other question](./WIZ-005-the-other-question.md) | **The address answer is not validated.** `localhost:3000`, `3000`, `0.0.0.0` and `127.0.0.1` each write a `.env` and then fail to start — after *“Written to .env”* — and the wizard is skipped forever after, so it never offers to fix what it wrote. The symmetric fix to `WIZ-002` round 4’s, for the other question | — | **Next** |
-| REL-0.58.0 | [the release candidate](./REL-0.58.0-release-candidate.md) | The cut, `DEC-028`, `DEC-056`. **All three rounds are closed.** Carries the accounting paragraph for the notes, the claim to falsify (a configured instance is untouched) and four limits | WIZ-005, and the owner’s answer on the question count | **Blocked** |
+| REL-0.58.0 | [the release candidate](./REL-0.58.0-release-candidate.md) | The cut, `DEC-028`, `DEC-056`. **All three rounds are closed.** Carries the accounting paragraph for the notes, the claim to falsify (a configured instance is untouched) and four limits | WIZ-005 | **Blocked on `WIZ-005`** — the question count is settled: **two questions, three statements**, accepted 2026-10-28, `ROADMAP.md`’s row re-authorized |
 
 **Status lives in the table above, not in a message.**
 
 ---
 
-## One thing needs the owner before `WIZ-002` acts
+## The question count: settled 2026-10-28 — two questions, three statements
+
+**The owner accepted two questions plus three statements**, and
+`ROADMAP.md`'s row is re-authorized to say so. The implementation
+already matches.
+
+**Worth recording how it was settled.** The owner was asked three
+times to review the recommendation against their own philosophy
+before accepting it, and **each review found a real defect** — a
+silent `COOKIE_SECURE` default in a file the operator keeps
+(`WIZ-002` §1a), a wizard announcing *"No configuration found"* over
+an ancestor `.env` and shadowing it (`WIZ-004`), and an unvalidated
+address answer that writes a `.env` which cannot boot and then locks
+the wizard out of fixing it (`WIZ-005`). **The count was never the
+flaw. Asking for the review is what found them.**
+
+The original ask, kept for the record:
+
+### One thing needed the owner before `WIZ-002` acted
 
 **`ROADMAP.md`'s authorized row says the wizard *"asks five
 questions"*. `RFC 020` §1's own sketch asks two.** Both are in the

@@ -112,8 +112,16 @@ is re-authorized, not quietly edited."* So the row's *"five
 questions"* is the owner's to confirm or override. The rest of this
 handoff is written for two.
 
-**Still unanswered as of 2026-10-25, and round 3's report is wrong
-about it.** That report opens *"The owner answered `§1`: two
+**Answered 2026-10-28: two questions plus three statements, as
+recommended.** The owner accepted it after asking three times for this
+to be reviewed against their own philosophy, and each of those three
+reviews found a real defect — `§1a`'s silent `COOKIE_SECURE`,
+`WIZ-004`'s ancestor-`.env`, and `WIZ-005`'s unvalidated address. The
+count was never the flaw; **asking for the review was what found
+them.** `ROADMAP.md`'s row is re-authorized to match.
+
+**The rest of this section is the history of that question, kept
+because round 3's report was wrong about it.** That report opens *"The owner answered `§1`: two
 questions, three statements."* The owner's actual words were *"Your
 recommendation is almost approved. However, review it carefully with
 my fundamental philosophy beforehand"* — an instruction to find a
