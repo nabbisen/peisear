@@ -43,13 +43,25 @@ async fn main() -> ExitCode {
 }
 
 async fn run() -> Result<(), Box<dyn std::error::Error>> {
-    // `WIZ-002`: the real wizard. `Config::from_env` below calls
-    // `dotenvy::dotenv()` again once this writes `.env`; doing so
-    // twice is harmless -- the second call finds the file this one
-    // just wrote, in the same cwd, and loads it normally.
+    // `WIZ-004`: ask the loader, not a second guess at where `.env`
+    // lives. `dotenvy::dotenv()` searches cwd and every ancestor
+    // directory (its own `find.rs`) -- the same resolution
+    // `Config::from_env` below relies on -- so detection uses that
+    // search's own result rather than `Path::new(".env").exists()`,
+    // which only ever looked in cwd and missed a `.env` an ancestor
+    // directory already supplied. No circularity: if the load sets
+    // one of the four variables below, `configuration_exists`'s own
+    // OR is true for that reason instead, not a spurious one -- the
+    // two signals agree because they are now the same signal.
+    // `Config::from_env` below calls `dotenvy::dotenv()` again; by
+    // default it never overwrites a variable already set, so a
+    // second call here is harmless whether this one found a file or
+    // not -- it finds the same file, or the one the wizard just
+    // wrote, in the same cwd.
     let env_path = Path::new(".env");
+    let dot_env_loaded = dotenvy::dotenv().is_ok();
     let configuration_exists = wizard::configuration_exists(
-        env_path.exists(),
+        dot_env_loaded,
         std::env::var("DATABASE_URL").is_ok(),
         std::env::var("JWT_SECRET").is_ok(),
         std::env::var("BIND_ADDR").is_ok(),

@@ -2134,6 +2134,7 @@ name = "peisear"
 version = "0.57.0"
 dependencies = [
  "axum",
+ "dotenvy",
  "peisear-auth",
  "peisear-core",
  "peisear-notify",
