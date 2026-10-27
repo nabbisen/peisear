@@ -12,8 +12,19 @@ an outage.**
 
 ## §0 — one thing gates this round, and it is not a gate you can clear
 
+**`WIZ-005` must close first.** Found 2026-10-27 reviewing the
+shipped wizard against the owner's own philosophy, for the third
+time, and each time the flaw was real. `WIZ-002` round 4 validated
+the **database** answer; the **address** answer is not validated at
+all. Measured: `localhost:3000`, `3000`, `0.0.0.0` and `127.0.0.1` —
+the four most natural answers to *"What address should it listen
+on?"* — each write a `.env` and then fail with `Error: invalid socket
+address syntax`, **after the wizard has already printed "Written to
+.env"**. And because `.env` now exists, the wizard is skipped on
+every later run, so **it never offers to fix what it wrote**.
+
 **`WIZ-004` closed** — the ancestor-`.env` defect is fixed and
-verified, so the only remaining gate is the question count below.
+verified.
 
 **One note so nobody chases it**: `cargo publish --workspace
 --dry-run` fails on the architect's own machine at this version and
