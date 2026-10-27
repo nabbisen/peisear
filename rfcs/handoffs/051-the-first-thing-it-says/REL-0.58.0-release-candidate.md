@@ -10,7 +10,19 @@ an outage.**
 
 ---
 
-## §0 — one thing gates this round, and it is not a gate you can clear
+## §0 — two things gate this round, and neither is a gate you can clear
+
+**`WIZ-004` must close first.** Found 2026-10-27 reviewing the
+shipped wizard against the owner's own philosophy: with a `.env` in
+an ancestor directory, the wizard prints *"No configuration found"*,
+asks its questions, writes a second `.env`, and the instance comes up
+on **its** defaults rather than the operator's settings — measured,
+3000 instead of the parent file's 3999. Detection is cwd-only;
+`dotenvy` searches ancestors. **A release whose claim is that the
+product tells you where its data is cannot ship while it tells you
+something false about it.**
+
+## §0a — and the question count
 
 **The owner has not settled the question count.** The implementation
 asks **two** questions and prints **three** statements;
