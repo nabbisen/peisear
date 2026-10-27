@@ -48,3 +48,9 @@ axum                        = { workspace = true }
 tokio                       = { workspace = true }
 tracing                     = { workspace = true }
 tracing-subscriber          = { workspace = true }
+
+# `WIZ-004`: `run()` calls `dotenvy::dotenv()` itself, once, to detect
+# configuration the same way `Config::from_env` (in `peisear-web`)
+# resolves it -- one ancestor-searching call, not a second, narrower
+# guess at where `.env` lives.
+dotenvy                     = { workspace = true }
