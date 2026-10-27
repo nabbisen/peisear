@@ -149,6 +149,36 @@ fn validate_database_answer(raw: &str) -> Result<String, String> {
     Ok(database_url)
 }
 
+/// Resolves the address question's own raw answer, or says why it
+/// cannot be used — `WIZ-005`, the symmetric fix to
+/// [`validate_database_answer`] for the other question. Before this,
+/// nothing validated the address answer at all: `localhost:3000`, a
+/// bare `3000`, `0.0.0.0`, and `127.0.0.1` — not typos, but the four
+/// forms a person is most likely to type when shown
+/// `[127.0.0.1:3000]` — each wrote a `.env` that could not start, and
+/// `configuration_exists` then locked the wizard out of ever being
+/// asked again.
+///
+/// The predicate is [`std::net::SocketAddr`]'s own `FromStr` — the
+/// exact parse `config::resolve_bind_addr` performs, so this refuses
+/// precisely what startup would refuse, restating an existing
+/// refusal rather than inventing a second one. Deliberately not
+/// `ToSocketAddrs`'s broader parse: resolving `localhost` would mean
+/// DNS at bind time and a `BIND_ADDR` that no longer means what it
+/// has always meant, and completing a bare port or bare address
+/// would be the wizard guessing which network interface the operator
+/// meant.
+fn validate_bind_addr(raw: &str) -> Result<String, String> {
+    if raw.parse::<std::net::SocketAddr>().is_ok() {
+        Ok(raw.to_string())
+    } else {
+        Err(format!(
+            "{raw:?} is not a numeric address and a port together (for example 127.0.0.1:3000) \
+             — a hostname is not accepted, and the address or the port alone is not enough."
+        ))
+    }
+}
+
 /// Asks `RFC 020` §1's own two questions and returns the answers —
 /// the one place in this module real I/O happens, and generic over
 /// `BufRead`/`Write` rather than hardcoding `io::stdin()`/`io::stdout()`
@@ -156,9 +186,9 @@ fn validate_database_answer(raw: &str) -> Result<String, String> {
 /// real, shared streams.
 ///
 /// **Re-asks rather than failing** when [`validate_database_answer`]
-/// rejects an answer — the operator is sitting at the prompt, and
-/// correcting it immediately is the one thing this wizard can do that
-/// a startup error later cannot.
+/// or [`validate_bind_addr`] rejects an answer — the operator is
+/// sitting at the prompt, and correcting it immediately is the one
+/// thing this wizard can do that a startup error later cannot.
 pub fn run_wizard<R: BufRead, W: Write>(mut input: R, mut output: W) -> io::Result<Answers> {
     writeln!(output)?;
     writeln!(
@@ -179,18 +209,24 @@ pub fn run_wizard<R: BufRead, W: Write>(mut input: R, mut output: W) -> io::Resu
         }
     };
 
-    writeln!(
-        output,
-        "  What address should it listen on?  [127.0.0.1:3000]"
-    )?;
-    writeln!(
-        output,
-        "    (press enter to keep it private to this machine)"
-    )?;
-    output.flush()?;
-    let mut line = String::new();
-    input.read_line(&mut line)?;
-    let bind_addr = resolve_prompt_answer(&line, "127.0.0.1:3000");
+    let bind_addr = loop {
+        writeln!(
+            output,
+            "  What address should it listen on?  [127.0.0.1:3000]"
+        )?;
+        writeln!(
+            output,
+            "    (press enter to keep it private to this machine)"
+        )?;
+        output.flush()?;
+        let mut line = String::new();
+        input.read_line(&mut line)?;
+        let raw = resolve_prompt_answer(&line, "127.0.0.1:3000");
+        match validate_bind_addr(&raw) {
+            Ok(addr) => break addr,
+            Err(reason) => writeln!(output, "    {reason} Try again.")?,
+        }
+    };
 
     Ok(Answers {
         database_url,

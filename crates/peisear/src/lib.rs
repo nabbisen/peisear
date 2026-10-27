@@ -31,7 +31,6 @@
 //! # async fn run() -> Result<(), Box<dyn std::error::Error>> {
 //! use peisear::storage::pool;
 //! use peisear::web::{AppState, Config, build_router};
-//! use std::net::SocketAddr;
 //!
 //! let config = Config::from_env()?;
 //! let db = pool::connect(&config.database_url).await?;
@@ -44,8 +43,9 @@
 //! };
 //! let app = build_router(state);
 //!
-//! let addr: SocketAddr = config.bind_addr.parse()?;
-//! let listener = tokio::net::TcpListener::bind(addr).await?;
+//! // Already a `SocketAddr` -- `Config::from_env` parses and
+//! // validates `BIND_ADDR` by name; nothing here can fail on it.
+//! let listener = tokio::net::TcpListener::bind(config.bind_addr).await?;
 //! axum::serve(listener, app).await?;
 //! # Ok(())
 //! # }

@@ -250,6 +250,69 @@ fn run_wizard_re_asks_on_a_postgres_url_and_names_the_reason() {
     assert!(text.contains("PostgreSQL"), "got {text:?}");
 }
 
+// ---------- WIZ-005: the address answer is validated, not left unchecked ----------
+
+#[test]
+fn validate_bind_addr_accepts_an_address_and_port() {
+    assert_eq!(
+        validate_bind_addr("127.0.0.1:3000"),
+        Ok("127.0.0.1:3000".to_string())
+    );
+    assert_eq!(
+        validate_bind_addr("0.0.0.0:3000"),
+        Ok("0.0.0.0:3000".to_string())
+    );
+}
+
+/// The round's own `§1` measurement: not typos, but the four forms a
+/// person is most likely to type when shown `[127.0.0.1:3000]` -- a
+/// hostname, a bare port, the publish-to-the-network value with no
+/// port, and the shown address with no port. All four must be
+/// refused, never written.
+#[test]
+fn validate_bind_addr_refuses_each_of_the_four_measured_answers() {
+    for bad in ["localhost:3000", "3000", "0.0.0.0", "127.0.0.1"] {
+        assert!(
+            validate_bind_addr(bad).is_err(),
+            "{bad:?} must be refused, not accepted"
+        );
+    }
+}
+
+/// All four of the round's own measured shapes, end to end through
+/// `run_wizard` itself: each bad first answer is rejected and the
+/// wizard re-asks in the same session, accepting a corrected second
+/// answer rather than writing an unusable one.
+#[test]
+fn run_wizard_re_asks_on_each_of_the_four_measured_bind_addr_answers() {
+    for bad in ["localhost:3000", "3000", "0.0.0.0", "127.0.0.1"] {
+        let input = io::Cursor::new(format!("\n{bad}\n127.0.0.1:3000\n").into_bytes());
+        let mut output = Vec::new();
+        let answers = run_wizard(input, &mut output).expect("wizard runs to completion");
+        assert_eq!(
+            answers.bind_addr, "127.0.0.1:3000",
+            "bad answer was {bad:?}"
+        );
+        let text = String::from_utf8(output).expect("valid utf-8");
+        assert!(
+            text.contains("Try again"),
+            "bad answer {bad:?} did not trigger a re-ask, got {text:?}"
+        );
+    }
+}
+
+/// The refusal names the expected shape -- three of the four measured
+/// answers are a *form* mistake, not a wrong value, so the message
+/// must say what to type, not just that the answer was wrong.
+#[test]
+fn run_wizard_names_the_expected_shape_on_a_bad_bind_addr_answer() {
+    let input = io::Cursor::new(b"\nlocalhost:3000\n127.0.0.1:3000\n".to_vec());
+    let mut output = Vec::new();
+    run_wizard(input, &mut output).expect("wizard runs to completion");
+    let text = String::from_utf8(output).expect("valid utf-8");
+    assert!(text.contains("127.0.0.1:3000"), "got {text:?}");
+}
+
 #[test]
 fn run_wizard_prints_both_questions() {
     let input = io::Cursor::new(b"\n\n".to_vec());
