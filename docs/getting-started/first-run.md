@@ -1,7 +1,9 @@
 # First Run
 
-With [Rust installed](build-from-source.md) and a [`.env`](configuration.md)
-in place, a working peisear instance is one command away.
+With [Rust installed](build-from-source.md), a working peisear
+instance is one command away. **No `.env` to create first** — if one
+doesn't already exist, peisear asks two quick questions on its first
+start and writes it for you.
 
 ## Launch
 
@@ -25,13 +27,42 @@ rebuild after you've edited something still has to recompile whatever
 you changed and relink the binary, seconds rather than minutes but not
 nothing.
 
-You should see:
+## The first-run questions
+
+With no `.env` and nothing set in the environment, you'll see this
+before anything else — holding enter for both keeps the defaults
+shown in brackets:
+
+```
+  No configuration found. Setting up a new instance.
+
+  Where should the database live?  [data/app.db]
+  What address should it listen on?  [127.0.0.1:3000]
+    (press enter to keep it private to this machine)
+
+  A signing key has been generated and saved to data/jwt_secret.
+  Back it up with the database.
+
+  Cookies are not marked Secure. Set COOKIE_SECURE=1 when peisear is served over HTTPS.
+
+  Written to .env — edit it any time, or delete it to start over.
+```
+
+Then you should see:
 
 ```
 2026-04-24T… INFO peisear: starting peisear database=sqlite://data/app.db addr=127.0.0.1:3000
 2026-04-24T… INFO peisear: listening addr=127.0.0.1:3000
   → http://localhost:3000
 ```
+
+**If a `.env` already exists**, or any of `DATABASE_URL`,
+`JWT_SECRET`, `BIND_ADDR`, `COOKIE_SECURE` is already set in the
+environment, the questions above are skipped entirely and you land
+straight on these log lines — including in a container, a systemd
+unit, or CI, where there is nobody to answer them. See
+[Configuration](configuration.md) for what each variable means and
+how to change one afterward.
 
 Open <http://localhost:3000>.
 

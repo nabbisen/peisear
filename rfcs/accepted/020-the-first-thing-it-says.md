@@ -119,6 +119,28 @@ output and most of the value.
 3. **Does `.env.example` survive at all** once a wizard writes the real
    thing? It is currently referenced by three documents and one scan.
 
+**Resolved (`WIZ-003`, 0.58.0)** — all three, by what shipped rather
+than by further proposal:
+
+1. **Write, and say the path.** `WIZ-002` built `wizard::run_wizard`
+   to ask, `wizard::write_env_file` to write, and `main.rs` prints the
+   written path as part of the three statements. The leaning held.
+2. **Existence, not completeness.** `wizard::configuration_exists`
+   (`WIZ-001`) treats a `.env` that exists — regardless of which of
+   the four variables it sets — as a configured instance, so a
+   partial answer is never re-asked. `Config::from_env`'s own
+   defaults already make a partial file a working one; asking again
+   would surprise an operator who has already configured the
+   instance.
+3. **It survives, measured at ten live references, not three.**
+   `config.rs`'s `PUBLISHED_PLACEHOLDER` refusal, `docs_scan` rule 7,
+   a dedicated CI workflow (`env-example-walk.yml`), `CONTRIBUTING.md`,
+   `README.md`, two getting-started pages, and both specification
+   documents all still depend on it. Removing it would delete a
+   security refusal, a scan rule, and a CI workflow in a release whose
+   subject is a first-run prompt — a separate proposal, not a tidy-up
+   this one performs.
+
 ## §6 — why 0.57.0 and not sooner
 
 `ROADMAP.md`'s *What ships next* has 0.54.0 through 0.56.0 committed to
