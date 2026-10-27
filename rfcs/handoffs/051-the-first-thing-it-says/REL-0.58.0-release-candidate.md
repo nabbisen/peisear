@@ -10,7 +10,24 @@ an outage.**
 
 ---
 
-## §0 — two things gate this round, and neither is a gate you can clear
+## §0 — one thing gates this round, and it is not a gate you can clear
+
+**`WIZ-004` closed** — the ancestor-`.env` defect is fixed and
+verified, so the only remaining gate is the question count below.
+
+**One note so nobody chases it**: `cargo publish --workspace
+--dry-run` fails on the architect's own machine at this version and
+passes on CI, and CI's is the meaningful one — its log shows
+*"Unpacking peisear-web v0.57.0 (registry …/target/package/tmp-registry)"*,
+so it compiles the locally packaged sibling rather than the published
+`0.57.0`. The local failure is consistent with this machine's cargo
+cache already holding the published `0.57.0` and preferring it.
+**This round's own version bump removes the ambiguity entirely** —
+`peisear-web 0.58.0` exists in no registry or cache — so the dry run
+you run after bumping is unambiguous, and it is the one that gates
+publishing.
+
+## §0a — the question count
 
 **`WIZ-004` must close first.** Found 2026-10-27 reviewing the
 shipped wizard against the owner's own philosophy: with a `.env` in
@@ -22,7 +39,7 @@ on **its** defaults rather than the operator's settings — measured,
 product tells you where its data is cannot ship while it tells you
 something false about it.**
 
-## §0a — and the question count
+### The count itself
 
 **The owner has not settled the question count.** The implementation
 asks **two** questions and prints **three** statements;
