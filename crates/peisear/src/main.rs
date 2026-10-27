@@ -9,7 +9,6 @@
 use peisear::storage::pool;
 use peisear::web::{AppState, Config, build_router, jobs, wizard};
 use std::io::IsTerminal;
-use std::net::SocketAddr;
 use std::path::Path;
 use std::process::ExitCode;
 
@@ -111,7 +110,10 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = build_router(state);
 
-    let addr: SocketAddr = config.bind_addr.parse()?;
+    // `WIZ-005` §3: `Config::from_env` already parsed and validated
+    // `BIND_ADDR` by name -- no second, unnamed `.parse()` here to
+    // fail with an error naming neither the variable nor the value.
+    let addr = config.bind_addr;
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!(%addr, "listening");
 

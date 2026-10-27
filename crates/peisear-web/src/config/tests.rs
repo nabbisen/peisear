@@ -42,7 +42,7 @@ fn debug_never_prints_the_jwt_secret_or_the_dsn_password() {
     let config = Config {
         database_url: "postgres://produser:hunter2-sentinel@10.0.0.5:5432/peisear".to_string(),
         jwt_secret: "sentinel-signing-key-do-not-print-me".to_string(),
-        bind_addr: "0.0.0.0:3000".to_string(),
+        bind_addr: "0.0.0.0:3000".parse().expect("valid address"),
         cookie_secure: true,
     };
     let formatted = format!("{config:?}");
@@ -289,6 +289,41 @@ fn resolve_jwt_secret_trims_a_real_value_before_using_it() {
     )
     .expect("a real, padded value must still be accepted");
     assert_eq!(secret, "a-real-secret-with-stray-whitespace");
+}
+
+// ---------- WIZ-005: resolve_bind_addr ----------
+
+#[test]
+fn resolve_bind_addr_accepts_a_numeric_address_and_port() {
+    let addr = resolve_bind_addr("127.0.0.1:3000").expect("a valid address and port");
+    assert_eq!(addr.to_string(), "127.0.0.1:3000");
+}
+
+/// The round's own `§1` measurement, all four answers: not typos,
+/// but the four forms a person is most likely to type when shown
+/// `[127.0.0.1:3000]` -- a hostname, a bare port, the publish value
+/// with no port, and the shown address with no port.
+#[test]
+fn resolve_bind_addr_refuses_each_of_the_four_measured_answers() {
+    for bad in ["localhost:3000", "3000", "0.0.0.0", "127.0.0.1"] {
+        match resolve_bind_addr(bad) {
+            Err(ConfigError::InvalidBindAddr { value }) => assert_eq!(value, bad),
+            other => panic!("expected InvalidBindAddr for {bad:?}, got {other:?}"),
+        }
+    }
+}
+
+/// `§3`'s own gate: the error must name the variable and the value --
+/// not the bare, unnamed `AddrParseError` display a `.parse()?`
+/// upstream of this function would have surfaced instead.
+#[test]
+fn invalid_bind_addr_message_names_the_variable_and_the_value() {
+    let message = ConfigError::InvalidBindAddr {
+        value: "localhost:3000".to_string(),
+    }
+    .to_string();
+    assert!(message.contains("BIND_ADDR"), "got {message:?}");
+    assert!(message.contains("localhost:3000"), "got {message:?}");
 }
 
 /// `FIV-001` round 3 `§16`: `thiserror`'s `#[error(...)]` cannot

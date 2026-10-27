@@ -160,7 +160,9 @@ jobs:
   # log and whether it answers `/health`. Four cases, `WIZ-001` §3's
   # own table, plus a fifth (`WIZ-004`): detection and loading must
   # agree about where `.env` lives, not just about whether the
-  # process has a terminal. The terminal cases use `script -qec` for
+  # process has a terminal; and a sixth (`WIZ-005`): the wizard's own
+  # answers must be validated, not just the skip condition around
+  # them. The terminal cases use `script -qec` for
   # a real pty -- the only genuinely new machinery `WIZ-001` needed,
   # and the one thing a piped `curl`-style check cannot exercise:
   # `IsTerminal` reads the child's own stdin, which `script` gives it
@@ -305,6 +307,31 @@ jobs:
           fi
           if [ -f .env ]; then
             echo "::error::a second .env was written into the child directory -- the wizard ran and shadowed the parent's configuration"
+            exit 1
+          fi
+      - name: Case 6 -- a bad address answer is refused and re-asked, the corrected address is the one bound
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wiz-case-6"
+          cd "$RUNNER_TEMP/wiz-case-6"
+          trap 'cat peisear.log 2>/dev/null; pkill -f "target/debug/peisear" 2>/dev/null || true' EXIT
+          # `WIZ-005`: the database question's own default (a blank
+          # line), then one of the round's own four measured bad
+          # address answers, then a corrected one. Binding 4001 (not
+          # the wizard's own default, 3000) is the proof that the
+          # *corrected* answer is what was written and bound, not
+          # merely that the bad one was rejected.
+          env -u DATABASE_URL -u JWT_SECRET -u BIND_ADDR -u COOKIE_SECURE \
+            script -qfec "$GITHUB_WORKSPACE/target/debug/peisear" peisear.log <<< $'\nlocalhost:3000\n127.0.0.1:4001\n' &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:4001/health > /dev/null 2>&1 && break; sleep 1; done
+          curl -sf http://127.0.0.1:4001/health
+          found=0
+          for i in $(seq 1 10); do
+            grep -q 'Try again' peisear.log 2>/dev/null && { found=1; break; }
+            sleep 0.5
+          done
+          if [ "$found" != "1" ]; then
+            echo "::error::the bad address answer (localhost:3000) was not refused -- no re-ask was found in the wizard's own output"
             exit 1
           fi
 

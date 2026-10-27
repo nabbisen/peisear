@@ -3,6 +3,7 @@
 use std::env;
 use std::fs;
 use std::io;
+use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 
 /// `SEC-001` §2: no `#[derive(Debug)]` here. `jwt_secret` is a signing
@@ -14,7 +15,7 @@ use std::path::{Path, PathBuf};
 pub struct Config {
     pub database_url: String,
     pub jwt_secret: String,
-    pub bind_addr: String,
+    pub bind_addr: SocketAddr,
     pub cookie_secure: bool,
 }
 
@@ -36,7 +37,13 @@ impl Config {
         // configuration entirely must not also publish the instance to
         // the local network -- the container image sets this explicitly
         // to `0.0.0.0:3000`, where an open bind is correct and expected.
-        let bind_addr = env::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:3000".to_string());
+        //
+        // `WIZ-005` §3: parsed here, once, into the type `main.rs`
+        // actually binds -- not left a `String` for a second, separate
+        // `.parse()` downstream to fail at with an error naming neither
+        // the variable nor the value.
+        let bind_addr_raw = env::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:3000".to_string());
+        let bind_addr = resolve_bind_addr(&bind_addr_raw)?;
 
         let cookie_secure = env::var("COOKIE_SECURE")
             .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
@@ -145,6 +152,14 @@ pub enum ConfigError {
     )]
     NoFilesystemPathForKey { database_url: String },
 
+    #[error(
+        "BIND_ADDR is set to {value:?}, which is not a valid address and port -- expected \
+         a numeric address and a port together, separated by a colon (for example \
+         127.0.0.1:3000). A hostname is not accepted, and the address or the port alone \
+         is not enough."
+    )]
+    InvalidBindAddr { value: String },
+
     #[error("failed to read the JWT signing key at {}: {source}", path.display())]
     KeyReadFailed { path: PathBuf, source: io::Error },
 
@@ -215,6 +230,27 @@ fn resolve_jwt_secret(env_value: Option<&str>, database_url: &str) -> Result<Str
         }
         None => resolve_generated_jwt_secret(database_url),
     }
+}
+
+/// `BIND_ADDR`'s own resolution: the exact parse `main.rs` used to
+/// perform a second time, downstream, with an error naming neither
+/// the variable nor the value (`WIZ-005` §3). Takes the
+/// already-looked-up (or defaulted) raw string as a parameter, the
+/// same reason [`resolve_jwt_secret`] does -- testable without a test
+/// reaching into the process's real, shared environment.
+///
+/// `SocketAddr`'s own `FromStr` is deliberately the predicate, not
+/// `ToSocketAddrs`'s broader one: a hostname like `localhost:3000`
+/// would resolve via DNS at bind time, and `BIND_ADDR` has never meant
+/// that. A bare port (`3000`) or a bare address (`127.0.0.1`,
+/// `0.0.0.0`) is refused for the same reason this type is the field's
+/// own, not a `String` main.rs re-parses: there is no address or no
+/// port to default either half to without guessing which interface
+/// the operator meant.
+fn resolve_bind_addr(raw: &str) -> Result<SocketAddr, ConfigError> {
+    raw.parse().map_err(|_| ConfigError::InvalidBindAddr {
+        value: raw.to_string(),
+    })
 }
 
 /// `database_url`'s own filesystem path, if it has one -- the same
