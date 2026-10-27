@@ -54,6 +54,7 @@ week — and fewer still will tell *you* first.
 ```bash
 cargo install peisear
 peisear
+#   asks two quick questions on first run (enter twice for the defaults)
 #   → http://localhost:3000
 ```
 
@@ -61,9 +62,8 @@ peisear
 
 ```bash
 git clone https://github.com/nabbisen/peisear.git && cd peisear
-cp .env.example .env
-
 cargo run --release -p peisear
+#   asks two quick questions on first run (enter twice for the defaults)
 #   → http://localhost:3000
 ```
 

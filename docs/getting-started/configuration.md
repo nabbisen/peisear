@@ -6,15 +6,27 @@ convenience for development and for simple deployments; production
 setups are free to inject the same variables via a process supervisor
 (systemd `EnvironmentFile`, Kubernetes `env:`, etc.).
 
-## Minimum viable `.env`
+## You don't have to write this file yourself
+
+**A first run with no `.env` and no configuration in the environment
+asks two questions — where the database lives, and what address to
+listen on — and writes `.env` for you**, holding enter for both keeps
+the defaults. See [First run](first-run.md) for what that looks like.
+
+This page is the reference for what each variable means and how to
+change one afterward — someone writing a systemd unit, or deploying
+without a terminal to answer a prompt, still needs the names below
+without running an interactive program to find them.
+
+If you'd rather write the file by hand, `.env.example` is still there
+to copy:
 
 ```bash
 cp .env.example .env
 ```
 
-That's it — no secret to generate by hand. `JWT_SECRET` is created for
-you on first run (see below); the defaults for everything else will
-get you to a working local instance.
+Either way gets you a working local instance. `JWT_SECRET` is created
+for you on first run regardless of which path you took (see below).
 
 ## Full reference
 
