@@ -179,19 +179,33 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
 fn is_foreground_stdin() -> bool {
     use std::os::fd::AsFd;
     let stdin = std::io::stdin();
-    match rustix::termios::tcgetpgrp(stdin.as_fd()) {
-        // The foreground process group of the terminal `tcgetpgrp`
-        // read, compared to our own -- the exact comparison the
-        // kernel makes before raising `SIGTTIN` on a background
-        // read. Equal means we are it.
-        Ok(tty_pgrp) => tty_pgrp == rustix::process::getpgrp(),
-        // `ENOTTY` (stdin is not a terminal at all) or any other
-        // failure to ask: this result is only ever consulted when
-        // `is_terminal` is also true (`wizard::can_prompt`'s own
-        // `&&`), so a value here changes nothing when it is not --
-        // `true` is the harmless default rather than a claim.
-        Err(_) => true,
-    }
+    let comparison = rustix::termios::tcgetpgrp(stdin.as_fd())
+        .map(|tty_pgrp| tty_pgrp == rustix::process::getpgrp());
+    resolve_is_foreground(comparison)
+}
+
+/// `TTY-001` round 2, `§1`: the honest unit-level form of the contract
+/// `is_foreground_stdin` cannot be tested at directly (no real
+/// terminal in a test process) -- a failure to even *ask* whether we
+/// may read the terminal means we cannot establish that we may, so
+/// we answer `false`, not `true`. `RFC 020` §7.3's own rule ("being
+/// unable to prompt is not an error") applied one level down, to
+/// being unable to ask whether we can prompt at all.
+///
+/// Round 1's own `Err(_) => true` reopened `§10.49` here: `tcgetpgrp`
+/// fails with `ENOTTY` not only when stdin is not a terminal at all
+/// (already screened out by [`wizard::can_prompt`]'s own `&&`, so a
+/// value here is genuinely unconsulted in that case) **but also when
+/// stdin is a terminal that is not our controlling one** -- `setsid`,
+/// and several init/supervisor shapes, detach a process from its
+/// controlling terminal while stdin still refers to a real tty
+/// device. There, `true` let the wizard attempt a read that blocked
+/// forever with no `SIGTTIN` to even show `Stopped` -- worse than the
+/// defect this round fixes, not merely as bad -- and suppressed the
+/// one-line notice too, since `is_foreground` reporting `true` made
+/// `wizard::background_notice_needed` false.
+fn resolve_is_foreground<E>(terminal_pgrp_matches_ours: Result<bool, E>) -> bool {
+    terminal_pgrp_matches_ours.unwrap_or(false)
 }
 
 /// `RFC 020` §7.2: no foreground-process-group equivalent exists on
@@ -204,4 +218,24 @@ fn is_foreground_stdin() -> bool {
 #[cfg(windows)]
 fn is_foreground_stdin() -> bool {
     true
+}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::resolve_is_foreground;
+
+    #[test]
+    fn resolves_to_false_on_any_failure_to_ask() {
+        // `tcgetpgrp` failing (`ENOTTY`, or anything else) must not
+        // default to "yes, we may read" -- the planted regression
+        // `TTY-001` round 1 shipped, reproduced here without a real
+        // terminal.
+        assert!(!resolve_is_foreground::<&str>(Err("ENOTTY")));
+    }
+
+    #[test]
+    fn resolves_to_the_successful_comparison_when_the_syscall_answers() {
+        assert!(resolve_is_foreground::<&str>(Ok(true)));
+        assert!(!resolve_is_foreground::<&str>(Ok(false)));
+    }
 }
