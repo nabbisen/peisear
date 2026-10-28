@@ -143,4 +143,32 @@ about its other call sites.
    Either is fine; leaving it unexamined is not, and a document
    asserting the state of a file it does not own is how a release
    record came to claim a release that had not happened.
-7. The gates in §6, re-run after the last edit, quoted.
+7. **Carried in from `TTY-001` round 2.**
+   `crates/peisear/src/main.rs` gates `is_foreground_stdin` with
+   `#[cfg(unix)]`, but its helper `resolve_is_foreground` carries no
+   attribute and the `#[cfg(windows)]` branch does not call it — so on
+   a Windows build it is compiled and unused, which is a `dead_code`
+   warning. **It is not fatal**: `test.yml` sets
+   `RUSTFLAGS: -D warnings` but every one of its jobs is
+   `ubuntu-latest`, and `release.yml` sets no `RUSTFLAGS`, so the
+   archive still builds. Add `#[cfg(unix)]` to it — one line; the test
+   module is already `#[cfg(all(test, unix))]` — and confirm it on the
+   real Windows job rather than by reading the attribute.
+8. **The gap item 7 exposes, to decide and state rather than
+   necessarily to fix.** Every job in `test.yml` runs on
+   `ubuntu-latest`. The only Windows compilation in this repository is
+   in `release.yml`, which runs **on a tag** — so platform-asymmetric
+   `#[cfg]` code, of which this series has added three pieces, is
+   first compiled for Windows at the moment the archive is being
+   produced. That is how `0.58.0` lost its archive, one level up: the
+   only check that put a terminal in front of the binary was the
+   release walk, too late to do anything but fail the release. This is
+   `§10.36`'s question asked of the platform matrix — a green CI
+   cannot tell *Windows is fine* from *Windows was never built*.
+   A `windows-latest` job running `cargo clippy -p peisear` would
+   close it; cross-compiling from Linux probably will not, since
+   `libsqlite3-sys` builds C. **If the cost is judged too high, say so
+   in the report and name the gap** — do not leave the matrix looking
+   complete. Opening a `§10` entry for it is the architect's call;
+   bring the finding, not the register edit.
+9. The gates in §6, re-run after the last edit, quoted.
