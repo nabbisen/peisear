@@ -7274,6 +7274,72 @@ is a round with its own measurement, not a clause of this one.
 withdrawn if P5 is itself withdrawn — tracked alongside `ROADMAP.md`'s
 own P5 section, not ahead of it.
 
+### 10.49 A terminal is attached, and nobody is reading it — **open**, found by the `Release` workflow's own Windows job at tag `0.58.0`, 2026-10-28
+
+`wizard::should_run_wizard` is `stdin_is_terminal && !configuration_exists`
+(`crates/peisear-web/src/wizard.rs:29`). The first operand answers
+*is a terminal attached to this process's stdin*. The question the
+wizard needs answered is *can a human answer a question right now*.
+Those differ, and the gap is not an edge case: it is the ordinary way
+a server is started.
+
+**Measured at tag `0.58.0`, twice, on Linux.** An empty directory, no
+`.env` in it and none in any ancestor, started the way an operator
+starts a server from an interactive shell -- `./peisear > out.log 2>&1 &`:
+
+```
+STATE=T   WCHAN=do_signal_stop     (stopped by SIGTTIN)
+LISTEN3000=0                       (nothing serving)
+ENV_CREATED=no                     (no configuration written)
+out.log:  "Where should the database live?  [data/app.db]"
+```
+
+The shell reports `Stopped`, nothing listens, and the only explanation
+is a question in a redirected log the operator has no reason to open.
+Backgrounding is what `&`, `nohup` and a hand-rolled init script all
+do; the kernel's `SIGTTIN` is the operating system answering exactly
+the question `is_terminal` was asked and could not answer.
+
+**The same cause, on Windows, cost `0.58.0` a platform.** The `Release`
+workflow starts the packaged binary with `Start-Process`, which gives
+the child a *fresh console*: `stdin` is a terminal by every test the
+binary can make, no input will ever arrive, and the walkthrough's
+health check gave up after thirty seconds. The job had already built
+and packaged `peisear-0.58.0-x86_64-pc-windows-msvc.zip`; its upload
+and attach steps never ran, so the Release carries four archives where
+`docs/getting-started/install.md`'s table offers five (`§10.41`, live
+— and `0.56.0` and `0.57.0` both shipped it).
+
+**Opened as a class**: *a readiness probe that reports the existence of
+a channel when the decision needs its liveness.* `is_terminal`,
+`isatty`, "the socket is open", "the file exists", "the service is
+enabled" are all of this shape. The failure is always the same: the
+program commits to waiting on something that will never arrive, and a
+wait is indistinguishable, from outside, from work in progress.
+
+**What makes it severe rather than untidy.** There is no way out. The
+binary parses no command-line arguments at all -- `peisear --version`
+at this tag starts the server and ignores the flag -- and no
+environment variable suppresses the wizard, so an operator who meets
+this has exactly two undocumented remedies: bring the job to the
+foreground and answer, or hand-write `.env`. Nothing printed says
+either. By the owner's own standard this fails twice over: not robust,
+and the operator cannot tell *waiting for you* from *hung*.
+
+**Not a check defect, and the repair must not be aimed at the check.**
+Making the Windows walk step pass -- `-NoNewWindow`, or redirecting
+`stdin` from `NUL` -- would restore the fifth archive and leave the
+stopped job shipped. That the two walk steps disagreed at all is a
+second, smaller finding: the Unix step passes because a GitHub `bash`
+step's `stdin` is not a tty, so it has never exercised the wizard, and
+the two steps have been testing different things under one name. The
+repair owes both a deliberate division: one case that proves an
+unattended start serves, one that proves an attended start prompts.
+
+*Proposed for `0.58.1` in `ROADMAP.md`'s own table, which is where
+release numbers live; open until the owner authorizes that row.*
+
+
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
 **Promoted from this document's own older compact register**

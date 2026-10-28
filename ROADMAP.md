@@ -148,7 +148,10 @@ decision, not a side effect.
 ## What ships next
 
 **The architect maintains this table; the owner authorizes it.**
-Authorized by the owner 2026-10-14, as it stands below. It is
+Authorized by the owner 2026-10-14, as it stood then. **A row marked
+*Proposed* carries no authorization** — it is the architect's
+recommendation, in the one place release numbers live, waiting for a
+yes or a no; `0.58.1` is such a row as of 2026-10-28. It is
 reconciled before every release is cut (Release cycle, exit criterion
 8), which is what stops it becoming the fixed sequence retired above —
 and a row that changes after authorization is re-authorized, not
@@ -161,7 +164,8 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| — | **Nothing is authorized beyond `0.58.0`.** The architect brings the next proposal; until the owner authorizes one, this table is empty on purpose rather than by omission. Candidates on record: the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0), the seven undocumented `SMTP_*` variables (**Unscheduled work**, below), and `RFC 018`’s own **P5** (the full `peisear-web` suite on both backends, which is what would earn a supported PostgreSQL install path) | — | **Awaiting the architect’s proposal and the owner’s authorization** |
+| `0.58.1` | **The terminal nobody is reading** — `§10.49`. A first run started in the background stops dead instead of serving: `should_run_wizard` asks whether a terminal is attached, which is not the question. Restores the Windows archive `0.58.0` dropped (`§10.41`, live) and makes the two CI walk steps test the same thing deliberately rather than diverging by accident | `RFC 020` (amended) | **Proposed by the architect 2026-10-28 — awaiting the owner's authorization.** A shipped defect with no operator workaround; the architect recommends it ahead of every candidate below |
+| — | **Nothing else is authorized beyond `0.58.0`.** Candidates on record, in no order: the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0), the seven undocumented `SMTP_*` variables (**Unscheduled work**, below), and `RFC 018`’s own **P5** (the full `peisear-web` suite on both backends, which is what would earn a supported PostgreSQL install path) | — | **Awaiting the architect’s proposal and the owner’s authorization** |
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
@@ -181,9 +185,11 @@ defaults — where the database lives, what address to listen on — and
 makes three statements — the generated signing key and where it is,
 the cookie flag and how to turn it on over TLS, the `.env` written and
 where — then writes the file it describes, so the file and the
-explanation cannot disagree. Skipped entirely where a prompt would be
-an outage: no terminal, or configuration already exists, proven by a
-CI walk including a real pty. **`RFC 020` §2's own test of itself,
+explanation cannot disagree. Skipped where a prompt would be an
+outage **in the two shapes it was tested in** -- no terminal, or
+configuration already exists -- proven by a CI walk including a real
+pty. **It is not skipped in a third shape, and that is a defect this
+release shipped**: see the cut record below. **`RFC 020` §2's own test of itself,
 answered honestly**: one of the three defects that motivated this RFC
 is prevented — `§10.40`, a copied `.env.example` placeholder, cannot
 happen on a path that never copies that file — and that defect was
@@ -205,14 +211,40 @@ questions cover two of the four variables `Config::from_env` reads —
 `JWT_SECRET` is generated, `COOKIE_SECURE` a commented statement, both
 deliberately not configured by a question. `CHANGELOG.md`'s own
 `[0.58.0]` section carries this in full.
-*`DEC-056`'s four legs are the architect's own, run on the owner's
-approval of this candidate — this line describes the engineering
-content, not a claim that crates.io, the Release or the container tag
-already carry it. Verified 2026-10-28: no `0.58.0` tag exists locally
-or on the remote, `peisear 0.58.0` is not on crates.io, and no
-GitHub Release exists. The commit that wrote this paragraph is titled
-"0.58.0 released", which it is not; the title is pushed history and
-is corrected here rather than rewritten.*
+**Cut 2026-10-28, incompletely**: tag `0.58.0` at `54512ba`, signed;
+seven crates on crates.io; `ghcr.io/nabbisen/peisear` at `0.58.0` and
+`latest` (one digest, `sha256:4bd0dcde`, under both tags). All four
+`DEC-056` legs verified against the registries themselves rather than
+from their workflows' own exit codes. **Four per-platform archives,
+not five.** `docs/getting-started/install.md`'s own table offers
+`peisear-<version>-x86_64-pc-windows-msvc.zip`; the `0.58.0` Release
+does not carry it, and `0.56.0` and `0.57.0` both did. This is
+`§10.41` — an install path the artefact cannot satisfy — live, and a
+platform regression.
+
+*Why it is missing, and the defect behind it.* The `Release` workflow's
+Windows job built and packaged the archive, then failed its own
+walkthrough: `Start-Process` gives the child a fresh console, so
+`stdin` is a terminal, so the wizard ran, so the process sat at *Where
+should the database live?* until the health check gave up after thirty
+seconds. The upload and attach steps never ran. **The cause is not
+Windows.** Measured twice on Linux at this tag, in an empty directory
+with no `.env` and none above it, started the way an operator starts a
+server -- `./peisear > out.log 2>&1 &` from an interactive shell:
+`STATE=T`, `WCHAN=do_signal_stop` (stopped by `SIGTTIN`), nothing
+listening on 3000, no `.env` written, and the only trace a question in
+a log file. `should_run_wizard` is `stdin_is_terminal && !configuration_exists`,
+and `stdin_is_terminal` answers *is a terminal attached*, not *can a
+human answer now*. A background job, and a detached Windows console,
+are both terminals nobody is reading. There is no escape hatch: no
+flag, no environment variable -- the binary parses no arguments at all
+-- so an operator who meets this has no documented way past it but to
+answer in the foreground or hand-write `.env`, and nothing on screen
+says so. Registered as `§10.49`; `0.58.1` is proposed above.
+
+*The commit that first wrote this paragraph's place in the file is
+titled "0.58.0 released", which at the time it was not; the title is
+pushed history and is corrected here rather than rewritten.*
 
 **Shipped 2026-10-24**: `0.57.0` (the specification checks itself) —
 `§10.42`'s own argument, acted on, in five rounds (`SPEC-001`–`SPEC-005`,
