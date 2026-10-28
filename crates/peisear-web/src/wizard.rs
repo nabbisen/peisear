@@ -120,10 +120,21 @@ pub fn background_notice_needed(
 /// The notice's own text — one line, named rather than written again
 /// at its one call site, so a test can assert the exact string a real
 /// run's `stderr` would also carry.
+///
+/// **`TTY-001` round 2, `§3`**: states only what `is_foreground`
+/// itself established — that this process cannot read the terminal
+/// right now — and not *why*. An earlier wording said *"it is not
+/// the foreground job"*, which is one of two distinct reasons
+/// `is_foreground` can be `false`: the other, that there was no way
+/// to even ask (a terminal detached from any controlling one, under
+/// `setsid` and similar), is not "not the foreground job" in any
+/// sense a reader could act on. Naming a mechanism neither input
+/// established is the same shape of defect this round's own `§1`
+/// fixed one level down.
 pub fn background_notice() -> &'static str {
-    "A terminal is attached, but this process cannot read it right now (it is not the \
-     foreground job) -- starting with defaults instead of asking. Set PEISEAR_SETUP=never \
-     to make that choice explicit next time."
+    "A terminal is attached, but this process cannot read it right now -- starting with \
+     defaults instead of asking. Set PEISEAR_SETUP=never to make that choice explicit next \
+     time."
 }
 
 /// Whether any signal already says this instance is configured:
