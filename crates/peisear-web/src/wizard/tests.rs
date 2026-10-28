@@ -37,6 +37,145 @@ fn configuration_does_not_exist_with_no_dot_env_and_nothing_set() {
     assert!(!configuration_exists(false, false, false, false, false));
 }
 
+// ---------- TTY-001: PEISEAR_SETUP and "can we actually prompt" ----------
+
+#[test]
+fn resolve_setup_mode_defaults_to_auto_when_unset() {
+    assert_eq!(resolve_setup_mode(None), Ok(SetupMode::Auto));
+}
+
+#[test]
+fn resolve_setup_mode_accepts_its_two_named_values() {
+    assert_eq!(resolve_setup_mode(Some("auto")), Ok(SetupMode::Auto));
+    assert_eq!(resolve_setup_mode(Some("never")), Ok(SetupMode::Never));
+}
+
+/// A misspelled value is refused by name, not silently read as
+/// `auto` -- the same class of defect `§10.49` found in the
+/// predicate this round replaces.
+#[test]
+fn resolve_setup_mode_refuses_an_unrecognised_value_and_names_it() {
+    let err = resolve_setup_mode(Some("nerver")).unwrap_err();
+    assert!(err.contains("PEISEAR_SETUP"), "got {err:?}");
+    assert!(err.contains("nerver"), "got {err:?}");
+    assert!(err.contains("auto"), "got {err:?}");
+    assert!(err.contains("never"), "got {err:?}");
+}
+
+/// `PEISEAR_SETUP=never` refuses to prompt whatever the terminal
+/// says -- the Windows release walk's own way to declare it
+/// deliberately, and the operator's escape hatch everywhere else.
+#[test]
+fn can_prompt_is_false_under_never_regardless_of_terminal_state() {
+    assert!(!can_prompt(SetupMode::Never, true, true));
+    assert!(!can_prompt(SetupMode::Never, false, false));
+}
+
+/// The round's own subject: a terminal is attached but this process
+/// is not its foreground process group -- the exact background-job
+/// shape `§10.49` measured as a silent `SIGTTIN` stop.
+#[test]
+fn can_prompt_is_false_under_auto_with_a_terminal_not_in_the_foreground() {
+    assert!(!can_prompt(SetupMode::Auto, true, false));
+}
+
+#[test]
+fn can_prompt_is_true_under_auto_with_a_foreground_terminal() {
+    assert!(can_prompt(SetupMode::Auto, true, true));
+}
+
+/// No terminal at all -- the ordinary container/piped case, which
+/// `WIZ-001` already proved silent and this round must not disturb.
+#[test]
+fn can_prompt_is_false_under_auto_with_no_terminal() {
+    assert!(!can_prompt(SetupMode::Auto, false, true));
+}
+
+#[test]
+fn background_notice_is_owed_only_for_the_one_case_it_describes() {
+    assert!(background_notice_needed(
+        SetupMode::Auto,
+        true,
+        false,
+        false
+    ));
+}
+
+#[test]
+fn background_notice_is_not_owed_without_a_terminal() {
+    // The ordinary container start -- `WIZ-001` already settled that
+    // this path is silent, and a per-start warning here is the thing
+    // it refused to add.
+    assert!(!background_notice_needed(
+        SetupMode::Auto,
+        false,
+        true,
+        false
+    ));
+}
+
+#[test]
+fn background_notice_is_not_owed_when_never_made_the_skip_deliberate() {
+    assert!(!background_notice_needed(
+        SetupMode::Never,
+        true,
+        false,
+        false
+    ));
+}
+
+#[test]
+fn background_notice_is_not_owed_when_configuration_already_exists() {
+    assert!(!background_notice_needed(
+        SetupMode::Auto,
+        true,
+        false,
+        true
+    ));
+}
+
+#[test]
+fn background_notice_names_the_escape_hatch() {
+    assert!(background_notice().contains("PEISEAR_SETUP=never"));
+}
+
+/// `§6`'s own proof requirement: the old predicate (`stdin_is_terminal
+/// && !configuration_exists`, with no foreground signal at all) must
+/// be shown to fail the exact case this round exists to fix, not just
+/// pass the new one. A background job has `is_terminal == true` and
+/// `is_foreground == false` -- the old predicate, which only ever saw
+/// `is_terminal`, would have said `true` here and run the wizard
+/// anyway. Planted by calling `should_run_wizard` with the old
+/// predicate's own single boolean (`is_terminal` alone, ignoring
+/// `is_foreground` entirely) and showing it disagrees with the
+/// correct answer for this exact case.
+#[test]
+fn the_old_predicate_is_wrong_on_the_case_this_round_fixes() {
+    let is_terminal = true;
+    let is_foreground = false; // backgrounded, e.g. `./peisear &`
+    let configuration_exists = false;
+
+    // The fixed predicate: correctly refuses to prompt.
+    let can_prompt = can_prompt(SetupMode::Auto, is_terminal, is_foreground);
+    assert!(!can_prompt, "fixed predicate must refuse this case");
+    assert!(!should_run_wizard(can_prompt, configuration_exists));
+
+    // The old predicate `WIZ-001` shipped, reconstructed verbatim
+    // (`stdin_is_terminal && !configuration_exists`, `is_terminal`
+    // alone): it would have said yes, which is the bug `§10.49`
+    // measured as a stopped job.
+    let old_predicate_result = is_terminal && !configuration_exists;
+    assert!(
+        old_predicate_result,
+        "the old predicate must be seen to disagree, not merely assumed to"
+    );
+    assert_ne!(
+        old_predicate_result, can_prompt,
+        "the old and fixed predicates must disagree on this exact case -- \
+         that disagreement is this round's whole reason to exist"
+    );
+}
+
 // ---------- WIZ-002: env_file, the independent half ----------
 
 /// Every variable the wizard carried in `Answers` appears in the

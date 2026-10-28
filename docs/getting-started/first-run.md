@@ -56,13 +56,29 @@ Then you should see:
   → http://localhost:3000
 ```
 
+The questions above are skipped for two different reasons, and it
+matters which one applies to you:
+
 **If a `.env` already exists**, or any of `DATABASE_URL`,
 `JWT_SECRET`, `BIND_ADDR`, `COOKIE_SECURE` is already set in the
-environment, the questions above are skipped entirely and you land
-straight on these log lines — including in a container, a systemd
-unit, or CI, where there is nobody to answer them. See
-[Configuration](configuration.md) for what each variable means and
-how to change one afterward.
+environment, you are already configured and land straight on the log
+lines above. This is also what a container, a systemd unit, or CI
+sees — nothing there sets these variables either, but each supplies
+its own configuration some other way before the process starts, or is
+fine with the defaults.
+
+**If nothing is configured and nobody can answer**, peisear starts
+with the defaults instead of asking — it does **not** hang. This
+covers a process with no terminal at all (the case above), and also a
+terminal that is attached but unattended: starting peisear with `&`,
+`nohup`, or from an init script backgrounds it, and a backgrounded
+job cannot read the terminal it is still attached to. **Only in that
+last case** — a terminal is there, but this process cannot read it —
+peisear says so once, on `stderr`, and names `PEISEAR_SETUP=never` as
+the way to make that choice deliberate next time. See
+[Configuration](configuration.md) for `PEISEAR_SETUP`'s own two
+values, and for what each variable means and how to change one
+afterward.
 
 Open <http://localhost:3000>.
 

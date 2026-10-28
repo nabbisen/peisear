@@ -2140,6 +2140,7 @@ dependencies = [
  "peisear-notify",
  "peisear-storage",
  "peisear-web",
+ "rustix",
  "tokio",
  "tracing",
  "tracing-subscriber",

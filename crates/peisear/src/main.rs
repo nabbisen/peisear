@@ -66,7 +66,30 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
         std::env::var("BIND_ADDR").is_ok(),
         std::env::var("COOKIE_SECURE").is_ok(),
     );
-    if wizard::should_run_wizard(std::io::stdin().is_terminal(), configuration_exists) {
+
+    // `TTY-001`, `§10.49`: "is a terminal attached" is not "can a
+    // human answer right now" -- a background job has the former and
+    // not the latter, and the gap stops the process dead (`SIGTTIN`)
+    // rather than starting it. `PEISEAR_SETUP` is read here, not
+    // through `Config::from_env`: it is launch-environment vocabulary,
+    // never `.env` vocabulary (`wizard` module docs), and an
+    // unrecognised value is refused by name rather than silently read
+    // as `auto`.
+    let setup_mode = wizard::resolve_setup_mode(std::env::var("PEISEAR_SETUP").ok().as_deref())?;
+    let is_terminal = std::io::stdin().is_terminal();
+    let is_foreground = is_foreground_stdin();
+    let can_prompt = wizard::can_prompt(setup_mode, is_terminal, is_foreground);
+
+    if wizard::background_notice_needed(
+        setup_mode,
+        is_terminal,
+        is_foreground,
+        configuration_exists,
+    ) {
+        eprintln!("{}", wizard::background_notice());
+    }
+
+    if wizard::should_run_wizard(can_prompt, configuration_exists) {
         let answers = wizard::run_wizard(std::io::stdin().lock(), std::io::stdout())?;
         wizard::write_env_file(env_path, &answers)?;
         let jwt_path = wizard::jwt_secret_display_path(&answers.database_url);
@@ -143,4 +166,42 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     axum::serve(listener, app).await?;
 
     Ok(())
+}
+
+/// `TTY-001`, `§10.49`: "can we actually prompt" needs one more
+/// signal than `IsTerminal` gives on Unix -- *is a terminal attached*
+/// and *is this process allowed to read it* are different questions,
+/// and the gap between them is `SIGTTIN`. Lives here, the one caller,
+/// rather than in `peisear-web`: the syscall is the edge, the
+/// decision it feeds ([`wizard::can_prompt`]) is the pure function a
+/// test can call with booleans (`§6`).
+#[cfg(unix)]
+fn is_foreground_stdin() -> bool {
+    use std::os::fd::AsFd;
+    let stdin = std::io::stdin();
+    match rustix::termios::tcgetpgrp(stdin.as_fd()) {
+        // The foreground process group of the terminal `tcgetpgrp`
+        // read, compared to our own -- the exact comparison the
+        // kernel makes before raising `SIGTTIN` on a background
+        // read. Equal means we are it.
+        Ok(tty_pgrp) => tty_pgrp == rustix::process::getpgrp(),
+        // `ENOTTY` (stdin is not a terminal at all) or any other
+        // failure to ask: this result is only ever consulted when
+        // `is_terminal` is also true (`wizard::can_prompt`'s own
+        // `&&`), so a value here changes nothing when it is not --
+        // `true` is the harmless default rather than a claim.
+        Err(_) => true,
+    }
+}
+
+/// `RFC 020` §7.2: no foreground-process-group equivalent exists on
+/// Windows, and `is_terminal` is already the complete answer there --
+/// a user who double-clicks `peisear.exe` gets a console
+/// indistinguishable, by any other signal, from the `Start-Process`
+/// case that never has a reader, and that user *is* one. Always
+/// `true`, so [`wizard::can_prompt`] degenerates to `is_terminal`
+/// alone, exactly as it did before this round.
+#[cfg(windows)]
+fn is_foreground_stdin() -> bool {
+    true
 }

@@ -18,6 +18,28 @@ change one afterward — someone writing a systemd unit, or deploying
 without a terminal to answer a prompt, still needs the names below
 without running an interactive program to find them.
 
+**`PEISEAR_SETUP` controls whether that first run can ask at all.**
+It is read from the launch environment only — never from `.env`,
+since `.env`'s own existence already means *configured* — and takes
+one of two values:
+
+- `auto` (the default) — ask when a human can actually answer, start
+  with defaults otherwise. A process with no terminal at all (a
+  container, CI, a pipe) already starts silently either way; this
+  only changes what happens when a terminal is attached but nobody
+  is watching it — a job started with `&`, `nohup`, or an init
+  script, which otherwise stops waiting for an answer that will
+  never come.
+- `never` — never ask, whatever the terminal says. Set this to make
+  an unattended start deliberate rather than relying on the default
+  to notice it for you — exactly what a systemd unit or a CI job
+  should set, and what the published archives' own release walk uses
+  on Windows, where no other signal exists.
+
+An unrecognised value (anything other than the two above) is refused
+at startup, naming the value and the two it accepts, rather than
+silently treated as `auto`.
+
 If you'd rather write the file by hand, `.env.example` is still there
 to copy:
 

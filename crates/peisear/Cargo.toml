@@ -54,3 +54,9 @@ tracing-subscriber          = { workspace = true }
 # resolves it -- one ancestor-searching call, not a second, narrower
 # guess at where `.env` lives.
 dotenvy                     = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+# `TTY-001`: the one syscall this round's own predicate needs --
+# Unix-only, since Windows keeps `is_terminal` and has no
+# foreground-process-group equivalent to ask.
+rustix                       = { workspace = true }
