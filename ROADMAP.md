@@ -148,10 +148,11 @@ decision, not a side effect.
 ## What ships next
 
 **The architect maintains this table; the owner authorizes it.**
-Authorized by the owner 2026-10-14, as it stood then. **A row marked
-*Proposed* carries no authorization** — it is the architect's
-recommendation, in the one place release numbers live, waiting for a
-yes or a no; `0.58.1` is such a row as of 2026-10-28. It is
+Authorized by the owner 2026-10-14, as it stood then; `0.58.1`
+authorized 2026-10-28, on the four-part proposal recorded in its own
+row. **A row marked *Proposed* carries no authorization** — it is the
+architect's recommendation, in the one place release numbers live,
+waiting for a yes or a no. It is
 reconciled before every release is cut (Release cycle, exit criterion
 8), which is what stops it becoming the fixed sequence retired above —
 and a row that changes after authorization is re-authorized, not
@@ -164,7 +165,7 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| `0.58.1` | **The terminal nobody is reading** — `§10.49`. A first run started in the background stops dead instead of serving: `should_run_wizard` asks whether a terminal is attached, which is not the question. Restores the Windows archive `0.58.0` dropped (`§10.41`, live) and makes the two CI walk steps test the same thing deliberately rather than diverging by accident | `RFC 020` (amended) | **Proposed by the architect 2026-10-28 — awaiting the owner's authorization.** A shipped defect with no operator workaround; the architect recommends it ahead of every candidate below |
+| `0.58.1` | **The terminal nobody is reading** — `§10.49`. A first run started in the background stops dead instead of serving: `should_run_wizard` asks whether a terminal is attached, which is not the question. Four parts as authorized: (1) prompt only where the process can actually read the terminal, which on Unix the kernel answers exactly (foreground process group, the same test it uses to raise `SIGTTIN`); (2) one documented launch-time variable to declare the answer where the OS cannot give it; (3) where we cannot prompt, start the way the no-terminal path already starts, on loopback with a generated key; (4) restore the Windows archive `0.58.0` dropped (`§10.41`, live) and divide the two CI walk steps deliberately — one proving an unattended start *serves*, one proving an attended start *prompts* | `RFC 020` §7 (amended) | **Authorized by the owner 2026-10-28.** Handoffs: `rfcs/handoffs/052-the-terminal-nobody-is-reading/`. Two work rounds and the cut; the 0.58.0 design is preserved, not reversed — a foreground first run still asks |
 | — | **Nothing else is authorized beyond `0.58.0`.** Candidates on record, in no order: the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0), the seven undocumented `SMTP_*` variables (**Unscheduled work**, below), and `RFC 018`’s own **P5** (the full `peisear-web` suite on both backends, which is what would earn a supported PostgreSQL install path) | — | **Awaiting the architect’s proposal and the owner’s authorization** |
 
 **This is order, not dates.** A row's number changes when something

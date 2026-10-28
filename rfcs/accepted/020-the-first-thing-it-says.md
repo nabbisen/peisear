@@ -62,8 +62,13 @@ peisear
   answer. The wizard's job is to *show* the decisions, not to require them.
 - **It writes the `.env` it describes**, so the file and the explanation can
   never disagree — which is the class of defect this RFC comes from.
-- **It is skipped entirely when configuration exists**, and when the process
-  has no terminal. A container, a systemd unit, or CI must never meet it.
+- **It is skipped entirely when configuration exists**, and whenever no one
+  can answer it. A container, a systemd unit, or CI must never meet it.
+  *Amended 2026-10-28 (§7): this property originally read "when the process
+  has no terminal", which named one mechanism for "no one can answer" and was
+  implemented as the whole of it. A background job has a terminal and no
+  reader; 0.58.0 stopped dead there. The property is the requirement; "no
+  terminal" is only one of its cases.*
 
 ## §2 — what it would replace, which is the actual argument
 
@@ -159,3 +164,58 @@ and nowhere else.
 0.52.0's precedent is that guard infrastructure does not queue behind a
 feature. **The argument above did not change; it applied twice.** This RFC
 is 0.58.0. See the header, and `ROADMAP.md` before either.
+
+## §7 — amended 2026-10-28: the terminal nobody is reading
+
+**`0.58.0` shipped this RFC and shipped a defect with it** (`§10.49` in
+`requirements.md`, which carries the evidence). §1's third property above was
+implemented as `stdin_is_terminal && !configuration_exists`. That predicate
+answers *is a terminal attached*. The property needs *can anyone answer*.
+
+The gap is not exotic. `./peisear > out.log 2>&1 &` from an interactive
+shell — backgrounding, which is what `&`, `nohup` and a hand-rolled init
+script all do — leaves `stdin` attached to the terminal while the process is
+not the terminal's foreground job. Measured twice at tag `0.58.0`: stopped by
+`SIGTTIN`, nothing listening, no `.env` written, the only trace a question in
+a redirected log. On Windows the same cause cost the release a platform: the
+`Release` workflow starts the binary with `Start-Process`, which creates a
+fresh console nobody will ever type into, so the walkthrough timed out and the
+packaged `.zip` was never attached.
+
+**What this amendment settles, for `0.58.1`:**
+
+1. **Where the operating system can answer the question exactly, ask it.** On
+   Unix, "can I read this terminal" is precisely "am I the foreground process
+   group of it" — the same condition the kernel evaluates to raise `SIGTTIN`.
+   That is not a heuristic standing in for the property; it *is* the property.
+
+2. **Where it cannot, the answer is declared, not guessed.** Windows has no
+   foreground-process-group equivalent, and the signals that look promising
+   are wrong in the case that matters most: a user who double-clicks
+   `peisear.exe` gets a console holding only their own process, exactly like
+   the `Start-Process` case, and that user *is* reading. So Windows keeps the
+   `is_terminal` behaviour — a double-click and a terminal both prompt — and
+   automation says so with one documented launch-time variable.
+
+   The asymmetry is deliberate and has a reason worth stating: we use the
+   exact answer where one exists and require a declaration where none does.
+   The alternative — one heuristic applied everywhere for the sake of
+   symmetry — would be wrong on both platforms instead of right on one.
+
+3. **Being unable to prompt is not an error.** It means start the way a start
+   with no terminal already starts: loopback, a generated signing key beside
+   the database, `.env` untouched. `Config::from_env` already does exactly
+   this and CI already proves it. A first run must never be *stopped* by the
+   absence of a reader; it must be *unblocked* by it.
+
+**The alternative, named so it is not rediscovered** (as §4 does for its own):
+a deadline on the first prompt — wait *n* seconds, then proceed. It answers
+the right question empirically and is platform-neutral, and it is still
+refused: it makes correctness depend on a clock, so a person who pauses to
+think about where their data should live gets a different program than a
+person who types quickly. A rule nobody can predict is not a simple rule.
+
+**What `0.58.0` got right and keeps.** A foreground first run still asks its
+two questions, still writes the `.env` it describes, still makes its three
+statements. Nothing in §1 is reversed; one of its properties is implemented as
+the property instead of as one of its examples.
