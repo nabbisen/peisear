@@ -133,4 +133,14 @@ about its other call sites.
 4. `install.md` offers exactly what the Release carries.
 5. `§10.41`'s status stated as either closed or closed-at-this-instance,
    with the reason.
-6. The gates in §6, re-run after the last edit, quoted.
+6. **Carried in from `TTY-001`.**
+   `docs/getting-started/configuration.md` already says
+   `PEISEAR_SETUP=never` is "what the published archives' own release
+   walk uses on Windows" — present tense, written before this round
+   existed. **Make that sentence true, or change it.** If this round's
+   Windows walk declares its intent that way, the sentence stands and
+   the report says so; if it does not, the sentence is wrong and goes.
+   Either is fine; leaving it unexamined is not, and a document
+   asserting the state of a file it does not own is how a release
+   record came to claim a release that had not happened.
+7. The gates in §6, re-run after the last edit, quoted.
