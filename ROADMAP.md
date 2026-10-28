@@ -161,6 +161,7 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
+| — | **Nothing is authorized beyond `0.58.0`.** The architect brings the next proposal; until the owner authorizes one, this table is empty on purpose rather than by omission. Candidates on record: the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0), the seven undocumented `SMTP_*` variables (**Unscheduled work**, below), and `RFC 018`’s own **P5** (the full `peisear-web` suite on both backends, which is what would earn a supported PostgreSQL install path) | — | **Awaiting the architect’s proposal and the owner’s authorization** |
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
@@ -204,6 +205,14 @@ questions cover two of the four variables `Config::from_env` reads —
 `JWT_SECRET` is generated, `COOKIE_SECURE` a commented statement, both
 deliberately not configured by a question. `CHANGELOG.md`'s own
 `[0.58.0]` section carries this in full.
+*`DEC-056`'s four legs are the architect's own, run on the owner's
+approval of this candidate — this line describes the engineering
+content, not a claim that crates.io, the Release or the container tag
+already carry it. Verified 2026-10-28: no `0.58.0` tag exists locally
+or on the remote, `peisear 0.58.0` is not on crates.io, and no
+GitHub Release exists. The commit that wrote this paragraph is titled
+"0.58.0 released", which it is not; the title is pushed history and
+is corrected here rather than rewritten.*
 
 **Shipped 2026-10-24**: `0.57.0` (the specification checks itself) —
 `§10.42`'s own argument, acted on, in five rounds (`SPEC-001`–`SPEC-005`,
