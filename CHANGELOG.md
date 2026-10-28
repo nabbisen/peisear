@@ -11,6 +11,129 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.0] — 2026-10-28
+
+**The first thing it says.** `RFC 020`: a start with no configuration
+asks, writes the file it describes, and is skipped entirely where a
+prompt would be an outage. Five rounds against three scoped
+(`WIZ-001`–`WIZ-005`) — two added under the standing exception for a
+release-blocking defect, both found reviewing the shipped wizard
+against the owner's own philosophy rather than against a diff.
+
+**`RFC 020` §2's own test of itself, answered honestly rather than
+assumed, because a project that answers a documentation defect by
+building a feature has chosen the more expensive repair:**
+
+> `RFC 020` asked whether a wizard would have **prevented** the three
+> defects that motivated it or merely moved them. One of three.
+> `§10.40` — a copied placeholder nobody was told to replace — could
+> not have happened on a wizard path, because nothing on it copies
+> `.env.example` at all; **that defect was already closed in 0.53.0**
+> by the startup refusal and by commenting out every line of that
+> file, so what this release adds is that the copy step is no longer
+> needed, not a fix for something open. The other two it does not
+> touch: documentation drifting from the binary's own output
+> (`FIV-004` §1b, `FIV-001` §11b) is a prose/code gap, and `§10.41`
+> was a packaging defect a wizard runs too late to see. This
+> release's own housekeeping fixed the current instance of the first
+> by reading the page against the real binary — the same means its
+> original fix used, not anything the wizard does.
+
+### Added
+
+- **A first-run wizard.** With no `.env` and nothing set in the
+  environment, and only on a real terminal, `peisear` now asks two
+  questions with working defaults — where the database lives, what
+  address to listen on — and makes three statements: the generated
+  signing key and where it is, that cookies are not marked `Secure`
+  and how to change that over TLS, and the `.env` it wrote and where.
+  Holding enter for both keeps the defaults; either answer is
+  validated against the exact rule startup itself would enforce and
+  re-asked, naming the expected shape, on a bad one — a database
+  answer that would create an unusable path or name a backend this
+  build does not have, or an address answer that is not a numeric
+  address and a port together (a hostname, a bare port, or the
+  address alone are each refused and re-asked, not silently
+  completed or resolved by DNS).
+- **Skipped entirely, never partially**, wherever a prompt would be
+  an outage: no terminal (a container, a systemd unit, CI), or
+  configuration already exists — `.env` found by the same
+  ancestor-searching resolution `Config::from_env` uses to load it,
+  or any of the four variables already set in the environment.
+  Existence, not completeness: a partial `.env` is already a working
+  configuration and is never re-asked over.
+- **`BIND_ADDR` is validated once, by name, in `Config::from_env`.**
+  `Config::bind_addr` is now a `SocketAddr`, not a `String` — parsed
+  and checked a single time, with `ConfigError::InvalidBindAddr`
+  naming the variable, the value, and the expected shape on failure.
+  This covers every source of a broken `BIND_ADDR`, not only the
+  wizard's own prompt: a hand-edited `.env`, a copied file, or the
+  environment variable itself. `main.rs` no longer re-parses the
+  value downstream, so there is exactly one predicate left and the
+  two can never disagree.
+- **A CI job proving the skip condition by behaviour**, never by
+  reading `.env` or `.env.example`: six cases, including a real pty
+  for every terminal case, asserting the server's own bound address
+  — not merely a line's absence — as the proof that a parent
+  directory's `.env` or a corrected answer was actually found and
+  obeyed, not just that nothing went wrong silently.
+
+### Changed
+
+- **`docs/getting-started/configuration.md`, `first-run.md`, and
+  `README.md`'s Quick Start** re-pointed to a product that configures
+  itself: the reference table stays intact for the operator writing a
+  systemd unit, and the newcomer path no longer instructs `cp
+  .env.example .env` before the first run. `.env.example` itself
+  survives — measured at ten live references, including a security
+  refusal, a scan rule, and a dedicated CI workflow — and removing it
+  is a separate proposal, not a tidy-up this release performs.
+- **`RFC 020` §5's three open questions resolved**, recorded in the
+  RFC itself by appending rather than editing the question away: the
+  wizard writes `.env` and says the path; the skip condition is
+  existence, not completeness; `.env.example` survives.
+
+### Fixed
+
+- **The wizard announced success before failure.** An unvalidated
+  address answer (`localhost:3000`, a bare `3000`, `0.0.0.0`, or
+  `127.0.0.1` — not typos, but the four forms most likely typed
+  against the shown default) wrote a `.env` that could not start,
+  *after* printing that it had been written — and because that file
+  now existed, the wizard was skipped on every later run, locking the
+  operator out of ever correcting it through the one tool meant to
+  help. Closed by validating the answer before it is written at all,
+  and by giving `BIND_ADDR` the same named, single-parse validation
+  startup itself relies on.
+- **A `.env` in a parent directory was not recognised**, because
+  detection checked the current directory only while loading searches
+  every ancestor. The wizard printed *"No configuration found"* over
+  a configuration that was in fact found and loaded, wrote a second
+  `.env` into the child directory, and the instance came up on its
+  own defaults rather than the operator's. Closed by resolving
+  detection with the same ancestor-searching call loading already
+  makes, rather than a second, narrower guess.
+
+### What this release does not prove
+
+- **Seven `SMTP_*` variables are documented nowhere operator-facing**
+  — `SMTP_HOST`, `SMTP_PORT`, `SMTP_TLS_MODE`, `SMTP_USER`,
+  `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS`, `SMTP_FROM_NAME`, read by
+  `peisear-notify` and documented only in that crate's own rustdoc.
+  Measured, not fixed, in this release; recorded on `ROADMAP.md`.
+- **The wizard is proven on a GitHub runner's own pty, not inside the
+  published container image.** A difference there is the case that
+  matters most, and a runner cannot exercise it.
+- **Two questions cover two of the four variables `Config::from_env`
+  reads.** `JWT_SECRET` is generated, never chosen; `COOKIE_SECURE` is
+  a commented statement at its built-in default, not a question —
+  both deliberate, neither the same as configuring them interactively.
+- **`§10.36`'s instance 6** — a refactor that would have silently
+  stopped `docs_scan` rule 4 from checking anything — was found and
+  fixed inside this release, by the change that would have caused it,
+  before it shipped. The register this project keeps for exactly this
+  class paid for itself again.
+
 ## [0.57.0] — 2026-10-24
 
 **`requirements.md` is this project's most-edited document, and until

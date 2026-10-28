@@ -161,7 +161,6 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| 0.58.0 | **The first thing it says.** `RFC 020` — a first run with no configuration **asks two questions with working defaults and makes three statements**, and writes the `.env` it describes, so the file and the explanation cannot disagree. Skipped when configuration exists or stdin is not a terminal | `RFC 020` (**Accepted**, 2026-10-15); handoffs [`051-the-first-thing-it-says`](rfcs/handoffs/051-the-first-thing-it-says/README.md) | **Authorized 2026-10-15.** Placement follows the note authorized with the 0.57.0 row: behind `RFC 018`'s phases, and behind the citation guard on 0.52.0's precedent that guard work does not queue behind a feature. **Handoffs are not written yet** and are not due until 0.57.0 is cut (Release cycle, entry criterion 3). **Scoped 2026-10-24 into three rounds**, ordered by risk: the skip condition — *“a wizard that blocks a `docker run` is an outage”* — is built and proven first, on a stub. **One clause needs re-authorizing**: this row says the wizard *“asks five questions”* and `RFC 020` §1’s own sketch asks **two**. Measured: `Config::from_env` reads **four** variables, `configuration.md` documents **five**, and the workspace reads **twelve** (seven of them `SMTP_*`), so *five* is the documented set rather than the surface. The architect recommends **two questions plus two statements** — `JWT_SECRET` is generated not chosen, `COOKIE_SECURE` is correct at its default and answering it needs knowledge of TLS termination this reader does not have, and `RUST_LOG` has a working default; asking all five is the *“configuration UI”* `RFC 020` §3 forbids. **Two of `RFC 020` §5’s three open questions are answered by measurement**: a partial `.env` is already a working configuration, so the skip is existence not completeness; and `.env.example` is referenced by **ten** live places including a security refusal, a scan rule and a dedicated workflow, so it survives. **Re-authorized 2026-10-28**: this row read *“asks five questions”* and `RFC 020` §1’s own sketch asked two. The owner accepted **two questions plus three statements** — where the database lives and what address it listens on, plus the generated key and where it is, the cookie flag, and the file written and where. `JWT_SECRET` is generated rather than chosen, `COOKIE_SECURE` is a commented line at its built-in default with the one sentence that makes it actionable (`WIZ-002` §1a — a silent security default in a file the operator keeps defeats the RFC’s own claim in substance), and `RUST_LOG` has a working default and no wrong setting. Asking all five would be the *“configuration UI”* `RFC 020` §3 forbids — and three rounds of review found that **each question is also a place to write an unusable value**, which is an argument for fewer |
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
@@ -171,6 +170,40 @@ from memory.
 themselves) on 2026-10-14. A row leaves when the release is **cut**;
 what it contained is in `CHANGELOG.md` and in the specification's own
 baseline rows, which is where release history belongs.
+
+**Shipped 2026-10-28**: `0.58.0` (the first thing it says) — `RFC 020`,
+in five rounds against three scoped (`WIZ-001`–`WIZ-005`, two of them
+added under the standing exception after reviewing the shipped wizard
+against the owner's own philosophy, each time finding a real defect).
+A first run with no configuration asks two questions with working
+defaults — where the database lives, what address to listen on — and
+makes three statements — the generated signing key and where it is,
+the cookie flag and how to turn it on over TLS, the `.env` written and
+where — then writes the file it describes, so the file and the
+explanation cannot disagree. Skipped entirely where a prompt would be
+an outage: no terminal, or configuration already exists, proven by a
+CI walk including a real pty. **`RFC 020` §2's own test of itself,
+answered honestly**: one of the three defects that motivated this RFC
+is prevented — `§10.40`, a copied `.env.example` placeholder, cannot
+happen on a path that never copies that file — and that defect was
+already closed in 0.53.0, so what this release adds is that the copy
+step is no longer needed, not a fix for something open. The other two
+are untouched: documentation drifting from the binary's own output is
+a prose/code gap a wizard does not read or write, and an install
+producing no assets is a packaging defect a wizard runs too late to
+see. **Nothing a configured instance runs moved** — the piped and
+terminal/configured CI cases assert byte-identical startup output to
+before this release, and `WIZ-001`'s own predicate and `WIZ-004`'s
+`listening`-wait were each seen to fail on a planted regression at
+least once this series. **What it does not deliver**: seven `SMTP_*`
+variables remain documented nowhere operator-facing, only in
+`peisear-notify`'s own rustdoc; the wizard is proven on a GitHub
+runner's pty, not inside the published container image, which is the
+one place `WIZ-001` said the difference matters most; the two
+questions cover two of the four variables `Config::from_env` reads —
+`JWT_SECRET` is generated, `COOKIE_SECURE` a commented statement, both
+deliberately not configured by a question. `CHANGELOG.md`'s own
+`[0.58.0]` section carries this in full.
 
 **Shipped 2026-10-24**: `0.57.0` (the specification checks itself) —
 `§10.42`'s own argument, acted on, in five rounds (`SPEC-001`–`SPEC-005`,
