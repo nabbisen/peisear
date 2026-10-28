@@ -11,23 +11,119 @@ use std::path::Path;
 /// Whether the wizard should run at all, stated as the one predicate
 /// `WIZ-001` §2 asks for rather than two scattered `if`s.
 ///
-/// Runs only when stdin has nobody to answer it (`RFC 020` §3: *"a
-/// wizard that blocks a `docker run` is an outage"*) **and** nothing
-/// has configured this instance yet. `configuration_exists` answers
-/// `RFC 020` §5's own open question — *"what happens on the second
-/// run after a partial answer?"* — with **existence, not
-/// completeness**: [`crate::config::Config::from_env`]'s own defaults
-/// already make a `.env` that exists but omits a variable a working
-/// configuration, so asking again would surprise an operator who has
-/// already configured the instance.
+/// Runs only when a human can actually answer right now (`RFC 020`
+/// §3: *"a wizard that blocks a `docker run` is an outage"*; `§7`:
+/// *being attached to a terminal is not the same question as being
+/// able to read it*) **and** nothing has configured this instance
+/// yet. `configuration_exists` answers `RFC 020` §5's own open
+/// question — *"what happens on the second run after a partial
+/// answer?"* — with **existence, not completeness**:
+/// [`crate::config::Config::from_env`]'s own defaults already make a
+/// `.env` that exists but omits a variable a working configuration,
+/// so asking again would surprise an operator who has already
+/// configured the instance.
 ///
 /// Takes already-looked-up values, never stdin or the environment
 /// itself — the same reason `config::resolve_jwt_secret` takes its
 /// value as a parameter rather than calling `env::var` inside: the
 /// only way this stays testable without a test reaching into the
-/// process's real, shared state.
-pub fn should_run_wizard(stdin_is_terminal: bool, configuration_exists: bool) -> bool {
-    stdin_is_terminal && !configuration_exists
+/// process's real, shared state. `can_prompt` is [`can_prompt`]'s own
+/// result, resolved at the call site from `PEISEAR_SETUP`, whether
+/// stdin is a terminal at all, and — on Unix — whether this process is
+/// that terminal's own foreground process group (`TTY-001`, `§10.49`:
+/// a background job has a terminal and no reader, and the two
+/// questions are not the same one).
+pub fn should_run_wizard(can_prompt: bool, configuration_exists: bool) -> bool {
+    can_prompt && !configuration_exists
+}
+
+/// `RFC 020` §7: `PEISEAR_SETUP`'s own two values. `Auto` is the
+/// default — prompt when, and only when, [`can_prompt`] says a human
+/// can actually answer; `Never` refuses to prompt at all, whatever
+/// the terminal says, and is the Windows release walk's own way to
+/// declare that deliberately.
+///
+/// **A third value (`Always`) is deliberately excluded.** Someone who
+/// wants the wizard with configuration already present deletes
+/// `.env` — which the wizard's own closing statement already tells
+/// them — and someone piping answers in already writes `.env`
+/// directly. A third value would buy a case that already has two
+/// answers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SetupMode {
+    Auto,
+    Never,
+}
+
+/// Resolves `PEISEAR_SETUP`'s own raw value, or says why it cannot be
+/// used — the same shape `config::resolve_bind_addr` and
+/// `wizard::validate_bind_addr` already use: a misspelled value is
+/// refused by name, naming what it was set to and the two values
+/// actually accepted, rather than silently read as `Auto`. A signal
+/// read as its own absence is `§10.49`'s own class of defect, applied
+/// here to the variable this round adds rather than to the one it
+/// found broken.
+pub fn resolve_setup_mode(raw: Option<&str>) -> Result<SetupMode, String> {
+    match raw {
+        None => Ok(SetupMode::Auto),
+        Some("auto") => Ok(SetupMode::Auto),
+        Some("never") => Ok(SetupMode::Never),
+        Some(other) => Err(format!(
+            "PEISEAR_SETUP is set to {other:?}, which is not one of the two accepted values: \
+             \"auto\" (the default) or \"never\"."
+        )),
+    }
+}
+
+/// Whether a human can actually answer a question right now —
+/// `RFC 020` §7's own replacement for *"is a terminal attached"*.
+///
+/// `is_terminal` answers whether stdin is a terminal device at all.
+/// `is_foreground` answers whether this process is the one currently
+/// allowed to read it: on Unix, whether it is the foreground process
+/// group of that terminal — the exact condition the kernel evaluates
+/// before raising `SIGTTIN`, measured at the call site, not here
+/// (`§10.49`). **On Windows there is no such concept**, and the
+/// caller always passes `true` there, so `is_terminal` alone decides
+/// — `RFC 020` §7.2's own deliberate asymmetry: a user who
+/// double-clicks `peisear.exe` gets a console indistinguishable, by
+/// any other signal, from the `Start-Process` case that never has a
+/// reader, and that user *is* one.
+pub fn can_prompt(setup_mode: SetupMode, is_terminal: bool, is_foreground: bool) -> bool {
+    match setup_mode {
+        SetupMode::Never => false,
+        SetupMode::Auto => is_terminal && is_foreground,
+    }
+}
+
+/// Whether the one-line stderr notice (`RFC 020` §7 `§3`) is owed: a
+/// terminal is attached, nothing is configured, and this process
+/// cannot read that terminal right now — the exact case `§10.49`
+/// measured as a silently stopped job, with the operator's only trace
+/// a question in a redirected log they have no reason to open.
+///
+/// **Not owed** when there is no terminal at all — the ordinary
+/// container start `WIZ-001` already proved silent, and a per-start
+/// warning on that path is the thing it refused to add — or when
+/// `PEISEAR_SETUP=never` made the skip deliberate, or when
+/// configuration already exists (nothing would have been asked
+/// regardless).
+pub fn background_notice_needed(
+    setup_mode: SetupMode,
+    is_terminal: bool,
+    is_foreground: bool,
+    configuration_exists: bool,
+) -> bool {
+    setup_mode == SetupMode::Auto && is_terminal && !is_foreground && !configuration_exists
+}
+
+/// The notice's own text — one line, named rather than written again
+/// at its one call site, so a test can assert the exact string a real
+/// run's `stderr` would also carry.
+pub fn background_notice() -> &'static str {
+    "A terminal is attached, but this process cannot read it right now (it is not the \
+     foreground job) -- starting with defaults instead of asking. Set PEISEAR_SETUP=never \
+     to make that choice explicit next time."
 }
 
 /// Whether any signal already says this instance is configured:

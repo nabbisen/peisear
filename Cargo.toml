@@ -85,6 +85,15 @@ mail-builder                = "0.4"
 
 # ─── Web‑layer specifics ─────────────────────────────────────────────
 dotenvy                     = "0.15"
+# `TTY-001`: "can we actually prompt" on Unix is "are we the
+# foreground process group of stdin's own terminal" -- the exact
+# condition the kernel evaluates before raising `SIGTTIN`. Already a
+# transitive dependency (via `gethostname`, pulled in by
+# `mail-builder`), so this adds no new supply-chain entry, only the
+# two feature flags (`termios`, `process`) this crate's own safe
+# wrappers need. Unix-only in `peisear`'s own `Cargo.toml` -- Windows
+# has no foreground-process-group equivalent and keeps `is_terminal`.
+rustix                       = { version = "1", features = ["termios", "process"] }
 # `static/`'s eight files, embedded into the binary at compile time
 # (`FIV-005`, `§10.41`): `cargo install peisear` publishes no
 # directory alongside the binary, so a filesystem `ServeDir` 404s on
