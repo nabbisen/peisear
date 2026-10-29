@@ -334,6 +334,50 @@ jobs:
             echo "::error::the bad address answer (localhost:3000) was not refused -- no re-ask was found in the wizard's own output"
             exit 1
           fi
+      - name: Case 7 -- stdin a terminal (pty), the process backgrounded, no configuration -- wizard absent, server starts, notice printed
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/wiz-case-7"
+          cd "$RUNNER_TEMP/wiz-case-7"
+          trap 'cat peisear.log 2>/dev/null; pkill -f "target/debug/peisear" 2>/dev/null || true' EXIT
+          # `§10.49`'s own defining case, which none of cases 1-6 reach:
+          # a terminal *is* attached (the pty below, same as case 3) but
+          # this process is not its foreground job -- the exact gap
+          # between `is_terminal` and `can_prompt` the entry measured as
+          # a job stopped dead by `SIGTTIN`, with nothing printed.
+          #
+          # `set -m` is load-bearing, not decoration. A non-interactive
+          # shell has job control off by default, and there a
+          # backgrounded `&` job stays in the *same* process group as
+          # the shell itself -- which is the pty's own foreground group
+          # -- so `tcgetpgrp` would agree with `getpgrp` and the case
+          # would degenerate into case 3 while still reporting green.
+          # Measured directly while building this case: removing `set
+          # -m` served the health check and printed the notice anyway,
+          # proving nothing about backgrounding at all. With `set -m`,
+          # bash's own job control gives the backgrounded binary a new
+          # process group distinct from the interactive `bash -c`
+          # shell that stays the pty's foreground job, so the kernel's
+          # own comparison -- the same one `tcgetpgrp`/`getpgrp` make --
+          # answers `false`, for real. Do not remove it to simplify
+          # this step; a case that cannot fail is worse than no case.
+          env -u DATABASE_URL -u JWT_SECRET -u BIND_ADDR -u COOKIE_SECURE \
+            script -qfec "bash -c 'set -m; \"$GITHUB_WORKSPACE/target/debug/peisear\" & wait'" peisear.log <<< $'\n\n' &
+          for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null 2>&1 && break; sleep 1; done
+          curl -sf http://127.0.0.1:3000/health
+          if grep -q 'No configuration found' peisear.log; then
+            echo "::error::the wizard ran in the backgrounded/terminal case -- a terminal attached but not foreground must not prompt"
+            exit 1
+          fi
+          found=0
+          for i in $(seq 1 10); do
+            grep -q 'cannot read it right now' peisear.log 2>/dev/null && { found=1; break; }
+            sleep 0.5
+          done
+          if [ "$found" != "1" ]; then
+            echo "::error::the one-line background notice is missing -- a terminal is attached and unreadable, and nothing said so"
+            exit 1
+          fi
 
   # `FIV-007` / `§10.44`: the one command that builds every crate from
   # its own package rather than from the workspace. `cargo build`,

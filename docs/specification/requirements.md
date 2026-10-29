@@ -7359,14 +7359,30 @@ no automated test in this repository:
 | no terminal at all → must not prompt | `release.yml` case 1 (Unix), `test.yml` cases 1–2 | yes |
 | attended, foreground pty → prompts | `release.yml` case 2 (Unix), `test.yml` case 3 | yes |
 | `PEISEAR_SETUP=never` → must not prompt | `release.yml` case 1 (Windows) | yes |
-| **terminal attached, not foreground → must not prompt** | **nothing** | **—** |
+| terminal attached, not foreground → must not prompt | `test.yml` case 7 | yes |
 
 The Windows release walk, which caught this class once by accident,
 now declares `PEISEAR_SETUP=never` — correct, since otherwise it
-hangs, but its accidental coverage was not replaced. So the entry
-stays open until the missing row has an owner. **A fix proven by hand
-is a fix; it is not a guard**, and this register's own `§10.36` is the
-question of what a green check can and cannot tell.
+hangs, but its accidental coverage was not replaced by anything there.
+**`TTY-002` round 2 built the guard this table's last row was missing**:
+`test.yml`'s `test-wizard-skip` job, case 7 — a real pty (`script`,
+case 3's own machinery), the backgrounded binary given its own process
+group by `set -m` so the pty's foreground group stays the shell's, not
+the server's. Seen both ways against real binaries, not inferred:
+planted the old predicate (`is_terminal` alone, round 1's own shape)
+and watched case 7 fail for the right reason —
+([40819438956](https://github.com/nabbisen/peisear/actions/runs/40819438956),
+the server itself logged `Stopped` under `SIGTTIN`, exactly this
+entry's own measurement, and the health check that never answered
+failed the step — the other six cases held throughout, so the plant
+reached only the one case it should have) — then reverted and watched
+it pass
+([40818349331](https://github.com/nabbisen/peisear/actions/runs/40818349331)).
+**A fix proven by hand is a fix; it is not a guard, and now it has
+one** — this register's own `§10.36` is the general question of what a
+green check can and cannot tell, answered here for this entry's own
+case. *Proposed closed, by the round that built the guard; the
+architect's own call, as `§3`'s own status line already is.*
 
 **Fixed in two rounds, both reachable paths of the predicate and both
 walk steps.** `TTY-001` replaced `stdin_is_terminal` with `can_prompt`
