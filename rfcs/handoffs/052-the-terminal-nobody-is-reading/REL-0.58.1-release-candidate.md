@@ -10,9 +10,33 @@ not a formality — the honest record of what went wrong is most of
 this release's value, and the only part a future reader can learn
 from.
 
-**No gate blocks this round.** Nothing waits on the owner except the
-four `DEC-056` legs themselves, which are the architect's to run on
-the owner's approval.
+## §0 — whose round this is, and in what order
+
+**This is a dev-team round, and it is the largest one left in the
+series.** `§1` and `§3`–`§7` are its work: the version bump, the
+`[0.58.1]` section and its accounting, the `ROADMAP` line, `DEC-028`'s
+five passes, the gate table re-measured, and a falsification walked
+with real binaries. `§10` lists the seven exit conditions.
+
+**The four `DEC-056` legs are not part of it.** Tag, push tag,
+`cargo publish --workspace` and `gh release create` are the
+architect's, on the owner's approval, per
+`docs/development/changelog-and-releases.md` (lines 59–60: *"The
+architect, on the owner's approval… The dev team never runs it."*).
+They happen **after** this round is reviewed and accepted, in this
+order:
+
+1. the dev team does `§1`, `§3`–`§7` and reports;
+2. the architect reviews;
+3. the owner approves the cut;
+4. the architect runs the four legs and the `§8` asset check.
+
+**No gate blocks step 1** — unlike `REL-0.58.0`, which waited on an
+owner's answer before it could start, nothing here is pending on
+anyone. *(An earlier wording of this line and of the series README's
+own State column said "nothing waits but the four legs", which read as
+"this round has no work in it". It has; that was my sentence, and this
+`§0` replaces it.)*
 
 ## §1 — the ordinary cut
 
