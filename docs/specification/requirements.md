@@ -3435,6 +3435,21 @@ version- and target-suffixed, flat, 7.7–9.0 MB
 (`gh release view 0.53.0 --json assets`). **Verified by reading the
 artefact, not the workflow**, which is what this entry's own check
 requires. *Status*: **Implemented** (0.53.0).
+*Note (0.58.1 candidate) — this requirement held for one release and
+then did not.* `0.58.0`'s own Release carried four archives, not
+five: the Windows walkthrough timed out before the upload/attach
+steps could run, the exact cause `§10.49` closes. Closing this entry
+once, at 0.53.0, did not make its own check a standing one — reading
+the asset list is required at every Release, not only the first.
+**Not reopened by this note**: the check this entry states is
+unchanged and the defect is `§10.49`'s own, not a second instance of
+this requirement's absence; the note exists so a reader of this entry
+alone is not left believing the property has held continuously since
+0.53.0. Re-verified by `0.58.1`'s own leg 8 — reading
+`gh release view 0.58.1 --json assets`, not the workflow's exit code,
+the same means this entry's own closing used — which this candidate
+does not run; that is the architect's, after the owner approves the
+cut.
 *Priority*: P2.
 
 **NFR-REL-010 — Published container image**

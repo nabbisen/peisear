@@ -11,11 +11,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.58.1] — 2026-10-29
+
+**The terminal nobody is reading.** `RFC 020` §7 (amended 2026-10-28):
+`should_run_wizard`'s own predicate asked whether a terminal was
+attached, not whether anyone could answer it — a background start
+stops dead instead of serving, and the same cause cost `0.58.0` its
+own Windows archive. Two series rounds against two scoped
+(`TTY-001`, `TTY-002`), the second earning a round of its own after
+its first review found the fix proven by hand but not yet guarded.
+
+**`0.58.0`'s own claim was wrong in a third shape.** It said the
+wizard "is skipped entirely where a prompt would be an outage,"
+tested in two — no terminal, configuration already exists. A third
+was not: a terminal attached that this process cannot read. There, a
+prompt *was* the outage. The only check that ever put a terminal in
+front of the binary was the Windows release walk, which runs on a
+tag — it worked, and the earliest it could speak was while `0.58.0`
+was already being produced.
+
+### Added
+
+- **`PEISEAR_SETUP`**, a launch-environment variable (`auto`, the
+  default; `never`, to refuse all prompting) — the documented way to
+  declare the answer on Windows, where no foreground-process-group
+  concept exists for the kernel to answer the way it does on Unix.
+- **`test.yml`'s `test-wizard-skip` gains case 7**: a real pty, the
+  server backgrounded with `set -m` so it lands in a process group
+  distinct from the terminal's own foreground one — this entry's own
+  defining case, exercised by no check before this release. Seen red
+  on a planted predicate (`[1]+  Stopped`, bash's own `wait: warning:
+  job stopped`, in the log) and green at the commit that shipped.
+
+### Fixed
+
+- **`should_run_wizard`'s own predicate.** Replaced `stdin_is_terminal`
+  with `can_prompt`: `PEISEAR_SETUP` first, then a terminal, then — on
+  Unix — the kernel's own foreground-process-group test (`tcgetpgrp`
+  compared against `getpgrp`, the same comparison it makes before
+  raising `SIGTTIN`). A background job, and several init/supervisor
+  shapes that detach from a controlling terminal while stdin still
+  names a real one, now start on defaults rather than stopping, with a
+  one-line notice on stderr naming that this process could not read
+  the terminal.
+- **The Windows release archive.** `Start-Process` gives a child a
+  console nobody will ever type into; that console answered "a
+  terminal is attached" with no way to answer the wizard's questions,
+  so the walkthrough step timed out and the upload/attach steps never
+  ran — `0.58.0`'s Release carried four of the five archives
+  `install.md` offers, a platform `0.56.0` and `0.57.0` both had.
+  Fixed by the predicate above, and the walkthrough divided into two
+  cases named for the property each proves rather than the platform:
+  an unattended start serves (both platforms; Windows declares it via
+  `PEISEAR_SETUP=never`), an attended start prompts (Unix, a real
+  pty).
+
+### What this release does not prove
+
+- **An attended start prompting is unproven on Windows.** Five
+  measured attempts at injecting real key-event input into a separate
+  console (`AttachConsole`, `WriteConsoleInput`, `CONIN$`), each
+  fixing one concrete, diagnosed defect in the last, ended with every
+  Win32 call reporting success and the wizard still not advancing past
+  its first question. Not a product gap — Windows' own asymmetry means
+  *attended* there is just *a terminal is attached*, which
+  `Start-Process` already provides — and the property itself is
+  proven on a real pty on Unix and by `test.yml`'s own case 3. The
+  account is in `release.yml`'s own comment, at the point the step
+  would go.
+- **No CI job in this repository compiles for Windows at all outside
+  the release tag.** `test.yml` is `ubuntu-latest` throughout, so
+  platform-asymmetric `#[cfg]` code — three pieces, this series — is
+  first compiled for Windows at the moment the archive is produced.
+  Found twice in this series (this, and BSD `script` being a different
+  program from GNU `script` on macOS); carried as a finding for the
+  next proposal, not fixed here.
+
 ## [0.58.0] — 2026-10-28
 
 **The first thing it says.** `RFC 020`: a start with no configuration
 asks, writes the file it describes, and is skipped entirely where a
-prompt would be an outage. Five rounds against three scoped
+prompt would be an outage *(corrected in 0.58.1 — this held in the two
+shapes tested, not in a third; see that section)*. Five rounds against
+three scoped
 (`WIZ-001`–`WIZ-005`) — two added under the standing exception for a
 release-blocking defect, both found reviewing the shipped wizard
 against the owner's own philosophy rather than against a diff.
