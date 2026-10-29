@@ -201,11 +201,17 @@ attended start prompting stays unproven on Windows, five diagnosed
 attempts named in `release.yml`'s own comment; no CI job in this
 repository compiles for Windows outside the release tag, carried as a
 finding for the architect's own next proposal. `CHANGELOG.md`'s own
-`[0.58.1]` section carries this in full. *`DEC-056`'s four legs are
-the architect's own, run on the owner's approval of this candidate —
-this line describes the engineering content, not a claim that
-crates.io, the Release, its five archives, or the container tag
-already carry it.*
+`[0.58.1]` section carries this in full. **Cut 2026-10-29**: tag `0.58.1` at `60a0684`, signed
+(`gpg: Good signature`); seven crates on crates.io, none yanked;
+**five per-platform archives on the GitHub Release**, one per target
+in `install.md`'s own table, the `x86_64-pc-windows-msvc` `.zip`
+among them; `ghcr.io/nabbisen/peisear` at `0.58.1` and `latest`
+under one digest (`sha256:1057c422`), with `0.58.0`'s own digest
+unchanged. All four `DEC-056` legs verified against the registries
+themselves rather than from their workflows' own exit codes — and
+the archive count read from the asset list, which is the check
+`0.58.0` taught: that release's record was one sentence away from
+claiming five when the Release carried four.
 
 **Shipped 2026-10-28**: `0.58.0` (the first thing it says) — `RFC 020`,
 in five rounds against three scoped (`WIZ-001`–`WIZ-005`, two of them

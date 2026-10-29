@@ -3453,6 +3453,16 @@ alone is not left believing the property has held continuously since
 the same means this entry's own closing used — which this candidate
 does not run; that is the architect's, after the owner approves the
 cut.
+*Re-verified 2026-10-29, at the cut.* `gh release view 0.58.1 --json
+assets` returns **five** archives, each `state=uploaded`, one per
+target in `install.md`'s own table — `x86_64-unknown-linux-gnu`,
+`aarch64-unknown-linux-gnu`, `aarch64-apple-darwin`,
+`x86_64-apple-darwin` and `x86_64-pc-windows-msvc` (the `.zip`
+`0.58.0` dropped), 7.7–9.1 MB. **Read from the asset list, not from
+the workflow's conclusion**, which is this entry's own standing
+check; the `Release` run's five jobs were also green, but that is not
+what satisfies this requirement. The property holds at `0.53.0` and
+`0.58.1` and does not hold at `0.58.0`, permanently.
 *Priority*: P2.
 
 **NFR-REL-010 — Published container image**
