@@ -165,8 +165,7 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| `0.58.1` | **The terminal nobody is reading** — `§10.49`. A first run started in the background stops dead instead of serving: `should_run_wizard` asks whether a terminal is attached, which is not the question. Four parts as authorized: (1) prompt only where the process can actually read the terminal, which on Unix the kernel answers exactly (foreground process group, the same test it uses to raise `SIGTTIN`); (2) one documented launch-time variable to declare the answer where the OS cannot give it; (3) where we cannot prompt, start the way the no-terminal path already starts, on loopback with a generated key; (4) restore the Windows archive `0.58.0` dropped (the class `§10.41` names, recurring — that entry itself is closed) and divide the two CI walk steps deliberately — one proving an unattended start *serves*, one proving an attended start *prompts* | `RFC 020` §7 (amended) | **Authorized by the owner 2026-10-28.** Handoffs: `rfcs/handoffs/052-the-terminal-nobody-is-reading/`. Two work rounds and the cut; the 0.58.0 design is preserved, not reversed — a foreground first run still asks |
-| — | **Nothing else is authorized beyond `0.58.0`.** Candidates on record, in no order: the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0), the seven undocumented `SMTP_*` variables (**Unscheduled work**, below), and `RFC 018`’s own **P5** (the full `peisear-web` suite on both backends, which is what would earn a supported PostgreSQL install path) | — | **Awaiting the architect’s proposal and the owner’s authorization** |
+| — | **Nothing else is authorized beyond `0.58.1`.** Candidates on record, in no order: the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0), the seven undocumented `SMTP_*` variables (**Unscheduled work**, below), an attended start unproven on Windows and no CI job compiling for Windows outside the release tag (both found by `052-the-terminal-nobody-is-reading`, carried as findings rather than register entries — the architect's own proposal to make), and `RFC 018`’s own **P5** (the full `peisear-web` suite on both backends, which is what would earn a supported PostgreSQL install path) | — | **Awaiting the architect’s proposal and the owner’s authorization** |
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
@@ -176,6 +175,37 @@ from memory.
 themselves) on 2026-10-14. A row leaves when the release is **cut**;
 what it contained is in `CHANGELOG.md` and in the specification's own
 baseline rows, which is where release history belongs.
+
+**Shipped 2026-10-29**: `0.58.1` (the terminal nobody is reading) —
+`RFC 020` §7 (amended), `§10.49`, in two series rounds against two
+scoped (`TTY-001`, `TTY-002`; `TTY-002` earning a round of its own
+after its first review found the fix proven by hand but not yet
+guarded). `should_run_wizard`'s own predicate asked whether a
+terminal was attached, not whether anyone could answer it:
+`stdin_is_terminal` replaced with `can_prompt` — `PEISEAR_SETUP`
+first, then a terminal, then, on Unix, the kernel's own
+foreground-process-group test (`tcgetpgrp` against `getpgrp`, the
+same comparison it makes before raising `SIGTTIN`). The same cause
+cost `0.58.0` its own Windows archive (`Start-Process`'s console is a
+terminal nobody will ever type into); the release walkthrough is now
+two cases named for the property each proves — an unattended start
+serves, an attended start prompts — and `test.yml` gained case 7, the
+first automated check for this entry's own defining case, seen red on
+a planted predicate and green at the commit that shipped.
+**`0.58.0`'s own `CHANGELOG` claim was wrong in a third shape**,
+corrected forward in `[0.58.1]` rather than rewritten. **Nothing a
+configured instance runs moved** — the predicate change is reached
+only where no configuration exists, the same cases `WIZ-001`'s own
+suite already proved untouched. **What it does not deliver**: an
+attended start prompting stays unproven on Windows, five diagnosed
+attempts named in `release.yml`'s own comment; no CI job in this
+repository compiles for Windows outside the release tag, carried as a
+finding for the architect's own next proposal. `CHANGELOG.md`'s own
+`[0.58.1]` section carries this in full. *`DEC-056`'s four legs are
+the architect's own, run on the owner's approval of this candidate —
+this line describes the engineering content, not a claim that
+crates.io, the Release, its five archives, or the container tag
+already carry it.*
 
 **Shipped 2026-10-28**: `0.58.0` (the first thing it says) — `RFC 020`,
 in five rounds against three scoped (`WIZ-001`–`WIZ-005`, two of them
