@@ -320,18 +320,21 @@ jobs:
             Pop-Location
           }
 
-      # §10.49 case 2 (Windows): attempted, measured, not assumed.
-      # First attempt (`AllocConsole` on this step's own process, child
-      # started with `-NoNewWindow` to inherit it) measured false:
-      # `AllocConsole`/`GetStdHandle` never threw, but the child served
-      # with defaults immediately -- `is_terminal` was still false for
-      # it, so `-NoNewWindow` did not make it share this console after
-      # all. Second attempt, here: give the child its own fresh console
-      # exactly as case 1 already does (plain `Start-Process`, no
-      # `-NoNewWindow`), then `AttachConsole` *this* script to *that*
-      # console instead of the other way around -- `GetStdHandle` after
-      # attaching resolves to the child's own input buffer, which
-      # `WriteConsoleInput` can then feed real key-event records into.
+      # §10.49 case 2 (Windows): attempted, measured, not assumed, three
+      # times over. First attempt (`AllocConsole` on this step's own
+      # process, child started with `-NoNewWindow` to inherit it)
+      # measured false: the child served with defaults immediately --
+      # `is_terminal` was still false for it, so `-NoNewWindow` did not
+      # make it share this console after all. Second: give the child
+      # its own fresh console instead (plain `Start-Process`, as case 1
+      # already does) and `AttachConsole` *this* script to *that*
+      # console -- reached a real attached console (the wizard's first
+      # question was already visible in the log) but `WriteConsoleInput`
+      # rejected the buffer outright, `ERROR_INVALID_HANDLE`: attaching
+      # a console does not retarget `GetStdHandle`'s own return value,
+      # which still names whatever this step started with. Third, here:
+      # open `CONIN$` directly with `CreateFile` for a handle to the
+      # console just attached to, independent of that stale slot.
       - name: "Walk it -- case 2 (Windows): an attended start prompts, attached to the child's own console"
         if: runner.os == 'Windows'
         shell: pwsh
@@ -358,7 +361,7 @@ jobs:
           # console (the wizard's first question was already visible in
           # the log) and still wrote 0 of 2 records, consistent with a
           # malformed buffer the call rejected outright.
-          $nativeConsoleSrc = '[DllImport("kernel32.dll", SetLastError = true)] public static extern bool FreeConsole(); [DllImport("kernel32.dll", SetLastError = true)] public static extern bool AttachConsole(uint dwProcessId); [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr GetStdHandle(int nStdHandle); [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)] public static extern bool WriteConsoleInput(IntPtr hConsoleInput, INPUT_RECORD[] lpBuffer, uint nLength, out uint lpNumberOfEventsWritten); [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] public struct KEY_EVENT_RECORD { [MarshalAs(UnmanagedType.Bool)] public bool bKeyDown; public ushort wRepeatCount; public ushort wVirtualKeyCode; public ushort wVirtualScanCode; public char UnicodeChar; public uint dwControlKeyState; } [StructLayout(LayoutKind.Explicit)] public struct INPUT_RECORD { [FieldOffset(0)] public ushort EventType; [FieldOffset(4)] public KEY_EVENT_RECORD KeyEvent; }'
+          $nativeConsoleSrc = '[DllImport("kernel32.dll", SetLastError = true)] public static extern bool FreeConsole(); [DllImport("kernel32.dll", SetLastError = true)] public static extern bool AttachConsole(uint dwProcessId); [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)] public static extern IntPtr CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, IntPtr lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile); [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)] public static extern bool WriteConsoleInput(IntPtr hConsoleInput, INPUT_RECORD[] lpBuffer, uint nLength, out uint lpNumberOfEventsWritten); [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] public struct KEY_EVENT_RECORD { [MarshalAs(UnmanagedType.Bool)] public bool bKeyDown; public ushort wRepeatCount; public ushort wVirtualKeyCode; public ushort wVirtualScanCode; public char UnicodeChar; public uint dwControlKeyState; } [StructLayout(LayoutKind.Explicit)] public struct INPUT_RECORD { [FieldOffset(0)] public ushort EventType; [FieldOffset(4)] public KEY_EVENT_RECORD KeyEvent; }'
           Add-Type -Namespace Native -Name Console -MemberDefinition $nativeConsoleSrc
 
           function Send-EnterKey([IntPtr]$hIn) {
@@ -389,8 +392,18 @@ jobs:
             if (-not [Native.Console]::AttachConsole([uint32]$proc.Id)) {
               throw "AttachConsole(child) failed, Win32 error $([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())"
             }
-            $hIn = [Native.Console]::GetStdHandle(-10)
-            if ($hIn -eq [IntPtr]::Zero -or $hIn -eq [IntPtr]::op_Explicit(-1)) { throw "AttachConsole/GetStdHandle did not produce a usable input handle" }
+            # `GetStdHandle` after `AttachConsole` measured false too:
+            # it returned a non-null handle that `WriteConsoleInput`
+            # then rejected with Win32 error 6 (`ERROR_INVALID_HANDLE`)
+            # -- attaching a console does not retarget this process's
+            # own registered standard-handle slot, which still names
+            # whatever this step started with. Opening `CONIN$` fresh
+            # is the documented way to get a real handle to the
+            # console just attached to, independent of that slot.
+            $hIn = [Native.Console]::CreateFile("CONIN$", 0xC0000000, 3, [IntPtr]::Zero, 3, 0, [IntPtr]::Zero)
+            if ($hIn -eq [IntPtr]::Zero -or $hIn -eq [IntPtr]::op_Explicit(-1)) {
+              throw "CreateFile(CONIN\$) did not produce a usable input handle, Win32 error $([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())"
+            }
             Send-EnterKey $hIn
             Start-Sleep -Milliseconds 500
             Send-EnterKey $hIn
