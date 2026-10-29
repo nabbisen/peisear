@@ -165,7 +165,7 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| `0.58.1` | **The terminal nobody is reading** — `§10.49`. A first run started in the background stops dead instead of serving: `should_run_wizard` asks whether a terminal is attached, which is not the question. Four parts as authorized: (1) prompt only where the process can actually read the terminal, which on Unix the kernel answers exactly (foreground process group, the same test it uses to raise `SIGTTIN`); (2) one documented launch-time variable to declare the answer where the OS cannot give it; (3) where we cannot prompt, start the way the no-terminal path already starts, on loopback with a generated key; (4) restore the Windows archive `0.58.0` dropped (`§10.41`, live) and divide the two CI walk steps deliberately — one proving an unattended start *serves*, one proving an attended start *prompts* | `RFC 020` §7 (amended) | **Authorized by the owner 2026-10-28.** Handoffs: `rfcs/handoffs/052-the-terminal-nobody-is-reading/`. Two work rounds and the cut; the 0.58.0 design is preserved, not reversed — a foreground first run still asks |
+| `0.58.1` | **The terminal nobody is reading** — `§10.49`. A first run started in the background stops dead instead of serving: `should_run_wizard` asks whether a terminal is attached, which is not the question. Four parts as authorized: (1) prompt only where the process can actually read the terminal, which on Unix the kernel answers exactly (foreground process group, the same test it uses to raise `SIGTTIN`); (2) one documented launch-time variable to declare the answer where the OS cannot give it; (3) where we cannot prompt, start the way the no-terminal path already starts, on loopback with a generated key; (4) restore the Windows archive `0.58.0` dropped (the class `§10.41` names, recurring — that entry itself is closed) and divide the two CI walk steps deliberately — one proving an unattended start *serves*, one proving an attended start *prompts* | `RFC 020` §7 (amended) | **Authorized by the owner 2026-10-28.** Handoffs: `rfcs/handoffs/052-the-terminal-nobody-is-reading/`. Two work rounds and the cut; the 0.58.0 design is preserved, not reversed — a foreground first run still asks |
 | — | **Nothing else is authorized beyond `0.58.0`.** Candidates on record, in no order: the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0), the seven undocumented `SMTP_*` variables (**Unscheduled work**, below), and `RFC 018`’s own **P5** (the full `peisear-web` suite on both backends, which is what would earn a supported PostgreSQL install path) | — | **Awaiting the architect’s proposal and the owner’s authorization** |
 
 **This is order, not dates.** A row's number changes when something
@@ -220,8 +220,12 @@ from their workflows' own exit codes. **Four per-platform archives,
 not five.** `docs/getting-started/install.md`'s own table offers
 `peisear-<version>-x86_64-pc-windows-msvc.zip`; the `0.58.0` Release
 does not carry it, and `0.56.0` and `0.57.0` both did. This is
-`§10.41` — an install path the artefact cannot satisfy — live, and a
-platform regression.
+the class `§10.41` names — an install path the artefact cannot
+satisfy — recurring in a new shape, and a platform regression. (That
+entry is **closed** and stays closed; it was already ruled
+not-reopened for an earlier recurrence. The wording here first said
+"`§10.41` ... live", which cited a closed entry as open — corrected
+2026-10-29.)
 
 *Why it is missing, and the defect behind it.* The `Release` workflow's
 Windows job built and packaged the archive, then failed its own

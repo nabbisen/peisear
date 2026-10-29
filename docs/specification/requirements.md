@@ -7274,7 +7274,7 @@ is a round with its own measurement, not a clause of this one.
 withdrawn if P5 is itself withdrawn — tracked alongside `ROADMAP.md`'s
 own P5 section, not ahead of it.
 
-### 10.49 A terminal is attached, and nobody is reading it — **closed**, `TTY-001`/`TTY-002`, 0.58.1; found by the `Release` workflow's own Windows job at tag `0.58.0`, 2026-10-28
+### 10.49 A terminal is attached, and nobody is reading it — **fixed, not yet guarded**, `TTY-001`/`TTY-002`, 0.58.1; found by the `Release` workflow's own Windows job at tag `0.58.0`, 2026-10-28
 
 `wizard::should_run_wizard` is `stdin_is_terminal && !configuration_exists`
 (`crates/peisear-web/src/wizard.rs:29`). The first operand answers
@@ -7307,8 +7307,15 @@ binary can make, no input will ever arrive, and the walkthrough's
 health check gave up after thirty seconds. The job had already built
 and packaged `peisear-0.58.0-x86_64-pc-windows-msvc.zip`; its upload
 and attach steps never ran, so the Release carries four archives where
-`docs/getting-started/install.md`'s table offers five (`§10.41`, live
-— and `0.56.0` and `0.57.0` both shipped it).
+`docs/getting-started/install.md`'s table offers five — **the class
+`§10.41` names, recurring in a new shape**, and `0.56.0` and `0.57.0`
+both shipped that archive. *Corrected 2026-10-29: this sentence first
+read "(`§10.41`, live)". `§10.41` is **closed** and was already ruled
+not-reopened for an earlier recurrence (see its own closing note and
+the `FIV-007` account above). Citing a closed entry as live is
+`§10.34`'s own defect, written by the architect in the entry that
+registers the class. The instance here is closed by `TTY-002`; the
+entry stays as `FIV-005` left it.*
 
 **Opened as a class**: *a readiness probe that reports the existence of
 a channel when the decision needs its liveness.* `is_terminal`,
@@ -7339,7 +7346,29 @@ unattended start serves, one that proves an attended start prompts.
 *Proposed for `0.58.1` in `ROADMAP.md`'s own table, which is where
 release numbers live; open until the owner authorizes that row.*
 
-**Closed in two rounds, both reachable paths of the predicate and both
+**Status, set by the architect 2026-10-29 over `TTY-002`'s own
+proposal to close.** The defect is fixed on both reachable paths and
+proven so against real binaries, three times over by two different
+people. **What does not yet exist is a check that would catch it
+coming back.** This entry's own defining case — a terminal is
+attached and this process is not its foreground job — is exercised by
+no automated test in this repository:
+
+| case | covered by | can it fail? |
+|---|---|---|
+| no terminal at all → must not prompt | `release.yml` case 1 (Unix), `test.yml` cases 1–2 | yes |
+| attended, foreground pty → prompts | `release.yml` case 2 (Unix), `test.yml` case 3 | yes |
+| `PEISEAR_SETUP=never` → must not prompt | `release.yml` case 1 (Windows) | yes |
+| **terminal attached, not foreground → must not prompt** | **nothing** | **—** |
+
+The Windows release walk, which caught this class once by accident,
+now declares `PEISEAR_SETUP=never` — correct, since otherwise it
+hangs, but its accidental coverage was not replaced. So the entry
+stays open until the missing row has an owner. **A fix proven by hand
+is a fix; it is not a guard**, and this register's own `§10.36` is the
+question of what a green check can and cannot tell.
+
+**Fixed in two rounds, both reachable paths of the predicate and both
 walk steps.** `TTY-001` replaced `stdin_is_terminal` with `can_prompt`
 -- `PEISEAR_SETUP`, then a terminal, then, on Unix, the kernel's own
 foreground-process-group test (`tcgetpgrp` compared against
