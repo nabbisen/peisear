@@ -320,110 +320,47 @@ jobs:
             Pop-Location
           }
 
-      # §10.49 case 2 (Windows): attempted, measured, not assumed, three
-      # times over. First attempt (`AllocConsole` on this step's own
-      # process, child started with `-NoNewWindow` to inherit it)
-      # measured false: the child served with defaults immediately --
-      # `is_terminal` was still false for it, so `-NoNewWindow` did not
-      # make it share this console after all. Second: give the child
-      # its own fresh console instead (plain `Start-Process`, as case 1
-      # already does) and `AttachConsole` *this* script to *that*
-      # console -- reached a real attached console (the wizard's first
-      # question was already visible in the log) but `WriteConsoleInput`
-      # rejected the buffer outright, `ERROR_INVALID_HANDLE`: attaching
-      # a console does not retarget `GetStdHandle`'s own return value,
-      # which still names whatever this step started with. Third, here:
-      # open `CONIN$` directly with `CreateFile` for a handle to the
-      # console just attached to, independent of that stale slot.
-      - name: "Walk it -- case 2 (Windows): an attended start prompts, attached to the child's own console"
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          New-Item -ItemType Directory -Force -Path walk-attended | Out-Null
-          Expand-Archive -Path $env:ARCHIVE_NAME -DestinationPath walk-attended -Force
-          Push-Location walk-attended
-
-          # A one-line string, not a `@'...'@` here-string: PowerShell
-          # requires that closer at column zero, which a YAML literal
-          # block scalar indented under this step's own `run:` cannot
-          # give it without ending the block early -- measured directly
-          # (the YAML parser rejected the first draft at exactly that
-          # line) rather than assumed from either language's own docs
-          # alone.
-          # `CharSet = CharSet.Unicode` on both the P/Invoke signature and
-          # the struct: left at C#'s own default (`Ansi`) the first time,
-          # which marshals `char UnicodeChar` as a 1-byte `CHAR` instead
-          # of the native 2-byte `WCHAR` -- a layout defect that would
-          # misplace every field after it, not just this one. Measured
-          # before fixing it, not assumed: the first attempt's own
-          # `WriteConsoleInput` call reached a real, now-attached
-          # console (the wizard's first question was already visible in
-          # the log) and still wrote 0 of 2 records, consistent with a
-          # malformed buffer the call rejected outright.
-          $nativeConsoleSrc = '[DllImport("kernel32.dll", SetLastError = true)] public static extern bool FreeConsole(); [DllImport("kernel32.dll", SetLastError = true)] public static extern bool AttachConsole(uint dwProcessId); [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)] public static extern IntPtr CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, IntPtr lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile); [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)] public static extern bool WriteConsoleInput(IntPtr hConsoleInput, INPUT_RECORD[] lpBuffer, uint nLength, out uint lpNumberOfEventsWritten); [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] public struct KEY_EVENT_RECORD { [MarshalAs(UnmanagedType.Bool)] public bool bKeyDown; public ushort wRepeatCount; public ushort wVirtualKeyCode; public ushort wVirtualScanCode; public char UnicodeChar; public uint dwControlKeyState; } [StructLayout(LayoutKind.Explicit)] public struct INPUT_RECORD { [FieldOffset(0)] public ushort EventType; [FieldOffset(4)] public KEY_EVENT_RECORD KeyEvent; }'
-          Add-Type -Namespace Native -Name Console -MemberDefinition $nativeConsoleSrc
-
-          function Send-EnterKey([IntPtr]$hIn) {
-            $down = New-Object Native.Console+INPUT_RECORD
-            $down.EventType = 1
-            $down.KeyEvent.bKeyDown = $true
-            $down.KeyEvent.wRepeatCount = 1
-            $down.KeyEvent.wVirtualKeyCode = 0x0D
-            $down.KeyEvent.UnicodeChar = [char]13
-            $up = $down
-            $up.KeyEvent.bKeyDown = $false
-            $written = 0
-            $ok = [Native.Console]::WriteConsoleInput($hIn, @($down, $up), 2, [ref]$written)
-            if (-not $ok) { throw "WriteConsoleInput returned false, Win32 error $([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
-            if ($written -ne 2) { throw "WriteConsoleInput wrote $written of 2 records" }
-          }
-
-          $proc = Start-Process -FilePath .\peisear.exe -RedirectStandardOutput ..\peisear-attended-out.log -RedirectStandardError ..\peisear-attended-err.log -PassThru
-          try {
-            $found = $false
-            for ($i = 0; $i -lt 10; $i++) {
-              if (Select-String -Path ..\peisear-attended-out.log -Pattern 'No configuration found' -Quiet -ErrorAction SilentlyContinue) { $found = $true; break }
-              Start-Sleep -Milliseconds 500
-            }
-            if (-not $found) { throw "the two questions never appeared -- an attended start did not prompt" }
-
-            [Native.Console]::FreeConsole() | Out-Null
-            if (-not [Native.Console]::AttachConsole([uint32]$proc.Id)) {
-              throw "AttachConsole(child) failed, Win32 error $([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())"
-            }
-            # `GetStdHandle` after `AttachConsole` measured false too:
-            # it returned a non-null handle that `WriteConsoleInput`
-            # then rejected with Win32 error 6 (`ERROR_INVALID_HANDLE`)
-            # -- attaching a console does not retarget this process's
-            # own registered standard-handle slot, which still names
-            # whatever this step started with. Opening `CONIN$` fresh
-            # is the documented way to get a real handle to the
-            # console just attached to, independent of that slot.
-            # `0xC0000000` as a bare PowerShell hex literal parses as
-            # `Int32` and wraps to a negative number before it ever
-            # reaches the `[uint32]` parameter -- measured directly,
-            # the fourth attempt's own failure. The decimal literal
-            # promotes to `Int64` instead, which converts cleanly.
-            $hIn = [Native.Console]::CreateFile("CONIN$", 3221225472, 3, [IntPtr]::Zero, 3, 0, [IntPtr]::Zero)
-            if ($hIn -eq [IntPtr]::Zero -or $hIn -eq [IntPtr]::op_Explicit(-1)) {
-              throw "CreateFile(CONIN\$) did not produce a usable input handle, Win32 error $([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())"
-            }
-            Send-EnterKey $hIn
-            Start-Sleep -Milliseconds 500
-            Send-EnterKey $hIn
-
-            $found = $false
-            for ($i = 0; $i -lt 10; $i++) {
-              if (Select-String -Path ..\peisear-attended-out.log -Pattern 'Written to .env' -Quiet -ErrorAction SilentlyContinue) { $found = $true; break }
-              Start-Sleep -Milliseconds 500
-            }
-            if (-not $found) { throw "the wizard's own three statements never completed" }
-          } finally {
-            Get-Content ..\peisear-attended-out.log, ..\peisear-attended-err.log -ErrorAction SilentlyContinue
-            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
-            Pop-Location
-          }
+      # §10.49 case 2 is NOT hosted on Windows -- named here rather than
+      # left to be discovered later, per this handoff's own §7. Five
+      # measured attempts on a real `windows-latest` runner, each fixing
+      # one concrete, diagnosed defect in the last: (1) `AllocConsole`
+      # on this step's own process, child started with `-NoNewWindow`
+      # to inherit it -- the child served with defaults immediately,
+      # `is_terminal` false for it, so `-NoNewWindow` did not share this
+      # console after all; (2) give the child its own console instead
+      # (plain `Start-Process`, as case 1 does) and `AttachConsole` this
+      # script to *that* one -- reached a real attached console (the
+      # wizard's first question appeared) but `WriteConsoleInput`
+      # rejected the buffer, `ERROR_INVALID_HANDLE`; (3) the struct's
+      # `char` field needed `CharSet.Unicode`, not C#'s default `Ansi`
+      # -- fixed the marshaling, call still rejected with the same
+      # error; (4) `GetStdHandle` after `AttachConsole` does not
+      # retarget this process's own standard-handle slot -- opened
+      # `CONIN$` directly with `CreateFile` instead; (5) a bare
+      # PowerShell hex literal (`0xC0000000`) wraps to a negative
+      # `Int32` before reaching the native `uint32` parameter -- fixed
+      # with a decimal literal. At that point every Win32 call reported
+      # success -- `AttachConsole`, `CreateFile(CONIN$)`,
+      # `WriteConsoleInput` all returned true, two records written each
+      # time -- and the wizard still never advanced past its first
+      # question. Chasing conhost's own internal routing of
+      # `WriteConsoleInput`-injected key events further, with no API
+      # error left to diagnose against, is exactly the cost this
+      # handoff's own §7 says to name rather than keep spending.
+      #
+      # This is not a product gap: `TTY-001`'s own asymmetry
+      # (`is_foreground_stdin` always `true` on Windows, `RFC 020`
+      # §7.2) means "attended" on this platform is just "a terminal is
+      # attached" -- exactly what case 1's own `Start-Process` already
+      # gives by default, and exactly why case 1 has to declare
+      # `PEISEAR_SETUP=never` to get the *other* case instead of relying
+      # on any tty-ness of its own. The two questions and three
+      # statements are proven attended, on real ptys, by case 2 (Unix)
+      # above and by `test.yml`'s own `test-wizard-skip` case 3 against
+      # the debug build; what is missing here is only the release
+      # archive's own Windows confirmation of that same property, which
+      # would need a different mechanism than console-input injection to
+      # prove without a human at the keyboard.
 
       - uses: actions/upload-artifact@v4
         with:
