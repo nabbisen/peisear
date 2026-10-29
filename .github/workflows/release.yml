@@ -166,17 +166,33 @@ jobs:
           Compress-Archive -Path "dist/peisear.exe" -DestinationPath "$name.zip" -Force
           echo "ARCHIVE_NAME=$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # NFR-REL-011: the archive this job just built, extracted and run
-      # from a scratch directory, reaching an authenticated session --
-      # same shape as `image.yml`'s own "Walk it" step, not gated on
-      # `release.published` so it runs on every dispatch too. All five
-      # targets build natively on a runner that already matches their
-      # OS/arch (this file's own top comment), so the binary this step
-      # runs is directly executable here, no emulation needed. `trap`,
-      # not a line at the end of the script, for the same reason
+      # `TTY-002`, `§10.49`: the two steps below used to be one, named for
+      # the platform rather than for what it proved, and the two
+      # platforms had quietly been proving different things under that
+      # one name -- a GitHub `bash` step's own stdin is not a tty, so
+      # the Unix step has never once exercised the wizard; `Start-Process`
+      # gives Windows a fresh console, so that step always has, and
+      # nobody meant it to (this round's handoff §2). Divided by the
+      # property each case actually establishes, named for that
+      # property rather than the platform, every unhosted case stated
+      # rather than left to be discovered later.
+      #
+      # Case 1, both platforms: an unattended start serves -- this is
+      # `§10.49`'s own regression test, the case that cost `0.58.0` its
+      # Windows archive, and it keeps the registration/authentication
+      # walk `NFR-REL-011` already asked for, unchanged. Case 2, where
+      # it can be hosted: an attended start prompts -- the two
+      # questions, then the three statements, `RFC 020`'s own first
+      # property, never reversed by this round.
+
+      # NFR-REL-011 / §10.49 case 1 (Unix): no terminal at all. A
+      # non-interactive bash step's own stdin is not a tty, and
+      # backgrounding here redirects the child's stdin from /dev/null
+      # besides -- the plainest reachable case of `can_prompt == false`.
+      # `trap`, not a line at the end of the script, for the same reason
       # `image.yml`'s own comment gives: a failure before the last line
       # must still leave something to diagnose with.
-      - name: Walk it -- extract, run, register, create a project (Unix)
+      - name: "Walk it -- case 1 (Unix): an unattended start serves, no terminal at all"
         if: runner.os != 'Windows'
         shell: bash
         run: |
@@ -189,6 +205,10 @@ jobs:
           trap 'cat ../peisear-walk.log; kill "$pid" 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null && break; sleep 1; done
           curl -sf http://127.0.0.1:3000/health
+          if grep -q 'No configuration found' ../peisear-walk.log; then
+            echo "::error::the wizard ran in the unattended case -- an unattended start must serve with defaults, never wait for an answer"
+            exit 1
+          fi
           cookie_jar=cookies.txt
           code=$(curl -s -o /dev/null -w '%{http_code}' -c "$cookie_jar" \
             --data-urlencode "email=walk@example.com" \
@@ -201,7 +221,64 @@ jobs:
           echo "authenticated /projects: $code"
           [ "$code" = "200" ] || { echo "::error::session from register did not authenticate, got $code"; exit 1; }
 
-      - name: Walk it -- extract, run, register, create a project (Windows)
+      # §10.49 case 2 (Unix): a real terminal, in the foreground. `script`
+      # forks a new session with the pty as its own controlling
+      # terminal, so the child starts out as that terminal's own
+      # foreground process group without any job-control setup in this
+      # step's own shell -- the same machinery `test.yml`'s
+      # `test-wizard-skip` case 3 already proved on Linux, reused here
+      # against the release archive rather than a debug build, not
+      # reinvented. `release.yml` also runs on macOS, which `test.yml`
+      # never has (every one of its jobs is `ubuntu-latest`) -- measured
+      # directly that macOS's own BSD `script` is not GNU `script`: no
+      # `-f`/`-c`, and its flush flag is `-F`, not `-f` (`usage: script
+      # [-aeFkpqr] [-t time] [file [command ...]]`, read from its own
+      # rejection of `-qfec`). `$RUNNER_OS`, GitHub's own documented
+      # variable, picks the right invocation rather than a `uname`
+      # guess. Two blank lines answer both questions with their
+      # defaults, the same as a human pressing enter twice.
+      - name: "Walk it -- case 2 (Unix): an attended start prompts, real pty, foreground"
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p walk-attended && cd walk-attended
+          tar xzf "../${ARCHIVE_NAME}"
+          chmod +x peisear
+          trap 'cat peisear-attended.log 2>/dev/null; pkill -f "walk-attended/peisear" 2>/dev/null || true' EXIT
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            script -qF peisear-attended.log ./peisear <<< $'\n\n' &
+          else
+            script -qfec ./peisear peisear-attended.log <<< $'\n\n' &
+          fi
+          found=0
+          for i in $(seq 1 10); do
+            grep -q 'No configuration found' peisear-attended.log 2>/dev/null && { found=1; break; }
+            sleep 0.5
+          done
+          if [ "$found" != "1" ]; then
+            echo "::error::the two questions never appeared -- an attended start did not prompt"
+            exit 1
+          fi
+          found=0
+          for i in $(seq 1 10); do
+            grep -q 'Written to .env' peisear-attended.log 2>/dev/null && { found=1; break; }
+            sleep 0.5
+          done
+          if [ "$found" != "1" ]; then
+            echo "::error::the wizard's own three statements never completed"
+            exit 1
+          fi
+
+      # §10.49 case 1 (Windows): no equivalent of a foreground
+      # process-group test exists on this platform (`TTY-001` `§2`, `RFC
+      # 020` §7.2) -- `Start-Process` gives the child a fresh console
+      # that is, by every signal the binary can read, always attended.
+      # `PEISEAR_SETUP=never` is the declared signal this platform has,
+      # and is the mechanism `configuration.md` already names for this
+      # exact case -- set explicitly here rather than relying on any
+      # tty-ness this job's own runner happens to have.
+      - name: "Walk it -- case 1 (Windows): an unattended start serves, declared via PEISEAR_SETUP=never"
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -209,6 +286,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path walk | Out-Null
           Expand-Archive -Path $env:ARCHIVE_NAME -DestinationPath walk -Force
           Push-Location walk
+          $env:PEISEAR_SETUP = 'never'
           $proc = Start-Process -FilePath .\peisear.exe -RedirectStandardOutput ..\peisear-walk-out.log -RedirectStandardError ..\peisear-walk-err.log -PassThru
           try {
             $ok = $false
@@ -216,6 +294,9 @@ jobs:
               try { Invoke-WebRequest -Uri http://127.0.0.1:3000/health -UseBasicParsing | Out-Null; $ok = $true; break } catch { Start-Sleep -Seconds 1 }
             }
             if (-not $ok) { throw "health check never came up" }
+            if (Select-String -Path ..\peisear-walk-out.log -Pattern 'No configuration found' -Quiet) {
+              throw "the wizard ran despite PEISEAR_SETUP=never -- an unattended start must serve with defaults, never wait for an answer"
+            }
             # `-MaximumRedirection 0` plus `-SkipHttpErrorCheck` does not
             # return the 303 here -- measured directly: pwsh 7's
             # HttpClient-backed `Invoke-WebRequest` throws "the maximum
@@ -238,6 +319,48 @@ jobs:
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
             Pop-Location
           }
+
+      # §10.49 case 2 is NOT hosted on Windows -- named here rather than
+      # left to be discovered later, per this handoff's own §7. Five
+      # measured attempts on a real `windows-latest` runner, each fixing
+      # one concrete, diagnosed defect in the last: (1) `AllocConsole`
+      # on this step's own process, child started with `-NoNewWindow`
+      # to inherit it -- the child served with defaults immediately,
+      # `is_terminal` false for it, so `-NoNewWindow` did not share this
+      # console after all; (2) give the child its own console instead
+      # (plain `Start-Process`, as case 1 does) and `AttachConsole` this
+      # script to *that* one -- reached a real attached console (the
+      # wizard's first question appeared) but `WriteConsoleInput`
+      # rejected the buffer, `ERROR_INVALID_HANDLE`; (3) the struct's
+      # `char` field needed `CharSet.Unicode`, not C#'s default `Ansi`
+      # -- fixed the marshaling, call still rejected with the same
+      # error; (4) `GetStdHandle` after `AttachConsole` does not
+      # retarget this process's own standard-handle slot -- opened
+      # `CONIN$` directly with `CreateFile` instead; (5) a bare
+      # PowerShell hex literal (`0xC0000000`) wraps to a negative
+      # `Int32` before reaching the native `uint32` parameter -- fixed
+      # with a decimal literal. At that point every Win32 call reported
+      # success -- `AttachConsole`, `CreateFile(CONIN$)`,
+      # `WriteConsoleInput` all returned true, two records written each
+      # time -- and the wizard still never advanced past its first
+      # question. Chasing conhost's own internal routing of
+      # `WriteConsoleInput`-injected key events further, with no API
+      # error left to diagnose against, is exactly the cost this
+      # handoff's own §7 says to name rather than keep spending.
+      #
+      # This is not a product gap: `TTY-001`'s own asymmetry
+      # (`is_foreground_stdin` always `true` on Windows, `RFC 020`
+      # §7.2) means "attended" on this platform is just "a terminal is
+      # attached" -- exactly what case 1's own `Start-Process` already
+      # gives by default, and exactly why case 1 has to declare
+      # `PEISEAR_SETUP=never` to get the *other* case instead of relying
+      # on any tty-ness of its own. The two questions and three
+      # statements are proven attended, on real ptys, by case 2 (Unix)
+      # above and by `test.yml`'s own `test-wizard-skip` case 3 against
+      # the debug build; what is missing here is only the release
+      # archive's own Windows confirmation of that same property, which
+      # would need a different mechanism than console-input injection to
+      # prove without a human at the keyboard.
 
       - uses: actions/upload-artifact@v4
         with:
