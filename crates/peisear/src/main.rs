@@ -204,6 +204,7 @@ fn is_foreground_stdin() -> bool {
 /// defect this round fixes, not merely as bad -- and suppressed the
 /// one-line notice too, since `is_foreground` reporting `true` made
 /// `wizard::background_notice_needed` false.
+#[cfg(unix)]
 fn resolve_is_foreground<E>(terminal_pgrp_matches_ours: Result<bool, E>) -> bool {
     terminal_pgrp_matches_ours.unwrap_or(false)
 }

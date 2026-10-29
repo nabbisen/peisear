@@ -166,17 +166,33 @@ jobs:
           Compress-Archive -Path "dist/peisear.exe" -DestinationPath "$name.zip" -Force
           echo "ARCHIVE_NAME=$name.zip" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      # NFR-REL-011: the archive this job just built, extracted and run
-      # from a scratch directory, reaching an authenticated session --
-      # same shape as `image.yml`'s own "Walk it" step, not gated on
-      # `release.published` so it runs on every dispatch too. All five
-      # targets build natively on a runner that already matches their
-      # OS/arch (this file's own top comment), so the binary this step
-      # runs is directly executable here, no emulation needed. `trap`,
-      # not a line at the end of the script, for the same reason
+      # `TTY-002`, `§10.49`: the two steps below used to be one, named for
+      # the platform rather than for what it proved, and the two
+      # platforms had quietly been proving different things under that
+      # one name -- a GitHub `bash` step's own stdin is not a tty, so
+      # the Unix step has never once exercised the wizard; `Start-Process`
+      # gives Windows a fresh console, so that step always has, and
+      # nobody meant it to (this round's handoff §2). Divided by the
+      # property each case actually establishes, named for that
+      # property rather than the platform, every unhosted case stated
+      # rather than left to be discovered later.
+      #
+      # Case 1, both platforms: an unattended start serves -- this is
+      # `§10.49`'s own regression test, the case that cost `0.58.0` its
+      # Windows archive, and it keeps the registration/authentication
+      # walk `NFR-REL-011` already asked for, unchanged. Case 2, where
+      # it can be hosted: an attended start prompts -- the two
+      # questions, then the three statements, `RFC 020`'s own first
+      # property, never reversed by this round.
+
+      # NFR-REL-011 / §10.49 case 1 (Unix): no terminal at all. A
+      # non-interactive bash step's own stdin is not a tty, and
+      # backgrounding here redirects the child's stdin from /dev/null
+      # besides -- the plainest reachable case of `can_prompt == false`.
+      # `trap`, not a line at the end of the script, for the same reason
       # `image.yml`'s own comment gives: a failure before the last line
       # must still leave something to diagnose with.
-      - name: Walk it -- extract, run, register, create a project (Unix)
+      - name: "Walk it -- case 1 (Unix): an unattended start serves, no terminal at all"
         if: runner.os != 'Windows'
         shell: bash
         run: |
@@ -189,6 +205,10 @@ jobs:
           trap 'cat ../peisear-walk.log; kill "$pid" 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null && break; sleep 1; done
           curl -sf http://127.0.0.1:3000/health
+          if grep -q 'No configuration found' ../peisear-walk.log; then
+            echo "::error::the wizard ran in the unattended case -- an unattended start must serve with defaults, never wait for an answer"
+            exit 1
+          fi
           cookie_jar=cookies.txt
           code=$(curl -s -o /dev/null -w '%{http_code}' -c "$cookie_jar" \
             --data-urlencode "email=walk@example.com" \
@@ -201,7 +221,53 @@ jobs:
           echo "authenticated /projects: $code"
           [ "$code" = "200" ] || { echo "::error::session from register did not authenticate, got $code"; exit 1; }
 
-      - name: Walk it -- extract, run, register, create a project (Windows)
+      # §10.49 case 2 (Unix): a real terminal, in the foreground. `script`
+      # forks a new session with the pty as its own controlling
+      # terminal, so the child starts out as that terminal's own
+      # foreground process group without any job-control setup in this
+      # step's own shell -- the same machinery `test.yml`'s
+      # `test-wizard-skip` case 3 already proved, reused here against
+      # the release archive rather than a debug build, not reinvented.
+      # Two blank lines answer both questions with their defaults, the
+      # same as a human pressing enter twice.
+      - name: "Walk it -- case 2 (Unix): an attended start prompts, real pty, foreground"
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p walk-attended && cd walk-attended
+          tar xzf "../${ARCHIVE_NAME}"
+          chmod +x peisear
+          trap 'cat peisear-attended.log 2>/dev/null; pkill -f "walk-attended/peisear" 2>/dev/null || true' EXIT
+          script -qfec ./peisear peisear-attended.log <<< $'\n\n' &
+          found=0
+          for i in $(seq 1 10); do
+            grep -q 'No configuration found' peisear-attended.log 2>/dev/null && { found=1; break; }
+            sleep 0.5
+          done
+          if [ "$found" != "1" ]; then
+            echo "::error::the two questions never appeared -- an attended start did not prompt"
+            exit 1
+          fi
+          found=0
+          for i in $(seq 1 10); do
+            grep -q 'Written to .env' peisear-attended.log 2>/dev/null && { found=1; break; }
+            sleep 0.5
+          done
+          if [ "$found" != "1" ]; then
+            echo "::error::the wizard's own three statements never completed"
+            exit 1
+          fi
+
+      # §10.49 case 1 (Windows): no equivalent of a foreground
+      # process-group test exists on this platform (`TTY-001` `§2`, `RFC
+      # 020` §7.2) -- `Start-Process` gives the child a fresh console
+      # that is, by every signal the binary can read, always attended.
+      # `PEISEAR_SETUP=never` is the declared signal this platform has,
+      # and is the mechanism `configuration.md` already names for this
+      # exact case -- set explicitly here rather than relying on any
+      # tty-ness this job's own runner happens to have.
+      - name: "Walk it -- case 1 (Windows): an unattended start serves, declared via PEISEAR_SETUP=never"
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -209,6 +275,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path walk | Out-Null
           Expand-Archive -Path $env:ARCHIVE_NAME -DestinationPath walk -Force
           Push-Location walk
+          $env:PEISEAR_SETUP = 'never'
           $proc = Start-Process -FilePath .\peisear.exe -RedirectStandardOutput ..\peisear-walk-out.log -RedirectStandardError ..\peisear-walk-err.log -PassThru
           try {
             $ok = $false
@@ -216,6 +283,9 @@ jobs:
               try { Invoke-WebRequest -Uri http://127.0.0.1:3000/health -UseBasicParsing | Out-Null; $ok = $true; break } catch { Start-Sleep -Seconds 1 }
             }
             if (-not $ok) { throw "health check never came up" }
+            if (Select-String -Path ..\peisear-walk-out.log -Pattern 'No configuration found' -Quiet) {
+              throw "the wizard ran despite PEISEAR_SETUP=never -- an unattended start must serve with defaults, never wait for an answer"
+            }
             # `-MaximumRedirection 0` plus `-SkipHttpErrorCheck` does not
             # return the 303 here -- measured directly: pwsh 7's
             # HttpClient-backed `Invoke-WebRequest` throws "the maximum
@@ -235,6 +305,77 @@ jobs:
             if ($resp2.StatusCode -ne 200) { throw "session from register did not authenticate, got $($resp2.StatusCode)" }
           } finally {
             Get-Content ..\peisear-walk-out.log, ..\peisear-walk-err.log -ErrorAction SilentlyContinue
+            Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
+            Pop-Location
+          }
+
+      # §10.49 case 2 (Windows): attempted, measured, not assumed.
+      # `AllocConsole` gives this step's own process a real console (it
+      # otherwise has none -- the runner's own pwsh host is fully
+      # redirected); starting the child with `-NoNewWindow` and no
+      # `-RedirectStandardInput` makes it inherit that same console,
+      # which is the one signal this platform's `is_foreground_stdin`
+      # (always `true`, by `TTY-001`'s own design) needs to call this
+      # attended. `WriteConsoleInput` then delivers the two answers as
+      # real key-event records on that console's own input buffer --
+      # the only documented way to feed a separate process's console
+      # without a pipe, which would stop being a terminal at all.
+      - name: "Walk it -- case 2 (Windows): an attended start prompts, own console, keystrokes written directly"
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path walk-attended | Out-Null
+          Expand-Archive -Path $env:ARCHIVE_NAME -DestinationPath walk-attended -Force
+          Push-Location walk-attended
+
+          # A one-line string, not a `@'...'@` here-string: PowerShell
+          # requires that closer at column zero, which a YAML literal
+          # block scalar indented under this step's own `run:` cannot
+          # give it without ending the block early -- measured directly
+          # (the YAML parser rejected the first draft at exactly that
+          # line) rather than assumed from either language's own docs
+          # alone.
+          $nativeConsoleSrc = '[DllImport("kernel32.dll", SetLastError = true)] public static extern bool AllocConsole(); [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr GetStdHandle(int nStdHandle); [DllImport("kernel32.dll", SetLastError = true)] public static extern bool WriteConsoleInput(IntPtr hConsoleInput, INPUT_RECORD[] lpBuffer, uint nLength, out uint lpNumberOfEventsWritten); [StructLayout(LayoutKind.Sequential)] public struct KEY_EVENT_RECORD { [MarshalAs(UnmanagedType.Bool)] public bool bKeyDown; public ushort wRepeatCount; public ushort wVirtualKeyCode; public ushort wVirtualScanCode; public char UnicodeChar; public uint dwControlKeyState; } [StructLayout(LayoutKind.Explicit)] public struct INPUT_RECORD { [FieldOffset(0)] public ushort EventType; [FieldOffset(4)] public KEY_EVENT_RECORD KeyEvent; }'
+          Add-Type -Namespace Native -Name Console -MemberDefinition $nativeConsoleSrc
+
+          [Native.Console]::AllocConsole() | Out-Null
+          $hIn = [Native.Console]::GetStdHandle(-10)
+          if ($hIn -eq [IntPtr]::Zero -or $hIn -eq [IntPtr]::op_Explicit(-1)) { throw "AllocConsole/GetStdHandle did not produce a usable input handle" }
+
+          function Send-EnterKey {
+            $down = New-Object Native.Console+INPUT_RECORD
+            $down.EventType = 1
+            $down.KeyEvent.bKeyDown = $true
+            $down.KeyEvent.wRepeatCount = 1
+            $down.KeyEvent.wVirtualKeyCode = 0x0D
+            $down.KeyEvent.UnicodeChar = [char]13
+            $up = $down
+            $up.KeyEvent.bKeyDown = $false
+            $written = 0
+            [Native.Console]::WriteConsoleInput($hIn, @($down, $up), 2, [ref]$written) | Out-Null
+            if ($written -ne 2) { throw "WriteConsoleInput wrote $written of 2 records" }
+          }
+
+          $proc = Start-Process -FilePath .\peisear.exe -RedirectStandardOutput ..\peisear-attended-out.log -RedirectStandardError ..\peisear-attended-err.log -PassThru -NoNewWindow
+          try {
+            $found = $false
+            for ($i = 0; $i -lt 10; $i++) {
+              if (Select-String -Path ..\peisear-attended-out.log -Pattern 'No configuration found' -Quiet -ErrorAction SilentlyContinue) { $found = $true; break }
+              Start-Sleep -Milliseconds 500
+            }
+            if (-not $found) { throw "the two questions never appeared -- an attended start did not prompt" }
+            Send-EnterKey
+            Start-Sleep -Milliseconds 500
+            Send-EnterKey
+            $found = $false
+            for ($i = 0; $i -lt 10; $i++) {
+              if (Select-String -Path ..\peisear-attended-out.log -Pattern 'Written to .env' -Quiet -ErrorAction SilentlyContinue) { $found = $true; break }
+              Start-Sleep -Milliseconds 500
+            }
+            if (-not $found) { throw "the wizard's own three statements never completed" }
+          } finally {
+            Get-Content ..\peisear-attended-out.log, ..\peisear-attended-err.log -ErrorAction SilentlyContinue
             Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue
             Pop-Location
           }
