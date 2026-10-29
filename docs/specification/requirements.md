@@ -3434,7 +3434,10 @@ https://github.com/nabbisen/peisear/releases/tag/0.53.0, each
 version- and target-suffixed, flat, 7.7–9.0 MB
 (`gh release view 0.53.0 --json assets`). **Verified by reading the
 artefact, not the workflow**, which is what this entry's own check
-requires. *Status*: **Implemented** (0.53.0).
+requires. *Status*: **Implemented** (0.53.0) — *the mechanism, and
+read the `0.58.1` note immediately below before citing this token:
+the property lapsed at `0.58.0`, and that Release can never carry
+five.*
 *Note (0.58.1 candidate) — this requirement held for one release and
 then did not.* `0.58.0`'s own Release carried four archives, not
 five: the Windows walkthrough timed out before the upload/attach
