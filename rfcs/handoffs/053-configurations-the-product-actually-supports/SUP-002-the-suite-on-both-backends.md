@@ -11,6 +11,58 @@ work, an install path for it must not be written, and `RFC 021` §5
 (end it) becomes the answer instead. Report what you find; do not
 make the finding fit the plan.
 
+## §0 — the environment, resolved 2026-10-30
+
+**This round escalated before starting rather than guessing, and that
+was correct.** It reported no local PostgreSQL, no Docker, no Podman
+and no `sudo`, named three paths, and refused to pre-guess
+incompatibilities from source without a server to confirm them
+against. The escalation is answered here; nothing in it was a defect.
+
+**The owner installed `podman`. It is rootless, so no privileged
+install is needed** — path 1 of the escalation's three, without the
+`sudo pacman` it assumed that path required. Verified end to end by
+the architect, not inferred:
+
+```
+podman 6.1.4, rootless: true
+podman run -d --name peisear-pg -e POSTGRES_PASSWORD=postgres   -e POSTGRES_DB=peisear_ci -p 5432:5432 docker.io/library/postgres:17
+pg_isready            → /var/run/postgresql:5432 - accepting connections
+TCP + scram from off  → peisear_ci | PostgreSQL 17.11
+  the host, via psql     (same credentials as CI's own job-level DATABASE_URL)
+```
+
+**Use the fully-qualified image name.** This machine has no
+`containers-registries.conf`, so `postgres:17` fails with *"short-name
+`postgres:17` did not resolve to an alias"* — a real podman/Docker
+difference, found by hitting it. `docker.io/library/postgres:17`
+works.
+
+**Nothing in the tree drives a container.** No `testcontainers`, no
+`DOCKER_HOST`; the tests read `DATABASE_URL` from the environment and
+nothing else. So the whole integration is the container plus
+`export DATABASE_URL=postgres://postgres:postgres@localhost:5432/peisear_ci`,
+which is exactly what `test.yml`'s postgres job sets at job level.
+
+**There are no PostgreSQL client tools on the host**, which does not
+matter: `podman exec peisear-pg psql -U postgres -d peisear_ci` reaches
+the ones inside the image, so the `\d` / `EXPLAIN` / real-error-text
+diagnosis this round asked for is available.
+
+**The architect's probe container was removed after proving the path.**
+Start your own, and stop it by name when done — a database left
+listening on 5432 across rounds is the same hazard as a stale server
+on a port, which this project has already been bitten by once.
+
+**CI is unaffected, and never was.** `test.yml` gets PostgreSQL from a
+GitHub Actions `services:` block (`image: postgres:17`, health-checked
+with `pg_isready`) that the runner provisions; no local container
+runtime is involved. The absence of podman never touched CI and its
+presence does not either. `image.yml` does shell out to the `docker`
+CLI, but that is the runner's Docker. **Local and CI are the same
+major version on purpose** — `postgres:17` both sides — so a local
+pass means something about CI rather than merely resembling it.
+
 ## §1 — the population
 
 **3 of 33** `peisear-web` integration binaries run against PostgreSQL
