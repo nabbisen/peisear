@@ -7274,7 +7274,7 @@ is a round with its own measurement, not a clause of this one.
 withdrawn if P5 is itself withdrawn — tracked alongside `ROADMAP.md`'s
 own P5 section, not ahead of it.
 
-### 10.49 A terminal is attached, and nobody is reading it — **open**, found by the `Release` workflow's own Windows job at tag `0.58.0`, 2026-10-28
+### 10.49 A terminal is attached, and nobody is reading it — **closed**, `TTY-001`/`TTY-002`, 0.58.1; found by the `Release` workflow's own Windows job at tag `0.58.0`, 2026-10-28
 
 `wizard::should_run_wizard` is `stdin_is_terminal && !configuration_exists`
 (`crates/peisear-web/src/wizard.rs:29`). The first operand answers
@@ -7338,6 +7338,61 @@ unattended start serves, one that proves an attended start prompts.
 
 *Proposed for `0.58.1` in `ROADMAP.md`'s own table, which is where
 release numbers live; open until the owner authorizes that row.*
+
+**Closed in two rounds, both reachable paths of the predicate and both
+walk steps.** `TTY-001` replaced `stdin_is_terminal` with `can_prompt`
+-- `PEISEAR_SETUP`, then a terminal, then, on Unix, the kernel's own
+foreground-process-group test (`tcgetpgrp` compared against
+`getpgrp`), the exact comparison the kernel makes before raising
+`SIGTTIN`. Round 1 closed the backgrounded-job case this entry
+measured; round 1's own review found a second, more severe path the
+first fix reopened -- `tcgetpgrp` failing with `ENOTTY` also on a
+terminal detached from any controlling one (`setsid`, several
+init/supervisor shapes), where the first fix's `Err(_) => true`
+blocked forever with no `SIGTTIN` to even show `Stopped`. Round 2
+closed it (`Err(_) => false`), reproduced against the real binary
+under `setsid` in both directions, before and after.
+
+`TTY-002` restored the archive and divided the two walk steps by the
+property each proves, named for the property rather than the
+platform, run for real rather than only read
+(workflow_dispatch [40805674323](https://github.com/nabbisen/peisear/actions/runs/40805674323),
+all five targets green): an unattended start serves (Unix: no terminal
+at all, the plainest `can_prompt == false`; Windows: declared via
+`PEISEAR_SETUP=never`, since no foreground-process-group equivalent
+exists there and `Start-Process` is otherwise always attended) and an
+attended start prompts (real pty, `script`, reusing `test.yml`'s own
+machinery against the release archive -- GNU `script` on Linux, BSD
+`script` on macOS, the two measured as genuinely different programs
+along the way).
+
+**One case stays unhosted, named rather than faked**: an attended
+start prompts on Windows. Five measured attempts at feeding a
+Windows console real key-event input from a separate script
+(`AttachConsole`/`WriteConsoleInput`/`CONIN$`) each fixed one
+concrete, diagnosed defect in the last, and the fifth still left every
+Win32 call reporting success while the wizard never advanced past its
+first question -- a `conhost`-internal routing question with no
+further API error to diagnose against, and the handoff's own
+instruction (`§7`) is to name that cost rather than keep spending it.
+Not a product gap: this platform's own asymmetry (`is_foreground_stdin`
+always `true`, `TTY-001` `§2`) means "attended" there is just "a
+terminal is attached," already exercised by `Start-Process`'s default
+behaviour; the property itself is proven attended, on a real pty, by
+the Unix case above and by `test.yml`'s own `test-wizard-skip` case 3.
+
+**A second, smaller gap `TTY-002`'s own review (deferred from `TTY-001`
+round 2) surfaced along the way, named here rather than left implicit:
+no CI job in this repository compiles for Windows at all outside the
+release tag itself** (`test.yml` is `ubuntu-latest` throughout), so
+platform-asymmetric `#[cfg]` code -- of which this series added three
+pieces -- is first compiled for Windows at the moment the release
+archive is produced. The same structural shape `§10.36` asks of a
+check that cannot tell *nothing wrong* from *nothing examined*, here
+asked of the platform matrix: a green `test.yml` cannot tell *Windows
+is fine* from *Windows was never built*. Not closed by this round --
+brought forward as a finding for the owner to schedule, not a register
+edit made unilaterally.
 
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
