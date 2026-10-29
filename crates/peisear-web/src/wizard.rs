@@ -89,10 +89,10 @@ pub fn resolve_setup_mode(raw: Option<&str>) -> Result<SetupMode, String> {
 /// double-clicks `peisear.exe` gets a console indistinguishable, by
 /// any other signal, from the `Start-Process` case that never has a
 /// reader, and that user *is* one.
-pub fn can_prompt(setup_mode: SetupMode, is_terminal: bool, _is_foreground: bool) -> bool {
+pub fn can_prompt(setup_mode: SetupMode, is_terminal: bool, is_foreground: bool) -> bool {
     match setup_mode {
         SetupMode::Never => false,
-        SetupMode::Auto => is_terminal,
+        SetupMode::Auto => is_terminal && is_foreground,
     }
 }
 
