@@ -7241,7 +7241,7 @@ self-hostability and no-CDN-dependency are unaffected by where
 `static/` lives relative to the binary, and embedding makes the
 self-contained claim strictly truer, not conditionally so.
 
-### 10.48 A feature named for a backend gates the `cfg`, not the driver — **open, pre-existing, becomes a defect at P5**, `CON-004`, 0.56.0; found by `CON-001`, 2026-10-20
+### 10.48 A feature named for a backend gates the `cfg`, not the driver — **closed**, `SUP-001`, 0.59.0; opened `CON-004`, 0.56.0, found by `CON-001`, 2026-10-20
 
 `peisear-storage`'s `sqlite = []` is an empty Cargo feature: it drives
 `#[cfg(feature = "sqlite")]` correctly throughout the crate, but gates
@@ -7301,6 +7301,49 @@ is a round with its own measurement, not a clause of this one.
 **Closes** when P5's own work gates the dependency per backend, or is
 withdrawn if P5 is itself withdrawn — tracked alongside `ROADMAP.md`'s
 own P5 section, not ahead of it.
+
+*Closed 2026-10-29 by `SUP-001` (0.59.0), on that condition exactly.*
+`sqlite = ["sqlx/sqlite"]` now forwards the driver the way `postgres`
+always did, and `sqlx`'s own unconditional `sqlite` is gone from
+`[workspace.dependencies]`. **The evidence is the dependency graph,
+not a symbol count**: `cargo tree -p peisear --no-default-features
+--features postgres -i libsqlite3-sys` prints nothing, while the
+default build still shows `libsqlite3-sys → sqlx-sqlite`. Verified by
+the architect independently of the round's own report.
+
+**Why this entry's own 387 stopped being evidence, which is worth
+more than the fix.** Re-measured at `cd51796`, *before* any change:
+**0** `sqlite3_*` symbols in a `--features postgres` binary, not 387.
+The dependency was still compiled and still in the graph; `rustc
+1.97.1`'s linker simply discards object code nothing references,
+which the toolchain of 0.56.0 did not. So the number this entry chose
+as its proof had quietly become unable to show the defect it was
+chosen to show, while the defect itself was untouched. The count is
+also method-dependent — 387 here, 272 in `SUP-001`'s own report, 282
+in the architect's re-measurement, for the same fact — because `nm`'s
+own flags and the profile's `strip` decide it. **A register entry's
+evidence has a shelf life.** Where a number must keep meaning
+something it belongs behind a guard that re-derives it (`spec_scan`
+does this for test counts and Appendix A); a figure sitting in prose
+does not re-derive itself. The round re-measured before changing
+anything because this entry told it to, and that instruction is why
+the drift was caught instead of inherited.
+
+**The dev-dependency this entry carved out, measured as it asked.**
+The text above names `crates/peisear-web/Cargo.toml`'s
+`[dev-dependencies] sqlx = { workspace = true }` as a second,
+independent declaration the fix would not reach — *"a round with its
+own measurement, not a clause of this one."* After the fix it carries
+no backend feature of its own at all and inherits one by Cargo's
+feature unification from whatever `peisear-storage` activates in the
+same build, which is a different arrangement than this entry
+predicted. **It works**: every `peisear-web` test target compiles
+under `--no-default-features --features postgres` (`cargo test
+--no-run`, exit 0, the architect's own run), and CI's postgres job
+already compiles and runs three of them against a real server. That
+is the measurement this entry said was owed. The arrangement is now
+implicit rather than declared, which `SUP-002` exercises on the full
+population.
 
 ### 10.49 A terminal is attached, and nobody is reading it — **closed**, `TTY-001`/`TTY-002`, 0.58.1; found by the `Release` workflow's own Windows job at tag `0.58.0`, 2026-10-28
 
