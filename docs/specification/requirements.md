@@ -7484,6 +7484,59 @@ brought forward as a finding for the owner to schedule, not a register
 edit made unilaterally.
 
 
+### 10.50 A green check matrix that cannot tell *this platform is fine* from *this platform was never built* — **open**, found by `TTY-001` round 2's review and `TTY-002`, 0.58.1, 2026-10-29
+
+**Measured 2026-10-29.** All **47** of `test.yml`'s jobs run on
+`ubuntu-latest`; not one runs on Windows or macOS. The only workflow
+that compiles for any other platform is `release.yml`
+(`windows-latest`, `macos-latest`, `macos-15-intel`,
+`ubuntu-24.04-arm`, `ubuntu-latest`), and it fires on a tag or a
+manual dispatch. So every platform but Linux is first compiled **at
+the moment the release archive is being produced**, which is the
+latest possible point at which a finding can still be acted on
+without re-cutting.
+
+**Twice in one series, `release.yml` found what `test.yml`
+structurally could not.** `TTY-002` added a helper to `main.rs` with
+no `#[cfg]`, dead on Windows, which `test.yml`'s own
+`RUSTFLAGS: -D warnings` would have rejected had any job compiled it
+there. And `release.yml`'s first dispatch failed on both macOS
+runners with `script: illegal option -- f` — BSD `script` is not GNU
+`script` — a difference no `ubuntu-latest` job can express. Neither
+was a hard-to-find defect; both were simply never looked for.
+
+**Opened as a class, not as a Windows item**: *a check matrix whose
+green is read as covering a population it never compiled.* This is
+`§10.36`'s own question — a check that cannot distinguish *nothing
+wrong* from *nothing examined* — asked of the platform axis instead
+of an assertion. The register's own precedents are the same shape one
+level down: `§10.46` (a list of test names cannot tell green from
+examined nothing) and `§10.2`'s descendants generally.
+
+**Why it is not merely untidy.** `0.58.0` lost a published platform
+(`§10.49`, `§10.41`'s own class recurring) and the only check that
+could have caught the cause ran on the tag. That cause is now fixed
+and guarded on Linux by `test.yml` case 7 — **on Linux**. The
+Windows and macOS halves of the same predicate are still guarded by
+nothing until a tag exists. This series added three
+platform-asymmetric `#[cfg]` pieces; the next one that is wrong will
+be found the same way.
+
+**Not scheduled by this entry.** A `windows-latest` job running
+`cargo clippy -p peisear` would close most of it cheaply;
+cross-compiling from Linux probably will not, since `libsqlite3-sys`
+builds C. macOS costs runner minutes that Linux does not. Whether the
+cost is worth paying, and in which release, is `ROADMAP.md`'s own
+table to say — this entry exists so the gap is a named defect with a
+number rather than a sentence in a closed round's report, which is
+how `§10.20`–`§10.24` came to live in two registers at once.
+
+*Found by the architect's review of `TTY-001` round 2 and reported
+forward by `TTY-002` as a finding rather than a register edit, which
+was the right division: the round brought the evidence, the entry is
+the architect's.*
+
+
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
 **Promoted from this document's own older compact register**
