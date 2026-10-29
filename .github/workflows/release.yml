@@ -400,7 +400,12 @@ jobs:
             # whatever this step started with. Opening `CONIN$` fresh
             # is the documented way to get a real handle to the
             # console just attached to, independent of that slot.
-            $hIn = [Native.Console]::CreateFile("CONIN$", 0xC0000000, 3, [IntPtr]::Zero, 3, 0, [IntPtr]::Zero)
+            # `0xC0000000` as a bare PowerShell hex literal parses as
+            # `Int32` and wraps to a negative number before it ever
+            # reaches the `[uint32]` parameter -- measured directly,
+            # the fourth attempt's own failure. The decimal literal
+            # promotes to `Int64` instead, which converts cleanly.
+            $hIn = [Native.Console]::CreateFile("CONIN$", 3221225472, 3, [IntPtr]::Zero, 3, 0, [IntPtr]::Zero)
             if ($hIn -eq [IntPtr]::Zero -or $hIn -eq [IntPtr]::op_Explicit(-1)) {
               throw "CreateFile(CONIN\$) did not produce a usable input handle, Win32 error $([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())"
             }
