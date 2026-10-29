@@ -7274,7 +7274,7 @@ is a round with its own measurement, not a clause of this one.
 withdrawn if P5 is itself withdrawn — tracked alongside `ROADMAP.md`'s
 own P5 section, not ahead of it.
 
-### 10.49 A terminal is attached, and nobody is reading it — **fixed, not yet guarded**, `TTY-001`/`TTY-002`, 0.58.1; found by the `Release` workflow's own Windows job at tag `0.58.0`, 2026-10-28
+### 10.49 A terminal is attached, and nobody is reading it — **closed**, `TTY-001`/`TTY-002`, 0.58.1; found by the `Release` workflow's own Windows job at tag `0.58.0`, 2026-10-28
 
 `wizard::should_run_wizard` is `stdin_is_terminal && !configuration_exists`
 (`crates/peisear-web/src/wizard.rs:29`). The first operand answers
@@ -7346,11 +7346,16 @@ unattended start serves, one that proves an attended start prompts.
 *Proposed for `0.58.1` in `ROADMAP.md`'s own table, which is where
 release numbers live; open until the owner authorizes that row.*
 
-**Status, set by the architect 2026-10-29 over `TTY-002`'s own
-proposal to close.** The defect is fixed on both reachable paths and
-proven so against real binaries, three times over by two different
-people. **What does not yet exist is a check that would catch it
-coming back.** This entry's own defining case — a terminal is
+**Status, set by the architect 2026-10-29, in two steps.** The entry
+was first held open at **fixed, not yet guarded** over `TTY-002`
+round 1's proposal to close: the defect was fixed on both reachable
+paths and proven against real binaries three times over by two
+different people, and still **no check would have caught it coming
+back.** Round 2 built that check (`test.yml` case 7, below) and the
+entry is now **closed**. The table is kept as written, with its last
+row filled, because the shape of the argument is the reusable part:
+the defining case of an entry is the row most likely to be the empty
+one. This entry's own defining case — a terminal is
 attached and this process is not its foreground job — is exercised by
 no automated test in this repository:
 
@@ -7375,9 +7380,20 @@ and watched case 7 fail for the right reason —
 the server itself logged `Stopped` under `SIGTTIN`, exactly this
 entry's own measurement, and the health check that never answered
 failed the step — the other six cases held throughout, so the plant
-reached only the one case it should have) — then reverted and watched
-it pass
-([40818349331](https://github.com/nabbisen/peisear/actions/runs/40818349331)).
+reached only the one case it should have) — and watched it pass with the
+fix in place
+([40821632948](https://github.com/nabbisen/peisear/actions/runs/40821632948),
+`main`'s own `CI` at the merged commit `b9e4172`, where case 7 reports
+`success` and no Rust source differs from the commit before it).
+*`TTY-002` round 2's own report cited a different run
+(`40818349331`) for this direction. That run is real and green, but it
+was dispatched at 04:32 and the planted run at 04:44, so it precedes
+the plant rather than following a revert — it is the branch's own
+pre-plant baseline, not the post-revert confirmation the report
+describes. The substance is unaffected and is in fact stronger at the
+merged commit cited above, which is the state that shipped; the
+citation is corrected here rather than left to read as a sequence that
+did not happen.*
 **A fix proven by hand is a fix; it is not a guard, and now it has
 one** — this register's own `§10.36` is the general question of what a
 green check can and cannot tell, answered here for this entry's own
