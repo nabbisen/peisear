@@ -348,7 +348,17 @@ jobs:
           # (the YAML parser rejected the first draft at exactly that
           # line) rather than assumed from either language's own docs
           # alone.
-          $nativeConsoleSrc = '[DllImport("kernel32.dll", SetLastError = true)] public static extern bool FreeConsole(); [DllImport("kernel32.dll", SetLastError = true)] public static extern bool AttachConsole(uint dwProcessId); [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr GetStdHandle(int nStdHandle); [DllImport("kernel32.dll", SetLastError = true)] public static extern bool WriteConsoleInput(IntPtr hConsoleInput, INPUT_RECORD[] lpBuffer, uint nLength, out uint lpNumberOfEventsWritten); [StructLayout(LayoutKind.Sequential)] public struct KEY_EVENT_RECORD { [MarshalAs(UnmanagedType.Bool)] public bool bKeyDown; public ushort wRepeatCount; public ushort wVirtualKeyCode; public ushort wVirtualScanCode; public char UnicodeChar; public uint dwControlKeyState; } [StructLayout(LayoutKind.Explicit)] public struct INPUT_RECORD { [FieldOffset(0)] public ushort EventType; [FieldOffset(4)] public KEY_EVENT_RECORD KeyEvent; }'
+          # `CharSet = CharSet.Unicode` on both the P/Invoke signature and
+          # the struct: left at C#'s own default (`Ansi`) the first time,
+          # which marshals `char UnicodeChar` as a 1-byte `CHAR` instead
+          # of the native 2-byte `WCHAR` -- a layout defect that would
+          # misplace every field after it, not just this one. Measured
+          # before fixing it, not assumed: the first attempt's own
+          # `WriteConsoleInput` call reached a real, now-attached
+          # console (the wizard's first question was already visible in
+          # the log) and still wrote 0 of 2 records, consistent with a
+          # malformed buffer the call rejected outright.
+          $nativeConsoleSrc = '[DllImport("kernel32.dll", SetLastError = true)] public static extern bool FreeConsole(); [DllImport("kernel32.dll", SetLastError = true)] public static extern bool AttachConsole(uint dwProcessId); [DllImport("kernel32.dll", SetLastError = true)] public static extern IntPtr GetStdHandle(int nStdHandle); [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)] public static extern bool WriteConsoleInput(IntPtr hConsoleInput, INPUT_RECORD[] lpBuffer, uint nLength, out uint lpNumberOfEventsWritten); [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)] public struct KEY_EVENT_RECORD { [MarshalAs(UnmanagedType.Bool)] public bool bKeyDown; public ushort wRepeatCount; public ushort wVirtualKeyCode; public ushort wVirtualScanCode; public char UnicodeChar; public uint dwControlKeyState; } [StructLayout(LayoutKind.Explicit)] public struct INPUT_RECORD { [FieldOffset(0)] public ushort EventType; [FieldOffset(4)] public KEY_EVENT_RECORD KeyEvent; }'
           Add-Type -Namespace Native -Name Console -MemberDefinition $nativeConsoleSrc
 
           function Send-EnterKey([IntPtr]$hIn) {
@@ -361,7 +371,8 @@ jobs:
             $up = $down
             $up.KeyEvent.bKeyDown = $false
             $written = 0
-            [Native.Console]::WriteConsoleInput($hIn, @($down, $up), 2, [ref]$written) | Out-Null
+            $ok = [Native.Console]::WriteConsoleInput($hIn, @($down, $up), 2, [ref]$written)
+            if (-not $ok) { throw "WriteConsoleInput returned false, Win32 error $([System.Runtime.InteropServices.Marshal]::GetLastWin32Error())" }
             if ($written -ne 2) { throw "WriteConsoleInput wrote $written of 2 records" }
           }
 
