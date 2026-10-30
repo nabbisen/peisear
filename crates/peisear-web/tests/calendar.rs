@@ -58,13 +58,21 @@ async fn migration_0016_adds_planned_columns_and_existing_rows_are_null() {
     let user_id = register_and_login(&app, &user).await;
     let project_id = create_personal_project(&app.db, &user_id, "Test").await;
 
-    let cols: Vec<(String,)> =
-        sqlx::query_as("SELECT name FROM pragma_table_info('issues') WHERE name IN (?1, ?2)")
-            .bind("planned_start_at")
-            .bind("planned_end_at")
-            .fetch_all(&app.db)
-            .await
-            .expect("read pragma_table_info");
+    // `SUP-002`: `pragma_table_info` is SQLite's own function, with
+    // no PostgreSQL equivalent -- `information_schema.columns` is
+    // the portable way to ask the same question there.
+    #[cfg(feature = "sqlite")]
+    const COLUMN_QUERY: &str =
+        "SELECT name FROM pragma_table_info('issues') WHERE name IN (?1, ?2)";
+    #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
+    const COLUMN_QUERY: &str = "SELECT column_name FROM information_schema.columns \
+         WHERE table_name = 'issues' AND column_name IN ($1, $2)";
+    let cols: Vec<(String,)> = sqlx::query_as(COLUMN_QUERY)
+        .bind("planned_start_at")
+        .bind("planned_end_at")
+        .fetch_all(&app.db)
+        .await
+        .expect("read column metadata");
     assert_eq!(
         cols.len(),
         2,

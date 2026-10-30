@@ -29,7 +29,8 @@ use peisear_storage::issues::IssueFields;
 use peisear_storage::{issues, projects, sprints, view_states};
 
 async fn read_updated_at(app: &TestApp, table: &str, id_column: &str, id: &str) -> DateTime<Utc> {
-    let query = format!("SELECT updated_at FROM {table} WHERE {id_column} = ?1");
+    let raw = format!("SELECT updated_at FROM {table} WHERE {id_column} = ?1");
+    let query = peisear_storage::dialect::sql(&raw);
     let (updated_at,): (DateTime<Utc>,) = sqlx::query_as(&query)
         .bind(id)
         .fetch_one(&app.db)

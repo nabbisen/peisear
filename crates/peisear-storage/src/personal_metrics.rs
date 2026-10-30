@@ -267,13 +267,17 @@ pub async fn for_user_in_project(
         FROM issues
         WHERE assignee_id = $1 AND project_id = $2
         "#;
-    let row: (i64, Option<i64>, i64, i64) = sqlx::query_as(&crate::dialect::sql(WIP_QUERY))
-        .bind(user_id.as_str())
-        .bind(project_id)
-        .bind(format!("-{} days", PERSONAL_ACTIVITY_WINDOW_DAYS))
-        .bind(PERSONAL_ACTIVITY_WINDOW_DAYS)
-        .fetch_one(pool)
-        .await?;
+    // `SUP-002`: see the identically-shaped query's own comment in
+    // [`for_user_global`] above -- `SUM` over zero matching rows is
+    // `NULL` on every backend, not only PostgreSQL.
+    let row: (Option<i64>, Option<i64>, Option<i64>, Option<i64>) =
+        sqlx::query_as(&crate::dialect::sql(WIP_QUERY))
+            .bind(user_id.as_str())
+            .bind(project_id)
+            .bind(format!("-{} days", PERSONAL_ACTIVITY_WINDOW_DAYS))
+            .bind(PERSONAL_ACTIVITY_WINDOW_DAYS)
+            .fetch_one(pool)
+            .await?;
 
     let (current_wip, in_flight_points, recent_done_count, long_stale_count) = row;
 
@@ -292,11 +296,11 @@ pub async fn for_user_in_project(
         user_id: user_id.as_str().to_string(),
         display_name,
         effective_wip_limit,
-        current_wip,
+        current_wip: current_wip.unwrap_or(0),
         in_flight_points: in_flight_points.unwrap_or(0),
         capacity_points,
-        recent_done_count,
-        long_stale_count,
+        recent_done_count: recent_done_count.unwrap_or(0),
+        long_stale_count: long_stale_count.unwrap_or(0),
         estimation_skew_days_per_point: skew,
     }))
 }
@@ -411,12 +415,22 @@ pub async fn for_user_global(
         FROM issues
         WHERE assignee_id = $1
         "#;
-    let row: (i64, Option<i64>, i64, i64) = sqlx::query_as(&crate::dialect::sql(WIP_QUERY))
-        .bind(user_id.as_str())
-        .bind(format!("-{} days", PERSONAL_ACTIVITY_WINDOW_DAYS))
-        .bind(PERSONAL_ACTIVITY_WINDOW_DAYS)
-        .fetch_one(pool)
-        .await?;
+    // `SUP-002`: all four columns are `SUM(...)` over `issues` rows
+    // scoped to this user, and `SUM` over zero matching rows is SQL
+    // `NULL` on every backend -- a user with no in-progress, no
+    // recently-done and no long-stale issues hits this on their very
+    // first visit. Decoded as `Option<i64>` and defaulted to 0 for
+    // that reason, not a backend difference: `sqlx-sqlite` happened
+    // to decode a `NULL` into a plain `i64` here regardless, which
+    // masked the same defect `in_flight_points` (below) was already
+    // written to expect.
+    let row: (Option<i64>, Option<i64>, Option<i64>, Option<i64>) =
+        sqlx::query_as(&crate::dialect::sql(WIP_QUERY))
+            .bind(user_id.as_str())
+            .bind(format!("-{} days", PERSONAL_ACTIVITY_WINDOW_DAYS))
+            .bind(PERSONAL_ACTIVITY_WINDOW_DAYS)
+            .fetch_one(pool)
+            .await?;
 
     let (current_wip, in_flight_points, recent_done_count, long_stale_count) = row;
 
@@ -427,11 +441,11 @@ pub async fn for_user_global(
         user_id: user_id.as_str().to_string(),
         display_name,
         effective_wip_limit,
-        current_wip,
+        current_wip: current_wip.unwrap_or(0),
         in_flight_points: in_flight_points.unwrap_or(0),
         capacity_points,
-        recent_done_count,
-        long_stale_count,
+        recent_done_count: recent_done_count.unwrap_or(0),
+        long_stale_count: long_stale_count.unwrap_or(0),
         estimation_skew_days_per_point: skew,
     }))
 }

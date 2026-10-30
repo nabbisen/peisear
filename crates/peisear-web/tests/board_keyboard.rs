@@ -262,21 +262,24 @@ async fn board_contains_no_prohibited_vocabulary() {
 // -------------------------------------------------------------------
 
 async fn read_issue_updated_at(app: &TestApp, issue_id: &str) -> String {
-    let (updated_at,): (DateTime<Utc>,) =
-        sqlx::query_as(r#"SELECT updated_at FROM issues WHERE id = ?1"#)
-            .bind(issue_id)
-            .fetch_one(&app.db)
-            .await
-            .expect("read updated_at");
+    let (updated_at,): (DateTime<Utc>,) = sqlx::query_as(&peisear_storage::dialect::sql(
+        r#"SELECT updated_at FROM issues WHERE id = ?1"#,
+    ))
+    .bind(issue_id)
+    .fetch_one(&app.db)
+    .await
+    .expect("read updated_at");
     updated_at.to_rfc3339()
 }
 
 async fn read_issue_status(app: &TestApp, issue_id: &str) -> String {
-    let (status,): (String,) = sqlx::query_as(r#"SELECT status FROM issues WHERE id = ?1"#)
-        .bind(issue_id)
-        .fetch_one(&app.db)
-        .await
-        .expect("read issue status");
+    let (status,): (String,) = sqlx::query_as(&peisear_storage::dialect::sql(
+        r#"SELECT status FROM issues WHERE id = ?1"#,
+    ))
+    .bind(issue_id)
+    .fetch_one(&app.db)
+    .await
+    .expect("read issue status");
     status
 }
 

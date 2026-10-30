@@ -1002,7 +1002,13 @@ pub async fn burndown(pool: &Pool, sprint_id: &str) -> StorageResult<Vec<Burndow
         let mut conn = pool.acquire().await?;
         return burndown_live(&mut conn, &sprint).await;
     }
-    let has_record: Option<i64> = sqlx::query_scalar(&crate::dialect::sql(
+    // `SUP-002`: `i32`, not `i64` -- the literal `1` is PostgreSQL's
+    // own `int4` by default, and `sqlx-postgres` decodes strictly by
+    // OID rather than widening; `i64` there failed with `ColumnDecode`
+    // (`"INT8" incompatible with "INT4"`). SQLite has no such
+    // distinction and accepted either width, which is why this was
+    // never seen until a real server read it.
+    let has_record: Option<i32> = sqlx::query_scalar(&crate::dialect::sql(
         "SELECT 1 FROM sprint_records WHERE sprint_id = ?1",
     ))
     .bind(sprint_id)

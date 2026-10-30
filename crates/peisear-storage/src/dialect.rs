@@ -335,7 +335,7 @@ pub(crate) fn stale_guard(n: u32) -> String {
 /// PostgreSQL (`42601`), found by `CON-002` reaching one of them in a
 /// real `postgres` CI run for the first time. Every one of the
 /// fourteen now opens its transaction through [`begin_guarded`]
-/// instead, and takes whichever of [`for_update`], [`lock_scope`] or
+/// instead, and takes whichever of `for_update`, [`lock_scope`] or
 /// `user_capacities`'s own advisory-lock wrapper its own classified
 /// shape needs (`CON-005` round 1's own classification, accepted with
 /// one correction in review): a single row that already exists and
@@ -345,8 +345,14 @@ pub(crate) fn stale_guard(n: u32) -> String {
 /// functions is `BEGIN IMMEDIATE` or a no-op, byte for byte, unmoved
 /// by this round** — the SQLite path loses nothing, `RFC 018`'s own
 /// condition at every phase.
+///
+/// `pub`, not `pub(crate)` (`SUP-002`): `race_guards.rs` needs the
+/// exact mechanism a guarded write holds to simulate one being held,
+/// the same reason it was worth exporting rather than a test-only
+/// reimplementation of `BEGIN IMMEDIATE`-or-nothing that could drift
+/// from the real seam.
 #[cfg(feature = "sqlite")]
-pub(crate) async fn begin_guarded(pool: &Pool) -> crate::StorageResult<Tx<'static>> {
+pub async fn begin_guarded(pool: &Pool) -> crate::StorageResult<Tx<'static>> {
     Ok(pool.begin_with("BEGIN IMMEDIATE").await?)
 }
 
@@ -371,7 +377,7 @@ pub(crate) async fn begin_guarded(pool: &Pool) -> crate::StorageResult<Tx<'stati
 /// a new bound on this backend, not a new meaning for the error it
 /// produces.
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
-pub(crate) async fn begin_guarded(pool: &Pool) -> crate::StorageResult<Tx<'static>> {
+pub async fn begin_guarded(pool: &Pool) -> crate::StorageResult<Tx<'static>> {
     let mut tx = pool.begin().await?;
     sqlx::query("SET LOCAL lock_timeout = '5s'")
         .execute(&mut *tx)
@@ -404,7 +410,7 @@ pub(crate) fn for_update() -> &'static str {
 /// predicate over sibling rows that **all already exist** (a team's
 /// sprints, a team's memberships), scoped by a shared key the self
 /// row is always a member of. A no-op on SQLite, matching
-/// [`for_update`]'s own reasoning: `BEGIN IMMEDIATE` already holds
+/// `for_update`'s own reasoning: `BEGIN IMMEDIATE` already holds
 /// the lock this would otherwise take. `table`/`column` are call-site
 /// literals, never attacker- or user-influenced text — only `key`
 /// carries a caller's value, and it is bound, never interpolated.
@@ -422,8 +428,12 @@ pub(crate) fn for_update() -> &'static str {
 /// primary key is `(team_id, user_id)`), found by this function's own
 /// first real run against a server, not read from the schema first —
 /// `42703`, `column "id" does not exist`.
+///
+/// `pub`, not `pub(crate)` (`SUP-002`, same reason as
+/// [`begin_guarded`]): `race_guards.rs` needs this exact scope lock to
+/// simulate one being held, not a reimplementation.
 #[cfg(feature = "sqlite")]
-pub(crate) async fn lock_scope(
+pub async fn lock_scope(
     _tx: &mut Tx<'_>,
     _table: &str,
     _column: &str,
@@ -435,7 +445,7 @@ pub(crate) async fn lock_scope(
 
 /// PostgreSQL's own body of [`lock_scope`] (above).
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
-pub(crate) async fn lock_scope(
+pub async fn lock_scope(
     tx: &mut Tx<'_>,
     table: &str,
     column: &str,

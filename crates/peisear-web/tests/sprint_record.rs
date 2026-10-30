@@ -75,13 +75,15 @@ impl World {
 
     async fn issue(&self, title: &str, effort: i64, status: &str) -> String {
         let id = create_issue(&self.app.db, &self.project_id, &self.admin_id, title).await;
-        sqlx::query("UPDATE issues SET effort = ?2, status = ?3 WHERE id = ?1")
-            .bind(&id)
-            .bind(effort)
-            .bind(status)
-            .execute(&self.app.db)
-            .await
-            .expect("set effort and status");
+        sqlx::query(&peisear_storage::dialect::sql(
+            "UPDATE issues SET effort = ?2, status = ?3 WHERE id = ?1",
+        ))
+        .bind(&id)
+        .bind(effort)
+        .bind(status)
+        .execute(&self.app.db)
+        .await
+        .expect("set effort and status");
         id
     }
 
@@ -109,12 +111,13 @@ impl World {
     }
 
     async fn stamp(&self, sprint: &str) -> String {
-        let (t,): (chrono::DateTime<chrono::Utc>,) =
-            sqlx::query_as("SELECT updated_at FROM sprints WHERE id = ?1")
-                .bind(sprint)
-                .fetch_one(&self.app.db)
-                .await
-                .unwrap();
+        let (t,): (chrono::DateTime<chrono::Utc>,) = sqlx::query_as(
+            &peisear_storage::dialect::sql("SELECT updated_at FROM sprints WHERE id = ?1"),
+        )
+        .bind(sprint)
+        .fetch_one(&self.app.db)
+        .await
+        .unwrap();
         t.to_rfc3339()
     }
 
@@ -128,11 +131,13 @@ impl World {
     }
 
     async fn status_of(&self, sprint: &str) -> (String, Option<String>) {
-        sqlx::query_as("SELECT status, CAST(completed_at AS TEXT) FROM sprints WHERE id = ?1")
-            .bind(sprint)
-            .fetch_one(&self.app.db)
-            .await
-            .unwrap()
+        sqlx::query_as(&peisear_storage::dialect::sql(
+            "SELECT status, CAST(completed_at AS TEXT) FROM sprints WHERE id = ?1",
+        ))
+        .bind(sprint)
+        .fetch_one(&self.app.db)
+        .await
+        .unwrap()
     }
 }
 
@@ -182,11 +187,13 @@ async fn carrying_an_issue_over_and_finishing_it_does_not_move_the_completed_spr
         "carried over: the completed sprint's record must not move"
     );
 
-    sqlx::query("UPDATE issues SET status = 'done' WHERE id = ?1")
-        .bind(&open)
-        .execute(&w.app.db)
-        .await
-        .unwrap();
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET status = 'done' WHERE id = ?1",
+    ))
+    .bind(&open)
+    .execute(&w.app.db)
+    .await
+    .unwrap();
     assert_eq!(
         w.record(&sprint).await,
         reported,
@@ -250,35 +257,41 @@ async fn the_record_is_stable_against_all_four_inputs() {
     let (sprint, done, open) = w.completed_sprint("S1").await;
     let reported = w.record(&sprint).await;
 
-    sqlx::query("UPDATE issues SET status = 'done' WHERE id = ?1")
-        .bind(&open)
-        .execute(&w.app.db)
-        .await
-        .unwrap();
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET status = 'done' WHERE id = ?1",
+    ))
+    .bind(&open)
+    .execute(&w.app.db)
+    .await
+    .unwrap();
     assert_eq!(w.record(&sprint).await, reported, "status");
 
-    sqlx::query("UPDATE issues SET effort = 100 WHERE id IN (?1, ?2)")
-        .bind(&done)
-        .bind(&open)
-        .execute(&w.app.db)
-        .await
-        .unwrap();
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET effort = 100 WHERE id IN (?1, ?2)",
+    ))
+    .bind(&done)
+    .bind(&open)
+    .execute(&w.app.db)
+    .await
+    .unwrap();
     assert_eq!(w.record(&sprint).await, reported, "effort");
 
-    sqlx::query(
+    sqlx::query(&peisear_storage::dialect::sql(
         "UPDATE issues SET title = 'edited', updated_at = '2031-01-01 00:00:00' WHERE id = ?1",
-    )
+    ))
     .bind(&done)
     .execute(&w.app.db)
     .await
     .unwrap();
     assert_eq!(w.record(&sprint).await, reported, "updated_at (any edit)");
 
-    sqlx::query("DELETE FROM sprint_issues WHERE sprint_id = ?1")
-        .bind(&sprint)
-        .execute(&w.app.db)
-        .await
-        .unwrap();
+    sqlx::query(&peisear_storage::dialect::sql(
+        "DELETE FROM sprint_issues WHERE sprint_id = ?1",
+    ))
+    .bind(&sprint)
+    .execute(&w.app.db)
+    .await
+    .unwrap();
     assert_eq!(w.record(&sprint).await, reported, "membership");
 }
 
@@ -288,11 +301,13 @@ async fn the_record_is_stable_against_all_four_inputs() {
 async fn a_completed_sprint_with_no_record_is_an_error_not_a_live_figure() {
     let w = world().await;
     let (sprint, _done, _open) = w.completed_sprint("S1").await;
-    sqlx::query("DELETE FROM sprint_records WHERE sprint_id = ?1")
-        .bind(&sprint)
-        .execute(&w.app.db)
-        .await
-        .unwrap();
+    sqlx::query(&peisear_storage::dialect::sql(
+        "DELETE FROM sprint_records WHERE sprint_id = ?1",
+    ))
+    .bind(&sprint)
+    .execute(&w.app.db)
+    .await
+    .unwrap();
     assert!(matches!(
         sprints::summary(&w.app.db, &sprint).await,
         Err(StorageError::InvalidData(_))
@@ -343,10 +358,10 @@ async fn reopen_returns_the_sprint_to_active_and_makes_it_live_again() {
         0,
         "reopened: out of the velocity list"
     );
-    let records: i64 = sqlx::query_scalar(
+    let records: i64 = sqlx::query_scalar(&peisear_storage::dialect::sql(
         "SELECT (SELECT COUNT(*) FROM sprint_records WHERE sprint_id = ?1)
               + (SELECT COUNT(*) FROM sprint_burndown_points WHERE sprint_id = ?1)",
-    )
+    ))
     .bind(&sprint)
     .fetch_one(&w.app.db)
     .await
@@ -355,11 +370,13 @@ async fn reopen_returns_the_sprint_to_active_and_makes_it_live_again() {
 
     let live = format!("{:?}", sprints::summary(&w.app.db, &sprint).await.unwrap());
     assert!(live.contains("committed_points: 8") && live.contains("carried_over_points: 0"));
-    sqlx::query("UPDATE issues SET status = 'done' WHERE id = ?1")
-        .bind(&open)
-        .execute(&w.app.db)
-        .await
-        .unwrap();
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET status = 'done' WHERE id = ?1",
+    ))
+    .bind(&open)
+    .execute(&w.app.db)
+    .await
+    .unwrap();
     let live = format!("{:?}", sprints::summary(&w.app.db, &sprint).await.unwrap());
     assert!(
         live.contains("completed_points: 8"),
@@ -378,11 +395,13 @@ async fn complete_reopen_correct_complete_recaptures_afresh() {
 
     w.reopen(&sprint).await.assert_status(StatusCode::SEE_OTHER);
     // the correction: the unfinished work was in fact finished, and re-estimated
-    sqlx::query("UPDATE issues SET status = 'done', effort = 6 WHERE id = ?1")
-        .bind(&open)
-        .execute(&w.app.db)
-        .await
-        .unwrap();
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET status = 'done', effort = 6 WHERE id = ?1",
+    ))
+    .bind(&open)
+    .execute(&w.app.db)
+    .await
+    .unwrap();
     // and an unassign (which no longer refuses anything)
     w.app
         .server
@@ -558,12 +577,13 @@ async fn simultaneous_reopens_in_one_team_leave_one_active() {
             )
         })
         .count();
-    let active: i64 =
-        sqlx::query_scalar("SELECT COUNT(*) FROM sprints WHERE team_id = ?1 AND status = 'active'")
-            .bind(&w.team_id)
-            .fetch_one(&db)
-            .await
-            .unwrap();
+    let active: i64 = sqlx::query_scalar(&peisear_storage::dialect::sql(
+        "SELECT COUNT(*) FROM sprints WHERE team_id = ?1 AND status = 'active'",
+    ))
+    .bind(&w.team_id)
+    .fetch_one(&db)
+    .await
+    .unwrap();
     let records: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM sprint_records")
         .fetch_one(&db)
         .await
