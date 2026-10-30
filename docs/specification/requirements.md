@@ -6704,7 +6704,11 @@ and state what was checked.**
 the assertion is right and **its input is empty for a reason it never asks
 about**, so it reports success having looked at nothing.
 
-Five instances, all measured, all from the last two releases:
+Seven instances, all measured. The first five were all from the two
+releases before 0.50.0; instances 6 and 7 are later, and **the count in
+this sentence is corrected each time a row is added** rather than left
+reading *five* over a longer table, which would be this entry's own
+class applied to this entry.
 
 | # | Instance | How it ended |
 |---|---|---|
@@ -6714,6 +6718,7 @@ Five instances, all measured, all from the last two releases:
 | 4 | A redactor exercised only on input with nothing to redact | Avoided in `SEC-001` §1, by instruction |
 | 5 | The round-trip test stopped catching truncation while a flake was being fixed — both sides of the comparison lost the same digits | `REG-001` §2, **introduced after this class was named** |
 | 6 | `docs_scan` rule 4's own `config.rs` lookup anchors on literal text (`env::var("DATABASE_URL")`); sharing a constant between `config.rs` and `wizard::env_file` moved that literal, and the `if let` consuming the lookup's `Option` simply did not match — zero violations, nothing examined | Found running the full suite after the change, before shipping it (`WIZ-002`); reverted, and the rule now asserts each lookup itself succeeded rather than trusting it |
+| 7 | **`DEC-028`'s sweep reported run over both specifications while one of them was never touched.** `external-design.md` received no amendment at 0.58.0 or 0.58.1 (last commit `692c20f`, the 0.57.0 cut); `requirements.md`'s Appendix C has no row for 0.57.0, 0.58.0 or 0.58.1; both documents' headers have read *Covers release: `0.53.0`* since 2026-10-15, through six releases. **The evidence of the sweep is a document edit, and no edit is indistinguishable from a sweep that found nothing to edit** — 0.54.0 through 0.57.0 each wrote an Appendix C row saying *"no screen, route, state or copy changed"*, so the row is owed by the release happening, not by the content changing. 0.58.1's candidate searched the document for that release's new identifiers, found zero hits, and inferred no amendment was owed; the search was right and the inference was not. No guard exists: `spec_scan`'s four rules read `§10.N` citations, the four-digit `RFC` form and Appendix A's arithmetic and census, and none reads a document header | Found by the architect while assembling `REL-0.59.0`, 2026-10-31; repaired at that cut (`REL-0.59.0` §3), and a `spec_scan` rule for it is a `ROADMAP.md` candidate rather than scheduled. **The lapse is the architect's**, in both candidates and both reviews |
 
 **Instance 5 is the one worth stating plainly.** The class was already written
 down and under review when a careful round reintroduced it anyway, while
@@ -6721,7 +6726,7 @@ fixing something else. The rule is not "remember this"; it is a question to
 ask of a green check: **what did it examine, and how would I know if the
 answer were nothing?**
 
-**Instance 6 is the first of the six caught by the change that would have
+**Instance 6 is still the only one of the seven caught by the change that would have
 caused it, before that change shipped, rather than after.** And the refactor
 it broke was itself the better code: sharing one constant between a writer
 and a reader is a real improvement over two independent literals that could
