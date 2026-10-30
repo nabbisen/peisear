@@ -58,13 +58,55 @@ run it, see [Build from source](build-from-source.md) instead — that
 path clones the repository and builds from a checkout, which this one
 does not.)
 
+## Running against PostgreSQL instead
+
+**Only Option C reaches it.** The five archives in Option A and the
+container image in Option B are all built against SQLite only — the
+same way `cargo install peisear` above is, by default. PostgreSQL is
+a real, proven backend (`RFC 018` P4; `peisear-storage`'s own suite
+and all 33 `peisear-web` integration binaries run against a real
+server in CI, unfiltered), reached today by building from source with
+the feature named instead of the default:
+
+```bash
+cargo install peisear --no-default-features --features postgres
+DATABASE_URL=postgres://user:password@host:5432/dbname JWT_SECRET=$(openssl rand -base64 48) peisear
+#   → http://localhost:3000
+```
+
+**`--no-default-features` is not optional here.** `peisear`'s own
+`postgres` feature adds the PostgreSQL driver; it does not remove the
+SQLite one, since Cargo features are additive. Leaving
+`--no-default-features` off installs a binary carrying both drivers —
+nothing is wrong with that build, but it defeats the one thing naming
+the feature is for, and `§10.48`'s own closing fix (`SUP-001`) is what
+makes the command above produce a binary that links PostgreSQL's
+driver alone.
+
+**No wizard on this path.** The first-run wizard ([First
+run](first-run.md)) only ever writes a SQLite `.env`; a PostgreSQL
+`DATABASE_URL` has no filesystem path to persist a generated signing
+key beside; either way, this backend expects both `DATABASE_URL` and
+`JWT_SECRET` set explicitly before the first start, not discovered
+interactively. [Configuration](configuration.md) covers `DATABASE_URL`'s
+own PostgreSQL form; [Scaling](../operations/scaling.md) covers why you
+would reach for this at all.
+
+**Proven against `postgres:17`.** That is the one version this
+project's own CI and this claim are both measured against — a range
+of one, stated as what was actually run rather than a guess at what
+the PostgreSQL ecosystem supports more broadly.
+
 ## What you'll see
 
-Whichever path you took, the server starts with no configuration
-required — `JWT_SECRET` is generated on first run and persisted beside
-the database (see [Configuration](configuration.md) if you want to set
-one yourself, or need to point at a different database). Register an
-account, and you land on an empty project list:
+Whichever of Options A–C you took on the default, SQLite path, the
+server starts with no configuration required — `JWT_SECRET` is
+generated on first run and persisted beside the database (see
+[Configuration](configuration.md) if you want to set one yourself, or
+need to point at a different database). On the PostgreSQL path above,
+you set `DATABASE_URL` and `JWT_SECRET` yourself before this point,
+so this is where that explicit start lands you too. Either way,
+register an account, and you land on an empty project list:
 
 ![The empty projects page right after registering: "No projects yet," with a "Create your first project" button](../src/assets/screenshots/projects_empty.png)
 

@@ -103,17 +103,18 @@ spelling. See
 for what shipped in which release and why the reason was stability
 and security, not scale.
 
-**Running peisear on PostgreSQL is not a supported configuration at
-0.56.0.** The distinction is a property, not a count — a count would
-be truer today and wrong by the next release: `peisear-storage`'s own
-storage suite and the optimistic-locking tests in three of
-`peisear-web`'s integration-test files run against a real PostgreSQL
-server in CI (`RFC 018` P4); the other thirty do not, among them the
-only tests proving two **P0** privacy controls
-(`NFR-PRIV-007`'s contributor floor, `NFR-PRIV-001`'s capacity
-visibility) that PostgreSQL's own queries enforce in different SQL
-than SQLite's. A property nobody has measured is not a property that
-holds, whatever a build flag suggests.
+**Running peisear on PostgreSQL is a supported configuration as of
+`0.59.0`** (`RFC 021`), reached by `cargo install` with the feature
+named — see [Install](../getting-started/install.md)'s own "Running
+against PostgreSQL instead." The distinction that mattered before this
+release was a property, not a count, and the property is now measured
+rather than assumed: all 33 of `peisear-web`'s integration-test files
+run against a real PostgreSQL server in CI, unfiltered (`SUP-002`),
+including the two **P0** privacy controls (`NFR-PRIV-007`'s
+contributor floor, `NFR-PRIV-001`'s capacity visibility) that
+PostgreSQL's own queries enforce in different SQL than SQLite's — the
+exact gap that, before `SUP-002`, three lock-test files and the
+storage suite alone could not have proven either way.
 
 **The guarantee every guarded write depends on is now proven on both
 backends.** Earlier in 0.56.0, no guarded write executed on PostgreSQL
@@ -141,31 +142,20 @@ it: generate a real secret
 (`openssl rand -base64 48` or any CSPRNG you trust) and set it
 alongside `DATABASE_URL`.
 
-**What this does not yet give you**: a conformance suite proving the
-*other* thirty integration-test files against a real PostgreSQL server
-(37 of 335 run today; `RFC 018` P4's own gate is met for the suite it
-named, not for the other thirty — see above); a way to carry an
-*existing* SQLite installation's data across — the feature is a second
-backend to start fresh with, not a converter, and `peisear migrate`
-does not exist; and **a supported path to run it at all**. The
-release artefacts are unchanged: the same five per-platform archives,
-the same single container tag, and `cargo install peisear` still
-builds against `sqlite` only. Building `peisear`/`peisear-web` with
-`--no-default-features --features postgres` compiles and links today
-— that is what "selectable at build time" means — but it is an
-informed choice a reader makes from source, not a documented,
-supported command, and this document does not give you one.
+**What this still does not give you**: a way to carry an *existing*
+SQLite installation's data across — the feature is a second backend
+to start fresh with, not a converter, and `peisear migrate` does not
+exist; and **a second set of release artefacts**. The archives in
+[Install](../getting-started/install.md)'s Option A and the container
+image in Option B are unchanged — the same five per-platform
+archives, the same single container tag, both SQLite only.
+`cargo install` with the feature named (Option C's own PostgreSQL
+note) is the one supported path, not a fourth artefact shape; a
+second archive set or container tag is its own, separate proposal,
+not implied by this one.
 
-**What would earn support**: the full `peisear-web` integration suite
-— all 335 tests, not 37 of them — running against a real PostgreSQL
-server, after which a documented and walked `cargo install` path, and
-only then the question of a second archive set and container tag.
-**Not scheduled.** `ROADMAP.md`'s own P5 names this as the next step
-and is written down there so it is taken deliberately rather than
-reached by drift from a passthrough that already exists.
-
-If you need this sooner, that's the most useful operator feedback we
-can get; an issue describing your scale and timeline is welcome.
+If you need those, that's the most useful operator feedback we can
+get; an issue describing your scale and timeline is welcome.
 
 ## What the background task does under load
 

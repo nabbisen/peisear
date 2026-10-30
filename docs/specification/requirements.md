@@ -3624,6 +3624,27 @@ and `image.yml`'s walk
 ([39008243647](https://github.com/nabbisen/peisear/actions/runs/39008243647))
 both still answer `register: 303` / `authenticated /projects: 200` —
 moving `static/` broke nothing else.
+
+*Amendment (`SUP-003`, 0.59.0) — a fourth path, reached by a fourth
+command on the artefact it actually is.* `docs/getting-started/install.md`
+documents a second shape of `cargo install`: `--no-default-features
+--features postgres`, the only install path that reaches PostgreSQL
+(`RFC 021` §4 condition (1), unblocked by `SUP-002` proving the suite
+first). **Status unchanged, Implemented** — this is the same
+requirement applied to a path this document now offers, not a new
+property: `test.yml`'s postgres job gained `cargo install --path
+crates/peisear --no-default-features --features postgres` to a
+scratch root, then the installed binary run from `$RUNNER_TEMP` —
+outside the checkout, the same shape the SQLite install walk already
+used — to a register → authenticated-`/projects` round trip against
+the job's own real server. Run for real
+([40993219816](https://github.com/nabbisen/peisear/actions/runs/40993219816),
+job `peisear-web and peisear-storage (postgres feature, real
+server)`): both new steps `success`, `register: 303`,
+`authenticated /projects: 200`. **Not a fifth path and not a second
+artefact set**: the archives and the container image are unchanged,
+SQLite only — this amendment is Option C's own second command, walked
+the same way Option C's first one already was.
 *Priority*: P1.
 
 **NFR-REL-008 — Published API documentation**
