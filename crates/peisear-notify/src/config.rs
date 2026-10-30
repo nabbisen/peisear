@@ -145,11 +145,22 @@ impl SmtpConfig {
                 );
             }
             None => {
+                // `SUP-004`: names no variable, rather than four of
+                // the seven as though they were the set. The warning
+                // used to name `SMTP_HOST`/`SMTP_USER`/`SMTP_PASSWORD`/
+                // `SMTP_FROM_ADDRESS` -- the four [`from_env`] checks
+                // directly -- and an operator who set exactly those
+                // four and found the channel still wrong had been
+                // taught the subset by the one message this crate
+                // volunteers. Pointing at the docs instead costs
+                // nothing when the set changes; a name list here
+                // would need to stay in sync with `from_env` by hand,
+                // the same `§10.36`-shaped drift this project already
+                // avoids in its own checks.
                 tracing::warn!(
-                    "SMTP not configured (set SMTP_HOST, SMTP_USER, SMTP_PASSWORD, \
-                     SMTP_FROM_ADDRESS to enable the email channel). The email \
-                     channel will fail at send time; in-app delivery continues \
-                     to work."
+                    "SMTP not configured -- see Configuration's own \"Email (SMTP)\" \
+                     section for all seven variables. The email channel will fail \
+                     at send time; in-app delivery continues to work."
                 );
             }
         }
