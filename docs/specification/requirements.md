@@ -7601,6 +7601,68 @@ was the right division: the round brought the evidence, the entry is
 the architect's.*
 
 
+### 10.51 A malformed value read as its own absence — **open**, found by the architect's review of `SUP-004`, 0.59.0, 2026-10-31
+
+**Two variables in `peisear-notify`'s own `SmtpConfig::from_env`
+discard an operator's declared value without saying so**, measured at
+`c53e7bc`:
+
+```rust
+let port = env::var("SMTP_PORT")
+    .ok().and_then(|s| s.parse::<u16>().ok())
+    .unwrap_or(465);
+let tls_mode = env::var("SMTP_TLS_MODE")
+    .ok().and_then(|s| TlsMode::from_str_loose(&s))
+    .unwrap_or_else(|| TlsMode::default_for_port(port));
+```
+
+`SMTP_TLS_MODE=startls` — one transposed letter — parses to `None`
+and silently becomes whatever the port implies. `SMTP_PORT=5877`
+likewise falls back to `465`, **and because the TLS mode derives from
+the port, a malformed port silently changes the transport security
+too.** Nothing is logged in either case. The operator stated an
+intent and the product ignored it.
+
+**Opened as a class**: *a present-but-unparseable value handled by the
+same path as an absent one.* Absence and error are different facts; a
+program that collapses them cannot tell *you did not configure this*
+from *you configured it wrongly*, and only the second is worth
+interrupting someone about.
+
+**Why this is `0.59.0`'s own business and not a pre-existing
+curiosity.** This release documented all seven `SMTP_*` variables for
+the first time (`SUP-004`) and documented `PEISEAR_SETUP` two
+sections earlier on the same page (`TTY-001`, 0.58.1). Those two
+behave oppositely on the same input class: `PEISEAR_SETUP=nerver` is
+**refused at startup, by name, with both accepted values listed**,
+and `wizard.rs`'s own comment explains why — *"A signal read as its
+own absence is `§10.49`'s own class of defect."* The same product, the
+same launch environment, the same page, the opposite rule — and the
+permissive half is the one governing transport security. `RFC 021`'s
+own subject is the gap between what an operator can configure and
+what the product says they can; this is that gap one level down, in
+what the product does with the answer.
+
+**The graceful-degradation argument, and its limit.** `peisear-notify`
+deliberately never fails startup over email: an unconfigured channel
+degrades rather than blocking a boot, which is right and which
+`SUP-004` correctly declined to change. That argument covers
+**absence**. It does not reach a value the operator supplied, because
+no boot is protected by ignoring it — the variable is only read when
+someone set it. The clean rule is one sentence: *absence degrades; a
+malformed present value is reported.*
+
+**Not scheduled, and not a fix anyone should make in passing.**
+Whether the repair is a refusal (matching `PEISEAR_SETUP`), a warning
+naming the variable and the accepted values, or a documented
+acceptance of the current behaviour is a design call with a security
+dimension, and `ROADMAP.md`'s own table decides which release pays for
+it. `SUP-004` was explicitly forbidden from changing channel
+behaviour and was right not to; it documented the `SMTP_TLS_MODE`
+half plainly, which is how this was found. The `SMTP_PORT` half, and
+the cascade from port to TLS mode, are this entry's own addition.
+
+
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
 **Promoted from this document's own older compact register**
