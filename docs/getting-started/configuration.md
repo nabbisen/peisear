@@ -60,6 +60,22 @@ for you on first run regardless of which path you took (see below).
 | `COOKIE_SECURE` | `0` | Set to `1` when serving over HTTPS so the session cookie is flagged `Secure`. |
 | `RUST_LOG` | `info,sqlx=warn,hyper=warn,tower_http=info` | Any `tracing_subscriber` env-filter expression. Use `debug` or `trace` to see per-request details. |
 
+**On a `--features postgres` build** ([Install](install.md)'s own
+"Running against PostgreSQL instead"), `DATABASE_URL` takes
+PostgreSQL's own form instead of the default above —
+`postgres://user:password@host:5432/dbname`, `postgresql://` accepted
+too — and query parameters such as `?sslmode=require` pass through
+unchanged, the normal shape against a managed provider. This is a
+different build, not a second default the table above could name:
+whichever driver the binary was compiled with is the only scheme it
+accepts, and the other is refused by name at startup rather than
+silently misread. `JWT_SECRET` must be set explicitly on this
+backend — there is no filesystem path beside a connection string to
+persist a generated one — so the wizard's own "created for you on
+first run" above does not apply there. Proven against `postgres:17`,
+one version, which is what this project's own CI actually runs
+against.
+
 ## Operational notes
 
 - **The generated `jwt_secret` file must be backed up with the

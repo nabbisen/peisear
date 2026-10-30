@@ -947,6 +947,17 @@ jobs:
   # was chosen. The declared PostgreSQL version range stays **one
   # version** (`postgres:17`) -- what this job actually runs against,
   # not a guess at what the ecosystem supports.
+  #
+  # `SUP-003`, carried in from `SUP-002`'s own review: `--shm-size=512m`
+  # on the service container (below). After `SUP-002` widened this one
+  # container to run 33 `--test` steps with no restart between them,
+  # that is exactly the accumulation that exhausted PostgreSQL's
+  # default 64 MB locally (`53100`, "could not resize shared memory
+  # segment… No space left on device") -- unmeasured headroom here
+  # until this line, not a defect CI had actually hit, but a failure
+  # mode that reads like a full disk is worth a real margin rather
+  # than a correct result resting on an accident of how little this
+  # job currently asks of the container.
   test-postgres-connection:
     name: peisear-web and peisear-storage (postgres feature, real server)
     runs-on: ubuntu-latest
@@ -963,6 +974,7 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+          --shm-size=512m
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/peisear_ci
     steps:
@@ -1029,24 +1041,42 @@ jobs:
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test updated_at_authority -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test view_state -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test workload_privacy -- --test-threads=1"
-      # `CON-001` (`RFC 018` P4): the one real benefit an install walk
-      # would have given, without documenting an install path -- build
-      # `peisear` with the passthrough and boot it against this job's
-      # own service container. Not a test in the per-crate DEC-007
-      # block (this job already carries real-server steps outside it);
-      # a CI step proving the first real start of peisear on
-      # PostgreSQL, nothing more claimed.
-      - name: cargo build -p peisear --no-default-features --features postgres
-        run: cargo build -p peisear --no-default-features --features postgres
-      - name: Boot smoke -- start against the service container, hit /health, stop
+      # `SUP-003` (`NFR-REL-011`): the installed artefact, not a debug
+      # build in place -- `cargo install --path`, the same mechanism
+      # `test-install-walk`'s own SQLite walk uses, with
+      # `--no-default-features --features postgres` naming the one
+      # command `docs/getting-started/install.md` now documents as
+      # the single install path that reaches this backend (the
+      # archives and the container image do not; `SUP-001`'s own fix
+      # is what makes building this way link only `sqlx-postgres`,
+      # not both drivers). `CON-001` (`RFC 018` P4) only proved a
+      # build booted against this job's own service container;
+      # `NFR-REL-011` requires reaching an authenticated session, the
+      # same bar `test-install-walk`'s SQLite walk already clears.
+      - name: cargo install --path, with the postgres feature, to a scratch root
+        run: cargo install --path crates/peisear --no-default-features --features postgres --root "$HOME/install-walk-postgres"
+      - name: Walk it -- the postgres install path, run from outside the repository, register, create a project
         run: |
           set -euo pipefail
-          export JWT_SECRET="ci-postgres-boot-smoke-not-a-real-secret-$(date +%s)"
-          ./target/debug/peisear > peisear-boot-smoke.log 2>&1 &
+          mkdir -p "$RUNNER_TEMP/install-walk-postgres-run"
+          cd "$RUNNER_TEMP/install-walk-postgres-run"
+          export JWT_SECRET="ci-postgres-install-walk-not-a-real-secret-$(date +%s)"
+          "$HOME/install-walk-postgres/bin/peisear" > peisear-walk.log 2>&1 &
           pid=$!
-          trap 'cat peisear-boot-smoke.log; kill "$pid" 2>/dev/null || true' EXIT
+          trap 'cat peisear-walk.log; kill "$pid" 2>/dev/null || true' EXIT
           for i in $(seq 1 30); do curl -sf http://127.0.0.1:3000/health > /dev/null && break; sleep 1; done
           curl -sf http://127.0.0.1:3000/health
+          cookie_jar=cookies.txt
+          code=$(curl -s -o /dev/null -w '%{http_code}' -c "$cookie_jar" \
+            --data-urlencode "email=postgres-walk@example.com" \
+            --data-urlencode "password=a-real-walk-password-123" \
+            --data-urlencode "display_name=Postgres Walk" \
+            http://127.0.0.1:3000/register)
+          echo "register: $code"
+          [ "$code" = "303" ] || { echo "::error::register did not redirect (303), got $code"; exit 1; }
+          code=$(curl -s -o /dev/null -w '%{http_code}' -b "$cookie_jar" http://127.0.0.1:3000/projects)
+          echo "authenticated /projects: $code"
+          [ "$code" = "200" ] || { echo "::error::session from register did not authenticate, got $code"; exit 1; }
       # `CON-004` (`RFC 018` P4): `docs/operations/backup.md`'s own
       # PostgreSQL section documents a pg_dump/psql/pg_restore round
       # trip -- an untested command in an operations document is the

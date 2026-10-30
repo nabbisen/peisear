@@ -2,10 +2,10 @@
 
 **Everything from here down to [PostgreSQL](#postgresql) is about the
 SQLite backend** — peisear's default, and the only backend any
-released archive, container image or `cargo install peisear` builds
-against. If you built with `--features postgres` (not a supported
-configuration at 0.56.0; see [`scaling.md`](scaling.md)), skip to that
-section.
+released archive or container image builds against. If you installed
+with `--features postgres` (a supported configuration since `0.59.0`
+via `cargo install`; see [`scaling.md`](scaling.md) and
+[Install](../getting-started/install.md)), skip to that section.
 
 peisear's persistent state lives in the database file and, if
 `JWT_SECRET` is not set explicitly, a generated signing-key file beside
@@ -130,14 +130,14 @@ not an environment variable.
 
 ## PostgreSQL
 
-**Not a supported configuration at 0.56.0** — selectable at build
-time (`--features postgres`), proven against a real server in CI, and
-not something any release documents an install path for; see
-[`scaling.md`](scaling.md) for what that does and does not mean. This
-section exists anyway, for the same reason `scaling.md` names the
-feature's status at all: the `[features]` section is public API the
-moment a crate publishes it, and an unexplained feature is worse for a
-reader than either answer.
+**A supported configuration since `0.59.0`**, reached by `cargo
+install peisear --no-default-features --features postgres` — see
+[Install](../getting-started/install.md)'s own "Running against
+PostgreSQL instead." Proven against a real server across the full
+`peisear-web` suite in CI, not only the storage layer; see
+[`scaling.md`](scaling.md) for what that proof does and does not
+mean (one declared version, `postgres:17`; the archives and the
+container image still do not carry this backend).
 
 **The backup unit is the operator's own PostgreSQL instance, backed up
 by the operator's own means — peisear coordinates nothing for a server
