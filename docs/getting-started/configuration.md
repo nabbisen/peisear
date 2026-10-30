@@ -76,6 +76,39 @@ first run" above does not apply there. Proven against `postgres:17`,
 one version, which is what this project's own CI actually runs
 against.
 
+## Email (SMTP)
+
+**Optional.** peisear always has an in-app notification channel;
+email is an additional one, read from seven environment variables at
+startup. If `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD` or
+`SMTP_FROM_ADDRESS` is unset, the email channel degrades quietly —
+in-app delivery keeps working, and a later send attempt through email
+fails at the channel layer rather than at startup.
+
+| Variable | Required | Default | Notes |
+|---|---|---|---|
+| `SMTP_HOST` | for the email channel | — | SMTP server hostname, e.g. `smtp.example.com`. |
+| `SMTP_USER` | for the email channel | — | SMTP AUTH username. |
+| `SMTP_PASSWORD` | for the email channel | — | SMTP AUTH password. |
+| `SMTP_FROM_ADDRESS` | for the email channel | — | The `From:` envelope address. |
+| `SMTP_PORT` | optional | `465` | Submission port. `587` is the other common choice (STARTTLS); anything else is treated as implicit TLS. |
+| `SMTP_TLS_MODE` | optional | derived from `SMTP_PORT` | `implicit` or `starttls` — see below. |
+| `SMTP_FROM_NAME` | optional | unset | Display name for the `From:` header; the envelope address alone is used if unset. |
+
+**`SMTP_TLS_MODE`'s two values, and when you need to set it at all.**
+`implicit` connects with TLS before any SMTP traffic (the standard
+"submissions" port, 465); `starttls` connects in plain text and
+upgrades in place (the standard "submission" port, 587). Left unset,
+the mode follows `SMTP_PORT`: `587` → `starttls`, everything else
+(including `465` and any non-standard port) → `implicit` — set it
+explicitly if you run STARTTLS on a non-standard port, since the
+port-derived default cannot tell that case from implicit TLS on an
+unusual port. **An unrecognised value is not refused at startup** —
+unlike `PEISEAR_SETUP` above, it falls back to the port-derived
+default silently, consistent with this channel's own
+graceful-degradation design: a typo here costs you the TLS mode you
+meant to force, not a stopped server.
+
 ## Operational notes
 
 - **The generated `jwt_secret` file must be backed up with the
