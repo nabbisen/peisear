@@ -2,14 +2,16 @@
 
 **Document type**: External design (basic design)
 **Document status**: Baseline
-**Covers release**: `0.53.0` (implementation through `0.53.0`; nothing
-this document describes changed — no screen, route, status code, copy
-string or state. See the `0.53.0` row below)
+**Covers release**: `0.59.0` (`§1.1` amended for `0.59.0`'s own
+PostgreSQL install path — the boundary this document drew at
+`0.55.0` no longer holds unconditionally. See the `0.59.0` row below,
+and the three backfilled rows above it for `0.57.0`/`0.58.0`/`0.58.1`,
+which this document was never amended for until now)
 **Supersedes**: [`history/peisear-0.19.1-external-design-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.19.1-external-design-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 retained unedited as the record of that release
 **Language**: English (normative)
-**Prepared**: 2026-10-07 · **Amended**: 2026-10-15 (0.53.0)
+**Prepared**: 2026-10-07 · **Amended**: 2026-10-31 (0.59.0)
 **Location**: `docs/specification/external-design.md`. **Normative**, English
 only, placed 2026-09-24 (`DEC-020`, closed). See
 [the directory README](./README.md) for how its citations resolve
@@ -176,9 +178,24 @@ test implementation.
 
 ### 1.1 Boundary
 
-peisear is a single self-hosted web application. It has no
-service-to-service dependencies at runtime beyond an optional outbound
-SMTP relay.
+peisear is a single self-hosted web application. Its persistent
+state is one database, selected at build time — SQLite by default,
+or PostgreSQL via the one documented install path
+(`docs/getting-started/install.md`'s own "Running against PostgreSQL
+instead", `RFC 021`, `0.59.0`). **Amended for `0.59.0`**: through
+`0.58.1` this section described SQLite alone, on the condition
+`0.55.0`'s own Appendix C row stated — *"the feature stays off by
+default… no screen, route, state or copy changed"* — which held only
+as long as no documented path reached the other backend. `0.59.0`
+documented one, so the condition no longer holds; a reader who
+follows this project's own getting-started documentation can now
+reach a running instance whose database is the other box this
+section always should have shown. **Beyond this section, and beyond
+`§1.1`'s own SMTP entity row below, nothing else in this document
+changes** — no screen, route, status code or copy string differs
+between the two backends; the boundary they sit inside does.
+Otherwise, the system still has no service-to-service dependencies at
+runtime beyond an optional outbound SMTP relay.
 
 ```
         ┌──────────────────────────────────────────────┐
@@ -194,9 +211,14 @@ SMTP relay.
   │ SMTP relay │◀───────────────────────┘        │     │
   │ (optional) │                                 │     │
   └────────────┘                        ┌────────▼──┐  │
-                                        │  SQLite   │  │
-                                        │  (single  │  │
-                                        │   file)   │  │
+                                        │ Database  │  │
+                                        │ (SQLite,  │  │
+                                        │  single   │  │
+                                        │  file, OR │  │
+                                        │ PostgreSQL│  │
+                                        │ a server  │  │
+                                        │ it does   │  │
+                                        │ not own)  │  │
                                         └───────────┘  │
         │                                              │
         └────────────── deployment host ───────────────┘
@@ -206,8 +228,9 @@ SMTP relay.
 |---|---|---|---|
 | Browser (human user) | in / out | HTTP, HTML | Primary interface. Server-rendered. |
 | Browser (script) | in / out | HTTP, JSON | Type-ahead search; personal-data reads. |
-| SMTP relay | out | SMTP | Optional. Absence degrades gracefully → `FR-NTF-008`. |
-| SQLite file | out | file I/O | Single file — the unit a backup captures, via `.backup` while running or a plain copy once stopped (`docs/operations/backup.md`) → `NFR-CMP-003`. |
+| SMTP relay | out | SMTP | Optional. Absence degrades gracefully, **and a malformed `SMTP_PORT` or `SMTP_TLS_MODE` degrades the same way without saying so** → `FR-NTF-008`, `§10.51`. |
+| Database — SQLite (default) | out | file I/O | Single file, selected by default and by every release artefact except the one `cargo install` command named above. The unit a backup captures, via `.backup` while running or a plain copy once stopped (`docs/operations/backup.md`) → `NFR-CMP-003`. |
+| Database — PostgreSQL (selected at build time) | out | SQL over TCP | Reached only by `cargo install peisear --no-default-features --features postgres`; a server the process did not start and does not own, unlike the file above. One declared version, `postgres:17`. Backup is the operator's own means against their own instance (`docs/operations/backup.md`'s own PostgreSQL section) → `NFR-CMP-003`/`NFR-CMP-007`, pending the owner's choice between them (`REL-0.59.0` §5.1). |
 
 ### 1.2 Runtime context
 
@@ -1727,6 +1750,14 @@ stream that is ignored provides no protection at all.
 No user-facing error is raised for mail failure; the in-app channel is
 authoritative.
 
+**Checked for `0.59.0` (`SUP-004` changed the startup warning's own
+text — see `REL-0.59.0` §4): this row needs no change.** It describes
+the externally observable *category* of behaviour (a warning fires,
+in-app delivery is unaffected), not the warning's own wording, and
+`SUP-004` changed only the wording — naming none of the seven
+variables instead of four and pointing at the documentation — not
+whether a warning fires or what it does to delivery.
+
 ---
 
 ## 12. External data view
@@ -2303,7 +2334,10 @@ entries about what is executed by nothing.
 | Version | Change |
 |---|---|
 | GUI v0.1 | Original GUI external specification, based on `0.16.0` |
-| **0.57.0 (this baseline)** | **No screen, route, state or copy changed.** This release's subject is `spec_scan`, a mechanical reader for `requirements.md` and this document's own `§10.N` citations — Appendix A's columns summed from its own rows, a status vocabulary closed to a known list, and eight `*Acceptance*: \`name\` (N tests)` citations checked against the test runner. None of it is externally observable application behaviour: the guard reads two documents and a CI log, it does not touch `src/`. **This document's own role in the series**: the citations into `requirements.md`'s `§10.N` register this document carries (thirteen of them dangling, across both specifications) are resolved by `SPEC-001`'s promotion of the four missing headings, not by an edit here — a citation naming a real heading was already correct prose, only the heading was missing. **Nothing here for this document to amend.** |
+| **0.59.0 (this baseline)** | **`§1.1` is amended — the one row in this document's own history where "nothing for this document to amend" does not hold, and the reason is this document's own.** `RFC 021`, four work rounds (`SUP-001`–`SUP-004`); full accounting in `requirements.md`'s own `0.59.0` row above the equivalent point in that document. What belongs here: `0.55.0`'s own row below stated the condition under which a second storage backend changed nothing this document describes — *"the feature stays off by default"* — and `SUP-003` wrote a documented, walked PostgreSQL install path into `docs/getting-started/install.md`, removing that condition. `§1.1`'s prose, boundary diagram and external-entities table now name both backends rather than one; `§11.2`'s SMTP degradation row and its own SMTP entity row were checked against `SUP-004`'s changed startup-warning text and found to need no change (the wording moved, the externally observable category did not) or to need only a citation (`§10.51`), stated in writing either way rather than left silent. **This document's own `Covers release` header and Appendix C baseline marker had drifted** — unamended since `0.57.0` below, through two releases, three different answers across both specifications to which release each covers — found and repaired at this cut (`requirements.md`'s own `§10.36` instance 7 carries the full finding; this document is half of what it is about). `0.58.0` and `0.58.1` backfilled below, each marked and dated, from `CHANGELOG.md`'s own sections — not written as though produced at their own cuts. |
+| 0.58.1 | *Backfilled 2026-10-31 (`REL-0.59.0` §3), from `CHANGELOG.md`'s own `[0.58.1]` section, reached from this document's own scope sentence rather than assumed from `0.53.0`'s precedent.* **No screen, route, state or copy changed.** This release's subject is `should_run_wizard`'s own predicate (`PEISEAR_SETUP`, then a terminal, then — on Unix — the kernel's own foreground-process-group test) and the release workflow's own walk steps, neither of which this document describes: it covers the running application's screens, routes and HTTP behaviour, not which launch-environment signal decides whether a terminal prompt runs, or how a CI job proves an archive. The one-line stderr notice a backgrounded start now prints (*"A terminal is attached, but this process cannot read it right now…"*) is terminal output at startup, the same exception `0.53.0`'s own row already drew for a startup log line, not a screen. **Nothing here for this document to amend.** |
+| 0.58.0 | *Backfilled 2026-10-31 (`REL-0.59.0` §3), from `CHANGELOG.md`'s own `[0.58.0]` section, reached from this document's own scope sentence rather than assumed from `0.53.0`'s precedent.* **No screen, route, state or copy changed.** This release's subject is the first-run wizard (`RFC 020`) — two terminal questions with working defaults, three terminal statements, a written `.env` — all of it terminal output at startup rather than a screen, the same exception `0.53.0`'s own row already drew for a single startup line, extended here to a short interactive sequence of the same kind. `BIND_ADDR` gaining single-parse, named validation in `Config::from_env` is an internal error-message improvement at a path this document has never tracked (it covers the running application's own HTTP behaviour, not a config-loading error a misconfigured deployment would see once, before the server exists for a browser to reach). **Nothing here for this document to amend.** |
+| 0.57.0 | **No screen, route, state or copy changed.** This release's subject is `spec_scan`, a mechanical reader for `requirements.md` and this document's own `§10.N` citations — Appendix A's columns summed from its own rows, a status vocabulary closed to a known list, and eight `*Acceptance*: \`name\` (N tests)` citations checked against the test runner. None of it is externally observable application behaviour: the guard reads two documents and a CI log, it does not touch `src/`. **This document's own role in the series**: the citations into `requirements.md`'s `§10.N` register this document carries (thirteen of them dangling, across both specifications) are resolved by `SPEC-001`'s promotion of the four missing headings, not by an edit here — a citation naming a real heading was already correct prose, only the heading was missing. **Nothing here for this document to amend.** |
 | 0.56.0 | **No screen, route, state or copy changed, same reason as `0.55.0`'s own row below.** `RFC 018` P4 closes the conformance suite and writes the operations story: both backends now run the storage suite and the 37 lock tests in CI, `project_health`'s own `HAVING` query is fixed, and `backup.md`/`scaling.md` gain PostgreSQL sections — none of it is externally observable application behaviour. The one borderline case, checked rather than assumed: the fourteen call sites `CON-005` moved onto `dialect`'s own transaction seam are a storage-layer mechanism change (which lock a write takes, not what it does), and the handler-level behaviour each one guards — a stale-token refusal, a status-transition check — is unchanged, confirmed by the same assertions passing unmodified on both backends. `NFR-CMP-003`'s restatement is a specification-text change, not an application one. **Nothing here for this document to amend.** |
 | 0.55.0 | **No screen, route, state or copy changed, same as `0.54.0`'s own row below — for the opposite reason this time.** `RFC 018` P3 plus the queries (`PG-001`–`PG-004`) give the `postgres` feature real code behind every part of it, but this document covers the running application's externally observable behaviour, and choosing a different storage engine changes none of it: the same screens, routes, HTTP status semantics and copy render whichever backend is selected, by construction (`peisear-storage`'s own public shape is backend-agnostic; see its crate root). The feature stays off by default — an operator who does not select it sees nothing this document would need to describe differently, and one who does sees the identical application this document already describes. `RFC 018` P4, the conformance suite, is where a divergence between backends — if one is ever found — would become this document's problem; none is known today. **Nothing here for this document to amend.** |
 | 0.54.0 | **No screen, route, state or copy changed.** This release's subject is the dialect seam (`RFC 018` P1 + P2) and a documentation guard, neither of which this document describes: it covers the running application's screens, routes and HTTP behaviour, not the storage layer's internal error-matching mechanism or which database backends a crate's `Cargo.toml` can select. The coded `RAISE` text migration `0022` adds (`DIA-001`) changes how a trigger failure is *matched* (a bracketed code, not the raw string) — `translate_trigger_error` still produces the same `MessageKey`, so the worded message a user sees is unchanged. The `postgres` feature publishing for the first time (`DIA-002`) has no implementation behind it — selecting it panics on first connection — so there is no second backend for this document to describe yet; `RFC 018` P3 is where one would appear here. `docs_scan` rule 7 (`DIA-003`) checks `.env.example` against source, which this document has never tracked. **Nothing here for this document to amend.** |
