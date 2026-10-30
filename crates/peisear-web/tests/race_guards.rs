@@ -420,11 +420,13 @@ async fn planned_sprint(app: &TestApp, team_id: &str, name: &str) -> String {
 }
 
 async fn active_count(app: &TestApp, team_id: &str) -> i64 {
-    sqlx::query_scalar("SELECT COUNT(*) FROM sprints WHERE team_id = ?1 AND status = 'active'")
-        .bind(team_id)
-        .fetch_one(&app.db)
-        .await
-        .expect("count active")
+    sqlx::query_scalar(&peisear_storage::dialect::sql(
+        "SELECT COUNT(*) FROM sprints WHERE team_id = ?1 AND status = 'active'",
+    ))
+    .bind(team_id)
+    .fetch_one(&app.db)
+    .await
+    .expect("count active")
 }
 
 /// `N` planned sprints of one team, all started at once: exactly one
@@ -621,9 +623,9 @@ async fn concurrent_duplicate_adds_get_the_already_a_member_message() {
             )
         })
         .count();
-    let rows: i64 = sqlx::query_scalar(
+    let rows: i64 = sqlx::query_scalar(&peisear_storage::dialect::sql(
         "SELECT COUNT(*) FROM team_memberships WHERE team_id = ?1 AND user_id = ?2",
-    )
+    ))
     .bind(&team_id)
     .bind(&newcomer)
     .fetch_one(&app.db)
@@ -726,15 +728,37 @@ async fn requests_landing_after<T: Send + 'static>(
     change: &str,
     sprint_id: &str,
 ) -> Vec<T> {
-    let mut tx = app
-        .db
-        .begin_with("BEGIN IMMEDIATE")
+    // `SUP-002`: the same seam a guarded write opens
+    // (`peisear_storage::dialect::begin_guarded`), not
+    // `BEGIN IMMEDIATE` directly -- SQLite-only syntax, a syntax
+    // error on PostgreSQL (`42601`), the same class `CON-005` already
+    // closed in production code.
+    let mut tx = peisear_storage::dialect::begin_guarded(&app.db)
         .await
         .expect("hold the write lock");
+    // On SQLite, opening the transaction above already holds the
+    // whole-database write lock `BEGIN IMMEDIATE` takes, so every
+    // concurrent request's own guarded write blocks immediately.
+    // PostgreSQL's MVCC takes no such lock merely by beginning a
+    // transaction -- a guarded write's own lock comes from
+    // `lock_scope`, scoped by the sprint's `team_id` exactly as
+    // `start_guarded`/`complete_guarded` lock it (`CON-005` Group B).
+    // Without this, the concurrent requests raced the 500ms sleep
+    // below and all landed before `change` ever ran (measured: every
+    // one returned 303, not refused) -- a no-op on SQLite, matching
+    // [`peisear_storage::dialect::lock_scope`]'s own body there.
+    let team_id = peisear_storage::sprints::find_by_id(&mut *tx, sprint_id)
+        .await
+        .expect("read the sprint's own team_id")
+        .expect("sprint exists")
+        .team_id;
+    peisear_storage::dialect::lock_scope(&mut tx, "sprints", "team_id", &team_id, "id")
+        .await
+        .expect("lock the team's sprints");
     let handles: Vec<_> = requests.into_iter().map(tokio::spawn).collect();
     // Let every request run its status read and block at its write.
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-    sqlx::query(change)
+    sqlx::query(&peisear_storage::dialect::sql(change))
         .bind(sprint_id)
         .execute(&mut *tx)
         .await
@@ -748,11 +772,13 @@ async fn requests_landing_after<T: Send + 'static>(
 }
 
 async fn members_of_sprint(app: &TestApp, sprint_id: &str) -> i64 {
-    sqlx::query_scalar("SELECT COUNT(*) FROM sprint_issues WHERE sprint_id = ?1")
-        .bind(sprint_id)
-        .fetch_one(&app.db)
-        .await
-        .expect("count sprint members")
+    sqlx::query_scalar(&peisear_storage::dialect::sql(
+        "SELECT COUNT(*) FROM sprint_issues WHERE sprint_id = ?1",
+    ))
+    .bind(sprint_id)
+    .fetch_one(&app.db)
+    .await
+    .expect("count sprint members")
 }
 
 /// `plan_add` reads a `planned` sprint; a `start` lands before its write.

@@ -395,11 +395,13 @@ async fn finishing_work_after_completion_cannot_open_a_hidden_trajectory() {
         "one contributor at completion: the trajectory is hidden"
     );
 
-    sqlx::query("UPDATE issues SET status = 'done' WHERE id = ?1")
-        .bind(&bobs)
-        .execute(&app.db)
-        .await
-        .expect("finish Bob's issue in place");
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET status = 'done' WHERE id = ?1",
+    ))
+    .bind(&bobs)
+    .execute(&app.db)
+    .await
+    .expect("finish Bob's issue in place");
 
     assert!(
         !sprint_page(&app, &sprint_id).await.contains("cumulative"),
@@ -443,9 +445,9 @@ async fn reopen_makes_the_gate_live_again_and_completing_recaptures_the_basis() 
     let basis = |app: &TestApp, sprint: String| {
         let db = app.db.clone();
         async move {
-            sqlx::query_as::<_, (i64, i64)>(
+            sqlx::query_as::<_, (i64, i64)>(&peisear_storage::dialect::sql(
                 "SELECT contributor_count, had_unassigned_contributor FROM sprint_records WHERE sprint_id = ?1",
-            )
+            ))
             .bind(sprint)
             .fetch_one(&db)
             .await
@@ -465,11 +467,13 @@ async fn reopen_makes_the_gate_live_again_and_completing_recaptures_the_basis() 
         !sprint_page(&app, &sprint_id).await.contains("cumulative"),
         "live: one contributor"
     );
-    sqlx::query("UPDATE issues SET status = 'done' WHERE id = ?1")
-        .bind(&bobs)
-        .execute(&app.db)
-        .await
-        .unwrap();
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET status = 'done' WHERE id = ?1",
+    ))
+    .bind(&bobs)
+    .execute(&app.db)
+    .await
+    .unwrap();
     assert!(
         sprint_page(&app, &sprint_id).await.contains("cumulative"),
         "reopened, the gate is live again: two contributors now"
@@ -494,9 +498,9 @@ async fn an_unassigned_completed_issue_suppresses_the_captured_trajectory() {
         .await
         .unwrap();
 
-    let flag: i64 = sqlx::query_scalar(
+    let flag: i64 = sqlx::query_scalar(&peisear_storage::dialect::sql(
         "SELECT had_unassigned_contributor FROM sprint_records WHERE sprint_id = ?1",
-    )
+    ))
     .bind(&sprint_id)
     .fetch_one(&app.db)
     .await

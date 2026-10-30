@@ -130,6 +130,16 @@ impl TestApp {
     /// exist.
     #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
     pub async fn spawn() -> Self {
+        // `SUP-002`: a bare `500` names nothing -- `peisear_web::error`
+        // already logs the real `sqlx` error via `tracing::error!` at
+        // every call site, this just gives it somewhere to go. Every
+        // defect this round found was read from this output, not
+        // guessed from the response body. `try_init` because
+        // `cargo test`'s own process can call `spawn` more than once;
+        // a second global-subscriber install would panic otherwise.
+        let _ = tracing_subscriber::fmt()
+            .with_env_filter("error")
+            .try_init();
         let test_database = pool::connect_isolated_test_database().await;
         let db = test_database.pool().clone();
 

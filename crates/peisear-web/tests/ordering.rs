@@ -13,9 +13,22 @@
 
 mod common;
 
+use chrono::{DateTime, NaiveDateTime, Utc};
 use common::auth::{TestUser, register_and_login};
 use common::fixture::{create_issue, create_personal_project};
 use common::server::TestApp;
+
+/// `SUP-002`: a fixed-clock timestamp, parsed once rather than bound
+/// as a raw string -- `created_at`/`assigned_at` are `timestamp with
+/// time zone` on PostgreSQL, which refuses to assign a `TEXT` bind to
+/// that column without an explicit cast (`42804`). SQLite's own
+/// `DATETIME` columns stored the same literal as text and never
+/// noticed; binding the typed value instead is correct on both.
+fn pinned(s: &str) -> DateTime<Utc> {
+    NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S")
+        .unwrap_or_else(|e| panic!("parse pinned timestamp {s:?}: {e}"))
+        .and_utc()
+}
 
 /// Byte offset of `needle`'s first occurrence, panicking with the body
 /// if it is absent -- an absent row would otherwise read as "ordered".
@@ -31,6 +44,16 @@ fn offset_of(body: &str, needle: &str) -> usize {
 /// issues created back to back came out `first, second, third,
 /// fourth`). The `rowid DESC` tiebreak is what makes "newest first"
 /// true for a burst, and this is the assertion that fails without it.
+///
+/// `SUP-002`: pinned explicitly, not relied on from insert speed.
+/// PostgreSQL's own `CURRENT_TIMESTAMP` carries sub-millisecond
+/// precision (`pool::tests::postgres_current_timestamp_resolution_is_finer_than_a_millisecond`,
+/// `peisear-storage`), so four sequential inserts there land in four
+/// distinct instants rather than tying by accident the way SQLite's
+/// whole-second column did. The property under test is the `rowid`
+/// tiebreak when a tie exists, not whether four fast inserts happen
+/// to tie -- pinning proves it deterministically on both backends
+/// instead of depending on how quickly either one's round trip runs.
 #[tokio::test]
 async fn issues_created_in_the_same_second_list_newest_first() {
     let app = TestApp::spawn().await;
@@ -41,6 +64,14 @@ async fn issues_created_in_the_same_second_list_newest_first() {
     for title in ["BURST-first", "BURST-second", "BURST-third", "BURST-fourth"] {
         create_issue(&app.db, &project_id, &user_id, title).await;
     }
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET created_at = ?1 WHERE project_id = ?2",
+    ))
+    .bind(tied())
+    .bind(&project_id)
+    .execute(&app.db)
+    .await
+    .expect("tie the burst");
     let distinct: i64 = sqlx::query_scalar("SELECT COUNT(DISTINCT created_at) FROM issues")
         .fetch_one(&app.db)
         .await
@@ -79,19 +110,24 @@ async fn issues_created_in_the_same_second_list_newest_first() {
 /// The one second every tied row in these tests shares.
 const TIED: &str = "2026-03-01 09:00:00";
 
+/// [`TIED`], parsed to the typed value every bind site now uses.
+fn tied() -> DateTime<Utc> {
+    pinned(TIED)
+}
+
 /// Write a `user_capacities` row directly, bypassing `insert`'s
 /// overlap check, so two open-ended rows can share a `created_at`.
 /// Rows are inserted in the order the caller lists them, which is
 /// what gives them ascending `rowid`s.
 async fn insert_capacity_row(app: &TestApp, user_id: &str, points: i64) -> String {
     let id = uuid::Uuid::new_v4().to_string();
-    sqlx::query(
+    sqlx::query(&peisear_storage::dialect::sql(
         "INSERT INTO user_capacities (id, user_id, points, created_at) VALUES (?1, ?2, ?3, ?4)",
-    )
+    ))
     .bind(&id)
     .bind(user_id)
     .bind(points)
-    .bind(TIED)
+    .bind(tied())
     .execute(&app.db)
     .await
     .expect("insert capacity row");
@@ -201,11 +237,13 @@ async fn notifications_from_one_second_list_newest_first() {
         .await
         .expect("insert notification");
     }
-    sqlx::query("UPDATE notifications SET created_at = ?1")
-        .bind(TIED)
-        .execute(&app.db)
-        .await
-        .expect("tie the burst");
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE notifications SET created_at = ?1",
+    ))
+    .bind(tied())
+    .execute(&app.db)
+    .await
+    .expect("tie the burst");
 
     let got = peisear_storage::notifications::recent_for_user(
         &app.db,
@@ -260,12 +298,14 @@ async fn sub_issues_from_one_second_list_in_creation_order() {
         .await
         .expect("insert sub-issue");
     }
-    sqlx::query("UPDATE issues SET created_at = ?1 WHERE parent_issue_id = ?2")
-        .bind(TIED)
-        .bind(&parent_id)
-        .execute(&app.db)
-        .await
-        .expect("tie the burst");
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET created_at = ?1 WHERE parent_issue_id = ?2",
+    ))
+    .bind(tied())
+    .bind(&parent_id)
+    .execute(&app.db)
+    .await
+    .expect("tie the burst");
 
     let got = peisear_storage::issues::list_sub_issues_of(&app.db, &parent_id)
         .await
@@ -287,11 +327,13 @@ async fn projects_created_in_one_second_list_newest_first() {
     for name in ["PROJ-first", "PROJ-second", "PROJ-third"] {
         create_personal_project(&app.db, &user_id, name).await;
     }
-    sqlx::query("UPDATE projects SET created_at = ?1, updated_at = ?1")
-        .bind(TIED)
-        .execute(&app.db)
-        .await
-        .expect("tie the burst");
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE projects SET created_at = ?1, updated_at = ?1",
+    ))
+    .bind(tied())
+    .execute(&app.db)
+    .await
+    .expect("tie the burst");
 
     let got = peisear_storage::projects::list_for_user(&app.db, &user_id)
         .await
@@ -371,12 +413,14 @@ async fn sprint_with_items_in_every_status() -> (TestApp, String, String) {
         peisear_storage::sprints::add_issue(&app.db, &sprint_id, id)
             .await
             .expect("add to sprint");
-        sqlx::query("UPDATE sprint_issues SET assigned_at = ?1 WHERE issue_id = ?2")
-            .bind(format!("2026-03-01 09:{minute:02}:00"))
-            .bind(id)
-            .execute(&app.db)
-            .await
-            .expect("pin assigned_at");
+        sqlx::query(&peisear_storage::dialect::sql(
+            "UPDATE sprint_issues SET assigned_at = ?1 WHERE issue_id = ?2",
+        ))
+        .bind(pinned(&format!("2026-03-01 09:{minute:02}:00")))
+        .bind(id)
+        .execute(&app.db)
+        .await
+        .expect("pin assigned_at");
     }
     (app, slug, sprint_id)
 }

@@ -263,12 +263,14 @@ async fn insert_issue_stalled_for_days(
     .expect("insert issue");
 
     let stale_at = chrono::Utc::now() - chrono::Duration::days(days_ago);
-    sqlx::query("UPDATE issues SET updated_at = ?1 WHERE id = ?2")
-        .bind(stale_at)
-        .bind(&id)
-        .execute(&app.db)
-        .await
-        .expect("back-date updated_at");
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET updated_at = ?1 WHERE id = ?2",
+    ))
+    .bind(stale_at)
+    .bind(&id)
+    .execute(&app.db)
+    .await
+    .expect("back-date updated_at");
 
     id
 }

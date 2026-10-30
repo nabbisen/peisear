@@ -97,11 +97,13 @@ async fn url_filter_filters_the_list() {
     let other = create_issue(&app.db, &project_id, &user_id, "Done issue").await;
 
     // Mark `other` as done so the open filter excludes it.
-    sqlx::query(r#"UPDATE issues SET status = 'done' WHERE id = ?1"#)
-        .bind(&other)
-        .execute(&app.db)
-        .await
-        .expect("update issue status");
+    sqlx::query(&peisear_storage::dialect::sql(
+        r#"UPDATE issues SET status = 'done' WHERE id = ?1"#,
+    ))
+    .bind(&other)
+    .execute(&app.db)
+    .await
+    .expect("update issue status");
 
     let resp = app
         .server
@@ -133,11 +135,13 @@ async fn explicit_filter_persists_as_default() {
 
     let _open = create_issue(&app.db, &project_id, &user_id, "Open issue").await;
     let other = create_issue(&app.db, &project_id, &user_id, "Done issue").await;
-    sqlx::query(r#"UPDATE issues SET status = 'done' WHERE id = ?1"#)
-        .bind(&other)
-        .execute(&app.db)
-        .await
-        .expect("update issue status");
+    sqlx::query(&peisear_storage::dialect::sql(
+        r#"UPDATE issues SET status = 'done' WHERE id = ?1"#,
+    ))
+    .bind(&other)
+    .execute(&app.db)
+    .await
+    .expect("update issue status");
 
     // 1. Visit with explicit filter; assert it's applied.
     let resp = app
@@ -180,11 +184,13 @@ async fn url_overrides_saved_default() {
 
     let _open = create_issue(&app.db, &project_id, &user_id, "Open issue").await;
     let done = create_issue(&app.db, &project_id, &user_id, "Done issue").await;
-    sqlx::query(r#"UPDATE issues SET status = 'done' WHERE id = ?1"#)
-        .bind(&done)
-        .execute(&app.db)
-        .await
-        .expect("update issue status");
+    sqlx::query(&peisear_storage::dialect::sql(
+        r#"UPDATE issues SET status = 'done' WHERE id = ?1"#,
+    ))
+    .bind(&done)
+    .execute(&app.db)
+    .await
+    .expect("update issue status");
 
     // Save status=open as default.
     let _ = app
@@ -225,11 +231,13 @@ async fn defaults_are_per_user() {
     let alice_project = create_personal_project(&alice_app.db, &alice_id, "Alice's").await;
     let _alice_open = create_issue(&alice_app.db, &alice_project, &alice_id, "Alice open").await;
     let alice_done = create_issue(&alice_app.db, &alice_project, &alice_id, "Alice done").await;
-    sqlx::query(r#"UPDATE issues SET status = 'done' WHERE id = ?1"#)
-        .bind(&alice_done)
-        .execute(&alice_app.db)
-        .await
-        .expect("update");
+    sqlx::query(&peisear_storage::dialect::sql(
+        r#"UPDATE issues SET status = 'done' WHERE id = ?1"#,
+    ))
+    .bind(&alice_done)
+    .execute(&alice_app.db)
+    .await
+    .expect("update");
 
     // Alice saves status=open as her default.
     let _ = alice_app
@@ -306,12 +314,21 @@ async fn insert_with_status_at(
     )
     .await
     .expect("insert issue");
-    sqlx::query("UPDATE issues SET created_at = ?1 WHERE id = ?2")
-        .bind(created_at)
-        .bind(&id)
-        .execute(&app.db)
-        .await
-        .expect("pin created_at");
+    // `SUP-002`: parsed before binding -- `created_at` is `timestamp
+    // with time zone` on PostgreSQL, which refuses a `TEXT` bind
+    // (`42804`) where SQLite's own `DATETIME` column stored the
+    // literal as text and never noticed.
+    let parsed_created_at = chrono::NaiveDateTime::parse_from_str(created_at, "%Y-%m-%d %H:%M:%S")
+        .unwrap_or_else(|e| panic!("parse pinned timestamp {created_at:?}: {e}"))
+        .and_utc();
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET created_at = ?1 WHERE id = ?2",
+    ))
+    .bind(parsed_created_at)
+    .bind(&id)
+    .execute(&app.db)
+    .await
+    .expect("pin created_at");
     id
 }
 
@@ -523,13 +540,20 @@ async fn explicit_sorts_are_unchanged() {
         let id = insert_with_status_at(&app, &project_id, &user_id, title, Open, created).await;
         // Setting `updated_at` explicitly keeps `0017`'s trigger (which
         // only fires when the UPDATE leaves it unchanged) out of the way.
-        sqlx::query("UPDATE issues SET priority = ?1, updated_at = ?2 WHERE id = ?3")
-            .bind(priority)
-            .bind(updated)
-            .bind(&id)
-            .execute(&app.db)
-            .await
-            .expect("pin priority and updated_at");
+        // `SUP-002`: `updated_at` bound as the parsed value, not the
+        // raw string -- see `insert_with_status_at`'s own note above.
+        let updated_at = chrono::NaiveDateTime::parse_from_str(updated, "%Y-%m-%d %H:%M:%S")
+            .unwrap_or_else(|e| panic!("parse pinned timestamp {updated:?}: {e}"))
+            .and_utc();
+        sqlx::query(&peisear_storage::dialect::sql(
+            "UPDATE issues SET priority = ?1, updated_at = ?2 WHERE id = ?3",
+        ))
+        .bind(priority)
+        .bind(updated_at)
+        .bind(&id)
+        .execute(&app.db)
+        .await
+        .expect("pin priority and updated_at");
     }
 
     let order = |sort: &'static str| {

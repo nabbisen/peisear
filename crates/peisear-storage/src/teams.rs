@@ -102,6 +102,12 @@ pub async fn find_by_slug(pool: &Pool, slug: &str) -> StorageResult<Option<Team>
 
 /// Teams the user is a member of, alphabetised by name. Used
 /// for the user nav and `/teams` page.
+///
+/// `SUP-002`: `ORDER BY LOWER(...)`, not `COLLATE NOCASE` -- SQLite's
+/// own named collation, which PostgreSQL has no collation of that
+/// name for (`error returned from database: collation "nocase" for
+/// encoding "UTF8" does not exist`). `LOWER()` is standard SQL and
+/// gives the same case-insensitive order on both.
 pub async fn teams_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<(Team, TeamRole)>> {
     let rows = sqlx::query_as::<_, TeamRoleRow>(&crate::dialect::sql(
         r#"
@@ -109,7 +115,7 @@ pub async fn teams_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<(Te
         FROM teams t
         JOIN team_memberships m ON m.team_id = t.id
         WHERE m.user_id = ?1
-        ORDER BY t.name COLLATE NOCASE ASC
+        ORDER BY LOWER(t.name) ASC
         "#,
     ))
     .bind(user_id)
@@ -161,7 +167,7 @@ pub async fn members_of_team(
                 WHEN 'viewer' THEN 2
                 ELSE 3
             END,
-            u.display_name COLLATE NOCASE ASC
+            LOWER(u.display_name) ASC
         "#,
         ))
         .bind(team_id)

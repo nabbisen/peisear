@@ -1298,13 +1298,23 @@ async fn remove_form_markup_carries_the_same_filter_fields_as_add() {
 /// Pin `created_at` explicitly: it is a one-second `CURRENT_TIMESTAMP`
 /// and these tests insert rows in microseconds, so "which is newer"
 /// would otherwise be a coin flip.
+///
+/// `SUP-002`: binds the parsed `DateTime<Utc>`, not the raw string --
+/// `created_at` is `timestamp with time zone` on PostgreSQL, which
+/// refuses a `TEXT` bind there (`42804`) where SQLite's own
+/// `DATETIME` column stored the literal as text and never noticed.
 async fn pin_created_at(app: &TestApp, issue_id: &str, created_at: &str) {
-    sqlx::query("UPDATE issues SET created_at = ?1 WHERE id = ?2")
-        .bind(created_at)
-        .bind(issue_id)
-        .execute(&app.db)
-        .await
-        .expect("pin created_at");
+    let created_at = chrono::NaiveDateTime::parse_from_str(created_at, "%Y-%m-%d %H:%M:%S")
+        .unwrap_or_else(|e| panic!("parse pinned timestamp {created_at:?}: {e}"))
+        .and_utc();
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET created_at = ?1 WHERE id = ?2",
+    ))
+    .bind(created_at)
+    .bind(issue_id)
+    .execute(&app.db)
+    .await
+    .expect("pin created_at");
 }
 
 fn offset_of(body: &str, needle: &str) -> usize {

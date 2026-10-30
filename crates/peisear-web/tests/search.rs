@@ -99,11 +99,13 @@ async fn typeahead_excludes_done_issues() {
     let project_id = create_personal_project(&app.db, &user_id, "Project X").await;
     let _open = create_issue(&app.db, &project_id, &user_id, "alpha open").await;
     let done = create_issue(&app.db, &project_id, &user_id, "alpha done").await;
-    sqlx::query(r#"UPDATE issues SET status = 'done' WHERE id = ?1"#)
-        .bind(&done)
-        .execute(&app.db)
-        .await
-        .expect("mark done");
+    sqlx::query(&peisear_storage::dialect::sql(
+        r#"UPDATE issues SET status = 'done' WHERE id = ?1"#,
+    ))
+    .bind(&done)
+    .execute(&app.db)
+    .await
+    .expect("mark done");
 
     let resp = app.server.get("/api/search?q=alpha").await;
     resp.assert_status(StatusCode::OK);

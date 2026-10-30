@@ -39,9 +39,18 @@ pub async fn list_for_user(pool: &Pool, user_id: &str) -> StorageResult<Vec<Proj
     // Personal project ownership is unchanged by 0.14.0:
     // `owner_id = user_id`. Team projects are reached via the
     // membership join below.
+    //
+    // `SUP-002`: no `DISTINCT` -- `team_memberships`'s own
+    // `PRIMARY KEY (team_id, user_id)` means the join below matches
+    // at most one row per `p.team_id` for a fixed `?1`, so this can
+    // never duplicate a project row; `DISTINCT` was never load-bearing,
+    // only incompatible with the `ORDER BY` below once `rowid` became
+    // a real column rather than SQLite's implicit one (`0023`) --
+    // PostgreSQL requires every `SELECT DISTINCT`'s own `ORDER BY`
+    // expression to appear in the select list, and `rowid` does not.
     let rows = sqlx::query_as::<_, ProjectRow>(&crate::dialect::sql(
         r#"
-        SELECT DISTINCT p.id, p.owner_id, p.name, p.description,
+        SELECT p.id, p.owner_id, p.name, p.description,
             p.wip_limit_default, p.team_id, p.created_at, p.updated_at
         FROM projects p
         LEFT JOIN team_memberships m

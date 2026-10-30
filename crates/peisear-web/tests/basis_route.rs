@@ -174,12 +174,14 @@ async fn linked_indicators_render_distinguishing_basis_links() {
     // comment above for why all three, not one at a time.
     let past_threshold = chrono::Utc::now()
         - chrono::Duration::days(peisear_core::project_health::LONG_STALE_THRESHOLD_DAYS + 1);
-    sqlx::query("UPDATE issues SET created_at = ?1, updated_at = ?1 WHERE id = ?2")
-        .bind(past_threshold)
-        .bind(&open_ids[0])
-        .execute(&app.db)
-        .await
-        .expect("back-date created_at and updated_at");
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET created_at = ?1, updated_at = ?1 WHERE id = ?2",
+    ))
+    .bind(past_threshold)
+    .bind(&open_ids[0])
+    .execute(&app.db)
+    .await
+    .expect("back-date created_at and updated_at");
 
     let resp = app.server.get(&format!("/projects/{project_id}")).await;
     resp.assert_status(StatusCode::OK);
@@ -323,12 +325,14 @@ async fn activity_basis_is_exactly_the_recently_touched_issues() {
     let old_id = create_issue(&app.db, &project_id, &user_id, "Old issue").await;
     let before_window = chrono::Utc::now()
         - chrono::Duration::days(peisear_core::project_health::ACTIVITY_WINDOW_DAYS + 1);
-    sqlx::query("UPDATE issues SET created_at = ?1 WHERE id = ?2")
-        .bind(before_window)
-        .bind(&old_id)
-        .execute(&app.db)
-        .await
-        .expect("back-date created_at");
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET created_at = ?1 WHERE id = ?2",
+    ))
+    .bind(before_window)
+    .bind(&old_id)
+    .execute(&app.db)
+    .await
+    .expect("back-date created_at");
 
     let basis_resp = app
         .server
@@ -415,12 +419,14 @@ async fn long_stale_basis_is_exactly_the_long_stale_issues() {
     let _fresh_id = create_issue(&app.db, &project_id, &user_id, "Fresh issue").await;
     let past_threshold = chrono::Utc::now()
         - chrono::Duration::days(peisear_core::project_health::LONG_STALE_THRESHOLD_DAYS + 1);
-    sqlx::query("UPDATE issues SET updated_at = ?1 WHERE id = ?2")
-        .bind(past_threshold)
-        .bind(&stale_id)
-        .execute(&app.db)
-        .await
-        .expect("back-date updated_at");
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE issues SET updated_at = ?1 WHERE id = ?2",
+    ))
+    .bind(past_threshold)
+    .bind(&stale_id)
+    .execute(&app.db)
+    .await
+    .expect("back-date updated_at");
 
     let basis_resp = app
         .server

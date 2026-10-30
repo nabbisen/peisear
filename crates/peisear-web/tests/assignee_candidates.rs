@@ -418,12 +418,14 @@ async fn assignee_names_render_in_elements_that_can_wrap() {
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
     let name = "Gate-e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-    sqlx::query("UPDATE users SET display_name = ?1 WHERE id = ?2")
-        .bind(name)
-        .bind(&user_id)
-        .execute(&app.db)
-        .await
-        .expect("set display name");
+    sqlx::query(&peisear_storage::dialect::sql(
+        "UPDATE users SET display_name = ?1 WHERE id = ?2",
+    ))
+    .bind(name)
+    .bind(&user_id)
+    .execute(&app.db)
+    .await
+    .expect("set display name");
     let project_id = create_personal_project(&app.db, &user_id, "Proj").await;
     let issue_id = uuid::Uuid::new_v4().to_string();
     issues::insert(
