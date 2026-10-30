@@ -104,4 +104,18 @@ answer either way rather than leave unasked.
 4. `.env.example` unchanged, or the reason it changed stated.
 5. `NFR-REL-011`'s walk exists for the new path, in CI, and the
    entry's own status question answered either way.
-6. The gates in §5, re-run after the last edit, quoted.
+6. **Carried in from `SUP-002`'s review — one line, and this round is
+   the one that edits `test.yml` anyway** (item 5 above). The postgres
+   job's `services:` block passes `--health-*` options and nothing
+   else, so its container runs at PostgreSQL's default **64 MB** of
+   shared memory — and after `SUP-002` that single container now runs
+   **33** `--test` steps with **no restart between them**, which is
+   exactly the accumulation that exhausted 64 MB locally (`53100`,
+   *"could not resize shared memory segment"*). CI passes today, 33 of
+   33 green, so this is headroom and not a defect — **but the headroom
+   is unmeasured and the failure mode reads like a disk problem.** Add
+   `--shm-size=512m` to that `options:` block, matching the local
+   invocation the `SUP-002` handoff's own `§0` documents, so the two
+   sides stop differing in a way nobody chose. Run the postgres job and
+   quote it; editing a gate obliges running that gate.
+7. The gates in §5, re-run after the last edit, quoted.

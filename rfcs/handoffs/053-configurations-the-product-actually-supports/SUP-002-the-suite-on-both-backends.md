@@ -26,11 +26,24 @@ the architect, not inferred:
 
 ```
 podman 6.1.4, rootless: true
-podman run -d --name peisear-pg -e POSTGRES_PASSWORD=postgres   -e POSTGRES_DB=peisear_ci -p 5432:5432 docker.io/library/postgres:17
+podman run -d --name peisear-pg --shm-size=512m \
+  -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=peisear_ci \
+  -p 5432:5432 docker.io/library/postgres:17
 pg_isready            → /var/run/postgresql:5432 - accepting connections
 TCP + scram from off  → peisear_ci | PostgreSQL 17.11
   the host, via psql     (same credentials as CI's own job-level DATABASE_URL)
 ```
+
+**`--shm-size=512m` is not optional for a long sweep, and that flag is
+`SUP-002`'s own finding rather than this section's original recipe.**
+The architect proved this path with one short probe and wrote it down
+without the flag; the round then ran the full population repeatedly
+against one long-lived container and exhausted PostgreSQL's default
+64 MB of shared memory — `53100`, *"could not resize shared memory
+segment… No space left on device"* — which reads like a disk problem
+and is not one. Corrected here so the next reader does not lose an
+afternoon to a recipe that was only ever tested against a single
+query.
 
 **Use the fully-qualified image name.** This machine has no
 `containers-registries.conf`, so `postgres:17` fails with *"short-name
