@@ -11,6 +11,112 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.59.0] — 2026-10-31
+
+**PostgreSQL is a configuration peisear says it supports, and now
+means it; an operator who wants email can read about all seven
+variables that configure it.** `RFC 021`, in four work rounds
+(`SUP-001`–`SUP-004`). Stated at the RFC's own four conditions for
+*supported*, because that is the rule this release was scoped
+against: reachable from `install.md`, variables documented where
+configuration is documented, CI exercising the same population it
+exercises the default on, and a declared version range of one tested
+version — `postgres:17`, said as one rather than implied as many.
+`RFC 021` §5 — end the backend rather than finish it — was on the
+table until `SUP-002` ran the suite; it is not the outcome.
+
+**This release's second subject: both specifications' own record of
+themselves had drifted**, found while cutting it. `requirements.md`
+and `external-design.md` each carry a `Covers release` header and an
+Appendix C baseline row, and across the two documents those gave
+three different answers to "which release does the specification
+cover" — one of them, `external-design.md`, had not been amended at
+all since `0.57.0`. Both brought current; the three releases'
+Appendix C rows that were never written are backfilled, each marked
+as backfilled and dated, not written as though produced at their own
+cuts. Recorded as `§10.36` instance 7 — a missing accounting row and
+one that says nothing changed are different facts, and nothing
+mechanical in this project could tell them apart.
+
+### Added
+
+- **`cargo install peisear --no-default-features --features
+  postgres`** is the one documented way to reach PostgreSQL — not a
+  fourth artefact shape; the archives and the container image stay
+  SQLite only. `--no-default-features` is not optional: Cargo
+  features are additive, so the feature name alone silently relinks
+  the SQLite driver `§10.48`'s own fix removed.
+  [Install](docs/getting-started/install.md)'s own "Running against
+  PostgreSQL instead" has the exact command, why the flag matters,
+  and that there is no first-run wizard on this path —
+  `DATABASE_URL` and `JWT_SECRET` are both set explicitly before the
+  first start.
+- **All 33 `peisear-web` integration binaries now run against a real
+  PostgreSQL server in CI, unfiltered** — 30 of them for the first
+  time. Nine real defects found and fixed along the way: raw
+  SQLite-only `?N` placeholders left unwrapped in test code; a
+  `SELECT DISTINCT` combined with an `ORDER BY` column outside the
+  select list; `SUM(...)` aggregates decoded as a non-nullable
+  integer where SQL `NULL` is the correct answer over zero rows; a
+  `SELECT 1` literal decoded at the wrong integer width; a SQLite-only
+  `PRAGMA` with no PostgreSQL equivalent; raw string timestamp binds
+  against a `timestamp with time zone` column; a same-second test
+  fixture that held only by accident on SQLite's coarser clock; a
+  named collation PostgreSQL has none of; and a test that opened
+  `BEGIN IMMEDIATE` directly instead of using the real production
+  lock seam. None of the 33 needed excluding as genuinely
+  SQLite-specific.
+- **All seven `SMTP_*` variables documented** in
+  [Configuration](docs/getting-started/configuration.md)'s new
+  "Email (SMTP)" section — four had been named in the startup
+  warning, three (including `SMTP_TLS_MODE`) nowhere operator-facing.
+
+### Changed
+
+- **The SMTP startup warning no longer names four variables as
+  though they were the set.** It names none and points at the
+  documentation, so it cannot drift from `peisear-notify`'s own
+  `from_env` again the way the four-name list already had.
+- **`docs/operations/backup.md` and `scaling.md`** no longer say
+  PostgreSQL is unsupported — both corrected to the now-true status,
+  with `scaling.md`'s own stale "37 of 335" accounting rewritten to
+  what `SUP-002` actually proved.
+- **`external-design.md §1.1`** no longer describes a single-backend
+  product. `0.55.0`'s own Appendix C row made that description
+  conditional on the feature staying off by default; this release's
+  own install path removes that condition, so the prose, the
+  boundary diagram and the external-entities table now name both
+  backends.
+
+### Fixed
+
+- **`requirements.md` §6.5 and `NFR-CMP-004`** had stopped at
+  migration `0015`; there are 22 under SQLite and 23 under
+  PostgreSQL today (`0023_rowid_surrogate_for_ordering`, the one the
+  `rowid` ordering tiebreak needed once it became a real column
+  rather than SQLite's implicit one). Both amended with the current
+  counts and the asymmetry named, not only the numbers.
+
+### What this release does not fix
+
+- **`§10.51`** (opened by this release): `SMTP_PORT` and
+  `SMTP_TLS_MODE` each discard a malformed value silently — where
+  `PEISEAR_SETUP` refuses one by name on the very same page — and
+  because the TLS mode derives from the port, a malformed port
+  silently changes transport security too. Unscheduled; a design
+  call with a security dimension, not a cut's to make.
+- **`§10.50`**: no CI job compiles for any platform but Linux outside
+  the release tag.
+- **An attended start prompting is unproven on Windows** — five
+  diagnosed attempts, the account in `release.yml`'s own comment.
+- **PostgreSQL's declared range is one version**, `postgres:17` —
+  narrower than the ecosystem, honestly.
+- **The first-run wizard writes a SQLite `.env` only** — a PostgreSQL
+  operator sets configuration by hand, a documented gap rather than a
+  hidden one.
+- **The container image's wizard is proven on a runner's pty and in
+  CI, not inside the published image.**
+
 ## [0.58.1] — 2026-10-29
 
 **The terminal nobody is reading.** `RFC 020` §7 (amended 2026-10-28):

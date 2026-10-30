@@ -167,8 +167,7 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| `0.59.0` | **Configurations the product actually supports** — the gap between what peisear can be run as and what it tells an operator it can be run as. **PostgreSQL, resolved either way.** Measured 2026-10-29: `docs/operations/` documents a PostgreSQL deployment on three pages (`backup.md` carries a full section whose every command was proven against a real `postgres:17`, plus `scaling.md` and `background-jobs.md`), while `docs/getting-started/` never mentions it — `install.md`, `configuration.md` and `first-run.md` offer only SQLite — **3 of 33** `peisear-web` integration binaries run against PostgreSQL in CI, no version range is declared anywhere, and `§10.48` is open and says it *"becomes a defect at P5"*. An operator reading the backup page concludes the backend is supported; the specification says it is not. **The architect recommends making it real** — `RFC 018` P5: the 30 uncovered binaries, `§10.48` closed so the feature gates the driver and not only the `cfg`, a declared version range, and an install path — **and names the alternative so it is not rediscovered**: end it, removing the feature and the three operations sections, which is the *less is more* reading and discards `CON-002`–`CON-006`'s finished dialect seam. **Plus the seven `SMTP_*` variables**: the code reads seven, the startup warning names four, operator-facing documentation names **zero**, and the undocumented three include `SMTP_TLS_MODE`, which is a security-shaped gap rather than a prose one | `RFC 018` P5 + `RFC 021` (the support question) | **Authorized by the owner 2026-10-29**, direction included: **make it real.** One subject, two surfaces, both *"what can an operator actually configure"*. Handoffs: `rfcs/handoffs/053-configurations-the-product-actually-supports/`. Four work rounds and the cut |
-| — | **Nothing else is authorized beyond `0.58.1`.** Remaining candidates, in no order: **`§10.51`** — `SMTP_PORT` and `SMTP_TLS_MODE` discard a malformed value silently where `PEISEAR_SETUP` refuses one by name, and because the TLS mode derives from the port a malformed port silently changes transport security, which is the only security-shaped item on this list; **a `spec_scan` rule reading both specifications' headers and both Appendix C baseline markers against the version being cut** — `§10.36` instance 7, which went three releases undetected because the evidence of a `DEC-028` sweep is a document edit and no edit reads the same as a sweep that found nothing to edit; the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0); an attended start unproven on Windows; and `§10.50` — no CI job compiling for Windows outside the release tag, now a register entry rather than loose prose. **Both of the 0.59.0 candidates above are drawn from this list**; what remains here is ranked below them because it is internal tooling and hygiene, which the owner's own ordering places after design and after what a user can misunderstand | — | **Awaiting the architect’s proposal and the owner’s authorization** |
+| — | **Nothing else is authorized beyond `0.59.0`.** Remaining candidates, in no order: **`§10.51`** — `SMTP_PORT` and `SMTP_TLS_MODE` discard a malformed value silently where `PEISEAR_SETUP` refuses one by name, and because the TLS mode derives from the port a malformed port silently changes transport security, which is the only security-shaped item on this list; **a `spec_scan` rule reading both specifications' headers and both Appendix C baseline markers against the version being cut** — `§10.36` instance 7, which went three releases undetected because the evidence of a `DEC-028` sweep is a document edit and no edit reads the same as a sweep that found nothing to edit; the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0); an attended start unproven on Windows; and `§10.50` — no CI job compiling for Windows outside the release tag, now a register entry rather than loose prose | — | **Awaiting the architect’s proposal and the owner’s authorization** |
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
@@ -178,6 +177,38 @@ from memory.
 themselves) on 2026-10-14. A row leaves when the release is **cut**;
 what it contained is in `CHANGELOG.md` and in the specification's own
 baseline rows, which is where release history belongs.
+
+**Shipped 2026-10-31**: `0.59.0` (configurations the product actually
+supports) — `RFC 021`, in four work rounds (`SUP-001`–`SUP-004`).
+PostgreSQL is a configuration peisear says it supports, and now means
+it: `§10.48` closed (the feature forwards the driver it names, not
+only the `cfg`), all 33 `peisear-web` integration binaries run
+against a real `postgres:17` in CI unfiltered (nine real defects
+found and fixed, none of the 33 genuinely SQLite-specific), one
+documented install path (`cargo install
+--no-default-features --features postgres`), one declared version
+(`postgres:17`). All seven `SMTP_*` variables documented where
+configuration is documented; the startup warning no longer teaches a
+subset of four. **This release's own second subject**: both
+specifications' record of themselves had drifted — `external-design.md`
+unamended since `0.57.0`, both Appendix C baselines stale, three
+different answers to which release each document covers — found
+while assembling this cut and repaired in it, backfilled rows marked
+as backfilled rather than written as though produced at their own
+cuts (`§10.36` instance 7). `external-design.md §1.1` no longer
+describes a single-backend product, the condition `0.55.0`'s own row
+stated for that description having been removed by this release's own
+install path. **What it does not fix**: `§10.51` (opened by this
+release — `SMTP_PORT`/`SMTP_TLS_MODE` discard a malformed value
+silently where `PEISEAR_SETUP` refuses one by name); `§10.50` (no CI
+job compiles for Windows outside the release tag); an attended start
+unproven on Windows; PostgreSQL's one-version range; the wizard
+writing a SQLite `.env` only; the container image's wizard unproven
+inside the image itself. `CHANGELOG.md`'s own `[0.59.0]` section
+carries this in full. *`DEC-056`'s four legs are the architect's own,
+run on the owner's approval of this candidate — this line describes
+the engineering content, not a claim that crates.io, the Release, its
+five archives, or the container tag already carry it.*
 
 **Shipped 2026-10-29**: `0.58.1` (the terminal nobody is reading) —
 `RFC 020` §7 (amended), `§10.49`, in two series rounds against two
@@ -436,7 +467,6 @@ Each line: what, why it isn't scheduled yet, and whose call it is.
 
 | What | Why not now | Whose call |
 |---|---|---|
-| **Seven `SMTP_*` variables documented nowhere operator-facing** — `SMTP_HOST`, `SMTP_PORT`, `SMTP_TLS_MODE`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_ADDRESS`, `SMTP_FROM_NAME`, read by `peisear-notify` and documented only in that crate’s own rustdoc. **Zero occurrences in `docs/getting-started/` or `docs/operations/`** — measured in `WIZ-003` §4 and confirmed in review. The startup log names four of the seven when the channel is unconfigured, so an operator who wants email has nowhere operator-facing to learn the other three | Found while re-pointing the configuration documentation for `RFC 020` (0.58.0), and reported rather than absorbed into a release about a first-run prompt. It is documentation of an existing, working feature — no code changes, no risk, and no reason to displace an authorized row for it | Architect to scope; the owner only if it reaches a documentation convention |
 | **POST landing on long pages — the calendar's half only.** A mutation that redirects to a page the acted-on subject has **left** lands the reader at the top with the subject nowhere in view. **Measured** (`POST-001`, 0.48.0): the calendar Move loses 231 px of a 1289 px view **and the block itself**. *The sprint-plan half is fixed* — `NAV-002` (0.48.0) appends a fragment to the row's own id, so after a move **the row you acted on is on screen** (measured: `scrollY` 1292 → 2177, the browser clamping to the page end with the row in view). **That is a different promise from *your scroll position is preserved*, and deliberately so**: restoring 1292 would return the reader to where the row no longer is. | **A fragment cannot fix the calendar case** — it targets an element, and the subject is not on the landing page. `CAL-006`'s flash naming the new day is already that case's remedy, so what remains is only the **residual** scroll loss when a calendar mutation leaves its subject in view — narrower than what was measured, and unconfirmed. | Owner, whether the residual is worth anything at all. |
 | **117 requirement entries citing no mechanism at all.** `REQ-004` (0.46.0) audited the 48 of 165 entries that cite a mechanism; the other 117 were its denominator, not its subject. Whether any of the 117 hide a `§10.35`-shaped gap — acceptance narrower than the requirement — is unaudited, not cleared. | Deliberately not commissioned: `REQ-004` was scoped to the entries it could audit without a second investigation's worth of work. | Owner, to decide whether and when to commission the audit. |
 
