@@ -463,6 +463,142 @@ fn table_default(configuration: &str, var: &str) -> Option<String> {
     Some(cell.trim_matches('`').to_string())
 }
 
+// ---------- rule 8: RFC 022 §3's rule, enforced (`CFG-003`) ----------
+
+/// Every literal `env::var("NAME")` call site, by its own variable
+/// name, in the order found. **The rule's own population** (`§3`): if
+/// this finds fewer or more occurrences than `EXPECTED_ENV_VAR_
+/// LITERAL_SITES`/`KNOWN_ENV_VAR_NAMES` expect, that is reported in
+/// [`violations`] rather than silently accepted, so a call site this
+/// predicate loses the ability to see shows up as a changed count,
+/// not as quiet.
+fn env_var_literal_names(source: &str) -> Vec<String> {
+    let marker = "env::var(\"";
+    let mut out = Vec::new();
+    let mut search_from = 0;
+    while let Some(rel_idx) = source[search_from..].find(marker) {
+        let idx = search_from + rel_idx;
+        let name_start = idx + marker.len();
+        let Some(end_rel) = source[name_start..].find('"') else {
+            break;
+        };
+        out.push(source[name_start..name_start + end_rel].to_string());
+        search_from = name_start + end_rel;
+    }
+    out
+}
+
+/// The twelve of `RFC 022`'s thirteen operator-facing variables that
+/// a literal `env::var("NAME")` call in `config.rs`/`main.rs`/
+/// `peisear-notify`'s `config.rs` actually names. **`RUST_LOG` is the
+/// deliberate thirteenth, absent from this list** -- see
+/// `silent_default_violations`'s own doc comment for why it cannot
+/// be, and why that is a named gap rather than an oversight.
+const KNOWN_ENV_VAR_NAMES: &[&str] = &[
+    "DATABASE_URL",
+    "JWT_SECRET",
+    "BIND_ADDR",
+    "COOKIE_SECURE",
+    "PEISEAR_SETUP",
+    "SMTP_HOST",
+    "SMTP_USER",
+    "SMTP_PASSWORD",
+    "SMTP_FROM_ADDRESS",
+    "SMTP_PORT",
+    "SMTP_TLS_MODE",
+    "SMTP_FROM_NAME",
+];
+
+/// The total literal `env::var("NAME")` call sites across the three
+/// files rule 8 reads, today -- four in `config.rs` (`DATABASE_URL`,
+/// `JWT_SECRET`, `BIND_ADDR`, `COOKIE_SECURE`), five in `main.rs`
+/// (the same four as presence checks, plus `PEISEAR_SETUP`), seven in
+/// `peisear-notify`'s `config.rs` (all `SMTP_*` but the two that are
+/// never read via a literal at all, `SMTP_PORT`/`SMTP_TLS_MODE`'s own
+/// *resolvers* are called with already-looked-up values -- the literal
+/// reads are the seven arguments `from_env` passes to `from_values`).
+const EXPECTED_ENV_VAR_LITERAL_SITES: usize = 16;
+
+/// `RFC 022` §3's rule, enforced: a value the operator supplied and
+/// the product cannot use must refuse, not silently default. The
+/// shape this recognises -- `env::var("VAR")`, somewhere in the same
+/// statement a combinator that can discard a present-but-unusable
+/// value (`.ok()`, `.map(`, `.and_then(`), and *later in that same
+/// statement* an unconditional fallback (`.unwrap_or(` or
+/// `.unwrap_or_else(`) -- is exactly what `COOKIE_SECURE`'s, `SMTP_
+/// PORT`'s and `SMTP_TLS_MODE`'s own pre-`CFG-001`/`CFG-002` code
+/// looked like, and exactly what their fixes replaced with a
+/// `Result`-returning resolver that this shape cannot match (`.ok()`
+/// or `.map(`/`.and_then(` may still appear at the call site, feeding
+/// the looked-up value to the resolver, but no `.unwrap_or(` sits
+/// anywhere near it any more).
+///
+/// **A discard-then-fallback window is bounded by the current line**
+/// (the next `\n`, capped at 300 chars), not a fixed char count and
+/// not the next `;` -- measured, not assumed, after a first attempt
+/// at the latter produced a real false positive: `peisear-notify`'s
+/// own `from_values(...)` call spans seven argument lines with no `;`
+/// until after it closes, so bounding by statement let `SMTP_HOST`'s
+/// own line borrow a `.unwrap_or_else(` planted three lines later on
+/// `SMTP_TLS_MODE`'s own line, flagging five innocent arguments
+/// alongside the one real plant. Every call site in this codebase
+/// keeps its own chain on one line (`rustfmt`'s own wrapping has not
+/// needed to split one yet); a chain deliberately wrapped across
+/// lines to dodge this bound would itself be unusual enough to invite
+/// a second look, which is the honest trade -- a predicate that never
+/// flags safe code, over one that catches a hypothetical wrapped
+/// chain at the cost of flagging real, safe arguments it sits next to.
+///
+/// **What this cannot see, named rather than left for a future reader
+/// to assume covered**: `RUST_LOG`'s own shape before `CFG-001` --
+/// `tracing_subscriber::EnvFilter::try_from_default_env()`, a library
+/// call that itself conflates absence and parse-failure in its one
+/// `Err` variant, with no literal `env::var("RUST_LOG")` anywhere in
+/// this codebase to anchor this predicate on at all. A future
+/// variable resolved the same way (a wrapping call, no literal
+/// `env::var` of its own) is invisible to this shape-check. It is
+/// *not* invisible to `§3`'s population assertion if it is ever
+/// introduced via a literal `env::var` call this predicate then fails
+/// to classify correctly -- but a variable that never calls
+/// `env::var` in this codebase at all defeats both halves of this
+/// rule, and that is the residual gap `CFG-003`'s own report names
+/// rather than claims closed.
+fn silent_default_violations(label: &str, source: &str) -> Vec<String> {
+    let discard_markers = [".ok()", ".map(", ".and_then("];
+    let fallback_markers = [".unwrap_or(", ".unwrap_or_else("];
+    let marker = "env::var(\"";
+    let mut out = Vec::new();
+    let mut search_from = 0;
+    while let Some(rel_idx) = source[search_from..].find(marker) {
+        let idx = search_from + rel_idx;
+        let name_start = idx + marker.len();
+        let Some(name_end_rel) = source[name_start..].find('"') else {
+            break;
+        };
+        let var_name = &source[name_start..name_start + name_end_rel];
+        let line_end = source[idx..]
+            .find('\n')
+            .map(|p| idx + p)
+            .unwrap_or(source.len())
+            .min(idx + 300);
+        let window = &source[idx..line_end];
+        let discard_pos = discard_markers.iter().filter_map(|m| window.find(m)).min();
+        let fallback_pos = fallback_markers.iter().filter_map(|m| window.find(m)).min();
+        if let (Some(d), Some(f)) = (discard_pos, fallback_pos)
+            && d < f
+        {
+            out.push(format!(
+                "rule 8: {label}'s {var_name} discards a present-but-unusable value \
+                 (.ok()/.map(/.and_then() before falling back unconditionally \
+                 (.unwrap_or(/.unwrap_or_else() -- RFC 022 §3 requires a refusal, by name, \
+                 for a value that was present and could not be used, not a silent default"
+            ));
+        }
+        search_from = name_start + name_end_rel;
+    }
+    out
+}
+
 // ---------- the four rules held in one Input, as a pure function ----------
 
 pub(crate) struct Input<'a> {
@@ -726,6 +862,60 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
                 "rule 7: .env.example sets {other}, which no known source recognises"
             )),
         }
+    }
+
+    // Rule 8 (`CFG-003`, `RFC 022` §3): a present value this product
+    // cannot use must refuse, not silently default. See
+    // `silent_default_violations`'s own doc comment for the shape
+    // this catches and, as importantly, what it cannot see.
+    for (label, source) in [
+        ("config.rs", input.config_rs),
+        ("main.rs", input.main_rs),
+        ("peisear-notify's config.rs", input.notify_config_rs),
+    ] {
+        out.extend(silent_default_violations(label, source));
+    }
+
+    // Rule 8's own population, asserted rather than assumed
+    // (`§10.36`'s own class, in this file for the third time this
+    // series): a rule examining fewer call sites than it used to,
+    // silently, reports zero violations for the same reason as
+    // examining none at all. Checked three ways, the same shape
+    // `spec_scan` rule (b) already uses for its own area census.
+    let examined: Vec<String> = [input.config_rs, input.main_rs, input.notify_config_rs]
+        .iter()
+        .flat_map(|s| env_var_literal_names(s))
+        .collect();
+    let examined_names: std::collections::BTreeSet<&str> =
+        examined.iter().map(String::as_str).collect();
+    let known_names: std::collections::BTreeSet<&str> =
+        KNOWN_ENV_VAR_NAMES.iter().copied().collect();
+    for name in &examined_names {
+        if !known_names.contains(name) {
+            out.push(format!(
+                "rule 8: found a literal env::var(\"{name}\") call, not in this rule's own \
+                 KNOWN_ENV_VAR_NAMES -- a new variable, or a rename. Check it against RFC 022 \
+                 §3 by hand (does a present value it cannot use refuse?), then add it here"
+            ));
+        }
+    }
+    if examined_names.len() != known_names.len() {
+        out.push(format!(
+            "rule 8: examined {} distinct variable names across config.rs/main.rs/peisear-notify's \
+             config.rs, KNOWN_ENV_VAR_NAMES has {} -- population narrower or wider than this \
+             rule's own census",
+            examined_names.len(),
+            known_names.len()
+        ));
+    }
+    if examined.len() != EXPECTED_ENV_VAR_LITERAL_SITES {
+        out.push(format!(
+            "rule 8: examined {} literal env::var(...) call sites across config.rs/main.rs/\
+             peisear-notify's config.rs, expected {EXPECTED_ENV_VAR_LITERAL_SITES} -- a call \
+             site was added, removed, or moved; update the census after checking what changed \
+             against RFC 022 §3 by hand",
+            examined.len()
+        ));
     }
 
     out

@@ -191,3 +191,35 @@ fn an_unconfigured_channel_still_degrades_even_with_a_malformed_port_present() {
         ),
     }
 }
+
+/// `CFG-002` round 2's own review: `from_values` takes seven
+/// parameters, all `Option<&str>` -- a transposition at the call site
+/// (`username` and `password`, say) compiles silently, and before
+/// this test nothing in the suite would have caught it, since every
+/// other `from_values` call here passes `None`s except one
+/// `Some("not-a-port")`, and no test asserted any of the struct's own
+/// string fields. Seven *distinct* values, each field asserted
+/// against the parameter it came from, so a transposition fails this
+/// test specifically rather than compiling clean and running green.
+#[test]
+fn from_values_assembles_every_field_from_its_own_named_parameter_not_a_transposed_one() {
+    let config = SmtpConfig::from_values(
+        Some("mail.example.com"),
+        Some("the-username"),
+        Some("the-password"),
+        Some("sender@example.com"),
+        Some("587"),
+        Some("starttls"),
+        Some("Example Sender"),
+    )
+    .expect("all seven values are present and well-formed")
+    .expect("a fully configured channel must be Some");
+
+    assert_eq!(config.host, "mail.example.com");
+    assert_eq!(config.username, "the-username");
+    assert_eq!(config.password, "the-password");
+    assert_eq!(config.from_address, "sender@example.com");
+    assert_eq!(config.port, 587);
+    assert_eq!(config.tls_mode, TlsMode::Starttls);
+    assert_eq!(config.from_name, Some("Example Sender".to_string()));
+}
