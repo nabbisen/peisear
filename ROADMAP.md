@@ -209,10 +209,23 @@ job compiles for Windows outside the release tag); an attended start
 unproven on Windows; PostgreSQL's one-version range; the wizard
 writing a SQLite `.env` only; the container image's wizard unproven
 inside the image itself. `CHANGELOG.md`'s own `[0.59.0]` section
-carries this in full. *`DEC-056`'s four legs are the architect's own,
-run on the owner's approval of this candidate — this line describes
-the engineering content, not a claim that crates.io, the Release, its
-five archives, or the container tag already carry it.*
+carries this in full. **Cut 2026-10-31**: tag `0.59.0` at `602ae80`, signed
+(`gpg: Good signature`), its message carrying the tag-pinned
+release-notes link; **seven crates on crates.io** at `0.59.0`, none
+yanked, each confirmed by its own per-crate registry query rather
+than from the publish command's exit code — which mattered here,
+because `peisear-auth` and `peisear-i18n` published on one line
+together, so six `Published` lines cover seven crates and the line
+count would have read as five; **five per-platform archives on the
+GitHub Release**, read from the asset list and matched against
+`install.md`'s own target table with no extra and none missing, the
+`x86_64-pc-windows-msvc` `.zip` among them; `ghcr.io/nabbisen/peisear`
+at `0.59.0` and `latest` under one digest (`sha256:0a5a7474`), with
+`0.58.1`'s own digest unchanged (`sha256:1057c422`). All four
+`DEC-056` legs verified against the registries themselves rather
+than from their workflows' own exit codes, and the archive count read
+from the asset list — the check `0.58.0` taught, whose own record was
+one sentence away from claiming five when the Release carried four.
 
 **Shipped 2026-10-29**: `0.58.1` (the terminal nobody is reading) —
 `RFC 020` §7 (amended), `§10.49`, in two series rounds against two
