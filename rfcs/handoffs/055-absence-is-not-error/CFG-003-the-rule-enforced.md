@@ -80,6 +80,39 @@ which are merely fixed-for-now.
 `§10.51` can and cannot claim on that basis. The entry closing is the
 architect's call; the evidence for it is this round's.
 
+## §4a — one carried item, which is not this round's subject
+
+**From `CFG-002` round 2's review, and it is the architect's finding
+against the architect's own handoff.** `SmtpConfig::from_values` takes
+**seven parameters, all `Option<&str>`**. A transposition at the call
+site — `username` and `password`, or `host` and `from_address` —
+compiles silently, and **measured, nothing in the suite would catch
+it**: the only two `from_values` calls in the tests pass all `None`s
+except one `Some("not-a-port")`, and no test asserts any of the
+struct's string fields. A swap of the two credential arguments would
+leave the suite green while peisear authenticated to the relay with
+the password as the username.
+
+Before that extraction the mistake was impossible — each
+`env::var("SMTP_USER")` sat beside the field it filled. **The
+extraction is the one my own handoff specified**, and it never asked
+for the guard this shape needs.
+
+**The call site is correct today**, verified at `24e88d7`. The risk is
+the next edit.
+
+**What this round adds: one test.** `from_values` with seven
+*distinct* values, asserting all seven fields — so a transposition
+fails the suite. **Not a redesign**: a named-field struct would make
+the mistake impossible rather than detectable and is the stronger
+answer, but it is ceremony for one internal function with one caller.
+If you think the struct is right anyway, **say so with the reason
+rather than building it.**
+
+**Keep it separate in the report.** This is carried, not part of the
+guard; the series' convention is a named item, the way `SUP-002`
+carried a finding to `SUP-003`.
+
 ## §5 — gates
 
 - **This round edits a gate's source, so run that gate**, with the
@@ -113,5 +146,8 @@ architect's call; the evidence for it is this round's.
    recognise.
 5. The population it examined is asserted, not assumed.
 6. `§4` answered: what `§10.51` can now claim.
-7. `§5`'s gates after the last edit, `DEC-007`'s delta with the
+7. **`§4a`'s carried test added** — `from_values` with seven distinct
+   values, all seven fields asserted — and reported separately from
+   the guard, or the named-field struct argued for instead.
+8. `§5`'s gates after the last edit, `DEC-007`'s delta with the
    runner, CI's own conclusion quoted.
