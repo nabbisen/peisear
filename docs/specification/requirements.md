@@ -3378,12 +3378,34 @@ clause.**
 **NFR-REL-007 — Documentation structure**
 `README.md` MUST remain concise and follow the ordering: hero, overview,
 why/when, quick start, features or design notes, links to full
-documentation. Full documentation MUST live under `docs/`, organised by
+documentation. **The quick start MUST offer at least one path that
+reaches a running instance without a language toolchain, and any path
+that needs one MUST say so in the line that introduces it.** Full documentation MUST live under `docs/`, organised by
 reader persona, and MUST build as an mdbook site.
 *Source*: project convention. *Status*: **Met at 0.41.0** (`DOCS-001`) —
 `docs/book.toml`, `docs/SUMMARY.md`, and `.github/workflows/docs.yml`
 deploying to Pages from `main` with a link check that fails the build.
 *Priority*: P2.
+*Amended (`QS-001`, 2026-11-01) — the quick start's contents, not only
+its position.* **Raised by the owner, twice**: the Quick Start offered
+two paths and both needed Rust, one also `git`, while
+`docs/getting-started/install.md` had offered two toolchain-free paths
+since `0.53.0` — a prebuilt binary and `docker run`. Seven releases of
+the front door contradicting the install page, and **this entry is why
+nothing caught it**: it governed the README's *ordering* and said
+nothing about what the quick start must contain, so `DEC-028`'s
+five-pass sweep had nothing to check, correctly, every release.
+`FIV-004` wrote `install.md`'s three options and did not carry them to
+the README; `§10.41` quoted this exact block as *"the instruction a
+first-time reader is most likely to follow"* and closed on a different
+defect inside the same four lines. The lapse is the architect's.
+*Status* unmoved: the structural half was and remains `Met`, and the
+new clause is met by the same commit that adds it.
+**What enforces the new clause: nothing yet.** It is a property a
+reader can check and a scan could check; `QS-002` is that scan, and
+until it lands this clause is prose (`§10.36`'s standing question).
+Said here so the clause is not read as implying a guard that does not
+exist.
 *Correction (0.41.0, `DOCS-001`) — this was recorded `Implemented` and neither
 half of it was true.* It required documentation *"under `docs/src` in an
 mdbook-compatible structure"*. Documentation lived under `docs/architecture/`,

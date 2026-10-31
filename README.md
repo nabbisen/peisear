@@ -49,7 +49,30 @@ week — and fewer still will tell *you* first.
 
 ## Quick Start
 
-**To run it:**
+**Nothing to install first.** Download the binary for your machine
+from [the latest release](https://github.com/nabbisen/peisear/releases/latest)
+— five platforms, one file each — then:
+
+```bash
+tar xzf peisear-*-x86_64-unknown-linux-gnu.tar.gz
+./peisear
+#   asks two quick questions on first run (enter twice for the defaults)
+#   → http://localhost:3000
+```
+
+On Windows, extract the `.zip` and run `peisear.exe` from a terminal
+in the same folder.
+
+**Or one command, if you have Docker:**
+
+```bash
+docker run -p 3000:3000 -v ./data:/data ghcr.io/nabbisen/peisear
+#   starts on defaults and says so — no questions, since there is no
+#   terminal to answer them; -v keeps your data across restarts
+#   → http://localhost:3000
+```
+
+**Or `cargo install`, if you already have Rust:**
 
 ```bash
 cargo install peisear
@@ -58,17 +81,17 @@ peisear
 #   → http://localhost:3000
 ```
 
-**To read or change it:**
+Then register an account, create a project, and drag cards across the
+board. [Install](https://github.com/nabbisen/peisear/blob/main/docs/getting-started/install.md)
+covers all three paths in full, including PostgreSQL; the rest of the
+guide is in [`docs/getting-started/`](https://github.com/nabbisen/peisear/blob/main/docs/getting-started/README.md).
+
+**To read or change the source** you will need `git` and Rust:
 
 ```bash
 git clone https://github.com/nabbisen/peisear.git && cd peisear
 cargo run --release -p peisear
-#   asks two quick questions on first run (enter twice for the defaults)
-#   → http://localhost:3000
 ```
-
-Register an account, create a project, drag cards across the board.
-The full guide is in [`docs/getting-started/`](https://github.com/nabbisen/peisear/blob/main/docs/getting-started/README.md).
 
 ## Features
 

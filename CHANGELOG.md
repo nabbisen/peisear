@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **`README.md`'s Quick Start now leads with a path that needs
+  nothing installed** — download the binary for your platform and run
+  it — followed by `docker run` as a one-command alternative, then
+  `cargo install` marked *if you already have Rust*, then the clone,
+  which is for reading or changing the source and says so. **It had
+  offered only the two paths that need Rust, one of them also `git`,
+  for seven releases**, while [Install](docs/getting-started/install.md)
+  had carried a prebuilt binary and a container image since `0.53.0`.
+  The front door contradicted the install page, and
+  `NFR-REL-007` is why nothing caught it: it required the README's
+  *ordering* and said nothing about what the quick start must
+  contain. That entry now carries the missing clause.
+
 **`CFG-001` and `CFG-002`, the first two of three rounds applying
 `RFC 022` §3's one rule**: *absence degrades; a value the operator
 supplied and the product cannot use refuses startup, by name,
