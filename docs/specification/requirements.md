@@ -7724,7 +7724,7 @@ was the right division: the round brought the evidence, the entry is
 the architect's.*
 
 
-### 10.51 A malformed value read as its own absence — **open**, found by the architect's review of `SUP-004`, 0.59.0, 2026-10-31
+### 10.51 A malformed value read as its own absence — **closed**, `RFC 022` / `CFG-001`–`CFG-003`, 0.60.0, 2026-11-01; found by the architect's review of `SUP-004`, 0.59.0, 2026-10-31
 
 **Two variables in `peisear-notify`'s own `SmtpConfig::from_env`
 discard an operator's declared value without saying so**, measured at
@@ -7774,6 +7774,49 @@ degrades rather than blocking a boot, which is right and which
 no boot is protected by ignoring it — the variable is only read when
 someone set it. The clean rule is one sentence: *absence degrades; a
 malformed present value is reported.*
+
+**Closed 2026-11-01, on this entry's own stated condition.** It said
+the repair was *"a refusal, a warning, or a documented acceptance"*
+and that the choice was a design call with a security dimension.
+`RFC 022` made it — **absence degrades; a value the operator supplied
+and the product cannot use refuses startup, by name, naming what
+would have been accepted** — chosen because the three variables that
+already handled this correctly (`PEISEAR_SETUP`, `JWT_SECRET`,
+`BIND_ADDR`) all refuse and none reports, so warning would have left
+the product with two rules for one input class, which is what this
+entry names.
+
+**Both named instances are now guarded, not merely fixed.**
+`CFG-001`/`CFG-002` made `SMTP_PORT` and `SMTP_TLS_MODE` refuse;
+`CFG-003` built `docs_scan` rule 8, and **closing rests on a plant
+rather than on the rule's existence**: round 1's predicate was bounded
+to a single line and the real defects were three and four lines, so a
+reintroduction in its own original layout — planted in place, literal
+`env::var` site count unchanged at 16 — passed the whole suite
+silently (`214 passed; 0 failed`). Round 2 rebounded the window to the
+next `;`, the next same-depth `,`, or an unmatched `)`, and the same
+plant now fails by name. Verified by the architect's own plant, not
+the round's.
+
+**Two bounds, so this closing is not read as wider than it is.**
+*(a)* **`RUST_LOG` is fixed but not guarded.** It is the same class —
+`EnvFilter::try_from_default_env().unwrap_or_else(…)` discarded a
+malformed directive silently — and `CFG-001` fixed it, but there is no
+literal `env::var("RUST_LOG")` anywhere in this codebase for either
+half of rule 8 to anchor on. It was never one of this entry's two
+named instances; it is recorded here so nobody assumes rule 8 covers
+it. *(b)* **`RUST_LOG`'s reach is narrow even fixed**: measured against
+`tracing-subscriber` 0.3.23, `RUST_LOG=dbug` is *accepted* as a target
+name with an implicit `TRACE` level, so only a malformed level after
+an `=` and an empty target refuse. `RFC 022` §4 carries the table.
+
+**One thing this entry got right and is worth keeping.** It said the
+repair was *"not a fix anyone should make in passing"*, and the
+history bears that out: three work rounds, two of them sent back — one
+for adding the workspace's only `unsafe`, one for a guard that could
+not fail on the shape it existed for — and the second only because the
+entry's own insistence on a *stated condition* made someone go and
+plant the original layout.
 
 **Not scheduled, and not a fix anyone should make in passing.**
 Whether the repair is a refusal (matching `PEISEAR_SETUP`), a warning
