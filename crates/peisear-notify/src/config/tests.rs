@@ -160,35 +160,34 @@ fn a_malformed_port_refuses_before_any_tls_mode_is_derived() {
     }
 }
 
-// ---------- CFG-002: from_env itself ----------
+// ---------- CFG-002 round 2: from_values, the whole channel ----------
 
-/// `RFC 022` §3: an unconfigured channel must not block a boot. The
-/// one test in this module that calls the real [`SmtpConfig::from_env`]
-/// rather than a pure resolver -- deliberately, since this is exactly
-/// the property `main`'s own `?` depends on: `Ok(None)`, never `Err`,
-/// when nothing is configured at all. Explicitly clears every `SMTP_*`
-/// variable first rather than assuming the ambient process environment
-/// has none of them set.
+/// `RFC 022` §3: an unconfigured channel must not block a boot. A
+/// statement about seven input values, tested as one -- `from_values`
+/// takes every looked-up value as a parameter (`CFG-002` round 2),
+/// the same reason `resolve_smtp_port`/`resolve_tls_mode` already do,
+/// so this needs no real environment and no `unsafe`.
 #[test]
 fn an_entirely_unconfigured_channel_still_yields_ok_none() {
-    for var in [
-        "SMTP_HOST",
-        "SMTP_USER",
-        "SMTP_PASSWORD",
-        "SMTP_FROM_ADDRESS",
-        "SMTP_PORT",
-        "SMTP_TLS_MODE",
-        "SMTP_FROM_NAME",
-    ] {
-        // SAFETY: `cargo test -p peisear-notify` runs with
-        // `--test-threads=1` (`.github/CONTRIBUTING.md`), so no other
-        // test observes the environment concurrently with this one.
-        unsafe {
-            std::env::remove_var(var);
-        }
-    }
-    match SmtpConfig::from_env() {
+    match SmtpConfig::from_values(None, None, None, None, None, None, None) {
         Ok(None) => {}
         other => panic!("expected Ok(None) for a wholly unconfigured channel, got {other:?}"),
+    }
+}
+
+/// The symmetric case, and a property worth recording rather than
+/// discovering later: the four early `Ok(None)` returns run before
+/// either resolver, so a wholly unconfigured channel with an
+/// *additionally* malformed `SMTP_PORT` still degrades to `Ok(None)`
+/// -- the bad port is never looked at, because `RFC 022` §3's first
+/// half (absence degrades) does not care what else was typed.
+#[test]
+fn an_unconfigured_channel_still_degrades_even_with_a_malformed_port_present() {
+    match SmtpConfig::from_values(None, None, None, None, Some("not-a-port"), None, None) {
+        Ok(None) => {}
+        other => panic!(
+            "expected Ok(None) -- the early absence returns must run before the port \
+             resolver ever sees the malformed value, got {other:?}"
+        ),
     }
 }

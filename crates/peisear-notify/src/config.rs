@@ -201,32 +201,76 @@ impl SmtpConfig {
     /// and never fails a boot over them (`RFC 022` §3, `CFG-002`).
     /// `Err(_)` if `SMTP_PORT` or `SMTP_TLS_MODE` was set to a value
     /// this crate cannot use.
+    ///
+    /// Every `env::var` call stays here, deliberately -- the only
+    /// place in this module that reaches into the process's real,
+    /// shared environment. `from_values` (`pub(crate)`, not linked --
+    /// a public doc comment may not link to a private item) is the
+    /// actual resolution, pure, so a test can exercise the whole
+    /// channel's absence/refusal composition without mutating it
+    /// (`CFG-002` round 2).
     pub fn from_env() -> Result<Option<Self>, SmtpConfigError> {
-        let Some(host) = env::var("SMTP_HOST").ok().filter(|s| !s.is_empty()) else {
+        Self::from_values(
+            env::var("SMTP_HOST").ok().as_deref(),
+            env::var("SMTP_USER").ok().as_deref(),
+            env::var("SMTP_PASSWORD").ok().as_deref(),
+            env::var("SMTP_FROM_ADDRESS").ok().as_deref(),
+            env::var("SMTP_PORT").ok().as_deref(),
+            env::var("SMTP_TLS_MODE").ok().as_deref(),
+            env::var("SMTP_FROM_NAME").ok().as_deref(),
+        )
+    }
+
+    /// [`Self::from_env`]'s body, extracted rather than rewritten
+    /// (`CFG-002` round 2): every early `Ok(None)` return, the
+    /// `.filter(|s| !s.is_empty())` absence treatment, the two
+    /// resolver calls and their order relative to the four early
+    /// returns, and the struct assembly are unchanged from round 1 --
+    /// only the seven `env::var` calls moved to the one caller.
+    ///
+    /// **The four early returns run before either resolver, which is
+    /// a deliberate property, not an accident of ordering**: a wholly
+    /// unconfigured channel with an additionally malformed
+    /// `SMTP_PORT` still yields `Ok(None)` and never reaches the port
+    /// resolver at all (`RFC 022` §3's first half — absence degrades
+    /// unconditionally, regardless of what else happens to be set to
+    /// nonsense nobody will ever read).
+    ///
+    /// `pub(crate)`, not `pub`: only this module's own tests need to
+    /// call it directly.
+    pub(crate) fn from_values(
+        host: Option<&str>,
+        username: Option<&str>,
+        password: Option<&str>,
+        from_address: Option<&str>,
+        port_raw: Option<&str>,
+        tls_mode_raw: Option<&str>,
+        from_name: Option<&str>,
+    ) -> Result<Option<Self>, SmtpConfigError> {
+        let Some(host) = host.filter(|s| !s.is_empty()) else {
             return Ok(None);
         };
-        let Some(username) = env::var("SMTP_USER").ok().filter(|s| !s.is_empty()) else {
+        let Some(username) = username.filter(|s| !s.is_empty()) else {
             return Ok(None);
         };
-        let Some(password) = env::var("SMTP_PASSWORD").ok().filter(|s| !s.is_empty()) else {
+        let Some(password) = password.filter(|s| !s.is_empty()) else {
             return Ok(None);
         };
-        let Some(from_address) = env::var("SMTP_FROM_ADDRESS").ok().filter(|s| !s.is_empty())
-        else {
+        let Some(from_address) = from_address.filter(|s| !s.is_empty()) else {
             return Ok(None);
         };
-        let port = resolve_smtp_port(env::var("SMTP_PORT").ok().as_deref())?;
-        let tls_mode = resolve_tls_mode(env::var("SMTP_TLS_MODE").ok().as_deref(), port)?;
-        let from_name = env::var("SMTP_FROM_NAME").ok().filter(|s| !s.is_empty());
+        let port = resolve_smtp_port(port_raw)?;
+        let tls_mode = resolve_tls_mode(tls_mode_raw, port)?;
+        let from_name = from_name.filter(|s| !s.is_empty());
 
         Ok(Some(SmtpConfig {
-            host,
+            host: host.to_string(),
             port,
             tls_mode,
-            username,
-            password,
-            from_address,
-            from_name,
+            username: username.to_string(),
+            password: password.to_string(),
+            from_address: from_address.to_string(),
+            from_name: from_name.map(str::to_string),
         }))
     }
 
