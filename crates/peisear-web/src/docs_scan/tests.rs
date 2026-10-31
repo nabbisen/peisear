@@ -316,6 +316,96 @@ fn rule_7_catches_a_mismatched_default_from_a_non_config_rs_source() {
     assert!(v.iter().any(|m| m.contains("SMTP_PORT")), "got {v:?}");
 }
 
+// ---------- rule 8: RFC 022 §3's rule, enforced (`CFG-003`) ----------
+
+/// `CFG-003` §2, seen red one of two ways: plant the exact pre-`CFG-
+/// 002` `SMTP_TLS_MODE` shape back into the real line that replaced
+/// it -- one literal `env::var("SMTP_TLS_MODE")`, same as before the
+/// plant, so this exercises the shape-check in isolation from the
+/// population check (`§2`'s other half, below).
+#[test]
+fn rule_8_catches_a_planted_silent_default_shape() {
+    let mut r = real();
+    r.notify_config_rs = r.notify_config_rs.replace(
+        "env::var(\"SMTP_TLS_MODE\").ok().as_deref(),",
+        "env::var(\"SMTP_TLS_MODE\").ok().and_then(|s| TlsMode::from_str_loose(&s)).unwrap_or_else(|| TlsMode::default_for_port(465)),",
+    );
+    let v = only(run(&r), "rule 8:");
+    // Exactly one violation, naming only the planted line -- a real
+    // first attempt at this predicate bounded its window by the next
+    // `;` rather than the current line, and `from_values(...)`'s own
+    // seven-argument call has no `;` until it closes, so that first
+    // attempt let SMTP_TLS_MODE's planted `.unwrap_or_else(` leak
+    // backwards onto the six lines above it, flagging SMTP_HOST/
+    // SMTP_USER/SMTP_PASSWORD/SMTP_FROM_ADDRESS/SMTP_PORT alongside
+    // the one real plant. This asserts the exact set, not merely that
+    // SMTP_TLS_MODE is among whatever was found, so that regression
+    // cannot return silently.
+    assert_eq!(
+        v,
+        vec![
+            "rule 8: peisear-notify's config.rs's SMTP_TLS_MODE discards a present-but-unusable \
+             value (.ok()/.map(/.and_then() before falling back unconditionally \
+             (.unwrap_or(/.unwrap_or_else() -- RFC 022 §3 requires a refusal, by name, for a \
+             value that was present and could not be used, not a silent default"
+                .to_string()
+        ],
+        "got {v:?}"
+    );
+}
+
+/// The shape-check's own negative: `DATABASE_URL`'s and `BIND_ADDR`'s
+/// real `env::var("X").unwrap_or_else(...)` lines sit two lines above
+/// `COOKIE_SECURE`'s real call in the same file -- confirms the
+/// statement-bounded window does not let a neighbour's absence-only
+/// fallback make a different variable's call look safe, or make
+/// those two look like violations themselves.
+#[test]
+fn rule_8_passes_the_real_tree_including_the_two_absence_only_fallbacks() {
+    let r = real();
+    let v = only(run(&r), "rule 8:");
+    assert!(v.is_empty(), "got {v:?}");
+}
+
+/// `CFG-003` §2, seen red the other way: break rule 8's own anchor by
+/// renaming one literal `env::var("SMTP_PORT")` call so the predicate
+/// can no longer find it -- the right outcome is the population
+/// assertion reporting the drop, not the shape-check silently
+/// agreeing there is nothing wrong because it now examines nothing
+/// about that call site at all (`§10.36` instance 6's class, in this
+/// rule from the day it was written rather than discovered later).
+#[test]
+fn rule_8_reports_rather_than_silently_skips_when_a_literal_moves() {
+    let mut r = real();
+    r.notify_config_rs = r
+        .notify_config_rs
+        .replace("env::var(\"SMTP_PORT\")", "env::var(SMTP_PORT_VAR)");
+    let v = only(run(&r), "rule 8:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("examined") && m.contains("expected")),
+        "got {v:?}"
+    );
+}
+
+/// The unknown-name half of the census: a variable this rule finds
+/// that `KNOWN_ENV_VAR_NAMES` does not list must be reported by name,
+/// not silently folded into "the count changed."
+#[test]
+fn rule_8_reports_a_literal_env_var_not_in_the_known_census() {
+    let mut r = real();
+    r.notify_config_rs = format!(
+        "{}\nfn extra() {{ let _ = env::var(\"SMTP_EXTRA_THING\"); }}\n",
+        r.notify_config_rs
+    );
+    let v = only(run(&r), "rule 8:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("SMTP_EXTRA_THING") && m.contains("KNOWN_ENV_VAR_NAMES")),
+        "got {v:?}"
+    );
+}
+
 #[test]
 fn the_helpers_do_what_the_rules_assume() {
     assert_eq!(short_crate_name("peisear-i18n"), "i18n");
@@ -440,6 +530,32 @@ fn the_helpers_do_what_the_rules_assume() {
         smtp_port_default(&real.notify_config_rs),
         Some(465),
         "peisear-notify's SMTP_PORT fallback no longer matches smtp_port_default's own pattern"
+    );
+    assert_eq!(
+        env_var_literal_names("env::var(\"FOO\").ok(); env::var(\"BAR\").unwrap_or_default();"),
+        vec!["FOO".to_string(), "BAR".to_string()]
+    );
+    assert!(
+        silent_default_violations(
+            "fragment",
+            "env::var(\"X\").ok().and_then(|s| s.parse::<u16>().ok()).unwrap_or(465);"
+        )
+        .iter()
+        .any(|m| m.contains('X'))
+    );
+    assert!(
+        silent_default_violations(
+            "fragment",
+            "env::var(\"X\").unwrap_or_else(|_| \"d\".into());"
+        )
+        .is_empty(),
+        "an absence-only fallback, with no discard combinator before it, must not be flagged"
+    );
+    assert!(
+        silent_default_violations("fragment", "resolve_x(env::var(\"X\").ok().as_deref())?;")
+            .is_empty(),
+        "forwarding the looked-up value to a Result-returning resolver, with no local \
+         .unwrap_or( at all, must not be flagged"
     );
 }
 
