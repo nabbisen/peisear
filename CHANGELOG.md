@@ -11,13 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-**`CFG-001`, the first of three rounds applying `RFC 022` §3's one
-rule**: *absence degrades; a value the operator supplied and the
-product cannot use refuses startup, by name, naming what would have
-been accepted.* `COOKIE_SECURE` and `RUST_LOG` are the two of
-`0.60.0`'s thirteen operator-facing variables that already had a
-named error type and a `Result` to refuse through — the remaining
-two (`SMTP_PORT`, `SMTP_TLS_MODE`) are `CFG-002`'s own, not yet done.
+**`CFG-001` and `CFG-002`, the first two of three rounds applying
+`RFC 022` §3's one rule**: *absence degrades; a value the operator
+supplied and the product cannot use refuses startup, by name,
+naming what would have been accepted.* `COOKIE_SECURE` and
+`RUST_LOG` (`CFG-001`) already had a named error type and a
+`Result` to refuse through; `SMTP_PORT` and `SMTP_TLS_MODE`
+(`CFG-002`) did not — `peisear-notify` gained one. `CFG-003` (the
+rule, enforced) is the remaining round.
 
 ### Changed
 
@@ -41,6 +42,26 @@ two (`SMTP_PORT`, `SMTP_TLS_MODE`) are `CFG-002`'s own, not yet done.
 - **`docs/getting-started/configuration.md`**'s reference table
   states `COOKIE_SECURE`'s accepted set and notes that both
   variables now refuse rather than silently default on a bad value.
+- **`SmtpConfig::from_env` is now fallible** (`Result<Option<Self>,
+  SmtpConfigError>`, was `Option<Self>`) — a signature change and one
+  `?` at its single call site, not a refactor. `Ok(None)` still means
+  "email channel not configured" and still never blocks a boot;
+  `Err(_)` is the new fact, "a value was given and it is wrong."
+- **`SMTP_PORT` no longer silently falls back to `465` on a value
+  that does not parse as a port number.** Unset still takes `465`,
+  unchanged. A present, unparseable value (including an explicitly
+  empty one) now refuses startup, naming `SMTP_PORT` and the value
+  given.
+- **`SMTP_TLS_MODE` no longer silently derives a mode from the port
+  on a value `from_str_loose` does not recognise.** Unset still
+  derives from `SMTP_PORT`, unchanged. A present, unrecognised value
+  now refuses startup, naming `SMTP_TLS_MODE` and listing every
+  spelling the parser actually accepts.
+- **The cascade this closes**: a malformed `SMTP_PORT` used to
+  silently fall back to `465`, and that defaulted port then silently
+  decided `SMTP_TLS_MODE` too — changing transport security with no
+  sign anything was wrong. After this round a malformed `SMTP_PORT`
+  refuses before any `SMTP_TLS_MODE` decision is ever made.
 
 ## [0.59.0] — 2026-10-31
 

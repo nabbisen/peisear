@@ -184,10 +184,13 @@ async fn run() -> Result<(), Box<dyn std::error::Error>> {
     pool::migrate(&db).await?;
 
     // Read SMTP config from environment for the email channel.
-    // Returns None if any required variable is missing; the
-    // dispatcher gracefully degrades (in-app channel keeps
-    // working, email sends are skipped). Q4 of 0.16.0 design.
-    let smtp = peisear_notify::config::SmtpConfig::from_env();
+    // Ok(None) if any required variable is missing; the dispatcher
+    // gracefully degrades (in-app channel keeps working, email
+    // sends are skipped). Q4 of 0.16.0 design. Err(_) -- SMTP_PORT
+    // or SMTP_TLS_MODE set to a value this crate cannot use --
+    // refuses startup by name (CFG-002, RFC 022 §3), the same `?`
+    // every other refusal in this function already uses.
+    let smtp = peisear_notify::config::SmtpConfig::from_env()?;
     peisear_notify::config::SmtpConfig::log_startup(smtp.as_ref());
 
     // Spawn background jobs (snapshot writer today; future:
