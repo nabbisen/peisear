@@ -364,15 +364,29 @@ fn rust_log_default(main_rs: &str) -> Option<String> {
     Some(after_start[..end].to_string())
 }
 
-/// `SMTP_PORT`'s literal numeric fallback in `peisear-notify`'s
-/// `SmtpConfig::from_env` -- `.unwrap_or(465)`, not a quoted string, so
-/// [`literal_string_default`] does not fit this one either.
+/// `SMTP_PORT`'s own absence-case default, inside
+/// `resolve_smtp_port`'s `None` arm -- a numeric literal, not a
+/// quoted string, so [`literal_string_default`] does not fit this
+/// one either.
+///
+/// **Moved by `CFG-002` (`RFC 022`), same reason as
+/// [`literal_bool_default`]'s own move (`CFG-001`).** Before that
+/// round this anchored on `env::var("SMTP_PORT")....unwrap_or(465)`
+/// directly at the call site in `SmtpConfig::from_env`: a present
+/// value that fails to parse now refuses
+/// (`SmtpConfigError::InvalidPort`) rather than becoming `465`, so
+/// the default and the refusal needed two sites and `.unwrap_or(`
+/// no longer sits near the `env::var` call. **Confirmed red before
+/// being fixed**: this function returning `None` against the real
+/// tree made `the_helpers_do_what_the_rules_assume`'s own real-source
+/// guard fail loudly (`§10.36` instance 6's remedy firing, not a
+/// vacuous pass) before this anchor was re-pointed.
 fn smtp_port_default(notify_config_rs: &str) -> Option<u16> {
-    let marker = "env::var(\"SMTP_PORT\")";
+    let marker = "fn resolve_smtp_port(";
     let idx = notify_config_rs.find(marker)?;
     let rest = &notify_config_rs[idx + marker.len()..];
     let window = &rest[..rest.len().min(200)];
-    let marker2 = ".unwrap_or(";
+    let marker2 = "None => Ok(";
     let idx2 = window.find(marker2)?;
     let after = &window[idx2 + marker2.len()..];
     let end = after.find(')')?;

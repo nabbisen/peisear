@@ -411,7 +411,8 @@ fn the_helpers_do_what_the_rules_assume() {
     );
     assert_eq!(
         smtp_port_default(
-            "let port = env::var(\"SMTP_PORT\").ok().and_then(|s| s.parse::<u16>().ok()).unwrap_or(465);"
+            "fn resolve_smtp_port(raw: Option<&str>) -> Result<u16, SmtpConfigError> {\n    \
+             match raw {\n        None => Ok(465),\n        Some(v) => todo!(),\n    }\n}"
         ),
         Some(465)
     );

@@ -28,7 +28,7 @@
 //! ## Behaviour when unconfigured
 //!
 //! Per Q4 of the design: graceful failure at send time, not at
-//! startup. [`SmtpConfig::from_env`] returns `None` if any
+//! startup. [`SmtpConfig::from_env`] returns `Ok(None)` if any
 //! required variable is missing; the caller logs a warning at
 //! startup and continues. Subsequent send attempts fail at the
 //! channel layer (logged), the audit row records `dispatched_via`
@@ -38,6 +38,13 @@
 //! deliberately don't configure email (single-user instances,
 //! evaluation environments). A startup failure would punish
 //! them for a non-essential capability.
+//!
+//! **`SMTP_PORT`/`SMTP_TLS_MODE` are a different case** (`CFG-002`,
+//! `RFC 022` §3): absence still degrades exactly as above, but a
+//! value the operator *did* set that this crate cannot use now
+//! refuses startup via [`SmtpConfigError`] rather than being
+//! silently discarded — the malformed-port-silently-changes-
+//! transport-security cascade `§10.51` named is what this closes.
 
 use std::env;
 
@@ -56,13 +63,45 @@ pub enum TlsMode {
     Starttls,
 }
 
+/// Every spelling `from_str_loose` accepts, paired with the mode it
+/// resolves to. **The one source both `from_str_loose` and
+/// [`TlsMode::accepted_spellings`] read** (`CFG-002`, `RFC 022` §3):
+/// an error message naming a tidier set than the parser actually
+/// implements would be its own, smaller version of the defect this
+/// round exists to end — a value the operator typed that the
+/// message's own "accepted" list did not warn them away from.
+const TLS_MODE_SPELLINGS: &[(&str, TlsMode)] = &[
+    ("implicit", TlsMode::Implicit),
+    ("implicit_tls", TlsMode::Implicit),
+    ("smtps", TlsMode::Implicit),
+    ("tls", TlsMode::Implicit),
+    ("starttls", TlsMode::Starttls),
+    ("start_tls", TlsMode::Starttls),
+    ("submission", TlsMode::Starttls),
+];
+
 impl TlsMode {
     fn from_str_loose(s: &str) -> Option<Self> {
-        match s.trim().to_ascii_lowercase().as_str() {
-            "implicit" | "implicit_tls" | "smtps" | "tls" => Some(Self::Implicit),
-            "starttls" | "start_tls" | "submission" => Some(Self::Starttls),
-            _ => None,
-        }
+        let lower = s.trim().to_ascii_lowercase();
+        TLS_MODE_SPELLINGS
+            .iter()
+            .find(|(spelling, _)| *spelling == lower)
+            .map(|(_, mode)| *mode)
+    }
+
+    /// Every spelling `from_str_loose` accepts, comma-joined, for
+    /// `SmtpConfigError::InvalidTlsMode`'s own message. Deliberately
+    /// the full alias set, not `configuration.md`'s own two canonical
+    /// names (a past review's own call: naming all seven there would
+    /// invite treating the alias set as a contract) — a refusal
+    /// message is telling the operator what will actually be
+    /// accepted *right now*, not documenting a stable surface.
+    fn accepted_spellings() -> String {
+        TLS_MODE_SPELLINGS
+            .iter()
+            .map(|(spelling, _)| *spelling)
+            .collect::<Vec<_>>()
+            .join(", ")
     }
 
     /// Default mode from a port number, used when SMTP_TLS_MODE
@@ -86,9 +125,64 @@ impl TlsMode {
     }
 }
 
-/// SMTP transport configuration. `None` if any required env var
+/// `CFG-002`, `RFC 022` §3: `peisear-notify` had no error channel at
+/// all before this round — [`SmtpConfig::from_env`]'s old `Option<Self>`
+/// could not express *"a value was given and it is wrong"*, only
+/// *"not configured"*. `Ok(None)` keeps meaning the first fact;
+/// `Err(_)` is the second, new one. Collapsing both into one type
+/// would re-merge the distinction `RFC 022` exists to draw.
+#[derive(Debug, thiserror::Error)]
+pub enum SmtpConfigError {
+    #[error(
+        "SMTP_PORT is set to {value:?}, which is not a valid port number -- expected an \
+         integer from 0 to 65535. Unset SMTP_PORT to use the default (465), or set it to a \
+         valid port."
+    )]
+    InvalidPort { value: String },
+
+    #[error(
+        "SMTP_TLS_MODE is set to {value:?}, which is not one of the accepted modes -- \
+         expected one of: {accepted}. Unset SMTP_TLS_MODE to derive it from SMTP_PORT, or \
+         set it to one of the accepted modes."
+    )]
+    InvalidTlsMode { value: String, accepted: String },
+}
+
+/// `SMTP_PORT`'s own resolution (`CFG-002`): absence still degrades
+/// to `465`, unchanged. A present value that does not parse as a
+/// `u16` -- including an explicitly empty string, which is not one of
+/// the five absence-shaped `SMTP_*` variables (`RFC 022` §7) -- now
+/// refuses by name rather than being silently discarded by the
+/// `.ok()` this used to sit behind. Takes the already-looked-up value
+/// as a parameter, the same reason `peisear-web`'s own resolvers do.
+fn resolve_smtp_port(raw: Option<&str>) -> Result<u16, SmtpConfigError> {
+    match raw {
+        None => Ok(465),
+        Some(v) => v.parse().map_err(|_| SmtpConfigError::InvalidPort {
+            value: v.to_string(),
+        }),
+    }
+}
+
+/// `SMTP_TLS_MODE`'s own resolution (`CFG-002`): absence still
+/// derives from `port`, unchanged. A present value `from_str_loose`
+/// does not recognise now refuses, listing every spelling the parser
+/// actually accepts (`TlsMode::accepted_spellings`) rather than a
+/// tidier set it does not implement.
+fn resolve_tls_mode(raw: Option<&str>, port: u16) -> Result<TlsMode, SmtpConfigError> {
+    match raw {
+        None => Ok(TlsMode::default_for_port(port)),
+        Some(v) => TlsMode::from_str_loose(v).ok_or_else(|| SmtpConfigError::InvalidTlsMode {
+            value: v.to_string(),
+            accepted: TlsMode::accepted_spellings(),
+        }),
+    }
+}
+
+/// SMTP transport configuration. `Ok(None)` if any required env var
 /// is missing; the caller treats `None` as "email channel
-/// unavailable" and logs accordingly.
+/// unavailable" and logs accordingly. `Err(_)` if `SMTP_PORT` or
+/// `SMTP_TLS_MODE` was given a value this crate cannot use.
 #[derive(Debug, Clone)]
 pub struct SmtpConfig {
     pub host: String,
@@ -101,26 +195,31 @@ pub struct SmtpConfig {
 }
 
 impl SmtpConfig {
-    /// Read from environment. Returns `None` if any required
-    /// variable is missing.
-    pub fn from_env() -> Option<Self> {
-        let host = env::var("SMTP_HOST").ok().filter(|s| !s.is_empty())?;
-        let username = env::var("SMTP_USER").ok().filter(|s| !s.is_empty())?;
-        let password = env::var("SMTP_PASSWORD").ok().filter(|s| !s.is_empty())?;
-        let from_address = env::var("SMTP_FROM_ADDRESS")
-            .ok()
-            .filter(|s| !s.is_empty())?;
-        let port = env::var("SMTP_PORT")
-            .ok()
-            .and_then(|s| s.parse::<u16>().ok())
-            .unwrap_or(465);
-        let tls_mode = env::var("SMTP_TLS_MODE")
-            .ok()
-            .and_then(|s| TlsMode::from_str_loose(&s))
-            .unwrap_or_else(|| TlsMode::default_for_port(port));
+    /// Read from environment. `Ok(None)` if any required variable is
+    /// missing -- checked first and still unconditional, so an
+    /// unconfigured channel never reaches `SMTP_PORT`/`SMTP_TLS_MODE`
+    /// and never fails a boot over them (`RFC 022` §3, `CFG-002`).
+    /// `Err(_)` if `SMTP_PORT` or `SMTP_TLS_MODE` was set to a value
+    /// this crate cannot use.
+    pub fn from_env() -> Result<Option<Self>, SmtpConfigError> {
+        let Some(host) = env::var("SMTP_HOST").ok().filter(|s| !s.is_empty()) else {
+            return Ok(None);
+        };
+        let Some(username) = env::var("SMTP_USER").ok().filter(|s| !s.is_empty()) else {
+            return Ok(None);
+        };
+        let Some(password) = env::var("SMTP_PASSWORD").ok().filter(|s| !s.is_empty()) else {
+            return Ok(None);
+        };
+        let Some(from_address) = env::var("SMTP_FROM_ADDRESS").ok().filter(|s| !s.is_empty())
+        else {
+            return Ok(None);
+        };
+        let port = resolve_smtp_port(env::var("SMTP_PORT").ok().as_deref())?;
+        let tls_mode = resolve_tls_mode(env::var("SMTP_TLS_MODE").ok().as_deref(), port)?;
         let from_name = env::var("SMTP_FROM_NAME").ok().filter(|s| !s.is_empty());
 
-        Some(SmtpConfig {
+        Ok(Some(SmtpConfig {
             host,
             port,
             tls_mode,
@@ -128,7 +227,7 @@ impl SmtpConfig {
             password,
             from_address,
             from_name,
-        })
+        }))
     }
 
     /// Log the configuration status at startup. If `None`, log
