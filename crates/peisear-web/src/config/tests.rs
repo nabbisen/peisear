@@ -326,6 +326,67 @@ fn invalid_bind_addr_message_names_the_variable_and_the_value() {
     assert!(message.contains("localhost:3000"), "got {message:?}");
 }
 
+// ---------- CFG-001: resolve_cookie_secure ----------
+
+#[test]
+fn resolve_cookie_secure_degrades_to_false_when_unset() {
+    assert!(
+        !resolve_cookie_secure(None).expect("absence must degrade, not refuse"),
+        "RFC 022 §3: an unset variable must never refuse"
+    );
+}
+
+/// `RFC 022` §5's own constraint, pinned so a later tidy-up cannot
+/// narrow the set: `1` and `true` (any letter case) must keep working
+/// exactly as they did before this round.
+#[test]
+fn resolve_cookie_secure_still_accepts_1_and_true_case_insensitively() {
+    for accepted in ["1", "true", "True", "TRUE", "tRuE"] {
+        assert!(
+            resolve_cookie_secure(Some(accepted)).expect("must be accepted, not refused"),
+            "{accepted:?} must still be accepted as true"
+        );
+    }
+}
+
+#[test]
+fn resolve_cookie_secure_accepts_0_and_false_case_insensitively() {
+    for accepted in ["0", "false", "False", "FALSE"] {
+        assert!(
+            !resolve_cookie_secure(Some(accepted)).expect("must be accepted, not refused"),
+            "{accepted:?} must be accepted as false"
+        );
+    }
+}
+
+/// A present value outside the accepted set must refuse rather than
+/// silently become `false` -- the exact regression `RFC 022` §3
+/// exists to end for this variable.
+#[test]
+fn resolve_cookie_secure_refuses_anything_else() {
+    for bad in ["yes", "no", "on", "off", "2", "", "truee"] {
+        match resolve_cookie_secure(Some(bad)) {
+            Err(ConfigError::InvalidCookieSecure { value }) => assert_eq!(value, bad),
+            other => panic!("expected InvalidCookieSecure for {bad:?}, got {other:?}"),
+        }
+    }
+}
+
+/// `§3`'s own gate: the error must name the variable, the value, and
+/// the accepted set -- not a bare, unnamed parse failure.
+#[test]
+fn invalid_cookie_secure_message_names_the_variable_the_value_and_the_accepted_set() {
+    let message = ConfigError::InvalidCookieSecure {
+        value: "yes".to_string(),
+    }
+    .to_string();
+    assert!(message.contains("COOKIE_SECURE"), "got {message:?}");
+    assert!(message.contains("yes"), "got {message:?}");
+    for spelling in ["1", "0", "true", "false"] {
+        assert!(message.contains(spelling), "got {message:?}");
+    }
+}
+
 /// `FIV-001` round 3 `§16`: `thiserror`'s `#[error(...)]` cannot
 /// interpolate a `const`, so `PublishedPlaceholder`'s message and
 /// `PUBLISHED_PLACEHOLDER` itself are two copies of the same literal

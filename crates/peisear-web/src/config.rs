@@ -45,9 +45,7 @@ impl Config {
         let bind_addr_raw = env::var("BIND_ADDR").unwrap_or_else(|_| "127.0.0.1:3000".to_string());
         let bind_addr = resolve_bind_addr(&bind_addr_raw)?;
 
-        let cookie_secure = env::var("COOKIE_SECURE")
-            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
-            .unwrap_or(false);
+        let cookie_secure = resolve_cookie_secure(env::var("COOKIE_SECURE").ok().as_deref())?;
 
         Ok(Self {
             database_url,
@@ -160,6 +158,13 @@ pub enum ConfigError {
     )]
     InvalidBindAddr { value: String },
 
+    #[error(
+        "COOKIE_SECURE is set to {value:?}, which is not one of the accepted values -- \
+         expected one of 1, 0, true, or false (true/false in any letter case). Unset \
+         COOKIE_SECURE to use the default (false), or set it to one of the accepted values."
+    )]
+    InvalidCookieSecure { value: String },
+
     #[error("failed to read the JWT signing key at {}: {source}", path.display())]
     KeyReadFailed { path: PathBuf, source: io::Error },
 
@@ -251,6 +256,44 @@ fn resolve_bind_addr(raw: &str) -> Result<SocketAddr, ConfigError> {
     raw.parse().map_err(|_| ConfigError::InvalidBindAddr {
         value: raw.to_string(),
     })
+}
+
+/// `COOKIE_SECURE`'s own resolution (`CFG-001`, `RFC 022` §3): absence
+/// still degrades to `false`, unchanged -- the `None` arm is checked
+/// first and on its own, deliberately, so a reader (and `docs_scan`'s
+/// own `literal_bool_default`, which anchors on exactly this arm)
+/// finds the default in one place without reading the refusal logic
+/// below it. A value the operator actually set that is not one of the
+/// accepted spellings refuses rather than silently becoming `false` --
+/// a worse failure than the one being fixed, since an operator who
+/// typed `COOKIE_SECURE=yes` behind a TLS-terminating proxy would
+/// otherwise serve the session cookie without the `Secure` flag they
+/// believed they had asked for.
+///
+/// **The accepted set is deliberately the four spellings that
+/// correspond to what was already accepted (`1`, `true`) and its two
+/// negatives (`0`, `false`), case-insensitive for the words** --
+/// `RFC 022` §5's own constraint: `1` and `true` must keep working
+/// exactly as before, in the accepting direction, so narrowing them
+/// would be the refusing-direction regression that section warns
+/// against. `yes`/`no`/`on`/`off` are deliberately not added: a set
+/// with eight spellings is a set nobody remembers, and `0.60.0`'s
+/// `CHANGELOG.md` entry says so rather than leaving the omission
+/// unexplained.
+///
+/// Takes the already-looked-up environment value as a parameter, the
+/// same reason [`resolve_bind_addr`] and [`resolve_jwt_secret`] do --
+/// testable without a test reaching into the process's real, shared
+/// environment.
+fn resolve_cookie_secure(env_value: Option<&str>) -> Result<bool, ConfigError> {
+    match env_value {
+        None => Ok(false),
+        Some(v) if v == "1" || v.eq_ignore_ascii_case("true") => Ok(true),
+        Some(v) if v == "0" || v.eq_ignore_ascii_case("false") => Ok(false),
+        Some(v) => Err(ConfigError::InvalidCookieSecure {
+            value: v.to_string(),
+        }),
+    }
 }
 
 /// `database_url`'s own filesystem path, if it has one -- the same

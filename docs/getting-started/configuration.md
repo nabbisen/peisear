@@ -57,8 +57,8 @@ for you on first run regardless of which path you took (see below).
 | `DATABASE_URL` | `sqlite://data/app.db` | SQLite connection string. The parent directory is auto-created on startup. Use `sqlite://:memory:` for ephemeral testing. |
 | `JWT_SECRET` | generated on first run | HMAC secret for session tokens. If unset, 32 random bytes are generated and persisted in a file named `jwt_secret` beside the database (`RFC 017` §4); later runs reuse it. Set this variable explicitly to override — for a multi-instance deployment sharing one secret, say — and it always wins over the generated file. |
 | `BIND_ADDR` | `127.0.0.1:3000` | Interface and port to bind. Loopback by default, so a first run never publishes the instance to the network. Use `0.0.0.0:3000` to accept connections from other machines (the container image sets this for you); put a real TLS reverse proxy in front for public deployments either way. |
-| `COOKIE_SECURE` | `0` | Set to `1` when serving over HTTPS so the session cookie is flagged `Secure`. |
-| `RUST_LOG` | `info,sqlx=warn,hyper=warn,tower_http=info` | Any `tracing_subscriber` env-filter expression. Use `debug` or `trace` to see per-request details. |
+| `COOKIE_SECURE` | `0` | Set to `1` when serving over HTTPS so the session cookie is flagged `Secure`. Accepted values are `1`, `0`, `true`, or `false` (`true`/`false` in any letter case); anything else refuses startup rather than silently taking the default. |
+| `RUST_LOG` | `info,sqlx=warn,hyper=warn,tower_http=info` | Any `tracing_subscriber` env-filter expression. Use `debug` or `trace` to see per-request details. A value the filter parser rejects refuses startup rather than silently taking the default above. |
 
 **On a `--features postgres` build** ([Install](install.md)'s own
 "Running against PostgreSQL instead"), `DATABASE_URL` takes

@@ -25,12 +25,20 @@ use std::process::ExitCode;
 /// and not the others in a function this size.
 #[tokio::main]
 async fn main() -> ExitCode {
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "info,sqlx=warn,hyper=warn,tower_http=info".into()),
-        )
-        .init();
+    // `CFG-001`, `RFC 022` §3: this runs before the subscriber below
+    // exists, so a refusal here cannot go through `tracing` -- it
+    // uses the exact "Error: {e}" shape `run()`'s own failures print
+    // below, so the two look the same to whoever is reading the
+    // terminal.
+    let env_filter = match resolve_env_filter() {
+        Ok(filter) => filter,
+        Err(e) => {
+            eprintln!("Error: {e}");
+            return ExitCode::FAILURE;
+        }
+    };
+
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
     match run().await {
         Ok(()) => ExitCode::SUCCESS,
@@ -38,6 +46,69 @@ async fn main() -> ExitCode {
             eprintln!("Error: {e}");
             ExitCode::FAILURE
         }
+    }
+}
+
+/// `RUST_LOG`'s own resolution (`CFG-001`, `RFC 022` §3). Looks the
+/// variable up itself, deliberately the one place that does:
+/// `std::env::var` failing (unset, or not valid Unicode) collapses to
+/// `None` here, which is the same two cases `try_from_default_env()`'s
+/// own `.unwrap_or_else` used to treat alike -- the actual resolution
+/// is [`build_env_filter`], taking the already-looked-up value as a
+/// parameter the same reason `peisear-web`'s own resolvers do
+/// (testable without a test reaching into the process's real, shared
+/// environment).
+///
+/// **`RUST_LOG` is the only variable name that can reach this call**:
+/// `tracing_subscriber::EnvFilter::DEFAULT_ENV` is a `pub const` fixed
+/// at `"RUST_LOG"`, and `try_from_default_env()` has no parameter and
+/// no other configuration point that could make it read a different
+/// variable -- confirmed by reading `tracing-subscriber`'s own source
+/// (`filter/env/mod.rs`) rather than assumed, so [`build_env_filter`]'s
+/// error can always name `RUST_LOG` specifically.
+fn resolve_env_filter() -> Result<tracing_subscriber::EnvFilter, RustLogError> {
+    build_env_filter(std::env::var(tracing_subscriber::EnvFilter::DEFAULT_ENV).ok())
+}
+
+/// Absence (`None`) still takes the built-in filter, unchanged. A
+/// present value `EnvFilter` cannot parse now refuses, naming
+/// `RUST_LOG` and carrying `EnvFilter`'s own parse error rather than
+/// inventing a new message for a mistake that type already explains
+/// better than this function could.
+fn build_env_filter(raw: Option<String>) -> Result<tracing_subscriber::EnvFilter, RustLogError> {
+    const DEFAULT_FILTER: &str = "info,sqlx=warn,hyper=warn,tower_http=info";
+    match raw {
+        Some(value) => value
+            .parse()
+            .map_err(|source| RustLogError { value, source }),
+        None => Ok(tracing_subscriber::EnvFilter::new(DEFAULT_FILTER)),
+    }
+}
+
+/// Carries `EnvFilter`'s own [`tracing_subscriber::filter::ParseError`]
+/// rather than replacing it -- that type already names what was
+/// expected, more specifically than anything this function would
+/// invent. `Display` names the variable and quotes the value, the
+/// same shape every other refusal in this product uses.
+#[derive(Debug)]
+struct RustLogError {
+    value: String,
+    source: tracing_subscriber::filter::ParseError,
+}
+
+impl std::fmt::Display for RustLogError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "RUST_LOG is set to {:?}, which is not a valid filter directive -- {}",
+            self.value, self.source
+        )
+    }
+}
+
+impl std::error::Error for RustLogError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        Some(&self.source)
     }
 }
 
@@ -219,6 +290,58 @@ fn resolve_is_foreground<E>(terminal_pgrp_matches_ours: Result<bool, E>) -> bool
 #[cfg(windows)]
 fn is_foreground_stdin() -> bool {
     true
+}
+
+#[cfg(test)]
+mod rust_log_tests {
+    use super::build_env_filter;
+
+    /// `RFC 022` §3: an unset variable must never refuse -- `None`
+    /// here stands in for both of `std::env::var`'s failure cases
+    /// (unset, or not valid Unicode), which [`super::resolve_env_filter`]
+    /// collapses together before this function ever sees them.
+    /// `EnvFilter`'s own `Display` does not preserve input order or
+    /// spelling (confirmed by running this, not assumed) -- both
+    /// sides go through the identical `"...".parse()` transform
+    /// rather than comparing against the literal this function was
+    /// given, so the assertion is about the value, not `EnvFilter`'s
+    /// own formatting choices.
+    #[test]
+    fn absence_degrades_to_the_built_in_filter() {
+        let filter = build_env_filter(None).expect("absence must not refuse");
+        let expected: tracing_subscriber::EnvFilter = "info,sqlx=warn,hyper=warn,tower_http=info"
+            .parse()
+            .expect("valid directive");
+        assert_eq!(filter.to_string(), expected.to_string());
+    }
+
+    #[test]
+    fn a_well_formed_directive_is_used_as_given() {
+        let filter =
+            build_env_filter(Some("debug,sqlx=warn".to_string())).expect("must be accepted");
+        let expected: tracing_subscriber::EnvFilter =
+            "debug,sqlx=warn".parse().expect("valid directive");
+        assert_eq!(filter.to_string(), expected.to_string());
+    }
+
+    /// The regression this round fixes: before it, a malformed
+    /// `RUST_LOG` silently fell back to the built-in filter via
+    /// `.unwrap_or_else`, with no sign anything was wrong.
+    ///
+    /// **`EnvFilter`'s own grammar is more permissive than it looks**
+    /// -- confirmed by running this, not assumed: a bare string with
+    /// spaces and punctuation (`"not a valid directive!!"`) parses
+    /// *successfully* as a module-path target with an implicit
+    /// `TRACE` level. An unrecognised **level** name is what actually
+    /// fails to parse.
+    #[test]
+    fn a_malformed_directive_refuses_rather_than_silently_falling_back() {
+        let err = build_env_filter(Some("sqlx=not_a_real_level".to_string()))
+            .expect_err("an unrecognised level name must refuse");
+        let message = err.to_string();
+        assert!(message.contains("RUST_LOG"), "got {message:?}");
+        assert!(message.contains("not_a_real_level"), "got {message:?}");
+    }
 }
 
 #[cfg(all(test, unix))]
