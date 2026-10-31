@@ -519,50 +519,102 @@ const KNOWN_ENV_VAR_NAMES: &[&str] = &[
 /// reads are the seven arguments `from_env` passes to `from_values`).
 const EXPECTED_ENV_VAR_LITERAL_SITES: usize = 16;
 
+/// The discard-then-fallback window for one `env::var("…")` call,
+/// starting at `idx` (the byte offset of its own `e`). **Bounded by
+/// the next `;`, the next `,` at the same parenthesis depth the scan
+/// started at, or an unmatched `)` that closes something opened
+/// *before* `idx` -- whichever comes first** (`CFG-003` round 2).
+///
+/// **Not the current line.** Round 1 bounded this by the next `\n`,
+/// which fixed its own false-positive bug (`from_values`'s own
+/// argument lines leaking into one another) but, found by the
+/// review planting the real `§10.51` defect verbatim rather than a
+/// one-line reconstruction, left it blind to the shape every
+/// historical defect actually had: a method chain wrapped across
+/// several lines, with `.unwrap_or(` three lines below `env::var(`.
+/// A same-depth-comma bound reaches across those lines (a wrapped
+/// chain has no comma at its own depth before its own fallback)
+/// while still closing before `peisear-notify`'s own `from_values(a,
+/// b, c, …)` lets one argument's fallback leak onto its neighbours --
+/// each argument's own window ends at the comma separating it from
+/// the next, which sits at depth 0 relative to where that argument's
+/// own scan began.
+///
+/// Depth is tracked only for `(`/`)`; it does not parse string
+/// literals, so a `(`, `)`, or `,` *inside* a string would mislead it.
+/// Verified rather than assumed: none of the three files this rule
+/// reads contains one in any text near an `env::var` call today, and
+/// this comment is where a future reader checks that again rather
+/// than where it is silently still true.
+fn silent_default_window(source: &str, idx: usize) -> &str {
+    let rest = &source[idx..];
+    let mut depth: i32 = 0;
+    let mut end = rest.len();
+    for (i, ch) in rest.char_indices() {
+        if i >= 500 {
+            end = i;
+            break;
+        }
+        match ch {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth < 0 {
+                    end = i;
+                    break;
+                }
+            }
+            ',' | ';' if depth == 0 => {
+                end = i;
+                break;
+            }
+            _ => {}
+        }
+    }
+    &rest[..end]
+}
+
 /// `RFC 022` §3's rule, enforced: a value the operator supplied and
 /// the product cannot use must refuse, not silently default. The
-/// shape this recognises -- `env::var("VAR")`, somewhere in the same
-/// statement a combinator that can discard a present-but-unusable
-/// value (`.ok()`, `.map(`, `.and_then(`), and *later in that same
-/// statement* an unconditional fallback (`.unwrap_or(` or
-/// `.unwrap_or_else(`) -- is exactly what `COOKIE_SECURE`'s, `SMTP_
-/// PORT`'s and `SMTP_TLS_MODE`'s own pre-`CFG-001`/`CFG-002` code
-/// looked like, and exactly what their fixes replaced with a
+/// shape this recognises -- `env::var("VAR")`, somewhere in
+/// [`silent_default_window`]'s own reach a combinator that can
+/// discard a present-but-unusable value (`.ok()`, `.map(`,
+/// `.and_then(`), and *later in that same window* an unconditional
+/// fallback (`.unwrap_or(` or `.unwrap_or_else(`) -- is exactly what
+/// `COOKIE_SECURE`'s, `SMTP_PORT`'s and `SMTP_TLS_MODE`'s own
+/// pre-`CFG-001`/`CFG-002` code looked like, in the actual multi-line
+/// layout each one had, and exactly what their fixes replaced with a
 /// `Result`-returning resolver that this shape cannot match (`.ok()`
 /// or `.map(`/`.and_then(` may still appear at the call site, feeding
 /// the looked-up value to the resolver, but no `.unwrap_or(` sits
 /// anywhere near it any more).
 ///
-/// **A discard-then-fallback window is bounded by the current line**
-/// (the next `\n`, capped at 300 chars), not a fixed char count and
-/// not the next `;` -- measured, not assumed, after a first attempt
-/// at the latter produced a real false positive: `peisear-notify`'s
-/// own `from_values(...)` call spans seven argument lines with no `;`
-/// until after it closes, so bounding by statement let `SMTP_HOST`'s
-/// own line borrow a `.unwrap_or_else(` planted three lines later on
-/// `SMTP_TLS_MODE`'s own line, flagging five innocent arguments
-/// alongside the one real plant. Every call site in this codebase
-/// keeps its own chain on one line (`rustfmt`'s own wrapping has not
-/// needed to split one yet); a chain deliberately wrapped across
-/// lines to dodge this bound would itself be unusual enough to invite
-/// a second look, which is the honest trade -- a predicate that never
-/// flags safe code, over one that catches a hypothetical wrapped
-/// chain at the cost of flagging real, safe arguments it sits next to.
+/// **The census (`§3`, [`env_var_literal_names`]) is the guarantee
+/// here; this predicate is the convenience, not the other way round**
+/// (`CFG-003` round 2's own correction of round 1's doc comment,
+/// which had this backwards) -- an in-place edit that keeps the
+/// literal `env::var` site count unchanged is seen *only* by this
+/// predicate. The census cannot see it at all, because nothing about
+/// *how many* call sites exist changes when one of them is rewritten
+/// in place, which is exactly what a reintroduction of `§10.51`'s own
+/// defect looks like. So this predicate carries the whole of the
+/// protection in precisely the case a regression would take, and
+/// round 1's own claim that the census was a backstop for what this
+/// predicate missed had the two roles reversed.
 ///
-/// **What this cannot see, named rather than left for a future reader
-/// to assume covered**: `RUST_LOG`'s own shape before `CFG-001` --
-/// `tracing_subscriber::EnvFilter::try_from_default_env()`, a library
-/// call that itself conflates absence and parse-failure in its one
-/// `Err` variant, with no literal `env::var("RUST_LOG")` anywhere in
-/// this codebase to anchor this predicate on at all. A future
-/// variable resolved the same way (a wrapping call, no literal
-/// `env::var` of its own) is invisible to this shape-check. It is
-/// *not* invisible to `§3`'s population assertion if it is ever
-/// introduced via a literal `env::var` call this predicate then fails
-/// to classify correctly -- but a variable that never calls
-/// `env::var` in this codebase at all defeats both halves of this
-/// rule, and that is the residual gap `CFG-003`'s own report names
-/// rather than claims closed.
+/// **What this still cannot see, named rather than left for a future
+/// reader to assume covered**: `RUST_LOG`'s own shape before
+/// `CFG-001` -- `tracing_subscriber::EnvFilter::try_from_default_
+/// env()`, a library call that itself conflates absence and
+/// parse-failure in its one `Err` variant, with no literal
+/// `env::var("RUST_LOG")` anywhere in this codebase to anchor this
+/// predicate on at all. A future variable resolved the same way (a
+/// wrapping call, no literal `env::var` of its own) is invisible to
+/// this shape-check and to `§3`'s own population, which only counts
+/// literal `env::var` call sites -- a variable that never writes one
+/// defeats both halves of this rule at once, and that is the one
+/// residual gap this round's own report names rather than claims
+/// closed.
 fn silent_default_violations(label: &str, source: &str) -> Vec<String> {
     let discard_markers = [".ok()", ".map(", ".and_then("];
     let fallback_markers = [".unwrap_or(", ".unwrap_or_else("];
@@ -576,12 +628,7 @@ fn silent_default_violations(label: &str, source: &str) -> Vec<String> {
             break;
         };
         let var_name = &source[name_start..name_start + name_end_rel];
-        let line_end = source[idx..]
-            .find('\n')
-            .map(|p| idx + p)
-            .unwrap_or(source.len())
-            .min(idx + 300);
-        let window = &source[idx..line_end];
+        let window = silent_default_window(source, idx);
         let discard_pos = discard_markers.iter().filter_map(|m| window.find(m)).min();
         let fallback_pos = fallback_markers.iter().filter_map(|m| window.find(m)).min();
         if let (Some(d), Some(f)) = (discard_pos, fallback_pos)

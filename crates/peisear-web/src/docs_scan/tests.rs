@@ -406,6 +406,99 @@ fn rule_8_reports_a_literal_env_var_not_in_the_known_census() {
     );
 }
 
+/// `CFG-003` round 2 §3, plant 1: the real `SMTP_PORT` defect at
+/// `c53e7bc`, verbatim (`git show c53e7bc:crates/peisear-notify/src/
+/// config.rs`), added as a brand new site. Both halves fire: the
+/// predicate names the variable, and the census reports the site
+/// count moving (17, not 16) -- round 1's own plant only showed the
+/// census half; this confirms the predicate also reaches the real,
+/// multi-line layout once added as new code.
+#[test]
+fn rule_8_catches_the_real_four_line_smtp_port_shape_added_as_a_new_site() {
+    let mut r = real();
+    r.notify_config_rs = format!(
+        "{}\nfn planted() {{\n    let port = env::var(\"SMTP_PORT\")\n        .ok()\n        \
+         .and_then(|s| s.parse::<u16>().ok())\n        .unwrap_or(465);\n}}\n",
+        r.notify_config_rs
+    );
+    let v = only(run(&r), "rule 8:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("SMTP_PORT") && m.contains("discards")),
+        "the predicate must name SMTP_PORT on the real multi-line layout: got {v:?}"
+    );
+    assert!(
+        v.iter()
+            .any(|m| m.contains("17") && m.contains("expected 16")),
+        "the census must also report the site count moving: got {v:?}"
+    );
+}
+
+/// `CFG-003` round 2 §3, plant 2 -- **this round's own acceptance
+/// test**. The same real `SMTP_PORT` defect, planted *in place* over
+/// the existing safe argument line, so the literal `env::var("SMTP_
+/// PORT")` site count stays at 16. This is what a reintroduction
+/// actually looks like, and it is the plant that passed silently
+/// (`214 passed; 0 failed`, no rule 8 message at all) against round
+/// 1's line-bounded window at `8b96a32`.
+#[test]
+fn rule_8_catches_the_real_four_line_smtp_port_shape_planted_in_place() {
+    let mut r = real();
+    r.notify_config_rs = r.notify_config_rs.replace(
+        "env::var(\"SMTP_PORT\").ok().as_deref(),",
+        "env::var(\"SMTP_PORT\")\n                .ok()\n                \
+         .and_then(|s| s.parse::<u16>().ok())\n                .unwrap_or(465),",
+    );
+    let v = only(run(&r), "rule 8:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("SMTP_PORT") && m.contains("discards")),
+        "an in-place reintroduction of the real defect must be caught by the predicate, \
+         with the site count unchanged: got {v:?}"
+    );
+}
+
+/// Not asked for by name in `§3`'s own list, but the same measurement
+/// for the fourth reachable historical shape (`RUST_LOG` has no
+/// literal `env::var` at all, so it is the one structurally excluded,
+/// named in the doc comment rather than tested here): `SMTP_TLS_
+/// MODE`'s own real pre-fix shape at `c53e7bc`, planted in place.
+#[test]
+fn rule_8_catches_the_real_four_line_smtp_tls_mode_shape_planted_in_place() {
+    let mut r = real();
+    r.notify_config_rs = r.notify_config_rs.replace(
+        "env::var(\"SMTP_TLS_MODE\").ok().as_deref(),",
+        "env::var(\"SMTP_TLS_MODE\")\n                .ok()\n                \
+         .and_then(|s| TlsMode::from_str_loose(&s))\n                \
+         .unwrap_or_else(|| TlsMode::default_for_port(port)),",
+    );
+    let v = only(run(&r), "rule 8:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("SMTP_TLS_MODE") && m.contains("discards")),
+        "got {v:?}"
+    );
+}
+
+/// `CFG-003` round 2 §3, plant 4: `COOKIE_SECURE`'s own real pre-fix
+/// shape at `f2aea9b` (`git show f2aea9b:crates/peisear-web/src/
+/// config.rs`), three lines, planted in place in `config.rs`.
+#[test]
+fn rule_8_catches_the_real_three_line_cookie_secure_shape() {
+    let mut r = real();
+    r.config_rs = r.config_rs.replace(
+        "let cookie_secure = resolve_cookie_secure(env::var(\"COOKIE_SECURE\").ok().as_deref())?;",
+        "let cookie_secure = env::var(\"COOKIE_SECURE\")\n            .map(|v| v == \"1\" || \
+         v.eq_ignore_ascii_case(\"true\"))\n            .unwrap_or(false);",
+    );
+    let v = only(run(&r), "rule 8:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("COOKIE_SECURE") && m.contains("discards")),
+        "got {v:?}"
+    );
+}
+
 #[test]
 fn the_helpers_do_what_the_rules_assume() {
     assert_eq!(short_crate_name("peisear-i18n"), "i18n");
