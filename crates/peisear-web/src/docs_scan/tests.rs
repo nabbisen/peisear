@@ -209,12 +209,18 @@ fn rule_4_reports_rather_than_silently_skips_when_bind_addr_s_literal_moves() {
     );
 }
 
+/// `CFG-001` moved the anchor from `env::var("COOKIE_SECURE")` to the
+/// `resolve_cookie_secure` function's own name (see
+/// `literal_bool_default`'s doc comment) -- this plants that
+/// function's own literal moving, not the `env::var` call, which is
+/// no longer what the rule reads.
 #[test]
 fn rule_4_reports_rather_than_silently_skips_when_cookie_secure_s_literal_moves() {
     let mut r = real();
-    r.config_rs = r
-        .config_rs
-        .replace("env::var(\"COOKIE_SECURE\")", "env::var(COOKIE_SECURE_VAR)");
+    r.config_rs = r.config_rs.replace(
+        "fn resolve_cookie_secure(",
+        "fn resolve_cookie_secure_renamed(",
+    );
     let v = only(run(&r), "rule 4:");
     assert!(
         v.iter()
@@ -365,8 +371,9 @@ fn the_helpers_do_what_the_rules_assume() {
     );
     assert_eq!(
         literal_bool_default(
-            "env::var(\"COOKIE_SECURE\").map(|v| v==\"1\").unwrap_or(false)",
-            "COOKIE_SECURE"
+            "fn resolve_cookie_secure(v: Option<&str>) -> Result<bool, ConfigError> {\n    \
+             match v {\n        None => Ok(false),\n        Some(_) => todo!(),\n    }\n}",
+            "resolve_cookie_secure"
         ),
         Some(false)
     );
@@ -397,7 +404,8 @@ fn the_helpers_do_what_the_rules_assume() {
     );
     assert_eq!(
         rust_log_default(
-            "tracing_subscriber::EnvFilter::try_from_default_env()\n    .unwrap_or_else(|_| \"info,sqlx=warn\".into())"
+            "fn build_env_filter(raw: Option<String>) -> Result<EnvFilter, RustLogError> {\n    \
+             const DEFAULT_FILTER: &str = \"info,sqlx=warn\";\n    todo!()\n}"
         ),
         Some("info,sqlx=warn".into())
     );

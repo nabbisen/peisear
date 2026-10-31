@@ -308,15 +308,29 @@ fn literal_string_default(config_rs: &str, var: &str) -> Option<String> {
     Some(after_start[..end].to_string())
 }
 
-/// The boolean inside `env::var("<var>")....unwrap_or(<bool>)`.
-fn literal_bool_default(config_rs: &str, var: &str) -> Option<bool> {
-    let marker = format!("env::var(\"{var}\")");
+/// `COOKIE_SECURE`'s own absence-case default, inside
+/// `resolve_cookie_secure`'s `None` arm.
+///
+/// **Moved here by `CFG-001` (`RFC 022`).** Before that round this
+/// anchored on `env::var("<var>")....unwrap_or(<bool>)` directly at
+/// the call site in `Config::from_env` -- the same shape
+/// [`literal_string_default`] still uses for `DATABASE_URL`/
+/// `BIND_ADDR`, which never gained a refusal path. `COOKIE_SECURE`
+/// did: a value the operator supplied and the type cannot use now
+/// refuses (`ConfigError::InvalidCookieSecure`) rather than becoming
+/// `false`, so the default and the refusal needed two sites, and
+/// `.unwrap_or(false)` no longer exists anywhere near the `env::var`
+/// call. Anchoring on the resolver function's own name, rather than
+/// on `env::var`, is the same move [`rust_log_default`] already made
+/// for the same reason.
+fn literal_bool_default(config_rs: &str, resolver_fn_name: &str) -> Option<bool> {
+    let marker = format!("fn {resolver_fn_name}(");
     let idx = config_rs.find(&marker)?;
     let rest = &config_rs[idx + marker.len()..];
-    let window = &rest[..rest.len().min(200)];
-    if window.contains(".unwrap_or(true)") {
+    let window = &rest[..rest.len().min(300)];
+    if window.contains("None => Ok(true)") {
         Some(true)
-    } else if window.contains(".unwrap_or(false)") {
+    } else if window.contains("None => Ok(false)") {
         Some(false)
     } else {
         None
@@ -326,15 +340,24 @@ fn literal_bool_default(config_rs: &str, var: &str) -> Option<bool> {
 // ---------- rule 7: .env.example vs each key's own default ----------
 
 /// `RUST_LOG`'s literal fallback in `main.rs` -- a different shape from
-/// [`literal_string_default`]'s `env::var("X").unwrap_or_else(...)`,
-/// since `tracing_subscriber::EnvFilter::try_from_default_env()` reads
-/// `RUST_LOG` itself; there is no `env::var("RUST_LOG")` call to anchor
-/// on, only the fallback that runs when that read comes back empty.
+/// [`literal_string_default`]'s `env::var("X").unwrap_or_else(...)`.
+///
+/// **Moved by `CFG-001` (`RFC 022`), same reason as
+/// [`literal_bool_default`]'s own move.** Before that round this
+/// anchored on `tracing_subscriber::EnvFilter::try_from_default_env()`
+/// directly, since that call read `RUST_LOG` and fell back in one
+/// place with no `env::var("RUST_LOG")` to anchor on at all.
+/// `try_from_default_env()` no longer appears in `main.rs`: a value
+/// the operator set that `EnvFilter` cannot parse now refuses
+/// (naming `RUST_LOG`) rather than being silently discarded, so the
+/// read moved into `resolve_env_filter` and the refusal plus the
+/// absence-case default moved into `build_env_filter`, which is the
+/// one that still holds a literal default to anchor on.
 fn rust_log_default(main_rs: &str) -> Option<String> {
-    let marker = "try_from_default_env()";
+    let marker = "fn build_env_filter(";
     let idx = main_rs.find(marker)?;
     let rest = &main_rs[idx + marker.len()..];
-    let window = &rest[..rest.len().min(120)];
+    let window = &rest[..rest.len().min(200)];
     let start = window.find('"')? + 1;
     let after_start = &window[start..];
     let end = after_start.find('"')?;
@@ -594,7 +617,7 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
             ));
         }
     }
-    match literal_bool_default(input.config_rs, "COOKIE_SECURE") {
+    match literal_bool_default(input.config_rs, "resolve_cookie_secure") {
         None => out.push(
             "rule 4: no literal default found in config.rs for COOKIE_SECURE -- has the call shape changed?"
                 .into(),
@@ -635,7 +658,7 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
                     "rule 7: .env.example sets {key}, but config.rs has no literal default for it to check against"
                 )),
             },
-            "COOKIE_SECURE" => match literal_bool_default(input.config_rs, "COOKIE_SECURE") {
+            "COOKIE_SECURE" => match literal_bool_default(input.config_rs, "resolve_cookie_secure") {
                 Some(default) => {
                     let default_str = if default { "1" } else { "0" };
                     if default_str != value {

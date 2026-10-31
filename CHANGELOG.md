@@ -11,6 +11,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**`CFG-001`, the first of three rounds applying `RFC 022` §3's one
+rule**: *absence degrades; a value the operator supplied and the
+product cannot use refuses startup, by name, naming what would have
+been accepted.* `COOKIE_SECURE` and `RUST_LOG` are the two of
+`0.60.0`'s thirteen operator-facing variables that already had a
+named error type and a `Result` to refuse through — the remaining
+two (`SMTP_PORT`, `SMTP_TLS_MODE`) are `CFG-002`'s own, not yet done.
+
+### Changed
+
+- **`COOKIE_SECURE` no longer treats every value other than `1`/
+  `true` as `false`.** It still does, for exactly `1`, `0`, `true`,
+  or `false` (case-insensitive for the words) — unset still degrades
+  to `false`, unchanged. Anything else now refuses startup, naming
+  the value given and the accepted set, instead of silently running
+  with cookie security the operator did not actually ask for.
+  `yes`/`no`/`on`/`off` are deliberately not accepted alongside
+  them: a set with eight spellings is a set nobody remembers, and
+  `1`/`true` must keep working exactly as before regardless (`RFC
+  022` §5) — narrowing the accepting direction would be a worse
+  regression than the one this round fixes.
+- **`RUST_LOG` no longer silently falls back to the built-in filter
+  on a value it cannot parse.** Unset still takes the built-in
+  filter, unchanged. A value `tracing_subscriber::EnvFilter` rejects
+  now refuses startup, naming `RUST_LOG` and carrying `EnvFilter`'s
+  own parse error rather than a message this round would have had to
+  invent.
+- **`docs/getting-started/configuration.md`**'s reference table
+  states `COOKIE_SECURE`'s accepted set and notes that both
+  variables now refuse rather than silently default on a bad value.
+
 ## [0.59.0] — 2026-10-31
 
 **PostgreSQL is a configuration peisear says it supports, and now
