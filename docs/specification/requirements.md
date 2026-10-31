@@ -3813,19 +3813,30 @@ requirement already takes toward the operating system underneath it.
 Silence on PostgreSQL until P5 is deliberate, named here so it is
 raised rather than rediscovered, not an oversight this entry already
 has one of (`§10.34`'s own class).
-*Open at 0.56.0 — what this requires of the PostgreSQL backend.*
-Scoping this entry to SQLite leaves `peisear`'s requirements silent
-about persistent state on the other backend. A sibling entry
-(`NFR-CMP-007 — Persistent state on the PostgreSQL backend`) was
-proposed to the owner on 2026-10-21, with text: peisear MUST NOT
-require, configure or coordinate any backup mechanism for a server
-it does not own; `docs/operations/backup.md` MUST state that the
-operator's own means — `pg_dump`/`pg_restore`, WAL archiving, or a
-managed provider's snapshot — are the backup path, and MUST state
-that no generated signing-key file exists on this backend.
-**Undecided at the cut.** `backup.md` already says all of it; what
-is open is whether the specification should require it. Recorded
-here so the silence is a known question rather than an oversight.
+*Opened at 0.56.0 — what this requires of the PostgreSQL backend —
+and **closed at 0.59.0 by the owner's decision**, 2026-10-31.*
+Scoping this entry to SQLite left `peisear`'s requirements silent
+about persistent state on the other backend. Two shapes for closing
+that silence were proposed, one day apart and never put side by side,
+which is why the question survived four releases: the **clause** in
+the 0.56.0 amendment above, and a **sibling entry** proposed to the
+owner on 2026-10-21. The owner chose the sibling entry on the
+architect's recommendation — `NFR-CMP-003` is titled for SQLite, so a
+PostgreSQL clause inside it would contradict its own title, and the
+sibling's text was the more complete of the two.
+**`NFR-CMP-007 — Persistent state on the PostgreSQL backend` is that
+entry**, and it governs the question this paragraph left open.
+**The clause proposed in the 0.56.0 amendment above is withdrawn**,
+named here so it is not later read as still owed: its substance lives
+in `NFR-CMP-007`, in that entry's own words rather than as a second
+copy here. Nothing about SQLite in this entry changes.
+*Why it closed at 0.59.0 and not earlier.* The 0.56.0 amendment set
+its own trigger — *"the day a PostgreSQL install path is
+documented"* — and `SUP-003` documented one on 2026-10-30. Until
+2026-10-31 this entry's own *"Silence on PostgreSQL until P5 is
+deliberate"* had stopped being true of a live state, and `0.59.0`
+would otherwise have shipped a supported configuration whose
+persistent state no requirement governed.
 
 **NFR-CMP-004 — Forward-only migrations**
 Schema migrations MUST be forward-only and numbered sequentially. A
@@ -3853,6 +3864,63 @@ restructured, so that existing rows remain valid without backfill.
 The project MUST be distributed under Apache-2.0, attributed to the
 author.
 *Source*: project convention. *Status*: Implemented. *Priority*: P1.
+
+**NFR-CMP-007 — Persistent state on the PostgreSQL backend**
+On the PostgreSQL backend, peisear MUST NOT require, configure or
+coordinate any backup mechanism for a server it did not start and does
+not own. `docs/operations/backup.md` MUST state that the operator's own
+means — `pg_dump`/`pg_restore`, WAL archiving and point-in-time
+recovery, or a managed provider's own snapshot mechanism — are the
+backup path, and MUST state that the backup unit is the database
+alone: no signing-key file is generated beside a PostgreSQL connection
+string, so the directory-shaped unit `NFR-CMP-003`'s own 0.53.0
+amendment introduced does not apply here.
+*Source*: proposed to the owner 2026-10-21 (`NFR-CMP-003`'s own open
+question at 0.56.0); **decided by the owner 2026-10-31**, at this
+release's cut, in the sibling-entry shape rather than as a clause
+inside `NFR-CMP-003`. *Status*: Implemented. *Priority*: P2.
+*Added (0.59.0)* — **on the trigger `NFR-CMP-003` set for itself.**
+That entry reserved this decision for the owner *"the day a PostgreSQL
+install path is documented"*; `SUP-003` documented one on 2026-10-30,
+and until this entry existed `0.59.0` would have shipped a supported
+configuration whose persistent state no requirement governed, with
+`docs/operations/backup.md` carrying a PostgreSQL section no
+requirement required.
+**Why a sibling entry and not a clause in `NFR-CMP-003`.** The owner's
+decision, on the architect's recommendation: `NFR-CMP-003` is titled
+*"Single-file database (SQLite backend)"* and was scoped to SQLite
+deliberately at 0.56.0, so a PostgreSQL clause inside it would
+contradict its own title — and one entry per backend, each titled for
+what it governs, stops that entry growing a fifth amendment note. The
+clause proposed there at 0.56.0 is **withdrawn by name** in that entry
+rather than left to be rediscovered.
+**The second sentence is stronger than the proposal's own wording, and
+it was corrected against the code rather than copied.** The 2026-10-21
+proposal said `backup.md` must state that *"no generated signing-key
+file exists on this backend"*, which is true but understates what
+happens: `config.rs`'s own `database_file_path` accepts only a
+`sqlite://` URL, so on PostgreSQL an unset `JWT_SECRET` does not
+silently skip key generation — **startup refuses, by name**: *"JWT_SECRET
+is not set, and DATABASE_URL (…) has no filesystem path to persist a
+generated signing key beside. Set JWT_SECRET explicitly."* So
+`JWT_SECRET` is effectively mandatory on this backend, which is why
+`docs/getting-started/install.md`'s own PostgreSQL command sets it
+inline, and why the backup unit is the database alone rather than a
+directory.
+*Evidence*: `docs/operations/backup.md`'s own PostgreSQL section states
+all three obligations today — the operator's own means and peisear
+coordinating nothing for a server it does not own; the three named
+techniques; and *"No generated signing-key file exists on this backend
+to back up"* with the explicit-`JWT_SECRET` consequence. The entry is
+therefore `Implemented` on arrival: the specification is catching up to
+documentation that was already correct, which is the whole of what this
+release's `RFC 021` was about one level down.
+**Its own bound, stated rather than implied**: like `NFR-CMP-003`'s own
+*"MUST state and keep stating"*, **nothing mechanical checks these
+sentences.** They are obligations a reader can verify in a document a
+reader can read, and `§10.36`'s standing question applies — if
+`backup.md` lost them, no gate in this project would notice. Named here
+so the absence of a check is a known bound and not an assumption.
 
 ---
 
@@ -7802,11 +7870,23 @@ it is in progress, not deferred.
 | Performance | 4 | 4 | — | — | — | — |
 | Maintainability | 10 | 9 | 1 | — | — | — |
 | Release | 11 | 9 | 1 | — | — | 1 undefined |
-| Compatibility | 6 | 6 | — | — | — | — |
-| **Non-functional total** | **69** | **60** | **3** | **0** | **2** | **4** |
+| Compatibility | 7 | 7 | — | — | — | — |
+| **Non-functional total** | **70** | **61** | **3** | **0** | **2** | **4** |
 
 Counts are indicative; the authoritative status is the per-requirement
 annotation in §4 and §5.
+
+**Re-derived at 0.59.0, one row and the total: Compatibility, on
+`NFR-CMP-007` being added** (the owner's decision of 2026-10-31,
+closing `NFR-CMP-003`'s own open question). Re-summed from each
+entry's own `*Status*` line rather than incremented by the delta, per
+`DEC-028`'s own standing instruction: all **seven** `NFR-CMP` entries
+read `Implemented`, so the row is `7 | 7 | — | — | — | —`, and the
+non-functional total re-sums across its nine rows to
+`61+3+0+2+4 = 70` — the column sums being `8+7+8+2+7+4+9+9+7 = 61`
+Implemented and `8+7+11+5+7+4+10+11+7 = 70` in total. The previous
+re-derivation of this same row, at 0.56.0 below, found a stale cell
+the table did not know it had; this one found none.
 
 **Re-derived at 0.53.0, four times, same release: the Release and
 Security rows and the non-functional total, from each entry's own
@@ -7931,7 +8011,7 @@ let `FR-DM-002` be violated for four releases without anyone checking.
 | V3 (`V3`) | Reconciliation with implemented state through 0.19.0 |
 | 0.19.1 baseline | Consolidation into English normative requirements; identifiers assigned; §10 compliance gaps recorded |
 | 0.20.0 | Compliance pass. Nine recorded statuses corrected — five of them P0 or P1 requirements annotated as satisfied while the code did the opposite. `NFR-PRIV-002` scoped (`DEC-019`); `NFR-CMP-001` extended with the toolchain/MSRV distinction (`DEC-044`/`DEC-045`); `NFR-LANG-005` rescheduled to 0.21.0 (`DEC-022`). §10 gains a state table and six new entries, five of which close in this release. Test inventory 65 → 82 active, 0 disabled. `RSK-001` closed |
-| **0.59.0 (this baseline)** | **Configurations the product actually supports, and both specifications' own record of themselves repaired in the same cut.** `RFC 021`, four work rounds (`SUP-001`–`SUP-004`). **`SUP-001`**: `peisear-storage`'s `sqlite = []` forwarded no dependency; `sqlite = ["sqlx/sqlite"]` now matches `postgres`'s own forwarding, and `sqlx`'s unconditional `sqlite` is out of `[workspace.dependencies]` — `cargo tree` confirms `libsqlite3-sys` gone from a `--features postgres` build. The entry's own 387-symbol figure had already decayed to 0 before the fix, through linker dead-code elimination; re-measured because `§10.48` said to, closed on its own stated condition regardless. **`SUP-002`**: all 33 `peisear-web` integration binaries run against a real `postgres:17` in CI, unfiltered — 30 for the first time — nine real defects found and fixed (raw SQLite-only `?N` placeholders in test code; a `SELECT DISTINCT`/`ORDER BY` incompatibility; `SUM(...)` decoded as non-nullable where `NULL` is correct over zero rows; a `SELECT 1` literal at the wrong integer width; a SQLite-only `PRAGMA`; raw string timestamp binds against a `timestamp with time zone` column; a same-second fixture that held by SQLite's coarser clock alone; a named collation PostgreSQL has none of; a test that opened `BEGIN IMMEDIATE` directly instead of the real production lock seam) — none of the 33 genuinely backend-specific. `RFC 021` §5 (end the backend) was on the table until this round; it is not the outcome. **`SUP-003`**: the one install path that reaches PostgreSQL is `cargo install --no-default-features --features postgres` — `--no-default-features` confirmed required, since Cargo features are additive and the bare feature name alone silently relinks the driver `SUP-001` removed. `install.md`, `configuration.md`, `backup.md` and `scaling.md` reconciled against what now exists; `NFR-REL-011` amended with a real CI walk for the new path. **`SUP-004`**: all seven `SMTP_*` documented in `configuration.md`'s new "Email (SMTP)" section; the startup warning, which named four as though they were the set, now names none and points at the documentation. `docs_scan` rule 4's own reach over the seven measured by planting a wrong default and watching the suite stay green, not by reading the rule — reported as a finding, not widened. **The cut's own second subject**: assembling it found both specifications' `Covers release` header and Appendix C baseline marker had drifted — `external-design.md` unamended since `0.57.0`, this document's own Appendix C missing rows for `0.57.0`/`0.58.0`/`0.58.1`, three different answers across two documents to which release each covers. Repaired here: both headers to `0.59.0`, the three missing rows below backfilled and marked as such, `external-design.md §1.1` no longer describing a single-backend product now that this release's own install path removes `0.55.0`'s own condition for that description. Recorded as `§10.36` instance 7, the lapse the architect's own, in both candidates and both reviews that accepted them. **`§6.5`/`NFR-CMP-004`** amended with the current migration counts (22 SQLite, 23 PostgreSQL) and the asymmetry named. **What this release does not fix, both open and unscheduled**: `§10.51` — `SMTP_PORT` and `SMTP_TLS_MODE` each discard a malformed value silently where `PEISEAR_SETUP` refuses one by name on the same page, and because the TLS mode derives from the port, a malformed port silently changes transport security too; and `§10.50`, cited rather than restated — no CI job in this repository compiles for any platform but Linux outside the release tag. `DEC-007`: **601, unchanged across all four work rounds** — no test added or removed by any of `SUP-001`–`SUP-004`, measured fresh with the runner at the candidate |
+| **0.59.0 (this baseline)** | **Configurations the product actually supports, and both specifications' own record of themselves repaired in the same cut.** `RFC 021`, four work rounds (`SUP-001`–`SUP-004`). **`SUP-001`**: `peisear-storage`'s `sqlite = []` forwarded no dependency; `sqlite = ["sqlx/sqlite"]` now matches `postgres`'s own forwarding, and `sqlx`'s unconditional `sqlite` is out of `[workspace.dependencies]` — `cargo tree` confirms `libsqlite3-sys` gone from a `--features postgres` build. The entry's own 387-symbol figure had already decayed to 0 before the fix, through linker dead-code elimination; re-measured because `§10.48` said to, closed on its own stated condition regardless. **`SUP-002`**: all 33 `peisear-web` integration binaries run against a real `postgres:17` in CI, unfiltered — 30 for the first time — nine real defects found and fixed (raw SQLite-only `?N` placeholders in test code; a `SELECT DISTINCT`/`ORDER BY` incompatibility; `SUM(...)` decoded as non-nullable where `NULL` is correct over zero rows; a `SELECT 1` literal at the wrong integer width; a SQLite-only `PRAGMA`; raw string timestamp binds against a `timestamp with time zone` column; a same-second fixture that held by SQLite's coarser clock alone; a named collation PostgreSQL has none of; a test that opened `BEGIN IMMEDIATE` directly instead of the real production lock seam) — none of the 33 genuinely backend-specific. `RFC 021` §5 (end the backend) was on the table until this round; it is not the outcome. **`SUP-003`**: the one install path that reaches PostgreSQL is `cargo install --no-default-features --features postgres` — `--no-default-features` confirmed required, since Cargo features are additive and the bare feature name alone silently relinks the driver `SUP-001` removed. `install.md`, `configuration.md`, `backup.md` and `scaling.md` reconciled against what now exists; `NFR-REL-011` amended with a real CI walk for the new path. **`SUP-004`**: all seven `SMTP_*` documented in `configuration.md`'s new "Email (SMTP)" section; the startup warning, which named four as though they were the set, now names none and points at the documentation. `docs_scan` rule 4's own reach over the seven measured by planting a wrong default and watching the suite stay green, not by reading the rule — reported as a finding, not widened. **The cut's own second subject**: assembling it found both specifications' `Covers release` header and Appendix C baseline marker had drifted — `external-design.md` unamended since `0.57.0`, this document's own Appendix C missing rows for `0.57.0`/`0.58.0`/`0.58.1`, three different answers across two documents to which release each covers. Repaired here: both headers to `0.59.0`, the three missing rows below backfilled and marked as such, `external-design.md §1.1` no longer describing a single-backend product now that this release's own install path removes `0.55.0`'s own condition for that description. Recorded as `§10.36` instance 7, the lapse the architect's own, in both candidates and both reviews that accepted them. **`§6.5`/`NFR-CMP-004`** amended with the current migration counts (22 SQLite, 23 PostgreSQL) and the asymmetry named. **What this release does not fix, both open and unscheduled**: `§10.51` — `SMTP_PORT` and `SMTP_TLS_MODE` each discard a malformed value silently where `PEISEAR_SETUP` refuses one by name on the same page, and because the TLS mode derives from the port, a malformed port silently changes transport security too; and `§10.50`, cited rather than restated — no CI job in this repository compiles for any platform but Linux outside the release tag. `DEC-007`: **601, unchanged across all four work rounds** — no test added or removed by any of `SUP-001`–`SUP-004`, measured fresh with the runner at the candidate **`NFR-CMP-007 — Persistent state on the PostgreSQL backend` is added**, on the owner's decision of 2026-10-31 — the sibling-entry shape rather than a clause inside `NFR-CMP-003`, whose own open question from 0.56.0 closes with it and whose competing clause proposal is withdrawn by name. It closed on the trigger that entry set for itself, *"the day a PostgreSQL install path is documented"*, which `SUP-003` fired on 2026-10-30: without it this release would have shipped a supported configuration whose persistent state no requirement governed, `backup.md` carrying a PostgreSQL section no requirement required. `Implemented` on arrival — `backup.md` already stated all three obligations — so the specification is catching up to documentation that was already correct, which is `RFC 021`'s own subject one level down. Its second obligation was **corrected against the code rather than copied from the proposal**: an unset `JWT_SECRET` on this backend does not silently skip key generation, it refuses startup by name, so the backup unit is the database alone. **Appendix A's Compatibility row and the non-functional total re-derived from each entry's own `*Status*` line** (7|7 and 70|61|3|0|2|4), and `spec_scan`'s own 168-entry population assertion went red on the addition before Appendix A's rules did — which is the population assertion `§10.36` exists to require, working. |
 | 0.58.1 | *Backfilled 2026-10-31, from `CHANGELOG.md`'s own `[0.58.1]` section and the register entries it cites — not written as though produced at this row's own cut (`REL-0.59.0` §3).* **The terminal nobody is reading.** `RFC 020` §7 (amended), `§10.49`, two series rounds (`TTY-001`, `TTY-002`; `TTY-002` earning a round of its own after its first review found the fix proven by hand but not yet guarded). `should_run_wizard`'s own predicate asked whether a terminal was attached, not whether anyone could answer it: `stdin_is_terminal` replaced with `can_prompt` — `PEISEAR_SETUP` first, then a terminal, then, on Unix, the kernel's own foreground-process-group test (`tcgetpgrp` against `getpgrp`, the same comparison it makes before raising `SIGTTIN`). The same cause cost `0.58.0` its own Windows archive; the release walkthrough divided into two cases named for the property each proves — an unattended start serves, an attended start prompts — and `test.yml` gained case 7, the first automated check for `§10.49`'s own defining case, seen red on a planted predicate and green at the commit that shipped. `0.58.0`'s own `CHANGELOG` claim ("skipped entirely where a prompt would be an outage") was wrong in a third shape, corrected forward rather than rewritten. **What it does not deliver**: an attended start prompting stays unproven on Windows, five diagnosed attempts named in `release.yml`'s own comment; no CI job in this repository compiles for Windows outside the release tag (`§10.50`, opened this release). `DEC-007`: **601, unchanged** |
 | 0.58.0 | *Backfilled 2026-10-31, from `CHANGELOG.md`'s own `[0.58.0]` section and the register entries it cites — not written as though produced at this row's own cut (`REL-0.59.0` §3).* **The first thing it says.** `RFC 020`: a start with no configuration asks two questions with working defaults, makes three statements, and writes the `.env` it describes, so the file and the explanation cannot disagree — skipped where a prompt would be an outage, in the two shapes tested at this tag (no terminal, configuration already exists; a third, a terminal attached and unreadable, was not, and cost this release its own Windows archive — `§10.49`, closed at `0.58.1`). Five rounds against three scoped (`WIZ-001`–`WIZ-005`), two added under the standing exception for a release-blocking defect. `RFC 020` §2's own test of itself, answered honestly: one of the three defects that motivated the RFC is prevented (`§10.40`, already closed at `0.53.0`, so this release makes the copy step unneeded rather than fixing something open); the other two — documentation drifting from the binary's own output, an install producing no assets — are untouched, a prose/code gap and a packaging defect a wizard runs too late to see, respectively. `BIND_ADDR` gains single-parse, named validation in `Config::from_env`. **What this release does not prove**: seven `SMTP_*` variables remain documented nowhere operator-facing (closed at `0.59.0`); the wizard is proven on a runner's pty, not inside the published container image; two questions cover two of the four variables `Config::from_env` reads. `DEC-007`: **586, unchanged across the release's own five rounds** |
 | 0.57.0 | *Backfilled 2026-10-31, from `CHANGELOG.md`'s own `[0.57.0]` section — not written as though produced at this row's own cut (`REL-0.59.0` §3).* **`requirements.md` is this project's most-edited document, and until this release nothing mechanical had ever read it.** `spec_scan`, a new guard module following `docs_scan`'s own shape: two citation rules (every `§10.N` resolves to a real heading; no four-digit `RFC 0NNN` reference outside the frozen history directory), Appendix A's own arithmetic and its census against the 168 real requirement entries, a closed status vocabulary, and eight test-count citations held to the runner — seven CI steps, one per cited binary, each checked against `cargo test --test <name> -- --list` rather than a grep. **The first reading found more wrong than expected, all four measured and fixed**: thirteen dangling `§10.N` citations (real entries in an older compact register, never promoted to the heading convention); nine of Appendix A's twenty-five areas stale, re-derived from the 168 entries' own governing status; `Partial`/`Partially implemented` normalised to one spelling, `Met` confirmed as `Implemented`'s synonym; three of eight test-count citations wrong on the live tree, corrected with the runner. **Nothing a user runs changed** — every file this release touches is the guard module itself, its own tests, `test.yml`, and the two specification documents. `DEC-007`: unchanged by this release's own work (the guard reads the documents, it does not change what runs) |

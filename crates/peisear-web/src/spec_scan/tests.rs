@@ -313,19 +313,25 @@ fn governing_status_token_matches_known_multi_word_tokens_before_falling_back() 
 }
 
 #[test]
-fn requirement_entries_is_168_on_the_real_tree() {
-    // SPEC-002 §1: 99 FR + 69 NFR, matching Appendix A's own totals --
+fn requirement_entries_is_169_on_the_real_tree() {
+    // SPEC-002 §1: 99 FR + 70 NFR, matching Appendix A's own totals --
     // the population this whole round's checks depend on.
+    //
+    // 0.59.0: 168 -> 169, NFR-CMP-007 added on the owner's decision of
+    // 2026-10-31. This assertion is why that addition could not land
+    // quietly: it is the population assertion §10.36 exists to require,
+    // and it went red before Appendix A's own rules did. Change it only
+    // alongside a counted change to the specification itself.
     let input = real_input();
     let entries = requirement_entries(&input.requirements);
-    assert_eq!(entries.len(), 168, "expected 99 FR + 69 NFR entries");
+    assert_eq!(entries.len(), 169, "expected 99 FR + 70 NFR entries");
     assert_eq!(
         entries.iter().filter(|e| e.id.starts_with("FR-")).count(),
         99
     );
     assert_eq!(
         entries.iter().filter(|e| e.id.starts_with("NFR-")).count(),
-        69
+        70
     );
 }
 

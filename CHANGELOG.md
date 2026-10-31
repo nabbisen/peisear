@@ -70,6 +70,20 @@ mechanical in this project could tell them apart.
   [Configuration](docs/getting-started/configuration.md)'s new
   "Email (SMTP)" section — four had been named in the startup
   warning, three (including `SMTP_TLS_MODE`) nowhere operator-facing.
+- **`NFR-CMP-007 — Persistent state on the PostgreSQL backend`**, a
+  new requirement. `NFR-CMP-003` reserved this decision for the owner
+  on a trigger it set for itself — *"the day a PostgreSQL install path
+  is documented"* — and this release fired it. Without the entry,
+  0.59.0 would have shipped a supported configuration whose persistent
+  state no requirement governed, with
+  [Backup](docs/operations/backup.md) carrying a PostgreSQL section no
+  requirement required. It requires what that page already said:
+  peisear coordinates no backup for a server it did not start and does
+  not own; `pg_dump`/`pg_restore`, WAL archiving or a provider's
+  snapshot are the operator's own path; and the backup unit is the
+  database alone, because no signing-key file is generated beside a
+  PostgreSQL connection string — `JWT_SECRET` must be set explicitly
+  or startup refuses, by name.
 
 ### Changed
 

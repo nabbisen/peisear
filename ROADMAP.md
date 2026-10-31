@@ -189,7 +189,11 @@ documented install path (`cargo install
 --no-default-features --features postgres`), one declared version
 (`postgres:17`). All seven `SMTP_*` variables documented where
 configuration is documented; the startup warning no longer teaches a
-subset of four. **This release's own second subject**: both
+subset of four. **`NFR-CMP-007` is added**, on the owner's
+decision of 2026-10-31 — `NFR-CMP-003` reserved that question for the
+owner on the trigger this release fired, and without it 0.59.0 would
+have shipped a supported configuration whose persistent state no
+requirement governed. **This release's own second subject**: both
 specifications' record of themselves had drifted — `external-design.md`
 unamended since `0.57.0`, both Appendix C baselines stale, three
 different answers to which release each document covers — found
