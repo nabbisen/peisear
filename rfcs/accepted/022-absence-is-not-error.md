@@ -121,13 +121,32 @@ boundary to maintain — and the edge is not very uncomfortable: the
 product already refuses a typo'd `BIND_ADDR`, and nobody has called
 that wrong.
 
-**Its own bound, stated so the rule is not read as promising more than
-it can do**: this catches a **malformed directive**, which
-`EnvFilter` reports as an error. A *well-formed* directive naming a
-target that does not exist is valid and simply matches nothing;
-`EnvFilter` cannot distinguish that from intent, and neither can this
-rule. Half of `RUST_LOG`'s silent-intent problem is out of reach, and
-saying so is better than implying it is solved.
+**Its own bound — measured 2026-10-31 against `tracing-subscriber`
+0.3.23, and far narrower than this section first claimed.** `CFG-001`
+found `EnvFilter`'s grammar more permissive than it looks while
+writing the test for a malformed value; the architect then probed it
+directly:
+
+| Value | `EnvFilter` |
+|---|---|
+| `dbug` | **accepted** — a target name with an implicit `TRACE` level |
+| `DBUG`, `not a valid directive!!`, `info,,`, `trace=info` | **accepted**, the same way |
+| `sqlx=not_a_real_level` | refused — *"expected one of off, error, warn, info, debug, trace, or a number 0-5"* |
+| `=info` | refused — *"invalid filter directive"* |
+
+**So `RUST_LOG=dbug`, the likeliest operator typo there is, is
+accepted in silence**, and this rule's reach on `RUST_LOG` is a
+malformed *level* after an `=`, plus an empty target. Nearly all of
+`RUST_LOG`'s silent-intent problem is out of reach — not half, as the
+first version of this section said. That earlier sentence promised
+more than the mechanism can deliver, which is `§10.35`'s own class
+inside an RFC instead of a requirement.
+
+**The decision stands and the claim is what changed.** `RUST_LOG`
+keeps the rule: the bad-level shape is a real typo too, the cost is
+nil once written, and an exception would restore the two-rule split
+this RFC exists to end. What may not stand is a reader concluding
+that a typo'd `RUST_LOG` refuses. Mostly it does not.
 
 ## §5 — applied, one line each
 
