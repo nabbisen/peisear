@@ -650,6 +650,20 @@ fn the_helpers_do_what_the_rules_assume() {
         "forwarding the looked-up value to a Result-returning resolver, with no local \
          .unwrap_or( at all, must not be flagged"
     );
+    // `CFG-003` round 2 §2's own closure-comma case, checked rather
+    // than assumed from the depth-tracking reasoning alone: a comma
+    // inside a closure's own parameter list sits one depth deeper
+    // than the chain's own, so it must not terminate the window
+    // before the real `.unwrap_or(` is reached.
+    assert!(
+        silent_default_window(
+            "env::var(\"X\").ok().and_then(|s, extra| s.parse().ok()).unwrap_or(1);",
+            0,
+        )
+        .contains(".unwrap_or("),
+        "a comma inside a closure's own parameter list is deeper than the chain's own depth \
+         and must not end the window early"
+    );
 }
 
 #[test]
