@@ -11,32 +11,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.60.0] — 2026-11-01
+
+**A value the operator supplied and peisear cannot use stops the
+server, by name, naming what would have been accepted — and absence
+still degrades exactly as before.** `RFC 022`, three work rounds
+(`CFG-001`–`CFG-003`, two of them sent back a round), generalising
+the shape three variables already had (`PEISEAR_SETUP`, `JWT_SECRET`,
+`BIND_ADDR`) to the four that had not: `COOKIE_SECURE`, `RUST_LOG`,
+`SMTP_PORT`, `SMTP_TLS_MODE`. The product now has **one** rule for
+this input class where it had two. `§10.51` — opened at `0.59.0`,
+found by the architect's own review — closes with it, on a plant
+rather than a feeling: a reintroduction of its own named defects, in
+the layout they actually had, now fails the suite by name rather than
+passing it silently.
+
+**`README.md`'s own front door changed too, landed under
+`[Unreleased]` the day before this cut and folded in here.** The
+Quick Start had offered only the two paths that need Rust, one of
+them also `git`, for seven releases, while
+[Install](docs/getting-started/install.md) had carried a prebuilt
+binary and a container image since `0.53.0` — the front door
+contradicted the install page, and `NFR-REL-007` is why nothing
+caught it: it required the README's *ordering* and said nothing
+about what the quick start must contain. That entry now carries the
+missing clause; **what enforces it is still a reader, not a scan** —
+the guard for it (`QS-002`) is open and this release does not wait
+for it (`§7`).
+
 ### Changed
 
 - **`README.md`'s Quick Start now leads with a path that needs
   nothing installed** — download the binary for your platform and run
   it — followed by `docker run` as a one-command alternative, then
   `cargo install` marked *if you already have Rust*, then the clone,
-  which is for reading or changing the source and says so. **It had
-  offered only the two paths that need Rust, one of them also `git`,
-  for seven releases**, while [Install](docs/getting-started/install.md)
-  had carried a prebuilt binary and a container image since `0.53.0`.
-  The front door contradicted the install page, and
-  `NFR-REL-007` is why nothing caught it: it required the README's
-  *ordering* and said nothing about what the quick start must
-  contain. That entry now carries the missing clause.
-
-**`CFG-001` and `CFG-002`, the first two of three rounds applying
-`RFC 022` §3's one rule**: *absence degrades; a value the operator
-supplied and the product cannot use refuses startup, by name,
-naming what would have been accepted.* `COOKIE_SECURE` and
-`RUST_LOG` (`CFG-001`) already had a named error type and a
-`Result` to refuse through; `SMTP_PORT` and `SMTP_TLS_MODE`
-(`CFG-002`) did not — `peisear-notify` gained one. `CFG-003` (the
-rule, enforced) is the remaining round.
-
-### Changed
-
+  which is for reading or changing the source and says so.
 - **`COOKIE_SECURE` no longer treats every value other than `1`/
   `true` as `false`.** It still does, for exactly `1`, `0`, `true`,
   or `false` (case-insensitive for the words) — unset still degrades
@@ -77,6 +86,45 @@ rule, enforced) is the remaining round.
   decided `SMTP_TLS_MODE` too — changing transport security with no
   sign anything was wrong. After this round a malformed `SMTP_PORT`
   refuses before any `SMTP_TLS_MODE` decision is ever made.
+- **`docs_scan` rule 8** (`CFG-003`) enforces the rule above itself —
+  a plantable predicate over `env::var` call sites plus an asserted
+  census, not a list of the thirteen variable names. Internal; no
+  behaviour of its own.
+- **`docs/specification/external-design.md` §11.2 and its own SMTP
+  entity row** now name the third, refusing case alongside the two
+  degrading ones.
+
+### Fixed
+
+- **`CHANGELOG.md`'s own archive**, `DEC-055`'s first move since
+  `0.50.0`: ten versions (`0.50.0`–`0.59.0`, eleven section headings
+  since `0.58.1` is a patch) moved verbatim to
+  [`changelog/0.50-0.59.md`](changelog/0.50-0.59.md), in their own
+  commit.
+
+### What this release does not fix
+
+- **`NFR-REL-007`'s new clause ships enforced by a reader, not a
+  check.** `QS-002`, the `docs_scan` rule that would enforce it, is
+  written and open; this release does not wait for it — `§10.36`'s
+  class, accepted for one release and named rather than left
+  implicit.
+- **`RUST_LOG` is fixed but not guarded.** No literal
+  `env::var("RUST_LOG")` exists anywhere in this codebase for
+  `docs_scan` rule 8 to anchor on, and its reach is narrow even
+  fixed: `RUST_LOG=dbug` is accepted as a target name with an
+  implicit `TRACE` level. Both bounds are in `§10.51`'s own closing
+  note and `RFC 022` §4.
+- **`§10.50`** — no CI job compiles for any platform but Linux
+  outside the release tag.
+- **`§10.32`** — `BROWSER-001`'s fixture cannot render four branches
+  its pages contain.
+- **An attended start prompting is unproven on Windows.**
+- **`SMTP_TLS_MODE` accepts seven spellings for two modes**, five of
+  them undocumented; deliberately not narrowed, on `RFC 022` §5's own
+  constraint.
+
+**No migration.**
 
 ## Earlier series
 

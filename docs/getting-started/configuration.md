@@ -91,8 +91,8 @@ fails at the channel layer rather than at startup.
 | `SMTP_USER` | for the email channel | — | SMTP AUTH username. |
 | `SMTP_PASSWORD` | for the email channel | — | SMTP AUTH password. |
 | `SMTP_FROM_ADDRESS` | for the email channel | — | The `From:` envelope address. |
-| `SMTP_PORT` | optional | `465` | Submission port. `587` is the other common choice (STARTTLS); anything else is treated as implicit TLS. |
-| `SMTP_TLS_MODE` | optional | derived from `SMTP_PORT` | `implicit` or `starttls` — see below. |
+| `SMTP_PORT` | optional | `465` | Submission port. `587` is the other common choice (STARTTLS); anything else is treated as implicit TLS. A value that isn't a valid port number refuses startup rather than silently taking the default. |
+| `SMTP_TLS_MODE` | optional | derived from `SMTP_PORT` | `implicit` or `starttls` — see below. An unrecognised value refuses startup rather than silently deriving from the port. |
 | `SMTP_FROM_NAME` | optional | unset | Display name for the `From:` header; the envelope address alone is used if unset. |
 
 **`SMTP_TLS_MODE`'s two values, and when you need to set it at all.**
@@ -103,11 +103,15 @@ the mode follows `SMTP_PORT`: `587` → `starttls`, everything else
 (including `465` and any non-standard port) → `implicit` — set it
 explicitly if you run STARTTLS on a non-standard port, since the
 port-derived default cannot tell that case from implicit TLS on an
-unusual port. **An unrecognised value is not refused at startup** —
-unlike `PEISEAR_SETUP` above, it falls back to the port-derived
-default silently, consistent with this channel's own
-graceful-degradation design: a typo here costs you the TLS mode you
-meant to force, not a stopped server.
+unusual port. **An unrecognised value is refused at startup**, naming
+the value and the two spellings this page documents — like
+`PEISEAR_SETUP` above, not unlike it: a typo here used to cost you
+only the TLS mode you meant to force, silently, which also meant a
+typo'd `SMTP_PORT` could silently change the TLS mode derived from
+it. Leaving `SMTP_TLS_MODE` unset still derives from `SMTP_PORT`
+exactly as above; only a value you actually set that this page's two
+spellings don't match now stops the server rather than being
+misread.
 
 ## Operational notes
 
