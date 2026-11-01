@@ -186,10 +186,20 @@ fn the_released_version_must_have_a_dated_section() {
 /// the same shape, not a stand-in for it.
 #[test]
 fn a_release_tag_with_no_heading_in_either_file_is_found() {
+    // `0.54.0` moved to `changelog/0.50-0.59.md` at `0.60.0` (`DEC-055`'s
+    // archive move) -- the plant now removes its heading there, not from
+    // `CHANGELOG.md`, which holds only the current series.
     let mut r = real();
-    let before = r.changelog.clone();
-    r.changelog = r.changelog.replacen("## [0.54.0] — 2026-10-18\n\n", "", 1);
-    assert_ne!(r.changelog, before, "0.54.0's heading must exist to remove");
+    let Some(entry) = r
+        .archives
+        .iter_mut()
+        .find(|(name, _)| name == "0.50-0.59.md")
+    else {
+        panic!("expected a changelog/0.50-0.59.md archive entry");
+    };
+    let before = entry.1.clone();
+    entry.1 = entry.1.replacen("## [0.54.0] — 2026-10-18\n\n", "", 1);
+    assert_ne!(entry.1, before, "0.54.0's heading must exist to remove");
     let v = only(run(&r), "rule 7");
     assert!(
         v.iter().any(|m| m.contains("0.54.0")),

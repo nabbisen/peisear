@@ -2,16 +2,14 @@
 
 **Document type**: External design (basic design)
 **Document status**: Baseline
-**Covers release**: `0.59.0` (`§1.1` amended for `0.59.0`'s own
-PostgreSQL install path — the boundary this document drew at
-`0.55.0` no longer holds unconditionally. See the `0.59.0` row below,
-and the three backfilled rows above it for `0.57.0`/`0.58.0`/`0.58.1`,
-which this document was never amended for until now)
+**Covers release**: `0.60.0` (`§11.2` and `§1.1`'s own SMTP entity
+row amended for `0.60.0`'s own third, refusing case — see the
+`0.60.0` row below)
 **Supersedes**: [`history/peisear-0.19.1-external-design-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.19.1-external-design-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 retained unedited as the record of that release
 **Language**: English (normative)
-**Prepared**: 2026-10-07 · **Amended**: 2026-10-31 (0.59.0)
+**Prepared**: 2026-10-07 · **Amended**: 2026-11-01 (0.60.0)
 **Location**: `docs/specification/external-design.md`. **Normative**, English
 only, placed 2026-09-24 (`DEC-020`, closed). See
 [the directory README](./README.md) for how its citations resolve
@@ -228,7 +226,7 @@ runtime beyond an optional outbound SMTP relay.
 |---|---|---|---|
 | Browser (human user) | in / out | HTTP, HTML | Primary interface. Server-rendered. |
 | Browser (script) | in / out | HTTP, JSON | Type-ahead search; personal-data reads. |
-| SMTP relay | out | SMTP | Optional. Absence degrades gracefully, **and a malformed `SMTP_PORT` or `SMTP_TLS_MODE` degrades the same way without saying so** → `FR-NTF-008`, `§10.51`. |
+| SMTP relay | out | SMTP | Optional. Absence degrades gracefully; **a value the operator supplied that the product cannot use refuses startup instead, by name** (`SMTP_PORT`, `SMTP_TLS_MODE`) → `FR-NTF-008`, `§10.51` (closed, `0.60.0`). |
 | Database — SQLite (default) | out | file I/O | Single file, selected by default and by every release artefact except the one `cargo install` command named above. The unit a backup captures, via `.backup` while running or a plain copy once stopped (`docs/operations/backup.md`) → `NFR-CMP-003`. |
 | Database — PostgreSQL (selected at build time) | out | SQL over TCP | Reached only by `cargo install peisear --no-default-features --features postgres`; a server the process did not start and does not own, unlike the file above. One declared version, `postgres:17`. Backup is the operator's own means against their own instance (`docs/operations/backup.md`'s own PostgreSQL section) → `NFR-CMP-007`, the entry the owner created for this on 2026-10-31. |
 
@@ -1746,17 +1744,27 @@ stream that is ignored provides no protection at all.
 |---|---|
 | SMTP unconfigured | Warning at startup; in-app delivery continues normally |
 | SMTP configured, unreachable | Send failure logged; in-app delivery unaffected |
+| SMTP configured with a value the product cannot use (`0.60.0`) | **Server refuses to start, naming the variable** |
 
-No user-facing error is raised for mail failure; the in-app channel is
-authoritative.
+No user-facing error is raised for a *failure to send* mail; the
+in-app channel is authoritative for that case. **A malformed
+`SMTP_PORT` or `SMTP_TLS_MODE` is not a mail failure and is not
+covered by that sentence** — it stops the server before any channel,
+in-app or otherwise, exists to be authoritative over (`0.60.0`,
+`RFC 022`, `§10.51`).
 
 **Checked for `0.59.0` (`SUP-004` changed the startup warning's own
-text — see `REL-0.59.0` §4): this row needs no change.** It describes
-the externally observable *category* of behaviour (a warning fires,
-in-app delivery is unaffected), not the warning's own wording, and
-`SUP-004` changed only the wording — naming none of the seven
-variables instead of four and pointing at the documentation — not
-whether a warning fires or what it does to delivery.
+text — see `REL-0.59.0` §4): that row needed no change.** It
+described the externally observable *category* of behaviour (a
+warning fires, in-app delivery is unaffected), not the warning's own
+wording, and `SUP-004` changed only the wording — naming none of the
+seven variables instead of four and pointing at the documentation —
+not whether a warning fires or what it does to delivery. **`0.60.0`
+is different**: it adds a third, externally observable condition this
+table did not have a row for at all, and the sentence beneath the
+table was written before that condition existed and read as though
+it covered every case of "the product could not use SMTP" — it did
+not.
 
 ---
 
@@ -2334,7 +2342,8 @@ entries about what is executed by nothing.
 | Version | Change |
 |---|---|
 | GUI v0.1 | Original GUI external specification, based on `0.16.0` |
-| **0.59.0 (this baseline)** | **`§1.1` is amended — the one row in this document's own history where "nothing for this document to amend" does not hold, and the reason is this document's own.** `RFC 021`, four work rounds (`SUP-001`–`SUP-004`); full accounting in `requirements.md`'s own `0.59.0` row above the equivalent point in that document. What belongs here: `0.55.0`'s own row below stated the condition under which a second storage backend changed nothing this document describes — *"the feature stays off by default"* — and `SUP-003` wrote a documented, walked PostgreSQL install path into `docs/getting-started/install.md`, removing that condition. `§1.1`'s prose, boundary diagram and external-entities table now name both backends rather than one; `§11.2`'s SMTP degradation row and its own SMTP entity row were checked against `SUP-004`'s changed startup-warning text and found to need no change (the wording moved, the externally observable category did not) or to need only a citation (`§10.51`), stated in writing either way rather than left silent. **This document's own `Covers release` header and Appendix C baseline marker had drifted** — unamended since `0.57.0` below, through two releases, three different answers across both specifications to which release each covers — found and repaired at this cut (`requirements.md`'s own `§10.36` instance 7 carries the full finding; this document is half of what it is about). `0.58.0` and `0.58.1` backfilled below, each marked and dated, from `CHANGELOG.md`'s own sections — not written as though produced at their own cuts. **`§1.1`'s PostgreSQL entity row cites `NFR-CMP-007`**, the entry the owner created on 2026-10-31; it was written here first as a pending choice between that entry and `NFR-CMP-003`, and resolved the same day the decision arrived, so this document never shipped the pending form. |
+| **0.60.0 (this baseline)** | **`§11.2` and `§1.1`'s own SMTP entity row are amended — a real content change, not a "nothing to amend" row.** `RFC 022`, three work rounds (`CFG-001`–`CFG-003`, two sent back a round); full accounting in `requirements.md`'s own `0.60.0` row above the equivalent point in that document. `§11.2 Degradation without SMTP` had exactly two conditions, both degrading; this release adds a third, **refusing** one — `SMTP_PORT`/`SMTP_TLS_MODE` set to a value the product cannot use now stops the server, by name, rather than degrading — and the sentence beneath the table (*"no user-facing error is raised for mail failure"*) was true of a *failure to send* and not of this, so it is amended to say so rather than left to be read as broader than it was. `§1.1`'s own SMTP entity row carried the stale half of the same fact — *"a malformed value degrades the same way without saying so"*, which stopped being true the moment `CFG-001`/`CFG-002` shipped — corrected to name the refusal. **`§1.1`'s own PostgreSQL entity row and the rest of `§1.1` are untouched** — checked, not assumed: this release selects no backend and changes no screen, route or boundary. **`§10.51` is cited, not restated**, closed at this baseline on a plant rather than a feeling. |
+| 0.59.0 | **`§1.1` is amended — the one row in this document's own history where "nothing for this document to amend" does not hold, and the reason is this document's own.** `RFC 021`, four work rounds (`SUP-001`–`SUP-004`); full accounting in `requirements.md`'s own `0.59.0` row above the equivalent point in that document. What belongs here: `0.55.0`'s own row below stated the condition under which a second storage backend changed nothing this document describes — *"the feature stays off by default"* — and `SUP-003` wrote a documented, walked PostgreSQL install path into `docs/getting-started/install.md`, removing that condition. `§1.1`'s prose, boundary diagram and external-entities table now name both backends rather than one; `§11.2`'s SMTP degradation row and its own SMTP entity row were checked against `SUP-004`'s changed startup-warning text and found to need no change (the wording moved, the externally observable category did not) or to need only a citation (`§10.51`), stated in writing either way rather than left silent. **This document's own `Covers release` header and Appendix C baseline marker had drifted** — unamended since `0.57.0` below, through two releases, three different answers across both specifications to which release each covers — found and repaired at this cut (`requirements.md`'s own `§10.36` instance 7 carries the full finding; this document is half of what it is about). `0.58.0` and `0.58.1` backfilled below, each marked and dated, from `CHANGELOG.md`'s own sections — not written as though produced at their own cuts. **`§1.1`'s PostgreSQL entity row cites `NFR-CMP-007`**, the entry the owner created on 2026-10-31; it was written here first as a pending choice between that entry and `NFR-CMP-003`, and resolved the same day the decision arrived, so this document never shipped the pending form. |
 | 0.58.1 | *Backfilled 2026-10-31 (`REL-0.59.0` §3), from `CHANGELOG.md`'s own `[0.58.1]` section, reached from this document's own scope sentence rather than assumed from `0.53.0`'s precedent.* **No screen, route, state or copy changed.** This release's subject is `should_run_wizard`'s own predicate (`PEISEAR_SETUP`, then a terminal, then — on Unix — the kernel's own foreground-process-group test) and the release workflow's own walk steps, neither of which this document describes: it covers the running application's screens, routes and HTTP behaviour, not which launch-environment signal decides whether a terminal prompt runs, or how a CI job proves an archive. The one-line stderr notice a backgrounded start now prints (*"A terminal is attached, but this process cannot read it right now…"*) is terminal output at startup, the same exception `0.53.0`'s own row already drew for a startup log line, not a screen. **Nothing here for this document to amend.** |
 | 0.58.0 | *Backfilled 2026-10-31 (`REL-0.59.0` §3), from `CHANGELOG.md`'s own `[0.58.0]` section, reached from this document's own scope sentence rather than assumed from `0.53.0`'s precedent.* **No screen, route, state or copy changed.** This release's subject is the first-run wizard (`RFC 020`) — two terminal questions with working defaults, three terminal statements, a written `.env` — all of it terminal output at startup rather than a screen, the same exception `0.53.0`'s own row already drew for a single startup line, extended here to a short interactive sequence of the same kind. `BIND_ADDR` gaining single-parse, named validation in `Config::from_env` is an internal error-message improvement at a path this document has never tracked (it covers the running application's own HTTP behaviour, not a config-loading error a misconfigured deployment would see once, before the server exists for a browser to reach). **Nothing here for this document to amend.** |
 | 0.57.0 | **No screen, route, state or copy changed.** This release's subject is `spec_scan`, a mechanical reader for `requirements.md` and this document's own `§10.N` citations — Appendix A's columns summed from its own rows, a status vocabulary closed to a known list, and eight `*Acceptance*: \`name\` (N tests)` citations checked against the test runner. None of it is externally observable application behaviour: the guard reads two documents and a CI log, it does not touch `src/`. **This document's own role in the series**: the citations into `requirements.md`'s `§10.N` register this document carries (thirteen of them dangling, across both specifications) are resolved by `SPEC-001`'s promotion of the four missing headings, not by an edit here — a citation naming a real heading was already correct prose, only the heading was missing. **Nothing here for this document to amend.** |
