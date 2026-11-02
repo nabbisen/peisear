@@ -101,6 +101,25 @@ is already walked by tests, where warning needs a mechanism, a
 decision about where warnings go, and a reader who must learn which
 bad values stop the server and which do not.
 
+**Where the two halves meet, and the rule is narrower than its own
+first sentence** *(added 2026-11-03, found by `REL-0.60.0` walking the
+claim against a real binary)*. Absence degrades **as a group, not only
+as a variable**: when a channel is not configured at all, values
+supplied for it are never read, so they cannot refuse. A malformed
+`SMTP_PORT` with `SMTP_HOST` unset **starts normally** —
+`SmtpConfig::from_values`'s four early `Ok(None)` returns
+short-circuit before either resolver runs, which `CFG-002` round 2's
+own symmetric test pins deliberately.
+
+**That is right**, and both reasons matter: refusing would block a boot
+over a value that has no effect, and the value *does* refuse the moment
+the channel is configured enough to use it. **It is stated here because
+§3's first sentence, read alone, promises a refusal for any malformed
+value**, and the product delivers one only for a value it would
+actually have used. A rule whose words reach further than its
+mechanism is `§10.35`'s class; naming the boundary is cheaper than
+letting a reader find it.
+
 **The error message is part of the rule, not a nicety.** `PEISEAR_SETUP`
 is the model: name the variable, quote what was given, and list what
 would have been accepted. An error that says only *"invalid"* tells an
