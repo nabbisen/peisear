@@ -153,7 +153,8 @@ authorized 2026-10-28, on the four-part proposal recorded in its own
 row. `0.59.0` authorized 2026-10-29, on the proposal recorded in its
 own row; `0.60.0` authorized 2026-10-31, on the **revised** proposal in
 its own row, the first version having been withheld and the
-architect's own rule reversed before it was accepted — **including the architect's recommended direction for
+architect's own rule reversed before it was accepted, and **cut
+2026-11-03** — **including the architect's recommended direction for
 PostgreSQL, which is to make it real rather than end it.** **A row marked *Proposed* carries no authorization** — it is the
 architect's recommendation, in the one place release numbers live,
 waiting for a yes or a no. It is
@@ -169,7 +170,8 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| — | **Nothing else is authorized beyond `0.60.0`.** **Outside this table, and deliberately**: `rfcs/handoffs/054-the-front-door/` is authorized and in progress with **no release number** — `README.md` on `main` is what GitHub serves the moment it merges, so the Quick Start fix does not wait for a cut and does not get one of its own. It lands under `[Unreleased]` and whichever release is cut next picks it up in its own `DEC-028` sweep. Raised by the owner 2026-10-31: the Quick Start offered two paths and both needed Rust, while `install.md` had offered two toolchain-free ones since `0.53.0`. Remaining candidates, in no order: **`QS-002`** — the `docs_scan` rule that would enforce `NFR-REL-007`'s new clause (the Quick Start must offer a toolchain-free path, said in the line that introduces any path that needs one); written and open, and `0.60.0` ships without it, the clause enforced by a reader rather than a check for one release (`§10.36`'s class); **`SMTP_TLS_MODE`'s seven spellings for two modes** — `implicit`/`implicit_tls`/`smtps`/`tls` and `starttls`/`start_tls`/`submission`, found reviewing `CFG-002`; the variable was documented for the first time at 0.59.0 naming only `implicit` and `starttls`, so five are undocumented and were never promised. Not narrowed in 0.60.0, on `RFC 022` §5's own constraint that a set keeps accepting what works today — breaking a working deployment in the refusing direction is worse than the untidiness. Deprecating five aliases is a decision with its own release, and it is untidiness with a compatibility cost rather than a defect, so no register entry; **`§10.32`** — `BROWSER-001` sweeps nineteen pages at five widths and its fixture cannot render four branches those pages contain (a completed sprint with no issues, a team with no projects, no assignee badge, no calendar blocks); three of the four hid real overflows, one of them 441 px on a 1280 px desktop, and each was found by changing the fixture for another reason rather than by looking, so the gate reported green cells for eleven releases on a page it could not have failed on; **`§10.51`** — **closed at `0.60.0`**, `SMTP_PORT` and `SMTP_TLS_MODE` no longer discard a malformed value silently, guarded against reintroduction by `docs_scan` rule 8; `RUST_LOG`, fixed by the same release but not guarded the same way, recorded in that entry's own closing note rather than carried here as open; **a `spec_scan` rule reading both specifications' headers and both Appendix C baseline markers against the version being cut** — `§10.36` instance 7, which went three releases undetected because the evidence of a `DEC-028` sweep is a document edit and no edit reads the same as a sweep that found nothing to edit; **no clippy step under any feature combination** — `test.yml:39` is the only clippy invocation and it runs default features, so clippy's own lints never reach the `postgres`-only code paths (rustc warnings there are caught, since the postgres test jobs compile under `RUSTFLAGS: -D warnings`); found by `REL-0.59.0` reading the workflow rather than assuming, and two lines to fix; the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0); an attended start unproven on Windows; and `§10.50` — no CI job compiling for Windows outside the release tag, now a register entry rather than loose prose | — | **Awaiting the architect’s proposal and the owner’s authorization** |
+| `0.61.0` | **A check that cannot fail is not a check** — `§10.36`'s own class, **seven instances** and this project's most repeated defect shape, taken as one release rather than one instance at a time. Four rounds, in order: **`QS-002`** — written and open, blocked on nothing since `QS-001` closed: the `docs_scan` rule that enforces `NFR-REL-007`'s new clause, which `0.60.0` shipped enforced by a reader; **`§10.32`** — `BROWSER-001`'s fixture cannot render four branches the nineteen swept pages contain, so an overflow gate reported green cells for eleven releases on pages it could not have failed on, and three of those four branches hid real overflows, one of them 441 px on a 1280 px desktop; **the `spec_scan` baseline rule** (`§10.36` instance 7) — no rule reads either specification's own header, or either Appendix C baseline marker, against the version being cut, which is why three releases of drift in the specifications' record of themselves went undetected until a person assembled a cut; **the two one-line gaps**, one round — clippy runs exactly once (`test.yml:39`, `--workspace --all-targets`, **default features**), so its lints never reach the `postgres`-only paths, and nothing compares a released changelog section's date to its own tag's date, which diverged for the first time at `0.60.0`'s cut. **Deliberately not in it**: `§10.50` (a CI cost decision, not this class), `SMTP_TLS_MODE`'s seven spellings (a compatibility decision that earns its own release), the `file:line` convention (untidiness, not a defect) | **No new RFC** — `requirements.md` `§10.32`, `§10.36` and `NFR-REL-007`, cited not restated. `RFC 022` earned an RFC because the rule it states had never been written down anywhere; `§10.36` has been written since `0.43.0`, and a second document carrying the same rule is how the retired sequence above went stale | **Proposed** — the architect's recommendation, in the one place release numbers live, awaiting the owner's yes or no |
+| — | **Nothing else is authorized beyond `0.60.0`.** **Outside this table, and deliberately**: `rfcs/handoffs/054-the-front-door/` is authorized and in progress with **no release number** — `README.md` on `main` is what GitHub serves the moment it merges, so the Quick Start fix does not wait for a cut and does not get one of its own. It lands under `[Unreleased]` and whichever release is cut next picks it up in its own `DEC-028` sweep. Raised by the owner 2026-10-31: the Quick Start offered two paths and both needed Rust, while `install.md` had offered two toolchain-free ones since `0.53.0`. **Four of the candidates below are now proposed for `0.61.0` in the row above** — `QS-002`, `§10.32`, the `spec_scan` baseline rule, and the two one-line gaps. They stay described here until that row is authorized or declined; the row above is the only place their release number lives. Remaining candidates, in no order: **`QS-002`** — the `docs_scan` rule that would enforce `NFR-REL-007`'s new clause (the Quick Start must offer a toolchain-free path, said in the line that introduces any path that needs one); written and open, and `0.60.0` ships without it, the clause enforced by a reader rather than a check for one release (`§10.36`'s class); **`SMTP_TLS_MODE`'s seven spellings for two modes** — `implicit`/`implicit_tls`/`smtps`/`tls` and `starttls`/`start_tls`/`submission`, found reviewing `CFG-002`; the variable was documented for the first time at 0.59.0 naming only `implicit` and `starttls`, so five are undocumented and were never promised. Not narrowed in 0.60.0, on `RFC 022` §5's own constraint that a set keeps accepting what works today — breaking a working deployment in the refusing direction is worse than the untidiness. Deprecating five aliases is a decision with its own release, and it is untidiness with a compatibility cost rather than a defect, so no register entry; **`§10.32`** — `BROWSER-001` sweeps nineteen pages at five widths and its fixture cannot render four branches those pages contain (a completed sprint with no issues, a team with no projects, no assignee badge, no calendar blocks); three of the four hid real overflows, one of them 441 px on a 1280 px desktop, and each was found by changing the fixture for another reason rather than by looking, so the gate reported green cells for eleven releases on a page it could not have failed on; **`§10.51`** — **closed at `0.60.0`**, `SMTP_PORT` and `SMTP_TLS_MODE` no longer discard a malformed value silently, guarded against reintroduction by `docs_scan` rule 8; `RUST_LOG`, fixed by the same release but not guarded the same way, recorded in that entry's own closing note rather than carried here as open; **a `spec_scan` rule reading both specifications' headers and both Appendix C baseline markers against the version being cut** — `§10.36` instance 7, which went three releases undetected because the evidence of a `DEC-028` sweep is a document edit and no edit reads the same as a sweep that found nothing to edit; **no clippy step under any feature combination** — `test.yml:39` is the only clippy invocation and it runs default features, so clippy's own lints never reach the `postgres`-only code paths (rustc warnings there are caught, since the postgres test jobs compile under `RUSTFLAGS: -D warnings`); found by `REL-0.59.0` reading the workflow rather than assuming, and two lines to fix; **a `changelog_scan` rule comparing a released version's section date to its own tag's date** — `0.60.0` is the first release whose two disagree (section 2026-11-01, tag 2026-11-03, because the owner's approval came two days after the candidate was written and the architect did not re-date the heading before tagging); the scan already reads real `git tag`s for its "every released version has a section" rule, so the date comparison is the same read, and `docs/development/changelog-and-releases.md` now carries the rule by hand and names it unchecked; the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0); an attended start unproven on Windows; and `§10.50` — no CI job compiling for Windows outside the release tag, now a register entry rather than loose prose | — | **Awaiting the architect’s proposal and the owner’s authorization** |
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
@@ -180,7 +182,7 @@ themselves) on 2026-10-14. A row leaves when the release is **cut**;
 what it contained is in `CHANGELOG.md` and in the specification's own
 baseline rows, which is where release history belongs.
 
-**Candidate cut 2026-11-01, legs pending**: `0.60.0` (what the product
+**Shipped 2026-11-03**: `0.60.0` (what the product
 does with what the operator typed) — `RFC 022`, three work rounds
 against three scoped (`CFG-001`–`CFG-003`, two of them sent back a
 round: an `unsafe` block round 1 introduced, and a guard that could
@@ -201,10 +203,41 @@ release does not wait for it; `RUST_LOG` fixed but not guarded (no
 literal `env::var` for `docs_scan` rule 8 to anchor on); `§10.50`;
 `§10.32`; an attended start unproven on Windows; `SMTP_TLS_MODE`'s
 five undocumented aliases, deliberately not narrowed.
-`CHANGELOG.md`'s own `[0.60.0]` section carries this in full. **The
-four `DEC-056` legs and the five-archive check are the architect's
-own, pending the owner's approval of this candidate — not run as
-part of the work above.**
+`CHANGELOG.md`'s own `[0.60.0]` section carries this in full. **Cut
+2026-11-03**, on the owner's approval: tag `0.60.0` at `66741ae`,
+signed (`gpg: Good signature`, the same key as `0.59.0`), its message
+carrying the tag-pinned release-notes link — and that link read back
+from the API rather than assumed, `CHANGELOG.md` at `ref=0.60.0`
+resolving with `[0.60.0]` as the first dated section in it; **seven
+crates on crates.io** at `0.60.0`, none yanked, each confirmed by its
+own per-crate registry query — six `Published` lines again covered
+seven crates, `peisear-auth` and `peisear-i18n` batched onto one, so
+the line count would have read as six; **five per-platform archives
+on the GitHub Release**, read from the asset list and compared **as a
+set** against `install.md`'s own target table, none extra and none
+missing, the `x86_64-pc-windows-msvc` `.zip` among them; the Release
+body diffed against the section as it stands in the *tagged*
+`CHANGELOG.md`, identical across 114 lines, with the extraction rule
+itself validated first by reproducing `0.59.0`'s live body byte for
+byte; `ghcr.io/nabbisen/peisear` at `0.60.0` and `latest` under one
+digest (`sha256:56eb9d21`), `latest` moved off `0.59.0`'s, and
+`0.59.0` (`sha256:0a5a7474`) and `0.58.1` (`sha256:1057c422`)
+unchanged. All four `DEC-056` legs verified against the registries
+themselves rather than from their workflows' own exit codes.
+
+**What this cut itself got wrong**: the section is dated **2026-11-01**
+and the tag is **2026-11-03** — the first divergence in at least nine
+releases, where section date, tagger date and commit date had been the
+same day every time. The architect wrote the date into the candidate
+and did not re-date the heading when approval came two days later,
+finding it only after the tag was pushed and while the crates were
+publishing. **Left as tagged**, on this project's own rule that a tag
+moves only before its crates are published, and because re-dating
+`main` alone would leave the tagged copy and `main` disagreeing about
+the one fact the heading carries. The rule it should have followed,
+and the unchecked row that admits nothing enforces it, are now in
+`docs/development/changelog-and-releases.md`; a `changelog_scan` rule
+that would catch it is a candidate above.
 
 **Shipped 2026-10-31**: `0.59.0` (configurations the product actually
 supports) — `RFC 021`, in four work rounds (`SUP-001`–`SUP-004`).

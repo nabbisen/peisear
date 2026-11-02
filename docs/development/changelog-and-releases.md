@@ -72,6 +72,25 @@ Work lands under `## [Unreleased]` as it merges. At release the heading is
 renamed to the version and dated (`## [0.41.0] — 2026-10-12`), and the section
 is written up for a reader.
 
+**The date is the day the release is tagged, not the day the candidate was
+written.** From `0.52.0` to `0.59.0` these were the same day in all nine —
+section date, tagger date and commit date — because approval came the day the
+candidate did. `0.60.0` is the first where it did not: the section was written
+2026-11-01, the owner approved the cut on 2026-11-03, and the architect found
+the divergence **after** the tag was pushed and while the crates were
+publishing. **It stands as tagged.** A tag moves only before its crates are
+published, and re-dating `main` alone would leave the two copies disagreeing
+about the one fact the heading carries. So the rule is the sentence above: **if
+approval slips past the day the section was written, re-date the heading before
+tagging** — one line of work, and the only release that has ever needed it is
+this one.
+
+**Nothing checks this.** `changelog_scan` requires the workspace version to
+have a *dated* section and never compares that date to its tag's. A rule that
+would is in reach — the scan already reads real `git tag`s for "every released
+version has a section" — and it is a candidate in `ROADMAP.md`'s **What ships
+next**, not a decision taken here.
+
 Sections follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) —
 `Added`, `Changed`, `Fixed`, `Security`, and this project's own `Internal`,
 listing only those with something in them.
@@ -195,6 +214,7 @@ in CI's `peisear-web --lib` step). Each rule has a test that breaks it.
 | The workspace version has a dated section | same | in place |
 | Every released version (a real `git tag`) has a section somewhere | same | in place, since `REL-0.55.0` round 2 |
 | ~~From 0.41.0, a dated section opens with `### Highlights`~~ | **nothing — withdrawn 2026-09-25 before it took effect** | **not a rule** |
+| **A released version's section is dated the day its tag was made** | **nobody — by hand, and it diverged for the first time at `0.60.0`** | **not checked** |
 | **The tag's message carries the release-notes link** | **nobody — the release procedure above, by hand** | **not checked** |
 | **The Release's title is the bare `X.Y.Z`** | **nobody — by hand, and it drifted for seven releases before anyone wrote it down** | **not checked** |
 | An external URL (the tag's link) resolves | nobody — nothing here uses the network | not checked |
