@@ -38,6 +38,32 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --workspace --all-targets -- -D warnings
 
+  # PLT-001 (§10.50): every other job in this file runs on ubuntu-latest.
+  # release.yml is the only workflow that compiles Windows or macOS, and
+  # it fires on a tag or a manual dispatch -- the latest point a finding
+  # can still be acted on without re-cutting. TTY-002's own dead-on-
+  # Windows helper (no #[cfg], live on Unix only) is the shape this job
+  # exists to catch: -D warnings turns that into an error here, the same
+  # way it already does on Linux above.
+  #
+  # Windows only, not macOS: the recorded incident was Windows, and
+  # macOS costs runner minutes Linux does not (§10.50's own reasoning).
+  # `-p peisear` only, not --workspace: cross-compiling peisear-storage's
+  # sqlite backend from Linux was never attempted here, and this runs
+  # natively on windows-latest, so that question does not arise -- `-p
+  # peisear` is the remedy §10.50 names itself, not a narrower stand-in
+  # for it.
+  clippy-windows:
+    name: cargo clippy (windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy -p peisear -- -D warnings
+
   # DOCS-002: the published API docs (seven crates go to crates.io;
   # docs.rs builds this). `clippy` above doesn't check doc links and
   # nothing else did either, which is how this backlog went unnoticed.
