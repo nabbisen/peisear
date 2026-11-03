@@ -21,14 +21,52 @@ name: Env Example Walk
 # reasoning this file carried for three days): bare `rustup install`
 # resolves `rust-toolchain.toml`'s pin, same as everywhere else.
 #
-# Still `workflow_dispatch` only, not wired to `push`/`pull_request`:
-# `NFR-REL-011`'s own two CI jobs are the permanent, continuously-run
-# form of "the documented paths work," scoped to `install.md`'s three
-# (`requirements.md`'s own note on that entry says why the
-# build-from-source path doesn't widen it). This file is a narrower,
-# deliberately separate check on one file's content, not a fourth leg
-# of that same gate.
+# `WLK-001`: `workflow_dispatch` alone meant this never ran on its own
+# -- three dispatches in its whole life, the last 2026-10-16, before
+# four releases shipped. `push`, scoped to the paths that can actually
+# break it, runs it exactly when its own inputs change and costs
+# nothing on every other push. This does not widen `NFR-REL-011`:
+# that entry's own `0.53.0` round 2 decision excluded this reader
+# deliberately, and this job already "stands on its own merit as a
+# regression guard for the contributor path" (that entry's own words)
+# -- a `push` trigger does not place it under that entry's authority,
+# only under its own.
+#
+# The path list, each verified against what actually governs this
+# walk's own outcome rather than assumed:
+#   - `.env.example` itself -- the file the walk copies.
+#   - `crates/peisear-web/src/config.rs` -- `Config::from_env` and the
+#     `BIND_ADDR`/`DATABASE_URL`/`JWT_SECRET`/`COOKIE_SECURE`
+#     resolvers .env.example's own commented-out defaults exercise.
+#   - `crates/peisear/src/main.rs` -- added beyond the handoff's own
+#     suggested list: `build_env_filter` (`RUST_LOG`'s resolver) lives
+#     here, not in `config.rs`, and a regression that turned an unset
+#     `RUST_LOG` from a default into a refusal would break this walk
+#     exactly like a `config.rs` regression would.
+#   - `docs/getting-started/build-from-source.md` and
+#     `.github/CONTRIBUTING.md` -- the two documents that now publish
+#     `cp .env.example .env` (`QS-003` made it two, from one).
+#   - this file.
+# Not included, considered and dropped: `crates/peisear-notify/src/
+# config.rs` -- `.env.example` leaves every `SMTP_*` variable unset,
+# and `RFC 022` §3's own rule makes that absence degrade (a warning,
+# not a refusal) rather than block startup, so a regression there
+# cannot fail this walk the way the others can.
+#
+# No `branches:` filter, unlike `test.yml`'s own `push`, deliberately:
+# this fires on a push to any branch that touches the paths above, not
+# only `main` -- a contributor's own branch gets the same regression
+# signal a PR's checks already give before it merges, and `main` gets
+# it again on the squash commit, each run's own event still `push`.
 on:
+  push:
+    paths:
+      - .env.example
+      - crates/peisear-web/src/config.rs
+      - crates/peisear/src/main.rs
+      - docs/getting-started/build-from-source.md
+      - .github/CONTRIBUTING.md
+      - .github/workflows/env-example-walk.yml
   workflow_dispatch:
     inputs:
       ref:
@@ -43,9 +81,13 @@ jobs:
   walk:
     runs-on: ubuntu-latest
     steps:
+      # `inputs.ref` only exists on `workflow_dispatch` -- on `push`
+      # the `inputs` context is empty, so this falls back to
+      # `github.sha`, the commit that triggered the run, rather than
+      # passing `actions/checkout` an empty string.
       - uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ inputs.ref || github.sha }}
 
       - name: Install the toolchain
         run: rustup install
