@@ -314,45 +314,78 @@ history — the shape `NFR-PRIV-007` suppressed at 0.28.0 — so it needs
 the candidate list; a scoped deferral is not a disagreement between the
 specification and the product.
 
-**What the architect recommends be worked on next, 2026-11-03 — no release
-number, on the accepted position above.** `054` closed and nothing is in
-flight. Three items, in this order, and the first two were measured before
-being proposed:
+**What the architect recommends be worked on next — revised 2026-11-03 after
+the owner asked for the three to be reviewed against this project's
+philosophy. They did not survive as proposed, and the lead item is new.**
+The first proposal was: the status census, `FR-TEAM-005`'s test, the clippy
+feature gap. What measuring them found:
 
-1. **The status census.** `requirements.md` holds **185** `*Status*`
-   clauses. A ten-minute pattern probe over those lines alone shortlisted
-   three live coverage claims, and checking each against the runner gave
-   **three different answers**: `FR-NTF-005`'s *"hidden-when-none limb is
-   untested"* is **false** — `mark_all_read_is_offered_only_while_something_is_unread`
-   asserts that limb first (`§10.34` instance 11, corrected); `FR-TEAM-005`,
-   a **P1**, is **true** — the string is pinned in `peisear-i18n` and no
-   `peisear-web` test asserts it on a screen, while its own *Acceptance*
-   names the team detail screen; and `FR-HLT-006`, a **P0**, read
-   `Implemented (untested —` and then reversed itself in sixty words
-   (reworded). **So the output is three-valued** — correct the status, write
-   the test, or reword — and only the first is a `§10.34` instance. The
-   round reads all 185 and reports verdicts with evidence; **the status
-   corrections stay the architect's to apply**, on `CFG-001`'s division of
-   labour. `REQ-003` showed a text rule cannot *judge* these; it can
-   *shortlist* them, and that distinction is why this is tractable now and
-   was not then.
-2. **`FR-TEAM-005`'s missing screen test**, the census's first confirmed
-   real gap: one `peisear-web` test asserting the footnote string on a
-   member's team detail page. Small, and a **P1** whose *Acceptance* has
-   named it all along.
-3. **The clippy feature-combination gap.** `test.yml:39` is the only clippy
-   invocation and runs default features, so clippy's own lints never reach
-   the `postgres`-only paths. Two lines, and the one item of the six that
-   is about the product's compiled code rather than its documents.
+**The clippy item fixes nothing, and measuring it was the whole value.**
+`cargo clippy --workspace --all-targets --no-default-features --features
+postgres -- -D warnings` is **already green — exit 0, zero diagnostics**,
+run here rather than assumed. So the two lines are a regression guard, not
+a repair, and calling it *"the one item about the product's compiled code"*
+oversold it. **But running it surfaced a false claim in published
+rustdoc.** `dialect.rs`'s own module comment says *"**No `#[cfg(feature =
+"postgres")]` anywhere outside this module and `pool.rs`**"*, naming five
+files that touch dialect-dependent types and asserting *"None of the
+fourteen occurrences carries a `#[cfg]`."* Measured across
+`crates/peisear-storage/src` (grep for `feature = "postgres"`, attribute
+and comment lines alike): **thirteen sites in six files**, and they are
+**production code, not tests** — `user_burnout.rs` (3),
+`personal_metrics.rs` (3), `metrics_snapshots.rs` (1) each carry a
+**second, postgres-only SQL body** (`const QUERY`, or a `format!`ed `sql`)
+for the health and sustainability queries; `optimistic_lock_guards.rs` (2),
+`sprints.rs` (2), `issue_events.rs` (1) and `lib.rs` (1) carry more, and
+four of those six files are not among the five the comment names. **A
+contributor who trusts that comment will not look for the second query to
+keep in step** — two SQL bodies per query, in the product's own domain
+logic, with a published comment saying they do not exist. That is the
+owner's *maintenance cost (continuous) and serious risk* clause, not a
+tidiness item, and it is recorded nowhere.
 
-**The other three candidates are not recommended yet** and the reason is
-*less is more* rather than their merit: the link check, the `spec_scan`
-baseline rule and the `changelog_scan` section-date rule are each a check
-for something already fixed by hand, and bundling them because they share
-`§10.36`'s shape is the mistake that cost two withdrawn proposals on
-2026-11-03. They keep. **The `env-example-walk` trigger needs a decision
-before it needs a round**, since `NFR-REL-011` deliberately excludes that
-reader.
+**Revised, in this order:**
+
+1. **The dialect seam's own claim.** Correct `dialect.rs`'s comment against
+   what the code holds, and — the substantive half — decide whether seven
+   postgres-only query bodies living outside the two files said to own them
+   are the intended design or drift that accumulated behind a comment
+   nobody re-read. **The clippy two-liner lands here as this round's
+   regression guard**, with its *green today* stated so nobody reads it as
+   a fix.
+2. **`FR-TEAM-005`'s missing screen test** — and it is the **only one of
+   the three that is for a user**: the footnote tells a reader that admin
+   is a management role rather than an oversight one, which is the *not to
+   be confused or misunderstand* clause in as plain a form as this product
+   has. A **P1** whose own *Acceptance* has named the assertion all along.
+   Two bounds: it must be written to `§10.17`'s standard, since eleven
+   assertions in this suite once passed on markup other than their own
+   subject; and **it is one of 28** — `requirements.md` has 51
+   `*Acceptance*` clauses and 28 name no test identifier at all. I picked
+   this one because I stumbled on it, and **the other 27 are unaudited,
+   not cleared.**
+3. **Pin the absence claims, instead of sweeping 185 of them.** The census
+   as first proposed was a one-time read of every `*Status*` clause — a
+   snapshot that goes stale the next time a status is written, which is the
+   shape this project rejects on its own doctrine: *the defect is not the
+   instances, it is a rule that was never written down.* The durable form
+   is the one `docs_scan` rules 8 and 9 already use and this project
+   already trusts: **an asserted enumeration** of the status clauses that
+   claim an absence, so adding one becomes a deliberate act and an
+   existing one cannot be forgotten. A one-time read is still owed, but to
+   **calibrate what the pattern misses**, not as the deliverable.
+   *(Considered and rejected: a rule routing coverage claims into
+   `*Acceptance*`, where CI already checks citations. It dies on
+   measurement — only 51 of 185 entries have an `*Acceptance*` clause, so
+   that "clean rule" is a 134-entry migration wearing a rule's clothes.)*
+
+**What the review says about the proposer, not the proposal.** Two of the
+original three were *a check for something already fixed by hand* — the
+exact shape I rejected by name three days ago when withdrawing the first
+`0.61.0`, and reintroduced here under a different heading. The one item
+that was not is the one I ranked second and called small. **The lead item
+exists only because the owner asked, and because asking made me run a
+command instead of repeating a sentence I had written twice.**
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
