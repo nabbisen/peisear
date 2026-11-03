@@ -43,6 +43,32 @@ instructions and reaching a working instance.
   already links the page that now teaches the checkout, so the claim is
   removed rather than duplicated.
 
+- **Two guards that cannot pass by examining nothing.** A clippy
+  invocation now runs under `--no-default-features --features postgres`,
+  where the only previous invocation ran default features and therefore
+  never compiled the PostgreSQL-only query bodies at all — proven by
+  planting a lint inside one and watching the default run stay green. And
+  `spec_scan` rule 3 pins which requirement statuses claim an absence of
+  test coverage, reporting any *change* to that set rather than judging
+  whether a claim is true, so a new one cannot be written unnoticed.
+
+### Fixed
+
+- **`peisear-storage`'s dialect module no longer tells a reader that
+  conditional compilation lives in two files.** It lives in eleven, at 22
+  sites, fourteen of them production query pairs — a second,
+  PostgreSQL-only SQL body beside the SQLite one — and the comment said
+  there were none. It now says where they are and, more usefully, **why**:
+  three distinct reasons (date and time functions, a row lock where SQLite
+  leans on a whole-database one, and an upsert with no SQLite equivalent),
+  only the first of which is mechanical. A contributor who trusted the old
+  sentence would have edited one body and shipped the other unchanged.
+- **Twelve requirement statuses that contradicted the shipped code**, four
+  of them from a single commit that added four tests and updated none of
+  the four statuses they existed to satisfy. Two are **P1** and one a
+  **P0**. No behaviour changes; what changes is that the specification now
+  describes what the suite actually covers.
+
 ### Changed
 
 - **`install.md`'s prebuilt-binary command uses the same glob the README

@@ -177,11 +177,26 @@
 //! by hand and resolved), and reports only a *change* to that
 //! membership -- a new claim appearing, or a known one's wording
 //! moving past the rule's own 500-character window. A human still
-//! decides what each change means; `§10.34`'s own twelve instances
-//! include one the phrase pattern could never have found at all
-//! (`FR-TEAM-005`, whose test renders a message key rather than
-//! quoting the status's own words) -- the commit-history pass that
-//! found that one is not this rule's job and stays a by-hand method.
+//! decides what each change means.
+//!
+//! **What this rule does not do, corrected 2026-11-03 by the architect
+//! whose own claim was wrong.** `REQ-006`'s handoff told this round that
+//! `§10.34`'s instance 12 (`FR-TEAM-005`) was one "the phrase pattern
+//! could never have found at all", and the round recorded that here.
+//! **It is false, and [`KNOWN_ABSENCE_CLAIM_IDS`] below disproves it**:
+//! `FR-TEAM-005` is in that list, because this rule's own phrases *do*
+//! match its status. What failed on instance 12 was not the shortlist but
+//! the **verification** -- the architect grepped the test suite for the
+//! status's literal words, and that test renders a message key and
+//! compares against the render, so the words are in its output and never
+//! in its source. **The lesson is about the second step, not the first:
+//! this rule shortlists correctly and tells you nothing about whether a
+//! claim is true.** A commit-history pass -- for any commit that adds
+//! tests to satisfy requirements, check each requirement it names against
+//! each test it added -- reaches statuses this rule cannot, because it
+//! needs no phrase in the status at all; it stays a by-hand method, and
+//! the architect ran it on 2026-11-03 over every requirement ID cited in
+//! a test file, finding no instance this list does not already hold.
 
 use std::collections::BTreeSet;
 use std::fs;

@@ -506,7 +506,14 @@ fn absence_claim_window_is_capped_and_stops_at_priority() {
 #[test]
 fn rule_3_is_clean_on_the_real_tree() {
     let input = real_input();
-    assert!(only(violations(&input), "rule 3").is_empty());
+    let v = only(violations(&input), "rule 3");
+    // Names what changed, like `rule_1`/`rule_b`'s own real-tree tests
+    // above: this rule exists to tell a contributor *which* entry's
+    // status moved, and a bare `is_empty()` reported only that one had.
+    assert!(
+        v.is_empty(),
+        "rule 3 found absence-claim membership changes: {v:?}"
+    );
 }
 
 /// `REQ-006` `§3`: seen red the first way -- a status that newly makes
