@@ -59,14 +59,53 @@
 //!   against the real server `pool::connect` (`PG-001`) reaches,
 //!   rather than never reaching a point where failing was possible.
 //!
-//! **No `#[cfg(feature = "postgres")]` anywhere outside this module
-//! and `pool.rs`.** Five files (`lib.rs`, `teams.rs`, `sprints.rs`,
-//! `user_capacities.rs`, `issue_events.rs`) do reference [`Database`],
-//! [`Tx`] or [`Connection`] in place of a hard-coded `sqlx::Sqlite` /
-//! `sqlx::SqliteConnection` — a changed *type name*, found in two
+//! **`#[cfg(feature = "postgres")]` lives in eleven files outside this
+//! module and `pool.rs`, at 22 sites** (`DIA-004`, measured
+//! 2026-11-03; this paragraph used to claim none, which was false).
+//! **Fourteen are production query pairs** — a second, PostgreSQL-only
+//! SQL body beside the SQLite one, the health and sustainability
+//! queries among them — in `user_burnout.rs` (3), `personal_
+//! metrics.rs` (3), `metrics_snapshots.rs` (1), `user_metrics_
+//! snapshots.rs` (1), `sprints.rs` (2), `issue_events.rs` (1) and
+//! `project_health.rs` (2), plus `issues.rs` (1: a single token
+//! spliced into one shared query, not a second body). **Eight are
+//! test-only**: `lib.rs`'s own `con005_transaction_seam_tests` module
+//! declaration; `optimistic_lock_guards.rs`'s two connection helpers,
+//! themselves outside that file's own `mod tests` but compiled only
+//! because the whole file is `#[cfg(test)]` from `lib.rs`; and
+//! `pool.rs`'s own test submodule, `pool/tests.rs` (five sites) — a
+//! different file by path, though `pool.rs`'s own declared `mod
+//! tests`.
+//!
+//! **Why they are there, stated so nobody "cleans up" a shape the
+//! placeholder seam cannot hold**: three distinct reasons, not one.
+//! Most are date/time functions — SQLite's `julianday`/`datetime(…)`
+//! against PostgreSQL's `EXTRACT(EPOCH FROM …)`/`now() + …::interval`,
+//! a class [`sql`]'s own rewriter cannot reach because it parses
+//! placeholders, not SQL grammar. `sprints.rs`'s own `lock_issue_set_
+//! for_sprint` is a second reason: SQLite's whole-database lock from
+//! `BEGIN IMMEDIATE` already covers what this would do, so its SQLite
+//! body is a no-op, while PostgreSQL needs an explicit `SELECT …
+//! FOR UPDATE`. `sprints.rs`'s own `capture_record` is a third:
+//! SQLite's `INSERT OR REPLACE` has no PostgreSQL equivalent — named
+//! again, with the semantics this one costs, in the paragraph below.
+//!
+//! **A separate, narrower claim about five files' own signatures**
+//! (not about `#[cfg]` scattering): [`Database`], [`Tx`] or
+//! [`Connection`] in place of a hard-coded SQLite type, found in two
 //! passes by building with `postgres` selected and reading what
-//! still failed, not a conditional-compilation block of their own.
-//! None of the fourteen occurrences carries a `#[cfg]`.
+//! still failed. **Sixteen such references exist today** — measured
+//! by qualified path (`dialect::Database`/`dialect::Tx`/`dialect::
+//! Connection`), not the bare word, which also names `sqlx::Error`'s
+//! own `Database` variant and this crate's own
+//! [`crate::StorageError::Database`] unrelatedly — across `lib.rs`
+//! (1), `teams.rs` (2), `sprints.rs` (9, the file's own growth since
+//! this count was last taken), `user_capacities.rs` (3) and `issue_
+//! events.rs` (1). **Two of the sixteen do carry a `#[cfg]`**:
+//! `sprints.rs`'s own two `lock_issue_set_for_sprint` signatures,
+//! named above — their own `#[cfg]` is what makes them a pair at all,
+//! not a count against the type-name-only claim, which still holds
+//! for the other fourteen.
 //!
 //! **Amended (`PG-004`) — the placeholder gap above is closed.**
 //! [`sql`] rewrites `?N` / bare `?` to `$N`, a parser rather than a
@@ -86,8 +125,11 @@
 //! interchangeably. A handful of queries still carry a genuine
 //! per-backend difference no
 //! placeholder rewrite reaches — SQLite's date functions, its
-//! implicit `rowid`, `INSERT OR REPLACE` — and those are named and
-//! justified at each call site rather than guessed at here;
+//! implicit `rowid`, `INSERT OR REPLACE`, an explicit per-row lock
+//! where SQLite's own whole-database one already covers it
+//! (`sprints.rs`'s `lock_issue_set_for_sprint`, `DIA-004`) — and
+//! those are named and justified at each call site rather than
+//! guessed at here;
 //! [`stale_guard`] is the one such difference that lives in this
 //! module, since (like the trigger-code translation above) it is
 //! reused across more than one call site.
