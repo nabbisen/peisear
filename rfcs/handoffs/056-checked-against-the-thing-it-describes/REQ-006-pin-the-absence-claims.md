@@ -63,6 +63,35 @@ the enumeration gains that entry.
 **Report any verdicts you form, but do not edit `requirements.md`.**
 Statuses are the architect's (`CFG-001`'s division).
 
+## §2a — the instrument `REQ-005` handed this round, and it is better than the pattern
+
+**Amended 2026-11-03, after `REQ-005`.** That round found `FR-TEAM-005`'s
+status false — instance **12** — and the architect's phrase pattern **could
+not have found it**: the test renders a message key and compares against
+that, so the status's literal words appear nowhere in the test's source. A
+pattern over status prose shortlists claims; it cannot tell you a claim is
+false when the evidence against it contains none of its words.
+
+**What found it was the commit.** `edea18c` — *"`REQ-002`: pin the four
+limbs `REQ-001` moved to Met on a probe"* — added exactly four tests, and
+**all four of the requirements they pin kept a status denying them**:
+`FR-PLAN-005` (8), `FR-CAL-005` (9), `FR-NTF-005` (11), `FR-TEAM-005` (12).
+Four for four, twenty-two releases.
+
+**So this round gains a second pass, and it runs first because it is both
+cheaper and exact**: find the commits that added tests *in order to satisfy
+requirements* — their own subject lines say so (`REQ-002`'s does) — and for
+each, check every requirement it names against every test it added.
+`git log --diff-filter=M -- docs/specification/requirements.md` and
+`git log -S` on a test name are the tools; `REQ-005` used the second to date
+its own finding to the day.
+
+**This does not replace the enumeration rule**, which is still the
+deliverable: the commit pass finds today's instances, the rule stops
+tomorrow's. **But report the commit pass first**, because if it finds a
+fifth and sixth the enumeration's pinned list must include them from the
+start.
+
 ## §3 — the trap, named once
 
 **The enumeration must fail loudly when its own lookup fails.** `§10.36`

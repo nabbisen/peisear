@@ -946,7 +946,7 @@ that personal sustainability data is visible only to the individual, and
 that admin is a management role rather than an oversight role.
 *Source*: `SPEC §11.4`, `SPEC §29.6`. *Acceptance*: the string
 "management role, not an oversight role" appears on the team detail
-screen. *Status*: **Met** (recorded Implemented (untested) until 0.40.0; `REQ-001`) — the footnote renders on a member's team page; the string is byte-pinned in `peisear-i18n`. **No web test asserts it on the screen**. *Priority*: P1.
+screen. *Status*: **Met** (recorded Implemented (untested) until 0.40.0; `REQ-001`) — the footnote renders on a member's team page. **Covered by two tests, and neither alone covers this *Acceptance* clause.** The words are byte-pinned in `peisear-i18n` (`tests/rendering.rs:105`); `the_team_privacy_footnote_renders_on_the_team_screen_for_every_role` (`aggregate_privacy.rs:587`) asserts the **rendered** `TeamPrivacyFootnote` appears on `/teams/{slug}` for **admin, member and viewer** — so it pins that the key reaches that screen, not what it says, and the i18n test pins what it says. **Pinned since 0.41.0** (`REQ-002`, `edea18c`), confirmed load-bearing twice by plant: removing the paragraph fails it, and rendering the footnote for admins only fails it **on the member's screen**, which is this requirement's own reader. *Clause corrected 2026-11-03: it read **No web test asserts it on the screen** for twenty-two releases — `§10.34` instance 12. The architect's grep searched `peisear-web` for the literal words *"management role, not an oversight role"*; the test renders the message key and compares against that, so the words are in its output and never in its source. **A literal-string needle could not have found this test, and the conclusion drawn from its silence was published twice.*** *Priority*: P1.
 
 ### 4.7 Sprints — `FR-SPR`
 
@@ -6430,9 +6430,9 @@ transaction seam does.
 mechanisms proven necessary by a test seen to fail without them. The
 entry's own named condition is met.
 
-### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; eleven instances
+### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; twelve instances — and four of them are one commit
 
-Eleven times the architect recorded a status that the shipped code contradicted.
+Twelve times the architect recorded a status that the shipped code contradicted.
 Every one **understated** what ships or overstated what is complete within a
 scope that had since changed; none hid a defect from a user. The cost is where
 attention goes: *nobody checks a requirement they believe is done*, which is
@@ -6497,21 +6497,61 @@ cannot be trusted to judge can still be trusted to shortlist**, and that
 distinction is what makes the census tractable where `REQ-003` found a scan
 impossible.
 
-**The same probe found the two other shapes this entry had not separated.**
-`FR-TEAM-005`, a **P1**, says *"No web test asserts it on the screen"* — and
-that is **true**: the string is pinned in `peisear-i18n`
-(`rendering.rs:105`) and no `peisear-web` test asserts it on a rendered
-page, while the requirement's own *Acceptance* names the team detail
-screen. **An accurate absence claim is not this entry's class at all — it is
-a missing test**, and conflating the two is how a census would waste its
-own findings. And `FR-HLT-006`, a **P0**, read `Implemented (untested —` and
-then spent sixty words reversing its own first three words: **no false fact,
-but read at a glance as the thing it denies.** Reworded above.
+**The same probe found a second shape this entry had not separated.**
+`FR-HLT-006`, a **P0**, read `Implemented (untested —` and then spent sixty
+words reversing its own first three words: **no false fact, but read at a
+glance as the thing it denies.** Reworded above.
 
 **So the census's output is three-valued, not two**: the claim is false
 (correct the status), the claim is true (write the test, or record the gap
 with a reason), or the claim is accurate but reads as its opposite (reword).
-Only the first is an instance of this entry.
+Only the first is an instance of this entry. **`FR-HLT-005` illustrates the
+middle bucket** — its own *Acceptance* clause reads *"none — see below"*, an
+absence stated on purpose.
+
+> **This passage first used `FR-TEAM-005` as that middle illustration,
+> asserting *"and that is **true**"*. It was false, and it is now instance
+> 12 — corrected 2026-11-03 by `REQ-005`, the round commissioned to write
+> the test that already existed.** The architect had grepped `peisear-web`
+> for the literal words *"management role, not an oversight role"*; the test
+> renders the message key and compares against **that**, so the words live
+> in its output and never in its source. **An absence concluded from a
+> literal-string search, in the entry whose whole subject is absences
+> concluded without checking** — and published twice before the round that
+> was supposed to act on it read the file instead.
+
+**Instances 8, 9, 11 and 12 are one commit, and that is the sharpest thing
+this entry has learned.** `edea18c` — *"`REQ-002`: pin the four limbs
+`REQ-001` moved to Met on a probe"*, shipped at `0.41.0` — added exactly
+four tests:
+
+| test | requirement | instance |
+|---|---|---|
+| `a_personal_projects_issue_is_not_in_the_team_backlog` | `FR-PLAN-005` | 8 |
+| `an_unscheduled_day_carries_no_comment_and_no_fill` | `FR-CAL-005` (**P1**) | 9 |
+| `mark_all_read_is_offered_only_while_something_is_unread` | `FR-NTF-005` | 11 |
+| `the_team_privacy_footnote_renders_on_the_team_screen_for_every_role` | `FR-TEAM-005` (**P1**) | 12 |
+
+**Four for four.** Every limb that commit pinned kept a status denying it,
+for twenty-two releases. So this is not four independent misses, which is
+how the count reads: **it is one omission with four faces** — the tests were
+written and the four statuses they existed to satisfy were never touched,
+in a commit whose own subject line says what it was for.
+
+**And it tells us why the recorded remedy did not catch them.** This entry's
+remedy is a person reading the specification against *what has just
+shipped*, which is what assembling a release candidate is — and it found
+four of the first seven. It cannot find these, because by the next release
+`edea18c` was no longer what had just shipped. **A `DEC-028` sweep reads the
+release in front of it; a status stranded by a previous release is invisible
+to every sweep thereafter.** Twenty-two of them read past these four.
+
+**Which makes the instrument obvious, and it is not a phrase pattern.**
+Three of these four were found by grepping status prose, and the fourth was
+missed by exactly that method because its test names no literal from the
+status. **The sharper instrument is the commit**: for any commit that adds
+tests in order to satisfy requirements, check every requirement it names
+against every test it added. `REQ-006` carries this.
 
 **Instance 10, found the next morning while measuring the replacement
 proposal — and it was predicted in writing before it was found.**

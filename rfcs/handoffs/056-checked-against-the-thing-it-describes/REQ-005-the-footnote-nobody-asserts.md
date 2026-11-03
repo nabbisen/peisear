@@ -49,7 +49,19 @@ revert, watch it pass. Report the planted failure text.
 **`FR-TEAM-005` is one of 28.** `requirements.md` has **51**
 `*Acceptance*` clauses and **28** of them name no test identifier at all
 (architect's measurement: `*Acceptance*` clauses containing no backticked
-identifier — **re-measure before quoting it**). This one was found because
+identifier — **re-measure before quoting it**).
+
+> **It is 6, not 28 — corrected by the round, and verified.** The six are
+> `FR-AUTH-001`, `FR-AUTH-002`, `FR-NAV-001`, `FR-PROJ-002`, `FR-TEAM-005`
+> and `FR-HLT-005` (whose clause says *"none — see below"* on purpose).
+> **The architect's measurement used `grep -o '\*Acceptance\*:[^*]*'`, and
+> `[^*]*` stops at the first `*`** — which in these wrapped prose
+> paragraphs is an emphasis marker, so every clause was truncated to a
+> fragment and a fragment with no backtick in it looked like a prose-only
+> clause. **The regex did not match the document's structure, and the
+> number it produced was out by a factor of four and a half.** Second time
+> in this series: `DIA-004`'s site table was wrong for the same kind of
+> reason. **Re-measure before quoting — as this round did.** This one was found because
 the status census's first probe stumbled on it, not because the 28 were
 audited.
 
