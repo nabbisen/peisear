@@ -90,6 +90,27 @@
 //! SQLite's `INSERT OR REPLACE` has no PostgreSQL equivalent — named
 //! again, with the semantics this one costs, in the paragraph below.
 //!
+//! **Decided 2026-11-03 (`DIA-004`), so this is not reopened by whoever
+//! next finds the pairs: no seam helper for any of the three, and the
+//! pairs stay.** The placeholder rewriter earned [`sql`] because
+//! placeholders are one mechanical class; these are not one class. Only
+//! the date/time group is mechanical, and covering it would need a
+//! vocabulary of SQL fragments — trading a query you can read for a
+//! small DSL you cannot. The other two are **semantic** differences, not
+//! translations: a whole-database lock is not a row lock, and
+//! `OR REPLACE` is not `ON CONFLICT`. A helper would hide exactly the
+//! difference a reader needs to see.
+//!
+//! **What makes a paired body safe here is not a helper but the suite.**
+//! `049`'s one-suite-two-backends arrangement runs all 33 `peisear-web`
+//! integration binaries under `--no-default-features --features postgres`
+//! as well as the default build (`test.yml:1022-1054`), so a pair that
+//! drifts in a way that changes behaviour fails a test. **Note where that
+//! coverage does *not* come from**: this crate's own 31 `--lib` tests
+//! cover `dialect`, `pool`, `optimistic_lock_guards`, `migration_drift`
+//! and `search` only — **none** of the modules holding the pairs above.
+//! Read "31 storage tests" as covering the seam, never the queries.
+//!
 //! **A separate, narrower claim about five files' own signatures**
 //! (not about `#[cfg]` scattering): [`Database`], [`Tx`] or
 //! [`Connection`] in place of a hard-coded SQLite type, found in two

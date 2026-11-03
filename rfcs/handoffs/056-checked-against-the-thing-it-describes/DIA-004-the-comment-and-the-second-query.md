@@ -27,6 +27,25 @@ precisely rather than trusting this table**:
 | `issue_events.rs` | 1 | **yes** |
 | `lib.rs` | 1 | **yes** |
 
+> **The table above is wrong, and the round corrected it — recorded here
+> rather than silently replaced.** It is **22 sites in eleven files**, not
+> thirteen in six: `user_metrics_snapshots.rs`, `issues.rs`,
+> `project_health.rs` and `pool/tests.rs` are missing from it entirely, nine
+> sites between them, and the prose above undercounted its own seven-row
+> table by a file. **Fourteen sites are production, eight test-only** — a
+> split the table did not draw at all.
+>
+> **How the architect got it wrong**: a loose `grep` was `head`-limited to
+> ten lines, and the per-file counts were then taken from a **hardcoded list
+> of the nine filenames those ten lines happened to show.** The loop counted
+> exactly the files it was handed and could not report the four it never
+> looked at — while the same output printed `50` total matches, which should
+> have stopped it. A partial search written up as a total, which is this
+> architect's most repeated failure, and the first time it reached a handoff.
+> **The instruction below — re-measure rather than trust this table — is the
+> only reason it cost nothing**, and it is why that sentence belongs in every
+> handoff that carries a number.
+
 The attribute is spelled `#[cfg(all(feature = "postgres", not(feature =
 "sqlite")))]` rather than the bare form the comment quotes. **That is not
 a defence of the comment**: a reader takes it to mean *you will not find
