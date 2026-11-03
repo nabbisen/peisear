@@ -499,6 +499,67 @@ fn rule_8_catches_the_real_three_line_cookie_secure_shape() {
     );
 }
 
+/// `QS-002` `§1`: seen red the first way -- a command added to the
+/// README's Quick Start that names no path install.md offers. **Planted
+/// right after the section's own heading**, not against whatever
+/// currently follows the section (`QS-002`'s own review, finding 2):
+/// anchoring on a neighbouring heading stops planting anything the
+/// moment that neighbour moves, which is exactly what this round's own
+/// fix does to `## Features`.
+#[test]
+fn rule_9_catches_a_quick_start_command_with_no_matching_install_md_path() {
+    let mut r = real();
+    r.readme = r.readme.replace(
+        "## Quick Start\n",
+        "## Quick Start\n\n\
+         **Or, from a package manager we don't actually publish to:**\n\n\
+         ```bash\n\
+         brew install peisear\n\
+         ```\n",
+    );
+    let v = only(run(&r), "rule 9:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("brew install peisear") && m.contains("does not offer")),
+        "got {v:?}"
+    );
+}
+
+/// `QS-002` `§1`: seen red the other way, the half that gets skipped --
+/// breaking this rule's own anchor (`## Quick Start`) must report the
+/// lookup failing, not report zero violations having examined nothing.
+#[test]
+fn rule_9_reports_rather_than_silently_skips_when_its_anchor_moves() {
+    let mut r = real();
+    r.readme = r.readme.replace("## Quick Start", "## Getting Going Fast");
+    let v = only(run(&r), "rule 9:");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("no \"## Quick Start\" heading to check")),
+        "got {v:?}"
+    );
+}
+
+/// `QS-002` `§3`: the population census is itself plantable -- removing a
+/// command from the Quick Start must change the examined count, not pass
+/// silently because the one command this rule lost sight of happened to
+/// have no install.md counterpart to flag either.
+#[test]
+fn rule_9_census_catches_a_command_disappearing_from_the_quick_start() {
+    let mut r = real();
+    r.readme = r.readme.replacen(
+        "cargo install peisear\npeisear\n",
+        "cargo install peisear\n",
+        1,
+    );
+    let v = only(run(&r), "rule 9:");
+    assert!(
+        v.iter().any(|m| m.contains("examined 4 command lines")
+            && m.contains(&EXPECTED_QUICK_START_COMMAND_COUNT.to_string())),
+        "got {v:?}"
+    );
+}
+
 #[test]
 fn the_helpers_do_what_the_rules_assume() {
     assert_eq!(short_crate_name("peisear-i18n"), "i18n");
