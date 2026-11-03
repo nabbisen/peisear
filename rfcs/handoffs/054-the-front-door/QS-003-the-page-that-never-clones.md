@@ -64,8 +64,20 @@ once* then settles the other two documents:
 **`.github/workflows/env-example-walk.yml` already walks this path** —
 `actions/checkout@v6`, `rustup install`, `cp .env.example .env`,
 `cargo build --release -p peisear`. Write the page's build-and-run step
-to agree with what that job actually runs, so the documented commands
-are ones CI exercises on every push.
+to agree with what that job actually runs.
+
+**Correction, 2026-11-03 — this handoff first said "so the documented
+commands are ones CI exercises on every push." That was false, and it
+was the architect's.** `env-example-walk.yml` is
+`on: workflow_dispatch:` **only**, with a required `ref` input: it runs
+when a person asks it to and never on a push. Its whole run history is
+**three manual dispatches, the last on 2026-10-16** — before `0.57.0`,
+`0.58.x`, `0.59.0` and `0.60.0` shipped. `§10.40` describes it
+accurately as *"a new, one-off `workflow_dispatch`-only job"*; the
+overstatement was in this handoff alone. **The round did not propagate
+it** — its report wrote *"on every manual dispatch"*, which is right.
+What the job's commands are still worth agreeing with; what they are
+not is continuously proven.
 
 **Two bounds to state rather than imply:**
 

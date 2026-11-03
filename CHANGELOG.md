@@ -11,6 +11,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+**The guard `0.60.0` shipped without, and the page `install.md` said
+would clone.** Two rounds of `054` landed after that cut rather than
+before it, so they wait here for whichever release is cut next. Neither
+changes behaviour; both are about a reader following written
+instructions and reaching a working instance.
+
+### Added
+
+- **A check now enforces what the README's Quick Start may contain**,
+  where `0.60.0` left it to a reader. `docs_scan` rule 9: every command
+  in the Quick Start must appear verbatim inside a ` ```bash ` fence in
+  [Install](docs/getting-started/install.md) — derived from that page
+  rather than from a hardcoded list of paths, so adding an install path
+  cannot drift the two documents apart a fourth time. It carries an
+  asserted population count, and its anchor reports **its own lookup
+  failing by name** rather than examining nothing and passing.
+
+### Fixed
+
+- **[Build from source](docs/getting-started/build-from-source.md) now
+  teaches the step its title promises.** `install.md` told the reader
+  that page *"clones the repository and builds from a checkout"* — and
+  it never cloned anything: it installed `rustc` two ways, verified the
+  version, and its `## Next` jumped to Configuration, skipping the step
+  in between. One published document promising what another did not
+  contain.
+- **`.github/CONTRIBUTING.md`'s development setup no longer promises a
+  clone it does not show.** Step 2 read *"Clone the workspace and run
+  the test suite"* over commands that began at `cargo check`. Step 1
+  already links the page that now teaches the checkout, so the claim is
+  removed rather than duplicated.
+
+### Changed
+
+- **`install.md`'s prebuilt-binary command uses the same glob the README
+  does** — `peisear-*-x86_64-…` rather than `peisear-<version>-x86_64-…`.
+  A `<version>` placeholder pasted literally fails; the glob pastes and
+  runs, and the two documents now agree byte for byte.
+- **The README's source-checkout block has its own
+  `## Build from source` heading** instead of sitting unheaded at the end
+  of the Quick Start. The README's own closing sentence already said
+  Install *"covers all three paths in full"* while that section held
+  four, so the heading was what disagreed with the document — the
+  block's position, order and commands are unchanged.
+
 ## [0.60.0] — 2026-11-01
 
 **A value the operator supplied and peisear cannot use stops the
