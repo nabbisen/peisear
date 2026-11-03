@@ -390,6 +390,77 @@ that was not is the one I ranked second and called small. **The lead item
 exists only because the owner asked, and because asking made me run a
 command instead of repeating a sentence I had written twice.**
 
+**Proposed 2026-11-03, after `056` closed and the dev team reported —
+correctly — that nothing was open.** Verified: **zero** rounds marked open
+in any series. Of the seven open register entries, one closes on reading
+(`§10.42`, below) and one is clearly the strongest piece of work this
+project has outstanding.
+
+**`057` — a gate that is not watching. Two rounds, no release number.**
+
+1. **`§10.50`: a `windows-latest` job in `test.yml`.** All **47** of that
+   workflow's jobs run on `ubuntu-latest`; **not one** runs on Windows or
+   macOS. The only workflow that compiles any other platform is
+   `release.yml`, which fires on a tag — **so every platform but Linux is
+   first compiled at the moment the release archive is being produced**,
+   the latest point at which a finding can still be acted on without
+   re-cutting. **This is not hypothetical twice over**: `0.58.0` lost a
+   published platform to this class, and in one series `release.yml` found
+   two defects `test.yml` structurally could not — a helper with no
+   `#[cfg]`, dead on Windows, which `-D warnings` would have rejected had
+   any job compiled it there; and `script: illegal option -- f`, because
+   BSD `script` is not GNU `script`. **The entry names the cheap remedy
+   itself** — a `windows-latest` job running `cargo clippy -p peisear`
+   closes most of it, cross-compiling from Linux will not because
+   `libsqlite3-sys` builds C, and macOS costs runner minutes Linux does
+   not — and it says in terms that **whether to pay, and when, is this
+   table's to say.** It is worth paying: five archives ship to users,
+   `.zip` among them, and the only thing standing between a Windows user
+   and a broken artefact today is that the tag build happens to be read.
+   **Windows first, macOS deliberately not yet** — the recorded incident
+   was Windows, and one platform bought cheaply beats two argued about.
+2. **The `env-example-walk` trigger — the architect's decision, now
+   made.** `.github/workflows/env-example-walk.yml` genuinely asserts the
+   documented copy-and-run path (non-zero exit if it does not reach a
+   listening server, since `0.53.0` round 2), but it is
+   **`on: workflow_dispatch:` only**, with a required `ref`, and its whole
+   history is **three manual dispatches, the last 2026-10-16** — before
+   `0.57.0`, `0.58.x`, `0.59.0` and `0.60.0`. Meanwhile `QS-003` made
+   `cp .env.example .env` documented on a **second** page. **Decision: give
+   it a `push` trigger scoped to the paths that can break it** —
+   `.env.example`, the configuration sources, and the two pages that
+   document the command — rather than every push or a schedule. It is a
+   real gate that is simply not running; a path filter makes it run exactly
+   when its own inputs change. **This does not widen `NFR-REL-011`**, whose
+   `0.53.0` round 2 decision excluded this reader and said in terms that
+   the walk *"stands on its own merit as a regression guard… it does not
+   need this entry's authority to justify existing."*
+
+**Why this is not the shape the owner's review removed on 2026-11-03.**
+That proposal bundled four items because they shared `§10.36`'s failure
+*shape*, and three of them were checks for defects already fixed by hand.
+**Neither of these is.** Both are live gaps on **shipped artefacts**: a
+platform axis that has already cost a published archive, and an assertion
+that exists and is not running. Nothing here is a check for something
+already repaired.
+
+**Closed on reading rather than scheduled: `§10.42`**, the entry the owner
+raised on 2026-10-15 asking whether relic rules were holding the project
+back. Its scheduled remedy — *a `spec_scan` over this document's own
+checkable properties* — shipped at `0.57.0` and now runs four rules, 39
+tests and eight CI steps, and **its stated bound held**: `REQ-006`'s rule 3
+shortlists and judges nothing, on `REQ-003`'s own evidence. The entry
+stayed open only because nobody re-read it after the thing it scheduled had
+shipped. **The answer to its question is yes, a relic was holding us
+back** — `REQ-003`'s conclusion over-applied — **and it has been narrowed
+to the class it proved.** The five-pass sweep remains the only guard for
+status *semantics*, deliberately.
+
+**Still not recommended**, and still on *less is more* rather than merit:
+the `spec_scan` baseline rule, the `changelog_scan` section-date rule and
+the link check outside the book. Each is a check for something already
+fixed by hand.
+
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
 from memory.

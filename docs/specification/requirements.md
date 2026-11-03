@@ -6339,7 +6339,7 @@ PostgreSQL equivalent to assert) are named and `#[cfg(feature =
 "sqlite")]`-gated in their own doc comments, a bounded claim rather
 than a silent exclusion.
 
-### 10.42 A finding about one checkable property, read as a verdict on all of them — **open**, raised by the owner 2026-10-15
+### 10.42 A finding about one checkable property, read as a verdict on all of them — **closed** 2026-11-03, raised by the owner 2026-10-15
 
 The owner, 2026-10-15: *"My concern is that outdated, nonsensical rules
 may still be in place — relics from the work of architects who, in the
@@ -6394,6 +6394,40 @@ properties, with `0.57.0`'s citation scan as its first rule. The
 bounds matter as much as the rules — **a scan that tries to read a
 status word is `REQ-003`'s rejected design rebuilt**, and must be
 refused on the same evidence.
+
+**Closed 2026-11-03 — delivered, including the bound.** `spec_scan`
+shipped at `0.57.0` with the citation scan as **rule 1** and has grown
+to **four rules** (1, 2, 3 and b) with **39 tests** and **eight** CI
+steps reading this document. Its first run found more wrong than
+expected and all of it measured: thirteen dangling `§10.N` citations,
+nine of Appendix A's twenty-five areas stale, a status vocabulary spelled
+two ways, and three of eight test-count citations wrong on the live tree.
+**So *"no automated check reads it for its own consistency"* has not been
+true since `0.57.0`**, and this entry stayed open only because nobody
+re-read it after the thing it scheduled had shipped — which is `§10.34`'s
+own class applied to the register rather than to a requirement, and the
+architect's.
+
+**The bound held, and that is the part worth recording.** `REQ-006`
+(2026-11-03) added rule 3, a census of the statuses that claim an absence
+of coverage. **It judges nothing**: it pins a membership and reports a
+*change* to it, leaving every verdict to a reader, with `REQ-003`'s
+evidence cited in its own doc comment as the reason. The temptation this
+entry warned about was live — the round was handed a rationale claiming
+the phrase pattern could not have found one instance, recorded it, and the
+rule's own pinned list disproved it eight lines below. **Caught in review,
+corrected, and the two steps separated: a rule may shortlist; only a
+reader may decide.**
+
+**What is deliberately not closed, so the closing is not read as wider
+than it is.** The five-pass sweep remains the only guard for status
+*semantics*, exactly as this entry intended — `REQ-003` still stands for
+the class it measured. What changed is that the sweep is **no longer the
+only guard for anything mechanical**, which is all this entry asked for.
+`§10.34` stays open by decision and is where status drift lives; this
+entry's own question — *is a relic rule holding us back?* — is answered:
+it was, the relic was `REQ-003`'s conclusion over-applied, and it has been
+narrowed to the class it proved.
 
 ### 10.47 A review accepted a claim's bound without testing it — **closed**, `CON-005`, 0.56.0; found 2026-10-20 in `CON-002`'s own review
 
