@@ -232,11 +232,11 @@ part of that work which has repeatedly been skipped: not amending the entries
 the release *touched*, but finding the ones it **closed without being
 touched**.
 
-Seven times a requirement's status has said one thing while the shipped code
-said another — all seven the architect's. `REQ-003` tested four text rules
+Nine times a requirement's status has said one thing while the shipped code
+said another — all nine the architect's. `REQ-003` tested four text rules
 against six of them and **none reached the bar**; the full result is `§10.34`.
 So this is a procedure, by hand, and the reason to trust it over a scan is
-that **four of the seven were caught exactly this way**: by a person reading
+that **four of the first seven were caught exactly this way**: by a person reading
 the specification against what had just shipped, which is what assembling a
 candidate is.
 

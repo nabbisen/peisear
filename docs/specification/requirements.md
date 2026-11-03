@@ -1081,7 +1081,7 @@ limit would convert planning into a quota.
 **FR-PLAN-005 — Team-scoped backlog**
 The backlog MUST draw only from team-scoped projects, excluding members'
 personal projects.
-*Source*: RFC 001 open question 1, resolved. *Status*: **Met** (recorded Specified until 0.40.0; `REQ-001`) — probe: a personal project's issue is absent from the backlog, a team project's present. **No test pins the exclusion**.
+*Source*: RFC 001 open question 1, resolved. *Status*: **Met** (recorded Specified until 0.40.0; `REQ-001`) — probe: a personal project's issue is absent from the backlog, a team project's present. **Pinned since 0.41.0** by `a_personal_projects_issue_is_not_in_the_team_backlog` (`sprint_plan.rs`), which asserts the absence on the rendered page *and* in the storage read. *Clause corrected 2026-11-03: it read **No test pins the exclusion** for twenty releases after `REQ-002` (`edea18c`) pinned it — `§10.34` instance 8, found by checking the sentence against the suite instead of reading it.*
 *Priority*: P2.
 
 ### 4.9 Project health — `FR-HLT`
@@ -1481,7 +1481,7 @@ The calendar MUST NOT fill, highlight, or comment on unscheduled time.
 Crowding MAY be indicated quietly; emptiness MUST NOT be.
 *Rationale*: `SPEC §10.4` — an asymmetric design. Flagging gaps converts
 a planning aid into a pressure instrument.
-*Source*: `SPEC §10.4`, `SPEC §16.3`. *Status*: **Met** (recorded Specified until 0.40.0; `REQ-001`) — probe: no *empty*/*free*/*gap* copy on any calendar. **No test asserts an unscheduled day carries no comment**. *Priority*: P1.
+*Source*: `SPEC §10.4`, `SPEC §16.3`. *Status*: **Met** (recorded Specified until 0.40.0; `REQ-001`) — probe: no *empty*/*free*/*gap* copy on any calendar. **Pinned since 0.41.0** by `an_unscheduled_day_carries_no_comment_and_no_fill` (`calendar_surfaces.rs`), which asserts no fill, no state colour or tooltip, no chip or badge, and the date and nothing else. *Clause corrected 2026-11-03: it read **No test asserts an unscheduled day carries no comment** for twenty releases, while the test that asserts exactly that is named after the sentence — `§10.34` instance 9, and the same `REQ-002` commit pinned this and `FR-PLAN-005` together.* *Priority*: P1.
 
 **FR-CAL-006 — No team-axis calendar**
 The system MUST NOT provide a team-axis calendar.
@@ -6380,9 +6380,9 @@ transaction seam does.
 mechanisms proven necessary by a test seen to fail without them. The
 entry's own named condition is met.
 
-### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; seven instances
+### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; nine instances
 
-Seven times the architect recorded a status that the shipped code contradicted.
+Nine times the architect recorded a status that the shipped code contradicted.
 Every one **understated** what ships or overstated what is complete within a
 scope that had since changed; none hid a defect from a user. The cost is where
 attention goes: *nobody checks a requirement they believe is done*, which is
@@ -6414,8 +6414,26 @@ more than the scan would have been, and three of its findings are why:
   something; the other needs to know that **lightness is not hue** — a fact
   about colour, not a string shape.
 
+**Instances 8 and 9, found 2026-11-03 — and the cost arrived before the
+correction did.** `FR-PLAN-005` and `FR-CAL-005` (a **P1**) each carried a
+clause denying that a test pinned the behaviour: *"No test pins the
+exclusion"* and *"No test asserts an unscheduled day carries no comment"*.
+`REQ-002` (`edea18c`, released at `0.41.0`) pinned **both**, in a commit whose
+own subject line is *pin the four limbs `REQ-001` moved to Met on a probe* —
+and one of the tests is named `an_unscheduled_day_carries_no_comment_and_no_fill`,
+the sentence the status denies. **Twenty releases, and every `DEC-028` sweep in
+them, read past it.**
+
+**What makes these two worth more than a count.** This entry says the cost is
+*where attention goes*, and that was abstract until this day: the architect had
+just written `FR-PLAN-005`'s missing test into a proposed `0.61.0` round —
+work to build a test that had existed since `0.41.0` — and found the clause
+false only while measuring the proposal. **A status that understates what ships
+does not merely waste a reader; it buys work that is already done.** Both
+clauses are corrected above, from the suite rather than from the entries.
+
 **The remedy is procedural, and the evidence for it is in how the instances
-were caught.** Four of seven were found by a person reading the specification
+were caught.** Four of the first seven were found by a person reading the specification
 against what had just shipped — which is exactly what assembling a release
 candidate is. The procedure is recorded in
 `docs/development/changelog-and-releases.md` and is a `§3` gate item of every
