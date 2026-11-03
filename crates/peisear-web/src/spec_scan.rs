@@ -166,6 +166,22 @@
 //!   one, move on. **No scan reads any of this**, and that is the
 //!   correct, honest state for prose this project already knows how
 //!   to date without a parser's help.
+//!
+//! **`REQ-006` adds rule 3: an asserted enumeration, not a verdict.**
+//! `§10.34`'s own investigation (above) already concluded no text rule
+//! can judge whether a requirement's status is true against the
+//! shipped code. Rule 3 does not try to -- it shortlists every entry
+//! whose *governing* `*Status*:` clause itself contains a coverage-
+//! absence phrase (`ABSENCE_CLAIM_PHRASES`), pins the six found on the
+//! real tree 2026-11-03 (`KNOWN_ABSENCE_CLAIM_IDS`, each already read
+//! by hand and resolved), and reports only a *change* to that
+//! membership -- a new claim appearing, or a known one's wording
+//! moving past the rule's own 500-character window. A human still
+//! decides what each change means; `§10.34`'s own twelve instances
+//! include one the phrase pattern could never have found at all
+//! (`FR-TEAM-005`, whose test renders a message key rather than
+//! quoting the status's own words) -- the commit-history pass that
+//! found that one is not this rule's job and stays a by-hand method.
 
 use std::collections::BTreeSet;
 use std::fs;
@@ -402,6 +418,9 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         }
     }
     out.extend(appendix_violations(&input.requirements));
+    out.extend(absence_claim_violations(&requirement_entries(
+        &input.requirements,
+    )));
     out
 }
 
@@ -480,6 +499,14 @@ pub(crate) struct ReqEntry {
     pub id: String,
     pub area: String,
     pub status_token: Option<String>,
+    /// The entry's own full span, from just after its `**ID — Title**`
+    /// marker to the boundary [`requirement_entries`] itself stops at.
+    /// Added for `REQ-006`'s rule 3 -- [`governing_status_token`] only
+    /// ever needed the first word after `*Status*:`; a rule that asks
+    /// what the status *clause* says, not just its token, needs the
+    /// text to search, and this is that text rather than a second
+    /// re-walk of `requirements.md`.
+    pub body: String,
 }
 
 /// Every `**FR-AREA-NNN — Title**` / `**NFR-AREA-NNN — Title**` entry
@@ -519,6 +546,7 @@ pub(crate) fn requirement_entries(text: &str) -> Vec<ReqEntry> {
                 id,
                 area,
                 status_token: governing_status_token(&body),
+                body,
             });
             i = j;
         } else {
@@ -862,6 +890,148 @@ fn check_grand_total(
             total_row.cells, sums
         ));
     }
+}
+
+// =====================================================================
+// Rule 3 (`REQ-006`, `§10.34`): an asserted enumeration of the
+// requirement entries whose *governing* `*Status*:` clause itself
+// makes a coverage-absence claim ("no test", "untested", …) -- the
+// shape `docs_scan` rules 8 and 9 already use, not a census of
+// `requirements.md` as a whole, and not a judge of whether each claim
+// is true. `REQ-003`/`§10.34`'s own conclusion stands: no text rule
+// can decide that. This one shortlists; a person still decides.
+// =====================================================================
+
+/// The nine phrasings `REQ-006`'s own calibration read (`§2` of its
+/// handoff) confirmed worth keeping, out of the architect's original
+/// seven plus two more found live on the real tree. **Not the full
+/// calibration set**: `no scan`, `nobody checks`, `not checked`, `by
+/// hand` and `no CI job` were also tried against the real tree and
+/// each matched only unrelated prose once [`absence_claim_window`]'s
+/// own 500-character cap was in place -- `no scan` in `FR-DM-006`'s
+/// own aside about a DOM-order scan's limits, `by hand` in `NFR-SEC-
+/// 004`'s note about a *reader* retyping a placeholder, `not verified`
+/// in `NFR-A11Y-007`'s own WCAG-exception caveat, three sentences and
+/// several hundred characters from that entry's own `*Status*:`
+/// marker. Excluded, named rather than silently dropped, so a future
+/// reader does not re-propose them assuming nobody tried.
+const ABSENCE_CLAIM_PHRASES: &[&str] = &[
+    "no test",
+    "not pinned",
+    "nothing asserts",
+    "nothing pins",
+    "nothing checks",
+    "unpinned",
+    "untested",
+    "no guard",
+    "nothing guards",
+];
+
+/// The text [`ABSENCE_CLAIM_PHRASES`] is matched against: up to 500
+/// characters after an entry's own **last** `*Status*:` marker (the
+/// same governing-status rule [`governing_status_token`] uses), cut
+/// earlier at the next `*Priority*:` if one appears first. `None` if
+/// the entry's body has no `*Status*:` marker at all -- the anchor
+/// [`violations`] reports failing by name rather than treating as a
+/// clean zero.
+///
+/// **The cap is load-bearing, not cosmetic** (the same shape as
+/// `docs_scan`'s own `silent_default_window`): an unbounded window run
+/// to the next entry's own marker crosses into whichever unrelated
+/// aside, amendment, or historical quotation happens to follow a
+/// heavily-amended entry's `*Status*:` line -- `NFR-A11Y-007`'s own
+/// 44px-touch-target entry runs over 150 lines between its `*Status*:`
+/// and its own `*Priority*:`, and without this cap a search across
+/// that whole span finds `not verified` in a sentence about a WCAG
+/// exception the entry's governing status says nothing about.
+fn absence_claim_window(body: &str) -> Option<&str> {
+    let marker = "*Status*:";
+    let idx = body.rfind(marker)?;
+    let start = idx + marker.len();
+    let cap = (start + 500).min(body.len());
+    let mut end = cap;
+    while end < body.len() && !body.is_char_boundary(end) {
+        end += 1;
+    }
+    let window = &body[start..end];
+    Some(match window.find("*Priority*:") {
+        Some(p) => &window[..p],
+        None => window,
+    })
+}
+
+/// Every requirement ID whose own [`absence_claim_window`] contains at
+/// least one of [`ABSENCE_CLAIM_PHRASES`], in the order
+/// [`requirement_entries`] finds them.
+fn absence_claiming_ids(entries: &[ReqEntry]) -> Vec<&str> {
+    entries
+        .iter()
+        .filter(|e| {
+            absence_claim_window(&e.body).is_some_and(|w| {
+                let low = w.to_ascii_lowercase();
+                ABSENCE_CLAIM_PHRASES.iter().any(|p| low.contains(p))
+            })
+        })
+        .map(|e| e.id.as_str())
+        .collect()
+}
+
+/// Today's shortlist, pinned (`REQ-006`, 2026-11-03) -- every one read
+/// by hand and found to be a resolved, historical mention, not a live
+/// gap: `FR-TEAM-003`/`FR-TEAM-004`/`FR-PLAN-005`/`FR-CAL-005` carry
+/// `REQ-001`'s own boilerplate parenthetical ("recorded Implemented
+/// (untested) until 0.40.0") ahead of a status that is, in each case,
+/// now backed by a named test; `FR-HLT-006`'s own correction narrative
+/// quotes the exact wrong text it replaced (`` `Implemented
+/// (untested —` ``); `FR-TEAM-005`'s carries the same boilerplate
+/// ahead of `REQ-005`'s own two-test-split correction. **This list is
+/// not a verdict that nothing here is a defect** -- it is a record of
+/// what was already checked, so the next change to any of these six
+/// is what the rule below actually watches for.
+const KNOWN_ABSENCE_CLAIM_IDS: &[&str] = &[
+    "FR-CAL-005",
+    "FR-HLT-006",
+    "FR-PLAN-005",
+    "FR-TEAM-003",
+    "FR-TEAM-004",
+    "FR-TEAM-005",
+];
+
+/// Rule 3, over `requirements.md`'s own entries -- already walked for
+/// rule (b) above, so no new population to collect.
+fn absence_claim_violations(entries: &[ReqEntry]) -> Vec<String> {
+    let mut out = Vec::new();
+    if entries.is_empty() {
+        out.push(
+            "rule 3: requirement_entries found no FR-/NFR- entries in requirements.md -- has \
+             the \"**ID — Title**\" marker shape changed?"
+                .to_string(),
+        );
+        return out;
+    }
+    let found: BTreeSet<&str> = absence_claiming_ids(entries).into_iter().collect();
+    let known: BTreeSet<&str> = KNOWN_ABSENCE_CLAIM_IDS.iter().copied().collect();
+    for id in &found {
+        if !known.contains(id) {
+            out.push(format!(
+                "rule 3: {id}'s governing *Status* clause now makes a coverage-absence claim \
+                 this census does not know about -- check it against the test suite and the \
+                 commit that pinned (or did not pin) it by hand, then add it to \
+                 KNOWN_ABSENCE_CLAIM_IDS once checked"
+            ));
+        }
+    }
+    for id in &known {
+        if !found.contains(id) {
+            out.push(format!(
+                "rule 3: {id} is in KNOWN_ABSENCE_CLAIM_IDS but its governing *Status* clause \
+                 no longer matches any phrase in ABSENCE_CLAIM_PHRASES -- remove it from the \
+                 census if the wording simply moved past the 500-character window, or leave it \
+                 removed if the status itself was reworded"
+            ));
+        }
+    }
+    out
 }
 
 // =====================================================================

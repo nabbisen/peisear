@@ -489,6 +489,88 @@ fn rule_2_is_green_on_the_real_tree_regression_guard_for_spec_002_edits() {
     assert!(only(violations(&input), "rule 2").is_empty());
 }
 
+// ---------- REQ-006: rule 3, the absence-claim census ----------
+
+#[test]
+fn absence_claim_window_is_capped_and_stops_at_priority() {
+    let body = "*Status*: Implemented. *Priority*: P1.";
+    assert_eq!(absence_claim_window(body), Some(" Implemented. "));
+
+    let long_tail = format!("*Status*: Implemented.{}", "x".repeat(600));
+    let w = absence_claim_window(&long_tail).unwrap();
+    assert_eq!(w.len(), 500);
+
+    assert_eq!(absence_claim_window("no marker here"), None);
+}
+
+#[test]
+fn rule_3_is_clean_on_the_real_tree() {
+    let input = real_input();
+    assert!(only(violations(&input), "rule 3").is_empty());
+}
+
+/// `REQ-006` `§3`: seen red the first way -- a status that newly makes
+/// a coverage-absence claim. **Built inside the entry it mutates**
+/// (`FR-NAV-001`'s own Acceptance-plus-Status sentence, replaced as one
+/// unique unit), not anchored on a neighbouring entry's own heading --
+/// `QS-002`'s own lesson, named in this round's handoff `§3`, applied
+/// from the start rather than found the hard way a second time.
+#[test]
+fn rule_3_catches_a_new_absence_claiming_status() {
+    let mut input = real_input();
+    let before =
+        "*Acceptance*: navigation renders five entries.\n*Status*: Implemented. *Priority*: P1.";
+    let after = "*Acceptance*: navigation renders five entries.\n*Status*: Implemented, no test covers the fifth entry. *Priority*: P1.";
+    assert_eq!(
+        input.requirements.matches(before).count(),
+        1,
+        "the plant's own anchor must be unique in the real file"
+    );
+    input.requirements = input.requirements.replacen(before, after, 1);
+    let v = only(violations(&input), "rule 3");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("FR-NAV-001") && m.contains("does not know about")),
+        "got {v:?}"
+    );
+}
+
+/// `REQ-006` `§3`: seen red the other way -- breaking this rule's own
+/// anchor (every `**ID — Title**` marker) must report the lookup
+/// failing, not report zero claims having examined nothing.
+#[test]
+fn rule_3_reports_rather_than_silently_skips_when_its_anchor_breaks() {
+    let input = Input {
+        maintained_docs: vec![],
+        doc_comments: vec![],
+        requirements: "No entry markers anywhere in this text at all.\n".to_string(),
+    };
+    let v = only(violations(&input), "rule 3");
+    assert!(
+        v.iter().any(|m| m.contains("found no FR-/NFR- entries")),
+        "got {v:?}"
+    );
+}
+
+/// The census is bidirectional: a known entry whose status is reworded
+/// past the point of matching any phrase must be noticed, not silently
+/// dropped from the list as if it had never been there.
+#[test]
+fn rule_3_notices_a_known_entry_leaving_the_census() {
+    let entries = vec![ReqEntry {
+        id: "FR-CAL-005".to_string(),
+        area: "CAL".to_string(),
+        status_token: Some("Implemented".to_string()),
+        body: "*Status*: Implemented, pinned by a real test now. *Priority*: P1.".to_string(),
+    }];
+    let v = only(absence_claim_violations(&entries), "rule 3");
+    assert!(
+        v.iter()
+            .any(|m| m.contains("FR-CAL-005") && m.contains("no longer matches")),
+        "got {v:?}"
+    );
+}
+
 // ---------- SPEC-003: the one population surveyed as a Shape B candidate ----------
 
 #[test]
