@@ -314,6 +314,46 @@ history — the shape `NFR-PRIV-007` suppressed at 0.28.0 — so it needs
 the candidate list; a scoped deferral is not a disagreement between the
 specification and the product.
 
+**What the architect recommends be worked on next, 2026-11-03 — no release
+number, on the accepted position above.** `054` closed and nothing is in
+flight. Three items, in this order, and the first two were measured before
+being proposed:
+
+1. **The status census.** `requirements.md` holds **185** `*Status*`
+   clauses. A ten-minute pattern probe over those lines alone shortlisted
+   three live coverage claims, and checking each against the runner gave
+   **three different answers**: `FR-NTF-005`'s *"hidden-when-none limb is
+   untested"* is **false** — `mark_all_read_is_offered_only_while_something_is_unread`
+   asserts that limb first (`§10.34` instance 11, corrected); `FR-TEAM-005`,
+   a **P1**, is **true** — the string is pinned in `peisear-i18n` and no
+   `peisear-web` test asserts it on a screen, while its own *Acceptance*
+   names the team detail screen; and `FR-HLT-006`, a **P0**, read
+   `Implemented (untested —` and then reversed itself in sixty words
+   (reworded). **So the output is three-valued** — correct the status, write
+   the test, or reword — and only the first is a `§10.34` instance. The
+   round reads all 185 and reports verdicts with evidence; **the status
+   corrections stay the architect's to apply**, on `CFG-001`'s division of
+   labour. `REQ-003` showed a text rule cannot *judge* these; it can
+   *shortlist* them, and that distinction is why this is tractable now and
+   was not then.
+2. **`FR-TEAM-005`'s missing screen test**, the census's first confirmed
+   real gap: one `peisear-web` test asserting the footnote string on a
+   member's team detail page. Small, and a **P1** whose *Acceptance* has
+   named it all along.
+3. **The clippy feature-combination gap.** `test.yml:39` is the only clippy
+   invocation and runs default features, so clippy's own lints never reach
+   the `postgres`-only paths. Two lines, and the one item of the six that
+   is about the product's compiled code rather than its documents.
+
+**The other three candidates are not recommended yet** and the reason is
+*less is more* rather than their merit: the link check, the `spec_scan`
+baseline rule and the `changelog_scan` section-date rule are each a check
+for something already fixed by hand, and bundling them because they share
+`§10.36`'s shape is the mistake that cost two withdrawn proposals on
+2026-11-03. They keep. **The `env-example-walk` trigger needs a decision
+before it needs a round**, since `NFR-REL-011` deliberately excludes that
+reader.
+
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
 from memory.

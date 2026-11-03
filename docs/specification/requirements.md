@@ -1164,8 +1164,15 @@ rendering one, and must not be scheduled behind `§10.15`'s browser question.
 **FR-HLT-006 — Explanation neutrality**
 Explanation text MUST be descriptive and MUST NOT contain evaluative
 words or directives.
-*Source*: `SPEC §3`, `NFR-LANG-001`. *Status*: Implemented (untested —
-**corrected 0.40.0 (`REQ-001`): a guard does exist** — `find_violations` runs over every `MessageKey` in `MessageKey::all()`, which includes all seven `IndicatorExplanation*` keys. The old text read *"no automated vocabulary guard exists"*, and it was the **only** finding of that audit in the dangerous direction: a recorded gap that is not there invites someone to build the guard a second time). *Priority*: P0.
+*Source*: `SPEC §3`, `NFR-LANG-001`. *Status*: **Implemented and
+guarded** — `find_violations` runs over every `MessageKey` in
+`MessageKey::all()`, which includes all seven `IndicatorExplanation*`
+keys. *Wording corrected 2026-11-03: this read `Implemented (untested —`
+and then spent sixty words reversing its own first three, on a **P0**. A
+status that needs a parenthetical to contradict itself is read at a
+glance as the thing it denies — the `§10.34` class without a false fact
+in it. The history it was carrying is kept below, where history belongs.
+(Original note: **corrected 0.40.0 (`REQ-001`): a guard does exist** — `find_violations` runs over every `MessageKey` in `MessageKey::all()`, which includes all seven `IndicatorExplanation*` keys. The old text read *"no automated vocabulary guard exists"*, and it was the **only** finding of that audit in the dangerous direction: a recorded gap that is not there invites someone to build the guard a second time.)* *Priority*: P0.
 
 **FR-HLT-007 — Indicator basis is traceable**
 Each indicator MUST offer a route to its basis: the underlying issue
@@ -1364,7 +1371,7 @@ history, visually distinguishing unread from read.
 **FR-NTF-005 — Mark all read**
 The inbox MUST offer a prominent action to mark all notifications read,
 hidden when there are none unread.
-*Source*: `SPEC §19.3`. *Status*: **Met** (recorded Specified (RFC 003) until 0.40.0; `REQ-001`) — `POST /inbox/mark-all-read`; probe: the control is absent with nothing unread, present with one. **The hidden-when-none limb is untested**. *Priority*: P2.
+*Source*: `SPEC §19.3`. *Status*: **Met** (recorded Specified (RFC 003) until 0.40.0; `REQ-001`) — `POST /inbox/mark-all-read`; probe: the control is absent with nothing unread, present with one. **Pinned by `mark_all_read_is_offered_only_while_something_is_unread` (`inbox_refinements.rs:385`)**, which asserts `action="/inbox/mark-all-read"` is **absent** on an empty inbox and present once something is unread — both limbs, in one test named after the property. *Clause corrected 2026-11-03: it read **The hidden-when-none limb is untested** — `§10.34` instance 11, and the fourth in two days. Found by the first bounded probe of the status census, not by reading.* *Priority*: P2.
 
 **FR-NTF-006 — Silence-all and its release affordance**
 The user MUST be able to silence all notifications. When silenced, the
@@ -6423,9 +6430,9 @@ transaction seam does.
 mechanisms proven necessary by a test seen to fail without them. The
 entry's own named condition is met.
 
-### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; ten instances
+### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; eleven instances
 
-Ten times the architect recorded a status that the shipped code contradicted.
+Eleven times the architect recorded a status that the shipped code contradicted.
 Every one **understated** what ships or overstated what is complete within a
 scope that had since changed; none hid a defect from a user. The cost is where
 attention goes: *nobody checks a requirement they believe is done*, which is
@@ -6474,6 +6481,37 @@ work to build a test that had existed since `0.41.0` — and found the clause
 false only while measuring the proposal. **A status that understates what ships
 does not merely waste a reader; it buys work that is already done.** Both
 clauses are corrected above, from the suite rather than from the entries.
+
+**Instance 11, found by the census's own first bounded probe — and the
+probe took ten minutes.** `FR-NTF-005`'s status read *"The hidden-when-none
+limb is untested"*. `mark_all_read_is_offered_only_while_something_is_unread`
+(`inbox_refinements.rs:385`) asserts that limb **first**, before the other
+one: the control is absent on an empty inbox, present once something is
+unread. **A test named after the property its status denies, for the third
+time in two days** (`FR-CAL-005`, `FR-PLAN-004`, now this). The probe that
+found it was a pattern over the file's 185 `*Status*` clauses, which is
+**not** the remedy this entry rejected — `REQ-003` showed text rules cannot
+*decide* these, and this one did not decide anything: it produced three
+candidates and a person checked each against the runner. **A rule that
+cannot be trusted to judge can still be trusted to shortlist**, and that
+distinction is what makes the census tractable where `REQ-003` found a scan
+impossible.
+
+**The same probe found the two other shapes this entry had not separated.**
+`FR-TEAM-005`, a **P1**, says *"No web test asserts it on the screen"* — and
+that is **true**: the string is pinned in `peisear-i18n`
+(`rendering.rs:105`) and no `peisear-web` test asserts it on a rendered
+page, while the requirement's own *Acceptance* names the team detail
+screen. **An accurate absence claim is not this entry's class at all — it is
+a missing test**, and conflating the two is how a census would waste its
+own findings. And `FR-HLT-006`, a **P0**, read `Implemented (untested —` and
+then spent sixty words reversing its own first three words: **no false fact,
+but read at a glance as the thing it denies.** Reworded above.
+
+**So the census's output is three-valued, not two**: the claim is false
+(correct the status), the claim is true (write the test, or record the gap
+with a reason), or the claim is accurate but reads as its opposite (reword).
+Only the first is an instance of this entry.
 
 **Instance 10, found the next morning while measuring the replacement
 proposal — and it was predicted in writing before it was found.**
