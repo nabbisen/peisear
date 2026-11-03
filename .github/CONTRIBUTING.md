@@ -20,7 +20,8 @@ project communication.
 
 1. Install `rustc` **1.88 or later** — see
    [docs/getting-started/build-from-source.md](../docs/getting-started/build-from-source.md).
-2. Clone the workspace and run the test suite:
+2. From the checkout step 1's link walks you through, run the test
+   suite:
    ```bash
    cargo check --workspace
    cargo build -p peisear --bin peisear

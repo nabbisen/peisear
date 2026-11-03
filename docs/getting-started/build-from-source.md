@@ -53,7 +53,29 @@ cargo --version
 # cargo 1.88.x ...   (or newer)
 ```
 
+## Get the code and run it
+
+```bash
+git clone https://github.com/nabbisen/peisear.git && cd peisear
+cp .env.example .env
+cargo run --release -p peisear
+#   → http://localhost:3000
+```
+
+(If you installed `rustc`/`cargo` via the distro package above, use
+`cargo-1.91` in place of `cargo` here, the same substitution its own
+build command makes.)
+
+`cp .env.example .env` is the same non-interactive default
+[`CONTRIBUTING`](https://github.com/nabbisen/peisear/blob/main/.github/CONTRIBUTING.md)'s
+own development loop uses — a fixed `.env` rather than answering
+prompts on every run. Skip it and `cargo run` reaches the first-run
+wizard instead, asking the same two questions [First run](first-run.md)
+describes. Either way reaches the same URL.
+
 ## Next
 
-Head to [Configuration](configuration.md) to set up the `.env` file,
-then [First run](first-run.md) to launch the server.
+[Configuration](configuration.md) to change `JWT_SECRET`, `BIND_ADDR`,
+or the database path from `.env.example`'s own defaults above; then
+[First run](first-run.md) for the full walkthrough — creating a
+project, the board, your own `/today` dashboard.
