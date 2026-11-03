@@ -76,7 +76,7 @@ fn resolve_env_filter() -> Result<tracing_subscriber::EnvFilter, RustLogError> {
 /// inventing a new message for a mistake that type already explains
 /// better than this function could.
 fn build_env_filter(raw: Option<String>) -> Result<tracing_subscriber::EnvFilter, RustLogError> {
-    const DEFAULT_FILTER: &str = "not a real filter directive";
+    const DEFAULT_FILTER: &str = "sqlx=not_a_real_level";
     match raw {
         Some(value) => value
             .parse()
