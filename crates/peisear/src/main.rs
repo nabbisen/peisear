@@ -76,17 +76,12 @@ fn resolve_env_filter() -> Result<tracing_subscriber::EnvFilter, RustLogError> {
 /// inventing a new message for a mistake that type already explains
 /// better than this function could.
 fn build_env_filter(raw: Option<String>) -> Result<tracing_subscriber::EnvFilter, RustLogError> {
-    const DEFAULT_FILTER: &str = "sqlx=not_a_real_level";
+    const DEFAULT_FILTER: &str = "info,sqlx=warn,hyper=warn,tower_http=info";
     match raw {
         Some(value) => value
             .parse()
             .map_err(|source| RustLogError { value, source }),
-        None => DEFAULT_FILTER
-            .parse()
-            .map_err(|source| RustLogError {
-                value: DEFAULT_FILTER.to_string(),
-                source,
-            }),
+        None => Ok(tracing_subscriber::EnvFilter::new(DEFAULT_FILTER)),
     }
 }
 
