@@ -646,6 +646,69 @@ fn silent_default_violations(label: &str, source: &str) -> Vec<String> {
     out
 }
 
+// ---------- rule 9: the README's Quick Start agrees with install.md (`QS-002`) ----------
+
+/// Every non-comment, non-blank line inside a ` ```bash ` fenced block in
+/// `text`, in the order found. **Not line-exact in the sense of ignoring
+/// whitespace variance** -- each line is trimmed, but otherwise compared
+/// verbatim, so a command reworded even slightly (a flag added, an
+/// argument reordered) is a different line, by design: this rule checks
+/// *correspondence*, and a command that no longer matches anything in
+/// `install.md` is exactly what it exists to catch, not a false positive
+/// to paper over with fuzzier matching.
+fn bash_fence_command_lines(text: &str) -> Vec<String> {
+    let fence_start = "```bash";
+    let mut out = Vec::new();
+    let mut search_from = 0;
+    while let Some(rel) = text[search_from..].find(fence_start) {
+        let after_marker = search_from + rel + fence_start.len();
+        let Some(body_start_rel) = text[after_marker..].find('\n') else {
+            break;
+        };
+        let body_start = after_marker + body_start_rel + 1;
+        let Some(body_end_rel) = text[body_start..].find("```") else {
+            break;
+        };
+        let body = &text[body_start..body_start + body_end_rel];
+        for line in body.lines() {
+            let line = line.trim();
+            if !line.is_empty() && !line.starts_with('#') {
+                out.push(line.to_string());
+            }
+        }
+        search_from = body_start + body_end_rel + 3;
+    }
+    out
+}
+
+/// `README.md`'s `## Quick Start` section, from just after its own
+/// heading to the next `## ` heading (or the end of the file). **The
+/// anchor this rule depends on**: if `## Quick Start` is renamed, moved,
+/// or removed, this returns `None` rather than quietly returning an
+/// empty slice, so [`violations`] reports the lookup failing -- `§10.36`
+/// instance 6's own class, repeated at every other anchor in this file,
+/// applied here from the start rather than found the hard way a fourth
+/// time (`CFG-003` round 1 found it the hard way; `QS-002`'s own handoff
+/// names that as the mistake not to repeat).
+fn quick_start_section(readme: &str) -> Option<&str> {
+    let marker = "## Quick Start";
+    let start = readme.find(marker)? + marker.len();
+    let rest = &readme[start..];
+    let end = rest.find("\n## ").map_or(readme.len(), |i| start + i);
+    Some(&readme[start..end])
+}
+
+/// The number of command lines [`bash_fence_command_lines`] finds in
+/// `README.md`'s own Quick Start section today -- four fenced blocks
+/// (the prebuilt-binary extract-and-run, `docker run`, `cargo install`
+/// plus the second invocation, and the `git clone`-and-build pair),
+/// seven command lines in total. **This is the population census
+/// (`§3`)**: a restructure that hides a command from this rule (a fence
+/// retagged away from `bash`, a block moved outside the section) changes
+/// this count rather than silently changing nothing, the same shape as
+/// rule 8's own `EXPECTED_ENV_VAR_LITERAL_SITES`.
+const EXPECTED_QUICK_START_COMMAND_COUNT: usize = 7;
+
 // ---------- the four rules held in one Input, as a pure function ----------
 
 pub(crate) struct Input<'a> {
@@ -660,6 +723,7 @@ pub(crate) struct Input<'a> {
     pub static_files: Vec<String>,
     pub deployment: &'a str,
     pub configuration: &'a str,
+    pub install_md: &'a str,
     pub config_rs: &'a str,
     /// Does this repo-root-relative path exist? (rule 6 only.)
     pub exists: &'a dyn Fn(&str) -> bool,
@@ -965,6 +1029,47 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
         ));
     }
 
+    // Rule 9 (`QS-002`): every command in README.md's Quick Start names a
+    // path install.md offers. **Two bounds stated here rather than left
+    // for a reader to assume covered**: this cannot check that a command
+    // *works* (`NFR-REL-011`'s CI walks exercise two of the three
+    // install.md paths; this rule only checks correspondence against the
+    // documented text), and it cannot check *order* -- a Quick Start that
+    // listed the toolchain-free path last would still pass this rule.
+    // That second bound is `QS-001`'s own territory, not this rule's;
+    // `NFR-REL-007`'s new clause has both halves, and this rule is only
+    // one of them.
+    match quick_start_section(input.readme) {
+        None => {
+            out.push("rule 9: README.md has no \"## Quick Start\" heading to check".to_string())
+        }
+        Some(quick_start) => {
+            let readme_commands = bash_fence_command_lines(quick_start);
+            let install_commands: std::collections::BTreeSet<String> =
+                bash_fence_command_lines(input.install_md)
+                    .into_iter()
+                    .collect();
+            for line in &readme_commands {
+                if !install_commands.contains(line) {
+                    out.push(format!(
+                        "rule 9: README.md's Quick Start runs `{line}`, which install.md does \
+                         not offer -- add the path there, or remove/move the command from the \
+                         Quick Start"
+                    ));
+                }
+            }
+            if readme_commands.len() != EXPECTED_QUICK_START_COMMAND_COUNT {
+                out.push(format!(
+                    "rule 9: examined {} command lines in README.md's Quick Start, expected \
+                     {EXPECTED_QUICK_START_COMMAND_COUNT} -- a fenced block was added, removed, \
+                     retagged away from `bash`, or moved; update the census after checking what \
+                     changed",
+                    readme_commands.len()
+                ));
+            }
+        }
+    }
+
     out
 }
 
@@ -980,6 +1085,7 @@ struct Real {
     static_files: Vec<String>,
     deployment: String,
     configuration: String,
+    install_md: String,
     config_rs: String,
     env_example: String,
     main_rs: String,
@@ -1008,6 +1114,8 @@ fn real() -> Real {
             .expect("read deployment.md"),
         configuration: fs::read_to_string(root.join("docs/getting-started/configuration.md"))
             .expect("read configuration.md"),
+        install_md: fs::read_to_string(root.join("docs/getting-started/install.md"))
+            .expect("read install.md"),
         config_rs: fs::read_to_string(root.join("crates/peisear-web/src/config.rs"))
             .expect("read config.rs"),
         // `.env.example` is public, committed, and part of the
@@ -1037,6 +1145,7 @@ fn run(r: &Real) -> Vec<String> {
         static_files: r.static_files.clone(),
         deployment: &r.deployment,
         configuration: &r.configuration,
+        install_md: &r.install_md,
         config_rs: &r.config_rs,
         exists: &exists,
         env_example: &r.env_example,
