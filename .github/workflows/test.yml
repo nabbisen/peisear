@@ -980,7 +980,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
       - uses: Swatinem/rust-cache@v2
+      # `DIA-004`: the `clippy` job above runs default features only,
+      # so it never compiles this crate's postgres-only bodies -- the
+      # health and sustainability queries' second, PostgreSQL-only SQL
+      # bodies among them. This is the only clippy invocation that
+      # does. Needs no real server (this crate's queries are all
+      # runtime strings, not compile-time `sqlx::query!` macros), but
+      # lives here rather than in a job of its own, beside the other
+      # postgres-feature step below.
+      - run: "cargo clippy --workspace --all-targets --no-default-features --features postgres -- -D warnings"
       # `CON-002` (`RFC 018` P4): the whole `--lib` suite, unfiltered --
       # a name filter that matches nothing exits 0 (measured: `cargo
       # test -p peisear-storage --lib a-name-that-does-not-exist` ->
