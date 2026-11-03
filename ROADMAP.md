@@ -24,11 +24,21 @@ a place for.
 
 ### v2.1 spec implementation (phases A–E — historical record)
 
-The [v2.1 feature specification](docs/spec/peisear-feature-spec-v2.1.md)
-defines a UI/UX overhaul (5-entry navigation, sub-issue
-hierarchy, calendar, direct-manipulation surfaces, plus the
-review-driven additions in §11.5 / §21.4 / §28.6). It rolls
+The v2.1 feature specification (`SPEC`) defines a UI/UX overhaul (5-entry
+navigation, sub-issue hierarchy, calendar, direct-manipulation surfaces, plus
+the review-driven additions in §11.5 / §21.4 / §28.6). It rolls
 out across five phases, one per minor release:
+
+> **`SPEC` is provenance, not a published document**, and this paragraph
+> linked to it as `docs/spec/peisear-feature-spec-v2.1.md` until 2026-11-03 —
+> **a path that has never existed in this repository.**
+> `docs/specification/README.md` says what `SPEC` is and that it is neither
+> published nor a source of truth; `docs/specification/requirements.md` and
+> `external-design.md` are. The link is removed rather than repointed, because
+> there is nothing to point it at, and the fact it was asserting is stated once
+> in the place that owns it. **Nothing caught this for the life of the file**:
+> `mdbook-linkcheck2` checks the book, and `ROADMAP.md` is not in the book —
+> see the candidate list under **What ships next**.
 
 - **Phase A — Information architecture** *(0.17.0, shipped
   2026-05-03)*. 5-entry navigation (`/me` → `/today`,
@@ -155,7 +165,12 @@ own row; `0.60.0` authorized 2026-10-31, on the **revised** proposal in
 its own row, the first version having been withheld and the
 architect's own rule reversed before it was accepted, and **cut
 2026-11-03** — **including the architect's recommended direction for
-PostgreSQL, which is to make it real rather than end it.** **A row marked *Proposed* carries no authorization** — it is the
+PostgreSQL, which is to make it real rather than end it.** **`0.61.0` was
+authorized 2026-11-03 and returned unspent the same day**, the architect having
+found the proposal's headline content — a published promise the published
+documents do not make — did not exist; the authorization stands available and
+there is no `0.61.0` row, by the architect's own recommendation recorded below.
+**A row marked *Proposed* carries no authorization** — it is the
 architect's recommendation, in the one place release numbers live,
 waiting for a yes or a no. It is
 reconciled before every release is cut (Release cycle, exit criterion
@@ -170,8 +185,7 @@ sequence above went twenty minor versions stale.
 
 | Release | Theme | Governing document | State |
 |---|---|---|---|
-| `0.61.0` | **Where the specification and the product disagree** — in both directions, which is one subject and reads as one sentence. **Outward, and this is the release's own content**: `FR-API-006` — `GET /api/users/{id}/wip-limit` and `GET /api/users/{id}/calendar` are named in `SPEC Appendix E.1`, published in this repository's own specification, and **neither is routed** (`app.rs:155–165` routes `search`, `burnout`, `capacity` and `notifications`, and nothing else), so a consumer reading our own documentation gets a 404. The owner's *APIs … for users not to be confused or misunderstand* clause, literally — and the data is already there: `users.wip_limit`, `set_wip_limit` and the `effective_wip_limit` copy exist, so what is missing is a route, a handler, and the `§11.5` self-access property (self only, cross-user 403, unauth 401 as JSON, admin does **not** bypass) that the three routed endpoints already pin. **Inward**: the statuses that deny what ships — two corrected 2026-11-03 as `§10.34` instances 8 and 9, and the question they raise, which is **how many more clauses inside a status assert an absence the suite has since filled**: a bounded census of every `*Status*` line claiming an absence, each checked against the runner rather than read. **Named as candidates, not rounds, until their surfaces are read**: `FR-PLAN-004` (the sprint column's capacity hint, *Specified*; its MUST limb may already ship — `committed_points` copy exists at `en.rs:364–379` — in which case it is a third status correction and not work at all) and `FR-HLT-007` (the basis route's third limb, *recent history*, Partial since `0.28.0`) | `requirements.md` `FR-API-006` and `§10.34`, plus `SPEC Appendix E.1` — cited not restated. **No new RFC**: there is no rule here that is not already written | **Proposed** — the architect's recommendation, in the one place release numbers live, awaiting the owner's yes or no |
-| — | **Nothing else is authorized beyond `0.60.0`.** **Outside this table, and deliberately**: `rfcs/handoffs/054-the-front-door/` is authorized and in progress with **no release number** — `README.md` on `main` is what GitHub serves the moment it merges, so the Quick Start fix does not wait for a cut and does not get one of its own. It lands under `[Unreleased]` and whichever release is cut next picks it up in its own `DEC-028` sweep. Raised by the owner 2026-10-31: the Quick Start offered two paths and both needed Rust, while `install.md` had offered two toolchain-free ones since `0.53.0`. **`QS-002`, the `spec_scan` baseline rule, the clippy feature-combination gap and the changelog section-date check carry no release number**, on `054`'s own precedent of 2026-10-31: they are internal, `main` is what a reader gets, so they land under `[Unreleased]` and whichever release is cut next picks them up in its own `DEC-028` sweep. They are candidates for *work*, not for a *number*. Remaining candidates, in no order: **`QS-002`** — the `docs_scan` rule that would enforce `NFR-REL-007`'s new clause (the Quick Start must offer a toolchain-free path, said in the line that introduces any path that needs one); written and open, and `0.60.0` ships without it, the clause enforced by a reader rather than a check for one release (`§10.36`'s class); **`SMTP_TLS_MODE`'s seven spellings for two modes** — `implicit`/`implicit_tls`/`smtps`/`tls` and `starttls`/`start_tls`/`submission`, found reviewing `CFG-002`; the variable was documented for the first time at 0.59.0 naming only `implicit` and `starttls`, so five are undocumented and were never promised. Not narrowed in 0.60.0, on `RFC 022` §5's own constraint that a set keeps accepting what works today — breaking a working deployment in the refusing direction is worse than the untidiness. Deprecating five aliases is a decision with its own release, and it is untidiness with a compatibility cost rather than a defect, so no register entry; **`§10.32`** — `BROWSER-001` sweeps nineteen pages at five widths and its fixture cannot render four branches those pages contain (a completed sprint with no issues, a team with no projects, no assignee badge, no calendar blocks); three of the four hid real overflows, one of them 441 px on a 1280 px desktop, and each was found by changing the fixture for another reason rather than by looking, so the gate reported green cells for eleven releases on a page it could not have failed on; **`§10.51`** — **closed at `0.60.0`**, `SMTP_PORT` and `SMTP_TLS_MODE` no longer discard a malformed value silently, guarded against reintroduction by `docs_scan` rule 8; `RUST_LOG`, fixed by the same release but not guarded the same way, recorded in that entry's own closing note rather than carried here as open; **a `spec_scan` rule reading both specifications' headers and both Appendix C baseline markers against the version being cut** — `§10.36` instance 7, which went three releases undetected because the evidence of a `DEC-028` sweep is a document edit and no edit reads the same as a sweep that found nothing to edit; **no clippy step under any feature combination** — `test.yml:39` is the only clippy invocation and it runs default features, so clippy's own lints never reach the `postgres`-only code paths (rustc warnings there are caught, since the postgres test jobs compile under `RUSTFLAGS: -D warnings`); found by `REL-0.59.0` reading the workflow rather than assuming, and two lines to fix; **a `changelog_scan` rule comparing a released version's section date to its own tag's date** — `0.60.0` is the first release whose two disagree (section 2026-11-01, tag 2026-11-03, because the owner's approval came two days after the candidate was written and the architect did not re-date the heading before tagging); the scan already reads real `git tag`s for its "every released version has a section" rule, so the date comparison is the same read, and `docs/development/changelog-and-releases.md` now carries the rule by hand and names it unchecked; the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0); an attended start unproven on Windows; and `§10.50` — no CI job compiling for Windows outside the release tag, now a register entry rather than loose prose | — | **Awaiting the architect’s proposal and the owner’s authorization** |
+| — | **Nothing else is authorized beyond `0.60.0`.** **Outside this table, and deliberately**: `rfcs/handoffs/054-the-front-door/` is authorized and in progress with **no release number** — `README.md` on `main` is what GitHub serves the moment it merges, so the Quick Start fix does not wait for a cut and does not get one of its own. It lands under `[Unreleased]` and whichever release is cut next picks it up in its own `DEC-028` sweep. Raised by the owner 2026-10-31: the Quick Start offered two paths and both needed Rust, while `install.md` had offered two toolchain-free ones since `0.53.0`. **`QS-002`, the `spec_scan` baseline rule, the clippy feature-combination gap, the changelog section-date check, the status census and the link check outside the book carry no release number**, on `054`'s own precedent of 2026-10-31: they are internal, `main` is what a reader gets, so they land under `[Unreleased]` and whichever release is cut next picks them up in its own `DEC-028` sweep. They are candidates for *work*, not for a *number*. Remaining candidates, in no order: **`QS-002`** — the `docs_scan` rule that would enforce `NFR-REL-007`'s new clause (the Quick Start must offer a toolchain-free path, said in the line that introduces any path that needs one); written and open, and `0.60.0` ships without it, the clause enforced by a reader rather than a check for one release (`§10.36`'s class); **`SMTP_TLS_MODE`'s seven spellings for two modes** — `implicit`/`implicit_tls`/`smtps`/`tls` and `starttls`/`start_tls`/`submission`, found reviewing `CFG-002`; the variable was documented for the first time at 0.59.0 naming only `implicit` and `starttls`, so five are undocumented and were never promised. Not narrowed in 0.60.0, on `RFC 022` §5's own constraint that a set keeps accepting what works today — breaking a working deployment in the refusing direction is worse than the untidiness. Deprecating five aliases is a decision with its own release, and it is untidiness with a compatibility cost rather than a defect, so no register entry; **`§10.32`** — `BROWSER-001` sweeps nineteen pages at five widths and its fixture cannot render four branches those pages contain (a completed sprint with no issues, a team with no projects, no assignee badge, no calendar blocks); three of the four hid real overflows, one of them 441 px on a 1280 px desktop, and each was found by changing the fixture for another reason rather than by looking, so the gate reported green cells for eleven releases on a page it could not have failed on; **`§10.51`** — **closed at `0.60.0`**, `SMTP_PORT` and `SMTP_TLS_MODE` no longer discard a malformed value silently, guarded against reintroduction by `docs_scan` rule 8; `RUST_LOG`, fixed by the same release but not guarded the same way, recorded in that entry's own closing note rather than carried here as open; **a `spec_scan` rule reading both specifications' headers and both Appendix C baseline markers against the version being cut** — `§10.36` instance 7, which went three releases undetected because the evidence of a `DEC-028` sweep is a document edit and no edit reads the same as a sweep that found nothing to edit; **no clippy step under any feature combination** — `test.yml:39` is the only clippy invocation and it runs default features, so clippy's own lints never reach the `postgres`-only code paths (rustc warnings there are caught, since the postgres test jobs compile under `RUSTFLAGS: -D warnings`); found by `REL-0.59.0` reading the workflow rather than assuming, and two lines to fix; **a `changelog_scan` rule comparing a released version's section date to its own tag's date** — `0.60.0` is the first release whose two disagree (section 2026-11-01, tag 2026-11-03, because the owner's approval came two days after the candidate was written and the architect did not re-date the heading before tagging); the scan already reads real `git tag`s for its "every released version has a section" rule, so the date comparison is the same read, and `docs/development/changelog-and-releases.md` now carries the rule by hand and names it unchecked; **the status census** — every `*Status*` clause in `requirements.md` that asserts an absence, checked against the runner rather than read; raised by four corrections in two days (`§10.34` instances 8, 9 and 10, plus the inverse recorded in `FR-API-006`), three of them found by hand while measuring a release proposal and one of them a **P1**. Bounded and checkable: the population is one file's status lines, the oracle is `cargo test --list` and the suite itself, and the output is a correction or a confirmation per clause. **This is the one piece of the withdrawn `0.61.0` that survived both reviews**, and it is internal; **a filed defect left unscheduled is this entry's own warning** — `§10.16` filed `FR-PLAN-004` correctly in 0.40.0, called the fix unscheduled, and the entry then read as a mandatory thing outstanding for twenty-two releases and was twice carried as candidate release work on that reading; **nothing checks a relative link outside the book** — `mdbook-linkcheck2` runs over `docs/` via `docs/book.toml`, and `README.md`, `ROADMAP.md`, `CHANGELOG.md` and `TERMS_OF_USE.md` are not in `docs/SUMMARY.md`, so their links have never been checked by anything. Measured 2026-11-03 across all four files (relative, non-anchor targets only): **one dead link, and it was `ROADMAP.md`'s link to the `SPEC` document the whole Near-term section is built on** — a path that never existed here, because `SPEC` is provenance held outside the repository. Fixed in place; the check that would have caught it is four files added to a linkcheck step, and `054` is the precedent for treating the front door as read by strangers; the `file:line` citation convention (37 occurrences, the class demonstrated twice during 0.57.0); an attended start unproven on Windows; and `§10.50` — no CI job compiling for Windows outside the release tag, now a register entry rather than loose prose | — | **Awaiting the architect’s proposal and the owner’s authorization** |
 
 **A `0.61.0` proposal written and withdrawn the same day — 2026-11-03.** The
 first one was *"a check that cannot fail is not a check"*: `QS-002`, `§10.32`,
@@ -203,6 +217,70 @@ counts, all the architect's:
 its mistakes: the first proposal is the fourth time the architect has brought a
 recommendation that reversed on reading the entry it rested on, which is why
 the row above names what each of its own claims was measured against.
+
+**And the replacement was authorized by the owner on 2026-11-03 and returned
+unspent the same day, because its headline did not exist.** The second
+proposal — *"where the specification and the product disagree"* — led with
+`FR-API-006`: two API paths *"named in `SPEC Appendix E.1`, published in this
+repository's own specification"* and routed nowhere, **so a consumer reading
+our own documentation gets a 404.** Both halves are false, and the documents
+that disprove them are the ones being cited:
+
+- **`SPEC` is not published and is not a source of truth.**
+  `docs/specification/README.md:46` says so in one line, of `SPEC` together
+  with `KICK`, `BRIEF`, `V3` and `GUI`: provenance, named so a reader can see
+  where a rule came from, held outside this repository. No consumer can read
+  `Appendix E.1`. **The architect's own link to that document, at the head of
+  this file's Near-term section, was dead** — to a path that has never
+  existed here.
+- **What is published says the right thing, twice.** `external-design.md`
+  §4.4 is headed **Reserved routes** and lists both paths; §8.2 lists the four
+  endpoints that exist and then **`Reserved: … → FR-API-006`**. The
+  requirement itself reads *Specified — not implemented*. **The product and
+  every published document agree.** The disagreement was in the proposal.
+
+**So the release's stated content was a defect that does not exist, and
+count 3 above stands against the second proposal as well** — with the
+outward half void, nothing in it was for a user either. **Twice in one day a
+release was assembled from the register rather than from the product, and the
+register cannot say what a user is missing, because it is a record of what we
+noticed.**
+
+**What the measurement did find is the reason not to assign a number at all.**
+Every **P1** requirement in `requirements.md` is Met or Implemented except
+`NFR-REL-004`, whose gap is §9.4's evidence limitation — a process
+requirement, not a screen. *(Bounded claim: a scripted pass over the file's
+`*Priority*: P1` entries and their recorded statuses, which reads the statuses
+as written — and three of those statuses were wrong as written this week, so
+the census under the candidate list is the thing that would make this number
+trustworthy.)* On that reading **the user-facing obligations this project has
+written down are discharged**, the remaining candidates are internal or
+deliberately deferred, and the next release for a *user* needs a **new
+requirement** — which is the owner's to set, not the architect's to invent
+from a defect register.
+
+**The architect's recommendation, therefore: no `0.61.0` yet.** The status
+census and the link check join the no-number queue under `[Unreleased]`, where
+`054`'s precedent already puts internal work, and the next number is assigned
+when there is something an installed user would notice — either new scope from
+the owner or a defect found in the shipped product. **The authorization of
+2026-11-03 is not spent and remains available**; it was given for content the
+architect reported and the architect could not deliver, and a release cut to
+honour a number is the opposite of *less is more*.
+
+**Two candidates named in the second proposal did not survive their own surface
+reads either, and both reads were owed before they became rounds**:
+`FR-PLAN-004` is a **status correction, not work** — its **MUST** limb ships
+at `components/sprint_plan.rs:149` and is pinned by
+`committed_total_matches_sum_of_effort`, and its **MAY** limb is a choice, not
+a gap (`§10.34` instance 10; `§10.16` had filed it correctly in 0.40.0 and
+called the fix unscheduled). And **`FR-HLT-007`'s history limb is a deliberate
+deferral with a privacy rationale, not drift**: an indicator's history is a
+time series, and for a project with one active contributor it is that person's
+history — the shape `NFR-PRIV-007` suppressed at 0.28.0 — so it needs
+`QA-017`'s contributor predicate and an audit of its own. It is removed from
+the candidate list; a scoped deferral is not a disagreement between the
+specification and the product.
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued

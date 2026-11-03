@@ -1076,7 +1076,19 @@ hint. The hint MUST be presented as guidance, never as a hard limit or
 a target to hit.
 *Rationale*: `SPEC §17.3` explicitly marks this "not a hard limit"; a
 limit would convert planning into a quota.
-*Source*: `SPEC §17.3`. *Status*: Specified. *Priority*: P2.
+*Source*: `SPEC §17.3`. *Status*: **Met on the MUST limb; the MAY limb is
+not built, which is not an outstanding obligation.** The sprint column shows
+committed effort — `CommittedTotalLabel` is built at
+`components/sprint_plan.rs:93` and rendered at `:149` — and it is **pinned by
+`committed_total_matches_sum_of_effort` (`sprint_plan.rs:504`)**, which sums
+effort across the sprint's issues and asserts the total reads `13 pt`. No
+capacity hint is rendered, and a **MAY** not exercised is a choice, not a gap;
+the clause that matters — never a hard limit or a target — cannot be
+violated by a hint that does not exist. *Clause corrected 2026-11-03: this read
+a bare **Specified** for twenty-two releases while its mandatory half shipped
+and was tested — `§10.34` instance 10, and the resolution of the `FR-PLAN-004`
+clause `§10.16` recorded as outstanding: the status now says which reading it
+is recording against, per limb.* *Priority*: P2.
 
 **FR-PLAN-005 — Team-scoped backlog**
 The backlog MUST draw only from team-scoped projects, excluding members'
@@ -1594,7 +1606,25 @@ endpoint of this shape was recorded as the reason one authorisation test
 remained disabled. **Corrected 0.40.0 (`REQ-001`): no `#[ignore]` exists in
 the tests** — 0.37.0's `PRIV-001` withdrew that test and the aside outlived it.
 The status itself is accurate: only `burnout`, `capacity` and `notifications`
-are routed. *Priority*: P2.
+are routed.
+*And the published documentation is accurate too — recorded 2026-11-03,
+because an architect's `0.61.0` proposal said it was not.* That proposal's
+headline was that these two paths are *"named in `SPEC Appendix E.1`, published
+in this repository's own specification"*, so **a consumer reading our own
+documentation gets a 404**. Both halves are false, and the documents that say
+so are the ones being cited. **`SPEC` is not published and is not a source of
+truth** — `docs/specification/README.md:46` says exactly that of `SPEC`,
+`KICK`, `BRIEF`, `V3` and `GUI`: provenance, named so a reader can see where a
+rule came from, held outside this repository. And what *is* published says the
+right thing in two places: `external-design.md` §4.4 is headed **Reserved
+routes** and lists both, and §8.2's endpoint table lists the four that exist
+and then **`Reserved: /api/users/{user_id}/wip-limit,
+/api/users/{user_id}/calendar → FR-API-006`**. A reader of the specification is
+told these are reserved; a reader of this entry is told *Specified — not
+implemented*; the product routes neither. **The product and every published
+document agree, and the disagreement was in the proposal.** Nothing here is
+outstanding except the feature itself, which is a **P2** nobody has asked for.
+*Priority*: P2.
 
 ### 4.16 Direct manipulation — `FR-DM`
 
@@ -5416,6 +5446,19 @@ about the product, and the scope is where the next gap opens — not in the rule
 > status says which one it is recording against. Adding it to the four above is
 > not scheduled — `NFR-A11Y-002` and `-004` need an audit to say anything at
 > all, and that is a larger thing than a wording fix.
+>
+> **`FR-PLAN-004` resolved 2026-11-03, and leaving it unscheduled cost more
+> than the wording fix would have.** Its status now reads per limb: the
+> **MUST** half ships and is pinned, the **MAY** half is not built. It was
+> filed here as a known two-reading status in 0.40.0 and left for twenty-two
+> releases, during which it read as a mandatory thing outstanding — and it was
+> carried as a candidate for release work on exactly that reading, twice, the
+> second time into a `0.61.0` proposal. **"Not scheduled" was the right call
+> for `NFR-A11Y-002`/`-004`, which need an audit; it was the wrong call for an
+> entry needing one sentence.** `§10.34` instance 10 records it, and the
+> distinction this adds is that a *filed* defect and a *missed* one are not the
+> same failure: the first is a scheduling decision and can be reconsidered on
+> its cost.
 
 ### 10.17 Assertions keep passing while no longer testing what they name — **open**, recorded at 0.31.0
 
@@ -6380,9 +6423,9 @@ transaction seam does.
 mechanisms proven necessary by a test seen to fail without them. The
 entry's own named condition is met.
 
-### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; nine instances
+### 10.34 A requirement's status said one thing while the release said another — **open by decision**, `REQ-003`, 0.43.0; ten instances
 
-Nine times the architect recorded a status that the shipped code contradicted.
+Ten times the architect recorded a status that the shipped code contradicted.
 Every one **understated** what ships or overstated what is complete within a
 scope that had since changed; none hid a defect from a user. The cost is where
 attention goes: *nobody checks a requirement they believe is done*, which is
@@ -6431,6 +6474,36 @@ work to build a test that had existed since `0.41.0` — and found the clause
 false only while measuring the proposal. **A status that understates what ships
 does not merely waste a reader; it buys work that is already done.** Both
 clauses are corrected above, from the suite rather than from the entries.
+
+**Instance 10, found the next morning while measuring the replacement
+proposal — and it was predicted in writing before it was found.**
+`FR-PLAN-004` carried a bare *Status: Specified* while its **MUST** limb
+shipped and was pinned: the sprint column renders the committed total
+(`components/sprint_plan.rs:149`) and
+`committed_total_matches_sum_of_effort` has asserted its arithmetic since
+the test was written. Only the **MAY** limb — the capacity hint — was never
+built, and `§10.16` had already recorded in 0.40.0 that this entry is a
+**MAY** recorded as `Specified`, *"so an optional thing never built reads as
+a mandatory thing outstanding"*, and that fixing it was **not scheduled**.
+**So the defect was known, written down, correctly characterised, and left
+for twenty-two releases** — which is a different failure from the nine above
+it. Those were missed. This one was *filed*.
+
+**And the same morning produced the inverse, which this entry had not seen
+before.** Nine instances understated what ships; instance 10 was filed and
+left. The tenth-and-a-half — recorded in `FR-API-006` rather than counted
+here, because it is a claim about a *document*, not a status — ran the other
+way: the architect's `0.61.0` proposal asserted that two reserved API paths
+were **published in this repository's own specification**, making a release
+out of a 404 that no reader can reach. `SPEC` is provenance held outside the
+repository and `docs/specification/README.md:46` says so in one line; the
+published external design calls both paths **Reserved** in two places. **The
+direction is new and the method is identical: a sentence about a document,
+written without opening the document.** Nine understatements and one
+overstatement share one remedy — read the source, not the summary — and the
+overstatement is the more expensive kind, because an understated status wastes
+work that was already done while an overstated one spends a release on work
+that was never owed.
 
 **The remedy is procedural, and the evidence for it is in how the instances
 were caught.** Four of the first seven were found by a person reading the specification
@@ -7931,7 +8004,7 @@ it is in progress, not deferred.
 | Sub-issues | 10 | 10 | — | — | — | — |
 | Teams | 5 | 5 | — | — | — | — |
 | Sprints | 4 | 4 | — | — | — | — |
-| Sprint planning | 5 | 4 | — | 1 | — | — |
+| Sprint planning | 5 | 5 | — | — | — | — |
 | Health | 9 | 8 | 1 | — | — | — |
 | Personal | 8 | 8 | — | — | — | — |
 | Notifications | 9 | 9 | — | — | — | — |
@@ -7940,7 +8013,7 @@ it is in progress, not deferred.
 | Settings | 3 | 3 | — | — | — | — |
 | API | 6 | 5 | — | 1 | — | — |
 | Direct manipulation | 7 | 7 | — | — | — | — |
-| **Functional total** | **99** | **96** | **1** | **2** | **0** | **0** |
+| **Functional total** | **99** | **97** | **1** | **1** | **0** | **0** |
 | Privacy | 8 | 8 | — | — | — | — |
 | Concurrency | 7 | 7 | — | — | — | — |
 | Accessibility | 11 | 8 | — | — | 1 | 2 (residual, unguarded) |
