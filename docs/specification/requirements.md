@@ -7870,7 +7870,7 @@ brought forward as a finding for the owner to schedule, not a register
 edit made unilaterally.
 
 
-### 10.50 A green check matrix that cannot tell *this platform is fine* from *this platform was never built* — **open**, found by `TTY-001` round 2's review and `TTY-002`, 0.58.1, 2026-10-29
+### 10.50 A green check matrix that cannot tell *this platform is fine* from *this platform was never built* — **open, narrowed** 2026-11-03 by `PLT-001`; found by `TTY-001` round 2's review and `TTY-002`, 0.58.1, 2026-10-29
 
 **Measured 2026-10-29.** All **47** of `test.yml`'s jobs run on
 `ubuntu-latest`; not one runs on Windows or macOS. The only workflow
@@ -7908,7 +7908,46 @@ nothing until a tag exists. This series added three
 platform-asymmetric `#[cfg]` pieces; the next one that is wrong will
 be found the same way.
 
-**Not scheduled by this entry.** A `windows-latest` job running
+**Narrowed 2026-11-03 — `PLT-001` took the Windows half, and the
+figures in this entry have moved.** `test.yml` now defines **48** jobs:
+**47 on `ubuntu-latest` and one on `windows-latest`**
+(`clippy-windows`, `cargo clippy -p peisear -- -D warnings`, not
+advisory). **Proven on a real runner rather than read from the YAML**:
+the round re-created `TTY-002`'s own historical defect —
+`#[cfg(unix)]` removed from `resolve_is_foreground`, leaving it live on
+Unix and dead on Windows — pushed it, and **exactly one job in the
+whole run failed**, the new one, with
+`error: function `resolve_is_foreground` is never used ... -D dead-code
+implied by -D warnings`. All 47 Linux jobs passed in that same run. **The
+asymmetry is the finding**, and it is the sharpest evidence this entry
+has: the defect that cost `0.58.0` a platform is invisible to every job
+this file had before, and visible to the one it now has. Job cost
+measured: **3m06s** cold, **1m23s** warm.
+
+**Why it stays open.** Of the **five** platforms `release.yml` publishes
+an archive for, **two are now compiled before a tag and three are not**:
+
+| published target | compiled before a tag? |
+|---|---|
+| `x86_64-unknown-linux-gnu` | yes — 47 jobs |
+| `x86_64-pc-windows-msvc` | **yes, since `PLT-001`** |
+| `aarch64-unknown-linux-gnu` | **no** |
+| `x86_64-apple-darwin` | **no** |
+| `aarch64-apple-darwin` | **no** |
+
+**And the Windows coverage is narrower than "Windows is tested"**: it is
+`cargo clippy -p peisear`, a compile and lint of the binary crate. It
+would have caught both defects this entry was opened for — a dead helper
+and a platform-asymmetric `#[cfg]` — and it would **not** catch a
+Windows-specific runtime behaviour, which `release.yml`'s own walk cases
+still reach first. **macOS was deliberately not taken**: the recorded
+incident was Windows, macOS costs runner minutes Linux does not, and one
+platform bought cheaply beats two argued about. Whether the remaining
+three are worth paying for, and in which release, is still
+`ROADMAP.md`'s to say.
+
+**The original note, kept because its reasoning is what `PLT-001`
+followed.** A `windows-latest` job running
 `cargo clippy -p peisear` would close most of it cheaply;
 cross-compiling from Linux probably will not, since `libsqlite3-sys`
 builds C. macOS costs runner minutes that Linux does not. Whether the
