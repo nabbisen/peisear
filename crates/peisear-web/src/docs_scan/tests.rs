@@ -500,17 +500,22 @@ fn rule_8_catches_the_real_three_line_cookie_secure_shape() {
 }
 
 /// `QS-002` `§1`: seen red the first way -- a command added to the
-/// README's Quick Start that names no path install.md offers.
+/// README's Quick Start that names no path install.md offers. **Planted
+/// right after the section's own heading**, not against whatever
+/// currently follows the section (`QS-002`'s own review, finding 2):
+/// anchoring on a neighbouring heading stops planting anything the
+/// moment that neighbour moves, which is exactly what this round's own
+/// fix does to `## Features`.
 #[test]
 fn rule_9_catches_a_quick_start_command_with_no_matching_install_md_path() {
     let mut r = real();
     r.readme = r.readme.replace(
-        "## Features",
-        "**Or, from a package manager we don't actually publish to:**\n\n\
+        "## Quick Start\n",
+        "## Quick Start\n\n\
+         **Or, from a package manager we don't actually publish to:**\n\n\
          ```bash\n\
          brew install peisear\n\
-         ```\n\n\
-         ## Features",
+         ```\n",
     );
     let v = only(run(&r), "rule 9:");
     assert!(
@@ -549,31 +554,8 @@ fn rule_9_census_catches_a_command_disappearing_from_the_quick_start() {
     );
     let v = only(run(&r), "rule 9:");
     assert!(
-        v.iter().any(|m| m.contains("examined 6 command lines")
+        v.iter().any(|m| m.contains("examined 4 command lines")
             && m.contains(&EXPECTED_QUICK_START_COMMAND_COUNT.to_string())),
-        "got {v:?}"
-    );
-}
-
-/// The real README's Quick Start, as it stands today: **not green**.
-/// `QS-002`'s own round found this rather than assumed a clean baseline
-/// -- recorded as a measurement, not a defect in the rule, pending the
-/// architect's decision (this round's own review-request package) on
-/// which document changes. This test is the opposite of every other
-/// rule's: it pins the *actual* three live violations so a fix silently
-/// resolving one of them, without anyone deciding to, is caught too.
-#[test]
-fn rule_9_the_real_readme_has_exactly_these_three_violations_today() {
-    let r = real();
-    let mut v = only(run(&r), "rule 9:");
-    v.sort();
-    assert_eq!(
-        v,
-        vec![
-            "rule 9: README.md's Quick Start runs `cargo run --release -p peisear`, which install.md does not offer -- add the path there, or remove/move the command from the Quick Start".to_string(),
-            "rule 9: README.md's Quick Start runs `git clone https://github.com/nabbisen/peisear.git && cd peisear`, which install.md does not offer -- add the path there, or remove/move the command from the Quick Start".to_string(),
-            "rule 9: README.md's Quick Start runs `tar xzf peisear-*-x86_64-unknown-linux-gnu.tar.gz`, which install.md does not offer -- add the path there, or remove/move the command from the Quick Start".to_string(),
-        ],
         "got {v:?}"
     );
 }

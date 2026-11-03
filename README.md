@@ -86,6 +86,8 @@ board. [Install](https://github.com/nabbisen/peisear/blob/main/docs/getting-star
 covers all three paths in full, including PostgreSQL; the rest of the
 guide is in [`docs/getting-started/`](https://github.com/nabbisen/peisear/blob/main/docs/getting-started/README.md).
 
+## Build from source
+
 **To read or change the source** you will need `git` and Rust:
 
 ```bash

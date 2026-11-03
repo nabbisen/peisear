@@ -20,7 +20,7 @@ Download the one that matches your machine, then extract it — the
 archive's root holds the binary alone, no subdirectory to `cd` into:
 
 ```bash
-tar xzf peisear-<version>-x86_64-unknown-linux-gnu.tar.gz
+tar xzf peisear-*-x86_64-unknown-linux-gnu.tar.gz
 ./peisear
 #   → http://localhost:3000
 ```

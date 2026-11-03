@@ -699,15 +699,25 @@ fn quick_start_section(readme: &str) -> Option<&str> {
 }
 
 /// The number of command lines [`bash_fence_command_lines`] finds in
-/// `README.md`'s own Quick Start section today -- four fenced blocks
+/// `README.md`'s own Quick Start section today -- three fenced blocks
 /// (the prebuilt-binary extract-and-run, `docker run`, `cargo install`
-/// plus the second invocation, and the `git clone`-and-build pair),
-/// seven command lines in total. **This is the population census
-/// (`§3`)**: a restructure that hides a command from this rule (a fence
-/// retagged away from `bash`, a block moved outside the section) changes
-/// this count rather than silently changing nothing, the same shape as
-/// rule 8's own `EXPECTED_ENV_VAR_LITERAL_SITES`.
-const EXPECTED_QUICK_START_COMMAND_COUNT: usize = 7;
+/// plus the second invocation), five command lines in total. **This is
+/// the population census (`§3`)**: a restructure that hides a command
+/// from this rule (a fence retagged away from `bash`, a block moved
+/// outside the section) changes this count rather than silently
+/// changing nothing, the same shape as rule 8's own
+/// `EXPECTED_ENV_VAR_LITERAL_SITES`.
+///
+/// **Was 7, through `QS-002`'s own review**: the `git clone`/`cargo
+/// run` pair that used to sit at the end of this section, unheaded,
+/// moved to its own `## Build from source` heading -- the README's own
+/// closing sentence already said `install.md` *"covers all three paths
+/// in full"* while the heading span held four, so the heading was what
+/// disagreed with the document, not this rule. Those two commands are
+/// still in the README; this rule simply no longer examines them (see
+/// `QS-003` for what, if anything, checks that block against
+/// `build-from-source.md`).
+const EXPECTED_QUICK_START_COMMAND_COUNT: usize = 5;
 
 // ---------- the four rules held in one Input, as a pure function ----------
 
@@ -1030,15 +1040,21 @@ pub(crate) fn violations(input: &Input) -> Vec<String> {
     }
 
     // Rule 9 (`QS-002`): every command in README.md's Quick Start names a
-    // path install.md offers. **Two bounds stated here rather than left
-    // for a reader to assume covered**: this cannot check that a command
-    // *works* (`NFR-REL-011`'s CI walks exercise two of the three
-    // install.md paths; this rule only checks correspondence against the
-    // documented text), and it cannot check *order* -- a Quick Start that
-    // listed the toolchain-free path last would still pass this rule.
-    // That second bound is `QS-001`'s own territory, not this rule's;
-    // `NFR-REL-007`'s new clause has both halves, and this rule is only
-    // one of them.
+    // path install.md offers. **Three bounds stated here rather than
+    // left for a reader to assume covered** (the third found by the
+    // review, not the round): this cannot check that a command *works*
+    // (`NFR-REL-011`'s CI walks exercise two of the three install.md
+    // paths; this rule only checks correspondence against the
+    // documented text); it cannot check *order* -- a Quick Start that
+    // listed the toolchain-free path last would still pass this rule,
+    // and that bound is `QS-001`'s own territory, not this rule's
+    // (`NFR-REL-007`'s new clause has both halves, and this rule is
+    // only one of them); and it checks a command against install.md
+    // *as a whole*, not against the matching option's own block -- a
+    // Quick Start command that happened to match a line from a
+    // different install.md path (the PostgreSQL variant, say) would
+    // pass. That is weaker than "names a path install.md offers," which
+    // is how both the handoff and this rule's own messages word it.
     match quick_start_section(input.readme) {
         None => {
             out.push("rule 9: README.md has no \"## Quick Start\" heading to check".to_string())
