@@ -461,87 +461,90 @@ the `spec_scan` baseline rule, the `changelog_scan` section-date rule and
 the link check outside the book. Each is a check for something already
 fixed by hand.
 
-**`0.61.0` proposed 2026-11-04 — the first user-facing scope the owner has
-set since the accepted position made that the trigger for a release number.**
-The owner asked whether layout, typography and colour could be kinder to
-**elder people**. Measured before answering; the short version is that this
-product's accessibility work is unusually thorough, **the word for that reader
-appears nowhere in the specification**, and there is one real defect hiding
-between two green checks.
+**The accessibility work, reconsidered 2026-11-04 on the owner's second
+reading — and the architect's own lead recommendation is withdrawn.** The
+owner asked whether layout, typography and colour could be kinder to **elder
+people**, listing **view layout first**. The first proposal answered **colour**
+first, typography second, and put the layout read **last, labelled
+unmeasured** — because colour is the part a scan can compute. *"Good trial on
+direction. However, we have to consider carefully one by one with time we
+need… App base layout(s), user workflows, and each view."*
 
-**What the project already does, read rather than assumed.**
-`NFR-A11Y-005` requires **WCAG AA (4.5:1)** and is **P1, measured and
-repaired**: `base-content` on `base-100` is **17.21:1** at full strength, the
-theme tokens were never the problem, and of **130** opacity modifiers this
-project had applied, **111 sat below AA** and were fixed. `/70` is the floor
-(**6.36:1** on `base-100`, **5.76** on `base-200`, **5.15** on `base-300`);
-`/60` was rejected at **4.54:1** as a margin the next theme tweak erases.
-`contrast_scan` pins the theme's four hex values by version and SHA-256. There
-are **eleven** `NFR-A11Y` requirements. **And on touch targets the project
-already holds itself to WCAG 2.2 *AAA*** (2.5.5, 44 px), having considered
-dropping to AA (24×24 with the spacing exception) and **refused** — not for
-strictness, but because the AA exception *"rests on rendered geometry and
-cannot be evaluated from source."*
+**Three things were wrong, and the second is the serious one.**
 
-**The finding: size and contrast are each checked, and their conjunction is
-not.** Measured across `components/`:
+1. **The owner's first bullet was ranked last.** The ranking followed what was
+   measurable, not what was asked.
+2. **The recommended rule points the wrong way.** It would have forbidden the
+   muted tier below 14 px — and the effect of that, applied to the ninety
+   sites, is to **enlarge ninety pieces of currently-quiet secondary
+   information**, twenty of them on `/today`, the first screen a user sees
+   after signing in. **That makes the busiest screens denser.** *Less is more*
+   points at **removing** what the reader does not need, not at making it
+   bigger. **A rule cannot decide whether information belongs on a screen; only
+   a read of that screen can.** The rule was a mechanical remedy offered for a
+   design question, which is the shape the owner's review removed once already
+   on 2026-11-03.
+3. **It was batched into three rounds** of one release. The owner asked for one
+   at a time, with the time each needs.
 
-| | count |
+**What the base layout actually does, measured from source — and it is the
+answer to the first bullet.** Three shells in `components/layout.rs`:
+**`Base`** (the document), **`AppShell`** (authenticated), **`PublicShell`**
+(login, register, error — no navbar). **68 routes** inherit one of them, so a
+decision here changes every screen at once. `AppShell` renders
+`SkipLink → Navbar → main[FlashBar + children]`. And inside `Navbar`:
+
+| element | visible by default? |
 |---|---|
-| `text-xs` (12 px) | **118** |
-| `text-sm` (14 px) | 145 |
-| `text-base` (16 px) | 167 |
-| larger | 32 |
-| **class attributes carrying `text-xs` *and* the muted tier** | **90** |
-| the same at `text-sm` | 52 |
-| of the 90, also `uppercase tracking-wide` | 4 |
-| of the 90, also `italic` | 3 |
+| brand link → **`/projects`** | yes, with text |
+| search input | **`hidden sm:block`** — not below the `sm` breakpoint |
+| bell → `/inbox` | yes, **icon-only**: an 18 px SVG with an `aria-label` and no visible word |
+| `/today`, `/teams`, `/inbox`, `/settings`, sign out | **no — all five sit inside one `dropdown-content`**, behind the user's own name |
 
-**So ninety places render 12 px text at 5.15–6.36:1.** Both checks pass:
-`contrast_scan` asks only about colour, and nothing asks about size at all.
-WCAG models the interaction in one direction only — *large* text may be
-**lower** contrast (3:1 at 18 pt) — and says nothing about the inverse, so a
-standards-conformant product can put its faintest text at its smallest size
-and no rule objects. **That is `§10.36`'s family: two green checks whose
-conjunction nobody examines** — and it is exactly the combination the owner's
-own question named.
+**So "what is visible by default" has a specific answer: the primary
+navigation is not.** Phase A's *5-entry navigation* exists — and four of its
+five destinations are one interaction behind a menu whose label is the
+reader's own username, which is the least predictable place to look for
+"where do I go". The only always-visible destination is the brand, and it
+leads to `/projects`, which is not one of the five. The one control that is
+always visible and *is* a destination carries **no word at all**.
 
-**The asymmetry worth deciding deliberately rather than inheriting**: **AAA
-was judged worth paying for reach; the same reader gets AA for contrast.** No
-document here has ever weighed 7:1, and *elder*, *ageing* and *older reader*
-appear nowhere in the specification.
+**Which corrects what *less is more* means here.** The base layout has already
+applied "less" — by **hiding**. That buys a quieter bar and charges a two-step
+interaction plus a memory burden. For a reader whose acuity and short-term
+recall are both declining, **less to decode** is the goal, and a visible row of
+labelled links decodes faster than a dropdown even though it is *more on
+screen*. **Hiding is not simplifying.** That is a design judgement for the
+owner, and it is the first one worth making.
 
-**Recommended: do not raise the global bar — forbid the conjunction.** Against
-`base-300`, 7:1 is unreachable without abolishing the muted tier outright,
-which would flatten a real hierarchy to satisfy a number. The clean rule is one
-sentence: **the muted tier may not be used below 14 px.** It targets exactly
-the ninety sites, keeps the tier where it is legible, keeps `NFR-A11Y-005`'s
-bar at AA, and — unlike the touch-target AA option this project rejected — it
-is **a conjunction of two class names in one attribute, decidable from source
-with no rendering at all**, by `contrast_scan`'s own existing technique.
+**The sequence, in the owner's own three terms and in the owner's order. One
+unit per round, no batch, no release number yet.**
 
-**Three rounds, in order:**
+1. **App base layout(s).** The three shells and the navbar, because 68 routes
+   inherit them and this is where one decision reaches every screen. The
+   findings above are in hand; what is **not** decided is whether the five
+   destinations come out of the dropdown, whether the bell gains a word, and
+   what happens below `sm`.
+2. **User workflows.** The paths across those views — register → first project
+   → board, and the daily loop through `/today`. **Not measured.** `§10.15`
+   records that this project does not execute rendering; `browser-checks`
+   already sweeps 19 pages at 5 widths, so the fixture exists and the reading
+   does not.
+3. **Each view, in the order the evidence gives.** The ninety sites are not a
+   defect list — they are a **map of where secondary information has
+   accumulated**: `me.rs` **20**, `sprints.rs` **18**, `issues.rs` **18**,
+   `teams.rs` **10**, then a tail of ten files with four or fewer. **Fifty-six
+   of the ninety are in three files**, and the densest is the screen a user
+   opens first. In each view the question is *does the reader need this at
+   all* — and only then, if it stays, how it should read.
 
-1. **The rule, and the ninety sites.** `NFR-A11Y-005` gains the clause;
-   `contrast_scan` gains the conjunction rule, seen red on a plant; the ninety
-   sites resolved each way the round judges — up to `text-sm`, or to full
-   strength at 12 px, which is 17.21:1 — with the choice stated per site.
-2. **Decoration at the smallest size.** The 4 `uppercase tracking-wide` and 3
-   `italic` sites among the ninety: uppercase removes the word-shape cue a
-   reader uses most when acuity drops, and 12 px italic is the least legible
-   combination the product renders. Small, and the owner's *decoration and
-   effect* bullet exactly.
-3. **The layout half, which is not yet measured and must not be guessed.** The
-   owner asked what is visible by default, how the flow runs, and whether menu
-   positions suit an older reader. **All I have is a population**, not a
-   finding: **30** `<details>` elements, **91** `hidden`, **14** `dropdown`.
-   **Which** content sits behind a disclosure, and whether that is *less is
-   more* or *the thing the reader wanted*, needs a designed read of rendered
-   screens — and `§10.15` plus `contrast_scan`'s own note record that this
-   project does not execute rendering, while `browser-checks` already sweeps 19
-   pages at 5 widths. **This round is that read, and it is the one with real
-   design content.** It is listed third because the first two are decided and
-   this one is not.
+**The conjunction rule is not discarded; it is demoted.** `text-xs` with the
+muted tier is still the least legible thing this product renders, and the
+measurement stands (**90** sites at 12 px and 5.15–6.36:1, against a
+`NFR-A11Y-005` bar of AA that the project already exceeds to **AAA** on touch
+targets). But it belongs **after** the views are decided, as a floor that stops
+the next drift — **rule after design, not instead of it.** Adopting it first
+would have frozen ninety decisions nobody had made.
 
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
