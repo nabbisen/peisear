@@ -102,7 +102,7 @@
 //! difference a reader needs to see.
 //!
 //! **What makes a paired body safe here is not a helper but the suite.**
-//! `049`'s one-suite-two-backends arrangement runs all 33 `peisear-web`
+//! `049`'s one-suite-two-backends arrangement runs all 34 `peisear-web`
 //! integration binaries under `--no-default-features --features postgres`
 //! as well as the default build (`test.yml:1022-1054`), so a pair that
 //! drifts in a way that changes behaviour fails a test. **Note where that

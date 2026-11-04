@@ -679,7 +679,28 @@ pub enum MessageKey {
     NavLinkTeams,
     NavLinkInbox,
     NavLinkSettings,
+    /// `NAV-001`: the primary navigation's own named entry for
+    /// Projects, independent of [`MessageKey::AppBrandName`] — a logo
+    /// is a convention, not a label, and `FR-NAV-001` requires the
+    /// destination be visibly named.
+    NavLinkProjects,
+    /// `NAV-001`: the visible label paired with the search input,
+    /// since an unlabelled `placeholder` disappears the moment a
+    /// reader types and a `hidden sm:block` input exposes nothing at
+    /// all below that width.
+    NavLinkSearch,
+    /// `NAV-001`: the word on the single control the five primary
+    /// entries collapse behind below the navbar's own threshold —
+    /// never the reader's own username, which is what the account
+    /// menu already uses and is the exact confusion this round
+    /// removes from the five destinations this requirement names.
+    NavMenuLabel,
     NavSignOut,
+    /// `NAV-001`: the primary navigation's own wrapping `<nav>`
+    /// `aria-label` -- there are now two `<nav>` landmarks on every
+    /// authenticated page (this one, [`MessageKey::BreadcrumbNavLabel`]
+    /// below it), so each needs its own name.
+    NavPrimaryLabel,
     /// `render_breadcrumb`'s wrapping `<nav>` `aria-label`.
     BreadcrumbNavLabel,
     /// `render_back_link`'s "Back to {section}" — used for both the
@@ -2569,6 +2590,10 @@ impl MessageKey {
             MessageKey::NavLinkTeams,
             MessageKey::NavLinkInbox,
             MessageKey::NavLinkSettings,
+            MessageKey::NavLinkProjects,
+            MessageKey::NavLinkSearch,
+            MessageKey::NavMenuLabel,
+            MessageKey::NavPrimaryLabel,
             MessageKey::NavSignOut,
             MessageKey::BreadcrumbNavLabel,
             MessageKey::ErrorPageTitle,

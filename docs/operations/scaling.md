@@ -108,7 +108,7 @@ and security, not scale.
 named — see [Install](../getting-started/install.md)'s own "Running
 against PostgreSQL instead." The distinction that mattered before this
 release was a property, not a count, and the property is now measured
-rather than assumed: all 33 of `peisear-web`'s integration-test files
+rather than assumed: all 34 of `peisear-web`'s integration-test files
 run against a real PostgreSQL server in CI, unfiltered (`SUP-002`),
 including the two **P0** privacy controls (`NFR-PRIV-007`'s
 contributor floor, `NFR-PRIV-001`'s capacity visibility) that
