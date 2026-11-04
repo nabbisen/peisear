@@ -581,8 +581,30 @@ The primary navigation MUST expose exactly five entry points: Today,
 Inbox, Projects, Teams, Search.
 *Rationale*: `SPEC §4.1` records that the previous seven-entry
 navigation diluted the user's sense of where to start.
-*Source*: `SPEC §4.2`. *Acceptance*: navigation renders five entries.
-*Status*: Implemented. *Priority*: P1.
+*Source*: `SPEC §4.2`.
+*Acceptance*: `navbar.rs`'s
+`the_five_required_entries_are_all_visible_in_the_primary_nav` — all five
+render, **by their own `MessageKey`**, inside the primary `<nav>`'s own block
+at full width; `settings_is_not_among_the_five` keeps the sixth entry this
+requirement does not list out of that block.
+*Status*: **Met (`NAV-001`, 2026-11-04)** — the five are a visible, labelled
+row at full width, collapsing below `md` behind one control labelled with a
+word rather than the reader's username.
+*Acceptance corrected 2026-11-04.* It read *"navigation renders five
+entries"* — **the requirement restated**, which `§10.35`'s own table already
+listed as a clause nobody can check, *"including its author."* And it was
+unverified in fact: **none of the five was visibly named at every width.**
+`Inbox` was an 18 px glyph with no word, `Projects` was reachable only
+through the brand link, `Today` and `Teams` sat in the dropdown behind the
+reader's own username, `Search` was `hidden sm:block`, and `Settings` — not
+one of the five — was exposed alongside them. **The status said
+`Implemented` for twenty-two releases on an acceptance clause that could not
+have contradicted it.** *The reading this now records*: **expose** means
+visible and named, without an interaction — the architect's design decision,
+on the owner's question about readers whose acuity and short-term recall are
+both declining, for whom a menu costs a two-step interaction plus
+remembering that the menu is behind their own name.
+*Priority*: P1.
 
 **FR-NAV-002 — Renamed route compatibility**
 Routes renamed during redesign MUST continue to resolve via HTTP 308

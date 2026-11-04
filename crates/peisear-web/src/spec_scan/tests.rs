@@ -525,9 +525,17 @@ fn rule_3_is_clean_on_the_real_tree() {
 #[test]
 fn rule_3_catches_a_new_absence_claiming_status() {
     let mut input = real_input();
-    let before =
-        "*Acceptance*: navigation renders five entries.\n*Status*: Implemented. *Priority*: P1.";
-    let after = "*Acceptance*: navigation renders five entries.\n*Status*: Implemented, no test covers the fifth entry. *Priority*: P1.";
+    // Re-anchored 2026-11-04 by the architect, whose own `FR-NAV-001`
+    // amendment (`NAV-001`) rewrote the sentence this plant used to
+    // replace -- and this test said so by name, `left: 0, right: 1`,
+    // rather than silently planting nothing. That is the property
+    // `REQ-006` `§3` asked for, working against the architect on its
+    // first day. **The standing fragility is the literal itself**: any
+    // status amendment can invalidate it, and statuses are the
+    // most-amended lines in this document. Deriving the anchor instead
+    // of hardcoding it is a candidate, recorded in `ROADMAP.md`.
+    let before = "*Source*: `KICK \u{a7}3.4`. *Status*: Implemented. *Priority*: P0.";
+    let after = "*Source*: `KICK \u{a7}3.4`. *Status*: Implemented, no test pins the binding rule. *Priority*: P0.";
     assert_eq!(
         input.requirements.matches(before).count(),
         1,
@@ -537,7 +545,7 @@ fn rule_3_catches_a_new_absence_claiming_status() {
     let v = only(violations(&input), "rule 3");
     assert!(
         v.iter()
-            .any(|m| m.contains("FR-NAV-001") && m.contains("does not know about")),
+            .any(|m| m.contains("NFR-SEC-001") && m.contains("does not know about")),
         "got {v:?}"
     );
 }
