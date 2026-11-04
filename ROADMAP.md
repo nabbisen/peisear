@@ -461,6 +461,88 @@ the `spec_scan` baseline rule, the `changelog_scan` section-date rule and
 the link check outside the book. Each is a check for something already
 fixed by hand.
 
+**`0.61.0` proposed 2026-11-04 — the first user-facing scope the owner has
+set since the accepted position made that the trigger for a release number.**
+The owner asked whether layout, typography and colour could be kinder to
+**elder people**. Measured before answering; the short version is that this
+product's accessibility work is unusually thorough, **the word for that reader
+appears nowhere in the specification**, and there is one real defect hiding
+between two green checks.
+
+**What the project already does, read rather than assumed.**
+`NFR-A11Y-005` requires **WCAG AA (4.5:1)** and is **P1, measured and
+repaired**: `base-content` on `base-100` is **17.21:1** at full strength, the
+theme tokens were never the problem, and of **130** opacity modifiers this
+project had applied, **111 sat below AA** and were fixed. `/70` is the floor
+(**6.36:1** on `base-100`, **5.76** on `base-200`, **5.15** on `base-300`);
+`/60` was rejected at **4.54:1** as a margin the next theme tweak erases.
+`contrast_scan` pins the theme's four hex values by version and SHA-256. There
+are **eleven** `NFR-A11Y` requirements. **And on touch targets the project
+already holds itself to WCAG 2.2 *AAA*** (2.5.5, 44 px), having considered
+dropping to AA (24×24 with the spacing exception) and **refused** — not for
+strictness, but because the AA exception *"rests on rendered geometry and
+cannot be evaluated from source."*
+
+**The finding: size and contrast are each checked, and their conjunction is
+not.** Measured across `components/`:
+
+| | count |
+|---|---|
+| `text-xs` (12 px) | **118** |
+| `text-sm` (14 px) | 145 |
+| `text-base` (16 px) | 167 |
+| larger | 32 |
+| **class attributes carrying `text-xs` *and* the muted tier** | **90** |
+| the same at `text-sm` | 52 |
+| of the 90, also `uppercase tracking-wide` | 4 |
+| of the 90, also `italic` | 3 |
+
+**So ninety places render 12 px text at 5.15–6.36:1.** Both checks pass:
+`contrast_scan` asks only about colour, and nothing asks about size at all.
+WCAG models the interaction in one direction only — *large* text may be
+**lower** contrast (3:1 at 18 pt) — and says nothing about the inverse, so a
+standards-conformant product can put its faintest text at its smallest size
+and no rule objects. **That is `§10.36`'s family: two green checks whose
+conjunction nobody examines** — and it is exactly the combination the owner's
+own question named.
+
+**The asymmetry worth deciding deliberately rather than inheriting**: **AAA
+was judged worth paying for reach; the same reader gets AA for contrast.** No
+document here has ever weighed 7:1, and *elder*, *ageing* and *older reader*
+appear nowhere in the specification.
+
+**Recommended: do not raise the global bar — forbid the conjunction.** Against
+`base-300`, 7:1 is unreachable without abolishing the muted tier outright,
+which would flatten a real hierarchy to satisfy a number. The clean rule is one
+sentence: **the muted tier may not be used below 14 px.** It targets exactly
+the ninety sites, keeps the tier where it is legible, keeps `NFR-A11Y-005`'s
+bar at AA, and — unlike the touch-target AA option this project rejected — it
+is **a conjunction of two class names in one attribute, decidable from source
+with no rendering at all**, by `contrast_scan`'s own existing technique.
+
+**Three rounds, in order:**
+
+1. **The rule, and the ninety sites.** `NFR-A11Y-005` gains the clause;
+   `contrast_scan` gains the conjunction rule, seen red on a plant; the ninety
+   sites resolved each way the round judges — up to `text-sm`, or to full
+   strength at 12 px, which is 17.21:1 — with the choice stated per site.
+2. **Decoration at the smallest size.** The 4 `uppercase tracking-wide` and 3
+   `italic` sites among the ninety: uppercase removes the word-shape cue a
+   reader uses most when acuity drops, and 12 px italic is the least legible
+   combination the product renders. Small, and the owner's *decoration and
+   effect* bullet exactly.
+3. **The layout half, which is not yet measured and must not be guessed.** The
+   owner asked what is visible by default, how the flow runs, and whether menu
+   positions suit an older reader. **All I have is a population**, not a
+   finding: **30** `<details>` elements, **91** `hidden`, **14** `dropdown`.
+   **Which** content sits behind a disclosure, and whether that is *less is
+   more* or *the thing the reader wanted*, needs a designed read of rendered
+   screens — and `§10.15` plus `contrast_scan`'s own note record that this
+   project does not execute rendering, while `browser-checks` already sweeps 19
+   pages at 5 widths. **This round is that read, and it is the one with real
+   design content.** It is listed third because the first two are decided and
+   this one is not.
+
 **This is order, not dates.** A row's number changes when something
 lands ahead of it, and the change is recorded here rather than argued
 from memory.
