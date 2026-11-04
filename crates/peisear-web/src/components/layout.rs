@@ -166,13 +166,20 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
     } else {
         MessageKey::NavBellLabelNone
     });
-    let unread_badge = (unread_count > 0).then(|| {
-        view! {
-            <span class="badge badge-sm badge-primary absolute -top-1 -right-1 px-1 min-h-0 h-4">
-                {t(MessageKey::NavBellCount { count: unread_count })}
-            </span>
-        }
-    });
+    // A closure, not a bound `Option<View>`: `NAV-001` renders the
+    // bell's badge twice (the full-width row and the collapsed `Menu`
+    // dropdown), and a Leptos view is built once, not `Clone`.
+    // `unread_count` is `Copy`, so the closure can run twice from one
+    // capture.
+    let unread_badge = move || {
+        (unread_count > 0).then(|| {
+            view! {
+                <span class="badge badge-sm badge-primary absolute -top-1 -right-1 px-1 min-h-0 h-4">
+                    {t(MessageKey::NavBellCount { count: unread_count })}
+                </span>
+            }
+        })
+    };
 
     view! {
         <header class="navbar bg-base-100 shadow-sm border-b border-base-300 px-4">
@@ -182,29 +189,66 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                 </a>
             </div>
 
-            // Global search (Phase A Step 4, v2.1 §4.5).
-            // The form submits to /search for the HTML results
-            // page. The vanilla JS at /static/search.js attaches
-            // a typeahead dropdown to this input via the data
-            // attribute below — JS-disabled clients still get a
-            // working search box, just without the dropdown
-            // preview.
+            // `NAV-001` (`FR-NAV-001`): the five required entries, as a
+            // visible, labelled row -- "expose" means visible and named,
+            // without an interaction, so none of these may hide behind a
+            // menu or a glyph. Full strength `base-content`, no
+            // `text-xs`: primary navigation is not secondary information
+            // (`§2`'s own instruction) -- `contrast_scan` holds the
+            // colour half, this file holds the size half, since no scan
+            // here reads font size.
             //
-            // The whole block is wrapped in `relative` so the
-            // dropdown's `absolute` positioning can be relative
-            // to the input, not the whole navbar. `min-w` keeps
-            // the box from collapsing on small viewports; mobile
-            // refinement (drawer placement) is Phase E mobile QA.
-            <div class="flex-none mx-2 hidden sm:block">
+            // `md:flex`/`md:hidden` below is the collapse threshold
+            // `§3` asks this round to choose and justify: `sm` (640px)
+            // is already spent on the search input's own old behaviour,
+            // and five labelled words plus the bell and brand do not fit
+            // in the gap between `sm` and `md` either -- measured against
+            // `browser-checks`' own 390px fixture width, the narrowest
+            // one meant to hold real content rather than prove the floor
+            // alone. `md` (768px) is the next stop and the one that
+            // fits.
+            <nav aria-label=t(MessageKey::NavPrimaryLabel) class="hidden md:flex items-center gap-1 mx-2">
+                <a href="/today" class=grow("btn btn-ghost btn-sm")>{t(MessageKey::NavLinkToday)}</a>
+                <a href="/inbox" class=grow("btn btn-ghost btn-sm relative") aria-label=bell_aria.clone()>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true">
+                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+                    </svg>
+                    {t(MessageKey::NavLinkInbox)}
+                    {unread_badge()}
+                </a>
+                <a href="/projects" class=grow("btn btn-ghost btn-sm")>{t(MessageKey::NavLinkProjects)}</a>
+                <a href="/teams" class=grow("btn btn-ghost btn-sm")>{t(MessageKey::NavLinkTeams)}</a>
+
+                // Global search (Phase A Step 4, v2.1 §4.5; `NAV-001`
+                // gives it the visible word `FR-NAV-001` requires,
+                // beside the input rather than replacing it --
+                // `placeholder` disappears the moment a reader types,
+                // so it was never the label).
+                //
+                // The form submits to /search for the HTML results
+                // page. The vanilla JS at /static/search.js attaches
+                // a typeahead dropdown to this input via the data
+                // attribute below — JS-disabled clients still get a
+                // working search box, just without the dropdown
+                // preview.
+                //
+                // The whole block is wrapped in `relative` so the
+                // dropdown's `absolute` positioning can be relative
+                // to the input, not the whole navbar.
                 <form method="get" action="/search"
-                      class="relative"
+                      class="relative flex items-center gap-1"
                       role="search"
                       aria-label=t(MessageKey::NavSearchFormLabel)>
+                    <span aria-hidden="true">{t(MessageKey::NavLinkSearch)}</span>
                     <input type="search"
                            name="q"
                            placeholder=t(MessageKey::NavSearchPlaceholder)
                            autocomplete="off"
-                           class=grow("input input-bordered input-sm w-64")
+                           class=grow("input input-bordered input-sm w-48")
                            data-typeahead="global"
                            aria-label=t(MessageKey::NavSearchQueryLabel)/>
                     // Container the JS populates with the
@@ -216,6 +260,29 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                          aria-label=t(MessageKey::NavSearchSuggestionsLabel)>
                     </div>
                 </form>
+            </nav>
+
+            // `NAV-001` `§0` point 5: below the threshold the five
+            // collapse into **one** control labelled with a word --
+            // never the username, which is the account menu's own
+            // label below and the exact confusion this round removes
+            // from the five destinations `FR-NAV-001` names.
+            <div class="dropdown dropdown-end md:hidden mx-2">
+                <label tabindex="0" class=grow("btn btn-ghost btn-sm")>
+                    {t(MessageKey::NavMenuLabel)}
+                </label>
+                <ul tabindex="0" class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-56 border border-base-300">
+                    <li><a href="/today" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkToday)}</a></li>
+                    <li>
+                        <a href="/inbox" class=grow_text(MENU_FOCUS_RING) aria-label=bell_aria>
+                            {t(MessageKey::NavLinkInbox)}
+                            {unread_badge()}
+                        </a>
+                    </li>
+                    <li><a href="/projects" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkProjects)}</a></li>
+                    <li><a href="/teams" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkTeams)}</a></li>
+                    <li><a href="/search" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkSearch)}</a></li>
+                </ul>
             </div>
 
             // `LAYOUT-006`: this block was `flex-none`, and that — not any
@@ -230,26 +297,12 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
             // `flex-none` with a `shrink` that contradicts it and resolves
             // on stylesheet order.
             //
-            // The name gives way and nothing else does: the bell is
-            // `shrink-0` below, and the button's own `min-w-11` (via
-            // `grow()`) floors it at 44px, so `NFR-A11Y-007` holds without a
-            // rule of its own — measured at 44x44 with the name removed
-            // entirely, which is also the proof that brand + bell + button
-            // do fit 320 and the floor is not the problem (§5's first
-            // escalation, checked and not triggered).
+            // `NAV-001`: this is now the **account** menu only -- Today,
+            // Inbox and Teams moved to the primary row/collapsed Menu
+            // above, and Settings stays here with Sign out, where
+            // account-scoped actions belong (`§0` point 4). The name
+            // gives way and nothing else does, same as before.
             <div class="min-w-0 gap-2">
-                <a href="/inbox"
-                   class=grow("btn btn-ghost btn-sm relative shrink-0")
-                   aria-label=bell_aria>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                         aria-hidden="true">
-                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
-                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
-                    </svg>
-                    {unread_badge}
-                </a>
                 <div class="dropdown dropdown-end min-w-0">
                     // `LAYOUT-006`: the name shows at every width and gives
                     // way with an ellipsis only when the row cannot fit —
@@ -309,9 +362,6 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                         // (Tailwind's `!important`) because nothing lower
                         // specificity reaches through the vendored rule
                         // without editing it.
-                        <li><a href="/today" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkToday)}</a></li>
-                        <li><a href="/teams" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkTeams)}</a></li>
-                        <li><a href="/inbox" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkInbox)}</a></li>
                         <li><a href="/settings" class=grow_text(MENU_FOCUS_RING)>{t(MessageKey::NavLinkSettings)}</a></li>
                         <li>
                             <form method="post" action="/logout">

@@ -73,7 +73,7 @@ impl TestApp {
         // invocation -- which `DEC-007` runs three times per release, and
         // every contributor runs routinely -- is not small. The failure
         // mode this leaves is written down instead: a `500` from any one
-        // of the ~33 integration-test files using `TestApp::spawn` can
+        // of the ~34 integration-test files using `TestApp::spawn` can
         // mean `/tmp` filled, not a broken lock (`DOC-004`'s own flake).
         // `/tmp` filling is a scratch-hygiene problem with its own fix
         // (`.github/CONTRIBUTING.md`'s "remove a scratch build's target

@@ -643,6 +643,15 @@ jobs:
           fi
           echo "issue_edit_url: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
+  test-peisear-web-navbar:
+    name: peisear-web / navbar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test navbar -- --test-threads=1
+
   test-peisear-web-status-segment:
     name: peisear-web / status_segment
     runs-on: ubuntu-latest
@@ -1032,7 +1041,7 @@ jobs:
       # into no build this step runs, named in their own doc comments
       # rather than silently excluded.
       - run: "cargo test -p peisear-storage --no-default-features --features postgres --lib -- --test-threads=1"
-      # `SUP-002` (`RFC 021` §4 condition 3): all 33 `peisear-web`
+      # `SUP-002` (`RFC 021` §4 condition 3): all 34 `peisear-web`
       # integration binaries, not the three `CON-003` scoped as "the
       # lock tests" -- that scoping was itself the finding this round
       # closes. `§10.46`'s own reason governs the shape, unchanged: a
@@ -1060,6 +1069,7 @@ jobs:
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test health_explainability -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test inbox_refinements -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test issue_edit_url -- --test-threads=1"
+      - run: "cargo test -p peisear-web --no-default-features --features postgres --test navbar -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test optimistic_lock -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test optimistic_lock_atomicity -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test ordering -- --test-threads=1"

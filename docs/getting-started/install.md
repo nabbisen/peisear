@@ -64,7 +64,7 @@ does not.)
 container image in Option B are all built against SQLite only — the
 same way `cargo install peisear` above is, by default. PostgreSQL is
 a real, proven backend (`RFC 018` P4; `peisear-storage`'s own suite
-and all 33 `peisear-web` integration binaries run against a real
+and all 34 `peisear-web` integration binaries run against a real
 server in CI, unfiltered), reached today by building from source with
 the feature named instead of the default:
 
