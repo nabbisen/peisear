@@ -520,11 +520,29 @@ owner, and it is the first one worth making.
 **The sequence, in the owner's own three terms and in the owner's order. One
 unit per round, no batch, no release number yet.**
 
-1. **App base layout(s).** The three shells and the navbar, because 68 routes
-   inherit them and this is where one decision reaches every screen. The
-   findings above are in hand; what is **not** decided is whether the five
-   destinations come out of the dropdown, whether the bell gains a word, and
-   what happens below `sm`.
+1. **App base layout(s) — authorized 2026-11-04 and written as
+   `rfcs/handoffs/058-where-do-i-go/` (`NAV-001`, one round).** The three
+   shells and the navbar, because 68 routes inherit them and this is where one
+   decision reaches every screen. **And the finding sharpened on reading the
+   requirement**: `FR-NAV-001` is a **P1** stating that the primary navigation
+   **MUST expose exactly five entry points — Today, Inbox, Projects, Teams,
+   Search** — its status is `Implemented`, and its *Acceptance* is the
+   sentence *"navigation renders five entries"*, which `§10.35`'s own table
+   already records as **a restatement nobody can check**. So nothing has ever
+   verified the five. Measured against the source: **none of the five is
+   visibly named at every width**; `Inbox` is an unlabelled 18 px glyph,
+   `Projects` is reachable only through the brand link, `Today` and `Teams`
+   are in the dropdown, `Search` is `hidden sm:block`, and **`Settings` is
+   exposed although it is not one of the five.**
+
+   **The architect's design decision, which the previous entry wrongly handed
+   up**: *expose* means **visible and named, without an interaction**. Design
+   authority is the architect's; the owner authorizes scope. The five become a
+   labelled row, the bell keeps its badge and gains its word, `Projects` stops
+   depending on a logo, `Settings` moves to the user dropdown with Sign out,
+   and below the collapse threshold the five sit behind one control labelled
+   with a **word** rather than the reader's username. The round also writes the
+   **locatable** acceptance the requirement has never had.
 2. **User workflows.** The paths across those views — register → first project
    → board, and the daily loop through `/today`. **Not measured.** `§10.15`
    records that this project does not execute rendering; `browser-checks`

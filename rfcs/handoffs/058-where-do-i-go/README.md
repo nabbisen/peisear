@@ -1,0 +1,70 @@
+# Handoffs — where do I go
+
+**No release number yet.** The owner authorized this sequence 2026-11-04,
+after asking whether layout, typography and colour could be kinder to
+**elder people** and then asking for the three to be reconsidered against
+this project's fundamental philosophy — *"one by one with time we need:
+App base layout(s), user workflows, and each view."*
+
+**This series is unit one: the app base layout.** One round, and the next
+unit is not written until this one closes. That pacing is the owner's
+instruction, not a shortage of material.
+
+**No RFC.** The RFC numbering is at `022`; `058` is a handoff series. The
+rule this round applies is already written: `FR-NAV-001`, a **P1**, says
+the primary navigation **MUST expose exactly five entry points — Today,
+Inbox, Projects, Teams, Search**. What was missing is not a rule but a
+reading of the word *expose*, and that reading is the architect's design
+decision, recorded in the round.
+
+---
+
+## Rounds
+
+| ID | Handoff | Subject | Blocked on | State |
+|---|---|---|---|---|
+| NAV-001 | [the five that are not there](./NAV-001-the-five-that-are-not-there.md) | `FR-NAV-001` is `Implemented` with an acceptance clause — *"navigation renders five entries"* — that this document already records as **a restatement nobody can check**. Measured against the source: of the five required entries, **none is visibly named at every width**; `Inbox` is an unlabelled glyph, `Projects` hides behind the brand link, `Today` and `Teams` are in a dropdown behind the reader's username, `Search` vanishes below `sm`, and `Settings` is exposed although it is not one of the five | — first in the series | **Open, the dev team's** |
+
+## The decision this round implements, and why it is not the dev team's
+
+**"Expose" means visible and named, without an interaction.** The five
+become a labelled row; the bell keeps its badge and gains its word;
+Projects stops depending on a logo; Settings leaves the primary row for
+the user dropdown; below the collapse threshold the five sit behind one
+control labelled with a **word**, never the username.
+
+**The reasoning is the reader the owner named.** A menu costs a two-step
+interaction *plus* remembering that the menu is behind one's own name. For
+someone whose acuity and short-term recall are both declining, that is the
+expensive part. **Hiding is not simplifying** — *less is more* means less
+to **decode**, not fewer things on screen. The base layout had already
+applied "less" by hiding, and that is the half being reconsidered.
+
+## What this series is not
+
+**Not a redesign of the five pages.** Their contents are later units, one
+at a time, in the order the evidence gives — `me.rs` carries 20 of the 90
+`text-xs`-with-muted-tier sites, `sprints.rs` and `issues.rs` 18 each.
+
+**Not the contrast rule.** The architect proposed forbidding the muted
+tier below 14 px and **withdrew it**: applied to those ninety sites it
+would have *enlarged* ninety pieces of quiet secondary information, twenty
+of them on the first screen a user sees, making the busiest screens
+denser. It survives only as a **floor adopted after** the views are
+decided — rule after design, not instead of it.
+
+**Not a change to any route.** `FR-NAV-002`'s 308 redirects stay exactly
+as they are.
+
+## The trap this series will walk into, named once here
+
+**A row of five labelled links is wider than a logo and a glyph**, and the
+cheap way to make it fit is to shrink the type or mute it. **That is
+forbidden**: it would reintroduce, in the primary navigation, the
+small-and-faint combination this entire line of work began from. The lever
+is the collapse threshold, not the type.
+
+## The standing exception applies
+
+A defect found in the shipped product while this series is open earns a
+round of its own rather than being folded into the round that noticed it.
