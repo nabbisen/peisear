@@ -28,6 +28,22 @@ instructions and reaching a working instance.
   asserted population count, and its anchor reports **its own lookup
   failing by name** rather than examining nothing and passing.
 
+- **Two platforms are now compiled before a tag, where one was.** A
+  `windows-latest` job runs `cargo clippy -p peisear -- -D warnings`, so
+  the kind of defect that cost `0.58.0` a published Windows archive — a
+  helper live on Unix and dead on Windows — fails on a push instead of at
+  the moment the archive is built. Proven by planting that exact defect:
+  of the forty-eight jobs in the run, **the new one was the only one that
+  failed**. Three of the five published platforms are still first
+  compiled at the tag.
+- **The walk that checks the documented copy-and-run path now runs by
+  itself.** It had asserted correctly since `0.53.0` and fired three
+  times in its life, the last eighteen days and four releases before
+  this, because it was manual-only. It now runs on pushes to `main` and
+  on pull requests, scoped to the six paths that can break it — which
+  includes pull requests from forks, the flow `CONTRIBUTING.md` actually
+  instructs.
+
 ### Fixed
 
 - **[Build from source](docs/getting-started/build-from-source.md) now
