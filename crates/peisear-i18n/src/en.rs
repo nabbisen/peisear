@@ -203,8 +203,8 @@ pub(crate) fn render(key: MessageKey) -> String {
 
         // ---- I18N-005a: components/{layout,breadcrumb,error_page} ----
         MessageKey::AppBrandName => "peisear".to_string(),
-        MessageKey::NavBellLabelNone => "Notifications".to_string(),
-        MessageKey::NavBellLabelUnread { count } => format!("Notifications ({count} unread)"),
+        MessageKey::NavBellLabelNone => "Inbox".to_string(),
+        MessageKey::NavBellLabelUnread { count } => format!("Inbox ({count} unread)"),
         MessageKey::NavBellCount { count } => bell_count(count),
         MessageKey::NavSearchFormLabel => "Search projects and open issues".to_string(),
         MessageKey::NavSearchPlaceholder => "Search...".to_string(),
