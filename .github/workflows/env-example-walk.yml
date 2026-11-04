@@ -53,13 +53,35 @@ name: Env Example Walk
 # not a refusal) rather than block startup, so a regression there
 # cannot fail this walk the way the others can.
 #
-# No `branches:` filter, unlike `test.yml`'s own `push`, deliberately:
-# this fires on a push to any branch that touches the paths above, not
-# only `main` -- a contributor's own branch gets the same regression
-# signal a PR's checks already give before it merges, and `main` gets
-# it again on the squash commit, each run's own event still `push`.
+# `WLK-001` round 2: round 1's bare `push:`, no `branches:` filter,
+# never fires for the contribution flow `.github/CONTRIBUTING.md`
+# itself documents -- fork, push to the fork, open a PR against
+# `main`. A `push` event for a fork's own branch occurs in the fork,
+# not here, so the one guard whose subject is the contributor path
+# was blind to the outside contributor. Brought to `test.yml`'s own
+# arrangement instead -- `push` narrowed to `main`, branch work
+# covered by `pull_request`, both carrying the same `paths:` list --
+# which also stops in-repo work from firing this ~7-minute job twice
+# for one change (branch push, then the squash to `main`).
+#
+# The fork case itself is not measured here -- no fork of this
+# repository was available to push from -- and rests on documented
+# GitHub behaviour instead: `push` fires in the repository that was
+# pushed to, so a fork's own push never reaches here; `pull_request`
+# fires in the base repository for a cross-repository PR, so a
+# fork's PR against `main` does reach here, on `pull_request`, same
+# as an in-repo branch's PR.
 on:
   push:
+    branches: [main]
+    paths:
+      - .env.example
+      - crates/peisear-web/src/config.rs
+      - crates/peisear/src/main.rs
+      - docs/getting-started/build-from-source.md
+      - .github/CONTRIBUTING.md
+      - .github/workflows/env-example-walk.yml
+  pull_request:
     paths:
       - .env.example
       - crates/peisear-web/src/config.rs
