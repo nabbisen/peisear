@@ -27,6 +27,7 @@ pub fn render_results(
     page: u32,
     has_more_projects: bool,
     has_more_issues: bool,
+    unread_count: i64,
 ) -> Html<String> {
     super::render_to_html(move || {
         view! {
@@ -38,12 +39,14 @@ pub fn render_results(
                 page=page
                 has_more_projects=has_more_projects
                 has_more_issues=has_more_issues
+                unread_count=unread_count
             />
         }
     })
 }
 
 #[component]
+#[allow(clippy::too_many_arguments)]
 fn SearchResultsPage(
     user: CurrentUser,
     q: String,
@@ -52,6 +55,7 @@ fn SearchResultsPage(
     page: u32,
     has_more_projects: bool,
     has_more_issues: bool,
+    unread_count: i64,
 ) -> impl IntoView {
     let title = if q.is_empty() {
         t(MessageKey::SearchWord)
@@ -65,7 +69,7 @@ fn SearchResultsPage(
     let has_query = !q.is_empty();
 
     view! {
-        <AppShell title=title user=user flash=None>
+        <AppShell title=title user=user flash=None unread_count=unread_count>
             // Inline form — also reachable when the user
             // landed on /search with no query, or wants to
             // refine. Keeps results page usable without the

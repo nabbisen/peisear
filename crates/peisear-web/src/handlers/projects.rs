@@ -6,11 +6,14 @@ use axum::{
     response::{IntoResponse, Redirect},
 };
 use peisear_i18n::{Locale, MessageKey};
-use peisear_storage::projects;
+use peisear_storage::{notifications as notif_store, projects};
 use serde::Deserialize;
 use validator::Validate;
 
-use crate::{AppError, AppResult, AppState, components, extractors::AuthUser};
+use crate::{
+    AppError, AppResult, AppState, components,
+    extractors::{AuthUser, Requester},
+};
 
 #[derive(Debug, Deserialize)]
 pub struct FlashQuery {
@@ -19,17 +22,23 @@ pub struct FlashQuery {
 
 pub async fn list_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Query(q): Query<FlashQuery>,
 ) -> AppResult<impl IntoResponse> {
     let projects = projects::list_for_user(&state.db, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
     Ok(components::projects::render_projects_list(
-        user, projects, q.flash,
+        user,
+        projects,
+        q.flash,
+        unread_count,
     ))
 }
 
 pub async fn new_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
 ) -> AppResult<impl IntoResponse> {
     // Load the user's teams (any role) so the form can offer
@@ -42,10 +51,12 @@ pub async fn new_page(
             .into_iter()
             .filter(|(_, role)| role.can_write())
             .collect();
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
     Ok(components::projects::render_project_new(
         user,
         writable_teams,
         None,
+        unread_count,
     ))
 }
 
@@ -113,12 +124,17 @@ pub async fn create(
 
 pub async fn edit_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(project_id): Path<String>,
 ) -> AppResult<impl IntoResponse> {
     let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
     Ok(components::projects::render_project_edit(
-        user, project, None,
+        user,
+        project,
+        None,
+        unread_count,
     ))
 }
 

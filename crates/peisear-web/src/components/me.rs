@@ -142,6 +142,7 @@ pub fn PersonalDashboard(
     burnout: Option<UserBurnoutSignals>,
     capacity_is_period_bounded: bool,
     flash: Option<String>,
+    unread_count: i64,
 ) -> impl IntoView {
     let display_name = user.display_name.clone();
 
@@ -149,7 +150,7 @@ pub fn PersonalDashboard(
     // happen, but treat it gracefully).
     let Some(m) = metrics else {
         return view! {
-            <AppShell title=t(MessageKey::PersonalDashboardTitle) user=user flash=flash>
+            <AppShell title=t(MessageKey::PersonalDashboardTitle) user=user flash=flash unread_count=unread_count>
                 <div class="max-w-2xl mx-auto">
                     <h1 class="text-xl font-semibold mb-4">{t(MessageKey::PersonalDashboardTitle)}</h1>
                     <p class="text-sm text-base-content/70 italic">
@@ -243,7 +244,7 @@ pub fn PersonalDashboard(
     );
 
     view! {
-        <AppShell title=t(MessageKey::PersonalDashboardTitle) user=user flash=flash>
+        <AppShell title=t(MessageKey::PersonalDashboardTitle) user=user flash=flash unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 <div class="flex items-center justify-between gap-3 mb-1">
                     <h1 class="text-xl font-semibold">{t(MessageKey::PersonalDashboardTitle)}</h1>
@@ -693,6 +694,7 @@ pub fn render_dashboard(
     burnout: Option<UserBurnoutSignals>,
     capacity_is_period_bounded: bool,
     flash: Option<String>,
+    unread_count: i64,
 ) -> Html<String> {
     super::render_to_html(move || {
         view! {
@@ -702,6 +704,7 @@ pub fn render_dashboard(
                 burnout=burnout
                 capacity_is_period_bounded=capacity_is_period_bounded
                 flash=flash
+                unread_count=unread_count
             />
         }
     })

@@ -15,10 +15,11 @@ pub fn ProjectsListPage(
     user: CurrentUser,
     projects: Vec<Project>,
     flash: Option<String>,
+    unread_count: i64,
 ) -> impl IntoView {
     let is_empty = projects.is_empty();
     view! {
-        <AppShell title=t(MessageKey::ProjectsListPageTitle) user=user flash=flash>
+        <AppShell title=t(MessageKey::ProjectsListPageTitle) user=user flash=flash unread_count=unread_count>
             <div class="flex items-center justify-between mb-6">
                 <div>
                     <h1 class="text-2xl font-semibold tracking-tight">{t(MessageKey::ProjectsSectionName)}</h1>
@@ -94,6 +95,7 @@ pub fn ProjectNewPage(
     user: CurrentUser,
     writable_teams: Vec<(peisear_core::teams::Team, peisear_core::teams::TeamRole)>,
     flash: Option<String>,
+    unread_count: i64,
 ) -> impl IntoView {
     let has_teams = !writable_teams.is_empty();
     let team_options = writable_teams
@@ -108,7 +110,7 @@ pub fn ProjectNewPage(
         .collect_view();
 
     view! {
-        <AppShell title=t(MessageKey::ProjectNewPageTitle) user=user flash=flash>
+        <AppShell title=t(MessageKey::ProjectNewPageTitle) user=user flash=flash unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
                     <li><a href="/projects" class=grow_text("")>{t(MessageKey::ProjectsSectionName)}</a></li>
@@ -167,6 +169,7 @@ pub fn ProjectEditPage(
     user: CurrentUser,
     project: Project,
     flash: Option<String>,
+    unread_count: i64,
 ) -> impl IntoView {
     let project_href = format!("/projects/{}", project.id);
     let edit_action = format!("/projects/{}/edit", project.id);
@@ -187,7 +190,7 @@ pub fn ProjectEditPage(
     let client_updated_at = project.updated_at.to_rfc3339();
 
     view! {
-        <AppShell title=title user=user flash=flash>
+        <AppShell title=title user=user flash=flash unread_count=unread_count>
             <div class="max-w-xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
                     <li><a href="/projects" class=grow_text("")>{t(MessageKey::ProjectsSectionName)}</a></li>
@@ -246,9 +249,10 @@ pub fn render_projects_list(
     user: CurrentUser,
     projects: Vec<Project>,
     flash: Option<String>,
+    unread_count: i64,
 ) -> Html<String> {
     super::render_to_html(move || {
-        view! { <ProjectsListPage user=user projects=projects flash=flash/> }
+        view! { <ProjectsListPage user=user projects=projects flash=flash unread_count=unread_count/> }
     })
 }
 
@@ -256,9 +260,10 @@ pub fn render_project_new(
     user: CurrentUser,
     writable_teams: Vec<(peisear_core::teams::Team, peisear_core::teams::TeamRole)>,
     flash: Option<String>,
+    unread_count: i64,
 ) -> Html<String> {
     super::render_to_html(move || {
-        view! { <ProjectNewPage user=user writable_teams=writable_teams flash=flash/> }
+        view! { <ProjectNewPage user=user writable_teams=writable_teams flash=flash unread_count=unread_count/> }
     })
 }
 
@@ -266,8 +271,9 @@ pub fn render_project_edit(
     user: CurrentUser,
     project: Project,
     flash: Option<String>,
+    unread_count: i64,
 ) -> Html<String> {
     super::render_to_html(move || {
-        view! { <ProjectEditPage user=user project=project flash=flash/> }
+        view! { <ProjectEditPage user=user project=project flash=flash unread_count=unread_count/> }
     })
 }

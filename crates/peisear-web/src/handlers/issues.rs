@@ -8,7 +8,9 @@ use axum::{
 };
 use peisear_core::{IssueStatus, Priority};
 use peisear_i18n::{Locale, MessageKey};
-use peisear_storage::{issues, metrics_snapshots, project_health, projects, view_states};
+use peisear_storage::{
+    issues, metrics_snapshots, notifications as notif_store, project_health, projects, view_states,
+};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -274,6 +276,8 @@ pub async fn project_detail(
         _ => "board".to_string(),
     };
 
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
+
     Ok(components::issues::render_project_detail(
         user,
         project,
@@ -287,6 +291,7 @@ pub async fn project_detail(
         merged.status.unwrap_or_default(),
         merged.assignee.unwrap_or_default(),
         merged.sort.unwrap_or_default(),
+        unread_count,
     ))
 }
 
@@ -310,6 +315,7 @@ pub async fn project_detail(
 /// `WipCompliance` specifically would itself be a tell.
 pub async fn health_indicator_basis(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path((project_id, indicator_slug)): Path<(String, String)>,
 ) -> AppResult<impl IntoResponse> {
@@ -327,22 +333,27 @@ pub async fn health_indicator_basis(
             .filter(|i| id_set.contains(i.id.as_str()))
             .collect();
 
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
+
     Ok(components::issues::render_health_indicator_basis(
         user,
         project,
         kind,
         basis_issues,
+        unread_count,
     ))
 }
 
 pub async fn new_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path(project_id): Path<String>,
 ) -> AppResult<impl IntoResponse> {
     let project = projects::find_accessible(&state.db, &project_id, &user.id).await?;
     let assignees = issues::list_assignee_candidates(&state.db, &project_id).await?;
     let workload = issues::project_workload(&state.db, &project_id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
     Ok(components::issues::render_issue_new(
         user,
         project,
@@ -351,6 +362,7 @@ pub async fn new_page(
         assignees,
         workload,
         None,
+        unread_count,
     ))
 }
 
@@ -517,6 +529,7 @@ pub async fn create(
 /// the parent (no sprint picker in this form).
 pub async fn new_sub_issue_form(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path((project_id, parent_issue_id)): Path<(String, String)>,
 ) -> AppResult<axum::response::Html<String>> {
@@ -533,8 +546,13 @@ pub async fn new_sub_issue_form(
     }
 
     let assignees = issues::list_assignee_candidates(&state.db, &project_id).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
     Ok(components::issues::render_new_sub_issue_form(
-        user, project, parent, assignees,
+        user,
+        project,
+        parent,
+        assignees,
+        unread_count,
     ))
 }
 
@@ -623,6 +641,7 @@ pub struct DetailQuery {
 /// links bookmarked before 0.18.0.
 pub async fn detail_page(
     user: AuthUser,
+    rid: Requester,
     state: State<AppState>,
     path: Path<(String, String)>,
     Query(q): Query<DetailQuery>,
@@ -645,6 +664,7 @@ pub async fn detail_page(
 
     Ok(render_detail_or_edit(
         user,
+        rid,
         state,
         path,
         q.flash,
@@ -666,6 +686,7 @@ pub async fn detail_page(
 /// inside a query parameter.
 pub async fn edit_page(
     user: AuthUser,
+    rid: Requester,
     state: State<AppState>,
     path: Path<(String, String)>,
     Query(q): Query<DetailQuery>,
@@ -676,6 +697,7 @@ pub async fn edit_page(
     let _ = q.edit;
     render_detail_or_edit(
         user,
+        rid,
         state,
         path,
         q.flash,
@@ -693,6 +715,7 @@ pub async fn edit_page(
 #[allow(clippy::too_many_arguments)]
 async fn render_detail_or_edit(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Path((project_id, issue_id)): Path<(String, String)>,
     flash: Option<String>,
@@ -761,6 +784,8 @@ async fn render_detail_or_edit(
         (Vec::new(), None)
     };
 
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
+
     Ok(components::issues::render_issue_detail(
         components::issues::IssueDetailView {
             user,
@@ -781,6 +806,7 @@ async fn render_detail_or_edit(
                 return_date: move_calendar_anchor.format("%Y-%m-%d").to_string(),
                 return_surface: move_return_surface,
             },
+            unread_count,
         },
     ))
 }

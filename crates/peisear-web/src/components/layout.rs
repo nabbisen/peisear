@@ -62,15 +62,22 @@ pub fn Base(
 
 /// Shell used for every authenticated page: navbar + flash + main.
 ///
-/// `unread_count` drives the bell badge in the navbar. Threaded
-/// through every handler that returns the shell so the badge
-/// stays in sync with reality across page loads.
+/// `unread_count` drives the bell badge in the navbar, and (`NAV-001`
+/// round 2) the bell's own accessible name. **Required, not
+/// defaulted** (`NAV-001` round 3): a `#[prop(default = 0)]` let
+/// twelve of twenty-six call sites render a plausible zero instead of
+/// the real count, silently, for as long as nobody noticed —
+/// `unread_count_for_user`'s own absence read exactly like its own
+/// true zero. Removing the default makes every one of those sites a
+/// compile error instead, so this sentence stays true structurally,
+/// not by convention: there is no path to this component that does
+/// not supply a real count.
 #[component]
 pub fn AppShell(
     #[prop(into)] title: String,
     user: CurrentUser,
     flash: Option<String>,
-    #[prop(default = 0)] unread_count: i64,
+    unread_count: i64,
     children: Children,
 ) -> impl IntoView {
     view! {

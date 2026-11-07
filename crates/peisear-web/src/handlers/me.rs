@@ -14,7 +14,10 @@ use axum::{
     extract::{Query, State},
     response::IntoResponse,
 };
-use peisear_storage::{personal_metrics, subjects::SubjectId, user_burnout, user_capacities};
+use peisear_storage::{
+    notifications as notif_store, personal_metrics, subjects::SubjectId, user_burnout,
+    user_capacities,
+};
 use serde::Deserialize;
 
 use crate::{
@@ -58,11 +61,14 @@ pub async fn page(
         .map(|r| r.period_start.is_some() || r.period_end.is_some())
         .unwrap_or(false);
 
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
+
     Ok(components::me::render_dashboard(
         user,
         metrics,
         burnout,
         capacity_is_period_bounded,
         q.flash,
+        unread_count,
     ))
 }

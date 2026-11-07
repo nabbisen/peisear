@@ -28,12 +28,12 @@ use axum::{
     extract::{Query, State},
     response::IntoResponse,
 };
-use peisear_storage::search;
+use peisear_storage::{notifications as notif_store, search};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     ApiAppResult, AppResult, AppState, components,
-    extractors::{ApiAuthUser, AuthUser},
+    extractors::{ApiAuthUser, AuthUser, Requester},
 };
 
 /// Query parameters for both `/search` and `/api/search`.
@@ -199,6 +199,7 @@ pub async fn typeahead(
 /// dropped before display.
 pub async fn results_page(
     AuthUser(user): AuthUser,
+    Requester(rid): Requester,
     State(state): State<AppState>,
     Query(q): Query<SearchQuery>,
 ) -> AppResult<impl IntoResponse> {
@@ -210,6 +211,7 @@ pub async fn results_page(
         // Empty-query landing — render the page with no hits,
         // ready for the user to type into the navbar input or
         // the on-page form.
+        let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
         return Ok(components::search::render_results(
             user,
             String::new(),
@@ -218,6 +220,7 @@ pub async fn results_page(
             page,
             false,
             false,
+            unread_count,
         ));
     }
 
@@ -245,6 +248,7 @@ pub async fn results_page(
         .collect();
     let has_more_projects = project_hits.len() > offset + projects_window.len();
     let has_more_issues = issue_hits.len() > offset + issues_window.len();
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
 
     Ok(components::search::render_results(
         user,
@@ -254,5 +258,6 @@ pub async fn results_page(
         page,
         has_more_projects,
         has_more_issues,
+        unread_count,
     ))
 }

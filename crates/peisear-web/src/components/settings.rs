@@ -39,6 +39,7 @@ pub fn SettingsPage(
     effective_today: Option<i64>,
     flash: Option<String>,
     error: Option<String>,
+    unread_count: i64,
 ) -> impl IntoView {
     let wip_value = wip_limit.map(|n| n.to_string()).unwrap_or_default();
     let display_name = user.display_name.clone();
@@ -90,7 +91,7 @@ pub fn SettingsPage(
     let settings_breadcrumb = settings_heading.clone();
 
     view! {
-        <AppShell title=t(MessageKey::SettingsSectionName) user=user flash=flash>
+        <AppShell title=t(MessageKey::SettingsSectionName) user=user flash=flash unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
                     <li>{settings_breadcrumb}</li>
@@ -348,6 +349,7 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_settings(
     user: CurrentUser,
     wip_limit: Option<i64>,
@@ -355,6 +357,7 @@ pub fn render_settings(
     effective_today: Option<i64>,
     flash: Option<String>,
     error: Option<String>,
+    unread_count: i64,
 ) -> Html<String> {
     super::render_to_html(move || {
         view! {
@@ -365,6 +368,7 @@ pub fn render_settings(
                 effective_today=effective_today
                 flash=flash
                 error=error
+                unread_count=unread_count
             />
         }
     })
