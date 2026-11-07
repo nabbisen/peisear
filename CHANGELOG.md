@@ -43,6 +43,18 @@ instructions and reaching a working instance.
   on pull requests, scoped to the six paths that can break it — which
   includes pull requests from forks, the flow `CONTRIBUTING.md` actually
   instructs.
+- **A class a component writes now has to have a rule the product
+  serves, or name itself as a JavaScript hook.** `CSS-001` fixed the
+  stylesheet by hand; nothing checked the relationship afterward,
+  because `cargo build` runs nothing in `style/tailwindcss/` by design
+  (`DEC-051` — a self-hoster needs no Node), so the one thing between a
+  missing rule and silence was a README sentence that was true, correct
+  and useless for three weeks. `css_scan` now reads every `class="…"`,
+  `grow("…")` and `grow_text("…")` literal in
+  `crates/peisear-web/src/components/**/*.rs` and checks each token
+  against the three stylesheets the binary actually serves: 291 class
+  tokens examined, 2 recognised as `static/*.js` selector hooks rather
+  than style, 0 unexplained.
 
 ### Fixed
 

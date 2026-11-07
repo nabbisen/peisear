@@ -26,6 +26,8 @@ pub mod config;
 #[cfg(test)]
 mod contrast_scan;
 #[cfg(test)]
+mod css_scan;
+#[cfg(test)]
 mod dec_007_ci_scan;
 #[cfg(test)]
 mod dec_007_fs_scan;
