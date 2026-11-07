@@ -587,9 +587,19 @@ navigation diluted the user's sense of where to start.
 render, **by their own `MessageKey`**, inside the primary `<nav>`'s own block
 at full width; `settings_is_not_among_the_five` keeps the sixth entry this
 requirement does not list out of that block.
-*Status*: **Met (`NAV-001`, 2026-11-04)** — the five are a visible, labelled
-row at full width, collapsing below `md` behind one control labelled with a
-word rather than the reader's username.
+*Status*: **Met in the markup (`NAV-001`, 2026-11-04); met on the page
+(`CSS-001`, 2026-11-07)** — the five are a visible, labelled row at full
+width, collapsing below `md` behind one control labelled with a word rather
+than the reader's username.
+*Status corrected 2026-11-07.* It read **Met** from 2026-11-04, and the
+acceptance above — a render test over the markup — passed throughout. The
+page did not: `hidden md:flex` had no `md:flex` rule in the shipped
+stylesheet, so the primary `<nav>` computed `display: none` at **every**
+width, including 1920, and a reader saw one control labelled *Menu*. The
+markup met this requirement for three days while the product did not
+(`§10.52`, which is also why this line now names both dates). The
+acceptance is unchanged and still correct for what it checks; what it
+cannot check is whether a class the markup carries has a rule behind it.
 *Acceptance corrected 2026-11-04.* It read *"navigation renders five
 entries"* — **the requirement restated**, which `§10.35`'s own table already
 listed as a clause nobody can check, *"including its author."* And it was
@@ -6490,7 +6500,13 @@ entry's own named condition is met.
 
 Twelve times the architect recorded a status that the shipped code contradicted.
 Every one **understated** what ships or overstated what is complete within a
-scope that had since changed; none hid a defect from a user. The cost is where
+scope that had since changed; none hid a defect from a user. *(That sentence
+is still true of these twelve, and `§10.52` is why it needed checking: on
+2026-11-07 a status in this family did hide a defect from a user —
+`FR-NAV-001` read **Met** while the primary navigation computed
+`display: none` at every width. It is counted there, not appended here, so
+this entry's own invariant stays an invariant rather than becoming an
+average.)* The cost is where
 attention goes: *nobody checks a requirement they believe is done*, which is
 how `NFR-REL-007` and `FR-HLT-006` each carried a false `Implemented` for
 several releases.
@@ -8087,6 +8103,102 @@ it. `SUP-004` was explicitly forbidden from changing channel
 behaviour and was right not to; it documented the `SMTP_TLS_MODE`
 half plainly, which is how this was found. The `SMTP_PORT` half, and
 the cascade from port to TLS mode, are this entry's own addition.
+
+### 10.52 A shipped stylesheet that no test, scan or gate reads — and a documented rebuild that wrote where nothing was served — `CSS-001`, 0.61.0, 2026-11-07; found by the architect's own unit-two workflow walk
+
+**Measured on `main` at `3af2ba9`, in a real browser at four widths.**
+`<nav class="hidden md:flex …">` — the primary navigation `NAV-001`
+had shipped three days earlier — computed `display: none` at **390,
+768, 1280 and 1920**, with `matchMedia('(min-width: 768px)')` true at
+three of them. The `md:hidden` phone menu beside it computed `block`
+at all four. The cause is not the markup: the shipped stylesheet has
+no rule for either class.
+
+```
+$ grep -o '\.md\\:[a-z0-9-]*' crates/peisear-web/static/tailwind.css | sort -u
+.md\:grid-cols-2
+.md\:grid-cols-3
+```
+
+`crates/peisear-web/static/tailwind.css` is built ahead of time by a
+pinned standalone binary and committed (`ASSET-001`, `DEC-051`);
+`cargo build` runs nothing in `style/tailwindcss/`. Its content was
+last regenerated at `a539980`, **2026-10-07**. Every Tailwind utility
+a component has gained since then has no rule — measured as exactly
+three, by scanning all 258 static `class="…"` tokens in `crates/**/*.rs`
+against all three shipped sheets: **`md:flex`, `md:hidden` and
+`w-56`, all in `components/layout.rs`, all introduced by `96bd102`
+(`NAV-001`, 2026-11-04)**. On screen a 1920 px desktop showed
+`● peisear … Menu   Demo Account` and nothing else: no five
+destinations, no search input, no bell, no unread badge — the three
+outcomes that round reported, none of them rendered.
+
+**The mechanism, and it is a rename nobody finished.** `FIV-007`
+(0.53.0) moved `static/` to `crates/peisear-web/static/`. That commit
+checked the readers that resolve `static/` from `CARGO_MANIFEST_DIR`
+— `static_js_scan`'s `STATIC-001` guard, `dm_fallback_boundary_scan`,
+and the `static/*.js` prose scan — and recorded that all three
+followed the move and passed unchanged. **The two readers that
+resolve it from the repo root were not checked and were not updated**:
+`style/tailwindcss/README.md`'s documented rebuild wrote to
+`-o static/tailwind.css`, a path no longer served and no longer
+present, and `tailwind.config.js`'s own content glob `static/*.js`
+stopped seeing the four JavaScript files. For three weeks the
+documented regeneration procedure could be followed exactly and change
+nothing the product serves.
+
+**The second half, which only shows up when the first is fixed.**
+Regenerating with the glob as it stood would have *removed* four
+rules — `.blur`, `.opacity-50`, `.p-0`, `.pb-1` — because they are
+applied only by `static/*.js`, which that glob no longer reached.
+`style/tailwindcss/README.md` already names removals as the dangerous
+direction; it would have been right, and the regeneration would have
+traded a missing navbar for three utilities the undo toast and the
+drag surfaces apply at runtime. Fixing the output path without fixing
+the glob is worse than doing neither, and nothing said so.
+
+**The class this opens**: *an artefact that every page depends on, that
+is produced by a step outside `cargo build`, and that no test, scan or
+gate reads.* `§10.15` is its sibling for the shipped JavaScript — but
+the JavaScript has `static_js_scan`, `undo_toast_attachment_scan` and
+three browser gates between it and a silent break. The stylesheet has
+none of those, and the overflow gate — the one check that renders real
+pages — swept 120 cells green across the whole three days, because a
+navigation that is `display: none` overflows nothing.
+
+**Its relation to `§10.34`.** That entry's twelve instances share a
+property it states plainly: *none hid a defect from a user*. This one
+does. `FR-NAV-001`'s own `*Status*: Met (NAV-001, 2026-11-04)` was
+true of the markup and false of the page, through three review rounds
+in which the architect verified render tests, a required prop and a
+compile-error plant — every one of which reads Rust, and none of which
+can see a stylesheet. It is counted here rather than appended to
+`§10.34`'s twelve, so that entry's own sentence stays true.
+
+**Fixed here, in the same commit that opened the entry** (`CSS-001`,
+architect, directly applied): the config glob now reads
+`crates/peisear-web/static/*.js`; both documented paths name the file
+the binary serves; the stylesheet is regenerated — **zero rules
+removed, five added** (`md:flex`, `md:hidden`, `w-56`, and `transform`
+and `w-auto`, which the scan was not looking for), version banner
+unchanged, which is exactly the three-rule reading `style/tailwindcss/README.md`
+asks for. Re-measured in the browser afterwards: `display: flex` and
+4/4 links sized at 768, 1280 and 1920; `display: none` with the menu
+shown at 390. All three browser gates, `fmt`, `clippy`,
+`peisear-web --lib` and `mdbook build docs` green on real exit codes.
+**0.60.0 is unaffected** — `96bd102` is in no tag; the defect existed
+only on `main`, for three days.
+
+**What is not fixed, and is the whole point of the entry.** Nothing
+enforces the relationship between a class a component writes and a
+rule the shipped sheet carries. The same break recurs the next time
+anyone adds a utility and does not regenerate, and the next reader of
+`style/tailwindcss/README.md` is still the only guard. A `css_scan`
+over the static `class="…"` tokens is specified in
+`rfcs/handoffs/059-what-the-browser-actually-draws/` and is **not built
+here** — the fix above is deliberately the smallest thing that makes
+the product right, with the rule left to follow the design rather than
+precede it.
 
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0

@@ -2,8 +2,12 @@
 // not a Play CDN `tailwind.config` script tag. Run from the repo root
 // (`style/tailwindcss/bin/tailwindcss-linux-x64 -c
 // style/tailwindcss/tailwind.config.js -i style/tailwindcss/input.css
-// -o static/tailwind.css --minify`), so every path below is relative
-// to the repo root, not this directory.
+// -o crates/peisear-web/static/tailwind.css --minify`), so every path below is
+// relative to the repo root, not this directory -- and repo-root-relative is
+// exactly why `FIV-007`'s move of `static/` into `crates/peisear-web/` broke
+// both this file's own JS glob and that output path (`CSS-001`): the three
+// Rust scans that read `static/` resolve it from `CARGO_MANIFEST_DIR` and
+// followed the move; these two do not, and were not updated.
 //
 // `darkMode` is copied verbatim from the inline script this replaces
 // (`components/layout.rs`, pre-ASSET-001) -- same two-way toggle,
@@ -27,7 +31,7 @@
 module.exports = {
   content: [
     'crates/**/*.rs',
-    'static/*.js',
+    'crates/peisear-web/static/*.js',
   ],
   darkMode: ['class', '[data-theme="dark"]'],
   theme: {

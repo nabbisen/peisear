@@ -46,6 +46,19 @@ instructions and reaching a working instance.
 
 ### Fixed
 
+- **The navigation bar actually draws.** The three entries below changed
+  the markup correctly and changed nothing a reader could see: the
+  stylesheet the application serves is built ahead of time and committed,
+  it had not been rebuilt since 7 October, and the three classes the new
+  navigation needs had no rule in it. The primary row was therefore
+  hidden at *every* window width — a 1920 px desktop showed one button
+  marked **Menu** and nothing else, with no search box and no unread
+  badge anywhere. The stylesheet is rebuilt, and the two places that
+  document how to rebuild it now name the file the application really
+  serves; they had pointed at a path that stopped existing in `0.53.0`,
+  so following them exactly changed nothing. **Never released** — this
+  was only ever true of unreleased work.
+
 - **The five primary destinations are visible and named.** `Today`,
   `Inbox`, `Projects`, `Teams` and `Search` were specified as the
   navigation's five entry points, and four of them sat behind a menu

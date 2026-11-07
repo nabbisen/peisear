@@ -1,6 +1,7 @@
 # Vendored CSS — regeneration, not a build dependency
 
-`ASSET-001` (`DEC-051`): `static/tailwind.css` and `static/daisyui.min.css`
+`ASSET-001` (`DEC-051`): `crates/peisear-web/static/tailwind.css` and
+`crates/peisear-web/static/daisyui.min.css`
 are committed, built ahead of time, and shipped as-is. **`cargo build` does
 not run anything in this directory.** A self-hoster runs `cargo build` and
 gets a styled application with no Node, no npm, and no network access at
@@ -24,8 +25,8 @@ verified against the checksum above before it changes.
 
 ```bash
 curl -L "https://cdn.jsdelivr.net/npm/daisyui@<version>/dist/full.min.css" \
-  -o static/daisyui.min.css
-sha256sum static/daisyui.min.css   # compare against the table above; update it on a real bump
+  -o crates/peisear-web/static/daisyui.min.css
+sha256sum crates/peisear-web/static/daisyui.min.css   # compare against the table above; update it on a real bump
 ```
 
 **Do not run DaisyUI as a Tailwind plugin**, and do not prune its 32 themes
@@ -56,11 +57,22 @@ relative to it, not to this directory):
 ./style/tailwindcss/bin/tailwindcss-linux-x64 \
   -c style/tailwindcss/tailwind.config.js \
   -i style/tailwindcss/input.css \
-  -o static/tailwind.css \
+  -o crates/peisear-web/static/tailwind.css \
   --minify
 ```
 
-Commit the regenerated `static/tailwind.css`.
+Commit the regenerated `crates/peisear-web/static/tailwind.css`.
+
+**The output path is the file the binary serves, and nothing checks that it
+is** (`CSS-001`, 0.61.0). `FIV-007` moved `static/` to
+`crates/peisear-web/static/` and confirmed that the three Rust scans reading
+`static/` followed the move, because they resolve it from
+`CARGO_MANIFEST_DIR`. This file and `tailwind.config.js` resolve it from the
+repo root instead, and were not updated: for three weeks the documented
+rebuild wrote to a `static/tailwind.css` that no longer existed and that
+nothing served, so `NAV-001`'s `md:flex`/`md:hidden`/`w-56` had no rule and
+the primary navigation was `display:none` at every width. Changing either
+path means changing the other.
 
 ## Reading the diff — three rules will look unexplained
 
@@ -107,7 +119,7 @@ non-empty diff as something to explain, not paper over with one.
 
 Tailwind's content scanner tokenises raw file text, comments included. A CSS
 property or utility name written in a Rust comment — `flex-shrink`, `shrink`
-— becomes a rule in `static/tailwind.css` even when no markup uses it
+— becomes a rule in `crates/peisear-web/static/tailwind.css` even when no markup uses it
 (`LAYOUT-006` added two such rules by explaining a fix). So the vendored file
 is a **superset** of what the markup uses, not an inventory of it. When a
 regeneration diff shows a class appearing from nowhere, look for it in prose
