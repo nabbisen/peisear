@@ -46,6 +46,25 @@ instructions and reaching a working instance.
 
 ### Fixed
 
+- **The five primary destinations are visible and named.** `Today`,
+  `Inbox`, `Projects`, `Teams` and `Search` were specified as the
+  navigation's five entry points, and four of them sat behind a menu
+  labelled with the reader's own username while `Projects` was reachable
+  only by clicking the logo. They are now a labelled row, collapsing on
+  narrow screens behind a control labelled **Menu** rather than a name.
+  `Settings`, which was never one of the five, moved to the account menu.
+- **The notification control says what it is.** It was an icon with no
+  word; it now carries the word *Inbox*, and its accessible name matches
+  what is on screen — it had still said *"Notifications"*, the name the
+  page carried before it was renamed, so anyone using voice control asked
+  for one thing and the control answered to another.
+- **The unread badge is correct on every page.** It was computed on
+  fourteen of twenty-six authenticated page renders and silently assumed
+  to be zero on the other twelve — including `/today`, the first screen
+  after signing in, and the projects, issue, search and settings pages. A
+  reader with unread notifications saw nothing there. The count is now
+  required rather than defaulted, so a page cannot render without it.
+
 - **[Build from source](docs/getting-started/build-from-source.md) now
   teaches the step its title promises.** `install.md` told the reader
   that page *"clones the repository and builds from a checkout"* — and
