@@ -46,9 +46,9 @@ round 1 below.
 
 | ID | Handoff | Subject | Blocked on | State |
 |---|---|---|---|---|
-| CSS-002 | [a class with no rule](./CSS-002-a-class-with-no-rule.md) | `CSS-001` fixed the stylesheet and both documented paths, and **nothing enforces the relationship**: a utility class added to a component still has no rule until a person remembers to run a binary that `cargo build` never invokes. A `css_scan` over the static `class="…"` tokens, with a named allowlist for the classes that are JavaScript hooks rather than CSS | — | **Not started** |
-| FLOW-001 | [five seconds to find the undo](./FLOW-001-five-seconds-to-find-the-undo.md) | Every undo in the product is drawn in the corner furthest from the control that triggered it and is removed **5 000 ms** later, with no pause on hover and none on keyboard focus — measured in all four of `dm.js`, `board.js`, `calendar.js`, `plan.js`. For the reader the owner named, that is an affordance announced and withdrawn before it can be reached | — | **Not started** |
-| FLOW-002 | [the word on the door and the name inside](./FLOW-002-the-word-on-the-door.md) | Two of the five destinations are called one thing in the navigation and another on arrival — *Inbox* → **“Notifications”**, *Today* → **“My dashboard”** — and of the page titles in `en.rs`, five end with *“— peisear”* and the rest do not, so three of the product's own screens are called nothing but **“Calendar”**, **“Notifications”** and **“My dashboard”** in a tab strip, a bookmark or a history list | — | **Not started** |
+| CSS-002 **(no release number)** | [a class with no rule](./CSS-002-a-class-with-no-rule.md) | `CSS-001` fixed the stylesheet and both documented paths, and **nothing enforces the relationship**: a utility class added to a component still has no rule until a person remembers to run a binary that `cargo build` never invokes. A `css_scan` over the static `class="…"` tokens, with a named allowlist for the classes that are JavaScript hooks rather than CSS | — | **Not started** |
+| FLOW-001 | [five seconds to find the undo](./FLOW-001-five-seconds-to-find-the-undo.md) | Every undo is removed **5 000 ms** after it appears, with no pause on hover and none on keyboard focus — all four of `dm.js`, `board.js`, `calendar.js`, `plan.js`, and **WCAG 2.2.1**. The round pauses the timer on hover and on focus and does nothing else. **Its first direction — *delete the timer* — was reversed before it started**: each surface builds its own fixed-position container in the same corner, and two of them, measured, print over each other and cover the earlier Undo | — | **Not started** |
+| FLOW-002 | [the word on the door and the name inside](./FLOW-002-the-word-on-the-door.md) | *Inbox* arrives at **“Notifications”**, and of the page titles in `en.rs`, five end with *“— peisear”* and the rest do not, so three of the product's own screens are called nothing but **“Calendar”**, **“Notifications”** and **“My dashboard”** in a tab strip, a bookmark or a history list. **Narrowed before it started**: *Today* → **“My dashboard”** is the same defect, but renaming that heading before deciding what the page shows trades a mismatch for a broken promise | open question 1 for the `Today` half only | **Not started** |
 
 ---
 
@@ -61,20 +61,42 @@ README that was itself wrong for three weeks. The guard reads Rust and
 CSS, both already in the repository, and needs no browser — so it costs
 one scan and no CI minutes (`CSS-002`).
 
-**An undo must not expire while the reader is still looking for it.**
-The recommendation is to **delete the timer**, not to tune it: a toast
-that lives until it is replaced, dismissed, or the reader leaves the page
-is both simpler to explain and simpler code than a timer that pauses on
-hover and on focus and resumes correctly on both. *Less is more* applied
-to the mechanism rather than to the screen. The alternative — pause on
-hover and focus, floor raised — is recorded in the round because it is
-the one a reviewer would otherwise propose (`FLOW-001`).
+**An undo must not expire while the reader is still looking for it —
+and the smallest change that achieves it is the right one.** The timer
+pauses on hover and on keyboard focus. Nothing else changes.
+
+*This reverses what this file said when it was written.* It said **delete
+the timer**, on the argument that a toast living until it is replaced or
+dismissed is simpler code than one that pauses. **Measured, that argument
+is false**: each surface builds its own fixed-position container in the
+same corner, nothing clears another element's toast, and two of them
+overlap — both sentences printed over each other, the earlier Undo
+covered and unreachable by pointer (`FLOW-001` §2 carries the rects).
+**The 5-second timer is the only thing keeping that rare today**, so
+deleting it promotes a collision into the resting state and then needs a
+toast region, a cap and a dismiss control to undo the damage — more
+mechanism, not less. *Less is more* is a claim about the result, and it
+has to be measured like any other.
 
 **The word on the door is the name inside.** `FR-NAV-001` fixes the five
 words; the destinations must answer to them. A reader who clicks *Inbox*
 and arrives at *Notifications* is being asked to hold two names for one
 place, which is the precise cost `058` was authorized to remove
 (`FLOW-002`).
+
+**But a name is a promise, so it waits on what the page does.** *Today*
+→ *My dashboard* is the same defect and is **held back**: rename the
+heading while `components/me.rs` still renders no issue at all, and the
+reader stops holding two names and starts being promised their day by a
+page that shows two metric chips. The label follows the design, never the
+other way round — the same ordering this project applied to the demoted
+contrast rule.
+
+**A guard nobody outside this repository can see does not need a release
+number.** `CSS-002` lands under `[Unreleased]` like `054`'s own rounds
+did; the owner's acceptance of that convention on 2026-11-03 is three
+days older than this series, and `0.61.0`'s scope is the part a reader
+would notice.
 
 ---
 
@@ -92,7 +114,20 @@ softer, so the question is worth asking before that round lands:
 data is already computed for the calendar. Recommendation: yes, and as
 its own round, after `FLOW-002` — the naming is cheap and this is not.
 
-**2. The home screen's substance is behind three closed disclosures.**
+**2. Where does an outcome — and its undo — belong?**
+The outcome of a status change is announced **twice**: small grey text in
+the `role="status"` region directly under the control, and a cyan toast
+about 700 px away in the corner, which is the only copy carrying the
+**Undo**. The overlap `FLOW-001` §2 measures is a symptom of a toast
+built per acted-on element rather than per page; so is the distance. The
+candidate answer — **the undo belongs beside the thing it undoes, and
+the toast stops existing** — removes both by construction and is the
+real *less is more* here. It touches four surfaces' visual language, so
+it needs the unit-three reading of those surfaces and is **not** decided
+inside a timing fix. Recommendation: hold it for unit three, and let
+`FLOW-001` buy conformance in the meantime with two handler pairs.
+
+**3. The home screen's substance is behind three closed disclosures.**
 At 1280 px, `/today` occupies the top 290 px of a 900 px viewport and
 the left 40 % of the width; its section labels are the smallest, faintest
 text on the page, and under one of them (*RHYTHM*) nothing is visible at

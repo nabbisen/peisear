@@ -30,6 +30,11 @@ open tab might also be using.
 
 ## 2. The decision
 
+> **Scope narrowed 2026-11-07, before the round started, by the
+> architect's own re-reading at the owner's request.** It covered both
+> renames; it now covers **Inbox and the titles only**. Renaming
+> `/today`'s heading to *Today* is held back, and §3 says why.
+
 **The word on the door is the name inside.** `FR-NAV-001` fixes the five
 words — Today, Inbox, Projects, Teams, Search — so the destinations
 answer to them, in `<title>` and in `<h1>`.
@@ -49,13 +54,19 @@ after it.
   defect than this one. `NAV-001 r2` made exactly this call for the
   bell's label; make it the same way, and check each call site rather
   than renaming the key globally.
-- `PersonalDashboardTitle` becomes `Today`, with the existing subtitle
-  (*"Personal metrics for {name}. Visible only to you."*) carrying what
-  the old heading was really saying. **Read the open question in this
-  series' README first** — `/today` shows metrics and not the day's
-  work, and this rename makes that sharper. It is still the right
-  rename: the alternative is changing the navigation word, which
-  `FR-NAV-001` fixes.
+- **`PersonalDashboardTitle` is *not* renamed in this round.** The first
+  version of this handoff said it should become `Today`, noting that the
+  rename "makes that sharper" and calling it right anyway. On re-reading,
+  that is the wrong order. Today a reader clicks *Today* and arrives at
+  *My dashboard*: two names for one place, which at least tells them what
+  the page is. Rename it first and they click *Today*, arrive at *Today*,
+  and find two metric chips and no tasks — **one name, now making a
+  promise the page does not keep**, which is the worse of the two
+  confusions and the harder one to notice. `components/me.rs` renders no
+  issue at all; the day's planned block is on `/today/calendar`. So the
+  content decision (this series' README, open question 1) comes first and
+  the rename follows it, in whichever round answers it. The navigation
+  word stays as `FR-NAV-001` fixes it either way.
 - Every page title gains the ` — peisear` suffix. Build it **once**, not
   by editing twenty strings: a single helper that the shell applies, so
   the rule is in one place and a new page cannot forget it.
@@ -71,7 +82,12 @@ after it.
 - A test asserting, for each of the five entries `FR-NAV-001` names,
   that the navigation word and the destination's own `<h1>` are the
   **same string**, by `MessageKey` — not two literals that happen to
-  match today. This is the rule, and it is cheap: five pairs.
+  match today. This is the rule, and it is cheap: five pairs. **`Today`
+  is the one pair that will not hold yet**: assert the other four, and
+  record `Today` in the test by name as pending the content decision,
+  with the entry failing the moment that decision lands and the rename
+  does not. A rule with a silent exception is worse than four pairs and
+  a named fifth.
 - `peisear-i18n`'s own suite, including the fixture locale, which must
   stay deliberately distinct (`NAV-001 r2` read it correctly; read it
   the same way).
@@ -79,8 +95,7 @@ after it.
 
 ## 5. What this round must not do
 
-- **Do not change what `/today` renders.** The rename is cheap and the
-  content question is not; they are separate decisions and the owner has
-  the second one.
+- **Do not change what `/today` renders, and do not rename its heading.**
+  Both wait on the owner's answer to open question 1.
 - **Do not rename the five `Notification*` item strings.**
 - **Do not touch `FR-NAV-001`'s own five words.** They are specified.

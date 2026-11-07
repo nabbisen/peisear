@@ -2,7 +2,13 @@
 
 **Series**: `059` (unit two, user workflows). **Blocked on**: nothing.
 
-## 1. What was measured
+> **This round's direction was reversed on 2026-11-07, before it started,
+> by the architect's own re-reading at the owner's request.** The first
+> version said *delete the 5-second timer, it is less code than pausing
+> it*. That was wrong, and §2 below is the measurement that says so. The
+> round as it now stands is **smaller** than the one it replaces.
+
+## 1. The defect
 
 Four surfaces build an undo toast, and all four remove it on a fixed
 timer:
@@ -14,92 +20,104 @@ crates/peisear-web/static/calendar.js:244  }, 5000);
 crates/peisear-web/static/plan.js:309      }, 5000);
 ```
 
-`clearTimeout` appears in each file exactly once, inside `removeToast`
-— i.e. only when the toast is already being taken away. **There is no
-pause on hover and none on keyboard focus.** A reader who has Tabbed to
-the Undo button can have it removed from under their focus at 5 000 ms;
-`removeToast` then returns focus to the control, which is careful and
-correct handling of a situation that should not arise.
+`clearTimeout` appears once per file, inside `removeToast` — only when
+the toast is already being taken away. **There is no pause on hover and
+none on keyboard focus** (`grep` for `mouseenter|mouseleave|focusin|focusout`
+across `static/`: four hits, all of them comments). A reader who has
+Tabbed to Undo can have it removed from under their focus at 5 000 ms.
 
-Observed in the running product (issue detail, status changed from Open
-to In Progress, 1280 × 900): the outcome appears **twice** — once as
-small grey text directly under the status buttons, which is the
-`role="status"` live region, and once as a cyan toast in the **bottom
-right corner**, about 700 px diagonally from the control that was just
-pressed. **The Undo button exists only in the toast.**
+**WCAG 2.2.1 Timing Adjustable (Level A)**, and none of its exceptions
+applies: 5 000 ms is not essential, nothing here is real-time, and it is
+far under the twenty-hour exception. The owner's question of 2026-11-05
+named **elder people**; five seconds to notice a message in the opposite
+corner, read it, decide and reach it is an affordance announced to that
+reader rather than offered.
 
-`A11Y-004` already placed the toast in DOM order immediately after the
-acted-on control so that Undo is the next Tab stop, and
-`drag-outcome-gate.mjs` asserts that it really is. That work is good and
-this round must not undo it: the problem is not where the toast sits in
-the Tab order, it is that **both** the sighted path (find it in the far
-corner) and the keyboard path (press Tab once) are on a 5-second clock.
+## 2. Why deleting the timer is the wrong fix — measured
 
-## 2. The reader this is for
+Each surface keys its toast on the **acted-on element**, not on the page:
+`form._dmToast`, `card._boardToast`, `block._calToast`, `row._planToast`.
+Each creates **its own container**, `class="toast toast-end toast-bottom z-50"`
+(`dm.js:180` and its three siblings), and DaisyUI pins every such
+container to the same place — `.toast{position:fixed}`,
+`.toast:where(.toast-end){inset-inline-end:0}`,
+`.toast:where(.toast-bottom){bottom:0}`. **Nothing removes another
+element's toast when a new one appears**; there is no page-level sweep.
 
-The owner's question on 2026-11-05 named **elder people** specifically.
-Five seconds to notice a message in the opposite corner of the screen,
-read it, decide, and reach it, is not an affordance offered to that
-reader; it is an affordance announced to them. **WCAG 2.2.1 Timing
-Adjustable (Level A)** is the criterion, and none of its exceptions
-applies — the 5 000 ms is not essential, nothing is real-time, and it is
-far under the twenty-hour exception.
+Two toasts built exactly as `dm.js` builds them, measured in the running
+product at 1280 × 900:
+
+```
+first  { x: 955, y: 659, w: 310, h: 98 }
+second { x: 1001, y: 659, w: 265, h: 98 }
+overlap: true
+elementFromPoint at the shared centre -> "Moved to Done."   (the second)
+the first toast's own Undo button     -> covered: true, by the second's Undo
+```
+
+The two sentences print on top of each other and the two Undo buttons
+land on each other; the earlier one is **unreachable by pointer**.
+
+**So the 5-second timer is currently the only thing keeping simultaneous
+toasts rare.** Deleting it does not remove a mechanism — it promotes an
+occasional sub-five-second collision into the resting state after any two
+actions, and would then require a single toast *region* (one container,
+alerts appended, which is what DaisyUI's `flex-direction:column;gap:.5rem`
+is for) plus dismissal and a cap. That is **more** mechanism than exists
+today, and the first version of this round claimed the opposite without
+measuring it.
 
 ## 3. The decision
 
-**Delete the timer.** The toast lives until one of: Undo is pressed; the
-toast is dismissed; a new toast replaces it on the same surface (the
-code already keeps one per surface, via `form._dmToast` and its three
-siblings); or the reader leaves the page. No pause logic, no resume
-logic, no extend control, and **less code than today**, which is the
-test this project applies to a simplification.
+**Pause the timer while the reader is engaging with the toast; change
+nothing else.**
 
-**The alternative, recorded because a reviewer would otherwise raise
-it**: keep a timer, pause it on `mouseenter` and on `focusin`, resume
-on `mouseleave`/`focusout`, and raise the floor. That conforms too. It
-is rejected here because it adds four event handlers and two state
-transitions per surface — on four surfaces — to preserve a behaviour
-nobody has asked for, and because "it stays until you deal with it" is a
-sentence a reader can predict, while "it stays five seconds unless your
-pointer is over it" is not.
+- `mouseenter` / `focusin` on the toast → `clearTimeout`.
+- `mouseleave` / `focusout` → restart it.
 
-## 4. What to build
+That is the whole round. It satisfies **2.2.1**'s *pause* allowance, it
+cannot increase the number of simultaneous toasts beyond what today
+already produces (only a toast the reader is actively on outlives its
+five seconds), and it pre-empts no design decision.
 
-- Remove the `setTimeout`/`timer` pair from all four files. `removeToast`
-  keeps its `clearTimeout` guard only if a timer can still exist; if none
-  can, delete that too rather than leave a dead branch.
-- Keep: the DOM-order placement (`A11Y-004`), the focus restoration on
-  removal, the one-toast-per-surface replacement, and every string.
-- **The toast needs a dismiss affordance now that it does not expire.**
-  A close button inside the toast, labelled with a word through the
-  message table like everything else, meeting `touch_target_scan`'s own
-  44 px floor. It is the only new control in this round.
+**What is deliberately not decided here**: *where* an outcome and its
+undo should live. The outcome is currently announced **twice** — small
+grey text in the `role="status"` region directly under the control, and
+a cyan toast about 700 px away in the corner — and only the far copy
+carries the Undo. The better answer may well be that the undo belongs
+beside the thing it undoes and the toast should not exist at all; that
+removes the overlap by construction and is the real *less is more*. It
+is a **view** decision across four surfaces, it needs the unit-three
+reading of those surfaces, and it is recorded as a candidate in this
+series' README rather than smuggled into a timing fix.
 
-## 5. Acceptance
+## 4. Acceptance
 
-- The three browser gates stay green, and `drag-outcome-gate.mjs`'s own
-  *"Tab from the acted-on block lands on the undo button"* assertion is
-  **unchanged and still passing** — it is the proof that `A11Y-004`
-  survived this round.
-- A new browser-gate assertion is **not** what this round adds. The
-  honest check is in `undo_toast_attachment_scan`'s own territory: assert
-  from source that no `setTimeout` remains in the four files' toast
-  paths, and that each toast carries a dismiss control. Say plainly in
-  the round report that *"the toast is still present after N seconds"* is
-  **not** asserted by anything, and why: `DEC-048` condition 2 forbids a
-  wall-clock-dependent check, and a gate that sleeps to prove a timer is
-  gone is exactly that.
-- `peisear-i18n`'s own suite for the new label, including the fixture
-  locale.
-- `DEC-007` from → to, measured with the runner.
+- The four files each gain the two handler pairs and nothing else. No new
+  control, no markup change, no string change — **this round adds no
+  user-visible copy**.
+- `undo_toast_attachment_scan`'s existing assertions stay green and
+  unchanged; extend it to assert the pause handlers are attached in all
+  four files, which is a source-level fact it is already in the business
+  of checking.
+- **A browser-level assertion is warranted here and is not gate-widening
+  for its own sake.** `§10.32`'s closing note allows chasing an
+  unmeasured branch *"when a defect appears behind it"*, and one has:
+  `drag-outcome-gate.mjs` already reaches the toast and already asserts
+  Tab lands on Undo. Add, on the two surfaces it already drives, that
+  **the toast still exists after the timer would have fired while the
+  pointer is over it**. `DEC-048` condition 2 forbids wall-clock
+  dependence, so do **not** sleep 5 000 ms: make the duration a constant
+  the gate can read and drive it short, or assert the handler's effect on
+  the timer handle rather than the wall clock — and if neither is
+  possible without a sleep, say so in the round report and assert the
+  source-level fact only. **Do not add a `setTimeout` to the gate.**
+- `DEC-007` from → to, measured with the runner, never a grep.
 
-## 6. What this round must not do
+## 5. What this round must not do
 
-- **Do not move the toast.** Where the outcome is drawn relative to the
-  control that caused it is a real question — the live region and the
-  toast say the same sentence in two places — and it is a **view**
-  question, for unit three, not a workflow one. Changing both at once
-  would make neither measurable.
-- **Do not touch the `role="status"` live region**, its text, or its
-  visibility.
+- **Do not delete the timer**, and do not raise its 5 000 ms. Both are
+  decisions that belong with §3's deferred question, not here.
+- **Do not move the toast, re-home the Undo, or touch the
+  `role="status"` live region**, its text or its visibility.
 - Do not change what an undo *does*, on any surface.
