@@ -5,10 +5,12 @@ authorized on 2026-11-04 — *"one by one with time we need: App base
 layout(s), user workflows, and each view."* Unit one (`058`, the base
 layout) closed 2026-11-07. This series is the **user workflows**.
 
-**Nothing here is started.** The rounds below are specified and ready to
-authorize; `ROADMAP.md`'s *What ships next* decides which release pays
-for them, and a row there is not a release cut (`DEC-056`, and the
-two-approval rule above that table).
+**The row is authorized; no round has started.** The owner authorized
+`0.61.0` on **2026-11-07**, covering `FLOW-001` and `FLOW-002`;
+`CSS-002` carries no release number and lands under `[Unreleased]`.
+**Authorizing the row is not approving the cut** — that is a separate
+decision at Release cycle exit criterion 7, and `DEC-056`'s four legs
+run only after it.
 
 ---
 
