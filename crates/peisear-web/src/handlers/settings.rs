@@ -24,7 +24,7 @@ use axum::{
 };
 use chrono::NaiveDate;
 use peisear_i18n::{Field, Locale, MessageKey};
-use peisear_storage::{subjects::SubjectId, user_capacities, users};
+use peisear_storage::{notifications as notif_store, subjects::SubjectId, user_capacities, users};
 use serde::Deserialize;
 
 use crate::{
@@ -57,6 +57,7 @@ pub async fn page(
     // the user can see "this is what's in effect right now".
     let effective_today =
         user_capacities::effective_for_user(&state.db, &SubjectId::from(&rid)).await?;
+    let unread_count = notif_store::unread_count_for_user(&state.db, &rid).await?;
 
     Ok(components::settings::render_settings(
         user,
@@ -65,6 +66,7 @@ pub async fn page(
         effective_today,
         q.flash,
         q.error,
+        unread_count,
     ))
 }
 

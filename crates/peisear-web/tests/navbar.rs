@@ -157,15 +157,12 @@ async fn the_bells_accessible_name_contains_its_visible_label_with_no_unread() {
 /// which also names the count -- a reader who cannot see the badge
 /// still needs it.
 ///
-/// **`/teams`, not `/today`**: `handlers::me::page` (the `/today`
-/// handler) never calls `unread_count_for_user` at all and always
-/// passes `AppShell`'s own `unread_count` default of `0` -- found
-/// while writing this test, not something this round introduced or
-/// is fixing. `/teams`'s own `list_page` does thread it, correctly,
-/// so this test exercises the shape it names rather than a page that
-/// cannot produce it. Reported, not silently worked around; the
-/// standing exception (`058`'s own README) is why it earns a round
-/// rather than a fix folded in here.
+/// `/teams`, same as `/today` as of `NAV-001` round 3: both now
+/// thread the caller's own `unread_count` (round 3 made the prop
+/// required, so there is no path to `AppShell` that does not), so
+/// either page demonstrates the shape. Kept on `/teams` rather than
+/// moved, since the test's own contract (bell accessible name, not
+/// which page it's rendered from) hasn't changed.
 #[tokio::test]
 async fn the_bells_accessible_name_contains_its_visible_label_with_unread() {
     let app = TestApp::spawn().await;
@@ -186,5 +183,60 @@ async fn the_bells_accessible_name_contains_its_visible_label_with_unread() {
     assert!(
         accessible.contains("unread"),
         "the unread shape must still name the count for a reader who cannot see the badge: {accessible:?}"
+    );
+}
+
+/// The bell badge `<span class="badge ...">`'s own rendered count,
+/// within an already-scoped `nav` slice.
+fn badge_count(nav: &str) -> &str {
+    let marker = r#"badge badge-sm badge-primary"#;
+    let class_at = nav.find(marker).expect("bell badge span present");
+    let tag_end = nav[class_at..]
+        .find('>')
+        .map(|i| class_at + i + 1)
+        .expect("badge span opening tag closes");
+    let text_end = nav[tag_end..]
+        .find("</span>")
+        .map(|i| tag_end + i)
+        .expect("badge span has a closing </span>");
+    nav[tag_end..text_end].trim()
+}
+
+/// `NAV-001` round 3 (`§4a`): before this round `/today`'s own
+/// handler never called `unread_count_for_user` and always passed
+/// `AppShell`'s then-defaulted `unread_count` of `0` -- a seeded
+/// unread notification would have rendered no badge and the "no
+/// unread" accessible name regardless of the real count. Now that
+/// `unread_count` is required (no default to fall back to) and
+/// `handlers::me::page` threads the real query result, this seeds one
+/// unread notification and asserts both the badge and the bell's
+/// accessible name carry it, on `/today` specifically.
+#[tokio::test]
+async fn today_shows_the_real_unread_count_in_badge_and_accessible_name() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    insert_notification(&app, &user_id).await;
+
+    let resp = app.server.get("/today").await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+    let nav = primary_nav(&body);
+
+    assert_eq!(
+        badge_count(nav),
+        "1",
+        "/today's bell badge must carry the seeded unread count: {nav}"
+    );
+
+    let visible = Locale::English.render(MessageKey::NavLinkInbox);
+    let accessible = bell_aria_label(nav);
+    assert!(
+        accessible.contains(&visible),
+        "the bell's accessible name {accessible:?} must contain its visible label {visible:?}"
+    );
+    assert!(
+        accessible.contains("unread"),
+        "/today's accessible name must name the real count, not a defaulted zero: {accessible:?}"
     );
 }

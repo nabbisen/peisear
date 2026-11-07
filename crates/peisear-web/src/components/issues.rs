@@ -35,6 +35,7 @@ pub fn ProjectDetailPage(
     /// Currently-applied sort key: "priority" / "created" /
     /// "updated". Empty string = storage-default order.
     active_sort: String,
+    unread_count: i64,
 ) -> impl IntoView {
     let title = t(MessageKey::ProjectDetailPageTitle {
         project_name: project.name.clone(),
@@ -81,7 +82,7 @@ pub fn ProjectDetailPage(
     let back_link = super::breadcrumb::render_back_link(NavSection::Projects, "/projects");
 
     view! {
-        <AppShell title=title user=user flash=flash>
+        <AppShell title=title user=user flash=flash unread_count=unread_count>
             {breadcrumb}
             {back_link}
             <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
@@ -1170,6 +1171,7 @@ pub fn IssueNewPage(
     assignees: Vec<AssigneeOption>,
     workload: Vec<UserLoad>,
     flash: Option<String>,
+    unread_count: i64,
 ) -> impl IntoView {
     let title = t(MessageKey::IssueNewPageTitle {
         project_name: project.name.clone(),
@@ -1180,7 +1182,7 @@ pub fn IssueNewPage(
     let back_link_for_breadcrumb = back_link.clone();
 
     view! {
-        <AppShell title=title user=user flash=flash>
+        <AppShell title=title user=user flash=flash unread_count=unread_count>
             <div class="max-w-2xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
                     <li><a href="/projects" class=grow_text("")>{t(MessageKey::ProjectsSectionName)}</a></li>
@@ -1303,6 +1305,7 @@ pub fn SubIssueNewPage(
     statuses: Vec<IssueStatus>,
     assignees: Vec<AssigneeOption>,
     flash: Option<String>,
+    unread_count: i64,
 ) -> impl IntoView {
     let title = t(MessageKey::SubIssueNewPageTitle {
         parent_title: parent.title.clone(),
@@ -1318,7 +1321,7 @@ pub fn SubIssueNewPage(
     let parent_href_for_cancel = parent_href.clone();
 
     view! {
-        <AppShell title=title user=user flash=flash>
+        <AppShell title=title user=user flash=flash unread_count=unread_count>
             <div class="max-w-2xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
                     <li><a href="/projects" class=grow_text("")>{t(MessageKey::ProjectsSectionName)}</a></li>
@@ -1453,6 +1456,7 @@ pub fn IssueDetailPage(
     flash: Option<String>,
     editing: bool,
     move_context: ScheduleMoveContext,
+    unread_count: i64,
 ) -> impl IntoView {
     let title = t(MessageKey::IssueDetailPageTitle {
         issue_title: issue.title.clone(),
@@ -1694,7 +1698,7 @@ pub fn IssueDetailPage(
     };
 
     view! {
-        <AppShell title=title user=user flash=flash>
+        <AppShell title=title user=user flash=flash unread_count=unread_count>
             <div class="max-w-3xl mx-auto">
                 {super::breadcrumb::render_breadcrumb(breadcrumb_items)}
                 {super::breadcrumb::render_back_link(
@@ -2029,6 +2033,7 @@ pub fn render_project_detail(
     active_status: String,
     active_assignee: String,
     active_sort: String,
+    unread_count: i64,
 ) -> Html<String> {
     super::render_to_html(move || {
         view! {
@@ -2045,6 +2050,7 @@ pub fn render_project_detail(
                 active_status=active_status
                 active_assignee=active_assignee
                 active_sort=active_sort
+                unread_count=unread_count
             />
         }
     })
@@ -2059,10 +2065,11 @@ pub fn render_health_indicator_basis(
     project: Project,
     kind: peisear_core::project_health::IndicatorKind,
     issues: Vec<Issue>,
+    unread_count: i64,
 ) -> Html<String> {
     super::render_to_html(move || {
         view! {
-            <HealthIndicatorBasisPage user=user project=project kind=kind issues=issues/>
+            <HealthIndicatorBasisPage user=user project=project kind=kind issues=issues unread_count=unread_count/>
         }
     })
 }
@@ -2073,6 +2080,7 @@ fn HealthIndicatorBasisPage(
     project: Project,
     kind: peisear_core::project_health::IndicatorKind,
     issues: Vec<Issue>,
+    unread_count: i64,
 ) -> impl IntoView {
     let title = t(MessageKey::IndicatorBasisPageTitle {
         label: kind.to_i18n_label(),
@@ -2104,7 +2112,7 @@ fn HealthIndicatorBasisPage(
         .collect_view();
 
     view! {
-        <AppShell title=title.clone() user=user flash=None>
+        <AppShell title=title.clone() user=user flash=None unread_count=unread_count>
             <div class="max-w-2xl mx-auto">
                 <div class="breadcrumbs text-sm mb-2"><ul>
                     <li><a href="/projects" class=grow_text("")>{t(MessageKey::ProjectsSectionName)}</a></li>
@@ -2135,6 +2143,7 @@ fn HealthIndicatorBasisPage(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn render_issue_new(
     user: CurrentUser,
     project: Project,
@@ -2143,6 +2152,7 @@ pub fn render_issue_new(
     assignees: Vec<AssigneeOption>,
     workload: Vec<UserLoad>,
     flash: Option<String>,
+    unread_count: i64,
 ) -> Html<String> {
     super::render_to_html(move || {
         view! {
@@ -2154,6 +2164,7 @@ pub fn render_issue_new(
                 assignees=assignees
                 workload=workload
                 flash=flash
+                unread_count=unread_count
             />
         }
     })
@@ -2168,6 +2179,7 @@ pub fn render_new_sub_issue_form(
     project: Project,
     parent: Issue,
     assignees: Vec<AssigneeOption>,
+    unread_count: i64,
 ) -> Html<String> {
     super::render_to_html(move || {
         view! {
@@ -2179,6 +2191,7 @@ pub fn render_new_sub_issue_form(
                 statuses=IssueStatus::all().to_vec()
                 assignees=assignees
                 flash=None
+                unread_count=unread_count
             />
         }
     })
@@ -2218,6 +2231,7 @@ pub(crate) struct IssueDetailView {
     /// `handlers::calendar` already follows) so this component only
     /// lays out what it's given.
     pub move_context: ScheduleMoveContext,
+    pub unread_count: i64,
 }
 
 /// See `IssueDetailView::move_context`. `CAL-005`: the target day is
@@ -2254,6 +2268,7 @@ pub(crate) fn render_issue_detail(view: IssueDetailView) -> Html<String> {
                 flash=view.flash
                 editing=view.editing
                 move_context=view.move_context
+                unread_count=view.unread_count
             />
         }
     })
