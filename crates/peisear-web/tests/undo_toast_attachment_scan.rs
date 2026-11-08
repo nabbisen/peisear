@@ -117,8 +117,8 @@ fn assert_auto_remove_pauses_on_hover_and_focus(file: &str) {
     for (event, handler) in [
         ("mouseenter", "pauseAutoRemove"),
         ("focusin", "pauseAutoRemove"),
-        ("mouseleave", "resumeAutoRemove"),
-        ("focusout", "resumeAutoRemove"),
+        ("mouseleave", "resumeIfFocusNotInside"),
+        ("focusout", "resumeIfPointerNotOver"),
     ] {
         let needle = format!(r#"toast.addEventListener("{event}", {handler})"#);
         assert!(
@@ -148,6 +148,82 @@ fn plan_js_pauses_auto_remove_on_hover_and_focus() {
 #[test]
 fn calendar_js_pauses_auto_remove_on_hover_and_focus() {
     assert_auto_remove_pauses_on_hover_and_focus("calendar.js");
+}
+
+/// A nested function's own body, scoped from `function {name}(` to the
+/// next `    function ` declaration within `within` (or to `within`'s
+/// own end, if none follows) — the same windowed, not brace-matched,
+/// approach [`scoped_function`] uses for a whole file, narrowed to an
+/// already-scoped substring so it can isolate one of several sibling
+/// nested functions inside `showUndoToast`'s own body.
+fn scoped_inner_function<'a>(within: &'a str, name: &str) -> &'a str {
+    let start_marker = format!("function {name}(");
+    let start = within
+        .find(&start_marker)
+        .unwrap_or_else(|| panic!("no `{start_marker}` found"));
+    let after_start = start + start_marker.len();
+    let end = within[after_start..]
+        .find("\n    function ")
+        .map(|rel| after_start + rel)
+        .unwrap_or(within.len());
+    &within[start..end]
+}
+
+/// `FLOW-001` round 2 — each resume handler must check the *other*
+/// source's own live DOM truth before resuming (so releasing one does
+/// not resume the countdown while the other still holds it), and must
+/// clear any timer still running before starting a new one. A source
+/// scan cannot see behaviour — the browser assertion in
+/// `drag-outcome-gate.mjs` is the primary evidence for the property
+/// itself — this is the backstop that a future edit cannot drop one of
+/// the two guards while leaving the listener wiring untouched.
+fn assert_resume_checks_the_other_source(file: &str) {
+    let source = read_static(file);
+    let body = scoped_function(&source, "showUndoToast", "performUndo");
+
+    let focus_guard = scoped_inner_function(body, "resumeIfFocusNotInside");
+    assert!(
+        focus_guard.contains("toast.contains(document.activeElement)"),
+        "{file}: resumeIfFocusNotInside must not resume while focus is still \
+         inside the toast: {focus_guard}"
+    );
+    assert!(
+        focus_guard.contains("clearTimeout(current.timer)"),
+        "{file}: resumeIfFocusNotInside must clear any timer still running \
+         before starting a new one: {focus_guard}"
+    );
+
+    let pointer_guard = scoped_inner_function(body, "resumeIfPointerNotOver");
+    assert!(
+        pointer_guard.contains(r#"toast.matches(":hover")"#),
+        "{file}: resumeIfPointerNotOver must not resume while the pointer is \
+         still over the toast: {pointer_guard}"
+    );
+    assert!(
+        pointer_guard.contains("clearTimeout(current.timer)"),
+        "{file}: resumeIfPointerNotOver must clear any timer still running \
+         before starting a new one: {pointer_guard}"
+    );
+}
+
+#[test]
+fn dm_js_resume_checks_the_other_source() {
+    assert_resume_checks_the_other_source("dm.js");
+}
+
+#[test]
+fn board_js_resume_checks_the_other_source() {
+    assert_resume_checks_the_other_source("board.js");
+}
+
+#[test]
+fn plan_js_resume_checks_the_other_source() {
+    assert_resume_checks_the_other_source("plan.js");
+}
+
+#[test]
+fn calendar_js_resume_checks_the_other_source() {
+    assert_resume_checks_the_other_source("calendar.js");
 }
 
 /// `dm.js` — the issue list/detail status control. The acted-on

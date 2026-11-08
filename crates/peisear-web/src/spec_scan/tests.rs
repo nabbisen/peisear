@@ -621,6 +621,11 @@ fn test_count_citations_finds_both_bold_and_plain_counts_across_a_line_break() {
 /// a human did (`cargo test -p peisear-web --test
 /// undo_toast_attachment_scan -- --list`: 8), and this pin is updated
 /// to match rather than the citation left stale.
+///
+/// **`FLOW-001` round 2: both citations moved 8 → 12** -- the round's
+/// own four new tests pinning the two resume guards
+/// (`resumeIfFocusNotInside`/`resumeIfPointerNotOver`), checked against
+/// the runner *before* pushing this time (round 1's own §6 finding).
 #[test]
 fn test_count_citations_population_is_exactly_these_eight() {
     let input = real_input();
@@ -630,12 +635,12 @@ fn test_count_citations_population_is_exactly_these_eight() {
         vec![
             ("view_state".to_string(), 9),
             ("issue_edit_url".to_string(), 3),
-            ("undo_toast_attachment_scan".to_string(), 8),
+            ("undo_toast_attachment_scan".to_string(), 12),
             ("aggregate_privacy".to_string(), 13),
             ("optimistic_lock".to_string(), 22),
             ("updated_at_authority".to_string(), 4),
             ("chart_equivalence".to_string(), 5),
-            ("undo_toast_attachment_scan".to_string(), 8),
+            ("undo_toast_attachment_scan".to_string(), 12),
         ]
     );
 }

@@ -242,56 +242,102 @@ async function realTabPress(browser) {
 }
 
 // `FLOW-001` (`WCAG 2.2.1`): the toast's five-second auto-remove timer
-// pauses while the reader's pointer is over it, and resumes when they
-// leave. `DEC-048` condition 2 forbids a wall-clock-dependent gate, so
-// this does not sleep 5000ms to watch the toast survive past its own
-// timer -- it asserts the handler's own effect on the timer handle
-// instead: `_<surface>Toast.timer` goes `null` on a real hover and
-// becomes a new, truthy handle again on leaving (`crates/peisear-web/static/*.js`'s
-// own `pauseAutoRemove`/`resumeAutoRemove`, which this reads directly
-// rather than re-deriving). A real `Input.dispatchMouseEvent` (`mouseMoved`),
-// the same mechanism `undo-mousedown-trap.mjs` already uses, so the
+// pauses while the reader's pointer is over it or keyboard focus is
+// inside it, and resumes once *neither* holds it. `DEC-048` condition 2
+// forbids a wall-clock-dependent gate, so this does not sleep 5000ms to
+// watch the toast survive past its own timer -- it asserts the
+// handlers' own effect on the timer handle instead:
+// `_<surface>Toast.timer` goes `null` while held and becomes a new,
+// truthy handle again once released (`crates/peisear-web/static/*.js`'s
+// own `pauseAutoRemove`/`resumeIfFocusNotInside`/`resumeIfPointerNotOver`,
+// which this reads directly rather than re-deriving). Pointer
+// transitions use a real `Input.dispatchMouseEvent` (`mouseMoved`), the
+// same mechanism `undo-mousedown-trap.mjs` already uses, so the
 // browser's own native `mouseenter`/`mouseleave` fire -- not a
-// synthetic DOM event dispatched from page script.
+// synthetic DOM event dispatched from page script. Keyboard-focus
+// transitions inside this function use `.focus()`/`.blur()` via
+// `browser.eval` rather than a second real Tab press: the Tab-order
+// property itself is already covered by the real key press in the
+// caller's own step 3 (`realTabPress`), so this function is about the
+// *pause state*, not Tab order, and `.focus()`/`.blur()` is the cheap
+// direction `FLOW-001` round 2 §4 allows for it.
 //
-// Called after each surface's own Tab-order check, which already left
-// real keyboard focus *on* the undo button -- inside the toast, so the
-// same pause/resume pair this function is about to test for hover had
-// already fired once for focus (`focusin`), and the timer is still
-// paused from it. Blurring first isolates the hover signal from that
-// leftover keyboard one, rather than this function's own first
-// assertion failing on a timer that is correctly paused for a
-// different reason.
-async function assertAutoRemovePausesOnHover(browser, holderSel, toastProp, label) {
-  await browser.eval(`document.activeElement && document.activeElement.blur()`);
+// **`FLOW-001` round 1's own defect, re-entered through the case its
+// `blur()` stepped over**: entering this function, the caller's step 3
+// has just left real keyboard focus *on* the undo button, via a real
+// Tab press -- so the timer is already paused by focus alone, and
+// round 1's bug was that the pointer's own `mouseleave`, arriving while
+// that focus still held the toast, resumed the countdown underneath
+// it. This function tests that case directly (no `blur()` first), then
+// the mirrored one (pointer holds, focus enters and leaves).
+async function assertAutoRemovePauseHonorsBothSources(browser, holderSel, toastProp, label) {
+  const timerExpr = `document.querySelector('${holderSel}')${toastProp}.timer`;
+  const focusInsideExpr = `document.querySelector('${holderSel} .toast').contains(document.activeElement)`;
 
-  const before = await browser.eval(`document.querySelector('${holderSel}')${toastProp}.timer !== null`);
-  if (!before) {
-    throw new Error(`${label}: expected a running auto-remove timer before hovering, found none`);
+  const focusHoldsAlone = await browser.eval(`${timerExpr} === null && ${focusInsideExpr}`);
+  if (!focusHoldsAlone) {
+    throw new Error(`${label}: expected the Tab press just before this to leave focus inside the toast holding the timer paused`);
   }
 
   const rect = await browser.eval(
     `(() => { const r = document.querySelector('${holderSel} .toast').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`,
   );
-  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rect.x, y: rect.y });
 
-  const pausedTimer = await browser.eval(`document.querySelector('${holderSel}')${toastProp}.timer`);
-  if (pausedTimer !== null) {
-    throw new Error(`${label}: hovering the toast did not pause the auto-remove timer (timer was ${JSON.stringify(pausedTimer)})`);
+  // The pointer enters and leaves while focus still holds the toast.
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rect.x, y: rect.y });
+  const pausedDuringHoverWithFocus = await browser.eval(`${timerExpr} === null && ${focusInsideExpr}`);
+  if (!pausedDuringHoverWithFocus) {
+    throw new Error(`${label}: entering the toast while focused changed something it should not have`);
   }
-  log(`${label}: hovering the toast pauses the auto-remove timer`);
 
   await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
-
-  const resumedTimer = await browser.eval(`document.querySelector('${holderSel}')${toastProp}.timer`);
-  if (resumedTimer === null) {
-    throw new Error(`${label}: leaving the toast did not resume the auto-remove timer`);
+  const stillPausedAfterLeaveWithFocusHeld = await browser.eval(`${timerExpr} === null && ${focusInsideExpr}`);
+  if (!stillPausedAfterLeaveWithFocusHeld) {
+    throw new Error(
+      `${label}: leaving the toast resumed the auto-remove timer (or moved focus) while keyboard focus was still inside it -- the two-sources-one-latch bug FLOW-001 round 2 fixed`,
+    );
   }
-  log(`${label}: leaving the toast resumes the auto-remove timer`);
+  log(`${label}: the pointer leaving does not resume the timer while focus still holds it`);
+
+  // Release the one source still holding it.
+  await browser.eval(`document.activeElement && document.activeElement.blur()`);
+  const resumedAfterBlur = await browser.eval(timerExpr);
+  if (resumedAfterBlur === null) {
+    throw new Error(`${label}: blurring did not resume the auto-remove timer once nothing else held it`);
+  }
+  log(`${label}: blurring resumes the timer once nothing else holds it`);
+
+  // The mirrored case: the pointer holds the toast, and keyboard focus
+  // enters and leaves it.
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rect.x, y: rect.y });
+  const pausedByPointerAlone = await browser.eval(timerExpr);
+  if (pausedByPointerAlone !== null) {
+    throw new Error(`${label}: hovering the toast did not pause the auto-remove timer`);
+  }
+
+  await browser.eval(`document.querySelector('${holderSel} .toast button').focus()`);
+  const stillPausedAfterFocusEnterWithPointerHeld = await browser.eval(timerExpr);
+  if (stillPausedAfterFocusEnterWithPointerHeld !== null) {
+    throw new Error(`${label}: focusing the undo button while hovered changed the timer unexpectedly`);
+  }
+
+  await browser.eval(`document.activeElement && document.activeElement.blur()`);
+  const stillPausedAfterFocusLeaveWithPointerHeld = await browser.eval(timerExpr);
+  if (stillPausedAfterFocusLeaveWithPointerHeld !== null) {
+    throw new Error(`${label}: blurring resumed the auto-remove timer while the pointer was still over the toast -- the mirrored two-sources-one-latch bug`);
+  }
+  log(`${label}: keyboard focus entering and leaving does not resume the timer while the pointer still holds it`);
+
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
+  const resumedAfterPointerLeaves = await browser.eval(timerExpr);
+  if (resumedAfterPointerLeaves === null) {
+    throw new Error(`${label}: leaving the toast did not resume the auto-remove timer once nothing else held it`);
+  }
+  log(`${label}: leaving the toast resumes the timer once nothing else holds it`);
 
   const stillPresent = await browser.eval(`!!document.querySelector('${holderSel} .toast')`);
   if (!stillPresent) {
-    throw new Error(`${label}: the toast is no longer in the DOM after the hover/leave sequence`);
+    throw new Error(`${label}: the toast is no longer in the DOM after the hover/focus sequence`);
   }
 }
 
@@ -359,7 +405,7 @@ async function checkPlan(browser, jar, { projectId, teamSlug, sprintId }) {
   log('plan: Tab from the acted-on row lands on the undo button');
 
   // 4: the auto-remove timer pauses while hovered (`FLOW-001`).
-  await assertAutoRemovePausesOnHover(browser, HOLDER_SEL.plan, '._planToast', 'plan');
+  await assertAutoRemovePauseHonorsBothSources(browser, HOLDER_SEL.plan, '._planToast', 'plan');
 }
 
 async function checkCalendar(browser, jar, { projectId, calIssueId }) {
@@ -408,7 +454,7 @@ async function checkCalendar(browser, jar, { projectId, calIssueId }) {
   log('calendar: Tab from the acted-on block lands on the undo button');
 
   // 4: the auto-remove timer pauses while hovered (`FLOW-001`).
-  await assertAutoRemovePausesOnHover(browser, HOLDER_SEL.calendar, '._calToast', 'calendar');
+  await assertAutoRemovePauseHonorsBothSources(browser, HOLDER_SEL.calendar, '._calToast', 'calendar');
 }
 
 async function main() {
