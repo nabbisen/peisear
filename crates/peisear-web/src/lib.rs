@@ -44,6 +44,8 @@ pub mod jobs;
 #[cfg(test)]
 mod one_encoder_scan;
 #[cfg(test)]
+mod page_title_scan;
+#[cfg(test)]
 mod prose_scan;
 #[cfg(test)]
 mod scan_support;

@@ -110,10 +110,18 @@ pub fn InboxPage(
     };
 
     let row_views = items.into_iter().map(render_row).collect_view();
-    let notifications_heading = t(MessageKey::NotificationsSectionName);
+    // `FLOW-002`: the page is reached by clicking `Inbox`
+    // (`NavLinkInbox`) in the primary nav, so its own title and
+    // heading answer to that word, not `NotificationsSectionName` —
+    // which still correctly names the *items* this page lists
+    // (notifications), not the destination itself. Other call sites
+    // of `NotificationsSectionName` (e.g. the settings breadcrumb back
+    // to this page) are unaffected; only this page's own title/heading
+    // moved.
+    let notifications_heading = t(MessageKey::NavLinkInbox);
 
     view! {
-        <AppShell title=t(MessageKey::NotificationsSectionName)
+        <AppShell title=t(MessageKey::NavLinkInbox)
                   user=user
                   flash=flash
                   unread_count=unread_count>

@@ -96,6 +96,17 @@ instructions and reaching a working instance.
   keyboard focus inside it — `WCAG 2.2.1 Timing Adjustable`. The timer
   now pauses while a reader is hovering or focused on the toast and
   resumes when they leave; nothing else about the toast changes.
+- **The Inbox answers to its own name, and every page title says what
+  application it belongs to.** Clicking *Inbox* in the navigation
+  landed on a page titled and headed *Notifications* — the name the
+  destination carried before `NAV-001` renamed the control itself; the
+  items in the inbox are still called notifications, only the
+  destination's own title and heading changed. Every page title now
+  also ends with *"— peisear"*, so a tab, a bookmark, or a history
+  entry for *Calendar* or *My dashboard* says which product it's from;
+  five titles that already carried the suffix by hand are unchanged in
+  what a reader sees. `Today` → *My dashboard* is not renamed in this
+  round; it waits on a content decision for `/today` itself.
 
 - **[Build from source](docs/getting-started/build-from-source.md) now
   teaches the step its title promises.** `install.md` told the reader
