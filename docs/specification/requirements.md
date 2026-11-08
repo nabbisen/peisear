@@ -1889,7 +1889,7 @@ blind spot: it does not catch a single word standing alone.
 **FR-DM-006 — Undo window**
 A completed direct manipulation SHOULD offer a brief undo affordance
 (approximately five seconds).
-*Source*: `SPEC §39.2`. *Acceptance*: `undo_toast_attachment_scan` (8) — a
+*Source*: `SPEC §39.2`. *Acceptance*: `undo_toast_attachment_scan` (12) — a
 source scan — plus `browser-checks/undo-mousedown-trap.mjs` for the
 click-not-drag property and, from 0.47.0,
 `browser-checks/drag-outcome-gate.mjs` for the **Tab order on two of the four
@@ -1909,7 +1909,7 @@ necessary is present on exactly the three draggable surfaces and absent on
 the one with no drag source to guard against.
 *What pins this status, and what it does not pin* (`DM-TEST-001`,
 `DM-TEST-002`, 0.44.0). Two instruments, and the split between them matters:
-**`undo_toast_attachment_scan`** (8 tests) reads `static/*.js` and asserts
+**`undo_toast_attachment_scan`** (12 tests) reads `static/*.js` and asserts
 that `showUndoToast` still appends the button into `alertBox`, `alertBox` into
 `toast`, and `toast` onto the element the function was **given** — bound to
 the function's own first parameter, so a rename cannot slip past it. **It is a
@@ -5172,7 +5172,7 @@ recorded in the guarding test's own doc comment rather than built for.
 > project**. **If it is ever wanted, that is the owner's capability decision.**
 >
 > **And the companion instrument is a scan, not an execution.**
-> `undo_toast_attachment_scan` (8 tests) reads `static/*.js` and pins what
+> `undo_toast_attachment_scan` (12 tests) reads `static/*.js` and pins what
 > `showUndoToast` is **written** to do. It is in this entry's class, not out
 > of it: if the chain were correct and something else detached the toast, it
 > would still pass. `FR-DM-006` names both instruments and this limit in its

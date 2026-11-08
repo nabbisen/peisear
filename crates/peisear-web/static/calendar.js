@@ -257,8 +257,8 @@
     // what Undo does.
     toast.addEventListener("mouseenter", pauseAutoRemove);
     toast.addEventListener("focusin", pauseAutoRemove);
-    toast.addEventListener("mouseleave", resumeAutoRemove);
-    toast.addEventListener("focusout", resumeAutoRemove);
+    toast.addEventListener("mouseleave", resumeIfFocusNotInside);
+    toast.addEventListener("focusout", resumeIfPointerNotOver);
 
     function pauseAutoRemove() {
       var current = block._calToast;
@@ -267,9 +267,31 @@
       current.timer = null;
     }
 
-    function resumeAutoRemove() {
+    // `FLOW-001` round 2: two independent sources (pointer, keyboard
+    // focus) share this one piece of state (`current.timer`), so
+    // releasing either must not resume the countdown while the other
+    // still holds it. `mouseleave` checks whether focus is still
+    // inside the toast -- `document.activeElement` is trustworthy here
+    // because no focus change is in flight during a pointer event;
+    // `focusout` checks whether the pointer is still over the toast
+    // (`:hover`) for the same reason, read during a focus event rather
+    // than a pointer one. Each handler asks the DOM for the other
+    // source's own live truth -- no `relatedTarget`, no hover flag, no
+    // state machine; the DOM already keeps this correctly.
+    // `clearTimeout` before reassigning guards the second consequence
+    // of the old shared-latch bug: two resumes in a row used to leave
+    // two pending removals, the earlier one winning.
+    function resumeIfFocusNotInside() {
       var current = block._calToast;
-      if (!current) return;
+      if (!current || toast.contains(document.activeElement)) return;
+      clearTimeout(current.timer);
+      current.timer = startAutoRemoveTimer();
+    }
+
+    function resumeIfPointerNotOver() {
+      var current = block._calToast;
+      if (!current || toast.matches(":hover")) return;
+      clearTimeout(current.timer);
       current.timer = startAutoRemoveTimer();
     }
 
