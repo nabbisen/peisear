@@ -103,6 +103,53 @@ fn assert_undo_is_appended_after_the_acted_on_element(file: &str) {
     );
 }
 
+/// `FLOW-001` (WCAG 2.2.1 Timing Adjustable) — the four auto-remove
+/// pause/resume handlers must be attached to `toast` itself, inside
+/// `showUndoToast`'s own body. A source-level fact, the same shape
+/// [`assert_undo_is_appended_after_the_acted_on_element`] already
+/// checks: it cannot see that hovering actually clears the pending
+/// timeout (that needs the browser, see `drag-outcome-gate.mjs`), but
+/// it can see that all four listeners are wired to the right element.
+fn assert_auto_remove_pauses_on_hover_and_focus(file: &str) {
+    let source = read_static(file);
+    let body = scoped_function(&source, "showUndoToast", "performUndo");
+
+    for (event, handler) in [
+        ("mouseenter", "pauseAutoRemove"),
+        ("focusin", "pauseAutoRemove"),
+        ("mouseleave", "resumeAutoRemove"),
+        ("focusout", "resumeAutoRemove"),
+    ] {
+        let needle = format!(r#"toast.addEventListener("{event}", {handler})"#);
+        assert!(
+            body.contains(needle.as_str()),
+            "{file}: showUndoToast must attach `{needle}` so the five-second \
+             auto-remove pauses while the reader is on the toast (pointer or \
+             keyboard focus) and resumes when they leave: {body}"
+        );
+    }
+}
+
+#[test]
+fn dm_js_pauses_auto_remove_on_hover_and_focus() {
+    assert_auto_remove_pauses_on_hover_and_focus("dm.js");
+}
+
+#[test]
+fn board_js_pauses_auto_remove_on_hover_and_focus() {
+    assert_auto_remove_pauses_on_hover_and_focus("board.js");
+}
+
+#[test]
+fn plan_js_pauses_auto_remove_on_hover_and_focus() {
+    assert_auto_remove_pauses_on_hover_and_focus("plan.js");
+}
+
+#[test]
+fn calendar_js_pauses_auto_remove_on_hover_and_focus() {
+    assert_auto_remove_pauses_on_hover_and_focus("calendar.js");
+}
+
 /// `dm.js` — the issue list/detail status control. The acted-on
 /// element is the status `<form>` itself; since a `<form>` with a
 /// toast appended as a child could interact oddly with form

@@ -182,11 +182,41 @@
     // bottom-right and takes no space in the layout it now sits inside.
     card.appendChild(toast);
 
-    var timer = setTimeout(function () {
-      removeToast(card);
-    }, 5000);
+    function startAutoRemoveTimer() {
+      return setTimeout(function () {
+        removeToast(card);
+      }, 5000);
+    }
 
-    card._boardToast = { el: toast, timer: timer };
+    // `FLOW-001` (WCAG 2.2.1 Timing Adjustable): the toast still removes
+    // itself after five seconds, but the five seconds stops counting
+    // while the reader is on it -- pointer or keyboard focus, either
+    // pauses it, and leaving resumes it. `mouseenter`/`mouseleave` fire
+    // only on this element's own boundary, not per descendant;
+    // `focusin`/`focusout` bubble from the one focusable child (the
+    // Undo button) -- both are exactly "is the reader engaging with
+    // this toast", with no `relatedTarget` check needed. Nothing else
+    // about the toast changes: not its position, not its text, not
+    // what Undo does.
+    toast.addEventListener("mouseenter", pauseAutoRemove);
+    toast.addEventListener("focusin", pauseAutoRemove);
+    toast.addEventListener("mouseleave", resumeAutoRemove);
+    toast.addEventListener("focusout", resumeAutoRemove);
+
+    function pauseAutoRemove() {
+      var current = card._boardToast;
+      if (!current) return;
+      clearTimeout(current.timer);
+      current.timer = null;
+    }
+
+    function resumeAutoRemove() {
+      var current = card._boardToast;
+      if (!current) return;
+      current.timer = startAutoRemoveTimer();
+    }
+
+    card._boardToast = { el: toast, timer: startAutoRemoveTimer() };
   }
 
   // Undo has no form to fall back to mid-gesture, so on failure this

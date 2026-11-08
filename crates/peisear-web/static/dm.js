@@ -204,11 +204,41 @@
     // bottom-right and takes no space in the layout it now sits inside.
     form.insertAdjacentElement("afterend", toast);
 
-    var timer = setTimeout(function () {
-      removeToast(form);
-    }, 5000);
+    function startAutoRemoveTimer() {
+      return setTimeout(function () {
+        removeToast(form);
+      }, 5000);
+    }
 
-    form._dmToast = { el: toast, timer: timer };
+    // `FLOW-001` (WCAG 2.2.1 Timing Adjustable): the toast still removes
+    // itself after five seconds, but the five seconds stops counting
+    // while the reader is on it -- pointer or keyboard focus, either
+    // pauses it, and leaving resumes it. `mouseenter`/`mouseleave` fire
+    // only on this element's own boundary, not per descendant;
+    // `focusin`/`focusout` bubble from the one focusable child (the
+    // Undo button) -- both are exactly "is the reader engaging with
+    // this toast", with no `relatedTarget` check needed. Nothing else
+    // about the toast changes: not its position, not its text, not
+    // what Undo does.
+    toast.addEventListener("mouseenter", pauseAutoRemove);
+    toast.addEventListener("focusin", pauseAutoRemove);
+    toast.addEventListener("mouseleave", resumeAutoRemove);
+    toast.addEventListener("focusout", resumeAutoRemove);
+
+    function pauseAutoRemove() {
+      var current = form._dmToast;
+      if (!current) return;
+      clearTimeout(current.timer);
+      current.timer = null;
+    }
+
+    function resumeAutoRemove() {
+      var current = form._dmToast;
+      if (!current) return;
+      current.timer = startAutoRemoveTimer();
+    }
+
+    form._dmToast = { el: toast, timer: startAutoRemoveTimer() };
   }
 
   // Shared by the original change and undo (a second call to this

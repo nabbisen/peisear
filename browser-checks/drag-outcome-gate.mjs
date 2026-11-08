@@ -241,6 +241,60 @@ async function realTabPress(browser) {
   await browser.send('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
 }
 
+// `FLOW-001` (`WCAG 2.2.1`): the toast's five-second auto-remove timer
+// pauses while the reader's pointer is over it, and resumes when they
+// leave. `DEC-048` condition 2 forbids a wall-clock-dependent gate, so
+// this does not sleep 5000ms to watch the toast survive past its own
+// timer -- it asserts the handler's own effect on the timer handle
+// instead: `_<surface>Toast.timer` goes `null` on a real hover and
+// becomes a new, truthy handle again on leaving (`crates/peisear-web/static/*.js`'s
+// own `pauseAutoRemove`/`resumeAutoRemove`, which this reads directly
+// rather than re-deriving). A real `Input.dispatchMouseEvent` (`mouseMoved`),
+// the same mechanism `undo-mousedown-trap.mjs` already uses, so the
+// browser's own native `mouseenter`/`mouseleave` fire -- not a
+// synthetic DOM event dispatched from page script.
+//
+// Called after each surface's own Tab-order check, which already left
+// real keyboard focus *on* the undo button -- inside the toast, so the
+// same pause/resume pair this function is about to test for hover had
+// already fired once for focus (`focusin`), and the timer is still
+// paused from it. Blurring first isolates the hover signal from that
+// leftover keyboard one, rather than this function's own first
+// assertion failing on a timer that is correctly paused for a
+// different reason.
+async function assertAutoRemovePausesOnHover(browser, holderSel, toastProp, label) {
+  await browser.eval(`document.activeElement && document.activeElement.blur()`);
+
+  const before = await browser.eval(`document.querySelector('${holderSel}')${toastProp}.timer !== null`);
+  if (!before) {
+    throw new Error(`${label}: expected a running auto-remove timer before hovering, found none`);
+  }
+
+  const rect = await browser.eval(
+    `(() => { const r = document.querySelector('${holderSel} .toast').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`,
+  );
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rect.x, y: rect.y });
+
+  const pausedTimer = await browser.eval(`document.querySelector('${holderSel}')${toastProp}.timer`);
+  if (pausedTimer !== null) {
+    throw new Error(`${label}: hovering the toast did not pause the auto-remove timer (timer was ${JSON.stringify(pausedTimer)})`);
+  }
+  log(`${label}: hovering the toast pauses the auto-remove timer`);
+
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
+
+  const resumedTimer = await browser.eval(`document.querySelector('${holderSel}')${toastProp}.timer`);
+  if (resumedTimer === null) {
+    throw new Error(`${label}: leaving the toast did not resume the auto-remove timer`);
+  }
+  log(`${label}: leaving the toast resumes the auto-remove timer`);
+
+  const stillPresent = await browser.eval(`!!document.querySelector('${holderSel} .toast')`);
+  if (!stillPresent) {
+    throw new Error(`${label}: the toast is no longer in the DOM after the hover/leave sequence`);
+  }
+}
+
 async function pollUntil(fn, timeoutMs, label) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -303,6 +357,9 @@ async function checkPlan(browser, jar, { projectId, teamSlug, sprintId }) {
     throw new Error('plan: Tab from the acted-on row did not land on the undo button');
   }
   log('plan: Tab from the acted-on row lands on the undo button');
+
+  // 4: the auto-remove timer pauses while hovered (`FLOW-001`).
+  await assertAutoRemovePausesOnHover(browser, HOLDER_SEL.plan, '._planToast', 'plan');
 }
 
 async function checkCalendar(browser, jar, { projectId, calIssueId }) {
@@ -349,6 +406,9 @@ async function checkCalendar(browser, jar, { projectId, calIssueId }) {
     throw new Error('calendar: Tab from the acted-on block did not land on the undo button');
   }
   log('calendar: Tab from the acted-on block lands on the undo button');
+
+  // 4: the auto-remove timer pauses while hovered (`FLOW-001`).
+  await assertAutoRemovePausesOnHover(browser, HOLDER_SEL.calendar, '._calToast', 'calendar');
 }
 
 async function main() {
