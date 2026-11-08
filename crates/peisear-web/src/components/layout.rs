@@ -35,6 +35,22 @@ use super::{grow, grow_text, t};
 /// same-specificity conflict (`app.css`'s own `.line-clamp-2` and
 /// Tailwind's native utility of the same name both exist) resolves
 /// the same way it did before.
+/// `FLOW-002`: every page title names the product, in a tab strip, a
+/// bookmark, or a history list where the title is the only thing that
+/// survives. Applied once, here — the one place [`Base`] renders
+/// `<title>` — rather than baked into each of the title-producing
+/// `MessageKey` strings themselves, which is how five of them had
+/// already drifted into carrying it by hand (`ErrorPageTitle`,
+/// `ProjectsListPageTitle`, `ProjectNewPageTitle`, `ProjectEditPageTitle`,
+/// `ProjectDetailPageTitle`, `LoginPageTitle`, `RegisterPageTitle` — all
+/// now bare, the suffix stripped so this doesn't double it). A raw,
+/// non-`MessageKey` title (`team_name`, `sprint_name`, a confirmation
+/// page's own heading) gets the same treatment for free, by
+/// construction, which a per-string convention could not guarantee.
+pub(crate) fn with_product_suffix(title: impl Into<String>) -> String {
+    format!("{} — {}", title.into(), t(MessageKey::AppBrandName))
+}
+
 #[component]
 pub fn Base(
     /// Page title shown in `<title>` and browser tab.
@@ -48,7 +64,7 @@ pub fn Base(
             <head>
                 <meta charset="utf-8"/>
                 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-                <title>{title}</title>
+                <title>{with_product_suffix(title)}</title>
                 <link href="/static/daisyui.min.css" rel="stylesheet"/>
                 <link rel="stylesheet" href="/static/app.css"/>
                 <link href="/static/tailwind.css" rel="stylesheet"/>

@@ -643,6 +643,15 @@ jobs:
           fi
           echo "issue_edit_url: requirements.md's own citation ($cited_list) matches the runner ($got)"
 
+  test-peisear-web-nav-destination-naming:
+    name: peisear-web / nav_destination_naming
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test -p peisear-web --test nav_destination_naming -- --test-threads=1
+
   test-peisear-web-navbar:
     name: peisear-web / navbar
     runs-on: ubuntu-latest
@@ -1069,6 +1078,7 @@ jobs:
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test health_explainability -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test inbox_refinements -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test issue_edit_url -- --test-threads=1"
+      - run: "cargo test -p peisear-web --no-default-features --features postgres --test nav_destination_naming -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test navbar -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test optimistic_lock -- --test-threads=1"
       - run: "cargo test -p peisear-web --no-default-features --features postgres --test optimistic_lock_atomicity -- --test-threads=1"
