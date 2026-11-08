@@ -89,6 +89,13 @@ instructions and reaching a working instance.
   after signing in, and the projects, issue, search and settings pages. A
   reader with unread notifications saw nothing there. The count is now
   required rather than defaulted, so a page cannot render without it.
+- **An undo can no longer disappear while a reader is still on it.**
+  Every undo toast (moving an issue on the board, the sprint plan, or a
+  calendar; changing an issue's status) removed itself five seconds
+  after it appeared, with no pause for a pointer resting on it or
+  keyboard focus inside it — `WCAG 2.2.1 Timing Adjustable`. The timer
+  now pauses while a reader is hovering or focused on the toast and
+  resumes when they leave; nothing else about the toast changes.
 
 - **[Build from source](docs/getting-started/build-from-source.md) now
   teaches the step its title promises.** `install.md` told the reader
