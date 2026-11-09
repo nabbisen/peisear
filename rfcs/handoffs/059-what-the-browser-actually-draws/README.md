@@ -59,6 +59,13 @@ round 1 below.
 
 ---
 
+## The release candidate
+
+`0.61.0`'s candidate is assembled and its recommendation issued:
+[`REL-0.61.0-release-candidate.md`](./REL-0.61.0-release-candidate.md).
+**The cut is not approved** — exit criterion 7 is the owner's, and it is
+a different decision from the row authorized on 2026-11-07.
+
 ## Rounds
 
 | ID | Handoff | Subject | Blocked on | State |
