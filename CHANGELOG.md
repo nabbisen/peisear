@@ -11,11 +11,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-**The guard `0.60.0` shipped without, and the page `install.md` said
-would clone.** Two rounds of `054` landed after that cut rather than
-before it, so they wait here for whichever release is cut next. Neither
-changes behaviour; both are about a reader following written
-instructions and reaching a working instance.
+*Candidate written 2026-11-09. The heading is renamed and dated **on the
+day the tag is pushed**, not today — `0.60.0` is the release where those
+two days first diverged and the section said the wrong one.*
+
+**The first screen you meet.** Five destinations — Today, Inbox,
+Projects, Teams, Search — were specified as this product's primary
+navigation and four of them sat behind a menu labelled with your own
+name, while Projects was reachable only by clicking the logo. They are
+now a labelled row, the notification control carries the word *Inbox*
+instead of an unlabelled bell, its unread badge is right on every page
+rather than on fourteen of twenty-six, and the destination you click
+answers to the name you clicked. This is the first release since
+`0.46.0` whose subject is a screen a user of this tracker looks at.
+
+**It is also the release where a guard caught us having shipped nothing
+at all.** The navigation above was written on 4 November and could not
+be seen: the stylesheet this product serves is built ahead of time and
+committed, it had not been rebuilt since 7 October, and the three
+classes the new row needs had no rule in it — so the row was hidden at
+*every* window width, including a 1920 px desktop, which showed one
+button marked **Menu** and nothing else. **No released version ever
+carried that**; it existed on the development branch for three days.
+The fix is here, and so is the check that makes the next one impossible
+to miss: a class a component writes must now have a rule the product
+serves, or say in one named place that it is a JavaScript hook.
+
+**And an undo can no longer be taken away while you are reaching for
+it.** Every undo in this product sat on a five-second timer that did not
+stop for a pointer resting on it or for keyboard focus inside it. It
+stops now — for either — and starts again only once both have let go.
+
+Two rounds of `054` also land here, having missed `0.60.0`'s own cut:
+both are about a reader following written instructions and reaching a
+working instance.
 
 ### Added
 
@@ -130,8 +159,6 @@ instructions and reaching a working instance.
   test coverage, reporting any *change* to that set rather than judging
   whether a claim is true, so a new one cannot be written unnoticed.
 
-### Fixed
-
 - **`peisear-storage`'s dialect module no longer tells a reader that
   conditional compilation lives in two files.** It lives in eleven, at 22
   sites, fourteen of them production query pairs — a second,
@@ -159,6 +186,48 @@ instructions and reaching a working instance.
   Install *"covers all three paths in full"* while that section held
   four, so the heading was what disagreed with the document — the
   block's position, order and commands are unchanged.
+
+### What this release does not fix
+
+- **`/today` is still called *My dashboard*, and still shows no work.**
+  Every other destination now answers to the word on the control that
+  led there; this one does not, deliberately. Renaming it before
+  deciding what the page shows would trade *two names for one place*
+  for *one name making a promise the page does not keep* — the page
+  renders metrics about your work and never the work itself, while the
+  day's planned block lives one click away on the calendar. The rename
+  and the content question travel together, and the content question is
+  not answered here. A test asserts the two names still differ, so this
+  cannot be quietly resolved without the entry that describes it
+  (`NFR-A11Y-012`).
+
+- **Where an outcome and its undo belong is not decided.** A status
+  change still announces itself twice — small grey text beside the
+  control, and a toast in the opposite corner about 700 px away, which
+  is the only copy carrying **Undo**. Each toast is also built per
+  acted-on element, so two of them overlap and cover each other's
+  button; the five-second timer is what keeps that rare. This release
+  makes the timer stop for a reader who is engaging with it, and leaves
+  the larger question — whether the undo should sit beside the thing it
+  undoes and the toast stop existing — to the reading of each view that
+  has not started.
+
+- **The reading of each view has not started.** This release is units
+  one and two of an accessibility sequence — the base layout, and the
+  workflows that cross it. Unit three, each view in turn, is named and
+  unscheduled, which is the owner's own pacing: one unit at a time,
+  with the time each needs.
+
+- **The shipped JavaScript is still executed by no test** (`§10.15`).
+  The undo change above is held by a source scan and by a browser gate
+  that drives two of the four surfaces; the other two are covered in
+  source only. Unchanged by this release and named rather than implied.
+
+- **No CI job in this repository compiles for any platform but Linux
+  outside the release tag** (`§10.50`), and the browser fixture closes
+  the branches that were known rather than the ones that are possible
+  (`§10.32`). Both carried forward.
+
 
 ## [0.60.0] — 2026-11-01
 
