@@ -39,7 +39,7 @@ use super::{grow, grow_text, t};
 /// bookmark, or a history list where the title is the only thing that
 /// survives. Applied once, here — the one place [`Base`] renders
 /// `<title>` — rather than baked into each of the title-producing
-/// `MessageKey` strings themselves, which is how five of them had
+/// `MessageKey` strings themselves, which is how seven of them had
 /// already drifted into carrying it by hand (`ErrorPageTitle`,
 /// `ProjectsListPageTitle`, `ProjectNewPageTitle`, `ProjectEditPageTitle`,
 /// `ProjectDetailPageTitle`, `LoginPageTitle`, `RegisterPageTitle` — all

@@ -19,9 +19,13 @@ this (WCAG 2.5.3) and left the arrival half, which no criterion covers
 and which the reader meets second.
 
 **The page titles are a second shape of the same thing.** Of the page
-titles in `crates/peisear-i18n/src/en.rs`, five end with `— peisear`
-(`ErrorPageTitle`, `ProjectsListPageTitle`, `ProjectNewPageTitle`,
-`LoginPageTitle`, `RegisterPageTitle`) and the rest do not. Three of the
+titles in `crates/peisear-i18n/src/en.rs`, ~~five~~ **seven** end with
+`— peisear` (`ErrorPageTitle`, `ProjectsListPageTitle`,
+`ProjectNewPageTitle`, `LoginPageTitle`, `RegisterPageTitle`, and —
+*corrected 2026-11-09, by the round, not by its author* —
+`ProjectDetailPageTitle` and `ProjectEditPageTitle`, which carry the
+suffix **inside a `format!`** and so were invisible to the literal-string
+grep this paragraph's own count came from) and the rest do not. Three of the
 product's own screens are therefore called nothing but **`Calendar`**,
 **`Notifications`** and **`My dashboard`** in a tab strip, a bookmark,
 a history list or a screen reader's window list — none of which says
