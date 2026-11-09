@@ -195,9 +195,15 @@ Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), m
 ```
 
 The `'unsafe-inline'` on `style-src` accommodates inline `style=`
-attributes emitted by some Leptos components. Self-hosting Tailwind
-(see [../operations/tailwind-local.md](../operations/tailwind-local.md))
-lets you remove the CDN origins from `script-src` and `style-src`.
+attributes emitted by some Leptos components. **No CDN origin is needed
+in `script-src` or `style-src`**: every stylesheet and script is served
+by the binary from memory, and has been since `0.32.0`
+(`ASSET-001`) — see
+[../operations/tailwind-local.md](../operations/tailwind-local.md).
+*Corrected 2026-11-09 (`§10.53`): this paragraph told a reader that
+self-hosting Tailwind was something they could still do to drop CDN
+origins, in the document whose job is to describe what the product
+actually exposes.*
 
 ### Rate limiting
 

@@ -1891,13 +1891,40 @@ blind spot: it does not catch a single word standing alone.
 
 **FR-DM-006 — Undo window**
 A completed direct manipulation SHOULD offer a brief undo affordance
-(approximately five seconds).
+(approximately five seconds), and **that window MUST stop while the
+reader is engaging with it** — pointer over the affordance or keyboard
+focus inside it — resuming only once **both** have let go.
 *Source*: `SPEC §39.2`. *Acceptance*: `undo_toast_attachment_scan` (12) — a
 source scan — plus `browser-checks/undo-mousedown-trap.mjs` for the
 click-not-drag property and, from 0.47.0,
 `browser-checks/drag-outcome-gate.mjs` for the **Tab order on two of the four
 surfaces**; see below for which two and why. *Status*: **Met at 0.44.0** — a
-5-second toast on **all four** direct-manipulation surfaces.
+5-second toast on **all four** direct-manipulation surfaces — **and the
+window amended at 0.61.0** (`FLOW-001`, `FLOW-001 r2`): it now pauses
+on `mouseenter`/`focusin` and resumes on `mouseleave`/`focusout`, in
+all four scripts.
+*Amended 2026-11-09, and the clause above is new.* Five seconds that
+did not stop for a reader reaching toward them is **WCAG 2.2.1 Timing
+Adjustable (Level A)** with no exception that applies, and the reader
+the owner named when authorizing this sequence — someone whose
+pointer and eyes move slowly — is the one it cost. The affordance is
+also drawn in the corner furthest from the control that caused it,
+about 700 px away on a 1280 px screen, so the five seconds were spent
+finding it. **What was deliberately not changed**: the duration, the
+toast's position, the second copy of the outcome text in the
+`role="status"` region beside the control, and what Undo does. Where
+an outcome and its undo belong is a view question, open and recorded
+in `rfcs/handoffs/059-what-the-browser-actually-draws/`.
+*And the first attempt shipped a half of it.* Round 1 gave the two
+sources — pointer and focus — **one piece of state**, so releasing
+either resumed the countdown while the other still held: measured on
+the real plan surface, Tab to Undo and then move the pointer across the
+toast and away, and the timer restarted **under the reader's own
+keyboard focus**. Round 2 made each handler ask the DOM for the other
+source's live truth (`!toast.contains(document.activeElement)` on
+`mouseleave`; `!toast.matches(":hover")` on `focusout`) and clear any
+running timer before starting a new one. Verified across the whole
+eleven-state truth table, both release orders included.
 *Corrected twice, and the second correction reverses the first.*
 Until 0.43.0 this read **"Implemented for both shipped surfaces"** and then
 named **three** places in the same sentence, contradicting itself in nine
@@ -1907,7 +1934,10 @@ caught the contradiction and recorded `Partial — three of four`.
 `<button type="button">` with the undo label and a `setTimeout(…, 5000)`
 window — `dm.js:209`, `calendar.js:244`, `plan.js:309`, `board.js:187` — all
 four reachable by Tab as the acted-on element's own next sibling, none
-`disabled` or `tabindex="-1"`. The `mousedown` guard that `A11Y-005` made
+`disabled` or `tabindex="-1"`. *(Those four line numbers were current
+at 0.44.0 and are not maintained; since 0.61.0 the window is created by
+each script's own `startAutoRemoveTimer`, and the pause pair sits beside
+it. Read the function, not the line.)* The `mousedown` guard that `A11Y-005` made
 necessary is present on exactly the three draggable surfaces and absent on
 the one with no drag source to guard against.
 *What pins this status, and what it does not pin* (`DM-TEST-001`,
@@ -8250,6 +8280,62 @@ over the static `class="…"` tokens is specified in
 here** — the fix above is deliberately the smallest thing that makes
 the product right, with the rule left to follow the design rather than
 precede it.
+
+
+### 10.53 A published operations page describing a product that stopped existing twenty-nine releases ago — **closed on sight**, `0.61.0`, 2026-11-09; found by that release's own pass 5
+
+**`docs/operations/tailwind-local.md` opened with this sentence until
+today**: *"peisear's default `<Base>` component loads Tailwind CSS and
+daisyUI from a CDN."* It then told a reader to install Node and npm,
+write a `tailwind.config.js` scanning one crate, build a bundle **over
+the top of `static/app.css`** (a hand-written file, at a repo-root path
+that has not existed since `FIV-007`), and edit `layout.rs` to replace
+CDN `<link>`/`<script>` tags that are not there.
+
+**Every clause stopped being true at `0.32.0`** (`ASSET-001`,
+`DEC-051`), when the CSS was vendored and the CDN removed — the change
+`browser-checks/overflow-gate.mjs` asserts positively on every pull
+request, by failing every request whose host is not `127.0.0.1` and
+then asserting the blocked list is empty. A reader following the page
+would have **re-created the exact Node dependency the project removed**
+and overwritten a stylesheet the product needs.
+
+**It was not one page.** The same claim was repeated in five documents
+that link to it, and the worst of them is the one whose job is to
+describe what the product exposes:
+
+| Document | What it said |
+|---|---|
+| `docs/README.md` | *"removing the CDN dependency"* |
+| `docs/operations/README.md` | *"pulling the CSS off the CDN"* |
+| `docs/operations/deployment.md` | *"removing the one remaining CDN dependency"* |
+| `docs/architecture/leptos-ssr.md` | *"the one part of the UI that still depends on a CDN"* |
+| **`docs/security/hardening.md`** | *"Self-hosting Tailwind … lets you remove the CDN origins from `script-src` and `style-src`"* — i.e. telling an operator their CSP still needs CDN origins |
+
+**What this says about the sweep that was supposed to catch it.** Pass 5
+exists *because* of the four audits of 2026-10-11, and `docs/operations/`
+and `docs/security/` are two of the six trees it names. This page sat in
+both the book and the sidebar through those audits and through every
+sweep since. The pass asks *does it still describe the code?* — and the
+honest reading is that a sweep of six directories, performed by a person
+under time pressure at a cut, reaches the documents the release touched
+and tends to skip the ones it did not. **This release touched the
+stylesheet pipeline** (`§10.52`, `CSS-001`, `CSS-002`), which is the only
+reason anyone opened this page.
+
+**Closed on sight rather than scheduled**: the page is rewritten to say
+what ships, where the regeneration procedure lives
+(`style/tailwindcss/README.md`, one place, so the output path and the
+content globs cannot drift apart again), and that `css_scan` now checks
+the result; the five inbound claims are corrected; the CSP section is
+kept and its premise fixed. **No requirement changes** — nothing here was
+a requirement, which is part of the point.
+
+**What is not fixed**: nothing makes a documentation page that describes
+a removed dependency fail anything. `docs_scan` does not read this file,
+and the rule that would catch it — *no published page may describe a
+dependency the product does not have* — is not expressible as a scan
+without a list of the dependencies it does have. Recorded, not chased.
 
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0

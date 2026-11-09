@@ -193,7 +193,7 @@ scratch or distroless container.
 ## Next
 
 - [Backup](backup.md) — before you need it
-- [Tailwind self-hosting](tailwind-local.md) — removing the one
-  remaining CDN dependency
+- [Tailwind self-hosting](tailwind-local.md) — there is no remaining CDN
+  dependency; what ships, and how the CSS is regenerated
 - [../security/hardening.md](../security/hardening.md) — what peisear
   does for you and what the operator needs to do

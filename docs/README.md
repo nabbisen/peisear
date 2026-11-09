@@ -39,8 +39,8 @@ You're running peisear in production (or trying to).
 - [Deployment](operations/deployment.md) — single-binary deploy,
   systemd unit, directory layout
 - [Backup](operations/backup.md) — SQLite online backup and cold copy
-- [Tailwind self-hosting](operations/tailwind-local.md) — removing the
-  CDN dependency
+- [Tailwind self-hosting](operations/tailwind-local.md) — already done;
+  what ships, and how the CSS is regenerated
 
 ## Security
 

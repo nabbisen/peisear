@@ -8,8 +8,8 @@ Running peisear in places other than your laptop.
   resolution, the whole production dance
 - [Backup](backup.md) — how to make (and restore) a copy of your
   SQLite database
-- [Tailwind self-hosting](tailwind-local.md) — pulling the CSS off
-  the CDN
+- [Tailwind self-hosting](tailwind-local.md) — already off the CDN since
+  `0.32.0`; what ships, and how the CSS is regenerated
 
 ## Day-two tasks
 

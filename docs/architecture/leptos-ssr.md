@@ -98,4 +98,5 @@ for the step-by-step when you're ready to cross that bridge.
 - [Crate boundaries](crate-boundaries.md) — where components sit in the
   `peisear-web` crate
 - [../operations/tailwind-local.md](../operations/tailwind-local.md) —
-  the one part of the UI that still depends on a CDN
+  no part of the UI depends on a CDN; what ships, and how the CSS is
+  regenerated
