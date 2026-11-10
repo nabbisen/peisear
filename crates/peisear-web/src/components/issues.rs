@@ -8,7 +8,9 @@ use crate::error::AppError;
 use peisear_core::{
     AssigneeOption, CurrentUser, DisplayHealthState, Issue, IssueStatus, Priority, Project,
     UserLoad,
-    project_health::{HealthScore, Indicator, ProjectHealthReport},
+    project_health::{
+        HealthScore, Indicator, IndicatorKind, ProjectHealthRaw, ProjectHealthReport,
+    },
 };
 use peisear_i18n::{Field, IssueStatusLabel, Locale, MessageKey, NavSection, TrendDirectionLabel};
 
@@ -164,6 +166,60 @@ pub fn ProjectDetailPage(
     }
 }
 
+/// `VIEW-001`: precedence order for the project screen's collapsed
+/// health headline, proposed here for the architect to accept or
+/// reorder when the round closes (series `060` README, "the decision
+/// this round implements"). Ranked by how directly a reader can act
+/// on it *today* — never by weight or severity, which would make the
+/// composite a sort key in disguise (`FR-HLT-008`):
+///
+/// 1. `WipCompliance` — someone is over their limit right now. The
+///    project-level analogue of `/today`'s own burnout escalation
+///    (`FR-PER-006`): it names a person's current load, not a shape
+///    of the backlog.
+/// 2. `Staleness` — the oldest in-flight issue's age points at one
+///    specific item a reader can open and act on immediately.
+/// 3. `LongStale` — the same shape as `Staleness`, widened from one
+///    issue to a share of the backlog: still a concrete cleanup
+///    target, one step more diffuse.
+/// 4. `BusFactor` — a concentration risk. Real, but structural: a
+///    reader cannot resolve it by clicking one issue today.
+/// 5. `Throughput` — a lifetime ratio over the whole project; a
+///    trend worth noticing, not a today-action.
+/// 6. `Activity` — lowest precedence: a quiet window is not on its
+///    own a problem (a project can simply be between sprints), so
+///    it is the signal least worth leading with.
+const HEALTH_HEADLINE_PRECEDENCE: [IndicatorKind; 6] = [
+    IndicatorKind::WipCompliance,
+    IndicatorKind::Staleness,
+    IndicatorKind::LongStale,
+    IndicatorKind::BusFactor,
+    IndicatorKind::Throughput,
+    IndicatorKind::Activity,
+];
+
+/// `VIEW-001`: the project screen's collapsed health headline — one
+/// line, a sentence, never a score (`FR-HLT-008`). Walks
+/// [`HEALTH_HEADLINE_PRECEDENCE`] and returns the first indicator's
+/// own [`Indicator::human_explanation`] — `FR-HLT-005`'s
+/// plain-language sentence, which already exists per indicator; this
+/// round's only addition is choosing one — or the single neutral
+/// line when nothing applies, which is `FR-PER-006`'s "no
+/// manufactured callout in a healthy state" transposed to this
+/// screen.
+fn compute_health_headline(indicators: &[Indicator], raw: &ProjectHealthRaw) -> MessageKey {
+    for kind in HEALTH_HEADLINE_PRECEDENCE {
+        if let Some(explanation) = indicators
+            .iter()
+            .find(|i| i.kind == kind)
+            .and_then(|i| i.human_explanation(raw))
+        {
+            return explanation;
+        }
+    }
+    MessageKey::HealthSummaryHealthy
+}
+
 /// Project-level health indicators. Three stats — Throughput,
 /// Staleness, Activity — each rendered as a labelled chip with a
 /// Project-level health summary. Per the V2.1 brief §1.1 and
@@ -182,6 +238,17 @@ pub fn ProjectDetailPage(
 ///
 /// Empty projects (no issues yet) skip the section entirely
 /// rather than show "Insufficient" chips that explain nothing.
+///
+/// **`VIEW-001`**: the whole section — heading, summary sentence,
+/// `Indicators` disclosure, chips — is now itself wrapped in one
+/// outer `<details>`, collapsed by default. Its `<summary>` is
+/// [`compute_health_headline`]'s own sentence, which doubles as the
+/// disclosure control's word (`058`'s own lesson: never a glyph
+/// alone). Expanding it reveals exactly the block that shipped
+/// before this round, unchanged. No persistence (series README):
+/// the collapsed state does not survive a reload, so a reader who
+/// expanded it once and forgot does not have the defect silently
+/// restored on their next visit.
 #[component]
 fn HealthStrip(health: ProjectHealthReport, project_id: String) -> impl IntoView {
     if health.raw.total_issues == 0 {
@@ -194,6 +261,12 @@ fn HealthStrip(health: ProjectHealthReport, project_id: String) -> impl IntoView
         }
         .into_any();
     }
+
+    // `VIEW-001`: computed before `health.indicators` is consumed
+    // below — the one line a reader sees collapsed. Reads `raw` and
+    // borrows `indicators`, so it must run before the `into_iter()`
+    // a few lines down.
+    let headline = t(compute_health_headline(&health.indicators, &health.raw));
 
     // §17.1 / FR-HLT-008: no headline score, no 0-100 figure
     // anywhere in health presentation. The composite keeps its
@@ -240,42 +313,54 @@ fn HealthStrip(health: ProjectHealthReport, project_id: String) -> impl IntoView
 
     view! {
         <section class="mb-4" aria-label=t(MessageKey::ProjectHealthSectionLabel)>
-            <div class="flex items-center gap-2 mb-1">
-                <h3 class="text-xs uppercase tracking-wide text-base-content/70">
-                    {t(MessageKey::HealthHeading)}
-                </h3>
-            </div>
-
-            <p class="text-sm text-base-content/70 mb-2">{summary}</p>
-
-            <details class="text-xs">
-                <summary class=grow_text("cursor-pointer text-base-content/70 hover:text-base-content")>
-                    {t(MessageKey::IndicatorsSummaryLabel)}
+            // `VIEW-001`: the single collapsed line. The summary's own
+            // text *is* the disclosure control's word — no separate
+            // glyph-only toggle (`058`'s lesson) — and it is exactly
+            // the plain-language sentence `compute_health_headline`
+            // chose, never a score.
+            <details class="text-sm">
+                <summary class=grow_text("cursor-pointer text-base-content/80 hover:text-base-content")>
+                    {headline}
                 </summary>
-                // Phase B PR3 (B-2): human-language
-                // explanation list. Each non-Good indicator
-                // contributes a sentence describing what's
-                // happening, in the user's own terms ("3 issues
-                // haven't moved in over two weeks") rather than
-                // the score's terms ("long_stale_ratio = 0.3").
-                // Per decision B-E5, readability beats
-                // calculation transparency.
-                //
-                // The list comes before the chip row so the
-                // user reads the story first, then can
-                // double-check against the numbers if they
-                // want.
-                {has_explanations.then(|| view! {
-                    <ul class="mt-2 ml-4 list-disc text-base-content/80 leading-relaxed space-y-1">
-                        {explanation_rows}
-                    </ul>
-                })}
-                // The composite sits first but at the same visual
-                // weight as the six individual indicators —
-                // FR-HLT-008 requires "alongside", not "above".
-                <div class="mt-2 flex flex-wrap items-center gap-3">
-                    {composite_chip}
-                    {indicator_rows}
+                <div class="mt-2 text-xs">
+                    <div class="flex items-center gap-2 mb-1">
+                        <h3 class="text-xs uppercase tracking-wide text-base-content/70">
+                            {t(MessageKey::HealthHeading)}
+                        </h3>
+                    </div>
+
+                    <p class="text-sm text-base-content/70 mb-2">{summary}</p>
+
+                    <details class="text-xs">
+                        <summary class=grow_text("cursor-pointer text-base-content/70 hover:text-base-content")>
+                            {t(MessageKey::IndicatorsSummaryLabel)}
+                        </summary>
+                        // Phase B PR3 (B-2): human-language
+                        // explanation list. Each non-Good indicator
+                        // contributes a sentence describing what's
+                        // happening, in the user's own terms ("3 issues
+                        // haven't moved in over two weeks") rather than
+                        // the score's terms ("long_stale_ratio = 0.3").
+                        // Per decision B-E5, readability beats
+                        // calculation transparency.
+                        //
+                        // The list comes before the chip row so the
+                        // user reads the story first, then can
+                        // double-check against the numbers if they
+                        // want.
+                        {has_explanations.then(|| view! {
+                            <ul class="mt-2 ml-4 list-disc text-base-content/80 leading-relaxed space-y-1">
+                                {explanation_rows}
+                            </ul>
+                        })}
+                        // The composite sits first but at the same visual
+                        // weight as the six individual indicators —
+                        // FR-HLT-008 requires "alongside", not "above".
+                        <div class="mt-2 flex flex-wrap items-center gap-3">
+                            {composite_chip}
+                            {indicator_rows}
+                        </div>
+                    </details>
                 </div>
             </details>
         </section>
@@ -2273,3 +2358,6 @@ pub(crate) fn render_issue_detail(view: IssueDetailView) -> Html<String> {
         }
     })
 }
+
+#[cfg(test)]
+mod health_headline_tests;
