@@ -8338,6 +8338,68 @@ dependency the product does not have* — is not expressible as a scan
 without a list of the dependencies it does have. Recorded, not chased.
 
 
+### 10.54 The browser gate failed on a documentation-only commit, and nobody was watching — **open**, `DEC-048` condition 3, 2026-11-11; found by the dev team in passing, on the architect's own commit
+
+**`0ac02ab` changed nine lines of `ROADMAP.md` and nothing else, and its
+`CI` run failed**
+([42796702843](https://github.com/nabbisen/peisear/actions/runs/42796702843)),
+in the `browser checks` job:
+
+```
+[overflow-gate] ERROR: Error: google-chrome-stable did not expose a page target
+```
+
+The fixtures had been created and the sweep was about to start. **No
+page and no width is implicated**: this is `cdp.mjs`'s own `launch()`
+giving up after 100 polls at 200 ms — a **20-second** bound on a cold
+runner bringing up headless Chrome — and reporting the one thing it
+cannot distinguish from a hung browser: that no page target appeared.
+
+**It is the first unstable result this gate has produced**, and
+`DEC-048` condition 3 decided the response in advance, before anyone had
+a stake in it. Three things about applying it here:
+
+1. **The owner is the architect**, by the condition's own words
+   (*"whoever is working `RFC 011` step 4 at the time"*). It was the
+   architect's commit, and the architect stopped watching CI after the
+   tag — the run that failed is the one *after* the release, and it sat
+   red on `main` for a day until a dev-team round noticed it in passing
+   while looking at something else.
+2. **"Open an issue" is recorded here instead**, named rather than
+   quietly reinterpreted: this repository has no GitHub issues and has
+   never used them; the register is where its defects live. The
+   condition's substance — *name the failure mode, give it an owner, do
+   not re-run past it* — is met.
+3. **The gate is not quarantined, and that is a decision, not an
+   omission.** Condition 3's remedy (`continue-on-error: true` with a
+   link) is written for a cell that fails intermittently; this is the
+   harness failing to start a browser, so quarantining would trade
+   **120 real cells** for a timeout — condition 4's own warning, *"a
+   quarantined check is not coverage"*, pointing the other way. If it
+   recurs before the repair lands, quarantine it then and say so in the
+   next candidate.
+
+**The repair, and what it is not.** `launch()` waits on a duration and
+reports a conclusion it cannot support. It should wait on the signal for
+longer, and on failure say what the browser itself said — its stderr —
+rather than *"did not expose a page target"*, which named the symptom
+and hid the cause. **No retry is added, at any level**: `DEC-048`
+condition 3 forbids re-running past a red gate, and a harness that
+retries its own browser launch is that rule defeated one layer down.
+`BROWSER-001 §2`'s own instruction — *wait on a signal, never on a
+duration* — is the thing `launch()` never applied to itself.
+
+**Not scheduled with a release number**: nobody outside this repository
+can see it. It joins the no-number queue in `ROADMAP.md`, where the
+architect owns it.
+
+**What this entry is really about.** The gate did its job: it failed
+loudly on a tree that could not have broken it, which is how a flake is
+supposed to present. What failed was attention — the release's own
+author stopped reading CI once the tag was green, and the record of that
+release says *"nothing this cut got wrong"* one commit earlier.
+
+
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
 **Promoted from this document's own older compact register**

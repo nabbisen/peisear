@@ -564,6 +564,16 @@ the `spec_scan` baseline rule, the `changelog_scan` section-date rule and
 the link check outside the book. Each is a check for something already
 fixed by hand.
 
+**One item in the no-number queue is owned and not optional**:
+`§10.54`, the browser gate's first unstable result —
+`google-chrome-stable did not expose a page target` on a
+documentation-only commit, `DEC-048` condition 3, **the architect's** by
+that condition's own words. The repair is `cdp.mjs`'s `launch()`: wait
+on the signal for longer, and on failure report the browser's own
+stderr instead of a conclusion the harness cannot support. **No retry,
+at any level.** The gate is deliberately **not** quarantined — see the
+entry for why, and for what to do if it recurs before the repair lands.
+
 **One candidate added at `0.61.0`'s cut, on the same footing**: a
 `changelog_scan` rule that a release section may not carry the same
 `###` heading twice. `[Unreleased]` carried **two `### Fixed` sections**
