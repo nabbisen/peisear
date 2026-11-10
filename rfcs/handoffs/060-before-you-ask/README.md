@@ -34,14 +34,28 @@ link, the title row with its four buttons, **the health block** — a
 heading, a sentence, an `Indicators` disclosure and six indicator chips
 each with its own expander — and the workload strip.
 
-**And a second measurement, because the first invites a bad fix**: there
-are **18 `<details>` across six views**, two open by default, and
+**And a second measurement, because the first invites a bad fix**:
+**fourteen `<details>` across six views**, **one** open by default, and
 **exactly one requirement governs any of it** — `FR-PER-007`, for
 `/today` alone, which says in terms that the rhythm panel MUST be
 collapsed and the sustainability panel MUST self-expand only at a watch
-threshold. The other thirteen are ad-hoc. So *"collapse things"* is not
-a rule this project has; it is a thing it has done thirteen times
-without one.
+threshold. Counting what is *governed or guarded* — those two panels,
+plus the project screen's health and workload blocks since `VIEW-001`
+and its round 2 — leaves **ten** that are neither. So *"collapse
+things"* is not a rule this project has; it is a thing it has done ten
+times without one.
+
+> *Corrected 2026-11-11.* This paragraph first said **eighteen**, two
+> open by default, thirteen ungoverned, and `VIEW-001 r2`'s own handoff
+> inherited the arithmetic as *"the other eleven"*. **The grep behind
+> those numbers counted `<details>` mentioned in comments as if it were
+> markup** — six of them, including three in `issues.rs`'s own doc
+> comments about disclosures. Re-measured with line comments stripped
+> first, the way `css_scan` already does it for exactly this reason, and
+> counting opening tokens rather than single-line tags so a tag split
+> across lines is not missed. **A census is a measurement and its method
+> is part of the number**; this one was taken by the architect and
+> stated without one.
 
 ## What governs this today — checked in both documents, not assumed
 
@@ -64,7 +78,7 @@ sustainability signals. **Read the entry before proposing the round.**
 | ID | Handoff | Subject | Blocked on | State |
 |---|---|---|---|---|
 | VIEW-001 | [work first](./VIEW-001-work-first.md) | A project screen's first content is its work; the analysis above it becomes **one line** until asked for, by the discipline `/today` already has | — | **Closed 2026-11-11, one finding — it earns round 2.** The collapse is built and the headline is right: the summary is the highest-precedence non-Good indicator's own sentence, or one neutral line; the precedence chain is **accepted as proposed** (its top three mirror `FR-PER-006`'s own, minus the project-level burnout that does not exist), and sorting by weight was correctly refused because that would make the composite a sort key. **Independently re-measured on the gate's fixture rather than theirs: −48 px at all four cells, reproducing their number exactly.** But −48 is not the property — measured on the shipped build the collapsed block is **44 px and constant**, where fully open it is **560 px at 1280 and 865 px at 390**; the report gave the delta from a near-healthy fixture without saying its block was ~92 px to begin with. **The finding: nothing pins *collapsed by default*.** Planting `open=true` on the new outer `<details>` — the exact defect this round removes — leaves lib 246, `health_explainability` 11 and `touch_target` 6 all green, because both new integration tests assert the headline's content and order, which hold open or closed. **The assertion already exists for the sibling screen**: `today_folds_rhythm_panel_by_default`, cited by `FR-PER-007`'s own acceptance. `DEC-007` **666 → 676** re-derived. **Two things done well and worth naming**: the `WorkloadStrip` question was *measured* rather than preferred (90 px desktop, 124 px phone) and reported as out of scope rather than built — the harder report to write, since the handoff's other branch would have let them say *leave it*; and their probe's own `<details>` discovery (Chromium keeps a closed subtree's last layout box) **explains an anomaly the architect's unit-two walk reported and did not pursue** |
-| VIEW-001 r2 | [the property itself](./VIEW-001-round-2-the-property-itself.md) | Pin *collapsed by default* for the health block, in the shape `/today`'s own guard already uses — and apply the same rule, with its own guard, to `WorkloadStrip`, which round 1 measured at a further 90 px / **124 px on a phone** and correctly declined to build | VIEW-001 | **Not started** |
+| VIEW-001 r2 | [the property itself](./VIEW-001-round-2-the-property-itself.md) | Pin *collapsed by default* for the health block, in the shape `/today`'s own guard already uses — and apply the same rule, with its own guard, to `WorkloadStrip`, which round 1 measured at a further 90 px / **124 px on a phone** and correctly declined to build | VIEW-001 | **Closed 2026-11-11, no findings.** Both guards pin the property round 1 left open, and the architect verified each by its own plant rather than the round's: `open=true` on the health block's outer `<details>` (line 321) fails `health_block_is_collapsed_by_default` **by name**, `open=true` on the workload block's (line 640) fails `workload_strip_is_collapsed_by_default`, and **each plant fails exactly one test** — 12 passed, 1 failed, both times. **The round's own §1 is the best thing in it**: its first guard copied `/today`'s backward scan verbatim, which is safe there and wrong here because the health block's first child *is* a second `<details>` — found **by planting**, then confirmed against the raw response body to rule out a Leptos serialization bug before rewriting the anchor. `§3b` is the property the review asked for: **44 px collapsed, constant across two fixtures and both widths, for both blocks**, against 536–913 px (health) and 126–160 px (workload) open. `DEC-007` **676 → 678** and `MessageKey::all()` **714 → 715** with `page_title_scan`'s pin updated in the same commit, both re-derived; `CI`/`Docs` `success` at `83e0cc7`. **One note, not a defect**: *“Workload across the team.”* renders on a personal project, where there is no team — the round's own guard creates exactly that case. One string with a condition already at the call site; held for this series' closing round rather than sent back for a word the round was not asked to choose |
 | VIEW-002 | — | Issue detail, the other screen in the authorized row. **Measured clean** (table above): its own `<h1>` is a quarter of a screen down at both widths, behind four controls, which is a breadcrumb and a back link. **No round is proposed**; the owner may still want one, and the measurement is here so that is a decision rather than a silence | — | **Not proposed** |
 
 ## The decision this round implements, and why it is not the dev team's

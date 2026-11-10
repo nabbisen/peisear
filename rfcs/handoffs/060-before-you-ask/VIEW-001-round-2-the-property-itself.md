@@ -79,7 +79,10 @@ one measurement — not a boundary of the rule.
 ## 5. What this round must not do
 
 - **Do not touch `/today`**, and do not collapse any of the other
-  eleven ungoverned `<details>` — the census stays closed.
+  ungoverned `<details>` — the census stays closed. *(This read "the
+  other eleven" until 2026-11-11; the census it came from counted
+  comment mentions as markup. The measured figure is ten, and the series
+  README carries the correction.)*
 - **Do not write `external-design §5.10`** or amend a requirement; the
   architect states the rule once, when this series closes.
 - Do not change any indicator's or workload figure's computation,
