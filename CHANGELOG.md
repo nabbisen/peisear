@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exactly the same detail as before on your own click. Nothing in it
   was removed or moved; it just doesn't stand in front of the work by
   default anymore.
+- **The workload strip below it now does the same.** One line until
+  you ask for it, opening to the same per-person chips as before.
+  Collapsed, this block is a constant 44px regardless of how much it
+  would otherwise show — open, it is whatever it was.
 
 ## [0.61.0] — 2026-11-10
 

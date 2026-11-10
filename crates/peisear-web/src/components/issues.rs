@@ -594,6 +594,15 @@ fn indicator_row(ind: Indicator) -> impl IntoView {
 /// regardless of how many members the strip lists (`ISSUE-003`
 /// ruling: an earlier `NFR-PRIV-007` single-member suppression here
 /// was a misapplication of that requirement and has been removed).
+///
+/// **`VIEW-001` round 2**: collapses behind one line by default, the
+/// same shape `HealthStrip` uses — a `<details>` whose `<summary>` is
+/// [`MessageKey::WorkloadSummaryLabel`], expanding to exactly the
+/// heading, the capacity link, and the chip row that shipped before
+/// this round. The line is static rather than chosen from a
+/// precedence chain: see that key's own doc comment for why a
+/// derived one-line state here would have to invent either a count
+/// (a score by another name) or a name (not what this strip is for).
 #[component]
 fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
     let any_signal = workload.iter().any(|u| u.in_flight_issues > 0);
@@ -627,16 +636,23 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
         .collect_view();
 
     view! {
-        <section class="mb-4">
-            <div class="flex items-center gap-2 mb-1">
-                <h3 class="text-xs uppercase tracking-wide text-base-content/70">
-                    {t(MessageKey::WorkloadHeading)}
-                </h3>
-                <a href="/settings" class=grow_text("text-xs link link-hover opacity-70")>
-                    {t(MessageKey::WorkloadSetCapacityLink)}
-                </a>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">{chips}</div>
+        <section class="mb-4" aria-label=t(MessageKey::WorkloadHeading)>
+            <details class="text-sm">
+                <summary class=grow_text("cursor-pointer text-base-content/80 hover:text-base-content")>
+                    {t(MessageKey::WorkloadSummaryLabel)}
+                </summary>
+                <div class="mt-2 text-xs">
+                    <div class="flex items-center gap-2 mb-1">
+                        <h3 class="text-xs uppercase tracking-wide text-base-content/70">
+                            {t(MessageKey::WorkloadHeading)}
+                        </h3>
+                        <a href="/settings" class=grow_text("text-xs link link-hover opacity-70")>
+                            {t(MessageKey::WorkloadSetCapacityLink)}
+                        </a>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">{chips}</div>
+                </div>
+            </details>
         </section>
     }
     .into_any()

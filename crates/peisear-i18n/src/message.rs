@@ -790,6 +790,18 @@ pub enum MessageKey {
     /// `HealthStrip`'s `<details>` `<summary>` text.
     IndicatorsSummaryLabel,
     WorkloadHeading,
+    /// `VIEW-001` round 2: `WorkloadStrip`'s own collapsed-by-default
+    /// `<details>` `<summary>` text — the one line a reader sees
+    /// before expanding it. Static rather than data-driven, unlike
+    /// `HealthStrip`'s own headline: the strip's data is inherently
+    /// per-person, and a derived one-line "state" sentence about the
+    /// whole team's workload would have to either name a count
+    /// (a score by another name, the thing this round was told not to
+    /// invent) or single out one person (not what the strip's
+    /// per-person-load design, `NFR-PRIV-002`, is for). The neutral
+    /// case is the only case here, by necessity, not merely the
+    /// common one.
+    WorkloadSummaryLabel,
     /// The workload strip's link to `/settings` for setting one's own
     /// capacity.
     WorkloadSetCapacityLink,
@@ -2614,6 +2626,7 @@ impl MessageKey {
             MessageKey::HealthHeading,
             MessageKey::IndicatorsSummaryLabel,
             MessageKey::WorkloadHeading,
+            MessageKey::WorkloadSummaryLabel,
             MessageKey::WorkloadSetCapacityLink,
             MessageKey::WorkloadTitle {
                 display_name: "Alex Rivera".to_string(),

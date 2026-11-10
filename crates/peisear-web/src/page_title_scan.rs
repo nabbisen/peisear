@@ -91,7 +91,7 @@ mod tests {
         let keys = MessageKey::all();
         assert_eq!(
             keys.len(),
-            714,
+            715,
             "MessageKey::all()'s own population moved -- re-measure before trusting this guard \
              examined anything"
         );
