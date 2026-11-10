@@ -333,6 +333,154 @@ async fn composite_renders_beside_indicators_not_as_a_headline() {
     );
 }
 
+// -------------------------------------------------------------------
+// `VIEW-001` (series `060`): the whole health block collapses behind
+// one headline sentence, and a healthy project gets a single neutral
+// line rather than a manufactured callout (`FR-PER-006`, transposed).
+// -------------------------------------------------------------------
+
+#[tokio::test]
+async fn health_strip_collapses_the_whole_block_behind_one_headline() {
+    // Same fixture as `wip_compliance_explanation_uses_corrected_wording`:
+    // one user with four in-progress issues drives WipCompliance to
+    // Concern (clamped to Watch vocabulary). That fixture also makes
+    // the lone assignee a solo BusFactor Watch, so this deliberately
+    // exercises the precedence chain rather than a project with only
+    // one non-Good indicator: WipCompliance outranks BusFactor in
+    // `HEALTH_HEADLINE_PRECEDENCE`, so its sentence must be the one
+    // that reaches the headline.
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "P").await;
+
+    for i in 0..4 {
+        let id = uuid::Uuid::new_v4().to_string();
+        peisear_storage::issues::insert(
+            &app.db,
+            &id,
+            &project_id,
+            &user_id,
+            peisear_storage::issues::IssueFields {
+                title: &format!("T{i}"),
+                description: "Test issue body.",
+                status: peisear_core::IssueStatus::InProgress,
+                priority: peisear_core::Priority::Medium,
+                effort: None,
+                assignee_id: Some(&user_id),
+                planned_start_at: None,
+                planned_end_at: None,
+            },
+        )
+        .await
+        .expect("insert issue");
+    }
+
+    let url = format!("/projects/{project_id}");
+    let resp = app.server.get(&url).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    let section_idx = body
+        .find(r#"aria-label="Project health""#)
+        .expect("project-health section missing");
+    let headline_idx = body[section_idx..]
+        .find("active assignees are over their WIP limit.")
+        .expect("expected WipCompliance's own sentence as the headline, outranking BusFactor's")
+        + section_idx;
+    let heading_idx = body[section_idx..]
+        .find(">Health<")
+        .expect("expected the 'Health' heading, now nested below the headline")
+        + section_idx;
+    let indicators_idx = body[section_idx..]
+        .find("Indicators")
+        .expect("Indicators details summary missing")
+        + section_idx;
+
+    assert!(
+        headline_idx < heading_idx,
+        "the headline sentence must come before the 'Health' heading -- it is the \
+         collapsed line a reader sees before expanding, not content inside the \
+         expanded block"
+    );
+    assert!(
+        heading_idx < indicators_idx,
+        "the 'Health' heading and summary paragraph must still precede the \
+         'Indicators' disclosure, unchanged from before this round"
+    );
+}
+
+#[tokio::test]
+async fn healthy_project_renders_one_neutral_line_and_no_callout() {
+    // Five issues, all created and immediately moved to `done`:
+    // in_flight_issues == 0 drives Staleness/BusFactor/LongStale/
+    // WipCompliance to `Insufficient` (never `Watch`), and
+    // done_issues == total_issues == 5 with all five counted in the
+    // activity window drives Throughput and Activity to `Good`. No
+    // indicator reaches Watch or Concern, so the headline must be the
+    // single neutral line, not a manufactured callout naming an
+    // indicator that is actually fine.
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "P").await;
+
+    for i in 0..5 {
+        let id = uuid::Uuid::new_v4().to_string();
+        peisear_storage::issues::insert(
+            &app.db,
+            &id,
+            &project_id,
+            &user_id,
+            peisear_storage::issues::IssueFields {
+                title: &format!("T{i}"),
+                description: "Test issue body.",
+                status: peisear_core::IssueStatus::Done,
+                priority: peisear_core::Priority::Medium,
+                effort: None,
+                assignee_id: None,
+                planned_start_at: None,
+                planned_end_at: None,
+            },
+        )
+        .await
+        .expect("insert issue");
+    }
+
+    let url = format!("/projects/{project_id}");
+    let resp = app.server.get(&url).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    let section_idx = body
+        .find(r#"aria-label="Project health""#)
+        .expect("project-health section missing");
+    assert!(
+        body[section_idx..].find("Looking healthy.").is_some(),
+        "expected the neutral headline for an all-Good/Insufficient project; body: {body}"
+    );
+
+    // No per-indicator sentence anywhere in the section -- a
+    // manufactured callout naming a fine indicator would be exactly
+    // the defect FR-PER-006's discipline forbids.
+    let section_text = &body[section_idx..];
+    for bad in [
+        "Throughput is",
+        "oldest in-flight issue",
+        "Issue activity",
+        "carried by one person",
+        "concentrated on one person",
+        "haven't been touched",
+        "are over their WIP limit",
+    ] {
+        assert!(
+            !section_text.contains(bad),
+            "no per-indicator explanation sentence may appear for an all-Good/\
+             Insufficient project; found {bad:?}"
+        );
+    }
+}
+
 #[tokio::test]
 async fn burnout_api_never_returns_a_concern_indicator() {
     // External design §8.3: `indicator` on this endpoint observes

@@ -9,6 +9,21 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **A project board or list now opens on your work, not on the
+  analysis above it.** The health block — a heading, a summary
+  sentence, and a row of indicator chips — used to sit above every
+  column and every row, unconditionally; on a phone, opening a
+  project's list view showed no issue at all without scrolling. It now
+  collapses to a single line — the one sentence worth your attention,
+  or a plain "looking healthy" when nothing needs it — and opens to
+  exactly the same detail as before on your own click. Nothing in it
+  was removed or moved; it just doesn't stand in front of the work by
+  default anymore.
+
 ## [0.61.0] — 2026-11-10
 
 *Candidate assembled 2026-11-09, cut 2026-11-10. The two are recorded
