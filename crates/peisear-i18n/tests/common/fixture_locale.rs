@@ -172,6 +172,7 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::HealthHeading => "[fx-health-heading]".to_string(),
         MessageKey::IndicatorsSummaryLabel => "[fx-indicators-summary]".to_string(),
         MessageKey::WorkloadHeading => "[fx-workload-heading]".to_string(),
+        MessageKey::WorkloadSummaryLabel => "[fx-workload-summary]".to_string(),
         MessageKey::WorkloadSetCapacityLink => "[fx-set-capacity]".to_string(),
         MessageKey::WorkloadTitle {
             display_name,

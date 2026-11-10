@@ -246,6 +246,7 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::HealthHeading => "Health".to_string(),
         MessageKey::IndicatorsSummaryLabel => "Indicators".to_string(),
         MessageKey::WorkloadHeading => "Workload".to_string(),
+        MessageKey::WorkloadSummaryLabel => "Workload across the team.".to_string(),
         MessageKey::WorkloadSetCapacityLink => "(set your capacity)".to_string(),
         MessageKey::WorkloadTitle {
             display_name,

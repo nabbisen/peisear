@@ -481,6 +481,114 @@ async fn healthy_project_renders_one_neutral_line_and_no_callout() {
     }
 }
 
+// -------------------------------------------------------------------
+// `VIEW-001` round 2: round 1 proved what the collapsed line *says*
+// but never pinned that the block is collapsed at all -- planting
+// `open=true` on the health `<details>` left every existing test
+// green. These two guards are that property, in the spirit of
+// `today_panel.rs`'s own `today_folds_rhythm_panel_by_default` for the
+// sibling screen.
+//
+// That test walks *backward* from a distinctive anchor to the
+// nearest preceding `<details`, which is safe for Rhythm because
+// nothing else on `/today` nests a `<details>` inside another one.
+// This screen does: the outer block's own first nested element is
+// itself a second `<details>` (`Indicators`, or the workload chips'
+// per-row calculation disclosure is not nested here, but the
+// `Indicators` one is). A backward walk from "Indicators" lands on
+// that *inner* `<details>`, not the outer one this test means to
+// check -- confirmed by running it: it reported green with the outer
+// `<details>` planted `open=true`, because it was reading the wrong
+// tag the whole time. Scanning *forward* from each section's own
+// stable `aria-label` to the first `<details` after it, the same
+// shape round 1's own `health_strip_collapses_the_whole_block_behind_one_headline`
+// already uses, reaches the right one unambiguously.
+// -------------------------------------------------------------------
+
+/// Finds the first `<details` opening tag after `section_label`'s own
+/// `aria-label` in `body`.
+fn first_details_opening_tag_after_section<'a>(body: &'a str, section_label: &str) -> &'a str {
+    let anchor = format!(r#"aria-label="{section_label}""#);
+    let section_at = body
+        .find(&anchor)
+        .unwrap_or_else(|| panic!("section with {anchor:?} not found in body"));
+    let rest = &body[section_at..];
+    let details_start = rest
+        .find("<details")
+        .map(|n| section_at + n)
+        .expect("a <details tag after the section's own aria-label");
+    let tag_end = body[details_start..]
+        .find('>')
+        .map(|n| details_start + n)
+        .expect("details tag should close");
+    &body[details_start..tag_end]
+}
+
+#[tokio::test]
+async fn health_block_is_collapsed_by_default() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "P").await;
+    let _issue_id = create_issue(&app.db, &project_id, &user_id, "T").await;
+
+    let url = format!("/projects/{project_id}");
+    let resp = app.server.get(&url).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    let opening_tag = first_details_opening_tag_after_section(&body, "Project health");
+    assert!(
+        !opening_tag.contains(" open"),
+        "the project screen's health block must be collapsed by default; \
+         found open attribute on its outer <details>: {opening_tag:?}"
+    );
+}
+
+#[tokio::test]
+async fn workload_strip_is_collapsed_by_default() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("alice");
+    let user_id = register_and_login(&app, &user).await;
+    let project_id = create_personal_project(&app.db, &user_id, "P").await;
+    // WorkloadStrip only renders a signal for an *assigned* in-flight
+    // issue (`project_workload`'s per-assignee-candidate join) --
+    // `create_issue`'s own default leaves `assignee_id: None`, so
+    // this inserts directly, the same shape
+    // `wip_compliance_explanation_uses_corrected_wording` above uses.
+    let issue_id = uuid::Uuid::new_v4().to_string();
+    peisear_storage::issues::insert(
+        &app.db,
+        &issue_id,
+        &project_id,
+        &user_id,
+        peisear_storage::issues::IssueFields {
+            title: "T",
+            description: "Test issue body.",
+            status: peisear_core::IssueStatus::InProgress,
+            priority: peisear_core::Priority::Medium,
+            effort: None,
+            assignee_id: Some(&user_id),
+            planned_start_at: None,
+            planned_end_at: None,
+        },
+    )
+    .await
+    .expect("insert issue");
+
+    let url = format!("/projects/{project_id}");
+    let resp = app.server.get(&url).await;
+    resp.assert_status(StatusCode::OK);
+    let body = resp.text();
+
+    let opening_tag = first_details_opening_tag_after_section(&body, "Workload");
+    assert!(
+        !opening_tag.contains(" open"),
+        "the workload strip must be collapsed by default; found open attribute \
+         on its outer <details>: {opening_tag:?}"
+    );
+}
+
 #[tokio::test]
 async fn burnout_api_never_returns_a_concern_indicator() {
     // External design §8.3: `indicator` on this endpoint observes
