@@ -515,6 +515,15 @@ the `spec_scan` baseline rule, the `changelog_scan` section-date rule and
 the link check outside the book. Each is a check for something already
 fixed by hand.
 
+**One candidate added at `0.61.0`'s cut, on the same footing**: a
+`changelog_scan` rule that a release section may not carry the same
+`###` heading twice. `[Unreleased]` carried **two `### Fixed` sections**
+for several days before the cut merged them, and nothing noticed —
+`changelog_scan` checks where versions live and whether links resolve,
+not the shape of a section. **Not recommended either**, for the same
+reason as the three above: it is a check for something already fixed by
+hand, and the thing that caught it was assembling a release.
+
 **The accessibility work, reconsidered 2026-11-04 on the owner's second
 reading — and the architect's own lead recommendation is withdrawn.** The
 owner asked whether layout, typography and colour could be kinder to **elder
