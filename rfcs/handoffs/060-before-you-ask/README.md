@@ -122,17 +122,119 @@ requirements entry will **cite** it rather than restate it. The
 architect writes both when the round closes, as with `FR-NAV-001` and
 `NFR-A11Y-012`.
 
-## Open questions — the owner's
+## The three questions, answered 2026-11-11
 
-**1. `/today` is reached by the word *Today* and titled *My dashboard*.**
-`FLOW-002` held the rename back and `page_title_scan` pins it as
-pending. The content half is now answered — `FR-PER-001` is a P0 and the
-page is doing what it says — so the remaining choice is the name.
-**Recommendation: rename the heading to *Today***, and let the word mean
-*how your work is going today*, which is what `FR-PER-001`'s own three
-nouns describe. It is a one-string change in whichever round takes it.
+The owner returned all three with *"review them carefully by yourself with
+my fundamental philosophy."* Each is answered below. **Two of the three
+reverse what this file said**, and the third keeps its verdict while
+discarding the reasoning that produced it.
 
-**2. Where an outcome and its undo belong**, carried from `059`: the
-outcome is announced twice, and only the far copy carries **Undo**.
-Still a view question, and it belongs to this unit rather than to a
-timing fix.
+### 1. `VIEW-002` — not wanted, and the reason this file gave was not evidence
+
+**The verdict stands: no layout round for issue detail.** What does not
+stand is how it was reached. This file called the screen *"measured
+clean"* on one number — where the first work sits — and that number was
+invented for the **project** screens, whose defect was a wall of analysis
+above the work. **Issue detail cannot fail that test**, so passing it
+said nothing. A screen declared clean by a metric it cannot fail is
+`§10.36`'s own shape, applied by the architect to his own unit.
+
+Read instead against the question this unit actually asks — *what is
+visible by default, and what is invisible* — at 390×844:
+
+| y | size | what |
+|---|---|---|
+| 108 | 14 px | breadcrumb: Today › Projects › Website Launch › *the issue title* |
+| 160 | 14 px | ← Back to issues |
+| 204 | 20 px | the issue title, as `<h1>` |
+| 272 | 14 px | Edit · Delete |
+| 328 | 14 px | Open / In Progress / Done |
+| 384 | **12 px** | High · 5 pt · Created 2026-11-10 23:31 |
+| 408 | **12 px** | Updated 2026-11-10 23:31 |
+| …  | | the description, then Sub-issues |
+
+**Nothing on this screen is hidden by default** — it holds no
+`<details>` at all, which is the one thing that made it worth reading
+and the one thing the y-number could never have told us.
+
+Two things that look like findings and are not, both checked rather
+than assumed. **The doubled way back** — a breadcrumb whose penultimate
+crumb is the parent *and* a "← Back to issues" link to the same place —
+is `FR-NAV-003` in so many words: *"Detail screens MUST provide a
+breadcrumb trail **and** a back link."* And **"+ Add sub-issue" is not
+above its own heading**: the two sit in one `justify-between` row, and
+the 12 px between their tops is vertical centring. The first read of
+this page produced that as a finding; the source disproved it before it
+reached anyone.
+
+**One real item survives**: two lines of **12 px** metadata between the
+status control and the description. That is the typography question,
+not a layout one — see §4.
+
+### 2. `/today`'s name — the recommendation is reversed
+
+This file recommended **renaming the page's heading to *Today***. That
+is the worst of the three available answers, and `FLOW-002` already had
+the right one before this file talked itself out of it.
+
+What a reader actually meets, in each case:
+
+| | they click | they arrive at | what happens |
+|---|---|---|---|
+| (a) today | **Today** | *My dashboard* | a small dissonance, **resolved on arrival** — the page says what it is |
+| (b) the rename | **Today** | *Today* | the dissonance is **confirmed and never resolved**: the page's own name agrees with an expectation it does not meet |
+| (c) the word changes | **Me** | *My dashboard* | nothing to resolve |
+
+**(c) is best, (a) is second, and (b) — the one recommended here — is
+worst.** The published design already says which way this goes:
+`external-design §3.2` gives this destination's own responsibility as
+**"What should I look at right now, about myself?"** The page is right.
+The word is wrong.
+
+**What that costs, measured rather than feared**: one word in
+`FR-NAV-001`, one `MessageKey`, and `NFR-A11Y-012`'s pending pair
+resolves instead of staying pinned. The route does not move;
+`FR-NAV-002`'s redirects are untouched.
+
+**And the one thing against it, stated because it is real**: the product
+renamed `/me` to `/today` deliberately at `0.17.0`, and **no published
+document records why**. Changing one of five entry-point words that
+`FR-NAV-001` fixes is product scope, so it is the owner's — but the
+recommendation is now (c), and failing that **(a), the status quo**.
+`NFR-A11Y-012`'s exception stays honest and pinned rather than being
+closed by making the product worse.
+
+### 3. Where an outcome and its undo belong — decided, not held a third time
+
+Held at `059` for *"the unit-three reading of those surfaces"*. That
+unit is now two rounds old and one of the four surfaces is the project
+board, in this very row. **Holding it again would be deferral by
+habit**, so it is decided here.
+
+**One outcome, one place: the undo belongs beside the thing it undid,
+and the corner toast stops existing.** The measurements are already in
+`059`: the same sentence is printed twice, ~700 px apart on a 1280 px
+screen; only the far copy carries **Undo**; and because each toast is
+built per acted-on element in one shared fixed corner, two of them
+overlap and cover each other's button. Moving the undo inline removes
+all three **by construction** rather than managing them — and
+`A11Y-004`'s own property, *Undo is the next Tab stop after the control*,
+becomes trivially true instead of carefully maintained.
+
+**This needs the row re-authorized before it starts.** The mechanism is
+one shape in four files; two of its surfaces (board, issue detail's
+status form) are in this row and two (`calendar.js`, `plan.js`) are not.
+Splitting one mechanism across two releases would leave the product
+saying the same thing two ways — which is the defect. So: all four, or
+not yet.
+
+### 4. What these three leave standing: typography
+
+`VIEW-002`'s one real item is 12 px metadata. The project screen's
+section labels are `text-xs` and the muted tier. `/today`'s are the
+same. **The owner's original question listed typography and colour**,
+and this architect demoted both on 2026-11-04 with a stated condition —
+*adopt the floor after the views are decided, never before, rule after
+design*. **Two views are now decided.** The condition is met, and the
+rule is the natural next piece of work: one measurement across the
+views this unit has read, one floor, written once.
