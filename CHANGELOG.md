@@ -9,11 +9,11 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.61.0] — 2026-11-10
 
-*Candidate written 2026-11-09. The heading is renamed and dated **on the
-day the tag is pushed**, not today — `0.60.0` is the release where those
-two days first diverged and the section said the wrong one.*
+*Candidate assembled 2026-11-09, cut 2026-11-10. The two are recorded
+separately because `0.60.0` is the release where they first diverged and
+this section's own date said the wrong one.*
 
 **The first screen you meet.** Five destinations — Today, Inbox,
 Projects, Teams, Search — were specified as this product's primary
