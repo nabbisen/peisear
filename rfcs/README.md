@@ -52,8 +52,11 @@ RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 Open for review. Design may still change.
 
-**None today.** `RFC 020` was the last one here and was accepted
-2026-10-15.
+| ID | Title | Target |
+|----|-------|--------|
+| 023 | [How a change reaches `main`](./proposed/023-how-a-change-reaches-main.md) — **proposed 2026-11-11**, owner-raised: *"Why was `main` not used?"* This project has **no written branching policy**; the only git workflow in the repository is `CONTRIBUTING.md`'s fork-and-pull-request process, written for contributors outside it, which the dev team correctly read as the only existing convention — so **18 of `main`'s last 25 commits are the architect's direct pushes and the other 7 are the dev team's pull requests**. Carries a **decision request** with three options, and surfaces a divergence that has gone undocumented for several releases: **the pull request has never been the review gate here** — two rounds were merged before review, one of them producing a finding that became a whole second round. Recommends `main` only, in two sentences, and states the one argument against it | documentation only |
+
+*`RFC 020` was the previous entry here and was accepted 2026-10-15.*
 
 ## Implemented
 
