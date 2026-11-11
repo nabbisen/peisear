@@ -629,6 +629,14 @@ fn test_count_citations_finds_both_bold_and_plain_counts_across_a_line_break() {
 /// own four new tests pinning the two resume guards
 /// (`resumeIfFocusNotInside`/`resumeIfPointerNotOver`), checked against
 /// the runner *before* pushing this time (round 1's own §6 finding).
+///
+/// **`VIEW-003` (`060`): both citations moved 12 → 4** -- the toast
+/// `undo_toast_attachment_scan` pinned is gone, replaced with a
+/// relocatable live region, and the eight tests for the five-second
+/// auto-remove timer's pause/resume behaviour went with the timer they
+/// described rather than being ported to describe nothing. Checked
+/// against the runner (`cargo test -p peisear-web --test
+/// undo_toast_attachment_scan -- --list`: 4) before pushing.
 #[test]
 fn test_count_citations_population_is_exactly_these_eight() {
     let input = real_input();
@@ -638,12 +646,12 @@ fn test_count_citations_population_is_exactly_these_eight() {
         vec![
             ("view_state".to_string(), 9),
             ("issue_edit_url".to_string(), 3),
-            ("undo_toast_attachment_scan".to_string(), 12),
+            ("undo_toast_attachment_scan".to_string(), 4),
             ("aggregate_privacy".to_string(), 13),
             ("optimistic_lock".to_string(), 22),
             ("updated_at_authority".to_string(), 4),
             ("chart_equivalence".to_string(), 5),
-            ("undo_toast_attachment_scan".to_string(), 12),
+            ("undo_toast_attachment_scan".to_string(), 4),
         ]
     );
 }

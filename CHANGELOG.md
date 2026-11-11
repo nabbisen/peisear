@@ -27,6 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   you ask for it, opening to the same per-person chips as before.
   Collapsed, this block is a constant 44px regardless of how much it
   would otherwise show — open, it is whatever it was.
+- **An undo now appears once, right next to what it undoes.** Moving
+  an issue on the board, the sprint plan or the calendar used to say
+  so twice — once quietly beside the control, and again in a pop-up
+  in the corner of the screen, which was the only place carrying
+  Undo. The pop-up is gone; the one message, with its Undo, now
+  renders in place, right after whatever you just moved.
 
 ## [0.61.0] — 2026-11-10
 
