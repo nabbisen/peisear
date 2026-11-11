@@ -1485,6 +1485,15 @@ pub enum MessageKey {
     ReadFirstLongStaleBody {
         long_stale_count: i64,
     },
+    /// `NAME-001`: `/today`'s own page title and `<h1>`, deliberately
+    /// rendering the same text as [`MessageKey::NavLinkToday`] —
+    /// `NFR-A11Y-012`'s "a destination answers to the navigation's own
+    /// word," satisfied for the one entry point that didn't. Kept as a
+    /// separate variant rather than reused directly: the two answer
+    /// different questions (a nav word vs. a page's own name) that
+    /// happen to agree today, the same non-coupling
+    /// [`MessageKey::SettingsLinkWord`]'s own doc comment draws for a
+    /// different pair.
     PersonalDashboardTitle,
     NothingToShowMessage,
     /// `FR-PER-001`/`NFR-PRIV-001`: `/today`'s privacy claim.

@@ -33,6 +33,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   in the corner of the screen, which was the only place carrying
   Undo. The pop-up is gone; the one message, with its Undo, now
   renders in place, right after whatever you just moved.
+- **The navigation word for your own page is now `Me`, not `Today`.**
+  The page itself didn't change — it's still your own load, rhythm
+  and sustainability signals, visible only to you — only the word
+  that pointed at it. Clicking it used to land you on a page titled
+  "My dashboard," a different name for the same place; now the word
+  you click and the page you land on say the same thing.
 
 ## [0.61.0] — 2026-11-10
 
