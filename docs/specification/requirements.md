@@ -2585,6 +2585,22 @@ drag, the board drag, the sprint-plan drag, and the undo toast's two endings
 on each of those surfaces. **Not measured**: a validation error re-render,
 which is a full-document response and therefore `NFR-A11Y-011`'s; any browser
 other than Chrome; and a real screen reader. *Priority*: P1.
+*Divergent on `main` since 2026-11-11, measured 2026-11-12, and **not
+released**.* `VIEW-003` replaced the undo toast with a relocatable live
+region, and the offer now ends by `region.textContent = ""` — which
+removes the **focused** Undo button from the document. Measured on the
+issue-detail status surface with real key events: Tab reaches Undo in
+three presses, Enter activates it, and `document.activeElement` is
+**`BODY`**, immediately and after the request settles. That is this
+entry's own named defect, on a path this entry counts among its eight.
+**The cause is an architect's instruction**: `VIEW-003`'s handoff said
+*"`removeToast`'s focus restoration has no counterpart once the control
+never moves focus in the first place. Delete it; do not port it"* —
+true of the toast *taking* focus, and false of the Undo control
+*receiving* it, which is the same round's own Tab-order property.
+Measured on **one** of the four surfaces; the other three carry the
+identical two lines, read rather than measured. `FOCUS-001` restores the
+ladder before `0.62.0` is cut, and `§10.57` records the class.
 *Editing note (0.41.0)*: this status read **Partial — 4 sites of 8 hold** two
 lines above a paragraph saying all four were closed. **Third instance of one
 habit of mine**: amending an entry by adding a correction while leaving the
@@ -8542,6 +8558,50 @@ there.
 step cancelled seconds after it starts, no log blob, and the job closed
 out roughly 45 minutes later is a lost runner — not a slow test, and not
 a defect in the code that job was compiling.
+
+
+### 10.57 A gate that proves a control can be reached and never asks what happens when it is used — **open**, `FOCUS-001`, 2026-11-12; found by the architect's own `DEC-028` pass 1, on his own instruction
+
+**`drag-outcome-gate.mjs` asserts that Tab from the acted-on element
+reaches Undo.** It does not press it. So the property *"Undo is
+reachable"* is measured on every run, and the property *"and using it
+leaves you somewhere"* is measured by nothing — on a control whose
+activation **removes itself from the document**.
+
+Measured 2026-11-12 on the issue-detail status surface, with real key
+events rather than `element.click()`:
+
+```
+focus reached the Undo button: after 3 Tab press(es)  -> BUTTON.btn.btn-xs [Undo]
+immediately after activating Undo                     -> BODY
+1.5 s later, after the request settled                -> BODY
+```
+
+`NFR-A11Y-002` says *"Focus does not land on `body` on any measured
+path"* and counts the undo's own endings among its eight sites. **It
+does now, on `main`, unreleased.**
+
+**The class, which is why this is an entry and not just a bug.** Both
+`§10.36` instances before it were checks that examined the wrong
+*thing*. This one examines the right thing, on the right surface, at the
+right moment — and asks half of the question. A reachability assertion
+and an outcome assertion look alike in a test file and are not alike: the
+first says a reader can get to the control, the second says the control
+leaves them able to continue. **`A11Y-004`/`A11Y-005` built the second
+half in 0.41.0 — the origin, then the first control still inside the same
+holder, then `main` with `tabindex="-1"` — and `VIEW-003` deleted it on
+the architect's own written instruction**, which reasoned about the toast
+*taking* focus and never about the Undo button *receiving* it.
+
+**What it is not**: a dev-team defect. The handoff said *"Delete it; do
+not port it"*, and the round did precisely that, reported it plainly, and
+its own report named the deletion. The review that accepted it — also the
+architect's — verified that Tab **reaches** Undo and never pressed it.
+
+**Bounded**: measured on one surface of four. The other three carry the
+identical two lines (`region.textContent = ""` then `onUndo()`), read and
+not measured. `FOCUS-001` measures all four and is where the remedy and
+the missing assertion both land.
 
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0

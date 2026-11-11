@@ -39,7 +39,7 @@ but ours."*
 | 4 | `CHANGELOG.md` records the *why* | §4 — architect's. The heading is renamed and dated **on the day the tag is pushed**, not today (`0.60.0` is where those two days first diverged) |
 | 5 | Affected documentation updated | §4 pass 5 **and `PREP-001`** |
 | 6 | Real binaries, and an upgrade that is a non-event | **`PREP-003`** |
-| 7 | Release recommendation; **owner approves** | after §4 and all three preps |
+| 7 | Release recommendation; **owner approves** | **blocked**: `FOCUS-001`, §4a |
 | 8 | *What ships next* reconciled | after approval, with the tag |
 
 ## §2 — the claim
@@ -63,6 +63,36 @@ archive was written at that cut. **Nothing moves this time.**
 claim, not an absence.
 
 ## §4 — the architect's own half, in progress
+
+### §4a — pass 1 found a P1 regression, and the cut waits for it
+
+**Pass 1 is not a formality and this is why it exists.** `FR-DM-006`'s
+own text still specifies a five-second window this release deleted, and
+following that thread into the shipped scripts found something worse:
+the undo offer ends with `region.textContent = ""`, which removes the
+**focused** Undo button. Measured with real key events on the
+issue-detail surface — Tab reaches Undo in three presses, Enter
+activates it, `document.activeElement` is **`BODY`** immediately and
+after the request settles. `NFR-A11Y-002` (**P1**) says focus lands on
+`body` on no measured path, and counts the undo's own endings among its
+eight sites.
+
+**The cause is this architect's own instruction** in `VIEW-003`'s
+handoff, and the review that accepted the round — also his — checked
+that Tab *reaches* Undo and never pressed it. `FOCUS-001` is the repair;
+`§10.57` is the class; `NFR-A11Y-002` records the divergence, dated and
+bounded to the one surface actually measured.
+
+**Nothing is released.** The cut waits for `FOCUS-001` to land and be
+reviewed.
+
+### §4b — the rest of the architect's half
+
+`FR-DM-006` still describes the five-second window, its pause/resume
+pair and a toast position; its acceptance still cites
+`undo_toast_attachment_scan` **(12)**, which is 4. Both are pass 1's and
+are amended with `FOCUS-001`'s own landing, so the entry is rewritten
+once against the mechanism that actually ships rather than twice.
 
 `DEC-028`'s five passes over both specifications and the reader-facing
 documentation; the `[Unreleased]` section's own wording — including the

@@ -96,6 +96,23 @@ ten remaining ungoverned `<details>`, which are a set to be decided once,
 and the typography and colour floor, whose stated condition — *adopt
 after the views are decided* — is now met.
 
+## `FOCUS-001` — open, and it blocks the cut
+
+**The architect's `DEC-028` pass over this series found a P1 regression
+in this series' own work, caused by the architect's own instruction.**
+`VIEW-003` deleted the undo's focus restoration because `VIEW-003`'s
+handoff told it to; measured 2026-11-12 with real key events, activating
+Undo now leaves `document.activeElement` on **`BODY`**, which is the
+defect `NFR-A11Y-002` (P1) names and `A11Y-004`/`A11Y-005` closed in
+0.41.0. **Not released** — it is on `main` only, which is why it is
+found before a cut rather than after one.
+
+[`FOCUS-001-where-undo-leaves-you.md`](./FOCUS-001-where-undo-leaves-you.md)
+restores the ladder that entry already names, measures **all four**
+surfaces (the architect measured one), and adds the assertion whose
+absence is the real finding: `drag-outcome-gate` proves Undo can be
+**reached** and never presses it. `§10.57` records that class.
+
 ## The release candidate — `0.62.0`
 
 **Started 2026-11-12 on the owner's instruction, and split.**
