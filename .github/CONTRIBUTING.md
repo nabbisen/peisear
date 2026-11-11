@@ -230,13 +230,7 @@ issue forms.
 Fixes #42
 ```
 
-## The pull request process — for contributions from outside the repository
-
-**This section describes how a contribution from outside the
-repository reaches `main`, and nothing else.** The project's own
-maintainers commit and push directly to the shared `main` branch
-(`RFC 023`, `DEC-060`); they do not open a pull request for their own
-work, and this process is not a model for it.
+## The pull request process
 
 1. Fork the repository and create a topic branch from `main`.
 2. Make your changes in logically organised commits.

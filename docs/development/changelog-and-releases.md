@@ -177,16 +177,22 @@ never copied, into one file each under [`changelog/`](https://github.com/nabbise
 - **The move is done with the release that starts the new series**, in its own
   commit, by moving the old sections verbatim.
 
-**"In its own commit" had never survived on `main`, and since `DEC-060`
-it simply does.** `0.50.0`'s own move (`ae431c5`) was bundled into the
-single release commit, and `0.60.0`'s was made as a separate commit on a
-branch and then collapsed by the squash-per-round convention that
-`RFC 023` retired — work now lands on the shared `main` as the commits it
-was made as, so this sentence holds literally. **The property it exists
-for is that the move is reviewable as pure deletion plus pure addition**:
-extract the moved range from the parent commit's own `CHANGELOG.md` and
-`diff` it against the new archive, as `REL-0.60.0`'s review did — 961
-lines, byte-identical.
+**"In its own commit" has never survived on `main`, and that is worth
+recording rather than rediscovering.** `0.50.0`'s own move (`ae431c5`) was
+bundled into the single release commit. `0.60.0`'s was made as a genuinely
+separate commit on its PR and then collapsed by this project's
+squash-per-round convention — two commits on the branch, one on `main`, which
+is closer to the letter of this rule than the precedent was. **The property
+this sentence exists for is that the move is reviewable as pure deletion plus
+pure addition**, and that is checkable from either shape: extract the moved
+range from the parent commit's own `CHANGELOG.md` and `diff` it against the
+new archive, as `REL-0.60.0`'s review did — 961 lines, byte-identical.
+
+Whether `main`'s history should carry the move separately is a convention
+question: the squash rule and this sentence cannot both hold literally, and it
+is the owner's to settle if it ever matters. **Not settled here** — named so
+the next series boundary, roughly ten releases away, starts from this
+paragraph rather than from scratch.
 
 **Known limit:** a link someone outside the project made to a section of
 `CHANGELOG.md` on `main` stops working when its series moves. Links pinned to a
