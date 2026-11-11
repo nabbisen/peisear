@@ -580,7 +580,7 @@ happened here, twice, before it was read correctly.
 ### 4.2 Navigation and information architecture — `FR-NAV`
 
 **FR-NAV-001 — Five primary entry points**
-The primary navigation MUST expose exactly five entry points: Today,
+The primary navigation MUST expose exactly five entry points: Me,
 Inbox, Projects, Teams, Search.
 *Rationale*: `SPEC §4.1` records that the previous seven-entry
 navigation diluted the user's sense of where to start.
@@ -617,6 +617,17 @@ visible and named, without an interaction — the architect's design decision,
 on the owner's question about readers whose acuity and short-term recall are
 both declining, for whom a menu costs a two-step interaction plus
 remembering that the menu is behind their own name.
+*Amended 2026-11-11 (`NAME-001`, `060`, 0.62.0): the first word is `Me`,
+not `Today`.* **The route does not move** — `/today` stays and
+`FR-NAV-002`'s 308 redirects are untouched; this is the label, not the
+destination. `external-design §3.2` already gave this entry point's own
+responsibility as *"What should I look at right now, about myself?"*, so
+the page was right and the word was wrong. The alternative — renaming the
+page to *Today* — was considered and rejected, because it would make the
+product's own name agree with an expectation the page does not meet,
+leaving the reader nothing to correct it with. **The product renamed
+`/me` to `/today` at 0.17.0 and no published document records why**; this
+amends the label back and leaves that decision's route alone.
 *Priority*: P1.
 
 **FR-NAV-002 — Renamed route compatibility**
@@ -2622,16 +2633,19 @@ this entry adds the two properties that criterion does not reach —
 identifying the product, and agreeing with the control that led here.
 *Source*: derived (`FLOW-002`, `059`); `FR-NAV-001` names the five words
 this entry makes the destinations answer to.
-*Acceptance*: `nav_destination_naming` — four live-render tests that read
-the **actual `<title>` of a running instance** at `/inbox`, `/projects`,
-`/teams` and `/search` (the last with no query, the state a reader
-reaches by clicking the word), strip the product suffix **by panicking if
-it is absent**, and compare what is left to the navigation's own
-`MessageKey`; plus `page_title_scan`'s three tests — the suffix helper
-always appends, **no `MessageKey` already carries the suffix** (walked
-over `MessageKey::all()`'s whole asserted population, so `Base` cannot
-double it), and `Today`'s own pending pair.
-*Status*: **Met at 0.61.0** (`FLOW-002`) for four of the five. The suffix
+*Acceptance*: `nav_destination_naming` — **five** live-render tests that
+read the **actual `<title>` of a running instance** at `/today`,
+`/inbox`, `/projects`, `/teams` and `/search` (the last with no query,
+the state a reader reaches by clicking the word), strip the product
+suffix **by panicking if it is absent**, and compare what is left to the
+navigation's own `MessageKey`; plus `page_title_scan`'s **two** tests —
+the suffix helper always appends, and **no `MessageKey` already carries
+the suffix** (walked over `MessageKey::all()`'s whole asserted
+population, so `Base` cannot double it). The third, `Today`'s own pending
+pair, was **deleted** by `NAME-001` in the same change that made its
+condition true, which is what that test was written to require.
+*Status*: **Met at 0.61.0** (`FLOW-002`) for four of the five, **and for
+the fifth at 0.62.0** (`NAME-001`, `060`). The suffix
 is applied **once**, in `Base`, the single place `<title>` is rendered —
 so a title built from user text (`team_name`, `sprint_name`, a
 confirmation page's own heading) gets it by construction, which a
@@ -2639,17 +2653,22 @@ per-string convention could not guarantee. Measured across sixteen
 authenticated pages and the public sign-in page: all carry it, none
 twice.
 *Priority*: P2.
-*The fifth is deliberately not met, and is pinned as pending rather than
-left silent*: **`/today` is reached by the word `Today` and is titled
-`My dashboard`.** Renaming it was in `FLOW-002`'s first scope and was
-withdrawn before the round started — `components/me.rs` renders no issue
-at all, so the rename would trade *two names for one place* for *one name
-making a promise the page does not keep*. `page_title_scan`'s own
-`today_is_pending_the_content_decision_not_yet_fixed` asserts the two
-**differ**, and fails the moment they stop differing without this entry
-being amended in the same change. The content question — whether `/today`
-should carry the day's planned work above its metrics — is the owner's,
-recorded in `rfcs/handoffs/059-what-the-browser-actually-draws/`.
+*The fifth was deliberately not met until 0.62.0, and was pinned as
+pending rather than left silent*: `/today` was reached by the word
+`Today` and titled `My dashboard`. Renaming the **page** was in
+`FLOW-002`'s first scope and was withdrawn before the round started —
+`components/me.rs` renders no issue at all, so that rename would have
+traded *two names for one place* for *one name making a promise the page
+does not keep*. `page_title_scan`'s own
+`today_is_pending_the_content_decision_not_yet_fixed` asserted the two
+**differ**, and was deleted by `NAME-001` in the same change that made
+them agree — the deliberate-gap shape working exactly as written.
+**The gap closed from the other side than that test expected**: not by
+giving `/today` new content, but by moving the **nav word** to `Me`,
+which the page's own title already answered to (`FR-NAV-001`, amended
+the same day). The content question — whether `/today` should carry the
+day's planned work above its metrics — is untouched by this and remains
+the owner's.
 
 **NFR-A11Y-003 — Screen reader equivalence for charts**
 Every chart MUST provide a one-sentence summary label, a two-to-three
@@ -8408,6 +8427,51 @@ loudly on a tree that could not have broken it, which is how a flake is
 supposed to present. What failed was attention — the release's own
 author stopped reading CI once the tag was green, and the record of that
 release says *"nothing this cut got wrong"* one commit earlier.
+
+
+### 10.55 Two header controls overlap at two widths, and the gate that measures that row cannot see it — **open**, 2026-11-11; found by the architect while performing `NAME-001`'s own acceptance measurement
+
+**At 768 px and 800 px the account menu's clickable box covers the right
+edge of the search field.** Measured on the real binary at `/today`, with
+the account control's own box against the search input's:
+
+| viewport | 768 | 800 | 860 | 940 | 1024 | 1120 | 1280 | 1920 |
+|---|---|---|---|---|---|---|---|---|
+| input's right edge − menu's left edge | **+18 px** | **+13 px** | −8 px | −8 px | −8 px | −8 px | −8 px | −8 px |
+
+A positive number is overlap. `document.elementFromPoint` 1 px and 4 px
+inside the input's right edge returns the **account control**, not the
+input; at 20 px inside it returns the input. So a click that lands in
+that strip opens the account menu instead of focusing search, and at
+every width from 860 up the two are 8 px apart and nothing is wrong.
+
+**Why it has never been visible, and why no check has ever failed.**
+The account control is `btn btn-ghost`, so the overlapping region is
+transparent padding — the header *looks* correct at 768, and a
+screenshot confirms it does. And `browser-checks/overflow-gate.mjs`
+measures **overflow**: whether content exceeds its box. Two controls can
+cover each other without the page scrolling by a pixel, so the gate
+reports a green cell at **768, which is one of its own five widths**.
+This is `§10.36`'s class — a check that cannot tell *nothing wrong* from
+*nothing examined* — in a new place: the gate examines the right row, at
+the right width, for the wrong property.
+
+**It is older than the round that found it, and that round halves it.**
+`NAME-001` shortened the first nav word from `Today` to `Me`, which moves
+the search field 20 px left at this width: the same measurement with
+`Today` substituted back into the rendered row puts the overlap at
+roughly 38 px. Nothing here argued against landing that round.
+
+**Not scheduled with a release number.** It is a defect a reader can
+reach — a click that does the wrong thing — so unlike the register's
+internal entries it is a candidate for one; what it is not is urgent, at
+two widths, with the control it covers still reachable from 20 px inside
+its own edge. The remedy and the check are separate pieces of work: the
+layout fix is a shrink or a gap in one flex row, and **a check that would
+have caught it is an occlusion test, not another overflow test** — for
+each pair of interactive controls in a shared row, assert that neither's
+box covers the other's. That second half is the part worth doing, because
+it is the part that generalises past this one row.
 
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0

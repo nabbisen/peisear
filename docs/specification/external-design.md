@@ -308,7 +308,7 @@ Every authenticated screen renders inside a common shell:
 ├────────────────────────────────────────────────────────────┤
 │ HEADER (banner)                                            │
 │   brand · NAV (nav, aria-label="Primary"):                 │
-│     Today · Inbox · Projects · Teams ·                     │
+│     Me · Inbox · Projects · Teams ·                        │
 │     Search [search box: role="search"]                     │
 │   · account menu (Settings, sign out)                      │
 ├────────────────────────────────────────────────────────────┤
@@ -370,7 +370,7 @@ is not one of.
 
 | Entry | Realisation | Responsibility |
 |---|---|---|
-| Today | nav link → `/today` | "What should I look at right now, about myself?" |
+| Me | nav link → `/today` | "What should I look at right now, about myself?" |
 | Inbox | nav link → `/inbox` | "What has changed that I should know about?" |
 | Projects | nav link → `/projects` | "Where is the work?" |
 | Teams | nav link → `/teams` | "Who am I working with, and on what cycle?" |
@@ -396,7 +396,7 @@ what the menu is about. **The five are labelled with words.**
 | SCR-01 | Landing / root | `/` | Implemented | `FR-AUTH-004` |
 | SCR-02 | Login | `/login` | Implemented | `FR-AUTH-002` |
 | SCR-03 | Register | `/register` | Implemented | `FR-AUTH-001` |
-| SCR-04 | Today (personal dashboard) | `/today` | Implemented | `FR-PER-001/006/007` |
+| SCR-04 | Me (personal dashboard) | `/today` | Implemented | `FR-PER-001/006/007` |
 | SCR-05 | Inbox | `/inbox` | Implemented | `FR-NTF-004` |
 | SCR-06 | Project list | `/projects` | Implemented | `FR-PROJ-001` |
 | SCR-07 | Project create | `/projects/new` | Implemented | `FR-PROJ-001` |
@@ -2283,7 +2283,7 @@ of this document:
 |---|---|---|---|
 | Personal dashboard route | `/me` | `/today` | Renamed in Phase A; `/me` 308-redirects |
 | Inbox route | `/notifications` | `/inbox` | Renamed in Phase A; legacy 308-redirects |
-| Navigation entries | Dashboard, Projects, Teams, Notifications, Settings | Today, Inbox, Projects, Teams, Search (+ Settings) | `SPEC §4.2` five-entry model |
+| Navigation entries | Dashboard, Projects, Teams, Notifications, Settings | Me, Inbox, Projects, Teams, Search (+ Settings) | `SPEC §4.2` five-entry model |
 | Cross-user personal data | "Return 404 or access-safe denial" (`GUI §3.4`) | **403 where the request names a user; 404 where it names a resource** | `SPEC Appendix E.2`. *Corrected 2026-09-23: this row read "403, uniformly", and "uniformly" was wrong — the capacity-row mutations return 404. The enumeration argument that justifies 403 applies to a **user id** in the path, where 403-versus-404 would distinguish a real account from a fake one; it does not apply to a **row** id, where 404 is returned identically for absent and not-yours and so reveals nothing. The behaviour is right in both shapes; the word was the defect* |
 
 Additionally, the GUI specification predates and therefore does not
