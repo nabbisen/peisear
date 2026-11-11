@@ -1942,13 +1942,21 @@ necessary is present on exactly the three draggable surfaces and absent on
 the one with no drag source to guard against.
 *What pins this status, and what it does not pin* (`DM-TEST-001`,
 `DM-TEST-002`, 0.44.0). Two instruments, and the split between them matters:
-**`undo_toast_attachment_scan`** (12 tests) reads `static/*.js` and asserts
-that `showUndoToast` still appends the button into `alertBox`, `alertBox` into
-`toast`, and `toast` onto the element the function was **given** — bound to
-the function's own first parameter, so a rename cannot slip past it. **It is a
-source scan and nothing more**: it pins what the four scripts are *written* to
-do, not what a browser does. If that chain were correct and something else
-detached the toast afterwards, all four would still pass.
+**`undo_toast_attachment_scan`** (4 tests) reads `static/*.js` and asserts
+that `showUndoInline` still appends the undo button and the message text into
+the live region, and attaches that region onto the element the function was
+**given** — bound to the function's own first parameter, so a rename cannot
+slip past it. **It is a source scan and nothing more**: it pins what the four
+scripts are *written* to do, not what a browser does. If that chain were
+correct and something else detached the region afterwards, all four would
+still pass. *Rewritten at `VIEW-003` (round 3 of `060`, 0.62.0): the test count moved
+from 12 to 4 when the toast this scan pinned was replaced with a relocatable
+live region carrying Undo beside the acted-on element, and the five-second
+auto-remove timer was deleted outright — the eight tests this scan used to
+carry for the timer's pause/resume behaviour are gone with it, not ported.
+The rest of this entry, and the status this citation sits inside
+(`FR-DM-006`, and `A11Y-004`/`A11Y-005` below), describe the toast as
+current and are stale pending the architect's own pass over this series.*
 **`browser-checks/undo-mousedown-trap.mjs`** pins the one runtime property a
 scan cannot see — that a real `mousedown` plus a small movement on the undo
 button is read as a click and not a drag-start, which is `A11Y-005`'s defect
@@ -5253,12 +5261,14 @@ recorded in the guarding test's own doc comment rather than built for.
 > project**. **If it is ever wanted, that is the owner's capability decision.**
 >
 > **And the companion instrument is a scan, not an execution.**
-> `undo_toast_attachment_scan` (12 tests) reads `static/*.js` and pins what
-> `showUndoToast` is **written** to do. It is in this entry's class, not out
-> of it: if the chain were correct and something else detached the toast, it
+> `undo_toast_attachment_scan` (4 tests) reads `static/*.js` and pins what
+> `showUndoInline` is **written** to do. It is in this entry's class, not out
+> of it: if the chain were correct and something else detached the region, it
 > would still pass. `FR-DM-006` names both instruments and this limit in its
 > own acceptance line, so a reader meeting that `Met` is not left to infer
-> coverage from it — the inference this entry exists to prevent.
+> coverage from it — the inference this entry exists to prevent. *Count
+> corrected at `VIEW-003` (0.62.0) — see the note beside `FR-DM-006`'s own
+> citation above.*
 
 0.26.0 is the first release where user-visible behaviour lives in code the test
 suite never runs. `static/dm.js` and `static/board.js` carry the in-place
