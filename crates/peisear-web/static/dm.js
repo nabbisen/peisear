@@ -7,7 +7,7 @@
 // controls on the issue detail page and the issue list. Intercepts
 // `.js-status-form` submits, POSTs the same JSON endpoint `board.js`
 // uses (`/projects/{id}/issues/{id}/status`), updates in place
-// instead of reloading, with a 5-second Undo toast.
+// instead of reloading, with an inline Undo (`VIEW-003`).
 //
 // The rule everything else here serves: any failure *before the
 // mutation lands* falls back to submitting the form natively — the
@@ -129,138 +129,50 @@
     }
   }
 
-  // `A11Y-004` (`NFR-A11Y-002`): when a toast ends -- Undo pressed or the
-  // five seconds up -- and focus is *inside it*, focus returns to the control
-  // that was acted on instead of falling to `body`. **Conditional on focus being
-  // inside the toast**: a user who has kept working elsewhere is not touched (an
-  // unconditional restore, or focusing the toast when it appears, would steal
-  // focus, and would make a second Enter on a status button press Undo).
-  function toastOrigin(form) {
-    return form.querySelector('button[aria-pressed="true"]');
-  }
+  // `VIEW-003`: one outcome, one place. The undo offer renders inside
+  // the polite live region that already sits beside the acted-on
+  // element (`#status-announcements`), rather than a second copy of
+  // the sentence in a toast pinned to a corner of the viewport --
+  // there is no longer a separate control to carry Undo, and no
+  // separate place for it to be.
+  //
+  // The region is one page-wide element, so showing an offer here
+  // moves it to sit right after whichever element this was just
+  // called for (`actedOnEl`), which is also what puts Undo at the
+  // next Tab stop. Because it is the *same* element every time, there
+  // is never more than one offer open at once, by construction -- not
+  // by a defensive removal call before each new mutation, the way the
+  // toast this replaces needed one per surface to avoid two of its
+  // own instances overlapping in the same fixed corner.
+  //
+  // The offer ends: when the reader acts on it (the region is cleared
+  // before `onUndo` runs, below); when the next outcome replaces it in
+  // this same region (the next call here clears and re-fills it); or
+  // when they leave the page. No timer -- `FLOW-001`'s five-second
+  // auto-remove and `FLOW-001` round 2's pause/resume existed only to
+  // keep two corner toasts from colliding, which cannot happen once
+  // there is only one region to begin with.
+  function showUndoInline(actedOnEl, message, onUndo) {
+    var region = document.getElementById("status-announcements");
+    if (!region) return;
 
-  // If the origin is gone (its element was removed from the page), focus goes to
-  // the first control inside the same holder, and failing that to `<main>` (made
-  // focusable with tabindex -1): always somewhere on the page the user was
-  // working in, never `body`.
-  function restoreFocus(form) {
-    var target = toastOrigin(form);
-    if (!target || !document.contains(target)) {
-      target = document.contains(form) ? form.querySelector('a[href], button:not([disabled])') : null;
-    }
-    if (!target) {
-      var main = document.querySelector("main");
-      if (main) {
-        if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
-        target = main;
-      }
-    }
-    if (target) target.focus();
-  }
-
-  // Returns whether focus was inside the toast. `deferRestore` lets the Undo
-  // click restore focus itself *after* the undo has moved its element back --
-  // the board and plan undos move the card/row synchronously, which would
-  // blur a focus restored before it (measured: focus fell to `body`).
-  function removeToast(form, deferRestore) {
-    var toast = form._dmToast;
-    if (!toast) return;
-    clearTimeout(toast.timer);
-    var hadFocus = toast.el.contains(document.activeElement);
-    if (toast.el.parentNode) toast.el.parentNode.removeChild(toast.el);
-    form._dmToast = null;
-    if (hadFocus && !deferRestore) restoreFocus(form);
-    return hadFocus;
-  }
-
-  function showUndoToast(form, message, onUndo) {
-    removeToast(form);
-
-    var toast = document.createElement("div");
-    toast.className = "toast toast-end toast-bottom z-50";
-
-    var alertBox = document.createElement("div");
-    alertBox.className = "alert alert-info text-sm";
-
+    region.textContent = "";
     var text = document.createElement("span");
     text.textContent = message;
+    region.appendChild(text);
+    region.appendChild(document.createTextNode(" "));
 
     var undoButton = document.createElement("button");
     undoButton.type = "button";
     undoButton.className = "btn btn-xs";
     undoButton.textContent = copy.undoLabel;
     undoButton.addEventListener("click", function () {
-      var refocus = removeToast(form, true);
+      region.textContent = "";
       onUndo();
-      if (refocus) restoreFocus(form);
     });
+    region.appendChild(undoButton);
 
-    alertBox.appendChild(text);
-    alertBox.appendChild(undoButton);
-    toast.appendChild(alertBox);
-    // `A11Y-004`: in DOM order right after the acted-on control, so Undo is the
-    // next Tab stop -- not appended to the end of `<body>`. This is a DOM-order
-    // change only: `.toast` is `position: fixed`, so it is still drawn
-    // bottom-right and takes no space in the layout it now sits inside.
-    form.insertAdjacentElement("afterend", toast);
-
-    function startAutoRemoveTimer() {
-      return setTimeout(function () {
-        removeToast(form);
-      }, 5000);
-    }
-
-    // `FLOW-001` (WCAG 2.2.1 Timing Adjustable): the toast still removes
-    // itself after five seconds, but the five seconds stops counting
-    // while the reader is on it -- pointer or keyboard focus, either
-    // pauses it, and leaving resumes it. `mouseenter`/`mouseleave` fire
-    // only on this element's own boundary, not per descendant;
-    // `focusin`/`focusout` bubble from the one focusable child (the
-    // Undo button) -- both are exactly "is the reader engaging with
-    // this toast", with no `relatedTarget` check needed. Nothing else
-    // about the toast changes: not its position, not its text, not
-    // what Undo does.
-    toast.addEventListener("mouseenter", pauseAutoRemove);
-    toast.addEventListener("focusin", pauseAutoRemove);
-    toast.addEventListener("mouseleave", resumeIfFocusNotInside);
-    toast.addEventListener("focusout", resumeIfPointerNotOver);
-
-    function pauseAutoRemove() {
-      var current = form._dmToast;
-      if (!current) return;
-      clearTimeout(current.timer);
-      current.timer = null;
-    }
-
-    // `FLOW-001` round 2: two independent sources (pointer, keyboard
-    // focus) share this one piece of state (`current.timer`), so
-    // releasing either must not resume the countdown while the other
-    // still holds it. `mouseleave` checks whether focus is still
-    // inside the toast -- `document.activeElement` is trustworthy here
-    // because no focus change is in flight during a pointer event;
-    // `focusout` checks whether the pointer is still over the toast
-    // (`:hover`) for the same reason, read during a focus event rather
-    // than a pointer one. Each handler asks the DOM for the other
-    // source's own live truth -- no `relatedTarget`, no hover flag, no
-    // state machine; the DOM already keeps this correctly.
-    // `clearTimeout` before reassigning guards the second consequence
-    // of the old shared-latch bug: two resumes in a row used to leave
-    // two pending removals, the earlier one winning.
-    function resumeIfFocusNotInside() {
-      var current = form._dmToast;
-      if (!current || toast.contains(document.activeElement)) return;
-      clearTimeout(current.timer);
-      current.timer = startAutoRemoveTimer();
-    }
-
-    function resumeIfPointerNotOver() {
-      var current = form._dmToast;
-      if (!current || toast.matches(":hover")) return;
-      clearTimeout(current.timer);
-      current.timer = startAutoRemoveTimer();
-    }
-
-    form._dmToast = { el: toast, timer: startAutoRemoveTimer() };
+    actedOnEl.insertAdjacentElement("afterend", region);
   }
 
   // Shared by the original change and undo (a second call to this
@@ -285,8 +197,7 @@
     try {
       setPressed(form, newStatus);
       var message = copy.movedTo[newStatus];
-      announcePolite(message);
-      showUndoToast(form, message, function () {
+      showUndoInline(form, message, function () {
         performUndo(form, projectId, issueId, previousStatus, clientInput);
       });
     } catch (e) {

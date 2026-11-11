@@ -201,166 +201,65 @@
     }
   }
 
-  // `A11Y-004` (`NFR-A11Y-002`): when a toast ends -- Undo pressed or the
-  // five seconds up -- and focus is *inside it*, focus returns to the control
-  // that was acted on instead of falling to `body`. **Conditional on focus being
-  // inside the toast**: a user who has kept working elsewhere is not touched (an
-  // unconditional restore, or focusing the toast when it appears, would steal
-  // focus, and would make a second Enter on a status button press Undo).
-  function toastOrigin(row) {
-    return row.querySelector("button, a");
-  }
+  // `VIEW-003`: one outcome, one place. The undo offer renders inside
+  // the polite live region that already sits beside the acted-on
+  // element (`#status-announcements`), rather than a second copy of
+  // the sentence in a toast pinned to a corner of the viewport --
+  // there is no longer a separate control to carry Undo, and no
+  // separate place for it to be.
+  //
+  // The region is one page-wide element, so showing an offer here
+  // moves it to sit inside whichever row this was just called for,
+  // which is also what puts Undo at the next Tab stop. Because it is
+  // the *same* element every time, there is never more than one offer
+  // open at once, by construction -- not by a defensive removal call
+  // before each new drag, the way the toast this replaces needed one
+  // per row to avoid two of its own instances overlapping in the
+  // same fixed corner.
+  //
+  // The offer ends: when the reader acts on it (the region is cleared
+  // before `onUndo` runs, below); when the next outcome replaces it in
+  // this same region (the next call here clears and re-fills it); or
+  // when they leave the page. No timer -- `FLOW-001`'s five-second
+  // auto-remove and `FLOW-001` round 2's pause/resume existed only to
+  // keep two corner toasts from colliding, which cannot happen once
+  // there is only one region to begin with.
+  function showUndoInline(row, message, onUndo) {
+    var region = document.getElementById("status-announcements");
+    if (!region) return;
 
-  // If the origin is gone (its element was removed from the page), focus goes to
-  // the first control inside the same holder, and failing that to `<main>` (made
-  // focusable with tabindex -1): always somewhere on the page the user was
-  // working in, never `body`.
-  function restoreFocus(row) {
-    var target = toastOrigin(row);
-    if (!target || !document.contains(target)) {
-      target = document.contains(row) ? row.querySelector('a[href], button:not([disabled])') : null;
-    }
-    if (!target) {
-      var main = document.querySelector("main");
-      if (main) {
-        if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
-        target = main;
-      }
-    }
-    if (target) target.focus();
-  }
-
-  // Returns whether focus was inside the toast. `deferRestore` lets the Undo
-  // click restore focus itself *after* the undo has moved its element back --
-  // the board and plan undos move the card/row synchronously, which would
-  // blur a focus restored before it (measured: focus fell to `body`).
-  function removeToast(row, deferRestore) {
-    var toast = row._planToast;
-    if (!toast) return;
-    clearTimeout(toast.timer);
-    var hadFocus = toast.el.contains(document.activeElement);
-    if (toast.el.parentNode) toast.el.parentNode.removeChild(toast.el);
-    row._planToast = null;
-    if (hadFocus && !deferRestore) restoreFocus(row);
-    return hadFocus;
-  }
-
-  function showUndoToast(row, message, onUndo) {
-    removeToast(row);
-
-    var toast = document.createElement("div");
-    toast.className = "toast toast-end toast-bottom z-50";
-
-    var alertBox = document.createElement("div");
-    alertBox.className = "alert alert-info text-sm";
-
+    region.textContent = "";
     var text = document.createElement("span");
     text.textContent = message;
+    region.appendChild(text);
+    region.appendChild(document.createTextNode(" "));
 
     var undoButton = document.createElement("button");
     undoButton.type = "button";
     undoButton.className = "btn btn-xs";
     undoButton.textContent = copy.undoLabel;
     // `A11Y-005`: `row` carries `draggable="true"` when `can_move`
-    // (`components/sprint_plan.rs`), and the toast is now this element's own
-    // child (`A11Y-004`). A mousedown on Undo followed by even a few pixels of
-    // real pointer movement was being read by the browser as the start of the
-    // row's own drag -- the click that activates Undo never fires. Two things
-    // that do NOT stop it, measured rather than assumed: `draggable="false"`
-    // on the toast itself (the browser's drag-source search walks past an
-    // explicit `draggable="false"` descendant to the nearest ancestor's
-    // `draggable="true"` -- the same mechanism that makes the row, not its
-    // `<a>`, the drag source a few lines above this one); and
-    // `preventDefault()`/`stopPropagation()` on the toast's own `dragstart`
-    // (by then the browser has already committed to a drag gesture instead of
-    // a click for this mousedown). What does work: `preventDefault()` on
-    // `mousedown` itself, which is where the browser decides whether this
-    // gesture becomes a drag at all -- confirmed with a real pointer gesture
-    // (not a synthetic click), on this surface and the other two draggable
-    // ones. `preventDefault()` here also suppresses the browser's own default
-    // mousedown-focuses-the-button behaviour, so it is put back explicitly on
-    // the next line -- `A11Y-004`'s restore-on-end contract depends on the
-    // button actually having focus when Undo is pressed.
+    // (`components/sprint_plan.rs`), and the region is this element's
+    // own child -- a real mousedown on Undo followed by a few pixels
+    // of real pointer movement is read by the browser as the start of
+    // the row's own drag, and the click that activates Undo never
+    // fires. Unchanged by this round (the defect is about the
+    // draggable ancestor, not about where the toast used to sit):
+    // `preventDefault()` on `mousedown` itself is what stops it,
+    // measured rather than assumed at `A11Y-005`; that call also
+    // suppresses the browser's own default mousedown-focuses-the-
+    // button behaviour, so it is put back explicitly on the next line.
     undoButton.addEventListener("mousedown", function (e) {
       e.preventDefault();
       undoButton.focus();
     });
     undoButton.addEventListener("click", function () {
-      var refocus = removeToast(row, true);
-      // The undo moves the row back only after its request returns, so focus is
-      // restored now (never `body` in between) and again once the row has moved
-      // (`performUndo`), which would otherwise blur it. Cleared there.
-      row._planRefocus = refocus;
+      region.textContent = "";
       onUndo();
-      if (refocus) restoreFocus(row);
     });
+    region.appendChild(undoButton);
 
-    alertBox.appendChild(text);
-    alertBox.appendChild(undoButton);
-    toast.appendChild(alertBox);
-    // `A11Y-004`: in DOM order right after the acted-on control, so Undo is the
-    // next Tab stop -- not appended to the end of `<body>`. This is a DOM-order
-    // change only: `.toast` is `position: fixed`, so it is still drawn
-    // bottom-right and takes no space in the layout it now sits inside.
-    row.appendChild(toast);
-
-    function startAutoRemoveTimer() {
-      return setTimeout(function () {
-        removeToast(row);
-      }, 5000);
-    }
-
-    // `FLOW-001` (WCAG 2.2.1 Timing Adjustable): the toast still removes
-    // itself after five seconds, but the five seconds stops counting
-    // while the reader is on it -- pointer or keyboard focus, either
-    // pauses it, and leaving resumes it. `mouseenter`/`mouseleave` fire
-    // only on this element's own boundary, not per descendant;
-    // `focusin`/`focusout` bubble from the one focusable child (the
-    // Undo button) -- both are exactly "is the reader engaging with
-    // this toast", with no `relatedTarget` check needed. Nothing else
-    // about the toast changes: not its position, not its text, not
-    // what Undo does.
-    toast.addEventListener("mouseenter", pauseAutoRemove);
-    toast.addEventListener("focusin", pauseAutoRemove);
-    toast.addEventListener("mouseleave", resumeIfFocusNotInside);
-    toast.addEventListener("focusout", resumeIfPointerNotOver);
-
-    function pauseAutoRemove() {
-      var current = row._planToast;
-      if (!current) return;
-      clearTimeout(current.timer);
-      current.timer = null;
-    }
-
-    // `FLOW-001` round 2: two independent sources (pointer, keyboard
-    // focus) share this one piece of state (`current.timer`), so
-    // releasing either must not resume the countdown while the other
-    // still holds it. `mouseleave` checks whether focus is still
-    // inside the toast -- `document.activeElement` is trustworthy here
-    // because no focus change is in flight during a pointer event;
-    // `focusout` checks whether the pointer is still over the toast
-    // (`:hover`) for the same reason, read during a focus event rather
-    // than a pointer one. Each handler asks the DOM for the other
-    // source's own live truth -- no `relatedTarget`, no hover flag, no
-    // state machine; the DOM already keeps this correctly.
-    // `clearTimeout` before reassigning guards the second consequence
-    // of the old shared-latch bug: two resumes in a row used to leave
-    // two pending removals, the earlier one winning.
-    function resumeIfFocusNotInside() {
-      var current = row._planToast;
-      if (!current || toast.contains(document.activeElement)) return;
-      clearTimeout(current.timer);
-      current.timer = startAutoRemoveTimer();
-    }
-
-    function resumeIfPointerNotOver() {
-      var current = row._planToast;
-      if (!current || toast.matches(":hover")) return;
-      clearTimeout(current.timer);
-      current.timer = startAutoRemoveTimer();
-    }
-
-    row._planToast = { el: toast, timer: startAutoRemoveTimer() };
+    row.appendChild(region);
   }
 
   // Puts `row` back in its origin column, re-creating that column's
@@ -400,10 +299,6 @@
         }
         var destList = ensureList(undoContainer);
         destList.appendChild(row);
-        if (row._planRefocus) {
-          row._planRefocus = false;
-          restoreFocus(row);
-        }
         ensureEmpty(currentContainer, emptyMessageFor(currentContainer));
         // Round 2 (`PLAN-002-review.md` §4/§6a): the row's new
         // `data-plan-move` is `undoContainer`'s own
@@ -437,8 +332,7 @@
       row.dataset.planMove = newMove;
       syncRowForm(row, newMove, originContainer.dataset.planUrl);
       var message = movedMessage(performedMove);
-      announcePolite(message);
-      showUndoToast(row, message, function () {
+      showUndoInline(row, message, function () {
         performUndo(row, originContainer, destContainer);
       });
     } catch (e) {
@@ -493,8 +387,6 @@
       var originContainer = row.closest("[data-plan-drop]");
       var destContainer = column;
       if (!originContainer || originContainer === destContainer) return;
-
-      removeToast(row); // a still-open undo from an earlier move is now stale
 
       // Optimistic move.
       var destList = ensureList(destContainer);

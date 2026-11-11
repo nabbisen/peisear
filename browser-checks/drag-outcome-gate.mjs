@@ -12,7 +12,7 @@
 //   1. The live region actually receives the outcome text -- not merely that
 //      the element exists. This is why the script exists: `NFR-A11Y-008`
 //      cannot otherwise cite a mechanism matching its text.
-//   2. The undo toast's own Tab order, measured rather than inferred --
+//   2. The undo control's own Tab order, measured rather than inferred --
 //      `COV-001`'s own standing gap, open since 0.46.0.
 //   3. The drop's stored effect, read back over HTTP -- independent of the
 //      page's own optimistic DOM state, which a correct client updates from
@@ -24,6 +24,18 @@
 // nothing. Asserting the stored effect first makes a setup failure (the
 // synthetic drop not reaching the handler at all) legible as its own failure
 // rather than reading as a defect in the announcement.
+//
+// **Updated for `VIEW-003`** (round 3 of `060`): the undo control used to
+// live inside a `position: fixed` toast, a separate element created fresh
+// per drop; it now renders inside `#status-announcements` itself, relocated
+// beside the acted-on element. Properties 1-3 are unchanged in substance --
+// only their selectors moved, from `.toast`/`.toast button` to
+// `#status-announcements` and a `<span>`/`<button>` inside it. The fourth
+// check this file used to run here, the `FLOW-001`/`FLOW-001` round 2
+// auto-remove pause/resume behaviour, is deleted along with the timer it
+// described: a single relocatable region cannot suffer the two-toasts-
+// collide defect that timer existed to manage, so there is nothing left for
+// that check to assert.
 //
 // Reuses `undo-mousedown-trap.mjs`'s own synthetic-`DragEvent` scaffolding
 // verbatim for `PRODUCE.calendar`/`PRODUCE.plan` -- proven already, in a
@@ -216,20 +228,16 @@ const PRODUCE = {
 };
 
 const HOLDER_SEL = {
-  plan: '[data-plan-move]:has(.toast)',
-  calendar: '#day-view [data-issue-id]:has(.toast)',
+  plan: '[data-plan-move]:has(#status-announcements)',
+  calendar: '#day-view [data-issue-id]:has(#status-announcements)',
 };
 
 // The element to Tab *from*. For the calendar block there is exactly
-// one focusable descendant (the title link), so it is also
-// `toastOrigin`'s own element and Undo is the row's only other
-// focusable child. For a plan row there are two -- the title link,
-// then the row's own keyboard move button -- so the control
-// immediately before Undo in DOM order is the move button, not the
-// link; `toastOrigin` itself (`row.querySelector("button, a")`)
-// picks the link because that selector list has no priority, which
-// is a fact about `toastOrigin`'s own focus-restore job (return focus
-// to *something* in the row), not about Tab order from here.
+// one focusable descendant before the relocated region (the title
+// link), so Undo is its only other focusable child. For a plan row
+// there are two -- the title link, then the row's own keyboard move
+// button -- so the control immediately before Undo in DOM order is
+// the move button, not the link.
 const ACTED_ON_SEL = {
   plan: '[data-plan-move] form button[type="submit"]',
   calendar: '#day-view [data-issue-id] a',
@@ -239,106 +247,6 @@ async function realTabPress(browser) {
   const common = { key: 'Tab', code: 'Tab', windowsVirtualKeyCode: 9, nativeVirtualKeyCode: 9 };
   await browser.send('Input.dispatchKeyEvent', { type: 'rawKeyDown', ...common });
   await browser.send('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
-}
-
-// `FLOW-001` (`WCAG 2.2.1`): the toast's five-second auto-remove timer
-// pauses while the reader's pointer is over it or keyboard focus is
-// inside it, and resumes once *neither* holds it. `DEC-048` condition 2
-// forbids a wall-clock-dependent gate, so this does not sleep 5000ms to
-// watch the toast survive past its own timer -- it asserts the
-// handlers' own effect on the timer handle instead:
-// `_<surface>Toast.timer` goes `null` while held and becomes a new,
-// truthy handle again once released (`crates/peisear-web/static/*.js`'s
-// own `pauseAutoRemove`/`resumeIfFocusNotInside`/`resumeIfPointerNotOver`,
-// which this reads directly rather than re-deriving). Pointer
-// transitions use a real `Input.dispatchMouseEvent` (`mouseMoved`), the
-// same mechanism `undo-mousedown-trap.mjs` already uses, so the
-// browser's own native `mouseenter`/`mouseleave` fire -- not a
-// synthetic DOM event dispatched from page script. Keyboard-focus
-// transitions inside this function use `.focus()`/`.blur()` via
-// `browser.eval` rather than a second real Tab press: the Tab-order
-// property itself is already covered by the real key press in the
-// caller's own step 3 (`realTabPress`), so this function is about the
-// *pause state*, not Tab order, and `.focus()`/`.blur()` is the cheap
-// direction `FLOW-001` round 2 §4 allows for it.
-//
-// **`FLOW-001` round 1's own defect, re-entered through the case its
-// `blur()` stepped over**: entering this function, the caller's step 3
-// has just left real keyboard focus *on* the undo button, via a real
-// Tab press -- so the timer is already paused by focus alone, and
-// round 1's bug was that the pointer's own `mouseleave`, arriving while
-// that focus still held the toast, resumed the countdown underneath
-// it. This function tests that case directly (no `blur()` first), then
-// the mirrored one (pointer holds, focus enters and leaves).
-async function assertAutoRemovePauseHonorsBothSources(browser, holderSel, toastProp, label) {
-  const timerExpr = `document.querySelector('${holderSel}')${toastProp}.timer`;
-  const focusInsideExpr = `document.querySelector('${holderSel} .toast').contains(document.activeElement)`;
-
-  const focusHoldsAlone = await browser.eval(`${timerExpr} === null && ${focusInsideExpr}`);
-  if (!focusHoldsAlone) {
-    throw new Error(`${label}: expected the Tab press just before this to leave focus inside the toast holding the timer paused`);
-  }
-
-  const rect = await browser.eval(
-    `(() => { const r = document.querySelector('${holderSel} .toast').getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`,
-  );
-
-  // The pointer enters and leaves while focus still holds the toast.
-  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rect.x, y: rect.y });
-  const pausedDuringHoverWithFocus = await browser.eval(`${timerExpr} === null && ${focusInsideExpr}`);
-  if (!pausedDuringHoverWithFocus) {
-    throw new Error(`${label}: entering the toast while focused changed something it should not have`);
-  }
-
-  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
-  const stillPausedAfterLeaveWithFocusHeld = await browser.eval(`${timerExpr} === null && ${focusInsideExpr}`);
-  if (!stillPausedAfterLeaveWithFocusHeld) {
-    throw new Error(
-      `${label}: leaving the toast resumed the auto-remove timer (or moved focus) while keyboard focus was still inside it -- the two-sources-one-latch bug FLOW-001 round 2 fixed`,
-    );
-  }
-  log(`${label}: the pointer leaving does not resume the timer while focus still holds it`);
-
-  // Release the one source still holding it.
-  await browser.eval(`document.activeElement && document.activeElement.blur()`);
-  const resumedAfterBlur = await browser.eval(timerExpr);
-  if (resumedAfterBlur === null) {
-    throw new Error(`${label}: blurring did not resume the auto-remove timer once nothing else held it`);
-  }
-  log(`${label}: blurring resumes the timer once nothing else holds it`);
-
-  // The mirrored case: the pointer holds the toast, and keyboard focus
-  // enters and leaves it.
-  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: rect.x, y: rect.y });
-  const pausedByPointerAlone = await browser.eval(timerExpr);
-  if (pausedByPointerAlone !== null) {
-    throw new Error(`${label}: hovering the toast did not pause the auto-remove timer`);
-  }
-
-  await browser.eval(`document.querySelector('${holderSel} .toast button').focus()`);
-  const stillPausedAfterFocusEnterWithPointerHeld = await browser.eval(timerExpr);
-  if (stillPausedAfterFocusEnterWithPointerHeld !== null) {
-    throw new Error(`${label}: focusing the undo button while hovered changed the timer unexpectedly`);
-  }
-
-  await browser.eval(`document.activeElement && document.activeElement.blur()`);
-  const stillPausedAfterFocusLeaveWithPointerHeld = await browser.eval(timerExpr);
-  if (stillPausedAfterFocusLeaveWithPointerHeld !== null) {
-    throw new Error(`${label}: blurring resumed the auto-remove timer while the pointer was still over the toast -- the mirrored two-sources-one-latch bug`);
-  }
-  log(`${label}: keyboard focus entering and leaving does not resume the timer while the pointer still holds it`);
-
-  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 5, y: 5 });
-  const resumedAfterPointerLeaves = await browser.eval(timerExpr);
-  if (resumedAfterPointerLeaves === null) {
-    throw new Error(`${label}: leaving the toast did not resume the auto-remove timer once nothing else held it`);
-  }
-  log(`${label}: leaving the toast resumes the timer once nothing else holds it`);
-
-  const stillPresent = await browser.eval(`!!document.querySelector('${holderSel} .toast')`);
-  if (!stillPresent) {
-    throw new Error(`${label}: the toast is no longer in the DOM after the hover/focus sequence`);
-  }
 }
 
 async function pollUntil(fn, timeoutMs, label) {
@@ -383,9 +291,13 @@ async function checkPlan(browser, jar, { projectId, teamSlug, sprintId }) {
   }
   log('plan: stored effect confirmed over HTTP -- issue left the backlog section');
 
-  // 2: the live region receives the outcome text.
+  // 2: the live region receives the outcome text. Read from the
+  // message `<span>` specifically, not the region's own `textContent`
+  // -- since `VIEW-003`, the region also holds the undo button, and
+  // `textContent` concatenates every descendant's text, button label
+  // included.
   const regionText = await browser.eval(
-    `document.getElementById('status-announcements')?.textContent || ''`,
+    `document.querySelector('#status-announcements span')?.textContent || ''`,
   );
   const expected = 'Moved to the sprint.';
   if (regionText !== expected) {
@@ -393,19 +305,16 @@ async function checkPlan(browser, jar, { projectId, teamSlug, sprintId }) {
   }
   log(`plan: live region reads ${JSON.stringify(regionText)}`);
 
-  // 3: the undo toast's own Tab order.
+  // 3: the undo control's own Tab order.
   await browser.eval(`document.querySelector('${ACTED_ON_SEL.plan}').focus()`);
   await realTabPress(browser);
   const tabbedToUndo = await browser.eval(
-    `document.activeElement === document.querySelector('[data-plan-move] .toast button')`,
+    `document.activeElement === document.querySelector('#status-announcements button')`,
   );
   if (!tabbedToUndo) {
     throw new Error('plan: Tab from the acted-on row did not land on the undo button');
   }
   log('plan: Tab from the acted-on row lands on the undo button');
-
-  // 4: the auto-remove timer pauses while hovered (`FLOW-001`).
-  await assertAutoRemovePauseHonorsBothSources(browser, HOLDER_SEL.plan, '._planToast', 'plan');
 }
 
 async function checkCalendar(browser, jar, { projectId, calIssueId }) {
@@ -435,26 +344,23 @@ async function checkCalendar(browser, jar, { projectId, calIssueId }) {
   // reproduce -- asserting the stable prefix is the honest amount of
   // precision; the full text is `CalendarRescheduledAnnouncement`'s own.
   const regionText = await browser.eval(
-    `document.getElementById('status-announcements')?.textContent || ''`,
+    `document.querySelector('#status-announcements span')?.textContent || ''`,
   );
   if (!regionText.startsWith('Rescheduled to ')) {
     throw new Error(`calendar: expected the polite region to start with "Rescheduled to ", got ${JSON.stringify(regionText)}`);
   }
   log(`calendar: live region reads ${JSON.stringify(regionText)}`);
 
-  // 3: the undo toast's own Tab order.
+  // 3: the undo control's own Tab order.
   await browser.eval(`document.querySelector('${ACTED_ON_SEL.calendar}').focus()`);
   await realTabPress(browser);
   const tabbedToUndo = await browser.eval(
-    `document.activeElement === document.querySelector('#day-view [data-issue-id] .toast button')`,
+    `document.activeElement === document.querySelector('#status-announcements button')`,
   );
   if (!tabbedToUndo) {
     throw new Error('calendar: Tab from the acted-on block did not land on the undo button');
   }
   log('calendar: Tab from the acted-on block lands on the undo button');
-
-  // 4: the auto-remove timer pauses while hovered (`FLOW-001`).
-  await assertAutoRemovePauseHonorsBothSources(browser, HOLDER_SEL.calendar, '._calToast', 'calendar');
 }
 
 async function main() {

@@ -24,12 +24,19 @@
 // original defect used (`.git-exclude/review-request/A11Y-005-toast-draggable/evidence/probe_drag_gesture.js`):
 // real `Input.dispatchMouseEvent` — mousedown, several real
 // mousemoves, mouseup, the same pipeline a real OS mouse event enters
-// — not a synthetic in-page `MouseEvent`. The toast itself is produced
-// by a synthetic `DragEvent` sequence (that is not the gesture under
-// test; it only needs to complete a drop so a toast exists to test
-// against), and `dm.js`'s surface is out of scope — it has no
-// `draggable` ancestor and so no trap to guard against
+// — not a synthetic in-page `MouseEvent`. The undo offer itself is
+// produced by a synthetic `DragEvent` sequence (that is not the
+// gesture under test; it only needs to complete a drop so an offer
+// exists to test against), and `dm.js`'s surface is out of scope — it
+// has no `draggable` ancestor and so no trap to guard against
 // (`FR-DM-002-measurement-review.md` §3).
+//
+// **Selectors updated for `VIEW-003`** (round 3 of `060`): the undo
+// control used to live inside its own `.toast` element; it now
+// renders inside `#status-announcements`, appended as a child of the
+// acted-on card/row/block exactly as the toast was, so the trap this
+// file guards against is unchanged and still real -- only the
+// selector that finds the button moved.
 
 import { spawn } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -200,7 +207,7 @@ const ARM_DRAG_LISTENER = `(() => {
 })()`;
 
 // Synthetic `DragEvent` sequences that complete a drop -- producing a
-// real undo toast the same way `A11Y-005`'s own evidence did. This is
+// real undo offer the same way `A11Y-005`'s own evidence did. This is
 // not the gesture under test.
 const PRODUCE = {
   board: `(() => {
@@ -233,14 +240,14 @@ const PRODUCE = {
 };
 
 const HOLDER_SEL = {
-  board: '.issue-card:has(.toast)',
-  plan: '[data-plan-move]:has(.toast)',
-  calendar: '#day-view [data-issue-id]:has(.toast)',
+  board: '.issue-card:has(#status-announcements)',
+  plan: '[data-plan-move]:has(#status-announcements)',
+  calendar: '#day-view [data-issue-id]:has(#status-announcements)',
 };
 
 async function realMouseGesture(browser, dx, dy, steps) {
   const btn = await browser.eval(
-    `(() => { const b = document.querySelector('.toast button'); const r = b.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`,
+    `(() => { const b = document.querySelector('#status-announcements button'); const r = b.getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }; })()`,
   );
   await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: btn.x, y: btn.y });
   await browser.send('Input.dispatchMouseEvent', { type: 'mousePressed', x: btn.x, y: btn.y, button: 'left', clickCount: 1 });
@@ -265,13 +272,13 @@ async function checkSurface(browser, name, url) {
   await new Promise(r => setTimeout(r, 300));
   await browser.waitForSelector(HOLDER_SEL[name], 2000);
 
-  // Reset the drag log AFTER producing the toast (which itself
+  // Reset the drag log AFTER producing the undo offer (which itself
   // dispatches a synthetic `dragstart` to complete the drop) and
   // arm a click listener on the real button, so a suppressed click
   // is directly observed, not inferred.
   await browser.eval(`(() => {
     window.__dragStarts = [];
-    const b = document.querySelector('.toast button');
+    const b = document.querySelector('#status-announcements button');
     b.addEventListener('click', () => { window.__undoClicks++; });
     return 1;
   })()`);
