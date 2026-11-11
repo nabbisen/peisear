@@ -313,7 +313,7 @@ fn governing_status_token_matches_known_multi_word_tokens_before_falling_back() 
 }
 
 #[test]
-fn requirement_entries_is_170_on_the_real_tree() {
+fn requirement_entries_is_171_on_the_real_tree() {
     // SPEC-002 §1: 99 FR + 71 NFR, matching Appendix A's own totals --
     // the population this whole round's checks depend on.
     //
@@ -327,10 +327,10 @@ fn requirement_entries_is_170_on_the_real_tree() {
     // alongside a counted change to the specification itself.
     let input = real_input();
     let entries = requirement_entries(&input.requirements);
-    assert_eq!(entries.len(), 170, "expected 99 FR + 71 NFR entries");
+    assert_eq!(entries.len(), 171, "expected 100 FR + 71 NFR entries");
     assert_eq!(
         entries.iter().filter(|e| e.id.starts_with("FR-")).count(),
-        99
+        100
     );
     assert_eq!(
         entries.iter().filter(|e| e.id.starts_with("NFR-")).count(),

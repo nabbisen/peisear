@@ -897,6 +897,54 @@ or in none.
    lifecycle are ranks, expressed once each in `peisear-core`. Ordering a TEXT
    column and relying on its alphabetical order is what `§10.29` records.
 
+### 5.10 Section order on a screen
+
+**A screen's first content is the reader's own work. Analysis about that
+work is one line until the reader asks for it.** Added at 0.62.0, from
+unit three of the accessibility sequence the owner set on 2026-11-04 —
+*"one by one with time we need: App base layout(s), user workflows, and
+each view."*
+
+Stated **once here**, for the same reason `§5.9` gives: the defects this
+rule exists for came from an order expressed in more than one place or in
+none. A requirements entry (`FR-NAV-006`) cites this section rather than
+restating it.
+
+**What this governs**, and what it measured before it was written — every
+figure from the shipped build, at 1280 × 900 and 390 × 844:
+
+| Surface | First content | Collapsed to one line by default | Pinned by |
+|---|---|---|---|
+| Project board and list (`SCR-08`) | the board's first column, the list's first row | **Project health** — the headline is the highest-precedence non-Good indicator's own sentence, or one neutral line | `health_block_is_collapsed_by_default` |
+| Project board and list (`SCR-08`) | as above | **Workload** — one static line, because this strip has no per-slot sentence to choose from and a derived one would either count people over capacity (a score by another name) or name a person (`NFR-PRIV-002`) | `workload_strip_is_collapsed_by_default` |
+| Me (`SCR-04`) | the reader's own load | **rhythm** always; **sustainability** self-expands only at a watch threshold | `FR-PER-007`, `today_folds_rhythm_panel_by_default` |
+| Issue detail (`SCR-11`) | its own `<h1>`, a quarter of a screen down at both widths | **nothing — the screen holds no disclosure at all**, measured 2026-11-11 | — |
+
+**Four obligations.**
+
+1. **The one visible line is a sentence, never a score.** `FR-HLT-008`
+   forbids a single aggregate as the headline representation of project
+   health; a collapsed summary showing the composite would be that
+   under another name.
+2. **At most one callout, by strict precedence, and none manufactured in
+   a healthy state.** This is `FR-PER-006`'s discipline, already written
+   for `SCR-04` and now applied to the project screens: *a manufactured
+   callout in a healthy state is noise that trains the user to ignore
+   the slot.*
+3. **Collapse, not relocation.** Moving a block below the work would
+   make a reader who wants it scroll past everything. One line at the
+   top is findable and costs nothing.
+4. **The collapsed height does not move with the data.** Measured at a
+   constant **44 px** for both project-screen blocks, across two
+   fixtures and both widths, against 536–913 px (health) and 126–160 px
+   (workload) when open. The state is **not persisted**: a reader who
+   expanded a block once and forgot should not have the collapse
+   silently restored.
+
+**What this does not govern.** Ten other `<details>` elements across the
+product are neither governed here nor guarded. They are a set, and a set
+is decided once, deliberately — not absorbed into this rule because the
+shape happens to match.
 
 ## 6. Screen specifications
 

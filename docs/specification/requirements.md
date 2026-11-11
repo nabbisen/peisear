@@ -722,6 +722,36 @@ calendar's return trip has a stated owner if it breaks. *The context is
 carried as typed fields rebuilt server-side, never as a caller-supplied
 redirect target.*
 
+**FR-NAV-006 — What a screen shows before it is asked**
+A screen's first content MUST be the reader's own work; analysis about
+that work MUST be collapsed to a single line until the reader expands it.
+*Rationale*: on a phone, a project's list view opened with **no work at
+all** on screen — the first row began at 89 % of the viewport, behind
+nineteen controls — and the board's first column three-quarters of the
+way down. Measured 2026-11-11 on the shipped build, which is also where
+the numbers in the cited section come from.
+*Source*: derived (`VIEW-001` and its round 2, `060`). **The rule itself
+is stated once, in `external-design §5.10`**, with the surfaces it
+governs, the four obligations it carries and the measurements behind
+them; this entry cites that section and does not restate it — `RFC 019`'s
+own rule for a decision with one home.
+*Acceptance*: `health_explainability`'s
+`health_block_is_collapsed_by_default` and
+`workload_strip_is_collapsed_by_default`, each asserting the outer
+`<details>` after its section's own `aria-label` carries no `open`
+attribute; `today_panel`'s `today_folds_rhythm_panel_by_default` for the
+sibling screen `FR-PER-007` already governed.
+*Status*: **Met at 0.62.0** (`VIEW-001`, `VIEW-001 r2`) for the project
+board and list, and at 0.40.0 (`FR-PER-007`) for `/today`. **Issue detail
+holds no disclosure at all**, so it meets this entry by having nothing to
+collapse — stated because a screen that cannot fail a test is not
+evidence, and that measurement is in `§5.10`'s own table rather than
+asserted here.
+*Priority*: P2.
+*What this entry does not reach.* Ten other `<details>` elements are
+neither governed nor guarded. They are a set, to be decided once; this
+requirement is not widened to cover them by resemblance.
+
 ### 4.3 Projects — `FR-PROJ`
 
 **FR-PROJ-001 — Project lifecycle**
@@ -8556,7 +8586,7 @@ it is in progress, not deferred.
 | Area | Total | Implemented | Partial | Specified | Deferred | Divergent |
 |---|---|---|---|---|---|---|
 | Authentication | 5 | 5 | — | — | — | — |
-| Navigation | 5 | 5 | — | — | — | — |
+| Navigation | 6 | 6 | — | — | — | — |
 | Projects | 4 | 4 | — | — | — | — |
 | Issues | 7 | 7 | — | — | — | — |
 | Sub-issues | 10 | 10 | — | — | — | — |
@@ -8571,7 +8601,7 @@ it is in progress, not deferred.
 | Settings | 3 | 3 | — | — | — | — |
 | API | 6 | 5 | — | 1 | — | — |
 | Direct manipulation | 7 | 7 | — | — | — | — |
-| **Functional total** | **99** | **97** | **1** | **1** | **0** | **0** |
+| **Functional total** | **100** | **98** | **1** | **1** | **0** | **0** |
 | Privacy | 8 | 8 | — | — | — | — |
 | Concurrency | 7 | 7 | — | — | — | — |
 | Accessibility | 12 | 9 | — | — | 1 | 2 (residual, unguarded) |
