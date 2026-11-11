@@ -8504,6 +8504,46 @@ box covers the other's. That second half is the part worth doing, because
 it is the part that generalises past this one row.
 
 
+### 10.56 A CI job whose runner was lost, read as a test that hung — **closed on reading**, 2026-11-11; found by the dev team on the architect's own merge commit
+
+`main`'s own `CI` at `ca459ad` — the `NAME-001` merge — read **failure**,
+in exactly one job: `peisear-web / board_keyboard`. Every other job in
+that run succeeded, and the two commits after it on `main` are green with
+that same job completing in **181 s** and **70 s**.
+
+**What the job's own record says**, which is not what the run summary
+suggests:
+
+| | |
+|---|---|
+| the step `cargo test … board_keyboard` started | 13:45:22Z |
+| that step's own conclusion | **cancelled**, 13:46:09Z — **47 seconds in** |
+| the job closed | 14:31:07Z, **45 minutes later** |
+| the job's log | **no blob at all** — never uploaded |
+
+So the test neither ran for 46 minutes nor failed: its runner stopped
+answering 47 seconds in, and the 46 minutes is GitHub closing out an
+orphaned job. The completion report that found this read the run's
+elapsed time and called it *"a 46-minute single-job hang"* on a test it
+then had to argue was unrelated. **The conclusion was right and the
+evidence for it was not** — and the honest version is simpler, because a
+lost runner needs no argument about which test it was.
+
+**A duration on a run summary is not a measurement of what ran.** That is
+the reusable part of this entry.
+
+**No re-run and no retry**, on `DEC-048` condition 3 and the reasoning
+`§10.54` already records: a red gate is not re-run until it is green.
+`main`'s own tip is green, so the trunk is not red now; `ca459ad` stays
+red in its own history, which is the accurate record of what happened
+there.
+
+**The signature, so the next one costs minutes rather than an hour**: a
+step cancelled seconds after it starts, no log blob, and the job closed
+out roughly 45 minutes later is a lost runner — not a slow test, and not
+a defect in the code that job was compiling.
+
+
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
 **Promoted from this document's own older compact register**
