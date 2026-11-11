@@ -83,7 +83,8 @@ sustainability signals. **Read the entry before proposing the round.**
 | NAME-001 | [the destination that is about you](./NAME-001-the-destination-that-is-about-you.md) | The nav word for `/today` becomes **`Me`**: the page is about the reader, in the published design's own words, and the word said otherwise. Closes `NFR-A11Y-012`'s pinned exception and gives `nav_destination_naming` its fifth case. The route does not move | — | **Closed 2026-11-11, no findings.** The word is `Me` in the nav, in `/today`'s own title and `<h1>`, and — for free, because it was always one `MessageKey` and never a second copy — in the breadcrumb root of every detail screen. The pending tripwire is **deleted, not edited**, which is what it was written to require, and `nav_destination_naming` gains the fifth live-rendered case it was built to hold. **Two plants from opposite sides**: the round reverted the *heading* to `My dashboard`, the architect reverted the *nav word* to `Today`, and the same test caught both by name — neither plant alone shows that it fails on either half of the pair diverging. Counts re-derived independently and matching: `--lib` **246 → 245**, `nav_destination_naming` **4 → 5**, `DEC-007` **670 → 670**, `MessageKey::all()` unchanged at 715. **The acceptance measurement was a measurement**: at the 768 px threshold all seven header controls sit in one row with no overflow, and substituting `Today` back into the same render pushes the search field 20 px right — the shorter word buys headroom rather than spending it. **One incidental finding, pre-existing and halved by this round**, filed as `§10.55`: at 768–800 px the account menu's box covers the search field's right edge by 18/13 px, invisible because the control is `btn-ghost` and undetected because `overflow-gate` measures overflow, never occlusion. **And the round read `main`'s own CI at the merge commit rather than the PR's green, and found it red** — one job, a lost runner: the step was cancelled 47 seconds in, the job was closed out 45 minutes later and no log was ever uploaded. Their conclusion (not a regression) was right; their evidence (*"a 46-minute hang"*) was the run's elapsed time, not what ran. `§10.56`, not re-run |
 | VIEW-002 | — | Issue detail, the other screen in the authorized row. **Measured clean** (table above): its own `<h1>` is a quarter of a screen down at both widths, behind four controls, which is a breadcrumb and a back link. **No round is proposed**; the owner may still want one, and the measurement is here so that is a decision rather than a silence | — | **Not proposed** |
 
-**Series closed 2026-11-11.** Every round specified here is closed and
+**Every work round closed 2026-11-11; the release candidate opened
+2026-11-12.** The four rounds specified here are closed and
 reviewed: `VIEW-001` and its round 2, `VIEW-003`, `NAME-001`. `VIEW-002`
 was decided as *not proposed*, with its measurement recorded so that is a
 decision rather than a silence. The unit's own closing obligations are
@@ -94,6 +95,27 @@ all five destinations. What this unit deliberately did not decide: the
 ten remaining ungoverned `<details>`, which are a set to be decided once,
 and the typography and colour floor, whose stated condition — *adopt
 after the views are decided* — is now met.
+
+## The release candidate — `0.62.0`
+
+**Started 2026-11-12 on the owner's instruction, and split.**
+[`REL-0.62.0-release-candidate.md`](./REL-0.62.0-release-candidate.md)
+carries the whole cut: which exit criterion is answered where, the claim,
+what this release does not fix, and the four legs that run **only** after
+the owner approves at criterion 7.
+
+**The cut is not the dev team's role.** Three preparation rounds are, and
+they are specified in that file:
+
+| ID | What | Why it is not assumed |
+|---|---|---|
+| `PREP-001` | Regenerate the **seven** published screenshots and **look at every one** | Two of the seven were opened by the architect and are stale in three ways — the nav word, the breadcrumb root, and a health block rendered fully expanded, which is the arrangement this release replaced. **Five were not opened**, and that bound is the round's first job |
+| `PREP-002` | Criterion 2 on `main`'s own tip, with captured logs and real exit codes | The release cycle names this *"the one that has historically failed"*. `DEC-007`'s total is **670** by the architect's count; a disagreement is to be reported, not reconciled |
+| `PREP-003` | Walk the upgrade with real binaries, `0.61.0` → candidate, on one database | No migration is added — but that is a diff, and the claim is a walk |
+
+**Not the dev team's, in that file and in this one**: the version bump,
+the dated heading, the tag, the publish, the Release. Not as a step, not
+in passing, not as a dry run.
 
 ## The decision this round implements, and why it is not the dev team's
 
