@@ -59,7 +59,9 @@ async fn project_detail_breadcrumb_starts_with_today() {
     let body = resp.text();
 
     let breadcrumb = breadcrumb_nav(&body);
-    // 1. Leading entry: a link to /today labelled "Today".
+    // 1. Leading entry: a link to /today (by route -- `NavLinkToday`'s
+    // own rendered label is `nav_destination_naming.rs`'s own concern,
+    // not this file's).
     assert!(
         breadcrumb.contains(r#"href="/today""#),
         "project detail breadcrumb missing /today entry-point link: {breadcrumb}"
@@ -96,7 +98,7 @@ async fn issue_detail_breadcrumb_full_chain() {
     let body = resp.text();
 
     let breadcrumb = breadcrumb_nav(&body);
-    // Today entry point.
+    // /today entry point (by route).
     assert!(
         breadcrumb.contains(r#"href="/today""#),
         "missing /today link: {breadcrumb}"

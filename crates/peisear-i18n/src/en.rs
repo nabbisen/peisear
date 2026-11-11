@@ -211,7 +211,7 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::NavSearchQueryLabel => "Search query".to_string(),
         MessageKey::NavSearchSuggestionsLabel => "Search suggestions".to_string(),
         MessageKey::SkipToMainContent => "Skip to main content".to_string(),
-        MessageKey::NavLinkToday => "Today".to_string(),
+        MessageKey::NavLinkToday => "Me".to_string(),
         MessageKey::NavLinkTeams => "Teams".to_string(),
         MessageKey::NavLinkInbox => "Inbox".to_string(),
         MessageKey::NavLinkSettings => "Settings".to_string(),
@@ -681,7 +681,7 @@ pub(crate) fn render(key: MessageKey) -> String {
                  Closing or re-assigning them clears your queue."
             )
         }
-        MessageKey::PersonalDashboardTitle => "My dashboard".to_string(),
+        MessageKey::PersonalDashboardTitle => "Me".to_string(),
         MessageKey::NothingToShowMessage => "Nothing to show yet.".to_string(),
         MessageKey::PersonalDashboardSubtitle { display_name } => {
             format!("Personal metrics for {display_name}. Visible only to you.")

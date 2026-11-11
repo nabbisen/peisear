@@ -42,15 +42,16 @@
 //! it never read `notifications.rs` at all. The live `<title>` is the
 //! oracle now, not a pairing table I maintain by hand.
 //!
-//! `Today` stays out of that integration test and is pinned here
-//! instead, as a pure `MessageKey` comparison — there is nothing live
-//! to assert yet, since the content decision it waits on
-//! (`components::me::PersonalDashboardTitle` renders no issue at all)
-//! hasn't landed. [`today_is_pending_the_content_decision_not_yet_fixed`]
-//! fails the moment `Today` and `PersonalDashboardTitle` render the
-//! same text without this guard being deleted in the same change —
-//! the `§10.36` shape applied to a *deliberate* gap rather than an
-//! accidental one.
+//! `Today` was the one pair excluded from that integration test and
+//! pinned here instead, as a pure `MessageKey` comparison asserting
+//! the two render *differently* — `components::me::PersonalDashboardTitle`
+//! rendered no issue at all, so the content decision the rename waited
+//! on hadn't landed. **`NAME-001` (`060`) closes that gap, the other
+//! way than the pending test expected**: not by giving `/today` new
+//! content, but by renaming the nav word itself to `Me`, which
+//! `PersonalDashboardTitle` already answers to. The pending test is
+//! deleted in this same change, not left to fail — `nav_destination_naming`
+//! now covers `/today` as its fifth live-rendered case instead.
 
 use peisear_i18n::{Locale, MessageKey};
 
@@ -104,25 +105,6 @@ mod tests {
             offenders.is_empty(),
             "these rendered strings already carry the product suffix -- Base applies it once \
              centrally, so a MessageKey string carrying it too would double it: {offenders:?}"
-        );
-    }
-
-    /// `FLOW-002` §3: *"Today is the one pair that will not hold yet
-    /// ... record Today in the test by name as pending the content
-    /// decision, with the entry failing the moment that decision lands
-    /// and the rename does not."* This asserts the current, known
-    /// mismatch — it must fail, loudly, the day `PersonalDashboardTitle`
-    /// is renamed to answer to `Today` without this guard being deleted
-    /// in the same change.
-    #[test]
-    fn today_is_pending_the_content_decision_not_yet_fixed() {
-        let nav_text = Locale::English.render(MessageKey::NavLinkToday);
-        let heading_text = Locale::English.render(MessageKey::PersonalDashboardTitle);
-        assert_ne!(
-            nav_text, heading_text,
-            "Today and My dashboard now render the same text -- the content decision (this \
-             series' README, open question 1) appears to have landed; delete this test, not \
-             just this assertion, as part of that round"
         );
     }
 }

@@ -1,5 +1,5 @@
 //! `FLOW-002` (`059`, unit two) — "the word on the door is the name
-//! inside": for four of `FR-NAV-001`'s five destinations, the primary
+//! inside": for all five of `FR-NAV-001`'s destinations, the primary
 //! nav's own word and the page the reader actually lands on must
 //! answer to the same name.
 //!
@@ -21,10 +21,11 @@
 //! today," one level removed, exactly what the handoff's own
 //! acceptance warned against. This reads the live page instead.
 //!
-//! `Today` is excluded here and pinned separately, as a pure
-//! `MessageKey` comparison, in `page_title_scan.rs` — there is nothing
-//! live to assert yet, since the content decision it waits on hasn't
-//! landed (this series' README, open question 1).
+//! `Today` was excluded here and pinned separately, as a pure
+//! `MessageKey` comparison in `page_title_scan.rs`, until `NAME-001`
+//! (`060`) closed the gap: the nav word is now `Me`, which
+//! `/today`'s own title already answers to, so the pending pin is
+//! deleted and this file gains the fifth case instead.
 
 mod common;
 
@@ -95,4 +96,14 @@ async fn teams_answers_to_its_own_nav_word() {
 #[tokio::test]
 async fn search_answers_to_its_own_nav_word_on_arrival_with_no_query() {
     assert_destination_title_matches_nav_word("/search", MessageKey::NavLinkSearch).await;
+}
+
+/// `NAME-001` (`060`): the fifth destination, closing the gap
+/// `page_title_scan.rs`'s own deleted pending pin left open. The nav
+/// word moved to `Me`; `/today`'s own title was already
+/// `PersonalDashboardTitle`, which this round also renders `Me` --
+/// the live page, not a pairing table, is what proves they agree.
+#[tokio::test]
+async fn today_answers_to_its_own_nav_word() {
+    assert_destination_title_matches_nav_word("/today", MessageKey::NavLinkToday).await;
 }
