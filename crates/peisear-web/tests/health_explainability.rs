@@ -227,7 +227,9 @@ async fn wip_compliance_explanation_uses_corrected_wording() {
     // `human_explanation` builds `IndicatorExplanationWipCompliance`.
     // Old wording: "N over of active assignees are over their WIP
     // limit." (awkward, doubled "over"). New wording: "N active
-    // assignees are over their WIP limit."
+    // assignees are over their WIP limit." -- and, since GRAM-001,
+    // "N active assignee is" when N == 1, which is exactly the count
+    // this fixture's single over-limit assignee drives.
     let app = TestApp::spawn().await;
     let user = TestUser::new("alice");
     let user_id = register_and_login(&app, &user).await;
@@ -260,8 +262,9 @@ async fn wip_compliance_explanation_uses_corrected_wording() {
     resp.assert_status(StatusCode::OK);
     let body = resp.text();
 
+    // GRAM-001: count == 1 here, so "assignee is", not "assignees are".
     assert!(
-        body.contains("active assignees are over their WIP limit."),
+        body.contains("active assignee is over their WIP limit."),
         "expected the WIP-compliance explanation to render; body: {body}"
     );
     assert!(
@@ -384,8 +387,9 @@ async fn health_strip_collapses_the_whole_block_behind_one_headline() {
     let section_idx = body
         .find(r#"aria-label="Project health""#)
         .expect("project-health section missing");
+    // GRAM-001: count == 1 here, so "assignee is", not "assignees are".
     let headline_idx = body[section_idx..]
-        .find("active assignees are over their WIP limit.")
+        .find("active assignee is over their WIP limit.")
         .expect("expected WipCompliance's own sentence as the headline, outranking BusFactor's")
         + section_idx;
     let heading_idx = body[section_idx..]

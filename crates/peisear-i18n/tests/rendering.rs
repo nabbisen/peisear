@@ -122,3 +122,29 @@ fn project_calendar_privacy_footnote_renders_byte_identically() {
          calendar is private to that person."
     );
 }
+
+/// `GRAM-001`: at `count == 1`, noun and verb must agree --
+/// "1 active assignee is", not "1 active assignees are". Asserted
+/// exactly, not by a substring match on the shared tail -- three
+/// existing tests already quote that tail and none of them could see
+/// the defect, which is why this pins the singular's own full
+/// sentence, byte-exact, same as the plural beside it.
+#[test]
+fn wip_compliance_explanation_singular_and_plural_agree() {
+    assert_eq!(
+        Locale::English.render(MessageKey::IndicatorExplanationWipCompliance { count: 1 }),
+        "1 active assignee is over their WIP limit."
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::IndicatorExplanationWipCompliance { count: 2 }),
+        "2 active assignees are over their WIP limit."
+    );
+    // `count == 0` is reachable (a Good indicator can still carry a
+    // zero count through this key) and "0 active assignees are" is
+    // correct English, so it takes the plural branch -- checked
+    // rather than assumed.
+    assert_eq!(
+        Locale::English.render(MessageKey::IndicatorExplanationWipCompliance { count: 0 }),
+        "0 active assignees are over their WIP limit."
+    );
+}
