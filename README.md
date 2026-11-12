@@ -31,7 +31,7 @@ oversight role.
 One Rust binary, one SQLite file, no Node toolchain, no external
 services.
 
-![The kanban board: issue cards in Open, In Progress and Done columns, with the project health indicators expanded to show the full breakdown](https://github.com/nabbisen/peisear/raw/main/docs/src/assets/screenshots/board.png)
+![The kanban board: issue cards in Open, In Progress and Done columns, with the project's health and workload each summarised in one line above them](https://github.com/nabbisen/peisear/raw/main/docs/src/assets/screenshots/board.png)
 
 ## Why peisear?
 
