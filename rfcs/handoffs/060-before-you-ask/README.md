@@ -73,6 +73,23 @@ sustainability signals. **Read the entry before proposing the round.**
 
 ---
 
+## How work lands — read this before starting a round
+
+**Commit and push to the shared `main`.** No topic branch and no pull
+request: the owner coordinates the schedule so that no two workers are
+ever on the same tree at once, so a branch and its merge step add a step
+and remove nothing.
+
+**Whoever pushes watches `main`'s own CI to completion.** A red `main` is
+that person's only work until it is green again — fix forward or revert,
+never leave it for someone else to find.
+
+Exceptions exist and are narrow: parallel work the owner has deliberately
+scheduled, a patch to an already-released version, a change that cannot
+be made in steps that each leave the trunk working, throwaway
+experiments, and any branch that is never pushed. A contribution from
+outside the team is the public workflow, not this one.
+
 ## Rounds
 
 | ID | Handoff | Subject | Blocked on | State |

@@ -1930,32 +1930,62 @@ they passed without a reword. `static_js_scan` now covers `static/*.js`,
 with `search.js` excluded pending a rendering mechanism, and with one named
 blind spot: it does not catch a single word standing alone.
 
-**FR-DM-006 — Undo window**
-A completed direct manipulation SHOULD offer a brief undo affordance
-(approximately five seconds), and **that window MUST stop while the
-reader is engaging with it** — pointer over the affordance or keyboard
-focus inside it — resuming only once **both** have let go.
-*Source*: `SPEC §39.2`. *Acceptance*: `undo_toast_attachment_scan` (12) — a
-source scan — plus `browser-checks/undo-mousedown-trap.mjs` for the
-click-not-drag property and, from 0.47.0,
-`browser-checks/drag-outcome-gate.mjs` for the **Tab order on two of the four
-surfaces**; see below for which two and why. *Status*: **Met at 0.44.0** — a
-5-second toast on **all four** direct-manipulation surfaces — **and the
-window amended at 0.61.0** (`FLOW-001`, `FLOW-001 r2`): it now pauses
-on `mouseenter`/`focusin` and resumes on `mouseleave`/`focusout`, in
-all four scripts.
-*Amended 2026-11-09, and the clause above is new.* Five seconds that
-did not stop for a reader reaching toward them is **WCAG 2.2.1 Timing
-Adjustable (Level A)** with no exception that applies, and the reader
-the owner named when authorizing this sequence — someone whose
-pointer and eyes move slowly — is the one it cost. The affordance is
-also drawn in the corner furthest from the control that caused it,
-about 700 px away on a 1280 px screen, so the five seconds were spent
-finding it. **What was deliberately not changed**: the duration, the
-toast's position, the second copy of the outcome text in the
-`role="status"` region beside the control, and what Undo does. Where
-an outcome and its undo belong is a view question, open and recorded
-in `rfcs/handoffs/059-what-the-browser-actually-draws/`.
+**FR-DM-006 — Undo offer**
+A completed direct manipulation SHOULD offer an undo affordance **beside
+the element it acted on**, and that offer **MUST NOT expire on a clock**.
+It ends when the reader acts on it, when the next outcome replaces it, or
+when the reader leaves the page. **Activating it MUST leave focus on a
+control the reader can continue from** (`NFR-A11Y-002`'s ladder), never
+on `body`.
+*Source*: `SPEC §39.2`, **amended at 0.62.0 — see the amendment note
+below, which is where this entry stops matching its source.**
+*Acceptance*: `undo_toast_attachment_scan` (**9**) — a source scan —
+plus `browser-checks/undo-mousedown-trap.mjs` for the click-not-drag
+property, and `browser-checks/drag-outcome-gate.mjs`, which since
+`FOCUS-001` pins **four** properties on two of the four surfaces: the
+stored effect over HTTP, the live region's text, **Tab from the acted-on
+element reaching Undo**, and **where focus lands once Undo is pressed**.
+*Status*: **Met at 0.62.0** (`VIEW-003`, `FOCUS-001`) — one message with
+its Undo, rendered in the live region beside the acted-on element, on
+all four surfaces.
+
+*Amended 2026-11-12 (`VIEW-003`, `FOCUS-001`, `060`): the window is
+gone, and that is a change to this requirement's own letter.* `SPEC
+§39.2` asks for *"a brief undo affordance (approximately five
+seconds)"*, and this entry carried that duration from 0.44.0. **A timed
+affordance is WCAG 2.2.1 Timing Adjustable with no exception that
+applies**, and 0.61.0 met the criterion by making the clock pause for a
+reader engaging with it (`FLOW-001` and its round 2 — two sources, one
+latch, eleven states). `VIEW-003` removed the clock instead. **The
+property every one of those mechanisms existed to protect — that the
+offer is still there when the reader reaches it — is now true by
+construction rather than maintained**, and the pause/resume pair, its
+truth table and its eight tests went with the timer rather than being
+ported. The duration is not reinstated by a future round without
+amending this clause first.
+
+*And the amendment opened a P1 for a day, named here rather than
+smoothed over.* Deleting the toast also deleted `A11Y-004`'s focus
+ladder, because `VIEW-003`'s own handoff instructed it — reasoning about
+the toast *taking* focus and not about the Undo control *receiving* it.
+Activating Undo left `document.activeElement` on `body`, measured
+2026-11-12 on the issue-detail surface. `FOCUS-001` restored the ladder
+in all four scripts, `§10.57` records the class, and the fourth gate
+property above exists so that this cannot recur silently. **It never
+reached a release.**
+*Superseded 2026-11-12, and kept because the reasoning is why the
+mechanism changed.* At 0.61.0 this entry gained a pause/resume clause:
+five seconds that did not stop for a reader reaching toward them is
+**WCAG 2.2.1 Timing Adjustable (Level A)** with no exception that
+applies, and the reader the owner named when authorizing this sequence —
+someone whose pointer and eyes move slowly — is the one it cost. The
+affordance was also drawn in the corner furthest from the control that
+caused it, about 700 px away on a 1280 px screen, so the five seconds
+were spent finding it. **That round deliberately did not change the
+duration or the toast's position**, recording where an outcome and its
+undo belong as a view question. `VIEW-003` then answered it by removing
+both, which is why the clause above no longer mentions a window at
+all: *the defect the pause existed to manage stopped existing.*
 *And the first attempt shipped a half of it.* Round 1 gave the two
 sources — pointer and focus — **one piece of state**, so releasing
 either resumed the countdown while the other still held: measured on
@@ -1995,9 +2025,12 @@ from 12 to 4 when the toast this scan pinned was replaced with a relocatable
 live region carrying Undo beside the acted-on element, and the five-second
 auto-remove timer was deleted outright — the eight tests this scan used to
 carry for the timer's pause/resume behaviour are gone with it, not ported.
-The rest of this entry, and the status this citation sits inside
-(`FR-DM-006`, and `A11Y-004`/`A11Y-005` below), describe the toast as
-current and are stale pending the architect's own pass over this series.*
+**Then 4 to 9 at `FOCUS-001`**, which added the per-file conditional
+restore-on-activation this entry's own clause now requires.
+That round's own note said the rest of this entry still described the toast
+as current and was stale pending the architect's pass; **that pass ran
+2026-11-12 and this entry is rewritten above**, so the warning is
+discharged rather than carried.*
 *Count corrected at `FOCUS-001` (0.62.0): 4 → 9 — five tests added as a
 backstop for the focus-restoration ladder `VIEW-003` deleted and `FOCUS-001`
 restored (a source scan can see the restore call exists; it cannot see
@@ -2590,8 +2623,9 @@ drag, the board drag, the sprint-plan drag, and the undo toast's two endings
 on each of those surfaces. **Not measured**: a validation error re-render,
 which is a full-document response and therefore `NFR-A11Y-011`'s; any browser
 other than Chrome; and a real screen reader. *Priority*: P1.
-*Divergent on `main` since 2026-11-11, measured 2026-11-12, and **not
-released**.* `VIEW-003` replaced the undo toast with a relocatable live
+*Diverged on `main` 2026-11-11, restored 2026-11-12, and **never
+released** — the sequence is kept because the gap it left is now a
+permanent gate property.* `VIEW-003` replaced the undo toast with a relocatable live
 region, and the offer now ends by `region.textContent = ""` — which
 removes the **focused** Undo button from the document. Measured on the
 issue-detail status surface with real key events: Tab reaches Undo in
@@ -2603,9 +2637,14 @@ entry's own named defect, on a path this entry counts among its eight.
 never moves focus in the first place. Delete it; do not port it"* —
 true of the toast *taking* focus, and false of the Undo control
 *receiving* it, which is the same round's own Tab-order property.
-Measured on **one** of the four surfaces; the other three carry the
-identical two lines, read rather than measured. `FOCUS-001` restores the
-ladder before `0.62.0` is cut, and `§10.57` records the class.
+Measured on **one** of the four surfaces when found; the other three
+carried the identical two lines. **`FOCUS-001` restored the ladder in all
+four scripts**, and the architect re-measured focus over time rather than
+at one instant: as shipped it rests on the acted-on row's own origin
+control at 0, 100, 300, 800, 1500 and 2500 ms, where removing the
+deferred restore puts it on `body` from 100 ms on. `drag-outcome-gate`
+now pins that as its **fourth** property, so this entry's claim is
+checked on every run rather than re-argued. `§10.57` records the class.
 *Editing note (0.41.0)*: this status read **Partial — 4 sites of 8 hold** two
 lines above a paragraph saying all four were closed. **Third instance of one
 habit of mine**: amending an entry by adding a correction while leaving the
@@ -2977,7 +3016,19 @@ grow-text guard examines 37 of 41 sites, and that limit is named
 nowhere** — the scan's own comment records it leaving the `grow` test
 (*"`MENU_FOCUS_RING`'s four sites moved to `grow_text`"*) without
 recording that it arrived in the other. **No live violation**: all four
-are `<a>` elements, and the test only fires on a form control. Widening
+are `<a>` elements, and the test only fires on a form control. *Figures stale 2026-11-12, and the reason is worse than the drift.*
+`DISC-001` moved three `<summary>` call sites from `grow_text(` to
+`grow(`, so both totals above changed by three. **But they cannot simply
+be decremented, because this entry never says what it counted.** Three
+measurements of the same quantity disagree today: this entry's **41**,
+the `DISC-001` round's **36** (grepped over `crates/peisear-web/src/components/`),
+and the architect's **49** (over `crates/peisear-web/src/`). None is
+wrong; they are three populations wearing one name. **A count whose
+denominator is unstated is not a measurement**, and re-deriving these
+figures means first writing down the population — which is a round, not
+an edit, and is in `ROADMAP.md`'s *Unscheduled work* with that reasoning.
+Until then these two numbers are historical, dated 0.52.0, and no gate
+reads them. Widening
 the needle to resolve a constant to its value is not done here; stating
 what the guard does not look at is. Same shape, and the same remedy, as
 `NFR-CONC-003`'s own first-column limit at 0.51.0.
