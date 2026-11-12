@@ -55,6 +55,34 @@
 //! this scan can see them. A sixth such binding would need the same
 //! verification, not an extension to this scan, unless it stops being
 //! a handful.
+//!
+//! **`DISC-001` (`060`) found a fourth way to be correct, and named
+//! three call sites rather than widening the rule.** A `<summary>`'s
+//! own UA-default `display: list-item` is a second accessibility
+//! requirement's own subject (`NFR-A11Y-007`'s own marker, restored by
+//! `grow()` specifically *because* it does not add `inline-flex` the
+//! way `grow_text()` does) — so neither `grow_text()` (kills the
+//! marker) nor an explicit `block`/`card` class (also kills a
+//! `<summary>`'s own marker; `list-item` and `block` are different
+//! `display` values) can be this call site's answer, and this scan's
+//! own three recognised shapes have no fourth name for "already
+//! correct because the padding itself, not a flex box, supplies the
+//! centring." [`is_padding_centred_disclosure`] is that fourth name,
+//! kept as narrow as [`is_named_escalation_exclusion`] in the sibling
+//! guard it mirrors: three exact call sites, not a blanket exemption
+//! for every `<summary>` — a future `<summary>` reaching `grow()` with
+//! `min-h-11` alone and no padding would still have `DOC-005` §1's own
+//! defect (text sitting at a `min-height` box's top, no flex to centre
+//! it), so this needs the same per-site verification the `let`-bound
+//! sites above already get, not a tag-wide pass.
+//!
+//! **Verified, not assumed**: a real render (`VISUAL`, `DISC-001`'s
+//! own completion report) shows the marker and the text sharing one
+//! visual line, centred in the row — `py-3`/`py-4`'s own arithmetic
+//! (`components/issues.rs`'s own comments at each site) make the
+//! padded box's total height exactly the padding plus the context's
+//! own line-height, so there is no excess `min-height` space left for
+//! the text to float inside.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -216,6 +244,23 @@ fn already_establishes_a_block_box(content: &str) -> bool {
     content
         .split_whitespace()
         .any(|cls| cls == "block" || cls == "card")
+}
+
+/// `DISC-001`: the three `<summary>` call sites in
+/// `components/issues.rs` this round moved from `grow_text(...)` to
+/// `grow(...)` so their native `list-item` display (and `::marker`)
+/// survives — centred by padding reaching the context's own
+/// line-height exactly, not by `grow_text`'s `inline-flex
+/// items-center`, which would undo the very marker this round
+/// restores. Keyed on each site's own exact padding suffix, which no
+/// other `grow(...)` call site in this tree shares. Closing this is
+/// the same kind of decision closing
+/// [`is_named_escalation_exclusion`] is in the sibling guard — a
+/// verified, per-site call, not this scan's to make by itself.
+fn is_padding_centred_disclosure(tag: &str, content: &str) -> bool {
+    tag == "summary"
+        && (content.ends_with("hover:text-base-content py-3")
+            || content.ends_with("hover:text-base-content py-4"))
 }
 
 const FORM_CONTROL_TAGS: [&str; 3] = ["input", "select", "textarea"];

@@ -33,11 +33,16 @@ fn every_grow_call_site_is_a_form_control_or_already_a_flex_container() {
                 continue;
             }
             let content = &stripped[cs..ce];
-            if !is_flex_container(content) && !already_establishes_a_block_box(content) {
+            if !is_flex_container(content)
+                && !already_establishes_a_block_box(content)
+                && !is_padding_centred_disclosure(&tag, content)
+            {
                 offenders.push(format!(
                     "{}:{line}: <{tag}> class={content:?} composes grow(), but is \
-                     neither a form control, already a flex container, nor already \
-                     a block box (`block`/`card`) -- use grow_text() instead",
+                     neither a form control, already a flex container, already a \
+                     block box (`block`/`card`), nor a named padding-centred \
+                     disclosure (`DISC-001`, is_padding_centred_disclosure) -- use \
+                     grow_text() instead",
                     path.display()
                 ));
             }
@@ -47,9 +52,11 @@ fn every_grow_call_site_is_a_form_control_or_already_a_flex_container() {
     assert!(
         offenders.is_empty(),
         "every components::grow(...) call site in src/components/ must already be \
-         a flex container or a form control (NFR-A11Y-007, DEC-049 as amended by \
-         DOC-005 §3.1) -- a plain text element reaching grow() directly, rather \
-         than components::grow_text(), reproduces DOC-005 §1's alignment defect:\n{}",
+         a flex container, a form control, or (as of DISC-001) a named \
+         padding-centred <summary> (NFR-A11Y-007, DEC-049 as amended by DOC-005 \
+         §3.1, DISC-001) -- a plain text element reaching grow() directly with \
+         none of those, rather than components::grow_text(), reproduces DOC-005 \
+         §1's alignment defect:\n{}",
         offenders
             .iter()
             .map(|o| format!("  {o}"))
