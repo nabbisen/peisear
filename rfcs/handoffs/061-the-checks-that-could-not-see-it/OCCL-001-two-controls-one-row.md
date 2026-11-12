@@ -26,10 +26,16 @@ its own five widths**, reporting a green cell.
 
 ## 2. What to build
 
+**Re-scoped 2026-11-12: make the overlap impossible, then check for
+it.** Controls in one flex row with a gap cannot cover each other; this
+pair can only overlap because something refuses to shrink. **Find what
+does** — the search field carries a fixed `w-48` — and let the row's own
+layout do its job. A fix that adds a magic number to buy 18 px back is
+not this round's answer, because the next width will need another one.
+
 **No two interactive controls in the header share pixels, at any width
-the gate measures.** The remedy is a layout decision and it is this
-round's to make and justify — a gap, a shrink, or a narrower field at
-`md` — under three constraints:
+the gate measures.** The remedy is this round's to choose and justify,
+under three constraints:
 
 - only classes already in the shipped stylesheet (`css_scan`);
 - every control still measures ≥ 44 × 44 (`NFR-A11Y-007`);
@@ -45,10 +51,10 @@ row before and after.
 whose boxes share a row, assert neither covers the other. Over the
 gate's own five widths, on the pages it already visits.
 
-This is the generalising half. An overflow check and an occlusion check
-answer different questions, and the project currently owns only the
-first — which is why a defect sat at a measured width behind a green
-cell.
+This is the backstop, **not the mechanism** — the layout is what should
+make overlap impossible. An overflow check and an occlusion check answer
+different questions, and the project currently owns only the first,
+which is why a defect sat at a measured width behind a green cell.
 
 **Where it lives is yours to argue**: a fourth property inside
 `overflow-gate.mjs`, or its own gate beside it. State the reason.
