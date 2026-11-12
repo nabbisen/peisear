@@ -2619,7 +2619,7 @@ unsatisfiable by construction. **What a navigation owes instead is
 sites `A11Y-001` measured now hold, four of them having been fixed by
 `A11Y-004` and `A11Y-005` in that same release. **Scope of the claim**: the
 eight are D-1's status change on issue detail and on the list, the calendar
-drag, the board drag, the sprint-plan drag, and the undo toast's two endings
+drag, the board drag, the sprint-plan drag, and the undo offer's own endings
 on each of those surfaces. **Not measured**: a validation error re-render,
 which is a full-document response and therefore `NFR-A11Y-011`'s; any browser
 other than Chrome; and a real screen reader. *Priority*: P1.
@@ -2656,15 +2656,22 @@ D-1's status change and the calendar drag keeping focus on the acted-on
 control, and the **board drag**, the **sprint-plan drag** and **both ways the
 undo toast ends** dropping focus to **`body`** — the moved or removed node
 being the focused one. **Nothing was ever sent off-screen.**
-**`A11Y-004` and `A11Y-005` closed all four.** The toast now sits beside the
-control it belongs to and returns focus to it when it ends, on either ending,
-**if focus was inside the toast** — an unconditional restore would take focus
-from someone who had moved on. Where the origin is gone, a named ladder
+**`A11Y-004` and `A11Y-005` closed all four**, and `0.62.0` rebuilt the
+same property on a different mechanism. The **live region** carrying the
+outcome and its Undo sits beside the element it acted on, and activating
+Undo returns focus **if focus was inside that region** — an unconditional
+restore would take focus from someone who had moved on, which is 0.41.0's
+own reasoning and still holds. Where the origin is gone, a named ladder
 applies: the origin, then the first control still inside the same holder, then
 `main` with `tabindex="-1"`. **Focus does not land on `body` on any measured
 path.** The one case that cannot be caught is the holder itself being removed
-while focus is in its toast — focus is lost at the removal, before any
+while focus is inside it — focus is lost at the removal, before any
 handler runs — and no path in the product does that.
+*Reworded 2026-11-12 (`DEC-028` pass 3).* This paragraph said *"the toast
+now sits beside the control"* for a toast `VIEW-003` deleted. **The
+mechanism's name was stale; the property was not** — which is why the
+ladder, the conditionality and the uncatchable case all survive the
+rewrite unchanged.
 *Amended 0.41.0*: the paragraph above previously described the four failures
 as current. **They were fixed by two handoffs in the release that recorded
 them**, and this line was not updated with them — the obligation `FR-DM-001`

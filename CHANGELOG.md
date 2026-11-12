@@ -19,20 +19,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   column and every row, unconditionally; on a phone, opening a
   project's list view showed no issue at all without scrolling. It now
   collapses to a single line — the one sentence worth your attention,
-  or a plain "looking healthy" when nothing needs it — and opens to
-  exactly the same detail as before on your own click. Nothing in it
-  was removed or moved; it just doesn't stand in front of the work by
+  or a plain "looking healthy" when nothing needs it — marked with a
+  disclosure triangle so you can see it opens, and opening to exactly
+  the same detail as before on your own click. Nothing in it was
+  removed or moved; it just doesn't stand in front of the work by
   default anymore.
 - **The workload strip below it now does the same.** One line until
   you ask for it, opening to the same per-person chips as before.
   Collapsed, this block is a constant 44px regardless of how much it
   would otherwise show — open, it is whatever it was.
-- **An undo now appears once, right next to what it undoes.** Moving
-  an issue on the board, the sprint plan or the calendar used to say
-  so twice — once quietly beside the control, and again in a pop-up
-  in the corner of the screen, which was the only place carrying
-  Undo. The pop-up is gone; the one message, with its Undo, now
-  renders in place, right after whatever you just moved.
+- **An undo now appears once, in the row you acted on.** Moving an
+  issue on the board, the sprint plan or the calendar used to say so
+  twice — once quietly beside the control, and again in a pop-up in
+  the corner of the screen, which was the only place carrying Undo,
+  about 700px away. The pop-up is gone; the one message, with its
+  Undo, now renders in the row itself — on a wide screen that is the
+  same line as what you moved, at its other end. **It no longer
+  disappears after five seconds**: it stays until you use it, until
+  your next change replaces it, or until you leave the page. And if
+  you reach it by keyboard, using it leaves you back on the row you
+  acted on rather than at the top of the page.
 - **The navigation word for your own page is now `Me`, not `Today`.**
   The page itself didn't change — it's still your own load, rhythm
   and sustainability signals, visible only to you — only the word
