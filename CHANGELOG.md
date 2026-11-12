@@ -9,7 +9,7 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.62.0] — 2026-11-12
 
 ### Changed
 
@@ -45,6 +45,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that pointed at it. Clicking it used to land you on a page titled
   "My dashboard," a different name for the same place; now the word
   you click and the page you land on say the same thing.
+
+### What this release does not fix
+
+- **`/today`'s own three disclosures still show no marker.** The same
+  defect this release fixed on the project screens, measured and
+  reported by the round that fixed those three, and deliberately out of
+  its scope.
+- **Five more counted sentences still read wrong at one.** *"1 issues"*,
+  *"across 1 issues"*, *"the last 1 sprints"*, *"up by 1 points"*,
+  *"Capacity 1 points"*. Only the one this release promoted to a
+  headline is corrected.
+- **At 768–800 px the account menu covers the search box's right edge**
+  by 13–18 px, so a click landing there opens the menu instead. Halved
+  by this release's shorter navigation word, not removed.
+- The ten other collapsible blocks across the product are still governed
+  by nothing, and the typography and colour floor this sequence named is
+  still unwritten.
+- The browser gate can still fail to start a browser and report only
+  that it *"did not expose a page target"*.
 
 ## [0.61.0] — 2026-11-10
 
