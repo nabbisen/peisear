@@ -58,10 +58,14 @@
 //!
 //! **`DISC-001` (`060`) found a fourth way to be correct, and named
 //! three call sites rather than widening the rule.** A `<summary>`'s
-//! own UA-default `display: list-item` is a second accessibility
-//! requirement's own subject (`NFR-A11Y-007`'s own marker, restored by
-//! `grow()` specifically *because* it does not add `inline-flex` the
-//! way `grow_text()` does) — so neither `grow_text()` (kills the
+//! own UA-default `display: list-item` is what generates its
+//! `::marker` — a defect `§10.58` records and no requirement governs,
+//! distinct from `NFR-A11Y-007`'s own touch-target-size clause, which
+//! `grow()` still satisfies through `min-h-11 min-w-11` regardless of
+//! `display`. Restoring the marker (by not adding `inline-flex` the
+//! way `grow_text()` does) and keeping the touch target are two
+//! separate properties this one call site now satisfies together — so
+//! neither `grow_text()` (kills the
 //! marker) nor an explicit `block`/`card` class (also kills a
 //! `<summary>`'s own marker; `list-item` and `block` are different
 //! `display` values) can be this call site's answer, and this scan's
@@ -76,13 +80,12 @@
 //! it), so this needs the same per-site verification the `let`-bound
 //! sites above already get, not a tag-wide pass.
 //!
-//! **Verified, not assumed**: a real render (`VISUAL`, `DISC-001`'s
-//! own completion report) shows the marker and the text sharing one
-//! visual line, centred in the row — `py-3`/`py-4`'s own arithmetic
-//! (`components/issues.rs`'s own comments at each site) make the
-//! padded box's total height exactly the padding plus the context's
-//! own line-height, so there is no excess `min-height` space left for
-//! the text to float inside.
+//! **Verified, not assumed**: a real render shows the marker and the
+//! text sharing one visual line, centred in the row — `py-3`/`py-4`'s
+//! own arithmetic (`components/issues.rs`'s own comments at each site)
+//! make the padded box's total height exactly the padding plus the
+//! context's own line-height, so there is no excess `min-height` space
+//! left for the text to float inside.
 
 use std::fs;
 use std::path::{Path, PathBuf};
