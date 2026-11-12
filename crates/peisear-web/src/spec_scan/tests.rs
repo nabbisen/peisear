@@ -637,6 +637,14 @@ fn test_count_citations_finds_both_bold_and_plain_counts_across_a_line_break() {
 /// described rather than being ported to describe nothing. Checked
 /// against the runner (`cargo test -p peisear-web --test
 /// undo_toast_attachment_scan -- --list`: 4) before pushing.
+///
+/// **`FOCUS-001` (`060`): both citations moved 4 → 9** -- five new
+/// tests backstopping the focus-restoration ladder `VIEW-003` deleted
+/// and `FOCUS-001` restored (a source scan can see the restore call
+/// exists; it cannot see where focus lands, which is
+/// `drag-outcome-gate.mjs`'s own fourth property instead). Checked
+/// against the runner (`cargo test -p peisear-web --test
+/// undo_toast_attachment_scan -- --list`: 9) before pushing.
 #[test]
 fn test_count_citations_population_is_exactly_these_eight() {
     let input = real_input();
@@ -646,12 +654,12 @@ fn test_count_citations_population_is_exactly_these_eight() {
         vec![
             ("view_state".to_string(), 9),
             ("issue_edit_url".to_string(), 3),
-            ("undo_toast_attachment_scan".to_string(), 4),
+            ("undo_toast_attachment_scan".to_string(), 9),
             ("aggregate_privacy".to_string(), 13),
             ("optimistic_lock".to_string(), 22),
             ("updated_at_authority".to_string(), 4),
             ("chart_equivalence".to_string(), 5),
-            ("undo_toast_attachment_scan".to_string(), 4),
+            ("undo_toast_attachment_scan".to_string(), 9),
         ]
     );
 }

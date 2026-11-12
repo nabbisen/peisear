@@ -224,6 +224,47 @@
   // auto-remove and `FLOW-001` round 2's pause/resume existed only to
   // keep two corner toasts from colliding, which cannot happen once
   // there is only one region to begin with.
+  // `FOCUS-001`: when the reader activates Undo, focus must not be left
+  // on `document.body` -- the region holding it is about to be cleared,
+  // taking the focused button with it. Restored only when focus was
+  // actually inside the region (a reader who had already moved on is
+  // left alone): the row's own move button or title link, if it is
+  // still in the document and focusable; otherwise the first focusable
+  // control in the row; otherwise `<main>` (`tabindex="-1"`).
+  // `A11Y-004`'s own ladder, restored -- its removal in `VIEW-003` was
+  // about the toast taking focus on its own, never about the Undo
+  // *button* releasing it (`NFR-A11Y-002`, `§10.57`).
+  //
+  // **Unlike `board.js`/`calendar.js`, this restore cannot happen once,
+  // synchronously, right after `onUndo()`.** `performUndo` below moves
+  // `row` into its destination list only inside its own fetch's
+  // `.then()` -- asynchronously, after this click handler has already
+  // returned -- and reparenting a focused element can blur it (measured:
+  // focus fell to `body` when only the immediate restore ran). So this
+  // restores twice: once now, in case the row has not moved yet, so
+  // focus is never on `body` in between; and again in `performUndo`'s
+  // own success callback, once the row has actually moved, via
+  // `row._focusAfterMove` -- the second restore the first one alone
+  // cannot replace.
+  function undoOrigin(row) {
+    return row.querySelector("button, a");
+  }
+
+  function restoreFocus(row) {
+    var target = undoOrigin(row);
+    if (!target || !document.contains(target)) {
+      target = document.contains(row) ? row.querySelector('a[href], button:not([disabled])') : null;
+    }
+    if (!target) {
+      var main = document.querySelector("main");
+      if (main) {
+        if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
+        target = main;
+      }
+    }
+    if (target) target.focus();
+  }
+
   function showUndoInline(row, message, onUndo) {
     var region = document.getElementById("status-announcements");
     if (!region) return;
@@ -254,8 +295,11 @@
       undoButton.focus();
     });
     undoButton.addEventListener("click", function () {
+      var hadFocus = region.contains(document.activeElement);
       region.textContent = "";
+      row._focusAfterMove = hadFocus;
       onUndo();
+      if (hadFocus) restoreFocus(row);
     });
     region.appendChild(undoButton);
 
@@ -299,6 +343,10 @@
         }
         var destList = ensureList(undoContainer);
         destList.appendChild(row);
+        if (row._focusAfterMove) {
+          row._focusAfterMove = false;
+          restoreFocus(row);
+        }
         ensureEmpty(currentContainer, emptyMessageFor(currentContainer));
         // Round 2 (`PLAN-002-review.md` §4/§6a): the row's new
         // `data-plan-move` is `undoContainer`'s own

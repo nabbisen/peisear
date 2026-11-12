@@ -4,7 +4,7 @@
 // `undo-mousedown-trap.mjs` in place with unrelated assertions would be the
 // same shape).
 //
-// Three properties, from one drop per surface, on the two surfaces `GATE-005`
+// Four properties, from one drop per surface, on the two surfaces `GATE-005`
 // measured as actually untested: `calendar.js` and `plan.js`. (`board.js`'s
 // pair is already covered by `status_control.rs`'s HTTP test asserting the
 // regions' presence; `dm.js` has no drag source at all.)
@@ -17,13 +17,18 @@
 //   3. The drop's stored effect, read back over HTTP -- independent of the
 //      page's own optimistic DOM state, which a correct client updates from
 //      the same response this reads a second time.
+//   4. (`FOCUS-001`, `NFR-A11Y-002`, `§10.57`) After activating Undo with a
+//      real key event, focus is not `document.body`. Property 2 proves Undo
+//      can be *reached*; this is the half that was missing -- that pressing
+//      it does not strand the reader at the top of the document.
 //
 // Ordered 3, then 1, then 2 within each surface, per `GATE-006` §2: a region
 // that stays empty because the handler never ran is indistinguishable, from
 // the region assertion's own side, from a handler that ran and announced
 // nothing. Asserting the stored effect first makes a setup failure (the
 // synthetic drop not reaching the handler at all) legible as its own failure
-// rather than reading as a defect in the announcement.
+// rather than reading as a defect in the announcement. Property 4 runs last,
+// after 2, since it needs Undo already focused to activate it.
 //
 // **Updated for `VIEW-003`** (round 3 of `060`): the undo control used to
 // live inside a `position: fixed` toast, a separate element created fresh
@@ -36,6 +41,17 @@
 // described: a single relocatable region cannot suffer the two-toasts-
 // collide defect that timer existed to manage, so there is nothing left for
 // that check to assert.
+//
+// **`FOCUS-001`** (`060` repair round) adds a different fourth property in
+// its place: `VIEW-003` deleted the toast's own focus-restoration along with
+// the toast, and in doing so also deleted the restoration Undo's own
+// activation needs (`A11Y-004`'s ladder) -- a regression this gate did not
+// catch because it only ever proved Undo could be *reached*, never pressed
+// it. The restore lands on each surface's own `undoOrigin` pick
+// (`calendar.js`: the block's title link, same element `ACTED_ON_SEL`
+// already names; `plan.js`: `row.querySelector("button, a")`, the link --
+// see the comment above `ACTED_ON_SEL` for why that is not the same element
+// Tab reaches Undo from).
 //
 // Reuses `undo-mousedown-trap.mjs`'s own synthetic-`DragEvent` scaffolding
 // verbatim for `PRODUCE.calendar`/`PRODUCE.plan` -- proven already, in a
@@ -249,6 +265,23 @@ async function realTabPress(browser) {
   await browser.send('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
 }
 
+// `FOCUS-001`: activates whichever element currently has focus via a real
+// key event, the same keyboard path `NFR-A11Y-002` names -- not
+// `element.click()`, which proves nothing about the keyboard.
+async function realEnterPress(browser) {
+  // `text`/`unmodifiedText` are load-bearing, not decoration: without them
+  // Chromium dispatches the keydown/keyup pair but never synthesizes the
+  // button's own default Enter-activates-click behaviour (confirmed by a
+  // direct probe -- `keyDown`/`keyUp` alone left a focused test button's
+  // own click listener at 0; adding both fields fired it).
+  const common = {
+    key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13,
+    text: '\r', unmodifiedText: '\r',
+  };
+  await browser.send('Input.dispatchKeyEvent', { type: 'keyDown', ...common });
+  await browser.send('Input.dispatchKeyEvent', { type: 'keyUp', ...common });
+}
+
 async function pollUntil(fn, timeoutMs, label) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -315,6 +348,31 @@ async function checkPlan(browser, jar, { projectId, teamSlug, sprintId }) {
     throw new Error('plan: Tab from the acted-on row did not land on the undo button');
   }
   log('plan: Tab from the acted-on row lands on the undo button');
+
+  // 4 (`FOCUS-001`, `NFR-A11Y-002`, `§10.57`): activate Undo with a real
+  // Enter press and confirm focus does not strand on `document.body`.
+  // Without a restore, the focused button is removed when the region
+  // clears and focus falls to `body` permanently -- `pollUntil` itself
+  // times out in that case, which is the failure this property exists
+  // to name.
+  await realEnterPress(browser);
+  await pollUntil(
+    async () => !(await browser.eval(`document.activeElement === document.body`)),
+    3000,
+    'focus to leave document.body after activating plan Undo',
+  );
+  const planFocusOnOrigin = await browser.eval(`(() => {
+    const row = document.querySelector('${HOLDER_SEL.plan}');
+    const origin = row ? row.querySelector('button, a') : null;
+    return !!origin && document.activeElement === origin;
+  })()`);
+  if (!planFocusOnOrigin) {
+    const activeDesc = await browser.eval(
+      `document.activeElement ? document.activeElement.outerHTML.slice(0, 120) : 'null'`,
+    );
+    throw new Error(`plan: focus after activating Undo is not the row's own origin control: ${activeDesc}`);
+  }
+  log('plan: focus after activating Undo is not body, and lands on the row\'s own origin control');
 }
 
 async function checkCalendar(browser, jar, { projectId, calIssueId }) {
@@ -361,6 +419,29 @@ async function checkCalendar(browser, jar, { projectId, calIssueId }) {
     throw new Error('calendar: Tab from the acted-on block did not land on the undo button');
   }
   log('calendar: Tab from the acted-on block lands on the undo button');
+
+  // 4 (`FOCUS-001`, `NFR-A11Y-002`, `§10.57`): activate Undo with a real
+  // Enter press and confirm focus does not strand on `document.body`.
+  // `calendar.js`'s own `undoOrigin` picks the same element
+  // `ACTED_ON_SEL.calendar` already names (the block's title link is its
+  // only focusable descendant before the region), so Tab-from and
+  // restore-to are the same selector here, unlike `plan.js`.
+  await realEnterPress(browser);
+  await pollUntil(
+    async () => !(await browser.eval(`document.activeElement === document.body`)),
+    3000,
+    'focus to leave document.body after activating calendar Undo',
+  );
+  const calendarFocusOnOrigin = await browser.eval(
+    `document.activeElement === document.querySelector('${ACTED_ON_SEL.calendar}')`,
+  );
+  if (!calendarFocusOnOrigin) {
+    const activeDesc = await browser.eval(
+      `document.activeElement ? document.activeElement.outerHTML.slice(0, 120) : 'null'`,
+    );
+    throw new Error(`calendar: focus after activating Undo is not the block's own origin control: ${activeDesc}`);
+  }
+  log('calendar: focus after activating Undo is not body, and lands on the block\'s own origin control');
 }
 
 async function main() {
@@ -392,7 +473,7 @@ async function main() {
     await checkPlan(browser, fixtures.jar, fixtures);
     await checkCalendar(browser, fixtures.jar, fixtures);
 
-    log('both surfaces: stored effect confirmed, live region text correct, Tab reaches Undo');
+    log('both surfaces: stored effect confirmed, live region text correct, Tab reaches Undo, focus survives activating it');
     exitCode = 0;
   } catch (err) {
     log('ERROR:', err.stack || err.message);
