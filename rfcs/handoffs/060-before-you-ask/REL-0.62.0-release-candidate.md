@@ -34,12 +34,12 @@ but ours."*
 | # | Criterion | Where |
 |---|---|---|
 | 1 | Every handoff reviewed and accepted, one commit per handoff | **Met.** `VIEW-001`, `VIEW-001 r2`, `VIEW-003`, `NAME-001` — PRs #47–#50, each reviewed before or on landing, each closed in this series' own README |
-| 2 | `fmt`, `clippy`, the full suite, **with captured logs** | **`PREP-002`** |
+| 2 | `fmt`, `clippy`, the full suite, **with captured logs** | **Met at `b77c5d9`** — `PREP-002` plus the architect's own run, §9 |
 | 3 | Requirements amendments applied | **Met already, not at the tag**: `FR-NAV-001` names `Me`; `NFR-A11Y-012` is Met for all five; `FR-NAV-006` and `external-design §5.10` state the section-order rule once; `§10.55` and `§10.56` are filed |
 | 4 | `CHANGELOG.md` records the *why* | §4 — architect's. The heading is renamed and dated **on the day the tag is pushed**, not today (`0.60.0` is where those two days first diverged) |
 | 5 | Affected documentation updated | **Met** — `PREP-001` regenerated, architect opened all six and committed them (`4f03045`), `README.md`'s board caption corrected, pass 5's sweep of the reader-facing documents clean. **Re-run after `DISC-001`**, which changes what those two images show |
-| 6 | Real binaries, and an upgrade that is a non-event | **`PREP-003`** |
-| 7 | Release recommendation; **owner approves** | **blocked**: `GRAM-001`. `FOCUS-001` and `DISC-001` closed and merged |
+| 6 | Real binaries, and an upgrade that is a non-event | **Met** — `PREP-003`, walked rather than reasoned |
+| 7 | Release recommendation; **owner approves** | **§9 — issued 2026-11-12, awaiting the owner. This is the only open criterion.** |
 | 8 | *What ships next* reconciled | after approval, with the tag |
 
 ## §2 — the claim
@@ -231,3 +231,82 @@ pass cannot be read.
 - No gate re-run to make it green.
 - No version bumped, no heading dated, no tag, no publish, no Release.
 - Scratch target directories removed; `df` quoted.
+
+---
+
+# §9 — the release recommendation
+
+**Recommendation: cut `0.62.0`.** Issued 2026-11-12. **This is a
+recommendation, not a decision** — exit criterion 7 is the owner's, and
+`DEC-056`'s four legs do not begin until it is given.
+
+## 9.1 — every gate, re-run at `main`'s own tip
+
+Not inherited from a branch or from an earlier commit: run at
+**`b77c5d9`**, with each command's own exit code recorded and the test
+total counted afterwards by a separate pass over the logs, because a
+counter that runs inline has twice reported a confident clean result
+while being wrong.
+
+| | |
+|---|---|
+| `cargo fmt --check` | 0 |
+| `cargo clippy --workspace --all-targets -- -D warnings` | 0 |
+| the same under `--no-default-features --features postgres` | 0 |
+| `DEC-007` block | **42 commands, 42 exits recorded, 0 non-zero** |
+| `DEC-007` total | **676 passed, 0 failed** |
+| `overflow-gate` · `undo-mousedown-trap` · `drag-outcome-gate` · `disclosure-marker-gate` | 0, 0, 0, 0 |
+| `mdbook build docs` | 0 |
+| `cargo doc` with broken-intra-doc-links denied | 0 |
+
+**`DEC-007`: 666 → 676** across the release.
+
+## 9.2 — what the release is
+
+**A project screen opens on your work.** The analysis above it is one
+line — marked as a disclosure, so it looks like one — until the reader
+asks. **An undo appears once, in the row it belongs to**, with no clock
+on it, and using it by keyboard leaves the reader where they were. **The
+word for your own page is the word that page answers to.**
+
+No migration. `0.61.0`'s session cookie authenticates against the
+candidate on the same database, walked with real binaries rather than
+reasoned from a diff.
+
+## 9.3 — what it does not fix, stated rather than implied
+
+- **`/today`'s own three summaries** still render without a marker —
+  `DISC-001` scoped its build to three sites and measured the rest.
+- **Five count-bearing strings** still read wrong at 1 (`§10.59`); only
+  the one this release promoted to a headline is fixed.
+- **`§10.55`** — at 768–800 px the account menu covers the search
+  field's right edge; halved by this release, not removed.
+- **`§10.54`** — the browser gate's own launch failure mode.
+- The **ten ungoverned `<details>`**, the **typography and colour
+  floor**, and `§10.15`, `§10.50`, `§10.32`, carried.
+- Two call-site counts whose population was never stated
+  (`ROADMAP.md`, *Unscheduled work*).
+
+## 9.4 — the honest part
+
+**Five register entries were opened while assembling this candidate**
+(`§10.55`–`§10.59`), which is more than any previous cut. One of them,
+`§10.57`, was a **P1 I caused**: `VIEW-003`'s handoff told the round to
+delete the undo's focus restoration, reasoning about the toast *taking*
+focus and not about the Undo control *receiving* it. It lived on `main`
+for a day.
+
+**None of the five reached a release**, and four were found by the
+candidate's own procedure rather than by a user — which is the argument
+for the procedure, not against the release. The fifth was found by a
+dev-team round reading `main`'s CI at a merge commit rather than
+trusting a PR's green.
+
+## 9.5 — if approved
+
+`DEC-056`'s four legs, in order: the version bump and the
+`[0.62.0] — <tag day>` heading in one commit; a signed tag, pushed;
+`cargo publish --workspace` from a detached worktree; and
+`gh release create 0.62.0 --notes-file --verify-tag`, which is what
+starts the platform archives. `What ships next` is reconciled with the
+tag (criterion 8).
