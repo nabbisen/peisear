@@ -73,19 +73,34 @@
 //! correct because the padding itself, not a flex box, supplies the
 //! centring." [`is_padding_centred_disclosure`] is that fourth name,
 //! kept as narrow as [`is_named_escalation_exclusion`] in the sibling
-//! guard it mirrors: three exact call sites, not a blanket exemption
-//! for every `<summary>` — a future `<summary>` reaching `grow()` with
-//! `min-h-11` alone and no padding would still have `DOC-005` §1's own
-//! defect (text sitting at a `min-height` box's top, no flex to centre
-//! it), so this needs the same per-site verification the `let`-bound
-//! sites above already get, not a tag-wide pass.
+//! guard it mirrors at `DISC-001`: three exact call sites, not a
+//! blanket exemption for every `<summary>`.
 //!
-//! **Verified, not assumed**: a real render shows the marker and the
-//! text sharing one visual line, centred in the row — `py-3`/`py-4`'s
-//! own arithmetic (`components/issues.rs`'s own comments at each site)
-//! make the padded box's total height exactly the padding plus the
-//! context's own line-height, so there is no excess `min-height` space
-//! left for the text to float inside.
+//! **`MARK-001` (`061`) took the same shape to six more sites and hit
+//! the limit `DISC-001`'s own comment named in advance.** Four of the
+//! six do not share either of `DISC-001`'s two literal padding
+//! suffixes — each carries its own text-size/padding combination
+//! (`settings.rs`'s two sites, `me.rs`'s two). Nine call sites sharing
+//! one property (a `<summary>`'s `grow(...)` carries a symmetric
+//! `py-*` class) is where a literal list stops being *"a handful"* and
+//! the function was rewritten to check the property itself rather than
+//! enumerate its instances — still reached only after the other three
+//! clauses rule out a flex container, form control or block box, which
+//! is what keeps the property from wrongly waving through the sites
+//! that merely happen to carry a `py-*` token alongside `flex` or
+//! `btn` (`teams.rs`, `notification_preferences.rs`, `settings.rs`'s
+//! close-button dropdown — found while measuring for `MARK-001`,
+//! reported rather than folded in since their own fix is a real
+//! flex-row layout or a daisyUI component class, not this shape).
+//!
+//! **Verified, not assumed, at every site**: a real render shows the
+//! marker and the text sharing one visual line, centred in the row —
+//! `py-3`/`py-4`'s own arithmetic (stated in a comment at each call
+//! site) makes the padded box's total height exactly the padding plus
+//! the context's own line-height, so there is no excess `min-height`
+//! space left for the text to float inside. This holds independently
+//! for all nine sites this function now recognises, not only the
+//! three it originally named.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -249,21 +264,37 @@ fn already_establishes_a_block_box(content: &str) -> bool {
         .any(|cls| cls == "block" || cls == "card")
 }
 
-/// `DISC-001`: the three `<summary>` call sites in
-/// `components/issues.rs` this round moved from `grow_text(...)` to
-/// `grow(...)` so their native `list-item` display (and `::marker`)
-/// survives — centred by padding reaching the context's own
-/// line-height exactly, not by `grow_text`'s `inline-flex
-/// items-center`, which would undo the very marker this round
-/// restores. Keyed on each site's own exact padding suffix, which no
-/// other `grow(...)` call site in this tree shares. Closing this is
-/// the same kind of decision closing
-/// [`is_named_escalation_exclusion`] is in the sibling guard — a
-/// verified, per-site call, not this scan's to make by itself.
+/// `DISC-001` and `MARK-001`: a `<summary>` whose `grow(...)` call
+/// carries a symmetric `py-*` class is centred by that padding reaching
+/// the context's own line-height exactly, not by `grow_text`'s
+/// `inline-flex items-center`, which would undo the native `list-item`
+/// display (and `::marker`) this shape exists to keep. `DISC-001`
+/// started this as a **literal list of two exact padding suffixes**,
+/// kept as narrow as [`is_named_escalation_exclusion`] on purpose —
+/// three call sites, not a property. `MARK-001` added six more, four of
+/// which do not share either literal suffix (`settings.rs`'s two, and
+/// `me.rs`'s two, each carry their own distinct padding/text-size
+/// combination), so the literal list stopped describing the real
+/// population at exactly the point its own doc comment named: *"a
+/// sixth such binding would need the same verification, not an
+/// extension to this scan, unless it stops being a handful."* Nine
+/// call sites is where it stops being a handful.
+///
+/// **Replaced the list with the property it always stood for**: any
+/// `<summary>` whose `grow(...)` class carries a `py-*` token. This is
+/// safe precisely because it is reached only when the call site is
+/// *not already* a flex container, form control or block box (this
+/// scan's other three clauses, checked first) — the sites this
+/// property would wrongly wave through if checked alone (`teams.rs`,
+/// `notification_preferences.rs`, both `flex flex-row`; `settings.rs`'s
+/// close-button dropdown, `btn btn-ghost btn-xs`) are already exempted
+/// by `is_flex_container` before this function is ever asked. Each of
+/// the nine sites this property now covers was still verified
+/// individually by a real render before being built, exactly as
+/// `DISC-001` did — this change widens what the guard can *recognise*,
+/// not what a contributor may build without checking.
 fn is_padding_centred_disclosure(tag: &str, content: &str) -> bool {
-    tag == "summary"
-        && (content.ends_with("hover:text-base-content py-3")
-            || content.ends_with("hover:text-base-content py-4"))
+    tag == "summary" && content.split_whitespace().any(|cls| cls.starts_with("py-"))
 }
 
 const FORM_CONTROL_TAGS: [&str; 3] = ["input", "select", "textarea"];

@@ -6,17 +6,33 @@
 // computed style the browser resolves from it. This is the browser check
 // that can.
 //
-// **Scoped to what this round built**: the project board/list's own
-// three summaries -- `HealthStrip`'s outer one, `WorkloadStrip`'s outer
-// one, and the nested `Indicators` toggle -- all in
-// `components/issues.rs`, all switched from `grow_text(...)` to
-// `grow(...)` plus padding so the native `list-item` display (and its
-// marker) survive. A guard asserting every `<summary>` in the product is
-// correct would fail today on sites this round did not touch (found
-// while measuring for this file, reported rather than fixed -- see the
-// round's own completion report) -- exactly the "fails on a tree nobody
-// asked it to cover" shape this project's own guards are written not to
-// be.
+// **`DISC-001` scoped this to the three it built** -- the project
+// board/list's own `HealthStrip`/`WorkloadStrip`/`Indicators`
+// summaries in `components/issues.rs`. **`MARK-001` (`061`) extends it
+// to the six more it built**, per that round's own handoff (§4): both
+// of `settings.rs`'s summaries (the "add a capacity row" disclosure and
+// the per-row points-edit dropdown), both of `me.rs`'s (`/today`'s
+// "What do these mean?" and the Sustainability summary), and both of
+// `sprints.rs`'s chart-table toggles -- the velocity table (sprints
+// list page) and the burndown table (sprint detail page). The handoff's
+// own parenthetical names three pages (`/today`, settings, sprint
+// detail); this covers a fourth, the sprints list, because that is
+// where the velocity-chart summary (one of the six this round actually
+// built) lives -- a guard that claims to cover what this round built
+// but skips the page one of its six sites is on would not be covering
+// what it claims.
+//
+// A guard asserting every `<summary>` in the product is correct would
+// still fail today on sites neither round touched (`teams.rs`,
+// `notification_preferences.rs`, and `/today`'s own Rhythm summary --
+// found while measuring for `MARK-001`, reported rather than fixed, see
+// that round's own completion report) -- exactly the "fails on a tree
+// nobody asked it to cover" shape this project's own guards are written
+// not to be. `alignment_scan`'s own source-level scan
+// (`no_summary_composes_grow_text`) is the one that cannot pass while
+// any `grow_text(`-shaped instance of this defect exists anywhere in
+// `src/components/`, including sites no browser gate visits; this file
+// stays the behavioural proof beside it, for the pages it does visit.
 //
 // **Two properties, read together, per the handoff's own instruction**:
 // a marker that costs the touch target is not the fix, and a target
@@ -89,10 +105,20 @@ async function optionValue(cookie, url, labelPart) {
   throw new Error(`no <option> containing "${labelPart}" on ${url}`);
 }
 
+async function lockStamp(cookie, url) {
+  const page = await (await fetch(url, { headers: { cookie } })).text();
+  const stamp = page.match(/name="client_updated_at"\s+value="([^"]+)"/)?.[1];
+  if (!stamp) throw new Error(`no lock value on ${url}`);
+  return stamp;
+}
+
 // Two members, several in-flight issues on one assignee -- the same
 // fixture shape `VIEW-001`'s own evidence used, so both `HealthStrip`
 // (a non-Good indicator) and `WorkloadStrip` (an assigned in-flight
 // issue) actually render their own summary rather than an empty state.
+// The owner's own four assigned in-progress issues are also what
+// `/today`'s `user_is_active` check reads, so no separate fixture is
+// needed for `MARK-001`'s two `me.rs` summaries.
 async function createFixture() {
   const jar = makeCookieJar();
   const DISPLAY_NAME = 'Disclosure Marker Fixture';
@@ -135,19 +161,117 @@ async function createFixture() {
     if (res.status !== 303) throw new Error(`create issue ${i}: expected 303, got ${res.status}`);
   }
 
-  return { cookie: ownerCookie, projectId };
+  // `MARK-001`'s two `settings.rs` summaries: an open-ended capacity
+  // row renders both the "add a capacity row" disclosure (always
+  // present) and the per-row points-edit dropdown (only once a row
+  // exists).
+  const capRes = await jar.fetchForm(`${BASE}/settings/capacity`, {
+    points: '10', period_start: '2026-01-01', period_end: '',
+  });
+  if (capRes.status !== 303) throw new Error(`insert capacity row: expected 303, got ${capRes.status}`);
+
+  // `MARK-001`'s two `sprints.rs` summaries: the burndown table needs
+  // one completed sprint with two contributors on done issues
+  // (`NFR-PRIV-007` suppresses it below two, the same gate
+  // `overflow-gate.mjs`'s own fixture works around); the velocity
+  // table's own page is covered by a second, simpler completed sprint,
+  // since a velocity row needs two sprints to compare and carries no
+  // privacy floor of its own.
+  const teamProjectRes = await jar.fetchForm(`${BASE}/projects`, {
+    name: 'Disclosure Marker Team Project', description: '', team_id: teamId,
+  });
+  if (teamProjectRes.status !== 303) throw new Error(`create team project: expected 303, got ${teamProjectRes.status}`);
+  const teamProjectId = teamProjectRes.headers.get('location').split('/projects/')[1].split(/[/?]/)[0];
+  const teamNewIssueUrl = `${BASE}/projects/${teamProjectId}/issues/new`;
+  const teamOwnerId = await optionValue(ownerCookie, teamNewIssueUrl, DISPLAY_NAME);
+  const teamSecondId = await optionValue(ownerCookie, teamNewIssueUrl, SECOND_DISPLAY_NAME);
+
+  const sprintARes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints`, {
+    name: 'Disclosure Marker Sprint A', goal: 'g', starts_on: '2026-08-01', ends_on: '2026-08-14',
+  });
+  if (sprintARes.status !== 303) throw new Error(`create sprint A: expected 303, got ${sprintARes.status}`);
+  const sprintAId = sprintARes.headers.get('location').split('/sprints/')[1].split(/[/?]/)[0];
+
+  const burndownIssueIds = [];
+  for (const [title, assignee] of [
+    ['Burndown fixture issue 1', teamOwnerId],
+    ['Burndown fixture issue 2', teamSecondId],
+  ]) {
+    const r = await jar.fetchForm(teamNewIssueUrl, {
+      title, description: '', status: 'open', priority: 'medium', effort: '3', assignee_id: assignee,
+    });
+    if (r.status !== 303) throw new Error(`create burndown issue: expected 303, got ${r.status}`);
+    const id = r.headers.get('location').split('/issues/')[1].split(/[/?]/)[0];
+    burndownIssueIds.push(id);
+    const add = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints/${sprintAId}/plan/add`, {
+      issue_id: id, project_id: teamProjectId,
+    });
+    if (add.status !== 303) throw new Error(`add issue to sprint A: expected 303, got ${add.status}`);
+  }
+
+  const startAStamp = await lockStamp(ownerCookie, `${BASE}/teams/${teamSlug}/sprints/${sprintAId}`);
+  const startARes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints/${sprintAId}/start`, { client_updated_at: startAStamp });
+  if (startARes.status !== 303) throw new Error(`start sprint A: expected 303, got ${startARes.status}`);
+
+  for (const id of burndownIssueIds) {
+    const stamp = await lockStamp(ownerCookie, `${BASE}/projects/${teamProjectId}/issues/${id}`);
+    const r = await jar.fetchForm(`${BASE}/projects/${teamProjectId}/issues/${id}/status/detail`, {
+      status: 'done', client_updated_at: stamp,
+    });
+    if (r.status !== 303) throw new Error(`mark burndown issue done: expected 303, got ${r.status}`);
+  }
+
+  const completeAStamp = await lockStamp(ownerCookie, `${BASE}/teams/${teamSlug}/sprints/${sprintAId}`);
+  const completeARes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints/${sprintAId}/complete`, { client_updated_at: completeAStamp });
+  if (completeARes.status !== 303) throw new Error(`complete sprint A: expected 303, got ${completeARes.status}`);
+
+  const sprintBRes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints`, {
+    name: 'Disclosure Marker Sprint B', goal: 'g', starts_on: '2026-09-01', ends_on: '2026-09-14',
+  });
+  if (sprintBRes.status !== 303) throw new Error(`create sprint B: expected 303, got ${sprintBRes.status}`);
+  const sprintBId = sprintBRes.headers.get('location').split('/sprints/')[1].split(/[/?]/)[0];
+  const startBStamp = await lockStamp(ownerCookie, `${BASE}/teams/${teamSlug}/sprints/${sprintBId}`);
+  const startBRes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints/${sprintBId}/start`, { client_updated_at: startBStamp });
+  if (startBRes.status !== 303) throw new Error(`start sprint B: expected 303, got ${startBRes.status}`);
+  const completeBStamp = await lockStamp(ownerCookie, `${BASE}/teams/${teamSlug}/sprints/${sprintBId}`);
+  const completeBRes = await jar.fetchForm(`${BASE}/teams/${teamSlug}/sprints/${sprintBId}/complete`, { client_updated_at: completeBStamp });
+  if (completeBRes.status !== 303) throw new Error(`complete sprint B: expected 303, got ${completeBRes.status}`);
+
+  return { cookie: ownerCookie, projectId, teamSlug, sprintDetailId: sprintAId };
 }
 
-// The three summaries this round rewrote, found by stable anchors --
-// never the headline's own computed sentence, which depends on which
-// indicator is driving it and is not this round's subject. `health`/
-// `workload` are each the first `<summary>` inside their section's own
+// `DISC-001`'s own three, found by stable anchors -- never the
+// headline's own computed sentence, which depends on which indicator
+// is driving it and is not either round's subject. `health`/`workload`
+// are each the first `<summary>` inside their section's own
 // `aria-label` (`VIEW-001`'s own stable anchor, reused here); `Indicators`
 // is a fixed label (`IndicatorsSummaryLabel`), never data-dependent.
-const IN_SCOPE = {
+const PROJECT_SCREEN_SUMMARIES = {
   health: `document.querySelector('[aria-label="Project health"] summary')`,
   workload: `document.querySelector('[aria-label="Workload"] summary')`,
   indicators: `Array.from(document.querySelectorAll('summary')).find(s => s.textContent.trim() === 'Indicators')`,
+};
+
+// `MARK-001`'s six, by the same stable-anchor discipline: a fixed
+// label where one exists (`AddCapacityRowSummary`'s own text,
+// `ChartTableSummaryLabel`'s own text), index-based only where the
+// page structurally has exactly one summary of that kind
+// (`WhatDoTheseMeanLabel` is `/today`'s only non-Rhythm summary in
+// this fixture; the points-edit dropdown is the only `<summary>`
+// inside a table row).
+const SETTINGS_SUMMARIES = {
+  add_capacity_row: `Array.from(document.querySelectorAll('summary')).find(s => s.textContent.includes('Add a capacity row'))`,
+  points_edit_dropdown: `document.querySelector('tr summary')`,
+};
+const ME_SUMMARIES = {
+  what_do_these_mean: `Array.from(document.querySelectorAll('summary')).find(s => s.textContent.includes('What do these mean'))`,
+  sustainability: `document.querySelector('[aria-label="Sustainability"] summary')`,
+};
+const SPRINTS_LIST_SUMMARIES = {
+  velocity_chart_table: `Array.from(document.querySelectorAll('summary')).find(s => s.textContent.includes('View as a table'))`,
+};
+const SPRINT_DETAIL_SUMMARIES = {
+  burndown_chart_table: `Array.from(document.querySelectorAll('summary')).find(s => s.textContent.includes('View as a table'))`,
 };
 
 async function measureSummary(browser, expr) {
@@ -164,30 +288,29 @@ async function measureSummary(browser, expr) {
   })()`);
 }
 
-async function checkWidth(browser, { projectId }, viewMode, width, height) {
+async function checkPage(browser, pageLabel, url, summaries, width, height) {
   await browser.setViewport(width, height, width < 768);
-  const url = `${BASE}/projects/${projectId}?view=${viewMode}`;
   await browser.goto(url);
   await browser.waitForSelector('header.navbar', 5000);
 
-  for (const [label, expr] of Object.entries(IN_SCOPE)) {
+  for (const [label, expr] of Object.entries(summaries)) {
     const found = await measureSummary(browser, expr);
     if (!found) {
-      throw new Error(`${viewMode}@${width}: ${label} summary not found on the page`);
+      throw new Error(`${pageLabel}@${width}: ${label} summary not found on the page`);
     }
     if (found.display !== 'list-item') {
       throw new Error(
-        `${viewMode}@${width}: ${label} summary (${JSON.stringify(found.text)}) has computed display ` +
+        `${pageLabel}@${width}: ${label} summary (${JSON.stringify(found.text)}) has computed display ` +
         `${JSON.stringify(found.display)}, not "list-item" -- its ::marker is suppressed`,
       );
     }
     if (found.width < 44 || found.height < 44) {
       throw new Error(
-        `${viewMode}@${width}: ${label} summary (${JSON.stringify(found.text)}) measures ` +
+        `${pageLabel}@${width}: ${label} summary (${JSON.stringify(found.text)}) measures ` +
         `${found.width}x${found.height}, below the 44x44 floor`,
       );
     }
-    log(`${viewMode}@${width}: ${label} -- display=list-item, ${found.width}x${found.height}`);
+    log(`${pageLabel}@${width}: ${label} -- display=list-item, ${found.width}x${found.height}`);
   }
 }
 
@@ -217,12 +340,26 @@ async function main() {
     const [cookieName, cookieValue] = fixture.cookie.split('=');
     await browser.send('Network.setCookie', { name: cookieName, value: cookieValue, domain: '127.0.0.1', path: '/' });
 
-    for (const viewMode of ['board', 'list']) {
-      await checkWidth(browser, fixture, viewMode, 1280, 900);
-      await checkWidth(browser, fixture, viewMode, 390, 844);
+    for (const [width, height] of [[1280, 900], [390, 844]]) {
+      for (const viewMode of ['board', 'list']) {
+        await checkPage(
+          browser, viewMode, `${BASE}/projects/${fixture.projectId}?view=${viewMode}`,
+          PROJECT_SCREEN_SUMMARIES, width, height,
+        );
+      }
+      await checkPage(browser, 'settings', `${BASE}/settings`, SETTINGS_SUMMARIES, width, height);
+      await checkPage(browser, 'today', `${BASE}/today`, ME_SUMMARIES, width, height);
+      await checkPage(
+        browser, 'sprints_list', `${BASE}/teams/${fixture.teamSlug}/sprints`,
+        SPRINTS_LIST_SUMMARIES, width, height,
+      );
+      await checkPage(
+        browser, 'sprint_detail', `${BASE}/teams/${fixture.teamSlug}/sprints/${fixture.sprintDetailId}`,
+        SPRINT_DETAIL_SUMMARIES, width, height,
+      );
     }
 
-    log('all three in-scope summaries: list-item display, >=44x44, on board and list, at both widths');
+    log('all nine in-scope summaries (DISC-001 three + MARK-001 six): list-item display, >=44x44, at both widths');
     exitCode = 0;
   } catch (err) {
     log('ERROR:', err.stack || err.message);

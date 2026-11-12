@@ -432,7 +432,12 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) 
                     </svg>
                 </div>
                 <details class="text-xs mt-2">
-                    <summary class=grow_text("cursor-pointer text-base-content/70 hover:text-base-content")>
+                    // MARK-001 (§10.58): grow() not grow_text(), same
+                    // arithmetic and the same exact padding suffix
+                    // `is_padding_centred_disclosure` already recognises
+                    // from `issues.rs`'s Indicators summary (`DISC-001`) --
+                    // py-4 = 32px + text-xs's own 16px line-height = 48px.
+                    <summary class=grow("cursor-pointer text-base-content/70 hover:text-base-content py-4")>
                         {t(MessageKey::ChartTableSummaryLabel)}
                     </summary>
                     <div class="overflow-x-auto mt-1">
@@ -976,7 +981,12 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
                     </span>
                 </div>
                 <details class="text-xs mt-2">
-                    <summary class=grow_text("cursor-pointer text-base-content/70 hover:text-base-content")>
+                    // MARK-001 (§10.58): grow() not grow_text(), same
+                    // arithmetic and the same exact padding suffix
+                    // `is_padding_centred_disclosure` already recognises
+                    // from `issues.rs`'s Indicators summary (`DISC-001`) --
+                    // py-4 = 32px + text-xs's own 16px line-height = 48px.
+                    <summary class=grow("cursor-pointer text-base-content/70 hover:text-base-content py-4")>
                         {t(MessageKey::ChartTableSummaryLabel)}
                     </summary>
                     <div class="overflow-x-auto mt-1">

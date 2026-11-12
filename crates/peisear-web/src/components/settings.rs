@@ -24,9 +24,9 @@
 use axum::response::Html;
 use leptos::prelude::*;
 
+use super::grow;
 use super::layout::AppShell;
 use super::t;
-use super::{grow, grow_text};
 use peisear_core::{CurrentUser, personal_metrics::DEFAULT_WIP_LIMIT};
 use peisear_i18n::MessageKey;
 use peisear_storage::user_capacities::CapacityRow;
@@ -139,7 +139,14 @@ pub fn SettingsPage(
                         </div>
 
                         <details class="mt-2">
-                            <summary class=grow_text("cursor-pointer text-sm")>
+                            // MARK-001 (§10.58): grow() not grow_text() -- the
+                            // native `list-item` display (and its marker)
+                            // survives only without the `inline-flex`
+                            // grow_text() adds. py-3 = 24px + text-sm's own
+                            // 20px line-height = 44px exactly, same arithmetic
+                            // DISC-001 used for issues.rs's health/workload
+                            // summaries.
+                            <summary class=grow("cursor-pointer text-sm py-3")>
                                 {t(MessageKey::AddCapacityRowSummary)}
                             </summary>
                             <form method="post" action="/settings/capacity"
@@ -281,7 +288,13 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
         <tr aria-label=aria>
             <td>
                 <details class="dropdown">
-                    <summary class=grow_text("cursor-pointer")>
+                    // MARK-001 (§10.58): grow() not grow_text(), same reason
+                    // as this file's other summary above. No text-size class
+                    // here -- the ambient context is the enclosing
+                    // `table table-sm`, whose own rule sets font-size/
+                    // line-height to exactly text-sm's (20px), so the same
+                    // py-3 arithmetic applies.
+                    <summary class=grow("cursor-pointer py-3")>
                         <span class="font-medium">{row.points}</span>
                         {t(MessageKey::PointsUnitSuffix)}
                     </summary>

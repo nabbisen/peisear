@@ -11,7 +11,7 @@ use axum::response::Html;
 use leptos::prelude::*;
 
 use super::layout::AppShell;
-use super::{grow, grow_text, t};
+use super::{grow, t};
 use peisear_core::{
     CurrentUser, DisplayHealthState,
     personal_metrics::{
@@ -357,7 +357,12 @@ pub fn PersonalDashboard(
 
                 <section class="text-xs text-base-content/70">
                     <details>
-                        <summary class=grow_text("cursor-pointer")>{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
+                        // MARK-001 (§10.58): grow() not grow_text() --
+                        // ambient context is this section's own text-xs
+                        // (16px line-height), so py-4 = 32px + 16px = 48px,
+                        // same arithmetic DISC-001 used for issues.rs's
+                        // Indicators summary.
+                        <summary class=grow("cursor-pointer py-4")>{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
                         <div class="mt-2 space-y-2">
                             <p>
                                 <strong>{t(MessageKey::WipChipLabel)}</strong>
@@ -506,7 +511,9 @@ fn render_burnout_panel(
                 {sustainability_heading}
             </h2>
             <details open=any_watch>
-                <summary class=grow_text("cursor-pointer text-sm text-base-content/80 mb-2")>
+                // MARK-001 (§10.58): grow() not grow_text() -- text-sm's
+                // own 20px line-height + py-3's 24px = 44px exactly.
+                <summary class=grow("cursor-pointer text-sm text-base-content/80 mb-2 py-3")>
                     {summary}
                 </summary>
                 {has_streaks.then(|| view! {

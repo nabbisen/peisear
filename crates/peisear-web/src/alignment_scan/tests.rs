@@ -40,8 +40,9 @@ fn every_grow_call_site_is_a_form_control_or_already_a_flex_container() {
                 offenders.push(format!(
                     "{}:{line}: <{tag}> class={content:?} composes grow(), but is \
                      neither a form control, already a flex container, already a \
-                     block box (`block`/`card`), nor a named padding-centred \
-                     disclosure (`DISC-001`, is_padding_centred_disclosure) -- use \
+                     block box (`block`/`card`), nor a padding-centred disclosure \
+                     (`DISC-001`/`MARK-001`, is_padding_centred_disclosure -- a \
+                     <summary> whose grow() carries a symmetric py-* class) -- use \
                      grow_text() instead",
                     path.display()
                 ));
@@ -52,11 +53,11 @@ fn every_grow_call_site_is_a_form_control_or_already_a_flex_container() {
     assert!(
         offenders.is_empty(),
         "every components::grow(...) call site in src/components/ must already be \
-         a flex container, a form control, or (as of DISC-001) a named \
-         padding-centred <summary> (NFR-A11Y-007, DEC-049 as amended by DOC-005 \
-         §3.1, DISC-001) -- a plain text element reaching grow() directly with \
-         none of those, rather than components::grow_text(), reproduces DOC-005 \
-         §1's alignment defect:\n{}",
+         a flex container, a form control, or a padding-centred <summary> \
+         (NFR-A11Y-007, DEC-049 as amended by DOC-005 §3.1, DISC-001, MARK-001) \
+         -- a plain text element reaching grow() directly with none of those, \
+         rather than components::grow_text(), reproduces DOC-005 §1's alignment \
+         defect:\n{}",
         offenders
             .iter()
             .map(|o| format!("  {o}"))
@@ -104,6 +105,63 @@ fn no_grow_text_call_site_is_a_form_control() {
         "no <input>/<select>/<textarea> in src/components/ may compose \
          components::grow_text(...) (DOC-005 §2/§3.1: inline-flex is meaningless \
          at best on a form control's native centring):\n{}",
+        offenders
+            .iter()
+            .map(|o| format!("  {o}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
+
+/// `MARK-001` (`061`, `§10.58`) -- the guard this round exists to ship.
+/// `grow_text()` appends `inline-flex items-center` unconditionally,
+/// which suppresses a `<summary>`'s native `display: list-item` and
+/// the `::marker` box that depends on it. This scan cannot pass while
+/// any `<summary>` in `src/components/` still reaches `grow_text(`,
+/// which is exactly the property `DISC-001` found missing: a source
+/// scan can see which helper a call site took, even though it cannot
+/// see the computed style a browser resolves from it.
+#[test]
+fn no_summary_composes_grow_text() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let components_dir = manifest_dir.join("src").join("components");
+    let mut files = Vec::new();
+    collect_rs_files(&components_dir, &mut files);
+    assert!(
+        !files.is_empty(),
+        "found no .rs files under src/components/ -- the workspace layout \
+         assumption this scan depends on may have changed"
+    );
+
+    let mut offenders = Vec::new();
+    for path in &files {
+        let source =
+            fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let stripped = strip_line_comments(&source);
+        for (quote_pos, _cs, _ce) in quoted_string_spans(&stripped) {
+            if !is_call_argument(&stripped, quote_pos, "grow_text") {
+                continue;
+            }
+            if let Some((tag, line)) = enclosing_tag(&stripped, quote_pos, "grow_text")
+                && tag == "summary"
+            {
+                offenders.push(format!(
+                    "{}:{line}: <summary> composes grow_text(), which adds \
+                     inline-flex unconditionally -- this suppresses the native \
+                     `display: list-item` a <summary> needs for its own \
+                     ::marker to exist at all (§10.58) -- use grow() with a \
+                     symmetric py-* class instead",
+                    path.display()
+                ));
+            }
+        }
+    }
+
+    assert!(
+        offenders.is_empty(),
+        "no <summary> in src/components/ may compose components::grow_text(...) \
+         (§10.58: grow_text()'s inline-flex removes a <summary>'s own disclosure \
+         marker, not merely its alignment):\n{}",
         offenders
             .iter()
             .map(|o| format!("  {o}"))
