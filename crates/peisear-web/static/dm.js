@@ -152,6 +152,36 @@
   // auto-remove and `FLOW-001` round 2's pause/resume existed only to
   // keep two corner toasts from colliding, which cannot happen once
   // there is only one region to begin with.
+  //
+  // `FOCUS-001`: when the reader activates Undo, focus must not be left
+  // on `document.body` -- the region holding it is about to be cleared,
+  // taking the focused button with it. Restored only when focus was
+  // actually inside the region (a reader who had already moved on is
+  // left alone): the acted-on form's own currently-pressed status
+  // button, if it is still in the document and focusable; otherwise the
+  // first focusable control in the form; otherwise `<main>`
+  // (`tabindex="-1"`). `A11Y-004`'s own ladder, restored -- its removal
+  // in `VIEW-003` was about the toast taking focus on its own, never
+  // about the Undo *button* releasing it (`NFR-A11Y-002`, `§10.57`).
+  function undoOrigin(form) {
+    return form.querySelector('[aria-pressed="true"]');
+  }
+
+  function restoreFocus(form) {
+    var target = undoOrigin(form);
+    if (!target || !document.contains(target)) {
+      target = document.contains(form) ? form.querySelector('a[href], button:not([disabled])') : null;
+    }
+    if (!target) {
+      var main = document.querySelector("main");
+      if (main) {
+        if (!main.hasAttribute("tabindex")) main.setAttribute("tabindex", "-1");
+        target = main;
+      }
+    }
+    if (target) target.focus();
+  }
+
   function showUndoInline(actedOnEl, message, onUndo) {
     var region = document.getElementById("status-announcements");
     if (!region) return;
@@ -167,8 +197,10 @@
     undoButton.className = "btn btn-xs";
     undoButton.textContent = copy.undoLabel;
     undoButton.addEventListener("click", function () {
+      var hadFocus = region.contains(document.activeElement);
       region.textContent = "";
       onUndo();
+      if (hadFocus) restoreFocus(actedOnEl);
     });
     region.appendChild(undoButton);
 

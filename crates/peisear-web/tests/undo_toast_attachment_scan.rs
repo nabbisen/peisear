@@ -150,3 +150,81 @@ fn plan_js_attaches_the_live_region_inside_the_dragged_row() {
 fn calendar_js_attaches_the_live_region_inside_the_dragged_block() {
     assert_undo_is_attached_after_the_acted_on_element("calendar.js");
 }
+
+/// `FOCUS-001`: a source scan can see that a restore call exists; it
+/// cannot see where focus actually lands once the browser runs it --
+/// that property is `drag-outcome-gate.mjs`'s own fourth assertion
+/// (`plan.js`/`calendar.js`) and this round's bespoke measurement
+/// (`dm.js`/`board.js`, evidence only, no permanent gate -- the same
+/// asymmetry `GATE-006` already drew for Tab order). This is the
+/// backstop the same project convention already uses for `FLOW-001`'s
+/// own resume guards: proof the wiring cannot be silently dropped,
+/// beside the stronger behavioural proof, not instead of it.
+///
+/// Scoped to `showUndoInline`'s own body (the same window
+/// [`assert_undo_is_attached_after_the_acted_on_element`] uses):
+/// the undo button's click handler must call `restoreFocus(` guarded
+/// by the `hadFocus` check captured before the region is cleared --
+/// `if (hadFocus) restoreFocus(` is the exact shape all four files
+/// share.
+fn assert_undo_click_restores_focus_when_it_had_it(file: &str) {
+    let source = read_static(file);
+    let body = scoped_function(&source, "showUndoInline", "performUndo");
+    let param = first_param_of(body, "showUndoInline");
+
+    assert!(
+        body.contains("region.contains(document.activeElement)"),
+        "{file}: showUndoInline's undo button must capture whether focus was \
+         inside the region before clearing it, so restoration is conditional \
+         on that rather than unconditional: {body}"
+    );
+
+    let restore_call = format!("if (hadFocus) restoreFocus({param})");
+    assert!(
+        body.contains(restore_call.as_str()),
+        "{file}: showUndoInline's undo button must restore focus to \
+         `{param}` when (and only when) focus was inside the region -- \
+         expected `{restore_call}`: {body}"
+    );
+}
+
+#[test]
+fn dm_js_restores_focus_when_undo_is_activated_with_it() {
+    assert_undo_click_restores_focus_when_it_had_it("dm.js");
+}
+
+#[test]
+fn board_js_restores_focus_when_undo_is_activated_with_it() {
+    assert_undo_click_restores_focus_when_it_had_it("board.js");
+}
+
+#[test]
+fn calendar_js_restores_focus_when_undo_is_activated_with_it() {
+    assert_undo_click_restores_focus_when_it_had_it("calendar.js");
+}
+
+#[test]
+fn plan_js_restores_focus_when_undo_is_activated_with_it() {
+    assert_undo_click_restores_focus_when_it_had_it("plan.js");
+}
+
+/// `plan.js` only: its row moves into its destination list inside
+/// `performUndo`'s own fetch `.then()` — asynchronously, after the
+/// click handler's own immediate restore has already run — and
+/// reparenting a focused element can blur it. `performUndo`'s success
+/// callback must restore focus a second time, guarded by the same
+/// `_focusAfterMove` flag the click handler set, once the row has
+/// actually moved.
+#[test]
+fn plan_js_restores_focus_again_after_the_row_actually_moves() {
+    let source = read_static("plan.js");
+    let body = scoped_function(&source, "performUndo", "applyMove");
+    assert!(
+        body.contains("if (row._focusAfterMove) {")
+            && body.contains("row._focusAfterMove = false;")
+            && body.contains("restoreFocus(row);"),
+        "plan.js: performUndo's own success callback must restore focus again, \
+         guarded by `row._focusAfterMove`, once the row has actually moved -- \
+         a single restore right after onUndo() races the async reparent: {body}"
+    );
+}
