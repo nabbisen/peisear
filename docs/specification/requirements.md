@@ -1983,7 +1983,7 @@ necessary is present on exactly the three draggable surfaces and absent on
 the one with no drag source to guard against.
 *What pins this status, and what it does not pin* (`DM-TEST-001`,
 `DM-TEST-002`, 0.44.0). Two instruments, and the split between them matters:
-**`undo_toast_attachment_scan`** (4 tests) reads `static/*.js` and asserts
+**`undo_toast_attachment_scan`** (9 tests) reads `static/*.js` and asserts
 that `showUndoInline` still appends the undo button and the message text into
 the live region, and attaches that region onto the element the function was
 **given** — bound to the function's own first parameter, so a rename cannot
@@ -1998,6 +1998,11 @@ carry for the timer's pause/resume behaviour are gone with it, not ported.
 The rest of this entry, and the status this citation sits inside
 (`FR-DM-006`, and `A11Y-004`/`A11Y-005` below), describe the toast as
 current and are stale pending the architect's own pass over this series.*
+*Count corrected at `FOCUS-001` (0.62.0): 4 → 9 — five tests added as a
+backstop for the focus-restoration ladder `VIEW-003` deleted and `FOCUS-001`
+restored (a source scan can see the restore call exists; it cannot see
+where focus lands once a browser runs it, which is `drag-outcome-gate.mjs`'s
+own fourth property instead).*
 **`browser-checks/undo-mousedown-trap.mjs`** pins the one runtime property a
 scan cannot see — that a real `mousedown` plus a small movement on the undo
 button is read as a click and not a drag-start, which is `A11Y-005`'s defect
@@ -5326,14 +5331,14 @@ recorded in the guarding test's own doc comment rather than built for.
 > project**. **If it is ever wanted, that is the owner's capability decision.**
 >
 > **And the companion instrument is a scan, not an execution.**
-> `undo_toast_attachment_scan` (4 tests) reads `static/*.js` and pins what
+> `undo_toast_attachment_scan` (9 tests) reads `static/*.js` and pins what
 > `showUndoInline` is **written** to do. It is in this entry's class, not out
 > of it: if the chain were correct and something else detached the region, it
 > would still pass. `FR-DM-006` names both instruments and this limit in its
 > own acceptance line, so a reader meeting that `Met` is not left to infer
 > coverage from it — the inference this entry exists to prevent. *Count
-> corrected at `VIEW-003` (0.62.0) — see the note beside `FR-DM-006`'s own
-> citation above.*
+> corrected at `VIEW-003` (0.62.0), then again at `FOCUS-001` (0.62.0) —
+> see the note beside `FR-DM-006`'s own citation above.*
 
 0.26.0 is the first release where user-visible behaviour lives in code the test
 suite never runs. `static/dm.js` and `static/board.js` carry the in-place
