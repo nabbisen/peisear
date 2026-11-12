@@ -8716,6 +8716,29 @@ the disclosure control's word — no separate glyph-only toggle"* stands:
 `058`'s lesson was against a glyph **instead of** a word, not against a
 marker **beside** one.
 
+*Census corrected 2026-11-12 by `MARK-001`, and the correction is this
+entry's most useful line.* The architect's own source census counted
+**six** markerless summaries by asking **which helper each call site
+used** — `grow_text(` suppresses the marker, `grow(` does not. **The
+real figure is ten of fourteen**, because the defect is a matter of
+**computed display**, and a literal class inside `grow()`'s own argument
+sets it just as well: `me.rs` composes `inline-flex` directly,
+`notification_preferences.rs` and `teams.rs` compose `flex flex-row` to
+lay out two children, and `settings.rs` composes `btn`, whose own rule
+in `daisyui.min.css` is `display:inline-flex`. **A census keyed on one
+mechanism misses every other route to the same state.**
+
+*And the guard that round shipped pins one of the two shapes.*
+`alignment_scan`'s source scan asserts that no `<summary>` reaches
+`grow_text(` — which is what the handoff specified. Planted with a
+literal `inline-flex` inside `grow()` instead, **it passes**, while
+`disclosure-marker-gate` fails by name. **The behavioural gate is the
+one holding the property**; it visits the pages carrying nine of the
+thirteen real summaries, and the four it does not visit are the four
+still markerless. In three of those four, `flex` is laying out **two
+children** rather than centring one label, so `DISC-001`'s remedy does
+not transfer and a round must not assume it does.
+
 
 ### 10.59 Counted sentences with no singular form — **open**, `GRAM-001` for the one this release promoted; found 2026-11-12 in a gate's own failure message
 
