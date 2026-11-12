@@ -37,9 +37,9 @@ but ours."*
 | 2 | `fmt`, `clippy`, the full suite, **with captured logs** | **`PREP-002`** |
 | 3 | Requirements amendments applied | **Met already, not at the tag**: `FR-NAV-001` names `Me`; `NFR-A11Y-012` is Met for all five; `FR-NAV-006` and `external-design §5.10` state the section-order rule once; `§10.55` and `§10.56` are filed |
 | 4 | `CHANGELOG.md` records the *why* | §4 — architect's. The heading is renamed and dated **on the day the tag is pushed**, not today (`0.60.0` is where those two days first diverged) |
-| 5 | Affected documentation updated | §4 pass 5 **and `PREP-001`** |
+| 5 | Affected documentation updated | **Met** — `PREP-001` regenerated, architect opened all six and committed them (`4f03045`), `README.md`'s board caption corrected, pass 5's sweep of the reader-facing documents clean. **Re-run after `DISC-001`**, which changes what those two images show |
 | 6 | Real binaries, and an upgrade that is a non-event | **`PREP-003`** |
-| 7 | Release recommendation; **owner approves** | **blocked**: `FOCUS-001`, §4a |
+| 7 | Release recommendation; **owner approves** | **blocked**: `FOCUS-001` and `DISC-001` |
 | 8 | *What ships next* reconciled | after approval, with the tag |
 
 ## §2 — the claim

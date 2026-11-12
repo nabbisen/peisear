@@ -113,6 +113,23 @@ surfaces (the architect measured one), and adds the assertion whose
 absence is the real finding: `drag-outcome-gate` proves Undo can be
 **reached** and never presses it. `§10.57` records that class.
 
+## `DISC-001` — open, and it blocks the cut with `FOCUS-001`
+
+**The collapsed line renders no disclosure marker**, and the cause is
+structural rather than cosmetic: `grow_text()` — the helper that
+satisfies the 44 × 44 touch-target requirement — appends `inline-flex`,
+and a `::marker` box only exists on a `list-item`. **The triangle is not
+hidden; it is never created.** Six *"How this is calculated"* summaries
+on the same screen keep theirs, so one page carries both conventions.
+
+Found by reading `PREP-001`'s own regenerated screenshot and then
+measuring computed style. It matters now because this release made that
+line the only way into the health block.
+[`DISC-001-the-line-that-does-not-look-like-a-door.md`](./DISC-001-the-line-that-does-not-look-like-a-door.md);
+`§10.58` records the class — two accessibility requirements met through
+one helper, where satisfying the first disables the second with no rule
+saying so.
+
 ## The release candidate — `0.62.0`
 
 **Started 2026-11-12 on the owner's instruction, and split.**

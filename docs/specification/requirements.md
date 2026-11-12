@@ -8604,6 +8604,52 @@ not measured. `FOCUS-001` measures all four and is where the remedy and
 the missing assertion both land.
 
 
+### 10.58 The helper that satisfies one accessibility requirement silently removes another's affordance — **open**, `DISC-001`, 2026-11-12; found by the architect reading a regenerated screenshot
+
+**A collapsed `<summary>` that uses `grow_text()` renders no disclosure
+marker at all.** `grow_text(base)` is
+`{base} min-h-11 min-w-11 inline-flex items-center` — the helper
+`touch_target_scan` requires on interactive elements, so that every
+control is at least 44 × 44 px. A `::marker` box is only generated for a
+`display: list-item` element; `inline-flex` is not one. **The triangle is
+not hidden by a rule — it is never created.**
+
+Measured on the project screen at 1280, reading computed style:
+
+| summary | `display` | `::marker` | marker visible |
+|---|---|---|---|
+| *"In-flight work is currently carried by one person."* | `inline-flex` | `display: block` | **no** |
+| *"Workload across the team."* | `inline-flex` | `display: block` | **no** |
+| `Indicators` | `inline-flex` | `display: block` | **no** |
+| `How this is calculated` × 6 | `list-item` | `display: inline` | **yes** |
+
+**So one screen shows both conventions**, six disclosures with a marker
+and three without, and the three without are the ones that now hide the
+most.
+
+**Why it matters now and did not before.** Until `VIEW-001` the health
+block's content was visible by default and only `Indicators` sat behind
+a disclosure. This release made that one line the only way in — for the
+reader this sequence was authorized for, whose acuity and short-term
+recall are both declining. The line is a real `<summary>`: a screen
+reader announces it as a collapsed disclosure, a keyboard reader finds
+it by Tab, and a pointer user who happens to hover gets `cursor:
+pointer`. **A touch reader, and a sighted reader who does not hover, sees
+a sentence.**
+
+**The class, which is the reusable part**: two accessibility
+requirements met through one shared helper, where satisfying the first
+disables the second **by construction and without any rule saying so**.
+`touch_target_scan` is green — it asks whether the control is big
+enough, which it is. Nothing asks whether a disclosure still looks like
+one.
+
+**Not a flaw in `VIEW-001`'s own reasoning.** *"The sentence itself is
+the disclosure control's word — no separate glyph-only toggle"* stands:
+`058`'s lesson was against a glyph **instead of** a word, not against a
+marker **beside** one.
+
+
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
 **Promoted from this document's own older compact register**
