@@ -130,6 +130,22 @@ line the only way into the health block.
 one helper, where satisfying the first disables the second with no rule
 saying so.
 
+## `GRAM-001` — open, the last thing before the cut
+
+**`FOCUS-001` and `DISC-001` are closed** — both accepted, both merged
+(`36a4b61`, `df1a5dc`), each verified by the architect's own plant
+against a binary proven to carry it.
+
+`DISC-001`'s own gate, failing on a planted defect, printed the headline
+it had just found to be markerless: **"1 active assignees are over their
+WIP limit."** `VIEW-001` is what promoted that sentence to the first
+line of a project screen, so making it grammatical is finishing this
+release's own work rather than new scope — the owner accepted that
+reading on 2026-11-12.
+[`GRAM-001-one-assignee-is.md`](./GRAM-001-one-assignee-is.md) fixes
+**that one string**; `§10.59` records the other five and the round they
+need.
+
 ## The release candidate — `0.62.0`
 
 **Started 2026-11-12 on the owner's instruction, and split.**

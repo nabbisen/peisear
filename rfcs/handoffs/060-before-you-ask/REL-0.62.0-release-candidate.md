@@ -39,7 +39,7 @@ but ours."*
 | 4 | `CHANGELOG.md` records the *why* | §4 — architect's. The heading is renamed and dated **on the day the tag is pushed**, not today (`0.60.0` is where those two days first diverged) |
 | 5 | Affected documentation updated | **Met** — `PREP-001` regenerated, architect opened all six and committed them (`4f03045`), `README.md`'s board caption corrected, pass 5's sweep of the reader-facing documents clean. **Re-run after `DISC-001`**, which changes what those two images show |
 | 6 | Real binaries, and an upgrade that is a non-event | **`PREP-003`** |
-| 7 | Release recommendation; **owner approves** | **blocked**: `FOCUS-001` and `DISC-001` |
+| 7 | Release recommendation; **owner approves** | **blocked**: `GRAM-001`. `FOCUS-001` and `DISC-001` closed and merged |
 | 8 | *What ships next* reconciled | after approval, with the tag |
 
 ## §2 — the claim

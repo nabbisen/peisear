@@ -8655,6 +8655,47 @@ the disclosure control's word — no separate glyph-only toggle"* stands:
 marker **beside** one.
 
 
+### 10.59 Counted sentences with no singular form — **open**, `GRAM-001` for the one this release promoted; found 2026-11-12 in a gate's own failure message
+
+**`"1 active assignees are over their WIP limit."`** That is what a
+project screen's **headline** reads when exactly one person is over
+their limit — the first line `VIEW-001` put in front of the work, chosen
+by `HEALTH_HEADLINE_PRECEDENCE` whenever `WipCompliance` is the
+highest-precedence non-Good indicator.
+
+**It is a class, measured rather than reported as one instance.** Every
+count-bearing English string whose noun or verb does not agree at 1:
+
+| string | at `count == 1` |
+|---|---|
+| `IndicatorExplanationWipCompliance` | *"1 active assignees **are** over their WIP limit."* |
+| `IssuesCountText` | *"1 issues"* |
+| `SprintCommittedSummary` | *"… committed across 1 issues"* |
+| the velocity chart's own summary | *"Completed points across the last 1 sprints"* |
+| `TrendDirectionLabel` (announced form) | *"trend: up by 1 points"* |
+| the capacity announcement | *"Capacity 1 points, period …"* |
+
+Six, across health, lists, sprints, charts and capacity. **English
+agreement is not a translation problem** — it is this locale's own text,
+and `peisear-i18n`'s own vocabulary guard checks words, not number.
+
+**Only the first is this release's business.** `0.62.0` did not write
+that sentence; it **promoted** it, from one chip's explanation inside a
+collapsed block to the single line a reader meets first. So `GRAM-001`
+fixes that one, before the cut, as finishing this release's own work —
+and the other five are a round of their own with a guard that renders
+each counted string at 1 and reads it, which is the thing that would
+have caught all six at once.
+
+**How it surfaced is the lesson.** No test asserts this text at 1; three
+tests assert it as a substring (`basis_route`, `health_explainability`
+twice), and a substring match cannot see a grammar defect in the part it
+does not quote. It appeared in the **failure message of a browser gate
+built for something else entirely** — `disclosure-marker-gate`, printing
+the headline it had just found to be markerless. **A check's own error
+text is a place defects get seen**, and that is worth saying once.
+
+
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
 **Promoted from this document's own older compact register**
