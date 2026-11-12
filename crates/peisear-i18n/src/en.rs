@@ -147,8 +147,17 @@ pub(crate) fn render(key: MessageKey) -> String {
         // I18N-004 fix for ISSUE-006 finding 3 -- the count is now a
         // typed parameter rather than an embedded "N over" string,
         // which is what produced the doubling.
+        //
+        // GRAM-001: count == 1 is the one form that disagreed --
+        // "1 active assignees are". The numeral stays (every sibling
+        // explanation uses one), and `their` is correct unchanged in
+        // both forms.
         MessageKey::IndicatorExplanationWipCompliance { count } => {
-            format!("{count} active assignees are over their WIP limit.")
+            if count == 1 {
+                format!("{count} active assignee is over their WIP limit.")
+            } else {
+                format!("{count} active assignees are over their WIP limit.")
+            }
         }
 
         // ---- I18N-002/004: project_health::summarize ----

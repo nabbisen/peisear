@@ -69,8 +69,11 @@ async fn wip_compliance_renders_no_basis_link_or_assignee_identity() {
     resp.assert_status(StatusCode::OK);
     let body = resp.text();
 
+    // GRAM-001: this fixture's single over-limit assignee drives
+    // count == 1, so the corrected wording (noun and verb agreeing
+    // with a singular count) is "assignee is", not "assignees are".
     assert!(
-        body.contains("active assignees are over their WIP limit."),
+        body.contains("active assignee is over their WIP limit."),
         "expected the WIP-compliance explanation to actually render, or \
          the rest of this test is meaningless: {body}"
     );
