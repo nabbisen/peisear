@@ -18,7 +18,7 @@ use peisear_core::{
 
 use super::layout::AppShell;
 use super::t;
-use super::{grow, grow_text};
+use super::{grow, grow_summary, grow_text};
 
 #[component]
 pub fn TeamsListPage(
@@ -261,9 +261,16 @@ pub fn TeamDetailPage(
     let add_member_form = is_admin.then(|| {
         view! {
             <details class="card bg-base-100 border border-base-300 shadow-sm mt-4">
-                <summary class=grow("card-body cursor-pointer py-3 flex flex-row items-center gap-2")>
-                    <span class="font-medium">{t(MessageKey::InviteMemberSummary)}</span>
-                    <span class="text-xs text-base-content/70">{t(MessageKey::ByEmailHint)}</span>
+                // MARK-002 (§10.58): same reasoning as
+                // `notification_preferences.rs`'s own summary -- `card-body`
+                // sets `display:flex` itself, so the row layout and its
+                // padding move onto an inner <div>; the summary keeps only
+                // `grow_summary(...)`.
+                <summary class=grow_summary("cursor-pointer")>
+                    <div class="card-body py-3 inline-flex flex-row items-center gap-2">
+                        <span class="font-medium">{t(MessageKey::InviteMemberSummary)}</span>
+                        <span class="text-xs text-base-content/70">{t(MessageKey::ByEmailHint)}</span>
+                    </div>
                 </summary>
                 <div class="px-4 pb-4">
                     <form method="post"

@@ -22,17 +22,29 @@
 // but skips the page one of its six sites is on would not be covering
 // what it claims.
 //
-// A guard asserting every `<summary>` in the product is correct would
-// still fail today on sites neither round touched (`teams.rs`,
-// `notification_preferences.rs`, and `/today`'s own Rhythm summary --
-// found while measuring for `MARK-001`, reported rather than fixed, see
-// that round's own completion report) -- exactly the "fails on a tree
-// nobody asked it to cover" shape this project's own guards are written
-// not to be. `alignment_scan`'s own source-level scan
-// (`no_summary_composes_grow_text`) is the one that cannot pass while
-// any `grow_text(`-shaped instance of this defect exists anywhere in
-// `src/components/`, including sites no browser gate visits; this file
-// stays the behavioural proof beside it, for the pages it does visit.
+// **`MARK-002` (`061`) extends it to the four `MARK-001` found but did
+// not build** -- `teams.rs`'s "invite a member" summary and
+// `notification_preferences.rs`'s "per-kind delivery" summary (both
+// moved their own row layout onto an inner `<div>`, since a `<summary>`
+// is never a flex container); `settings.rs`'s close-date dropdown
+// (tried moving its `btn btn-ghost btn-xs` appearance onto an inner
+// `<span>` first, but `inline-flex` is an atomic inline-level box that
+// wraps as a whole unit onto its own line when it does not fit beside
+// the marker in a narrow container -- measured wrong at 390px, so the
+// decision changed to dropping the button look entirely, matching
+// `settings.rs`'s own sibling points-edit dropdown); and `/today`'s own
+// Rhythm summary, which turned out on closer reading to be one of the
+// ordinary single-label sites this round's shape already covers, not a
+// fourth multi-child exception -- see that round's own completion
+// report for all three measurements.
+//
+// `alignment_scan`'s own source-level scan now asserts the positive
+// property this file asserts behaviourally: every real `<summary>`
+// composes `grow_summary(...)` and nothing else, with no display class
+// smuggled into that call's own argument either. Thirteen of this
+// product's fourteen real summaries are swept by both; the fourteenth
+// (`issues.rs`'s own named escalation exclusion) is deliberately below
+// 44x44 and out of this file's own scope.
 //
 // **Two properties, read together, per the handoff's own instruction**:
 // a marker that costs the touch target is not the fix, and a target
@@ -262,8 +274,20 @@ const PROJECT_SCREEN_SUMMARIES = {
 const SETTINGS_SUMMARIES = {
   add_capacity_row: `Array.from(document.querySelectorAll('summary')).find(s => s.textContent.includes('Add a capacity row'))`,
   points_edit_dropdown: `document.querySelector('tr summary')`,
+  // `MARK-002`: the close-date dropdown, converted from a bare
+  // `btn btn-ghost btn-xs` summary to plain text -- found by the
+  // stable `CloseOnDateSummary` text.
+  close_date_dropdown: `Array.from(document.querySelectorAll('summary')).find(s => s.textContent.includes('Close on date'))`,
 };
 const ME_SUMMARIES = {
+  // `MARK-002`: `/today`'s own Rhythm summary -- found markerless
+  // while measuring for `MARK-001` (literal `inline-flex` baked into
+  // `grow(...)`'s argument, not `grow_text(`) and, on closer reading,
+  // a single-label site like every other one this round converts, not
+  // one of the genuinely multi-child sites it was first named beside.
+  // Its own `aria-label` is a fixed string (`RhythmAriaLabel`), set on
+  // the `<summary>` itself.
+  rhythm: `document.querySelector('summary[aria-label^="Rhythm"]')`,
   what_do_these_mean: `Array.from(document.querySelectorAll('summary')).find(s => s.textContent.includes('What do these mean'))`,
   sustainability: `document.querySelector('[aria-label="Sustainability"] summary')`,
 };
@@ -272,6 +296,15 @@ const SPRINTS_LIST_SUMMARIES = {
 };
 const SPRINT_DETAIL_SUMMARIES = {
   burndown_chart_table: `Array.from(document.querySelectorAll('summary')).find(s => s.textContent.includes('View as a table'))`,
+};
+// `MARK-002`'s two multi-child sites, each row layout now on an inner
+// <div> rather than the <summary> itself; found by the stable
+// `PerKindDeliverySummary`/`InviteMemberSummary` text.
+const NOTIFICATION_PREFERENCES_SUMMARIES = {
+  per_kind_delivery: `Array.from(document.querySelectorAll('summary')).find(s => s.textContent.includes('Per-kind delivery'))`,
+};
+const TEAM_DETAIL_SUMMARIES = {
+  invite_member: `Array.from(document.querySelectorAll('summary')).find(s => s.textContent.includes('Invite a member'))`,
 };
 
 async function measureSummary(browser, expr) {
@@ -357,9 +390,17 @@ async function main() {
         browser, 'sprint_detail', `${BASE}/teams/${fixture.teamSlug}/sprints/${fixture.sprintDetailId}`,
         SPRINT_DETAIL_SUMMARIES, width, height,
       );
+      await checkPage(
+        browser, 'settings_notifications', `${BASE}/settings/notifications`,
+        NOTIFICATION_PREFERENCES_SUMMARIES, width, height,
+      );
+      await checkPage(
+        browser, 'team_detail', `${BASE}/teams/${fixture.teamSlug}`,
+        TEAM_DETAIL_SUMMARIES, width, height,
+      );
     }
 
-    log('all nine in-scope summaries (DISC-001 three + MARK-001 six): list-item display, >=44x44, at both widths');
+    log('all thirteen checkable summaries (DISC-001 three + MARK-001 six + MARK-002 four): list-item display, >=44x44, at both widths. The fourteenth real <summary>, issues.rs\'s own named escalation exclusion, is deliberately below 44x44 and outside this gate\'s own scope.');
     exitCode = 0;
   } catch (err) {
     log('ERROR:', err.stack || err.message);

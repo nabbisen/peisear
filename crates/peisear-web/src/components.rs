@@ -170,6 +170,31 @@ pub(crate) fn grow_text(base: &str) -> String {
     format!("{base} {TOUCH_TARGET} inline-flex items-center")
 }
 
+/// `MARK-002` (`061`, `§10.58`) — the only helper a `<summary>` may
+/// take. Composes [`TOUCH_TARGET`] and nothing else, the same body
+/// [`grow`] has, under its own name so a guard can check the one
+/// property that actually matters -- **every real `<summary>` reaches
+/// this function, and no other** -- without having to parse an
+/// arbitrary class string for every way a display class could be
+/// smuggled in. `MARK-001` tried the other direction (ban `grow_text(`
+/// on a `<summary>`) and a literal `inline-flex` baked into `grow(`'s
+/// own argument sailed straight past it, because that scan was
+/// checking which function was *called*, not what `display` the
+/// result would resolve to. A dedicated name makes the second check
+/// possible too: `alignment_scan` can read every `grow_summary(...)`
+/// call site's own argument and refuse a `flex`/`inline-flex`/`btn`
+/// token there, because this function's contract is "centres by
+/// padding alone" and nothing calling it should need to say otherwise.
+///
+/// **If a `<summary>`'s content genuinely needs row layout** (more
+/// than one child laid out side by side, not just one label centred
+/// vertically), that layout goes on an inner `<div>`, never on the
+/// `<summary>` itself -- a `<summary>` is never a flex container, by
+/// construction, so there is nothing on it left to misuse.
+pub(crate) fn grow_summary(base: &str) -> String {
+    format!("{base} {TOUCH_TARGET}")
+}
+
 /// Column of issues on the kanban board, grouped by status. Shared
 /// between [`issues::ProjectDetailPage`] and its handler.
 #[derive(Debug, Clone)]

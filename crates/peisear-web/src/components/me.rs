@@ -11,7 +11,7 @@ use axum::response::Html;
 use leptos::prelude::*;
 
 use super::layout::AppShell;
-use super::{grow, t};
+use super::{grow, grow_summary, t};
 use peisear_core::{
     CurrentUser, DisplayHealthState,
     personal_metrics::{
@@ -320,8 +320,17 @@ pub fn PersonalDashboard(
                 // Default-closed `<details>` keeps the page
                 // scannable.
                 <details class="mb-6">
-                    <summary class=grow("cursor-pointer text-xs uppercase tracking-wide \
-                                    text-base-content/70 mb-2 inline-flex items-center")
+                    // MARK-002: grow_summary(), not grow() with a literal
+                    // inline-flex baked in -- the exact shape MARK-001's
+                    // own scan could not see. A single text child needs
+                    // only vertical centring, which py-4 supplies (16px
+                    // text-xs line-height + 32px = 48px), the same as
+                    // every other single-label summary -- re-measured
+                    // rather than inherited: this site has one child, not
+                    // two, so it was never one of this round's genuinely
+                    // multi-child sites despite being named as one.
+                    <summary class=grow_summary("cursor-pointer text-xs uppercase tracking-wide \
+                                    text-base-content/70 mb-2 py-4")
                              aria-label=t(MessageKey::RhythmAriaLabel)>
                         {t(MessageKey::RhythmSummaryLabel)}
                     </summary>
@@ -357,12 +366,11 @@ pub fn PersonalDashboard(
 
                 <section class="text-xs text-base-content/70">
                     <details>
-                        // MARK-001 (§10.58): grow() not grow_text() --
-                        // ambient context is this section's own text-xs
-                        // (16px line-height), so py-4 = 32px + 16px = 48px,
-                        // same arithmetic DISC-001 used for issues.rs's
-                        // Indicators summary.
-                        <summary class=grow("cursor-pointer py-4")>{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
+                        // MARK-002 (§10.58): grow_summary(), the only
+                        // helper a <summary> may take. Ambient context is
+                        // this section's own text-xs (16px line-height),
+                        // so py-4 = 32px + 16px = 48px.
+                        <summary class=grow_summary("cursor-pointer py-4")>{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
                         <div class="mt-2 space-y-2">
                             <p>
                                 <strong>{t(MessageKey::WipChipLabel)}</strong>
@@ -511,9 +519,9 @@ fn render_burnout_panel(
                 {sustainability_heading}
             </h2>
             <details open=any_watch>
-                // MARK-001 (§10.58): grow() not grow_text() -- text-sm's
-                // own 20px line-height + py-3's 24px = 44px exactly.
-                <summary class=grow("cursor-pointer text-sm text-base-content/80 mb-2 py-3")>
+                // MARK-002 (§10.58): grow_summary() -- text-sm's own
+                // 20px line-height + py-3's 24px = 44px exactly.
+                <summary class=grow_summary("cursor-pointer text-sm text-base-content/80 mb-2 py-3")>
                     {summary}
                 </summary>
                 {has_streaks.then(|| view! {

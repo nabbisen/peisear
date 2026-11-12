@@ -24,9 +24,9 @@
 use axum::response::Html;
 use leptos::prelude::*;
 
-use super::grow;
 use super::layout::AppShell;
 use super::t;
+use super::{grow, grow_summary};
 use peisear_core::{CurrentUser, personal_metrics::DEFAULT_WIP_LIMIT};
 use peisear_i18n::MessageKey;
 use peisear_storage::user_capacities::CapacityRow;
@@ -139,14 +139,11 @@ pub fn SettingsPage(
                         </div>
 
                         <details class="mt-2">
-                            // MARK-001 (§10.58): grow() not grow_text() -- the
-                            // native `list-item` display (and its marker)
-                            // survives only without the `inline-flex`
-                            // grow_text() adds. py-3 = 24px + text-sm's own
-                            // 20px line-height = 44px exactly, same arithmetic
-                            // DISC-001 used for issues.rs's health/workload
-                            // summaries.
-                            <summary class=grow("cursor-pointer text-sm py-3")>
+                            // MARK-002 (§10.58): grow_summary(), the only
+                            // helper a <summary> may take -- never grow()
+                            // or grow_text(). py-3 = 24px + text-sm's own
+                            // 20px line-height = 44px exactly.
+                            <summary class=grow_summary("cursor-pointer text-sm py-3")>
                                 {t(MessageKey::AddCapacityRowSummary)}
                             </summary>
                             <form method="post" action="/settings/capacity"
@@ -263,7 +260,31 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
     let close_button = is_open_ended.then(|| {
         view! {
             <details class="dropdown dropdown-end">
-                <summary class=grow("btn btn-ghost btn-xs")
+                // MARK-002 (§10.58): `.btn` sets `display:inline-flex`
+                // itself (daisyui.min.css), so it cannot stay on the
+                // <summary>. Tried moving the button's own appearance
+                // to an inner <span> first -- measured correct at
+                // 1280 (48px, centred) but wrong at 390: `inline-flex`
+                // is an atomic inline-level box, and when the span
+                // does not fit beside the marker in the narrow
+                // container it wraps as a whole unit onto its own
+                // line, leaving the marker's own line empty above it
+                // (measured 72px, not 48). **Decision: drop the button
+                // look instead** -- plain text, same shape
+                // `settings.rs`'s own points-edit dropdown already
+                // uses for the same "dropdown" trigger pattern
+                // (`MARK-001` already established a marker beside a
+                // dropdown-trigger summary as an accepted shape in
+                // this project). `py-3` (24px) + text-sm's 20px
+                // line-height = 44px exactly -- measured correct at
+                // 1280, but at 390 this column is only 44px wide and
+                // the plain text itself wrapped across several lines
+                // (measured 104px), the same inflated-height symptom
+                // from an ordinary cause this time: `truncate` (the
+                // one bundled `white-space:nowrap` utility this
+                // stylesheet ships) keeps it on the one line its own
+                // text already ends in "…" for.
+                <summary class=grow_summary("cursor-pointer text-sm py-3 truncate")
                          aria-label=t(MessageKey::CloseThisRowAriaLabel)>
                     {t(MessageKey::CloseOnDateSummary)}
                 </summary>
@@ -288,13 +309,15 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
         <tr aria-label=aria>
             <td>
                 <details class="dropdown">
-                    // MARK-001 (§10.58): grow() not grow_text(), same reason
-                    // as this file's other summary above. No text-size class
+                    // MARK-002 (§10.58): grow_summary(), same reason as
+                    // this file's other summary above. No text-size class
                     // here -- the ambient context is the enclosing
                     // `table table-sm`, whose own rule sets font-size/
                     // line-height to exactly text-sm's (20px), so the same
-                    // py-3 arithmetic applies.
-                    <summary class=grow("cursor-pointer py-3")>
+                    // py-3 arithmetic applies. The span plus trailing text
+                    // are ordinary inline content, not a flex row -- no
+                    // child-layout change needed here.
+                    <summary class=grow_summary("cursor-pointer py-3")>
                         <span class="font-medium">{row.points}</span>
                         {t(MessageKey::PointsUnitSuffix)}
                     </summary>

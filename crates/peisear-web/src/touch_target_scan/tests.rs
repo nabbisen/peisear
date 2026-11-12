@@ -157,6 +157,7 @@ fn every_interactive_element_declares_a_touch_target() {
             }
             let declares_target = tag.contains("class=grow(")
                 || tag.contains("class=grow_text(")
+                || tag.contains("class=grow_summary(")
                 || tag.contains("data-inline-text-link")
                 || class_value_identifier_binding_calls_grow(&stripped, start, tag)
                 || is_named_escalation_exclusion(tag)

@@ -38,7 +38,7 @@ use peisear_core::notifications::{
 use peisear_i18n::{MessageKey, NotificationChannelLabel, NotificationKindLabel};
 
 use super::layout::AppShell;
-use super::{grow, grow_text, kind_label_for, t};
+use super::{grow, grow_summary, grow_text, kind_label_for, t};
 
 #[component]
 pub fn PreferencesPage(
@@ -106,11 +106,22 @@ pub fn PreferencesPage(
                 </p>
 
                 <details class="card bg-base-100 border border-base-300 shadow-sm">
-                    <summary class=grow("card-body cursor-pointer py-3 flex flex-row items-center justify-between gap-2")>
-                        <span class="font-medium">{t(MessageKey::PerKindDeliverySummary)}</span>
-                        <span class="text-xs text-base-content/70">
-                            {t(MessageKey::ClickToExpandHint)}
-                        </span>
+                    // MARK-002 (§10.58): a <summary> is never a flex
+                    // container -- `card-body` itself sets `display:flex`
+                    // (daisyui.min.css), which would suppress the native
+                    // marker just as surely as a literal `flex` token
+                    // would. The row layout (and the padding that used
+                    // to ride on the summary itself) moves onto this
+                    // inner <div>; the summary keeps only
+                    // `grow_summary(...)`, which appends the touch
+                    // target and nothing that can set `display`.
+                    <summary class=grow_summary("cursor-pointer")>
+                        <div class="card-body py-3 inline-flex flex-row items-center justify-between gap-2">
+                            <span class="font-medium">{t(MessageKey::PerKindDeliverySummary)}</span>
+                            <span class="text-xs text-base-content/70">
+                                {t(MessageKey::ClickToExpandHint)}
+                            </span>
+                        </div>
                     </summary>
                     <div class="px-4 pb-4">
                         <form method="post" action="/settings/notifications" class="space-y-4">

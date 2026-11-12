@@ -77,30 +77,41 @@
 //! blanket exemption for every `<summary>`.
 //!
 //! **`MARK-001` (`061`) took the same shape to six more sites and hit
-//! the limit `DISC-001`'s own comment named in advance.** Four of the
-//! six do not share either of `DISC-001`'s two literal padding
-//! suffixes — each carries its own text-size/padding combination
-//! (`settings.rs`'s two sites, `me.rs`'s two). Nine call sites sharing
-//! one property (a `<summary>`'s `grow(...)` carries a symmetric
-//! `py-*` class) is where a literal list stops being *"a handful"* and
-//! the function was rewritten to check the property itself rather than
-//! enumerate its instances — still reached only after the other three
-//! clauses rule out a flex container, form control or block box, which
-//! is what keeps the property from wrongly waving through the sites
-//! that merely happen to carry a `py-*` token alongside `flex` or
-//! `btn` (`teams.rs`, `notification_preferences.rs`, `settings.rs`'s
-//! close-button dropdown — found while measuring for `MARK-001`,
-//! reported rather than folded in since their own fix is a real
-//! flex-row layout or a daisyUI component class, not this shape).
+//! the limit `DISC-001`'s own comment named in advance**, then found
+//! the limit of the *shape itself*. Four of the six did not share
+//! either of `DISC-001`'s two literal padding suffixes, so the literal
+//! list was replaced with the property it stood for; but a scan built
+//! to ban `grow_text(` on a `<summary>` passed clean on a plant that
+//! baked a literal `inline-flex` straight into `grow(...)`'s own
+//! argument instead — four sites were markerless that way, invisible
+//! to a scan that only reads *which function was called*.
 //!
-//! **Verified, not assumed, at every site**: a real render shows the
-//! marker and the text sharing one visual line, centred in the row —
-//! `py-3`/`py-4`'s own arithmetic (stated in a comment at each call
-//! site) makes the padded box's total height exactly the padding plus
-//! the context's own line-height, so there is no excess `min-height`
-//! space left for the text to float inside. This holds independently
-//! for all nine sites this function now recognises, not only the
-//! three it originally named.
+//! **`MARK-002` (`061`) deletes the exclusion rather than widening it
+//! again.** `is_padding_centred_disclosure` and the scan built against
+//! it are both gone. In their place: `components::grow_summary`, the
+//! only helper a `<summary>` may take, which appends the touch-target
+//! floor and nothing that can set `display` — so there is no longer a
+//! class string for this module to read and classify as safe or
+//! unsafe. The property is now **every real `<summary>` composes
+//! `grow_summary(...)`**, checked positively rather than by excluding
+//! known-safe shapes, plus a backstop reading each `grow_summary(...)`
+//! call's own argument for a `flex`/`inline-flex`/`btn` token that
+//! should never be there. Any `<summary>` that still needs more than
+//! one child laid out in a row gets that layout on an inner `<div>` —
+//! `notification_preferences.rs`, `teams.rs` — or, where the control's
+//! own appearance (not its layout) was the thing setting `display`
+//! (`settings.rs`'s `btn btn-ghost btn-xs` close-date trigger), that
+//! appearance moves to an inner `<span>` instead. The `<summary>`
+//! itself is left with nothing on it that could ever smuggle a display
+//! class back in.
+//!
+//! **One named exception, cross-referenced rather than re-listed**:
+//! `issues.rs`'s *"How this is calculated"* toggle takes no helper at
+//! all and is already a named escalation exclusion in
+//! `touch_target_scan`. This module's own test checks for that one
+//! exact, literal tag rather than building a second list for it — if a
+//! second bare `<summary>` ever appears, the rule is wrong and goes
+//! back to the architect, not into a wider exception.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -264,40 +275,18 @@ fn already_establishes_a_block_box(content: &str) -> bool {
         .any(|cls| cls == "block" || cls == "card")
 }
 
-/// `DISC-001` and `MARK-001`: a `<summary>` whose `grow(...)` call
-/// carries a symmetric `py-*` class is centred by that padding reaching
-/// the context's own line-height exactly, not by `grow_text`'s
-/// `inline-flex items-center`, which would undo the native `list-item`
-/// display (and `::marker`) this shape exists to keep. `DISC-001`
-/// started this as a **literal list of two exact padding suffixes**,
-/// kept as narrow as [`is_named_escalation_exclusion`] on purpose —
-/// three call sites, not a property. `MARK-001` added six more, four of
-/// which do not share either literal suffix (`settings.rs`'s two, and
-/// `me.rs`'s two, each carry their own distinct padding/text-size
-/// combination), so the literal list stopped describing the real
-/// population at exactly the point its own doc comment named: *"a
-/// sixth such binding would need the same verification, not an
-/// extension to this scan, unless it stops being a handful."* Nine
-/// call sites is where it stops being a handful.
-///
-/// **Replaced the list with the property it always stood for**: any
-/// `<summary>` whose `grow(...)` class carries a `py-*` token. This is
-/// safe precisely because it is reached only when the call site is
-/// *not already* a flex container, form control or block box (this
-/// scan's other three clauses, checked first) — the sites this
-/// property would wrongly wave through if checked alone (`teams.rs`,
-/// `notification_preferences.rs`, both `flex flex-row`; `settings.rs`'s
-/// close-button dropdown, `btn btn-ghost btn-xs`) are already exempted
-/// by `is_flex_container` before this function is ever asked. Each of
-/// the nine sites this property now covers was still verified
-/// individually by a real render before being built, exactly as
-/// `DISC-001` did — this change widens what the guard can *recognise*,
-/// not what a contributor may build without checking.
-fn is_padding_centred_disclosure(tag: &str, content: &str) -> bool {
-    tag == "summary" && content.split_whitespace().any(|cls| cls.starts_with("py-"))
-}
-
 const FORM_CONTROL_TAGS: [&str; 3] = ["input", "select", "textarea"];
+
+/// `MARK-002`: the one named escalation exclusion this module cross-
+/// references rather than re-lists — `issues.rs`'s *"How this is
+/// calculated"* toggle, already owned by `touch_target_scan`'s own
+/// `is_named_escalation_exclusion`. Matched by its exact, literal
+/// opening tag (no helper call at all is itself part of what makes it
+/// the one exception) so a second bare `<summary>` appearing anywhere
+/// else is caught rather than silently waved through by a looser
+/// pattern.
+const NAMED_ESCALATION_EXCLUSION_TAG: &str =
+    r#"<summary class="cursor-pointer text-base-content/70 hover:text-base-content">"#;
 
 #[cfg(test)]
 mod tests;
