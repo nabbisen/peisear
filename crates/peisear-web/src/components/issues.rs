@@ -319,7 +319,18 @@ fn HealthStrip(health: ProjectHealthReport, project_id: String) -> impl IntoView
             // the plain-language sentence `compute_health_headline`
             // chose, never a score.
             <details class="text-sm">
-                <summary class=grow_text("cursor-pointer text-base-content/80 hover:text-base-content")>
+                // `DISC-001`: `grow(...)`, not `grow_text(...)` --
+                // `grow_text` adds `inline-flex items-center`, and a
+                // `::marker` box only exists on a `display: list-item`
+                // element, which `<summary>` already is by the UA
+                // stylesheet's own default. `grow` alone appends only
+                // `TOUCH_TARGET`, so the native marker and list-item
+                // display survive; `py-3` (12px) above and below
+                // `text-sm`'s own 20px line-height reaches the same
+                // 44px the removed `inline-flex` used to, via padding
+                // instead of a flex box, so the target is not
+                // weakened to restore the affordance.
+                <summary class=grow("cursor-pointer text-base-content/80 hover:text-base-content py-3")>
                     {headline}
                 </summary>
                 <div class="mt-2 text-xs">
@@ -332,7 +343,17 @@ fn HealthStrip(health: ProjectHealthReport, project_id: String) -> impl IntoView
                     <p class="text-sm text-base-content/70 mb-2">{summary}</p>
 
                     <details class="text-xs">
-                        <summary class=grow_text("cursor-pointer text-base-content/70 hover:text-base-content")>
+                        // `DISC-001`: same reasoning as the outer
+                        // summary above, measured separately because
+                        // this one sits in a `text-xs` (16px
+                        // line-height) context, not `text-sm` --
+                        // `py-3` (24px) would total only 40px here;
+                        // `py-4` (32px) reaches 48px, over the 44px
+                        // floor rather than exactly on it, with no
+                        // class this project's own vendored
+                        // stylesheet does not already carry (there is
+                        // no `pt-3`/`pb-3` pairing to split it evenly).
+                        <summary class=grow("cursor-pointer text-base-content/70 hover:text-base-content py-4")>
                             {t(MessageKey::IndicatorsSummaryLabel)}
                         </summary>
                         // Phase B PR3 (B-2): human-language
@@ -638,7 +659,11 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
     view! {
         <section class="mb-4" aria-label=t(MessageKey::WorkloadHeading)>
             <details class="text-sm">
-                <summary class=grow_text("cursor-pointer text-base-content/80 hover:text-base-content")>
+                // `DISC-001`: same reasoning as `HealthStrip`'s own
+                // outer summary -- `grow(...)` keeps the native
+                // `list-item` display (and its marker), `py-3`
+                // reaches 44px with `text-sm`'s own line-height.
+                <summary class=grow("cursor-pointer text-base-content/80 hover:text-base-content py-3")>
                     {t(MessageKey::WorkloadSummaryLabel)}
                 </summary>
                 <div class="mt-2 text-xs">
