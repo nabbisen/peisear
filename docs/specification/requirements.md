@@ -8739,6 +8739,35 @@ still markerless. In three of those four, `flex` is laying out **two
 children** rather than centring one label, so `DISC-001`'s remedy does
 not transfer and a round must not assume it does.
 
+*Closed 2026-11-14 by `MARK-002`, as a rule rather than as four more
+repairs.* **A `<summary>` is never a flex container**: one helper,
+`components::grow_summary`, whose body appends the touch-target floor
+and nothing else, so no call site has a class string this guard must
+classify as safe or unsafe. Thirteen of the fourteen real summaries
+compose it; the fourteenth is `touch_target_scan`'s own named escalation
+exclusion, cross-referenced rather than re-listed. **Both exceptions
+this defect accumulated are deleted** — `is_padding_centred_disclosure`
+and the scan built against it — and the property is checked
+**positively**: every real `<summary>` is accounted for by name. Both
+shapes fail one consolidated test, including the literal `inline-flex`
+inside the helper's own argument that the previous guard could not see.
+
+**Two of the architect's own statements were corrected in the closing.**
+Only **two** sites needed an inner wrapper, not three — `/today`'s
+Rhythm summary has a single child. And the browser gate's own population
+had a gap that no test could report, found because a regenerated
+documentation screenshot still showed Rhythm markerless after its source
+was already fixed: **a published artefact was the instrument**, for the
+second time in this series.
+
+*And the remedy's own measurements are worth more than the remedy.* A
+**block-level** child pushes the marker onto its own line (72 px, not
+48) where an inline-level one shares it; an `inline-flex` box is
+**atomic**, so at 390 px it wraps whole rather than reflowing, which
+killed a design that measured correct at 1280; and plain text in a 44 px
+control wraps to 104 px. **None of the three is visible in a diff**, and
+each would have shipped wrong.
+
 
 ### 10.59 Counted sentences with no singular form — **open**, `GRAM-001` for the one this release promoted; found 2026-11-12 in a gate's own failure message
 
