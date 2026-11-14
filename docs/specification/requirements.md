@@ -8769,7 +8769,7 @@ control wraps to 104 px. **None of the three is visible in a diff**, and
 each would have shipped wrong.
 
 
-### 10.59 Counted sentences with no singular form — **open**, `GRAM-001` for the one this release promoted; found 2026-11-12 in a gate's own failure message
+### 10.59 Counted sentences with no singular form — **open**, `GRAM-001` for the one `0.62.0` promoted and `GRAM-002` for fourteen more; found 2026-11-12 in a gate's own failure message, and **the class is seventeen, not six**
 
 **`"1 active assignees are over their WIP limit."`** That is what a
 project screen's **headline** reads when exactly one person is over
@@ -8789,9 +8789,10 @@ count-bearing English string whose noun or verb does not agree at 1:
 | `TrendDirectionLabel` (announced form) | *"trend: up by 1 points"* |
 | the capacity announcement | *"Capacity 1 points, period …"* |
 
-Six, across health, lists, sprints, charts and capacity. **English
-agreement is not a translation problem** — it is this locale's own text,
-and `peisear-i18n`'s own vocabulary guard checks words, not number.
+Six when first written, and **that count was a census, not the class** —
+see the amendment below. **English agreement is not a translation
+problem** — it is this locale's own text, and `peisear-i18n`'s own
+vocabulary guard checks words, not number.
 
 **Only the first is this release's business.** `0.62.0` did not write
 that sentence; it **promoted** it, from one chip's explanation inside a
@@ -8808,6 +8809,59 @@ does not quote. It appeared in the **failure message of a browser gate
 built for something else entirely** — `disclosure-marker-gate`, printing
 the headline it had just found to be markerless. **A check's own error
 text is a place defects get seen**, and that is worth saying once.
+
+**Amended 2026-11-14, `0.63.0`'s `GRAM-002` and its round 2.** Three
+things this entry had wrong or did not have.
+
+**1. The class is seventeen keys, and one rule sorts it.** Every count
+in `en.rs`, measured mechanically rather than enumerated by reading:
+
+> **A number immediately followed by the noun it counts must choose both
+> forms in one place.** A unit abbreviation (`pt`, `d`, `%`) has no
+> plural to get wrong. A noun after `of`, `or more`, or a ratio names a
+> *set*, not the count, and agrees with the set.
+
+`GRAM-002` fixed fourteen — the five this entry named, plus `WorkloadTitle`,
+`CalendarCellAriaLabel`, three burnout summaries, two notification
+bodies, a duplicate code path, and `ConfirmDeleteIssueCascadeNote` — with
+a private `en.rs::counted(n, singular, plural)`. **Four of the seventeen
+render the defect today**: `ReadFirstLongStaleBody`, `StalledAriaLabel`,
+`OverloadStreakAriaLabel`, `BurndownSummary`. The remaining thirteen are
+correct **only because a constant somewhere else is not 1** —
+`STALLED_WATCH_DAYS = 14`, `OVERLOAD_STREAK_WATCH = 8`,
+`SWITCHING_MIN_EVENTS = 5`, a schema `CHECK` on `wip_limit_default`.
+A property held by an unrelated constant is the shape `0.63.0` exists to
+remove.
+
+**2. `CAL-002 §2.2` is superseded, and the ratification is the record.**
+That handoff said ***"Do not add pluralisation"***, because an
+`if count == 1` would be *"the first inflection logic in the codebase"*
+and *"one ad-hoc case sets a precedent the architecture is not ready to
+honour."* **The reasoning was right and its prediction came true** —
+`GRAM-001` was the ad-hoc case and it cascaded to seventeen sites. What
+changed is not that `CAL-002` was wrong but that **the architecture is
+now ready**: `counted()` is the systematic answer `§2.2` wanted and
+lacked. `GRAM-002`'s own justification cited `RFC 006`; read at source,
+`RFC 006` rejects **`fluent`** — a dependency with runtime resolution —
+not agreement itself, so `CalendarCellAriaLabel`'s old doc comment
+over-read its own citation. `NFR-LANG-005` is the requirement that
+governs, and a private English-only helper precludes nothing. **The
+reversal is ratified; `CAL-002 §8`'s "No pluralisation logic" is spent
+and `PointsValue` is the one case that correctly stays uninflected.**
+
+**3. The guard this entry asked for is still the open part**, and both
+rounds of checking so far are the shape the defect already defeated.
+`GRAM-001`'s three substring tests could not see a defect in the part
+they did not quote; `GRAM-002`'s `assert_eq!` lists cannot see a string
+that is not in the list. `MessageKey::all()` has carried
+`ReadFirstLongStaleBody { long_stale_count: 1 }` throughout, rendered on
+every CI run as **"1 issue haven't been touched in over two weeks"** —
+a verb and a pronoun disagreeing, in `/today`'s read-first callout,
+reachable by design, and **in neither the fixed nor the reported list**
+because it already had a hand-written `if` for its noun. The guard is
+the one `0.63.0`'s row names: *render every count-bearing message at 1
+and read it*, as a property over the existing population rather than a
+list of known strings.
 
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
