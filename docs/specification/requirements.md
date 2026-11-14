@@ -8542,7 +8542,7 @@ author stopped reading CI once the tag was green, and the record of that
 release says *"nothing this cut got wrong"* one commit earlier.
 
 
-### 10.55 Two header controls overlap at two widths, and the gate that measures that row cannot see it — **open**, 2026-11-11; found by the architect while performing `NAME-001`'s own acceptance measurement
+### 10.55 Two header controls overlap at two widths, and the gate that measures that row cannot see it — **closed**, `OCCL-001`, 0.63.0; found 2026-11-11 by the architect while performing `NAME-001`'s own acceptance measurement
 
 **At 768 px and 800 px the account menu's clickable box covers the right
 edge of the search field.** Measured on the real binary at `/today`, with
@@ -8585,6 +8585,54 @@ have caught it is an occlusion test, not another overflow test** — for
 each pair of interactive controls in a shared row, assert that neither's
 box covers the other's. That second half is the part worth doing, because
 it is the part that generalises past this one row.
+
+**Closed 2026-11-14 by `OCCL-001` (`14a275e`), and the cause was not a
+missing gap.** `w-48` is not `flex-shrink: 0`, but a flex item's
+automatic minimum size still floors at its specified width for a form
+control whose `overflow` is `visible`, so the input never shrank below
+192 px however little room the row had. **`min-w-0` has to sit at every
+level of the nesting that floors**: on the `<input>` alone it changes
+nothing (measured: −18 px at both widths, unmoved); on the `<form>` as
+well it clears (+8 px, identical to every wider width); on `<nav>` too
+it only over-shrinks for no further benefit. That is `LAYOUT-006`'s own
+lesson, recorded in this same file for the account button a few lines
+down, reaching the search field this time. No magic number, no
+`flex-shrink: 0` — the row's own shrink mechanism, already correct for
+every sibling, now reaches the one control that was floored against it.
+
+**The check is `browser-checks/occlusion-gate.mjs`, a fourth sibling
+gate** rather than a second assertion inside `overflow-gate.mjs`, whose
+own README says *"do not widen this gate"* and whose one-line promise —
+*one assertion, `scrollWidth <= clientWidth`* — stays literally true.
+For every visible interactive control in `header.navbar` it asserts no
+two overlap, which **generalises the one named pair into a property of
+the row**. It imports `overflow-gate.mjs`'s own
+`WIDTHS`/`ADVERSARIAL_STRINGS`/`createFixtures`/`buildPages` rather than
+copying them, so *"the gate's own widths, on the pages it already
+visits"* is true by construction.
+
+**The gate found more of the defect than the investigation did.**
+Planted — the two classes reverted and the binary rebuilt — it fails at
+**48 of 120 cells**: all 24 pages at 768 px (18 × 44 px, as this
+entry's own table predicted) **and all 24 at 1280 px** (10 × 44 px),
+which the table above says is −8 px and safe. The difference is the
+fixture: `overflow-gate`'s own adversarial 77-character display name
+grows the account label far enough to reach the search field even with
+room to spare. A check built on the project's own adversarial fixture
+rather than a fresh minimal one found a wider reach of the same defect
+than the measurement that named it.
+
+**Three properties of the check, recorded so the next person meets them
+as decisions.** (1) It samples the gate's five widths — 320, 390, 768,
+1280, 1920 — so **800 px, this entry's second measured width, is not
+itself visited**; the remedy is width-independent, which is why that is
+acceptable rather than a hole. (2) Nested interactive controls would
+overlap by definition, and the header has none today; a future control
+inside another would need an ancestor/descendant exclusion rather than a
+weakened assertion. (3) Its 20-second server-readiness window is the
+pattern all six scripts in that directory share, and it expired once in
+six local runs on a loaded machine — a flake surface belonging to the
+directory, not to this gate.
 
 
 ### 10.56 A CI job whose runner was lost, read as a test that hung — **closed on reading**, 2026-11-11; found by the dev team on the architect's own merge commit
