@@ -2295,12 +2295,19 @@ pub enum MessageKey {
     /// or a pre-rendered "May 3" — `peisear-i18n` has no workspace
     /// dependencies (`I18N-001` §4.1), so the month-name lookup and
     /// the sentence shape both live in `en.rs`, where a future locale
-    /// could render the date differently. `count` is never inflected
-    /// — `CAL-002` §2.2: this project renders every count uninflected
-    /// (`WorkloadTitle`, `PointsValue`); a `count == 1` branch here
-    /// would be the first inflection logic in the codebase, and
-    /// inflection is a locale problem RFC 006 deliberately leaves
-    /// unsolved.
+    /// could render the date differently.
+    ///
+    /// **`count` was never inflected until `GRAM-002`** (`CAL-002`
+    /// §2.2 read "every count uninflected, including `WorkloadTitle`"
+    /// as a deliberate limit, since general inflection is a locale
+    /// problem `RFC 006` leaves unsolved). `GRAM-002`'s own
+    /// `en.rs::counted` is not that: a private, English-only helper,
+    /// not a public plural-rules mechanism, which is exactly the
+    /// distinction `RFC 006` left room for. This key now renders
+    /// through it, same as `WorkloadTitle`. `PointsValue` stays
+    /// uninflected correctly, not by the same limit: `"pt"` is a unit
+    /// abbreviation with no plural form to get wrong, the same reason
+    /// `counted()`'s own doc comment gives for skipping it.
     CalendarCellAriaLabel {
         month: u32,
         day: u32,
@@ -2576,6 +2583,10 @@ impl MessageKey {
                 in_flight: 12,
             },
             MessageKey::IndicatorExplanationWipCompliance { count: 2 },
+            // GRAM-002 (§10.59): a singular sample per count-bearing
+            // variant, so the next one to disagree with itself
+            // announces itself here rather than staying unseen.
+            MessageKey::IndicatorExplanationWipCompliance { count: 1 },
             // -- I18N-002/004: project_health::summarize --
             MessageKey::HealthSummaryHealthy,
             MessageKey::HealthSummaryTwoWatch {
@@ -2585,18 +2596,30 @@ impl MessageKey {
             // -- I18N-002: user_burnout::summarize --
             MessageKey::BurnoutSummarySteady,
             MessageKey::BurnoutSummaryOverloadOnly { days: 4 },
+            // GRAM-002 (§10.59): a singular sample per count-bearing
+            // variant, for each of this group's five.
+            MessageKey::BurnoutSummaryOverloadOnly { days: 1 },
             MessageKey::BurnoutSummaryStalledOnly { days: 6 },
+            MessageKey::BurnoutSummaryStalledOnly { days: 1 },
             MessageKey::BurnoutSummaryBoth {
                 overload_days: 4,
                 stalled_days: 6,
+            },
+            MessageKey::BurnoutSummaryBoth {
+                overload_days: 1,
+                stalled_days: 1,
             },
             // -- I18N-003: peisear_notify::edge --
             MessageKey::NotificationBurnoutOverloadTitle,
             MessageKey::NotificationBurnoutOverloadBody {
                 streak_snapshots: 3,
             },
+            MessageKey::NotificationBurnoutOverloadBody {
+                streak_snapshots: 1,
+            },
             MessageKey::NotificationBurnoutStalledTitle,
             MessageKey::NotificationBurnoutStalledBody { stalled_days: 10 },
+            MessageKey::NotificationBurnoutStalledBody { stalled_days: 1 },
             // -- I18N-005a: components/{layout,breadcrumb,error_page} --
             MessageKey::AppBrandName,
             MessageKey::NavBellLabelNone,
@@ -2640,6 +2663,12 @@ impl MessageKey {
             MessageKey::WorkloadTitle {
                 display_name: "Alex Rivera".to_string(),
                 in_flight_issues: 4,
+            },
+            // GRAM-002 (§10.59): a singular sample per count-bearing
+            // variant.
+            MessageKey::WorkloadTitle {
+                display_name: "Alex Rivera".to_string(),
+                in_flight_issues: 1,
             },
             MessageKey::WorkloadHintLabel,
             MessageKey::EmptyBoardHint,
@@ -2750,6 +2779,12 @@ impl MessageKey {
                 committed_points: 10,
                 committed_count: 4,
             },
+            // GRAM-002 (§10.59): a singular sample per count-bearing
+            // variant.
+            MessageKey::SprintCardSummaryPlanned {
+                committed_points: 3,
+                committed_count: 1,
+            },
             MessageKey::SprintCardAriaLabel {
                 name: "Sprint 4".to_string(),
                 status: SprintStatusLabel::Active,
@@ -2782,6 +2817,12 @@ impl MessageKey {
                 points_list: "8, 13, 5, 11, 9".to_string(),
                 sprint_count: 5,
             },
+            // GRAM-002 (§10.59): a singular sample per count-bearing
+            // variant.
+            MessageKey::VelocitySummaryPointsList {
+                points_list: "8".to_string(),
+                sprint_count: 1,
+            },
             MessageKey::VelocitySummaryMedianClause { median: 9 },
             MessageKey::VelocityTableAriaLabel,
             MessageKey::VelocityTableSprintHeader,
@@ -2790,6 +2831,11 @@ impl MessageKey {
                 sprint_count: 5,
                 min_completed: 5,
                 max_completed: 13,
+            },
+            MessageKey::BarChartAriaLabel {
+                sprint_count: 1,
+                min_completed: 5,
+                max_completed: 5,
             },
             MessageKey::MedianLabel { median: 5 },
             MessageKey::NewSprintLabel,
@@ -2812,6 +2858,9 @@ impl MessageKey {
             MessageKey::CarriedOverHeading,
             MessageKey::PointsUnitSuffix,
             MessageKey::IssuesCountText { count: 4 },
+            // GRAM-002 (§10.59): a singular sample per count-bearing
+            // variant.
+            MessageKey::IssuesCountText { count: 1 },
             MessageKey::BurndownHeading,
             MessageKey::BurndownSectionAriaLabel,
             MessageKey::BurndownCaptionLead,
@@ -3055,6 +3104,13 @@ impl MessageKey {
             MessageKey::InProgressIssuesHint,
             MessageKey::CapacityRowAriaLabel {
                 points: 8,
+                from: "2026-08-01".to_string(),
+                to: "2026-08-31".to_string(),
+            },
+            // GRAM-002 (§10.59): a singular sample per count-bearing
+            // variant.
+            MessageKey::CapacityRowAriaLabel {
+                points: 1,
                 from: "2026-08-01".to_string(),
                 to: "2026-08-31".to_string(),
             },
@@ -3310,6 +3366,13 @@ impl MessageKey {
                 day: 3,
                 count: 2,
             },
+            // GRAM-002 (§10.59): a singular sample per count-bearing
+            // variant.
+            MessageKey::CalendarCellAriaLabel {
+                month: 5,
+                day: 3,
+                count: 1,
+            },
             MessageKey::CalendarUtcNote,
             MessageKey::SprintBandAriaLabel {
                 sprint_name: "Sprint 4".to_string(),
@@ -3376,6 +3439,14 @@ impl MessageKey {
             MessageKey::TrendAriaLabel {
                 direction,
                 delta: 3,
+            }
+        }));
+        // GRAM-002 (§10.59): a singular sample per count-bearing
+        // variant.
+        keys.extend(TrendDirectionLabel::all().into_iter().map(|direction| {
+            MessageKey::TrendAriaLabel {
+                direction,
+                delta: 1,
             }
         }));
         keys.extend(

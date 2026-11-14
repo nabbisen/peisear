@@ -4,7 +4,7 @@
 
 mod common;
 
-use peisear_i18n::{Locale, MessageKey};
+use peisear_i18n::{Locale, MessageKey, TrendDirectionLabel};
 
 /// Test 4: the fixture locale renders every key differently from
 /// English — not just some keys, which would suggest the mechanism
@@ -146,5 +146,273 @@ fn wip_compliance_explanation_singular_and_plural_agree() {
     assert_eq!(
         Locale::English.render(MessageKey::IndicatorExplanationWipCompliance { count: 0 }),
         "0 active assignees are over their WIP limit."
+    );
+}
+
+/// `GRAM-002` (`061`, `§10.59`): every counted sentence this round
+/// routed through `en.rs::counted`, asserted byte-exact at 1 and 2 --
+/// not by a substring on the shared tail, the same reason `GRAM-001`'s
+/// own test above gives. `count == 0` checked per string rather than
+/// assumed, since not every one of these is reachable at zero in
+/// practice and the point is the text, not the reachability.
+#[test]
+fn gram_002_counted_sentences_agree_with_their_own_number() {
+    assert_eq!(
+        Locale::English.render(MessageKey::IssuesCountText { count: 1 }),
+        "1 issue"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::IssuesCountText { count: 2 }),
+        "2 issues"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::IssuesCountText { count: 0 }),
+        "0 issues"
+    );
+
+    assert_eq!(
+        Locale::English.render(MessageKey::SprintCardSummaryPlanned {
+            committed_points: 3,
+            committed_count: 1,
+        }),
+        "3 pt committed across 1 issue"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::SprintCardSummaryPlanned {
+            committed_points: 3,
+            committed_count: 2,
+        }),
+        "3 pt committed across 2 issues"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::SprintCardSummaryPlanned {
+            committed_points: 3,
+            committed_count: 0,
+        }),
+        "3 pt committed across 0 issues"
+    );
+
+    assert_eq!(
+        Locale::English.render(MessageKey::VelocitySummaryPointsList {
+            points_list: "8".to_string(),
+            sprint_count: 1,
+        }),
+        "Completed points across the last 1 sprint: 8."
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::VelocitySummaryPointsList {
+            points_list: "8, 13".to_string(),
+            sprint_count: 2,
+        }),
+        "Completed points across the last 2 sprints: 8, 13."
+    );
+
+    assert_eq!(
+        Locale::English.render(MessageKey::BarChartAriaLabel {
+            sprint_count: 1,
+            min_completed: 5,
+            max_completed: 5,
+        }),
+        "Bar chart of 1 sprint, completed points from 5 to 5"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::BarChartAriaLabel {
+            sprint_count: 2,
+            min_completed: 5,
+            max_completed: 13,
+        }),
+        "Bar chart of 2 sprints, completed points from 5 to 13"
+    );
+
+    assert_eq!(
+        Locale::English.render(MessageKey::TrendAriaLabel {
+            direction: TrendDirectionLabel::Up,
+            delta: 1,
+        }),
+        "trend: up by 1 point"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::TrendAriaLabel {
+            direction: TrendDirectionLabel::Down,
+            delta: 2,
+        }),
+        "trend: down by 2 points"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::TrendAriaLabel {
+            direction: TrendDirectionLabel::Up,
+            delta: 0,
+        }),
+        "trend: up by 0 points"
+    );
+
+    assert_eq!(
+        Locale::English.render(MessageKey::CapacityRowAriaLabel {
+            points: 1,
+            from: "2026-08-01".to_string(),
+            to: "2026-08-31".to_string(),
+        }),
+        "Capacity 1 point, period 2026-08-01 to 2026-08-31."
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::CapacityRowAriaLabel {
+            points: 2,
+            from: "2026-08-01".to_string(),
+            to: "2026-08-31".to_string(),
+        }),
+        "Capacity 2 points, period 2026-08-01 to 2026-08-31."
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::CapacityRowAriaLabel {
+            points: 0,
+            from: "2026-08-01".to_string(),
+            to: "2026-08-31".to_string(),
+        }),
+        "Capacity 0 points, period 2026-08-01 to 2026-08-31."
+    );
+
+    assert_eq!(
+        Locale::English.render(MessageKey::WorkloadTitle {
+            display_name: "Alex Rivera".to_string(),
+            in_flight_issues: 1,
+        }),
+        "Alex Rivera — 1 in-flight issue"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::WorkloadTitle {
+            display_name: "Alex Rivera".to_string(),
+            in_flight_issues: 2,
+        }),
+        "Alex Rivera — 2 in-flight issues"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::WorkloadTitle {
+            display_name: "Alex Rivera".to_string(),
+            in_flight_issues: 0,
+        }),
+        "Alex Rivera — 0 in-flight issues"
+    );
+
+    assert_eq!(
+        Locale::English.render(MessageKey::CalendarCellAriaLabel {
+            month: 5,
+            day: 3,
+            count: 1,
+        }),
+        "May 3, 1 issue scheduled"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::CalendarCellAriaLabel {
+            month: 5,
+            day: 3,
+            count: 2,
+        }),
+        "May 3, 2 issues scheduled"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::CalendarCellAriaLabel {
+            month: 5,
+            day: 3,
+            count: 0,
+        }),
+        "May 3, 0 issues scheduled"
+    );
+}
+
+/// `GRAM-002`: already correct (`I18N-004`), now routed through
+/// `counted()` for the count+noun segment -- byte-exact at 1 and 2 to
+/// confirm the refactor changed nothing a reader sees.
+#[test]
+fn confirm_delete_issue_cascade_note_unchanged_by_the_refactor() {
+    assert_eq!(
+        Locale::English.render(MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count: 1 }),
+        "This issue has 1 sub-issue. Deleting it deletes that sub-issue too. \
+         This cannot be undone."
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count: 2 }),
+        "This issue has 2 sub-issues. Deleting it deletes all of them too. \
+         This cannot be undone."
+    );
+}
+
+/// `GRAM-002`: the burnout panel's own summary and its two notification
+/// bodies, found independently of the handoff's own named five while
+/// re-deriving the population from the enum -- short, direct sentences
+/// read whole, not fragments of a longer threshold explanation, the
+/// same shape as this round's other fixes.
+#[test]
+fn gram_002_burnout_sentences_agree_with_their_own_number() {
+    assert_eq!(
+        Locale::English.render(MessageKey::BurnoutSummaryOverloadOnly { days: 1 }),
+        "you've been over capacity for 1 recent snapshot — consider whether \
+         some work can wait or move"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::BurnoutSummaryOverloadOnly { days: 2 }),
+        "you've been over capacity for 2 recent snapshots — consider whether \
+         some work can wait or move"
+    );
+
+    assert_eq!(
+        Locale::English.render(MessageKey::BurnoutSummaryStalledOnly { days: 1 }),
+        "an assigned issue has been stuck for 1 day — worth a quick check \
+         whether it's blocked"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::BurnoutSummaryStalledOnly { days: 2 }),
+        "an assigned issue has been stuck for 2 days — worth a quick check \
+         whether it's blocked"
+    );
+
+    assert_eq!(
+        Locale::English.render(MessageKey::BurnoutSummaryBoth {
+            overload_days: 1,
+            stalled_days: 1,
+        }),
+        "you've been over capacity for 1 recent snapshot — consider whether \
+         some work can wait or move; an assigned issue has been stuck for \
+         1 day — worth a quick check whether it's blocked"
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::BurnoutSummaryBoth {
+            overload_days: 2,
+            stalled_days: 2,
+        }),
+        "you've been over capacity for 2 recent snapshots — consider whether \
+         some work can wait or move; an assigned issue has been stuck for \
+         2 days — worth a quick check whether it's blocked"
+    );
+
+    assert_eq!(
+        Locale::English.render(MessageKey::NotificationBurnoutOverloadBody {
+            streak_snapshots: 1
+        }),
+        "Your in-flight load has been over capacity for 1 consecutive \
+         snapshot. This is a description of the recent rhythm, not an \
+         evaluation of your work — many streaks have legitimate causes. \
+         You can review at /today."
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::NotificationBurnoutOverloadBody {
+            streak_snapshots: 2
+        }),
+        "Your in-flight load has been over capacity for 2 consecutive \
+         snapshots. This is a description of the recent rhythm, not an \
+         evaluation of your work — many streaks have legitimate causes. \
+         You can review at /today."
+    );
+
+    assert_eq!(
+        Locale::English.render(MessageKey::NotificationBurnoutStalledBody { stalled_days: 1 }),
+        "An assigned issue has been in flight for 1 day. May be worth a \
+         glance — sometimes a quick check-in turns out to be all that's \
+         needed. Visit /today for context."
+    );
+    assert_eq!(
+        Locale::English.render(MessageKey::NotificationBurnoutStalledBody { stalled_days: 2 }),
+        "An assigned issue has been in flight for 2 days. May be worth a \
+         glance — sometimes a quick check-in turns out to be all that's \
+         needed. Visit /today for context."
     );
 }

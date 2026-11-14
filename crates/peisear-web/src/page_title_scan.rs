@@ -92,7 +92,10 @@ mod tests {
         let keys = MessageKey::all();
         assert_eq!(
             keys.len(),
-            715,
+            // GRAM-002 (§10.59): 715 -> 730, fifteen singular samples
+            // added, one per count-bearing variant this round touched
+            // (two for TrendAriaLabel's own Up/Down pair).
+            730,
             "MessageKey::all()'s own population moved -- re-measure before trusting this guard \
              examined anything"
         );

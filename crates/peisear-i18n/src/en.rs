@@ -151,14 +151,14 @@ pub(crate) fn render(key: MessageKey) -> String {
         // GRAM-001: count == 1 is the one form that disagreed --
         // "1 active assignees are". The numeral stays (every sibling
         // explanation uses one), and `their` is correct unchanged in
-        // both forms.
-        MessageKey::IndicatorExplanationWipCompliance { count } => {
-            if count == 1 {
-                format!("{count} active assignee is over their WIP limit.")
-            } else {
-                format!("{count} active assignees are over their WIP limit.")
-            }
-        }
+        // both forms. GRAM-002: the hand-written `if` that fixed it
+        // is now `counted()`, the same mechanism every other counted
+        // sentence in this file uses.
+        MessageKey::IndicatorExplanationWipCompliance { count } => counted(
+            count,
+            "active assignee is over their WIP limit.",
+            "active assignees are over their WIP limit.",
+        ),
 
         // ---- I18N-002/004: project_health::summarize ----
         MessageKey::HealthSummaryHealthy => "Looking healthy.".to_string(),
@@ -175,39 +175,54 @@ pub(crate) fn render(key: MessageKey) -> String {
 
         // ---- I18N-002: user_burnout::summarize ----
         MessageKey::BurnoutSummarySteady => "Steady so far.".to_string(),
+        // GRAM-002 (§10.59): counted() -- found independently of the
+        // handoff's own named five, re-deriving the population from
+        // the enum. These are short, direct, single-purpose sentences
+        // (the burnout panel's own summary, read whole), not fragments
+        // of a longer multi-threshold glossary explanation -- the same
+        // shape as this round's other fixes, not the "How this is
+        // calculated" prose this round leaves alone.
         MessageKey::BurnoutSummaryOverloadOnly { days } => format!(
-            "you've been over capacity for {days} recent snapshots — \
-             consider whether some work can wait or move"
+            "you've been over capacity for {} — \
+             consider whether some work can wait or move",
+            counted(days, "recent snapshot", "recent snapshots")
         ),
         MessageKey::BurnoutSummaryStalledOnly { days } => format!(
-            "an assigned issue has been stuck for {days} days — \
-             worth a quick check whether it's blocked"
+            "an assigned issue has been stuck for {} — \
+             worth a quick check whether it's blocked",
+            counted(days, "day", "days")
         ),
         MessageKey::BurnoutSummaryBoth {
             overload_days,
             stalled_days,
         } => format!(
-            "you've been over capacity for {overload_days} recent snapshots — \
+            "you've been over capacity for {} — \
              consider whether some work can wait or move; \
-             an assigned issue has been stuck for {stalled_days} days — \
-             worth a quick check whether it's blocked"
+             an assigned issue has been stuck for {} — \
+             worth a quick check whether it's blocked",
+            counted(overload_days, "recent snapshot", "recent snapshots"),
+            counted(stalled_days, "day", "days")
         ),
 
         // ---- I18N-003: peisear_notify::edge ----
         MessageKey::NotificationBurnoutOverloadTitle => {
             "Sustained over-capacity streak".to_string()
         }
+        // GRAM-002 (§10.59): counted(), same reasoning as the burnout
+        // summaries above.
         MessageKey::NotificationBurnoutOverloadBody { streak_snapshots } => format!(
-            "Your in-flight load has been over capacity for {streak_snapshots} \
-             consecutive snapshots. This is a description of the recent rhythm, \
-             not an evaluation of your work — many streaks have legitimate causes. \
-             You can review at /today."
+            "Your in-flight load has been over capacity for {}. \
+             This is a description of the recent rhythm, not an evaluation of \
+             your work — many streaks have legitimate causes. \
+             You can review at /today.",
+            counted(streak_snapshots, "consecutive snapshot", "consecutive snapshots")
         ),
         MessageKey::NotificationBurnoutStalledTitle => "Long-stalled assigned work".to_string(),
         MessageKey::NotificationBurnoutStalledBody { stalled_days } => format!(
-            "An assigned issue has been in flight for {stalled_days} days. \
+            "An assigned issue has been in flight for {}. \
              May be worth a glance — sometimes a quick check-in turns out to be \
-             all that's needed. Visit /today for context."
+             all that's needed. Visit /today for context.",
+            counted(stalled_days, "day", "days")
         ),
 
         // ---- I18N-005a: components/{layout,breadcrumb,error_page} ----
@@ -257,10 +272,17 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::WorkloadHeading => "Workload".to_string(),
         MessageKey::WorkloadSummaryLabel => "Workload across the team.".to_string(),
         MessageKey::WorkloadSetCapacityLink => "(set your capacity)".to_string(),
+        // GRAM-002 (§10.59): counted() -- found independently of the
+        // handoff's own named five, re-deriving the population from
+        // the enum rather than inheriting the list. "1 in-flight
+        // issues" read wrong.
         MessageKey::WorkloadTitle {
             display_name,
             in_flight_issues,
-        } => format!("{display_name} — {in_flight_issues} in-flight issues"),
+        } => format!(
+            "{display_name} — {}",
+            counted(in_flight_issues, "in-flight issue", "in-flight issues")
+        ),
         MessageKey::WorkloadHintLabel => "Workload:".to_string(),
         MessageKey::EmptyBoardHint => "Drop issues here".to_string(),
         MessageKey::MoveIssueAriaLabel {
@@ -385,10 +407,14 @@ pub(crate) fn render(key: MessageKey) -> String {
             "{completed_points} of {committed_points} pt completed · \
              {in_flight_points} pt in flight"
         ),
+        // GRAM-002 (§10.59): counted() -- "across 1 issues" read wrong.
         MessageKey::SprintCardSummaryPlanned {
             committed_points,
             committed_count,
-        } => format!("{committed_points} pt committed across {committed_count} issues"),
+        } => format!(
+            "{committed_points} pt committed across {}",
+            counted(committed_count, "issue", "issues")
+        ),
         MessageKey::SprintCardAriaLabel {
             name,
             status,
@@ -439,23 +465,29 @@ pub(crate) fn render(key: MessageKey) -> String {
             " Numbers describe what happened — they don't grade it.".to_string()
         }
         MessageKey::ChartTableSummaryLabel => "View as a table".to_string(),
+        // GRAM-002 (§10.59): counted() -- "the last 1 sprints" read wrong.
         MessageKey::VelocitySummaryPointsList {
             points_list,
             sprint_count,
-        } => format!("Completed points across the last {sprint_count} sprints: {points_list}."),
+        } => format!(
+            "Completed points across the last {}: {points_list}.",
+            counted(sprint_count, "sprint", "sprints")
+        ),
         MessageKey::VelocitySummaryMedianClause { median } => {
             format!(" The median is {median}.")
         }
         MessageKey::VelocityTableAriaLabel => "Completed sprint values".to_string(),
         MessageKey::VelocityTableSprintHeader => "Sprint".to_string(),
         MessageKey::MedianRowLabel => "Median".to_string(),
+        // GRAM-002 (§10.59): counted() -- same defect as
+        // VelocitySummaryPointsList's own sprint_count.
         MessageKey::BarChartAriaLabel {
             sprint_count,
             min_completed,
             max_completed,
         } => format!(
-            "Bar chart of {sprint_count} sprints, completed points from \
-             {min_completed} to {max_completed}"
+            "Bar chart of {}, completed points from {min_completed} to {max_completed}",
+            counted(sprint_count, "sprint", "sprints")
         ),
         MessageKey::MedianLabel { median } => format!("median {median}"),
         MessageKey::NewSprintLabel => "New sprint".to_string(),
@@ -481,7 +513,8 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::InFlightStatLabel => "In flight".to_string(),
         MessageKey::CarriedOverHeading => "Carried over".to_string(),
         MessageKey::PointsUnitSuffix => "pt".to_string(),
-        MessageKey::IssuesCountText { count } => format!("{count} issues"),
+        // GRAM-002 (§10.59): counted() -- "1 issues" read wrong.
+        MessageKey::IssuesCountText { count } => counted(count, "issue", "issues"),
         MessageKey::BurndownHeading => "Burndown".to_string(),
         MessageKey::BurndownSectionAriaLabel => "Sprint burndown".to_string(),
         MessageKey::BurndownCaptionLead => "Two cumulative lines: ".to_string(),
@@ -897,8 +930,12 @@ pub(crate) fn render(key: MessageKey) -> String {
         }
         MessageKey::WipLimitLabel => "WIP limit".to_string(),
         MessageKey::InProgressIssuesHint => "in-progress issues".to_string(),
+        // GRAM-002 (§10.59): counted() -- "Capacity 1 points" read wrong.
         MessageKey::CapacityRowAriaLabel { points, from, to } => {
-            format!("Capacity {points} points, period {from} to {to}.")
+            format!(
+                "Capacity {}, period {from} to {to}.",
+                counted(points, "point", "points")
+            )
         }
         MessageKey::CloseOnDateSummary => "Close on date…".to_string(),
         MessageKey::CloseThisRowAriaLabel => "Close this row on a specific date".to_string(),
@@ -1301,10 +1338,14 @@ pub(crate) fn render(key: MessageKey) -> String {
             TrendDirectionLabel::Down => format!("-{delta}"),
         },
         MessageKey::TrendAriaFlat => "trend: roughly flat".to_string(),
-        MessageKey::TrendAriaLabel { direction, delta } => match direction {
-            TrendDirectionLabel::Up => format!("trend: up by {delta} points"),
-            TrendDirectionLabel::Down => format!("trend: down by {delta} points"),
-        },
+        // GRAM-002 (§10.59): counted() -- "by 1 points" read wrong.
+        MessageKey::TrendAriaLabel { direction, delta } => {
+            let points = counted(i64::from(delta), "point", "points");
+            match direction {
+                TrendDirectionLabel::Up => format!("trend: up by {points}"),
+                TrendDirectionLabel::Down => format!("trend: down by {points}"),
+            }
+        }
 
         // ---- I18N-007: components/issues.rs (composite_row) ----
         MessageKey::CompositeLabel => "Composite".to_string(),
@@ -1339,8 +1380,14 @@ pub(crate) fn render(key: MessageKey) -> String {
         }
         MessageKey::CalendarBreadcrumbWord => "Calendar".to_string(),
         MessageKey::CalendarViewName { view } => calendar_view_label(view).to_string(),
+        // GRAM-002 (§10.59): counted() -- found independently of the
+        // handoff's own named five. "1 issues scheduled" read wrong.
         MessageKey::CalendarCellAriaLabel { month, day, count } => {
-            format!("{} {day}, {count} issues scheduled", month_name(month))
+            format!(
+                "{} {day}, {} scheduled",
+                month_name(month),
+                counted(count, "issue", "issues")
+            )
         }
         MessageKey::CrowdingChipAriaLabel { state } => {
             format!("Crowded day: {}.", health_state_label(state))
@@ -1390,17 +1437,21 @@ pub(crate) fn render(key: MessageKey) -> String {
             "This status change may not have completed. The board has been refreshed to show the current state."
                 .to_string()
         }
+        // GRAM-002 (§10.59): already correct (I18N-004), refactored to
+        // `counted()` for the one segment where a number meets a noun
+        // -- "that sub-issue"/"all of them" has no number in it and
+        // stays its own plain `if`, per this helper's own named limit.
         MessageKey::ConfirmDeleteIssueCascadeNote { sub_issue_count } => {
-            if sub_issue_count == 1 {
-                "This issue has 1 sub-issue. Deleting it deletes that sub-issue too. \
-                 This cannot be undone."
-                    .to_string()
+            let referent = if sub_issue_count == 1 {
+                "that sub-issue"
             } else {
-                format!(
-                    "This issue has {sub_issue_count} sub-issues. Deleting it deletes all \
-                     of them too. This cannot be undone."
-                )
-            }
+                "all of them"
+            };
+            format!(
+                "This issue has {}. Deleting it deletes {referent} too. \
+                 This cannot be undone.",
+                counted(sub_issue_count, "sub-issue", "sub-issues")
+            )
         }
         MessageKey::CalendarRescheduledAnnouncement { time_label } => {
             format!("Rescheduled to {time_label}.")
@@ -1445,6 +1496,28 @@ pub(crate) fn render(key: MessageKey) -> String {
 fn throughput_value(done: i64, total: i64) -> String {
     let pct = (done * 100) / total;
     format!("{done} / {total} ({pct}%)")
+}
+
+/// `GRAM-002` (`061`, `§10.59`) — a private helper, not a public API
+/// and not a plural-rules mechanism: this locale is English-only
+/// (`FR-I18N` is not amended here), and English needs exactly two
+/// forms. Every counted sentence in this crate's English text goes
+/// through it, so a sentence cannot disagree with its own number --
+/// the number and both forms are chosen in the same call, not
+/// re-derived at each call site by a hand-written `if`. `singular`
+/// and `plural` are whatever text follows the number (a bare noun, or
+/// a full verb phrase like `GRAM-001`'s own "active assignee is over
+/// their WIP limit." / "active assignees are..."); the count itself
+/// is never baked into either string, since `counted` prepends it.
+/// `n == 0` always takes `plural` -- "0 issues" is correct English,
+/// "0 issue" is not, and that holds for every caller below, not just
+/// the one `GRAM-001` already checked it for.
+fn counted(n: i64, singular: &str, plural: &str) -> String {
+    if n == 1 {
+        format!("{n} {singular}")
+    } else {
+        format!("{n} {plural}")
+    }
 }
 
 /// The navbar bell badge's own visible number: `IndicatorValueActivity`'s
@@ -1621,9 +1694,12 @@ fn sprint_card_summary_text(
                  {in_flight_points} pt in flight"
             )
         }
-        SprintStatusLabel::Planned => {
-            format!("{committed_points} pt committed across {committed_count} issues")
-        }
+        // GRAM-002 (§10.59): counted() -- same defect, same fix, as
+        // MessageKey::SprintCardSummaryPlanned's own identical text.
+        SprintStatusLabel::Planned => format!(
+            "{committed_points} pt committed across {}",
+            counted(committed_count, "issue", "issues")
+        ),
     }
 }
 

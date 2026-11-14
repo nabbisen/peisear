@@ -197,8 +197,11 @@ async fn project_detail_workload_tooltip_names_only_the_in_flight_count() {
     resp.assert_status(StatusCode::OK);
     let body = resp.text();
 
+    // GRAM-002 (§10.59): this fixture's own count is 1, so the
+    // corrected wording (noun agreeing with a singular count) is
+    // "issue", not "issues".
     assert!(
-        body.contains(r#"title="bob — 1 in-flight issues""#),
+        body.contains(r#"title="bob — 1 in-flight issue""#),
         "Bob's workload chip tooltip must be exactly the permitted \
          name-and-in-flight-count shape, with nothing appended or \
          substituted; body: {body}"
@@ -264,8 +267,9 @@ async fn subjects_own_today_and_settings_still_show_capacity() {
     let resp = app.server.get("/settings").await;
     resp.assert_status(StatusCode::OK);
     let settings_body = resp.text();
-    // `CapacityRowAriaLabel`'s own literal format
-    // (`en.rs`: `"Capacity {points} points, period {from} to {to}."`),
+    // `CapacityRowAriaLabel`'s own literal format (`en.rs`, via
+    // `counted()` since `GRAM-002`: "Capacity {N} point(s), period
+    // {from} to {to}." -- this fixture's own count is 5, so "points"),
     // not a bare digit -- same reasoning as the /today check above.
     assert!(
         settings_body.contains("Capacity 5 points"),
