@@ -8863,6 +8863,29 @@ the one `0.63.0`'s row names: *render every count-bearing message at 1
 and read it*, as a property over the existing population rather than a
 list of known strings.
 
+**Amended again 2026-11-14, round 2 (`60cb2e4`).** **That guard now
+exists** — `peisear-i18n/tests/grammar_guard.rs` renders all **748** of
+`MessageKey::all()`'s entries and reads every one, collecting every
+offender with its rendered string. All seventeen go through `counted()`;
+`ReadFirstLongStaleBody`'s hand-written `if` is gone, replaced by one
+call carrying noun, verb and pronoun in both arms.
+
+**Sixteen of the seventeen had no sample at `1` in `MessageKey::all()`
+at all** before the round added them. A population guard sees only what
+the population hands it, and that is this entry's second lesson after
+the first: *a check's own error text is a place defects get seen*, and
+now *a check's own population is a place defects hide*.
+
+**Two gaps remain, named rather than closed, both confirmed by plant.**
+The rule as written — *a number **immediately** followed by the noun it
+counts* — cannot see a disagreement one adjective away (`"1 consecutive
+snapshots"`) or one verb away (`"1 issue haven't been touched"`).
+Reverting either string leaves the guard green. **The narrow word was
+the architect's**, not the round's: round 3 widens the adjacency with a
+closed stop set, and answers the verb case at the mechanism — no
+hand-rolled inflection branch may return to `en.rs` — rather than
+pretending an adjacency check can reach it.
+
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
