@@ -71,10 +71,10 @@
 //! `display` values) can be this call site's answer, and this scan's
 //! own three recognised shapes have no fourth name for "already
 //! correct because the padding itself, not a flex box, supplies the
-//! centring." [`is_padding_centred_disclosure`] is that fourth name,
-//! kept as narrow as [`is_named_escalation_exclusion`] in the sibling
-//! guard it mirrors at `DISC-001`: three exact call sites, not a
-//! blanket exemption for every `<summary>`.
+//! centring." `is_padding_centred_disclosure` was that fourth name,
+//! kept as narrow as `touch_target_scan::is_named_escalation_exclusion`
+//! in the sibling guard it mirrors at `DISC-001`: three exact call
+//! sites, not a blanket exemption for every `<summary>`.
 //!
 //! **`MARK-001` (`061`) took the same shape to six more sites and hit
 //! the limit `DISC-001`'s own comment named in advance**, then found
