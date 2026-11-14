@@ -28,6 +28,10 @@ The number and its noun may be separated by adjectives — *"1 consecutive
 snapshots"*, *"1 total events"*, *"1 recent snapshots"*. They may not be
 separated by a word that ends the noun phrase.
 
+**Amended 2026-11-14 — the window is two words, not three. See `§7`.**
+The paragraph below is left as it was written so the amendment can be
+read against it.
+
 **Scan forward from a bare `1` for up to three words, stopping at:**
 
 - any token containing a digit (`"1 vs 14"`, `"1 / 12 …"`, `"… is 1.
@@ -134,3 +138,60 @@ after it.
 ## 6. Required review-request format
 
 Workflow §9.2. Lead with the widened guard's pre-change run.
+
+
+## 7. Ruling on the blocking finding — the window, not the stop set
+
+**The finding is correct and it is accepted.** The three hits were
+reproduced here on the uncommitted file, and all three are correct
+English: the three-word lookahead reads past the noun phrase the `1`
+governs — across a full stop into *"This"*, across a comma into
+*"completed points"*, across a semicolon into *"progress"*. Stopping at
+the first acceptance step and putting the question in a file was the
+right call, and `§1` asked for exactly this.
+
+**The resolution is a narrower window: `WINDOW = 2`.** Not a fourth
+stop condition, not an allowlist — `§5` stands unchanged, and this
+takes machinery out rather than putting it in.
+
+**Measured before being specified**, on the round's own uncommitted
+implementation with nothing else changed and the file restored
+byte-identical afterwards:
+
+| window | `no_rendered_message_disagrees_with_the_number_one` over the real 748 | `"1 consecutive snapshots"` |
+|---|---|---|
+| 3 | **FAILED**, the three hits above | caught |
+| **2** | **ok** | **caught** |
+
+**The principle, and state it as the measurement it is**: the noun a
+number counts is the head of its own noun phrase, and in this
+interface's English that head is at most **one** modifier away. Every
+counted phrase in `en.rs` is `1 <noun>` or `1 <adjective> <noun>` —
+`"1 issue"`, `"1 day"`, `"1 consecutive snapshot"`, `"1 total event"`,
+`"1 recent snapshot"`. A third word is already past the noun, which is
+why it only ever found other clauses. Say so in the report as something
+you re-derived, not as something this ruling asserts.
+
+**Two things not to do**, both of which would make the three hits
+disappear and both of which are the failure this series is about:
+
+- **Do not add `progress` (or any word) to the grammar-word skip set.**
+  It is a mass noun, the skip set is five grammar words, and growing it
+  to fit a string that showed up is the allowlist `§5` forbids wearing
+  a different hat.
+- **Do not add punctuation stops.** At `WINDOW = 2` they are
+  unnecessary, and an unnecessary stop is a rule nobody can test the
+  need for.
+
+**Keep the three strings as negative space.** Add all three *rendered*
+sentences — `NotificationBurnoutOverloadBody`'s, `BarChartAriaLabel`'s
+and `ReadFirstWipBody`'s, verbatim from the run above — to
+`guard_does_not_reject_grammar_words_or_correctly_uninflected_shapes`.
+They are test inputs that must not be flagged, not exemptions inside
+the guard, and they pin at the new width the exact discovery this round
+made. That is the round's own finding becoming part of the check.
+
+**Then the rest of `§4` as written**, plus one correction to it: `§4.1`
+has already been satisfied — the pre-change run above is the
+measurement, it does not need repeating. Report the `WINDOW = 2` run
+the same way, verbatim, and carry on into `§2` and `§3`.
