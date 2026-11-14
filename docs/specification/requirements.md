@@ -8769,7 +8769,7 @@ control wraps to 104 px. **None of the three is visible in a diff**, and
 each would have shipped wrong.
 
 
-### 10.59 Counted sentences with no singular form — **open**, `GRAM-001` for the one `0.62.0` promoted and `GRAM-002` for fourteen more; found 2026-11-12 in a gate's own failure message, and **the class is seventeen, not six**
+### 10.59 Counted sentences with no singular form — **closed**, `GRAM-001`, `GRAM-002` and its two further rounds, 0.63.0; found 2026-11-12 in a gate's own failure message, and **the class was seventeen, not six**
 
 **`"1 active assignees are over their WIP limit."`** That is what a
 project screen's **headline** reads when exactly one person is over
@@ -8885,6 +8885,47 @@ the architect's**, not the round's: round 3 widens the adjacency with a
 closed stop set, and answers the verb case at the mechanism — no
 hand-rolled inflection branch may return to `en.rs` — rather than
 pretending an adjacency check can reach it.
+
+**Closed 2026-11-14, round 3 (`0bed21c`) — and the width was measured,
+not reasoned.** The architect's widened rule said *up to three words*,
+and at that width the guard flagged **three renderings that are already
+correct English**: the lookahead read past the noun phrase its number
+governs — across a full stop into *"This"*, across a comma into
+*"completed points"*, across a semicolon into *"progress"*, a mass noun
+that ends in `s`. The round stopped at that finding rather than
+choosing one of the three available escapes, all of which its own
+handoff prohibited. **The resolution was a narrower window, not a wider
+stop set**: `WINDOW = 2`, green over all 748 and still catching
+`"1 consecutive snapshots"`. The property it rests on is a measured one
+— every counted phrase in `en.rs` is `1 <noun>` or `1 <adjective>
+<noun>`, so a third word is already past the noun. **Three of the
+architect's own instructions were corrected across these rounds**: a
+citation to `FR-I18N`, an id this repository does not have; a
+three-run `cargo test --workspace` criterion `CONTRIBUTING.md` retired
+on 2026-10-15; and the word *"immediately"*, then *"three words"*.
+
+**The verb case is answered at the mechanism, and the claim is
+deliberately smaller than the defect class.**
+`peisear-i18n/tests/no_hand_rolled_inflection.rs` asserts that no
+hand-rolled `if … == 1 { "…" } else { "…" }` chooses between two string
+literals in `en.rs` outside `counted()`'s own body, with
+`ConfirmDeleteIssueCascadeNote`'s `referent` as the one named
+exception — identified by its condition text, and proven by a
+negative-space test to be something the detector can actually see, so
+the exemption is not excluding nothing. It does not prove any two
+strings agree; it proves the one mechanism that bypassed `counted()`
+and produced an unguardable disagreement is gone.
+
+**Its boundary was probed rather than assumed**: the same mechanism
+spelled `!= 1` instead of `== 1` is invisible to it, confirmed by
+plant. That boundary is kept deliberately — `> 1`, a `match`, two
+`format!` templates chosen by an `if` lie the same way, and chasing
+them ends in a second Rust parser. **What would close the class
+structurally is a type**: a count-bearing field that only `counted()`
+can render, so `en.rs` cannot express the choice at all. That is a
+design change for a later release, not a repair, and it is named here
+so the next person meets the boundary as a decision rather than an
+oversight.
 
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
