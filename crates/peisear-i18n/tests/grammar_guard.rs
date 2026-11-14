@@ -24,10 +24,42 @@
 //!
 //! **The skip set is closed and is grammar, not an allowlist of
 //! strings** — `is`, `as`, `vs`, `was`, `has` are words that end in
-//! `s` without being the plural of anything; `guard_does_not_reject_`
-//! `grammar_words_ending_in_s` below is the negative-space check that
-//! keeps it that way, the same role `guard_does_not_reject_legitimate_`
-//! `shipped_symbols` plays in `language_guard.rs`.
+//! `s` without being the plural of anything;
+//! `guard_does_not_reject_grammar_words_or_correctly_uninflected_shapes`
+//! below is the negative-space check that keeps it that way, the same
+//! role `guard_does_not_reject_legitimate_shipped_symbols` plays in
+//! `language_guard.rs`.
+//!
+//! **Round 3 (`061`, `§10.59`) widens the adjacency, to two words, not
+//! three.** Round 2's own rule said "immediately", and round 2
+//! implemented that sentence exactly -- which is what let `"1
+//! consecutive snapshots"` through: an adjective between the number
+//! and its noun. A three-word window was tried first and measured
+//! against the real population before being written down here: it
+//! produced three false positives, each from reading straight past the
+//! noun phrase the `1` actually governs and into an unrelated clause
+//! (`NotificationBurnoutOverloadBody`'s `"1 consecutive snapshot. This"`
+//! across a full stop, `BarChartAriaLabel`'s `"1 sprint, completed
+//! points"` across a comma, `ReadFirstWipBody`'s `"1 issue in
+//! progress;"` across a semicolon). **The noun a number counts is the
+//! head of its own noun phrase, at most one modifier away in this
+//! interface's English** -- `"1 issue"`, `"1 consecutive snapshot"`,
+//! `"1 total event"` are all at most one word past the number. A
+//! two-word window reaches every adjective case in the population and
+//! none of the three false positives, without a fourth stop condition
+//! or an allowlist for the three strings -- both of which were the
+//! tempting wrong fix, named and declined for the same reason: a
+//! punctuation stop would be machinery this window doesn't need, and
+//! skipping `"progress"` would be the grammar-word skip set doing an
+//! allowlist's job in a different hat.
+//!
+//! The scan looks ahead up to two words from a bare `1`, stopping at
+//! the first digit-bearing token or at `of`/`or`/`/` -- the three that
+//! turn a count into a set description (`"1 of last 14"`, `"1 or more
+//! issues"`, `"1 / 12 of in-flight issues"`) -- and flags the first
+//! plural-shaped word reached before a stop. The grammar-word skip set
+//! keeps its job unchanged: skipped, not a stop, so `"1 was over
+//! capacity"` keeps scanning past `"was"` and finds nothing.
 //!
 //! **Only `MessageKey::all()`'s own population is visible to this
 //! guard.** Before this round, sixteen of the seventeen count-bearing
@@ -81,14 +113,53 @@ fn is_bare_one(word: &str) -> bool {
     word.trim_matches(|c: char| !c.is_ascii_alphanumeric() && c != '-') == "1"
 }
 
-/// The guard itself, as a value rather than a bool: `\b1\s+([A-Za-z-]+s)\b`
-/// over `text`, by hand. Returns the offending two-word span so a
-/// failure names what it found, not just that it found something.
+/// True if `word` contains a digit anywhere in it — `"14"`, `"1.0"`,
+/// `"12"` — a sibling count the scan must not read past, since a
+/// second number in the window means the first `1` is no longer the
+/// count the trailing noun agrees with.
+fn contains_digit(word: &str) -> bool {
+    word.chars().any(|c| c.is_ascii_digit())
+}
+
+/// True if `word`, once its leading/trailing punctuation is stripped,
+/// is one of the closed three that turn a count into a set
+/// description rather than leaving it a count: `of` (`"1 of last
+/// 14"`), `or` (`"1 or more issues"`), `/` (`"1 / 12 of in-flight
+/// issues"`). Not an allowlist of strings -- these three are the
+/// grammatical join words the round 3 handoff names, and the window
+/// stops at the first one reached exactly because a noun past it
+/// agrees with the set, not with `1`.
+fn is_set_description_stop_word(word: &str) -> bool {
+    let trimmed = word.trim_matches(|c: char| !c.is_ascii_alphanumeric() && c != '/');
+    matches!(trimmed.to_ascii_lowercase().as_str(), "of" | "or" | "/")
+}
+
+/// The guard itself. Round 2's own `\b1\s+([A-Za-z-]+s)\b`, widened by
+/// round 3 to look ahead up to two words rather than one -- the
+/// number and its noun may be separated by one adjective
+/// (`"1 consecutive snapshots"`), but not by a word that ends the
+/// noun phrase (a second number, or `of`/`or`/`/`), and not by more
+/// than one modifier -- a three-word window read past the noun this
+/// interface's English ever puts there and found other clauses
+/// instead (measured, not assumed; see this file's own module doc).
+/// Returns the offending span, from the `1` through the flagged word,
+/// so a failure names what it found, not just that it found
+/// something.
 fn find_singular_plural_disagreement(text: &str) -> Option<String> {
+    const WINDOW: usize = 2;
     let words: Vec<&str> = text.split_whitespace().collect();
-    for i in 0..words.len().saturating_sub(1) {
-        if is_bare_one(words[i]) && is_plural_shaped(words[i + 1]) {
-            return Some(format!("{} {}", words[i], words[i + 1]));
+    for i in 0..words.len() {
+        if !is_bare_one(words[i]) {
+            continue;
+        }
+        let window_end = (i + 1 + WINDOW).min(words.len());
+        for (j, word) in words.iter().enumerate().take(window_end).skip(i + 1) {
+            if contains_digit(word) || is_set_description_stop_word(word) {
+                break;
+            }
+            if is_plural_shaped(word) {
+                return Some(words[i..=j].join(" "));
+            }
         }
     }
     None
@@ -142,11 +213,33 @@ fn guard_rejects_a_planted_disagreement() {
     );
 }
 
-/// The negative-space check for the test above, and for the skip
-/// set's own claim to be grammar rather than an allowlist: every
-/// shape this round's own `§3` table names as correctly left alone
-/// must stay clean, plus the five grammar words the skip set exists
-/// for, each immediately after a bare `1`.
+/// Round 3's own proof for the widened window: `"1 consecutive
+/// snapshots"` (`OverloadStreakAriaLabel`'s `ccbf67c` text, the case
+/// round 2's narrower rule let through) is caught now that an
+/// adjective between the number and its noun no longer defeats the
+/// scan.
+#[test]
+fn guard_rejects_a_planted_disagreement_separated_by_an_adjective() {
+    let found = find_singular_plural_disagreement(
+        "Overload streak: 1 consecutive snapshots over capacity (steady).",
+    );
+    assert_eq!(
+        found,
+        Some("1 consecutive snapshots".to_string()),
+        "expected the widened guard to flag \"1 consecutive snapshots\", but it found {found:?}"
+    );
+}
+
+/// The negative-space check for the tests above, and for the skip
+/// set's and stop set's own claim to be grammar rather than an
+/// allowlist: every shape this round's own `§3` table names as
+/// correctly left alone must stay clean, plus the five grammar words
+/// the skip set exists for, plus the three stop-set shapes
+/// (`of`/`or`/`/`) and a digit-bearing token, each exercised at the
+/// window width that now matters, plus the three real renderings the
+/// three-word window measurement found and rejected (`NFR-LANG-005`'s
+/// own discovery becoming part of the check, not left as a claim about
+/// a window nobody tried).
 #[test]
 fn guard_does_not_reject_grammar_words_or_correctly_uninflected_shapes() {
     for text in [
@@ -162,6 +255,13 @@ fn guard_does_not_reject_grammar_words_or_correctly_uninflected_shapes() {
         "1 / 12 of in-flight issues",
         "1 or more issues",
         "1%",
+        "your effective limit is 1. Pushing one to Done",
+        "Your in-flight load has been over capacity for 1 consecutive snapshot. This is a \
+         description of the recent rhythm, not an evaluation of your work — many streaks \
+         have legitimate causes. You can review at /today.",
+        "Bar chart of 1 sprint, completed points from 5 to 5",
+        "You have 1 issue in progress; your effective limit is 1. Pushing one to Done before \
+         starting more keeps focus crisp.",
     ] {
         assert!(
             find_singular_plural_disagreement(text).is_none(),
