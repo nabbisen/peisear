@@ -21,12 +21,20 @@ releases and that nothing else this project owns could observe.
 
 **Not target size** (`TT-004`'s own guard covers the class-carrying
 subset from source; a rendered-size gate is step 4's second-ranked
-candidate, not this one). **Not overlap** (`§10.19`/`§10.21` are real, but
-their measurement artefacts — a closed `<details>`'s stale
-`getBoundingClientRect`, a dropdown's close-animation `scale()` — aren't
-understood well enough yet to gate on). **Not JavaScript** (`DEC-048`
-condition 2 forbids wall-clock-dependent checks, and `JS-001` measured the
-untested surface as thin anyway).
+candidate, not this one). **Not JavaScript** (`DEC-048` condition 2
+forbids wall-clock-dependent checks, and `JS-001` measured the untested
+surface as thin anyway).
+
+**Not overlap, either — not any more.** `§10.19`/`§10.21` were real, but
+their own measurement artefacts (a closed `<details>`'s stale
+`getBoundingClientRect`, a dropdown's close-animation `scale()`) weren't
+understood well enough to gate on at the time this paragraph was written.
+`OCCL-001` (`061`, `§10.55`) found a real occlusion defect this gate's own
+`scrollWidth <= clientWidth` assertion structurally cannot see — two
+controls can cover each other without the page scrolling a pixel — and
+built `occlusion-gate.mjs` for it, as its own gate rather than a second
+assertion here. See that script's own doc comment and this file's own
+entry for it, below.
 
 **Do not widen this gate.** Adding a second assertion before the first has
 run stable in CI for a while is how `DEC-048` condition 3 starts costing
@@ -67,6 +75,17 @@ attention.
   drag needs `Input.dispatchDragEvent`/`Input.setInterceptDrags`, a CDP
   domain `cdp.mjs` does not wrap, and that question (`GATE-005` candidate
   4) is declined on the record, not built here.
+- `occlusion-gate.mjs` — **a fourth gate** (`OCCL-001`, `061`, `§10.55`).
+  For every visible interactive control inside `header.navbar`, asserts
+  no two overlap — the property that let the account menu's own
+  clickable box cover the search field's right edge at 768/800px,
+  invisible to this directory's own overflow assertion (nothing
+  scrolled) and to a screenshot (the overlapping region was transparent
+  `.btn-ghost` padding). Imports `overflow-gate.mjs`'s own
+  `WIDTHS`/`ADVERSARIAL_STRINGS`/`createFixtures`/`buildPages` — "the
+  gate's own five widths, on the pages it already visits," literally,
+  not a second list kept in sync by hand. Its own port (`4177`), own
+  scratch server and database.
 - `doc-screenshots.mjs` — **not a gate** (`DOCS-004`, owner request;
   `DOCS-007` closed its own escalation). Starts its own scratch instance on
   its own port (`4176` by default) and reuses `overflow-gate.mjs`'s own
@@ -109,6 +128,7 @@ cargo build -p peisear
 node browser-checks/overflow-gate.mjs
 node browser-checks/undo-mousedown-trap.mjs
 node browser-checks/drag-outcome-gate.mjs
+node browser-checks/occlusion-gate.mjs
 ```
 
 Needs a Chrome-family browser on `$PATH` (`google-chrome-stable`,
@@ -116,16 +136,16 @@ Needs a Chrome-family browser on `$PATH` (`google-chrome-stable`,
 pointing at one. `PEISEAR_BIN` overrides the binary path (default
 `target/debug/peisear`); `PEISEAR_PORT` overrides the scratch port.
 
-**The three scripts default to different ports — `4173`, `4174` and
-`4175` — and each starts and tears down its own server and scratch
-database.** That is why they share one CI job safely. **But `PEISEAR_PORT`
-is read by all three**, so setting it gives them the *same* port.
-Sequentially that is harmless, since each script's `finally` block kills
-its server before the next starts. **In parallel it is a silent
-collision**, and `PEISEAR_PORT` is the reason: if these are ever run
-concurrently, give each its own port rather than assuming the defaults still
-apply. Recorded here because the defaults make the hazard invisible until
-someone parallelises the job to save a minute.
+**The four scripts default to different ports — `4173`, `4174`,
+`4175` and `4177` — and each starts and tears down its own server and
+scratch database.** That is why they share one CI job safely. **But
+`PEISEAR_PORT` is read by all four**, so setting it gives them the
+*same* port. Sequentially that is harmless, since each script's
+`finally` block kills its server before the next starts. **In parallel
+it is a silent collision**, and `PEISEAR_PORT` is the reason: if these
+are ever run concurrently, give each its own port rather than assuming
+the defaults still apply. Recorded here because the defaults make the
+hazard invisible until someone parallelises the job to save a minute.
 
 ## `DEC-048`, condition by condition
 

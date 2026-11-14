@@ -39,7 +39,11 @@ export const BASE = `http://127.0.0.1:${PORT}`;
 // unbroken run that same defect fails at 390 too. 320's value is the
 // defect that manifests *only* at the narrowest phone — which is
 // exactly what it caught on its first run.
-const WIDTHS = [
+//
+// `OCCL-001`: exported so `occlusion-gate.mjs` sweeps "the gate's own
+// five widths" literally, by importing this array, rather than a
+// second copy that could drift from it.
+export const WIDTHS = [
   [320, 568, true], [390, 844, true], [768, 1024, false],
   [1280, 900, false], [1920, 1080, false],
 ];
@@ -562,6 +566,49 @@ export async function createFixtures(strings, onRegistered) {
   return { cookie: jar.header(), projectId, issueId, assignedIssueId, teamSlug, sprintId, completedSprintId, calendarUrls };
 }
 
+// `OCCL-001`: extracted out of `main()` and exported so
+// `occlusion-gate.mjs` sweeps the exact page set "it already visits"
+// literally, from one `createFixtures(ADVERSARIAL_STRINGS)` result,
+// rather than a second copy of this map that could drift from it.
+export function buildPages({ projectId, issueId, assignedIssueId, teamSlug, sprintId, completedSprintId, calendarUrls }) {
+  return {
+    today: `${BASE}/today`,
+    inbox: `${BASE}/inbox`,
+    calendar: `${BASE}/today/calendar`,
+    projects: `${BASE}/projects`,
+    project_detail: `${BASE}/projects/${projectId}`,
+    // `LAYOUT-005`: this key was `board`, and it points at the list
+    // view. The board is the default view, which `project_detail`
+    // above already covers -- a coverage log should not name a page
+    // after the one it is not.
+    list: `${BASE}/projects/${projectId}?view=list`,
+    // `LAYOUT-005`: both absent from this list until now, which is
+    // why the fixture that exposed five sites never saw these two.
+    project_calendar: `${BASE}/projects/${projectId}/calendar`,
+    // `GATE-003`: the day and month layouts, both axes (the two above are week).
+    ...Object.fromEntries(Object.entries(calendarUrls).map(([k, v]) => [k, `${BASE}${v}`])),
+    team_detail: `${BASE}/teams/${teamSlug}`,
+    // `LAYOUT-008`: four more absent pages. Three render the sprint
+    // name or goal; `issue_new` renders the workload hint's chips,
+    // which hold display names.
+    sprints: `${BASE}/teams/${teamSlug}/sprints`,
+    sprint_detail: `${BASE}/teams/${teamSlug}/sprints/${sprintId}`,
+    sprint_plan: `${BASE}/teams/${teamSlug}/sprints/${sprintId}/plan`,
+    // `SPRINT-005`: the completed-sprint form of the detail page.
+    sprint_detail_completed: `${BASE}/teams/${teamSlug}/sprints/${completedSprintId}`,
+    issue_new: `${BASE}/projects/${projectId}/issues/new`,
+    issue_detail: `${BASE}/projects/${projectId}/issues/${issueId}`,
+    // `GATE-002`: the assigned issue's detail page, so its assignee badge is held
+    // by the gate; the older issue above stays unassigned and unchanged.
+    issue_detail_assigned: `${BASE}/projects/${projectId}/issues/${assignedIssueId}`,
+    settings: `${BASE}/settings`,
+    settings_notifications: `${BASE}/settings/notifications`,
+    teams: `${BASE}/teams`,
+    search: `${BASE}/search?q=fixture`,
+    delete_interstitial: `${BASE}/projects/${projectId}/issues/${issueId}/delete`,
+  };
+}
+
 async function main() {
   const dbDir = mkdtempSync(join(tmpdir(), 'overflow-gate-db-'));
   const dbPath = join(dbDir, 'app.db');
@@ -586,45 +633,11 @@ async function main() {
     await waitForServer(`${BASE}/login`);
     log('server ready');
 
-    const { cookie, projectId, issueId, assignedIssueId, teamSlug, sprintId, completedSprintId, calendarUrls } = await createFixtures(ADVERSARIAL_STRINGS);
-    log(`fixtures created: project=${projectId} issue=${issueId}`);
+    const fixture = await createFixtures(ADVERSARIAL_STRINGS);
+    log(`fixtures created: project=${fixture.projectId} issue=${fixture.issueId}`);
+    const { cookie } = fixture;
 
-    const pages = {
-      today: `${BASE}/today`,
-      inbox: `${BASE}/inbox`,
-      calendar: `${BASE}/today/calendar`,
-      projects: `${BASE}/projects`,
-      project_detail: `${BASE}/projects/${projectId}`,
-      // `LAYOUT-005`: this key was `board`, and it points at the list
-      // view. The board is the default view, which `project_detail`
-      // above already covers -- a coverage log should not name a page
-      // after the one it is not.
-      list: `${BASE}/projects/${projectId}?view=list`,
-      // `LAYOUT-005`: both absent from this list until now, which is
-      // why the fixture that exposed five sites never saw these two.
-      project_calendar: `${BASE}/projects/${projectId}/calendar`,
-      // `GATE-003`: the day and month layouts, both axes (the two above are week).
-      ...Object.fromEntries(Object.entries(calendarUrls).map(([k, v]) => [k, `${BASE}${v}`])),
-      team_detail: `${BASE}/teams/${teamSlug}`,
-      // `LAYOUT-008`: four more absent pages. Three render the sprint
-      // name or goal; `issue_new` renders the workload hint's chips,
-      // which hold display names.
-      sprints: `${BASE}/teams/${teamSlug}/sprints`,
-      sprint_detail: `${BASE}/teams/${teamSlug}/sprints/${sprintId}`,
-      sprint_plan: `${BASE}/teams/${teamSlug}/sprints/${sprintId}/plan`,
-      // `SPRINT-005`: the completed-sprint form of the detail page.
-      sprint_detail_completed: `${BASE}/teams/${teamSlug}/sprints/${completedSprintId}`,
-      issue_new: `${BASE}/projects/${projectId}/issues/new`,
-      issue_detail: `${BASE}/projects/${projectId}/issues/${issueId}`,
-      // `GATE-002`: the assigned issue's detail page, so its assignee badge is held
-      // by the gate; the older issue above stays unassigned and unchanged.
-      issue_detail_assigned: `${BASE}/projects/${projectId}/issues/${assignedIssueId}`,
-      settings: `${BASE}/settings`,
-      settings_notifications: `${BASE}/settings/notifications`,
-      teams: `${BASE}/teams`,
-      search: `${BASE}/search?q=fixture`,
-      delete_interstitial: `${BASE}/projects/${projectId}/issues/${issueId}/delete`,
-    };
+    const pages = buildPages(fixture);
     log(`coverage: ${Object.keys(pages).length} pages x ${WIDTHS.length} widths`);
 
     browser = await launch({ width: 1280, height: 900 });

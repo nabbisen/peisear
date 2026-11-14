@@ -262,8 +262,26 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                 // The whole block is wrapped in `relative` so the
                 // dropdown's `absolute` positioning can be relative
                 // to the input, not the whole navbar.
+                //
+                // `OCCL-001`: `min-w-0` on both this `<form>` and the
+                // `<input>` below -- the account menu's own box covers
+                // this field's right edge at 768/800px without it.
+                // `w-48` alone is not a `flex-shrink: 0`, but a flex
+                // item's default automatic minimum size still floors
+                // at its specified width for a form control whose
+                // `overflow` is `visible` (the default), so the input
+                // never actually shrank below 192px -- the same
+                // `min-w-0`-at-every-level-of-nesting lesson `LAYOUT-006`
+                // already recorded for the account button a few lines
+                // down, here for the search field instead. Measured,
+                // not assumed: `min-w-0` on the `<input>` alone leaves
+                // the overlap at both widths unchanged; adding it to
+                // the `<form>` too clears it (768/800px: -18 -> +8,
+                // identical to the un-constrained gap at 860px+, and
+                // no change there at all). `min-w-0` on `<nav>` as well
+                // over-shrinks for no further benefit, so it stays off.
                 <form method="get" action="/search"
-                      class="relative flex items-center gap-1"
+                      class="relative flex items-center gap-1 min-w-0"
                       role="search"
                       aria-label=t(MessageKey::NavSearchFormLabel)>
                     <span aria-hidden="true">{t(MessageKey::NavLinkSearch)}</span>
@@ -271,7 +289,7 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                            name="q"
                            placeholder=t(MessageKey::NavSearchPlaceholder)
                            autocomplete="off"
-                           class=grow("input input-bordered input-sm w-48")
+                           class=grow("input input-bordered input-sm w-48 min-w-0")
                            data-typeahead="global"
                            aria-label=t(MessageKey::NavSearchQueryLabel)/>
                     // Container the JS populates with the

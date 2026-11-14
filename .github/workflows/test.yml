@@ -124,8 +124,19 @@ jobs:
   # toast's Tab order, and the drop's stored effect read back over
   # HTTP. Port `4175`, its own scratch server and database, independent
   # of the other two.
+  #
+  # `OCCL-001` (`061`, `§10.55`): a fourth gate, same reasoning again
+  # -- two controls occluding each other at a measured width
+  # (768/800px, the account menu over the search field's right edge)
+  # is a property `overflow-gate.mjs`'s own `scrollWidth <=
+  # clientWidth` cannot see (nothing scrolled), and a screenshot cannot
+  # either (the overlapping region is transparent `.btn-ghost`
+  # padding). `occlusion-gate.mjs` imports `overflow-gate.mjs`'s own
+  # `WIDTHS`/`createFixtures`/`buildPages` rather than a second copy of
+  # either, so it sweeps the same five widths on the same pages by
+  # construction. Port `4177`, its own scratch server and database.
   browser-overflow-gate:
-    name: browser checks (overflow gate + undo mousedown trap + drag outcome)
+    name: browser checks (overflow gate + undo mousedown trap + drag outcome + occlusion)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -135,6 +146,7 @@ jobs:
       - run: node browser-checks/overflow-gate.mjs
       - run: node browser-checks/undo-mousedown-trap.mjs
       - run: node browser-checks/drag-outcome-gate.mjs
+      - run: node browser-checks/occlusion-gate.mjs
 
   # NFR-REL-011: README.md's third install path (`cargo install
   # peisear`) exercised end to end by CI, on the artefact that path
