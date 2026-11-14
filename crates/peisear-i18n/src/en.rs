@@ -538,10 +538,11 @@ pub(crate) fn render(key: MessageKey) -> String {
             last_completed,
             gap,
         } => format!(
-            "Across the {day_count} days from {first_label} to {last_label}, committed \
-             went from {first_committed} to {last_committed} pt and completed went from \
+            "Across the {} from {first_label} to {last_label}, committed went from \
+             {first_committed} to {last_committed} pt and completed went from \
              {first_completed} to {last_completed} pt. The gap between them, {gap} pt, \
-             is in flight."
+             is in flight.",
+            counted(day_count, "day", "days")
         ),
         MessageKey::BurndownTableAriaLabel => "Burndown values".to_string(),
         MessageKey::BurndownTableDateHeader => "Date".to_string(),
@@ -688,8 +689,9 @@ pub(crate) fn render(key: MessageKey) -> String {
             overload_streak_days,
             window_days,
         } => format!(
-            "Over capacity for {overload_streak_days} of the last {window_days} snapshots. \
-             A short break or a backlog re-prioritisation often helps here."
+            "Over capacity for {overload_streak_days} of the last {}. \
+             A short break or a backlog re-prioritisation often helps here.",
+            counted(window_days, "snapshot", "snapshots")
         ),
         MessageKey::ReadFirstStalledTitle => {
             "An assigned issue hasn't moved in a while.".to_string()
@@ -697,32 +699,36 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::ReadFirstStalledBody {
             stalled_assigned_max_days,
         } => format!(
-            "Your oldest in-flight assigned issue has been open for \
-             {stalled_assigned_max_days} days. Worth a look — it may be blocked, or worth \
-             re-scoping."
+            "Your oldest in-flight assigned issue has been open for {}. Worth a look — it may \
+             be blocked, or worth re-scoping.",
+            counted(stalled_assigned_max_days, "day", "days")
         ),
         MessageKey::ReadFirstWipTitle => "WIP is over your limit.".to_string(),
         MessageKey::ReadFirstWipBody {
             current_wip,
             effective_wip_limit,
         } => format!(
-            "You have {current_wip} issues in progress; your effective limit is \
-             {effective_wip_limit}. Pushing one to Done before starting more keeps focus crisp."
+            "You have {} in progress; your effective limit is {effective_wip_limit}. Pushing \
+             one to Done before starting more keeps focus crisp.",
+            counted(current_wip, "issue", "issues")
         ),
         MessageKey::ReadFirstLongStaleTitle => {
             "Some long-stale issues are still assigned to you.".to_string()
         }
-        MessageKey::ReadFirstLongStaleBody { long_stale_count } => {
-            let plural = if long_stale_count == 1 {
-                "issue"
-            } else {
-                "issues"
-            };
-            format!(
-                "{long_stale_count} {plural} haven't been touched in over two weeks. \
-                 Closing or re-assigning them clears your queue."
-            )
-        }
+        // GRAM-002 round 2 (§10.59): this hand-written `if` chose the
+        // right noun ("1 issue", not "1 issues") and still disagreed
+        // with its own number -- the verb ("haven't") and the pronoun
+        // ("them"/"their") three and nine words past the number were
+        // never touched by it. counted() now carries the whole
+        // predicate in both arms, the shape
+        // IndicatorExplanationWipCompliance already uses.
+        MessageKey::ReadFirstLongStaleBody { long_stale_count } => counted(
+            long_stale_count,
+            "issue hasn't been touched in over two weeks. Closing or re-assigning it clears \
+             your queue.",
+            "issues haven't been touched in over two weeks. Closing or re-assigning them \
+             clears your queue.",
+        ),
         MessageKey::PersonalDashboardTitle => "Me".to_string(),
         MessageKey::NothingToShowMessage => "Nothing to show yet.".to_string(),
         MessageKey::PersonalDashboardSubtitle { display_name } => {
@@ -762,12 +768,13 @@ pub(crate) fn render(key: MessageKey) -> String {
              vs. your capacity if you've set one."
                 .to_string()
         }
-        MessageKey::ThroughputGlossaryDefinition { window_days } => {
-            format!(" — issues you have moved to Done in the last {window_days} days.")
-        }
+        MessageKey::ThroughputGlossaryDefinition { window_days } => format!(
+            " — issues you have moved to Done in the last {}.",
+            counted(window_days, "day", "days")
+        ),
         MessageKey::LongStaleGlossaryDefinition { window_days } => format!(
-            " — in-flight issues assigned to you that have not been touched in over \
-             {window_days} days."
+            " — in-flight issues assigned to you that have not been touched in over {}.",
+            counted(window_days, "day", "days")
         ),
         MessageKey::PaceGlossaryDefinition => {
             " — active in-progress time per story point on your recently-completed \
@@ -813,19 +820,29 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::StalledDaysValue {
             stalled_assigned_max_days,
         } => format!("{stalled_assigned_max_days} d"),
+        // GRAM-002 round 2 (§10.59): the pre-fix guard run did not
+        // find this one -- "consecutive" sits between the number and
+        // the noun it counts, one word short of the guard's own
+        // immediate-adjacency check. The table names it anyway; fixed
+        // on that basis, not the guard's.
         MessageKey::OverloadStreakAriaLabel {
             overload_streak_days,
             is_watch,
         } => format!(
-            "Overload streak: {overload_streak_days} consecutive snapshots over capacity \
-             ({}).",
+            "Overload streak: {} over capacity ({}).",
+            counted(
+                overload_streak_days,
+                "consecutive snapshot",
+                "consecutive snapshots"
+            ),
             if is_watch { "watch" } else { "steady" }
         ),
         MessageKey::StalledAriaLabel {
             stalled_assigned_max_days,
             is_watch,
         } => format!(
-            "Oldest stalled assigned issue: {stalled_assigned_max_days} days ({}).",
+            "Oldest stalled assigned issue: {} ({}).",
+            counted(stalled_assigned_max_days, "day", "days"),
             if is_watch { "watch" } else { "steady" }
         ),
         MessageKey::DriftInsufficientDataAriaLabel => {
@@ -850,7 +867,8 @@ pub(crate) fn render(key: MessageKey) -> String {
             direction,
         } => format!(
             "Estimation drift: recent {recent_median_days_per_point:.2} d/pt vs. older \
-             {older_median_days_per_point:.2} d/pt over the last {window_days} days ({}).",
+             {older_median_days_per_point:.2} d/pt over the last {} ({}).",
+            counted(window_days, "day", "days"),
             drift_trend_phrase(direction)
         ),
         MessageKey::SwitchingInsufficientDataAriaLabel => {
@@ -863,16 +881,20 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::SwitchingSampleLine {
             total_events_observed,
             window_days,
-        } => format!("{total_events_observed} events over {window_days} d"),
+        } => format!(
+            "{} over {window_days} d",
+            counted(total_events_observed, "event", "events")
+        ),
         MessageKey::SwitchingAriaLabel {
             median,
             total_events_observed,
             window_days,
         } => format!(
-            "Switching pattern: median {} pickups per active day ({total_events_observed} \
-             total events over {window_days} days). For context only — high or low here \
-             is not a quality judgement.",
-            switching_median_number(median)
+            "Switching pattern: median {} pickups per active day ({} over {}). For context \
+             only — high or low here is not a quality judgement.",
+            switching_median_number(median),
+            counted(total_events_observed, "total event", "total events"),
+            counted(window_days, "day", "days")
         ),
 
         // ---- I18N-005d: components/settings ----
@@ -1213,16 +1235,20 @@ pub(crate) fn render(key: MessageKey) -> String {
             watch_days,
             concern_days,
         } => format!(
-            "Good under {watch_days} days. Watch from {watch_days} days, continuing from \
-             {concern_days} days. Measured from the oldest issue still Open or In Progress."
+            "Good under {}. Watch from {}, continuing from {}. Measured from the oldest issue \
+             still Open or In Progress.",
+            counted(watch_days, "day", "days"),
+            counted(watch_days, "day", "days"),
+            counted(concern_days, "day", "days")
         ),
         MessageKey::IndicatorCalculationActivity {
             good_count,
             watch_count,
             window_days,
         } => format!(
-            "Good at {good_count} or more issues created or finished in the last {window_days} \
-             days. Watch below {good_count}, continuing below {watch_count}."
+            "Good at {good_count} or more issues created or finished in the last {}. Watch \
+             below {good_count}, continuing below {watch_count}.",
+            counted(window_days, "day", "days")
         ),
         MessageKey::IndicatorCalculationBusFactor {
             watch_pct,
@@ -1236,8 +1262,9 @@ pub(crate) fn render(key: MessageKey) -> String {
             concern_pct,
             window_days,
         } => format!(
-            "Good under {watch_pct}% of in-flight issues untouched for {window_days} days or \
-             more. Watch from {watch_pct}%, continuing from {concern_pct}%."
+            "Good under {watch_pct}% of in-flight issues untouched for {}. Watch from \
+             {watch_pct}%, continuing from {concern_pct}%.",
+            counted(window_days, "day or more", "days or more")
         ),
         MessageKey::IndicatorCalculationWipCompliance {
             watch_pct,
@@ -1311,13 +1338,15 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::OverloadStreakSignalMessage {
             overload_streak_days,
             window_days,
-        } => {
-            format!("Over capacity for {overload_streak_days} of the last {window_days} snapshots.")
-        }
+        } => format!(
+            "Over capacity for {overload_streak_days} of the last {}.",
+            counted(window_days, "snapshot", "snapshots")
+        ),
         MessageKey::StalledAssignedSignalMessage {
             stalled_assigned_max_days,
         } => format!(
-            "Oldest in-flight assigned issue hasn't moved in {stalled_assigned_max_days} days."
+            "Oldest in-flight assigned issue hasn't moved in {}.",
+            counted(stalled_assigned_max_days, "day", "days")
         ),
         MessageKey::EstimationDriftUpSignalMessage => {
             "Recent issues are taking longer per point than older ones.".to_string()
@@ -1499,8 +1528,14 @@ fn throughput_value(done: i64, total: i64) -> String {
 }
 
 /// `GRAM-002` (`061`, `§10.59`) — a private helper, not a public API
-/// and not a plural-rules mechanism: this locale is English-only
-/// (`FR-I18N` is not amended here), and English needs exactly two
+/// and not a plural-rules mechanism: this locale is English-only, and
+/// `NFR-LANG-005` (full internationalisation deferred, the
+/// architecture must not preclude it) is the requirement this stays
+/// inside of -- a private English-only helper does not preclude
+/// anything. Round 1's own handoff and report both cited `FR-I18N`
+/// here, an id this repository does not have; round 2's handoff named
+/// that error, so it is corrected in this comment rather than carried
+/// forward a third time. English needs exactly two
 /// forms. Every counted sentence in this crate's English text goes
 /// through it, so a sentence cannot disagree with its own number --
 /// the number and both forms are chosen in the same call, not

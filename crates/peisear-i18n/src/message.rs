@@ -2882,6 +2882,19 @@ impl MessageKey {
                 last_completed: 8,
                 gap: 7,
             },
+            // GRAM-002 round 2 (§10.59): a singular sample, so the
+            // guard built in this round can see this variant's
+            // count-bearing field at 1.
+            MessageKey::BurndownSummary {
+                day_count: 1,
+                first_label: "08-01".to_string(),
+                last_label: "08-14".to_string(),
+                first_committed: 10,
+                last_committed: 15,
+                first_completed: 0,
+                last_completed: 8,
+                gap: 7,
+            },
             MessageKey::BurndownTableAriaLabel,
             MessageKey::BurndownTableDateHeader,
             MessageKey::IssuesInSprintAriaLabel,
@@ -2989,14 +3002,28 @@ impl MessageKey {
                 overload_streak_days: 3,
                 window_days: 5,
             },
+            // GRAM-002 round 2 (§10.59): a singular sample, so the
+            // guard built in this round can see this variant's
+            // count-bearing fields at 1.
+            MessageKey::ReadFirstOverloadBody {
+                overload_streak_days: 1,
+                window_days: 1,
+            },
             MessageKey::ReadFirstStalledTitle,
             MessageKey::ReadFirstStalledBody {
                 stalled_assigned_max_days: 10,
+            },
+            MessageKey::ReadFirstStalledBody {
+                stalled_assigned_max_days: 1,
             },
             MessageKey::ReadFirstWipTitle,
             MessageKey::ReadFirstWipBody {
                 current_wip: 5,
                 effective_wip_limit: 3,
+            },
+            MessageKey::ReadFirstWipBody {
+                current_wip: 1,
+                effective_wip_limit: 1,
             },
             MessageKey::ReadFirstLongStaleTitle,
             MessageKey::ReadFirstLongStaleBody {
@@ -3025,7 +3052,12 @@ impl MessageKey {
             MessageKey::WipGlossaryDefinition,
             MessageKey::LoadGlossaryDefinition,
             MessageKey::ThroughputGlossaryDefinition { window_days: 30 },
+            // GRAM-002 round 2 (§10.59): a singular sample per
+            // count-bearing variant, so the guard built in this round
+            // can see it.
+            MessageKey::ThroughputGlossaryDefinition { window_days: 1 },
             MessageKey::LongStaleGlossaryDefinition { window_days: 30 },
+            MessageKey::LongStaleGlossaryDefinition { window_days: 1 },
             MessageKey::PaceGlossaryDefinition,
             MessageKey::SustainabilityHeading,
             MessageKey::SustainabilityGlossaryDefinition,
@@ -3046,8 +3078,18 @@ impl MessageKey {
                 overload_streak_days: 3,
                 is_watch: true,
             },
+            // GRAM-002 round 2 (§10.59): a singular sample per
+            // count-bearing variant.
+            MessageKey::OverloadStreakAriaLabel {
+                overload_streak_days: 1,
+                is_watch: true,
+            },
             MessageKey::StalledAriaLabel {
                 stalled_assigned_max_days: 10,
+                is_watch: false,
+            },
+            MessageKey::StalledAriaLabel {
+                stalled_assigned_max_days: 1,
                 is_watch: false,
             },
             MessageKey::DriftInsufficientDataAriaLabel,
@@ -3064,10 +3106,22 @@ impl MessageKey {
                 total_events_observed: 12,
                 window_days: 14,
             },
+            // GRAM-002 round 2 (§10.59): a singular sample, both
+            // count-bearing fields at once, the shape round 1's own
+            // BurnoutSummaryBoth sample already used.
+            MessageKey::SwitchingSampleLine {
+                total_events_observed: 1,
+                window_days: 1,
+            },
             MessageKey::SwitchingAriaLabel {
                 median: 4.3,
                 total_events_observed: 12,
                 window_days: 14,
+            },
+            MessageKey::SwitchingAriaLabel {
+                median: 4.3,
+                total_events_observed: 1,
+                window_days: 1,
             },
             MessageKey::WipLimitExplanation {
                 default_wip_limit: 3,
@@ -3269,10 +3323,23 @@ impl MessageKey {
                 watch_days: 14,
                 concern_days: 28,
             },
+            // GRAM-002 round 2 (§10.59): a singular sample, both
+            // count-bearing fields at once (the shape round 1's own
+            // BurnoutSummaryBoth sample already used) -- `watch_days`
+            // appears twice in this one sentence, `concern_days` once.
+            MessageKey::IndicatorCalculationStaleness {
+                watch_days: 1,
+                concern_days: 1,
+            },
             MessageKey::IndicatorCalculationActivity {
                 good_count: 5,
                 watch_count: 1,
                 window_days: 14,
+            },
+            MessageKey::IndicatorCalculationActivity {
+                good_count: 5,
+                watch_count: 1,
+                window_days: 1,
             },
             MessageKey::IndicatorCalculationBusFactor {
                 watch_pct: 60,
@@ -3282,6 +3349,11 @@ impl MessageKey {
                 watch_pct: 20,
                 concern_pct: 40,
                 window_days: 14,
+            },
+            MessageKey::IndicatorCalculationLongStale {
+                watch_pct: 20,
+                concern_pct: 40,
+                window_days: 1,
             },
             MessageKey::IndicatorCalculationWipCompliance {
                 watch_pct: 1,
@@ -3325,8 +3397,17 @@ impl MessageKey {
                 overload_streak_days: 3,
                 window_days: 5,
             },
+            // GRAM-002 round 2 (§10.59): a singular sample, both
+            // count-bearing fields at once.
+            MessageKey::OverloadStreakSignalMessage {
+                overload_streak_days: 1,
+                window_days: 1,
+            },
             MessageKey::StalledAssignedSignalMessage {
                 stalled_assigned_max_days: 10,
+            },
+            MessageKey::StalledAssignedSignalMessage {
+                stalled_assigned_max_days: 1,
             },
             MessageKey::EstimationDriftUpSignalMessage,
             MessageKey::EstimationDriftDownSignalMessage,
@@ -3550,6 +3631,17 @@ impl MessageKey {
                 recent_median_days_per_point: 1.5,
                 older_median_days_per_point: 1.2,
                 window_days: 28,
+                direction,
+            }
+        }));
+        // GRAM-002 round 2 (§10.59): a singular sample per direction,
+        // so the guard built in this round can see this variant's
+        // count-bearing field at 1.
+        keys.extend(DriftDirectionLabel::all().into_iter().map(|direction| {
+            MessageKey::DriftAriaLabel {
+                recent_median_days_per_point: 1.5,
+                older_median_days_per_point: 1.2,
+                window_days: 1,
                 direction,
             }
         }));
