@@ -1,19 +1,22 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.62.0` (**what a screen shows before you ask it
-anything.** A project board or list opens on the work: the health and
-workload blocks collapse to one line each, marked as disclosures so
-they look openable, and `external-design §5.10` states that rule once
-with `FR-NAV-006` citing it. An outcome and its undo are **one thing in
-one place** — the corner toast is gone, the undo sits in the row it
-belongs to, it no longer expires on a clock (`FR-DM-006` amended away
-from `SPEC §39.2`'s own duration), and activating it returns focus.
-`/today`'s nav word becomes `Me`, closing `NFR-A11Y-012`'s last
-exception. Five register entries opened while assembling the candidate
-(`§10.55`–`§10.59`), one of them a P1 that lived on the development
-branch for a day and reached no release; implementation through
-`0.62.0`)
+**Covers release**: `0.63.0` (**the checks that could not see it.** No
+requirement is amended and none is added: three defects a reader could
+meet are repaired, and `§10.55`, `§10.58` and `§10.59` close with
+them — a disclosure that rendered no marker, seventeen counted
+sentences that disagreed with their own number, and two header
+controls that covered each other at 768–800 px. Each closure records
+the property its new check can and cannot see, because in all three
+cases the gate nearest the defect was green throughout and asking a
+neighbouring question. The release before it, `0.62.0`, is **what a
+screen shows before you ask it anything**: the health and workload
+blocks collapse to one line each with `external-design §5.10` stating
+that rule once and `FR-NAV-006` citing it; an outcome and its undo
+become one thing in one place, the corner toast gone and `FR-DM-006`
+amended away from `SPEC §39.2`'s own duration; `/today`'s nav word
+becomes `Me`, closing `NFR-A11Y-012`'s last exception; implementation
+through `0.63.0`)
 **Supersedes**: [`history/peisear-0.20.0-requirements-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.20.0-requirements-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 and through it
@@ -9215,7 +9218,8 @@ let `FR-DM-002` be violated for four releases without anyone checking.
 
 ## Appendix C — Requirements change history
 
-| **0.62.0 (this baseline)** | **What a screen shows before you ask it anything.** Unit three of the accessibility sequence: `VIEW-001` and its round 2 collapse the project screens' health and workload blocks to one line each — **44 px, constant across fixtures and widths** — with `external-design §5.10` stating the section-order rule once and **`FR-NAV-006`** citing rather than restating it. `VIEW-003` deletes the corner toast outright: one outcome, one place, the undo in the row it belongs to. **`FR-DM-006` is amended away from its own source's duration** — `SPEC §39.2` asks for *"approximately five seconds"*, and the clock is gone rather than paused, so WCAG 2.2.1's property holds by construction instead of being maintained by a pause/resume latch. `NAME-001` makes `/today`'s nav word `Me`, and **`NFR-A11Y-012` reaches Met for all five** destinations. **Five register entries opened while assembling the candidate**, more than any previous cut: `§10.55` (two header controls overlap at 768–800 px, which `overflow-gate` cannot see because it measures overflow and not occlusion), `§10.56` (a lost CI runner read as a 46-minute hang — *a duration on a run summary is not a measurement of what ran*), **`§10.57`** (a **P1**: `VIEW-003` deleted the undo's focus restoration on the architect's own written instruction, and `drag-outcome-gate` proved Undo could be **reached** without ever pressing it — restored by `FOCUS-001`, never released), `§10.58` (the 44 × 44 touch-target helper appends `inline-flex`, which stops a `<summary>` being a list item and so deletes its `::marker` — one accessibility requirement's helper disabling another's affordance, fixed by `DISC-001`), and `§10.59` (six counted sentences with no singular form; `GRAM-001` fixes the one this release promoted to a headline). **No migration. `DEC-007`: 666 → 676** |
+| **0.63.0 (this baseline)** | **The checks that could not see it.** Three defects a reader could meet, all shipped, **each invisible to every gate this project owned for a structural reason** — and in each case the repair makes the property true by construction, with the new check as a backstop rather than the mechanism. **No requirement amended, none added**, and the only user-visible copy change is agreement. `MARK-001`/`MARK-002` (`§10.58`, closed): ten `<summary>` controls rendered no marker because the 44 × 44 touch-target helper appends a `display` value that stops a `<summary>` being a list item; thirteen of fourteen now compose `grow_summary`, which **cannot** contribute one, and **both previous exceptions are deleted** rather than widened. `GRAM-002` and its two further rounds (`§10.59`, closed): **seventeen** counted sentences, not the six this register first named, now choose both forms in one place; the one in `/today`'s own callout had the right noun and the wrong verb. `OCCL-001` (`§10.55`, closed): a form control floors at its specified width at every level of nesting that floors, so the row's own shrink never reached the search field. **Four new checks, each watched failing on its own defect**, none pulling in a dependency — and each one's reach is recorded as a decision: the grammar check sees agreement only within two words of the number, the source check sees `== 1` and not `!= 1`, the occlusion gate samples five widths and 800 px is not one of them. **Three of the architect's own instructions were corrected by the rounds**: a citation to an id this repository does not have, an acceptance criterion `CONTRIBUTING.md` had retired, and a rule whose load-bearing word was wrong twice. **No migration. `DEC-007`: 676 → 687** |
+| 0.62.0 | **What a screen shows before you ask it anything.** Unit three of the accessibility sequence: `VIEW-001` and its round 2 collapse the project screens' health and workload blocks to one line each — **44 px, constant across fixtures and widths** — with `external-design §5.10` stating the section-order rule once and **`FR-NAV-006`** citing rather than restating it. `VIEW-003` deletes the corner toast outright: one outcome, one place, the undo in the row it belongs to. **`FR-DM-006` is amended away from its own source's duration** — `SPEC §39.2` asks for *"approximately five seconds"*, and the clock is gone rather than paused, so WCAG 2.2.1's property holds by construction instead of being maintained by a pause/resume latch. `NAME-001` makes `/today`'s nav word `Me`, and **`NFR-A11Y-012` reaches Met for all five** destinations. **Five register entries opened while assembling the candidate**, more than any previous cut: `§10.55` (two header controls overlap at 768–800 px, which `overflow-gate` cannot see because it measures overflow and not occlusion), `§10.56` (a lost CI runner read as a 46-minute hang — *a duration on a run summary is not a measurement of what ran*), **`§10.57`** (a **P1**: `VIEW-003` deleted the undo's focus restoration on the architect's own written instruction, and `drag-outcome-gate` proved Undo could be **reached** without ever pressing it — restored by `FOCUS-001`, never released), `§10.58` (the 44 × 44 touch-target helper appends `inline-flex`, which stops a `<summary>` being a list item and so deletes its `::marker` — one accessibility requirement's helper disabling another's affordance, fixed by `DISC-001`), and `§10.59` (six counted sentences with no singular form; `GRAM-001` fixes the one this release promoted to a headline). **No migration. `DEC-007`: 666 → 676** |
 | Version | Change |
 |---|---|
 | V1 (`KICK`) | MVP scope: authentication, projects, issues, minimal UI |

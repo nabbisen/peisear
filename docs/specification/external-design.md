@@ -2,10 +2,13 @@
 
 **Document type**: External design (basic design)
 **Document status**: Baseline
-**Covers release**: `0.62.0` (**`§5.10` is new** — a screen's first
-content is the reader's own work, and analysis about it is one line
-until asked for; `§3.1`'s diagram, `§3.2`'s responsibility table and
-`SCR-04`'s own name now read `Me`; see the `0.62.0` row below)
+**Covers release**: `0.63.0` (**nothing in this document is amended** —
+`0.63.0` repairs three defects without changing a screen, a route, a
+state or a word of copy beyond singular/plural agreement; see the
+`0.63.0` row below. `0.62.0` before it added **`§5.10`** — a screen's
+first content is the reader's own work, and analysis about it is one
+line until asked for — and made `§3.1`'s diagram, `§3.2`'s
+responsibility table and `SCR-04`'s own name read `Me`)
 **Supersedes**: [`history/peisear-0.19.1-external-design-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.19.1-external-design-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 retained unedited as the record of that release
@@ -2417,7 +2420,8 @@ entries about what is executed by nothing.
 
 ## Appendix C — Change history
 
-| **0.62.0 (this baseline)** | **`§5.10` is added — a real content change, and the rule unit three existed to earn.** *A screen's first content is the reader's own work; analysis about that work is one line until the reader asks for it.* Stated **once**, for the same reason `§5.9` gives, with the surfaces it governs, four obligations and the measurements behind them — including that a collapsed block is **44 px and constant**, not a figure that moves with the data — and an explicit statement of what it does **not** govern: the ten other `<details>` elements, which are a set to be decided once rather than absorbed by resemblance. `FR-NAV-006` cites this section rather than restating it. **`§3.1`'s layout diagram, `§3.2`'s responsibility table and `SCR-04`'s own screen name all read `Me`**, following `NAME-001`; the route does not move and `FR-NAV-002`'s redirects are untouched |
+| **0.63.0 (this baseline)** | **No screen, route, state or copy changed, and the copy exception is agreement alone.** `0.63.0` repairs three defects without touching anything this document describes: a `<summary>`'s missing `::marker` is a rendering defect against `NFR-A11Y-007`'s affordance, not a change to any screen's content; seventeen counted sentences now read *"1 issue"* where they read *"1 issues"*, which is the same sentence saying the same thing correctly; and the site header's search field and account control stop overlapping at 768–800 px, which restores the layout `§3.1` already describes rather than altering it. **Stated rather than left silent**, on `0.59.0`'s own lesson below: this row exists because the release happened, not because the content changed, and *"nothing for this document to amend"* is a finding that has to be written down to be distinguishable from a sweep nobody ran |
+| 0.62.0 | **`§5.10` is added — a real content change, and the rule unit three existed to earn.** *A screen's first content is the reader's own work; analysis about that work is one line until the reader asks for it.* Stated **once**, for the same reason `§5.9` gives, with the surfaces it governs, four obligations and the measurements behind them — including that a collapsed block is **44 px and constant**, not a figure that moves with the data — and an explicit statement of what it does **not** govern: the ten other `<details>` elements, which are a set to be decided once rather than absorbed by resemblance. `FR-NAV-006` cites this section rather than restating it. **`§3.1`'s layout diagram, `§3.2`'s responsibility table and `SCR-04`'s own screen name all read `Me`**, following `NAME-001`; the route does not move and `FR-NAV-002`'s redirects are untouched |
 | Version | Change |
 |---|---|
 | GUI v0.1 | Original GUI external specification, based on `0.16.0` |

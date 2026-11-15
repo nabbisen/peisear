@@ -9,6 +9,87 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.63.0] — 2026-11-15
+
+**Three defects you could meet, each of which every check this project
+owns was structurally unable to see.** The repairs are small. What this
+release is actually buying is the four checks that would have caught
+them — and in each case the property is made true by construction first,
+so the check is a backstop rather than the mechanism.
+
+### Fixed
+
+- **A line that opens now looks like a line that opens.** Ten
+  disclosure controls across the product — the health and workload
+  summaries, settings sections, sprint velocity, team invitations —
+  rendered **no triangle at all**. They worked: clicking still opened
+  them. Nothing on screen said they would. The cause was one
+  accessibility helper disabling another's affordance: the helper that
+  guarantees a 44 × 44 touch target appends a `display` value that
+  stops a `<summary>` being a list item, and a `<summary>` that is not
+  a list item has no marker to draw. Thirteen of the fourteen now
+  compose a helper that **cannot** contribute a `display` value, so
+  the marker cannot be removed by styling again. The fourteenth is a
+  deliberate exception, and it is named as one.
+- **Counted sentences now agree with their own number.** *"1 issues"*,
+  *"the last 1 sprints"*, *"up by 1 points"*, *"Capacity 1 points"*,
+  *"open for 1 days"*, *"1 consecutive snapshots"* — and, in the
+  callout `/today` leads with, *"1 issue **haven't** been touched in
+  over two weeks"*, where the noun was right and the verb and pronoun
+  were not. **Seventeen strings**, across health, lists, sprints,
+  charts, capacity, notifications and screen-reader labels. They now
+  pick both forms in one place, so a sentence cannot disagree with its
+  own count.
+- **At 768–800 px, a click on the right edge of the search box opened
+  the account menu.** The account control's clickable box covered the
+  field by 18 px, and because that control is transparent padding, the
+  header *looked* right and a screenshot confirmed it did. The row's
+  own shrink mechanism simply never reached the search field: a form
+  control floors at its specified width unless told otherwise, at
+  every level of nesting. It is told otherwise now, at both.
+
+### Internal
+
+- **Four checks, each of which fails on its own defect** and none of
+  which existed before: a source rule that no `<summary>` can take a
+  helper that styles it; a test that renders **every** message at one
+  and reads it; a source rule that no hand-rolled singular/plural
+  branch returns; and an occlusion gate asserting that no two
+  interactive controls in the site header cover each other. Each was
+  watched failing, on the real defect, before being trusted.
+- **The occlusion gate found more of the defect than the investigation
+  that named it** — reverted, it fails at 1280 px as well as 768 px,
+  because it runs on this project's own adversarial fixture with a
+  77-character display name rather than a fresh minimal one.
+- `DEC-007`: **676 → 687**. No migration. No dependency added — all
+  four checks are hand-written rather than pulling in a library.
+
+### What this release does not fix
+
+- **The grammar check sees agreement only next to the number.** A verb
+  or a pronoun that disagrees further along the sentence — the exact
+  shape of the `/today` defect above — is invisible to it, and so is
+  a hand-rolled branch written `!= 1` rather than `== 1`. Both
+  boundaries were confirmed by deliberately reintroducing the defect,
+  and both are recorded rather than papered over. What would close
+  them is a type the code cannot express the mistake around, which is
+  a design change rather than a repair.
+- **It also sees only the messages the project already enumerates.**
+  Sixteen of this release's own seventeen strings had no sample at one
+  in that list until this release added them.
+- **The occlusion gate samples five widths**, and 800 px — one of the
+  two widths where the overlap was measured — is not one of them. The
+  remedy does not depend on width, which is what makes that
+  acceptable rather than a hole.
+- **The ten other collapsible blocks are still governed by nothing**,
+  and the typography and colour floor named three releases ago is
+  still unwritten. Both are design decisions, deliberately not taken
+  alongside three repairs.
+- Still open and unscheduled: a fixture that cannot render four
+  branches the overflow gate's own pages contain; no CI job compiling
+  for any platform but Linux outside the release tag; PostgreSQL
+  performance work.
+
 ## [0.62.0] — 2026-11-12
 
 ### Changed
