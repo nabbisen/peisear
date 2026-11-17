@@ -9124,6 +9124,20 @@ corrected here rather than quietly edited**, because this entry is
 already where one of the architect's own figures is recorded as wrong
 and a second instance belongs beside the first.
 
+**Round 2's own reasoning, since the ruling asked for it rather than
+just the fact.** Agreed: the worry that moving to `text-base-content/70`
+gives a site `contrast_scan` cannot verify a false "now guarded" look
+does not survive its own premise. The scan does not check this site's
+*current* value either way — it is not the comparison that matters.
+What matters is the day someone *lowers* it: `text-base-content/50`
+fails the scan by name on sight; `opacity-50` would be invisible to
+every check this project owns, forever, unless someone happens to look.
+The guarded spelling buys a future failure, which is what a backstop is
+for — it was never offered as a present assurance it does not have, and
+`NFR-A11Y-005`'s own entry already carries the disclaimer about what the
+guard does and does not see, so the spelling does not need to carry it
+again.
+
 What `calendar.rs:185` **kept** is its **size**: 10px rather than
 raised. Its real legibility limit is an unrelated, pre-existing defect
 — its own line is clipped by the block's `overflow-hidden` on any event
@@ -9163,6 +9177,51 @@ rather than something four readings have now passed over.
   cards came out marginally shorter, not taller, at 390 and 1280, with
   no wrap to a second line.
 
+**Round 2, 2026-11-17 — two measurements owed by the review, both
+closed.**
+
+**`calendar.rs:110`'s own line-height claim (zero cost) was right, but
+height is the wrong dimension — the badge lives on a `truncate` line it
+shares with `time` and `title`, is the last child, and is therefore the
+first thing an overflowing line's ellipsis eats.** Measured painted
+width (not asserted), for a short, a typical and a long project name,
+at 390 and 1280, month and week view, before (10px, live-patched) and
+after (12px, shipped) — via layout geometry (`<a>.scrollWidth` against
+`.clientWidth`, and the badge's own `.offsetWidth`), not font-metric
+arithmetic:
+
+- **At 390px, in both views, the badge is fully clipped — zero pixels
+  of it paint — for all three name lengths, before and after.** The
+  change is free here for the plain reason that there was nothing to
+  cost: a day cell is too narrow for any part of the badge to survive
+  the line's own ellipsis even at 10px. This is the finding the review
+  asked for rather than a bare "zero" — the badge does not reach a
+  phone-width month or week view at all, which is a question about
+  whether the information belongs on that surface, for `TYPE-003`,
+  not acted on here.
+- **At 1280px, the badge was already only partially visible before this
+  round — at most about four characters' worth, often fewer than one —
+  in every case tested.** Because the badge is the line's last child,
+  growing its own width grows the line's overflow by the same amount,
+  so the *pixel* budget actually painted does not change between 10px
+  and 12px (16px visible either way for the short name in month view;
+  21px → 20px for the long name, a rounding-sized difference). **But a
+  fixed pixel budget buys fewer characters once each character is
+  wider**: the short name's visible slice goes from representing roughly
+  2.5 characters at 10px to roughly 2.1 at 12px in month view; the long
+  name's from roughly 4.4 to roughly 3.5. Never a swing from legible to
+  clipped or back — every case measured was already showing a handful
+  of characters at most, or none — but a real, if modest, character
+  cost that the height measurement could not see and the pixel measurement
+  almost hides.
+
+**`calendar.rs:216`'s hour label, checked against the 48px gap to the
+day view's block column** (`absolute left-0` against the blocks'
+`absolute left-12 right-1`): `00:00` in tabular figures at 12px renders
+**30.7px** wide, measured directly (not the architect's own ~30px
+arithmetic) — **17.3px of clearance**, identical at 390 and 1280 (the
+label's width does not depend on viewport width). Clears.
+
 **Population effect.** The six-site population is now **one** (the
 kept `calendar.rs:185`); the other five moved onto scale classes. The
 `css_scan` live-rule population dropped **291 → 290** (one distinct
@@ -9177,6 +9236,18 @@ have numbers, at every background that matters. The type-floor
 question is untouched, exactly as the series' own README requires:
 `TYPE-002` and `TYPE-003` have not run, and whether any requirement
 gets written is still decided after `TYPE-003`, not before it.
+
+**`TYPE-001` round 2 closed, 2026-11-17.** The record is now correct
+(above) and carries the reasoning the ruling asked for, not just the
+fact. The badge's cost is now measured in the dimension it actually
+lives in (painted width/characters, not line-height) and the hour
+label's horizontal clearance is measured rather than assumed — both
+above. Neither finding is acted on: the badge's clipped-at-390
+behaviour and its character-level cost at 1280 are recorded for
+`TYPE-003` to read when it reaches this surface; the hour label clears
+and the question closes. The day-view badge's own clipping defect
+(found by round 1, above) stays found-and-not-fixed, unchanged by round
+2.
 
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0

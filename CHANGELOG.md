@@ -25,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   calendar's day-view project badge stays at its current size — its
   own legibility limit is an unrelated pre-existing defect, unaffected
   by this change (`TYPE-001`, `§10.60`).
+- All four of the calendar's smallest-text sites also moved from bare
+  `opacity-70` to the guarded `text-base-content/70`, measured
+  equivalent on every background involved (including the two tinted
+  ones) — no visible effect; it only changes what a future change to
+  the same colour would be checked against (`TYPE-001`, `§10.60`).
 
 ## [0.63.0] — 2026-11-15
 
