@@ -8989,6 +8989,67 @@ so the next person meets the boundary as a decision rather than an
 oversight.
 
 
+### 10.60 Nothing governs the size of the text, and the smallest text in the product is the text whose contrast nothing checks — **open**, `TYPE-001`–`TYPE-003`, 0.64.0; opened 2026-11-17 by the architect scoping that release, measuring the owner's own question of 2026-11-04 at source
+
+**Found while scoping, not by a gate** — which is this entry's first
+property: there is no gate to find it with.
+
+**Two facts, measured 2026-11-17 against `0.63.0`'s tree.**
+
+**(1) Neither specification governs typography at all.** `font-size`,
+*typography*, *text size* and *type scale* appear nowhere in
+`requirements.md` or `external-design.md`. There is no scale, no floor
+and no minimum. The product's smallest step is `text-xs` (12 px) by
+convention only, and **six sites go below it** — written as arbitrary
+values (`text-[10px]` ×4 in `calendar.rs`, `text-[11px]` in
+`projects.rs` and `issues.rs`), which is also why no census of scale
+classes can see them. This is the same shape as the ten ungoverned
+`<details>`: a convention that reads as a rule because nothing has ever
+contradicted it.
+
+**(2) All four 10 px sites use bare `opacity-70`, and two of them sit on
+a tint.** `NFR-A11Y-005` is **Met** and `/70` is the measured floor, and
+that entry already states both limits of its guard in terms: it bans a
+modifier range, it **does not cover bare `opacity` at all**, and it
+**does not know which background a passing modifier sits over**.
+`calendar.rs:110` is inside `bg-primary/10` and `calendar.rs:185` inside
+`bg-primary/15`. So the two unguarded limits meet at the four smallest
+pieces of text in the product, and **the ratios there have never been
+measured** — not when `QA-012` measured 111 sites, not when `QA-013`
+checked 21 bare-opacity sites by hand, and not since. **Today there are
+31 bare-opacity lines under `components/`** against that 21; the two
+populations may not have been defined identically, which is itself the
+reason an unguarded fact should not be carried as settled.
+
+**Why this is open rather than a repair.** The owner asked on 2026-11-04
+whether layout, typography and colour could be kinder to elder people,
+and asked for it to be considered *"carefully one by one with time we
+need"* — base layout, workflows, then each view. The architect attached
+one condition the same day: **rule after design** — adopt a floor after
+the views are decided, never before. That condition was met when
+`0.62.0` decided two views. **So what this entry records is an absence
+to be read, not a defect to be fixed**, and the three rounds of `0.64.0`
+read it one population at a time with removal available at every site.
+**Whether a type requirement gets written at all is decided after
+`TYPE-003`** — adopted or deliberately deferred, with the reason
+recorded either way. A round that adopts a floor early has done the
+thing the condition prohibits, and the series' own `README.md` says so.
+
+**What would close it.** Either a requirement that governs text size,
+or a recorded decision that none should exist — plus, for the contrast
+half, measured ratios for the four sites, since a limit that is stated
+and unmeasured is the weaker of the two states `§10.36`'s class
+describes. **It is deliberately not closed by this release's first
+round**: `TYPE-001` adds measurements to it, and it stays open until the
+third round decides the rule.
+
+**One correction recorded here rather than silently fixed.** The
+architect's note of 2026-11-04 put the `text-xs` population at *"ninety
+sites"*. The census at source is **126**, across thirteen component
+files. The scope was proposed on the re-derived figure, and the row
+carries the correction; the figure in the note was never measured.
+
+
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
 **Promoted from this document's own older compact register**
