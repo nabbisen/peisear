@@ -284,7 +284,10 @@ pub fn PersonalDashboard(
                 })}
 
                 <section class="mb-6" aria-label=t(MessageKey::CurrentLoadSectionLabel)>
-                    <h2 class="text-xs uppercase tracking-wide text-base-content/70 mb-2">
+                    // `TYPE-002` (`§10.60`): raised from `text-xs` --
+                    // measured cost +4px (16px -> 20px line-height) at
+                    // both 390 and 1280, no wrap, no overflow.
+                    <h2 class="text-sm uppercase tracking-wide text-base-content/70 mb-2">
                         {t(MessageKey::RightNowHeading)}
                     </h2>
                     <div class="flex flex-wrap items-center gap-3">
@@ -292,7 +295,18 @@ pub fn PersonalDashboard(
                              role="group"
                              aria-label=wip_aria_label.clone()
                              title=wip_aria_label>
-                            <span class="text-xs text-base-content/70">{t(MessageKey::WipChipLabel)}</span>
+                            // `TYPE-002` (`§10.60`): every chip-label
+                            // `text-xs` site on this page raised to
+                            // `text-sm` -- measured cost is **no change
+                            // in row-wrap count** at 390 or 1280 for any
+                            // of the four chip rows on this page,
+                            // checked live with every such label raised
+                            // at once (two rows already wrap to two
+                            // lines at 390 before this change, a
+                            // pre-existing fact this round neither
+                            // causes nor fixes). Not individually
+                            // re-commented at every site below.
+                            <span class="text-sm text-base-content/70">{t(MessageKey::WipChipLabel)}</span>
                             <span class=wip_badge_class>
                                 <span class="mr-1" aria-hidden="true">{wip_glyph}</span>
                                 {wip_value}
@@ -301,10 +315,16 @@ pub fn PersonalDashboard(
 
                         <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
                              title=t(MessageKey::LoadChipTooltip)>
-                            <span class="text-xs text-base-content/70">{t(MessageKey::LoadChipLabel)}</span>
+                            <span class="text-sm text-base-content/70">{t(MessageKey::LoadChipLabel)}</span>
                             <span class="badge badge-sm badge-ghost">{load_text}</span>
                             {load_period_hint.then(|| view! {
-                                <span class="text-xs text-base-content/70 italic"
+                                // `TYPE-002`: italic kept (removal
+                                // considered -- this is the only place
+                                // the capacity period mismatch is
+                                // surfaced at all, since `LoadChipTooltip`
+                                // never mentions it); raised to `text-sm`,
+                                // measured cost +4px, no new wrap.
+                                <span class="text-sm text-base-content/70 italic"
                                       title=t(MessageKey::PeriodHintTooltip)>
                                     {t(MessageKey::ThisPeriodHint)}
                                 </span>
@@ -323,13 +343,20 @@ pub fn PersonalDashboard(
                     // MARK-002: grow_summary(), not grow() with a literal
                     // inline-flex baked in -- the exact shape MARK-001's
                     // own scan could not see. A single text child needs
-                    // only vertical centring, which py-4 supplies (16px
-                    // text-xs line-height + 32px = 48px), the same as
+                    // only vertical centring, which py-4 supplies (20px
+                    // text-sm line-height + 32px = 52px), the same as
                     // every other single-label summary -- re-measured
                     // rather than inherited: this site has one child, not
                     // two, so it was never one of this round's genuinely
                     // multi-child sites despite being named as one.
-                    <summary class=grow_summary("cursor-pointer text-xs uppercase tracking-wide \
+                    // `TYPE-002` (`§10.60`): raised from `text-xs`
+                    // (16px line-height, sum 48px) to `text-sm` (20px,
+                    // sum 52px, re-measured here rather than carried
+                    // over) -- still clears `NFR-A11Y-007`'s 44px floor
+                    // with 8px to spare, measured cost +4px at both 390
+                    // and 1280. `touch_target_scan` and
+                    // `disclosure-marker-gate.mjs` both re-run.
+                    <summary class=grow_summary("cursor-pointer text-sm uppercase tracking-wide \
                                     text-base-content/70 mb-2 py-4")
                              aria-label=t(MessageKey::RhythmAriaLabel)>
                         {t(MessageKey::RhythmSummaryLabel)}
@@ -337,7 +364,7 @@ pub fn PersonalDashboard(
                     <div class="flex flex-wrap items-center gap-3 mt-2">
                         <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
                              title=t(MessageKey::ThroughputTooltip)>
-                            <span class="text-xs text-base-content/70">{t(MessageKey::ThroughputChipLabel)}</span>
+                            <span class="text-sm text-base-content/70">{t(MessageKey::ThroughputChipLabel)}</span>
                             <span class="badge badge-sm badge-ghost">{throughput_text}</span>
                         </div>
 
@@ -345,7 +372,7 @@ pub fn PersonalDashboard(
                              role="group"
                              aria-label=stale_aria_label.clone()
                              title=stale_aria_label>
-                            <span class="text-xs text-base-content/70">{t(MessageKey::LongStaleChipLabel)}</span>
+                            <span class="text-sm text-base-content/70">{t(MessageKey::LongStaleChipLabel)}</span>
                             <span class=stale_badge_class>
                                 <span class="mr-1" aria-hidden="true">{stale_glyph}</span>
                                 {stale_text}
@@ -355,7 +382,7 @@ pub fn PersonalDashboard(
                         {skew_text.map(|s| view! {
                             <div class="flex items-center gap-2 px-3 py-2 rounded border border-base-300 bg-base-100"
                                  title=t(MessageKey::PaceTooltip)>
-                                <span class="text-xs text-base-content/70">{t(MessageKey::PaceChipLabel)}</span>
+                                <span class="text-sm text-base-content/70">{t(MessageKey::PaceChipLabel)}</span>
                                 <span class="badge badge-sm badge-ghost">{s}</span>
                             </div>
                         })}
@@ -364,12 +391,27 @@ pub fn PersonalDashboard(
 
                 {render_burnout_panel(burnout, user_is_active)}
 
+                // `TYPE-002` (`§10.60`): this container decided
+                // separately from every other site in this round's
+                // population, per that handoff's own §3 -- **kept** at
+                // `text-xs`, not raised. Its own subtree (15 descendant
+                // text nodes: this summary plus 7 glossary definition
+                // paragraphs) measured, open, at both widths: raising
+                // it costs +80px at 1280 and +208px at 390 -- real,
+                // non-trivial, and paid by content that is optional,
+                // disclosure-gated, and already fully legible at its
+                // current size. A defensible split, stated as one: the
+                // leaves elsewhere on this page raised, this container
+                // did not.
                 <section class="text-xs text-base-content/70">
                     <details>
                         // MARK-002 (§10.58): grow_summary(), the only
                         // helper a <summary> may take. Ambient context is
                         // this section's own text-xs (16px line-height),
                         // so py-4 = 32px + 16px = 48px.
+                        // `TYPE-002`: unchanged -- the container above
+                        // was kept, so this sum stays true without an
+                        // edit here.
                         <summary class=grow_summary("cursor-pointer py-4")>{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
                         <div class="mt-2 space-y-2">
                             <p>
@@ -515,7 +557,9 @@ fn render_burnout_panel(
 
     view! {
         <section class="mb-6" aria-label=sustainability_heading_aria>
-            <h2 class="text-xs uppercase tracking-wide text-base-content/70 mb-2">
+            // `TYPE-002` (`§10.60`): raised from `text-xs`, +4px at
+            // both 390 and 1280, no wrap.
+            <h2 class="text-sm uppercase tracking-wide text-base-content/70 mb-2">
                 {sustainability_heading}
             </h2>
             <details open=any_watch>
@@ -530,7 +574,7 @@ fn render_burnout_panel(
                              role="group"
                              aria-label=overload_aria_label.clone()
                              title=overload_aria_label>
-                            <span class="text-xs text-base-content/70">{t(MessageKey::OverloadStreakChipLabel)}</span>
+                            <span class="text-sm text-base-content/70">{t(MessageKey::OverloadStreakChipLabel)}</span>
                             <span class=overload_badge>
                                 <span class="mr-1" aria-hidden="true">{overload_glyph}</span>
                                 {overload_value}
@@ -540,7 +584,7 @@ fn render_burnout_panel(
                              role="group"
                              aria-label=stalled_aria_label.clone()
                              title=stalled_aria_label>
-                            <span class="text-xs text-base-content/70">{t(MessageKey::OldestStalledChipLabel)}</span>
+                            <span class="text-sm text-base-content/70">{t(MessageKey::OldestStalledChipLabel)}</span>
                             <span class=stalled_badge>
                                 <span class="mr-1" aria-hidden="true">{stalled_glyph}</span>
                                 {stalled_value}
@@ -549,18 +593,29 @@ fn render_burnout_panel(
                     </div>
                 })}
                 <div class="mt-3">
-                    <h3 class="text-xs uppercase tracking-wide text-base-content/70 mb-1">
+                    // `TYPE-002`: raised from `text-xs`, +4px at both
+                    // widths, no wrap.
+                    <h3 class="text-sm uppercase tracking-wide text-base-content/70 mb-1">
                         {patterns_subheading}
                     </h3>
                     <div class="flex flex-wrap items-center gap-3">
                         {drift_chip}
                         {switching_chip}
                     </div>
-                    <p class="mt-1 text-xs text-base-content/70 italic">
+                    // `TYPE-002`: italic kept -- removal considered and
+                    // rejected (this disclaimer is the product's
+                    // anti-evaluation framing made explicit beside the
+                    // numbers, not redundant with either chip); raised
+                    // to `text-sm`, measured cost +8px at 390 (two
+                    // lines, both taller, no third line), +4px at 1280
+                    // (one line).
+                    <p class="mt-1 text-sm text-base-content/70 italic">
                         {t(MessageKey::PatternsDisclaimer)}
                     </p>
                 </div>
-                <p class="mt-2 text-xs text-base-content/70 italic">
+                // `TYPE-002`: same reasoning and the same measured cost
+                // as the disclaimer above -- kept, raised, not removed.
+                <p class="mt-2 text-sm text-base-content/70 italic">
                     {t(MessageKey::SustainabilityPrivacyNote)}
                 </p>
             </details>
@@ -594,7 +649,12 @@ fn render_drift_chip(
                  role="group"
                  aria-label=aria
                  title=aria_title>
-                <span class="text-xs text-base-content/70">{t(MessageKey::PaceDriftChipLabel)}</span>
+                // `TYPE-002`: raised to `text-sm`, same class and same
+                // measured cost as every other chip label on this
+                // page -- both of this chip's two code paths reached
+                // (`GRAM-002`'s own duplicate-path lesson), see the
+                // value branch below.
+                <span class="text-sm text-base-content/70">{t(MessageKey::PaceDriftChipLabel)}</span>
                 <span class="badge badge-sm badge-ghost italic">
                     <span class="mr-1" aria-hidden="true">{t(MessageKey::NoValuePlaceholder)}</span>
                     {t(MessageKey::NeedMoreDataLabel)}
@@ -632,12 +692,23 @@ fn render_drift_chip(
              role="group"
              aria-label=aria.clone()
              title=aria>
-            <span class="text-xs text-base-content/70">{t(MessageKey::PaceDriftChipLabel)}</span>
+            <span class="text-sm text-base-content/70">{t(MessageKey::PaceDriftChipLabel)}</span>
             <span class="badge badge-sm badge-ghost">
                 <span class="mr-1" aria-hidden="true">{glyph}</span>
                 {direction_label}
             </span>
-            <span class="text-xs text-base-content/70">{value_line}</span>
+            // `TYPE-002`: raised to `text-sm`. Not reached by this
+            // round's own fixture (needs two sets of `done`-issue
+            // closing timestamps real-calendar-separated by ~14+ days,
+            // not reachable without a multi-week wait or backdating a
+            // second table's historical event timestamps). Measured by
+            // structural analogy instead: this value-line sits in the
+            // identical position (third child of an unwrapped chip row,
+            // itself a child of the same `flex flex-wrap` Patterns row)
+            // as the switching chip's own `sample_line` below, which
+            // *is* reachable and *was* measured live, raised, in that
+            // row, with no row-wrap-count change at 390 or 1280.
+            <span class="text-sm text-base-content/70">{value_line}</span>
         </div>
     }
     .into_any()
@@ -660,7 +731,10 @@ fn render_switching_chip(
                  role="group"
                  aria-label=aria
                  title=aria_title>
-                <span class="text-xs text-base-content/70">{t(MessageKey::SwitchingChipLabel)}</span>
+                // `TYPE-002`: raised to `text-sm`, same reasoning as
+                // the drift chip's twin comment above; both code paths
+                // reached.
+                <span class="text-sm text-base-content/70">{t(MessageKey::SwitchingChipLabel)}</span>
                 <span class="badge badge-sm badge-ghost italic">
                     <span class="mr-1" aria-hidden="true">{t(MessageKey::NoValuePlaceholder)}</span>
                     {t(MessageKey::NeedMoreDataLabel)}
@@ -693,11 +767,20 @@ fn render_switching_chip(
              role="group"
              aria-label=aria.clone()
              title=aria>
-            <span class="text-xs text-base-content/70">{t(MessageKey::SwitchingChipLabel)}</span>
+            <span class="text-sm text-base-content/70">{t(MessageKey::SwitchingChipLabel)}</span>
             <span class="badge badge-sm badge-ghost">
                 {median_value}
             </span>
-            <span class="text-xs text-base-content/70">{sample_line}</span>
+            // `TYPE-002`: raised to `text-sm`. This value branch *was*
+            // reached by this round's own fixture (five real
+            // `status_changed -> in_progress` events, no waiting) and
+            // measured directly, live, inside the Patterns row with
+            // every chip label on the page raised at once: row-wrap
+            // count unchanged at 390 (2 rows, same as before) and 1280
+            // (1 row, same as before). This is the measurement
+            // `render_drift_chip`'s own `value_line` comment above
+            // points to.
+            <span class="text-sm text-base-content/70">{sample_line}</span>
         </div>
     }
     .into_any()

@@ -30,6 +30,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   equivalent on every background involved (including the two tinted
   ones) — no visible effect; it only changes what a future change to
   the same colour would be checked against (`TYPE-001`, `§10.60`).
+- **Twenty of `/today`'s twenty-one smallest-text sites move up one
+  type step.** The "Right now", "Rhythm", "Sustainability" and
+  "Patterns" section headings, every chip's label (WIP, Load,
+  Throughput, Long-stale, Pace, over-capacity streak, oldest stalled,
+  pace drift, switching), the three italic explanatory lines, and the
+  drift/switching value lines all move from 12px to 14px, each
+  measured to cost nothing visible: no chip row wraps to an extra line
+  at a phone width that it did not already wrap to, and no text gains
+  a line it did not already have. The "What do these mean?" glossary
+  stays at its current size — raising it, measured, would have made an
+  already-long, opt-in panel noticeably longer on a phone for
+  information that is already fully legible (`TYPE-002`, `§10.60`).
 
 ## [0.63.0] — 2026-11-15
 

@@ -9267,6 +9267,118 @@ and the question closes. The day-view badge's own clipping defect
 (found by round 1, above) stays found-and-not-fixed, unchanged by round
 2.
 
+**`TYPE-002` closed, 2026-11-17 — `/today`'s own 21 render sites,
+decided by class.** Re-derived the population first with the series'
+own corrected command (`grep -rn 'text-xs' crates/peisear-web/src/components/me.rs
+| grep -vE ':[[:space:]]*//'`): **21**, all in `me.rs`, matching the
+handoff.
+
+**The constraint read first, because it changes what "raise" costs.**
+Four `<summary>` controls elsewhere in this codebase reach
+`NFR-A11Y-007`'s 44px touch-target floor by an arithmetic keyed to
+`text-xs`'s own 16px line-height, each stating the sum in a comment
+beside itself; two of the four (`me.rs:332`, `me.rs:373`) are inside
+this round's population, one directly (`332` carries `text-xs` itself)
+and one ambiently (`373` inherits it from the container, `367`,
+decided separately below). Raising an ambient size only *raises* the
+margin over 44px — never a risk to the floor — but a comment stating a
+sum the tree no longer produces is this series' own recurring defect
+(`§10.58`, and this entry's own correction above), so every touched
+comment was updated with its new sum rather than left stale.
+
+**Per-class decision, each measured rather than asserted, at 390 and
+1280:**
+
+- **Section headings (4: `me.rs:287`, `:332`, `:518`, `:552`)** —
+  **raised** to `text-sm`. Measured cost: **+4px**, uniform, at both
+  widths, for all four — plain block labels in flexible containers, no
+  wrap, no overflow. `me.rs:332` (the Rhythm summary) is also a
+  touch-target site: its comment's sum is updated `48px → 52px`
+  (`text-xs`'s 16px line-height replaced by `text-sm`'s 20px, both
+  pinned at source in `static/tailwind.css` rather than assumed), still
+  8px clear of the 44px floor, and `touch_target_scan` and
+  `disclosure-marker-gate.mjs` were both re-run (below) rather than
+  only asserted clean.
+- **Chip labels (11)** — **raised** to `text-sm`. The question the
+  handoff asked for — does a wider label push a chip row to wrap at
+  390 — was checked **live, with every chip label on the page raised
+  at once**, across all four of the page's own chip rows ("Right now",
+  "Rhythm", "Sustainability", "Patterns"): row-wrap count is
+  **unchanged** at both 390 (`[1, 2, 2, 2]` before and after — two rows
+  already wrap to two lines, a pre-existing fact this round neither
+  causes nor fixes) and 1280 (`[1, 1, 1, 1]`, unchanged). Both halves
+  of each duplicate code path (`PaceDriftChipLabel` at `:597`/`:635`,
+  `SwitchingChipLabel` at `:663`/`:696`) carry the identical literal
+  class string, so one source edit per pair reaches both, as `GRAM-002`
+  found it must.
+- **Italic explanatory lines (3: `me.rs:307`, `:559`, `:563`)** —
+  **kept as information, raised** to `text-sm`. Removal considered and
+  rejected for each: the period hint is the only place a capacity/period
+  mismatch is surfaced at all (`LoadChipTooltip` never mentions it); the
+  Patterns disclaimer and the Sustainability privacy note are this
+  product's anti-evaluation framing made explicit beside the numbers,
+  not redundant with any chip beside them. Measured cost: +4px
+  (single-line cases, both widths) to +8px (the two full-sentence
+  lines at 390, which already wrap to two lines at `text-xs` and still
+  wrap to exactly two, now taller, at `text-sm` — no third line at
+  either width).
+- **Value/sample lines (2: `me.rs:640`, `:700`)** — **raised** to
+  `text-sm`. `me.rs:700` (the switching chip's `sample_line`) was
+  reached directly by this round's own fixture — five real
+  `status_changed → in_progress` events, no waiting — and measured
+  live inside the Patterns row with every label raised at once: no
+  row-wrap change, matching the chip-label class above. `me.rs:640`
+  (the drift chip's `value_line`) was **not** reached — it needs two
+  sets of `done`-issue closing timestamps real-calendar-separated by
+  roughly 14 days, reachable only by a multi-week wait or backdating a
+  second table's historical event timestamps, neither attempted this
+  round. Measured instead by structural analogy: `640` sits in the
+  identical position (the third child of the same unwrapped chip-row
+  shape, itself a child of the same `flex flex-wrap` Patterns row) as
+  `700`, which *was* measured. Stated as an analogy, not a
+  measurement, in the code's own comment.
+- **The container (1: `me.rs:367`)** — **kept** at `text-xs`, decided
+  separately from every leaf above, as the handoff's own §3 requires.
+  Its subtree (15 descendant text nodes: the glossary's own summary
+  plus 7 definition paragraphs) measured with the `<details>` forced
+  open: raising it costs **+80px at 1280** and **+208px at 390** — real
+  and non-trivial, for content that is optional, disclosure-gated, and
+  already fully legible at its current size. Removal of the glossary
+  itself was also considered and rejected: every chip already carries
+  a hover tooltip or `aria-label`, but a hover tooltip has no touch
+  equivalent, and the glossary is the one place a first-time or
+  touch-only reader can read every term at once without discovering
+  each tooltip by trial. Because the container is kept, `me.rs:373`'s
+  own touch-target comment (`32px + 16px = 48px`, ambient from this
+  container) stays true unedited — the split costs nothing in
+  bookkeeping, which is part of why it is the right split.
+
+**One fixture bug, self-caught before it reached a number.** The first
+attempt at measuring `me.rs:700`'s live row cycled a test issue through
+only four `open → in_progress` transitions, one short of the
+`SWITCHING_MIN_EVENTS = 5` threshold the switching chip's value branch
+needs — so the first run silently measured the *insufficient-data*
+branch while the round's own draft comment claimed the value branch had
+been reached. Caught by checking which branch's text actually
+rendered, not by trusting the row-count numbers, which were identical
+either way and so gave no signal that anything was wrong. Fixed (five
+transitions, not four) and re-verified against the real shipped page,
+not the fixture script alone, before the comment above was written.
+
+**Population effect.** `/today`'s own text-xs population drops from
+**21 to 1** (the kept container). `MARK-002`'s touch-target sums move
+with the one site that changed (`332`: `48px → 52px`); the other
+three (`issues.rs:350`, `sprints.rs:438`/`:985`) are untouched, as the
+handoff required. `css_scan`'s live-rule population is unaffected —
+this round introduced or removed no arbitrary-value or bare-opacity
+token, only moved existing scale classes.
+
+**Still open.** No type floor, no type requirement, no scan over text
+sizes. `NFR-A11Y-005`, `NFR-A11Y-007`, `contrast_scan` and
+`touch_target_scan`'s own rules are unchanged — only the tree they
+measure moved, and the measurement confirms it still passes.
+`TYPE-003` has not run.
+
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
