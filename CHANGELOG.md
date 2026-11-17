@@ -9,6 +9,23 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Five of the six smallest text sizes in the product are no longer
+  below the type scale's own floor.** The calendar's hour labels and
+  "+N more" overflow count, and a project card's "Updated" line and a
+  board card's whole metadata row (priority, effort, assignee, date)
+  all move from 10–11px arbitrary values to the scale's existing 12px
+  step, each measured to cost nothing: the hour labels keep ~24px of
+  headroom, the project and board cards came out marginally shorter
+  rather than taller, and the calendar month grid's own row grows at
+  most a few pixels with no clipping at any width checked. The
+  calendar's day-view project badge stays at its current size — its
+  own legibility limit is an unrelated pre-existing defect, unaffected
+  by this change (`TYPE-001`, `§10.60`).
+
 ## [0.63.0] — 2026-11-15
 
 **Three defects you could meet, each of which every check this project

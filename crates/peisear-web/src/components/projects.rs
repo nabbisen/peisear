@@ -74,7 +74,13 @@ fn ProjectCard(project: Project) -> impl IntoView {
                         view! { <span>{desc}</span> }.into_any()
                     }}
                 </div>
-                <div class="text-[11px] text-base-content/70 mt-2">
+                // `TYPE-001` (`§10.60`): raised from 11px to match the
+                // description line above. Measured cost: none
+                // -- `text-xs` carries its own explicit 16px line-height,
+                // tighter than the 16.5px this 11px arbitrary value
+                // inherited ambiently, so the card is marginally shorter
+                // after the change, not taller, at both 390 and 1280.
+                <div class="text-xs text-base-content/70 mt-2">
                     {t(MessageKey::UpdatedAt { formatted: updated })}
                 </div>
             </div>

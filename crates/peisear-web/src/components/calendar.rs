@@ -106,8 +106,15 @@ fn render_block(
     );
     let title = issue.title.clone();
     let time = time_label_for(issue.planned_start_at, issue.planned_end_at);
+    // `TYPE-001` (`§10.60`): raised from 10px to the scale's own
+    // floor -- measured free (the line's own height is already set by the
+    // 12px siblings on it, `time` and `title` above) -- and the colour
+    // moved from bare `opacity-70` to the guarded `text-base-content/70`,
+    // measured equivalent on this tinted (`bg-primary/10`/`20`) background
+    // for an un-nested leaf text node (ratio unchanged to within pixel
+    // noise, both resting and hover).
     let badge = project_badge
-        .map(|name| view! { <span class="text-[10px] opacity-70 truncate">{name}</span> });
+        .map(|name| view! { <span class="text-xs text-base-content/70 truncate">{name}</span> });
     view! {
         <a href=href class="block text-xs px-1.5 py-0.5 rounded bg-primary/10 hover:bg-primary/20 truncate">
             <span class="tabular-nums opacity-70 mr-1">{time}</span>
@@ -181,8 +188,17 @@ fn render_day_view(
             );
             let title = issue.title.clone();
             let time = time_label_for(issue.planned_start_at, issue.planned_end_at);
+            // `TYPE-001` (`§10.60`): kept at 10px rather than
+            // raised -- the real limit on this badge's legibility is a
+            // pre-existing, unrelated defect (an event under roughly an
+            // hour already clips this third line before the vertical
+            // space runs out; measured unaffected by font size across
+            // 15-60 minute events), and contrast already clears 4.5:1 with
+            // real margin on this tinted (`bg-primary/15`/`25`) background.
+            // The colour did move, bare `opacity-70` to the guarded
+            // `text-base-content/70` -- measured equivalent here too.
             let badge = project_badge_for(issue).map(|name| {
-                view! { <span class="text-[10px] opacity-70 block truncate">{name}</span> }
+                view! { <span class="text-[10px] text-base-content/70 block truncate">{name}</span> }
             });
             let issue_id = issue.id.clone();
             let project_id = issue.project_id.clone();
@@ -212,8 +228,14 @@ fn render_day_view(
     let hours = (0..24u32)
         .map(|h| {
             let top = h as f64 / 24.0 * 100.0;
+            // `TYPE-001` (`§10.60`): raised from 10px -- measured
+            // cost is one pixel of line-height (15px -> 16px) against
+            // roughly 40px of per-hour row height, leaving ~24px of
+            // headroom at both 390 and 1280; no overlap risk between
+            // adjacent labels. Colour moved to the guarded
+            // `text-base-content/70` (this site carries no tint).
             view! {
-                <div class="absolute left-0 text-[10px] opacity-70 tabular-nums"
+                <div class="absolute left-0 text-xs text-base-content/70 tabular-nums"
                      style=format!("top:{top}%;")>
                     {format!("{h:02}:00")}
                 </div>
@@ -307,7 +329,15 @@ fn render_month_view(
             let label = t(MessageKey::CalendarMoreIssuesLabel {
                 count: (day.blocks.len() - 3) as i64,
             });
-            view! { <div class="text-[10px] opacity-70">{label}</div> }
+            // `TYPE-001` (`§10.60`): raised from 10px. Measured
+            // cost: the month grid's own row (a `<table>` row auto-grows
+            // to fit a cell's content) grows up to ~12px at 390 and
+            // shrinks slightly at 1280 -- no clipping or bleed into a
+            // neighbouring cell at either width, checked directly against
+            // each cell's own (post-change) bottom edge rather than a
+            // stale pre-change one. Colour moved to the guarded
+            // `text-base-content/70` (this site carries no tint).
+            view! { <div class="text-xs text-base-content/70">{label}</div> }
         });
         cells.push(
             view! {

@@ -1025,7 +1025,13 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
                 // box edge by `line-clamp-2`'s own `overflow: hidden`
                 // (`LAYOUT-003`; see the column's `min-w-0`).
                 <div class="text-sm font-medium line-clamp-2 break-words">{issue.title}</div>
-                <div class="flex items-center justify-between gap-2 mt-2 text-[11px] text-base-content/70">
+                // `TYPE-001` (`§10.60`): raised from 11px.
+                // Measured cost: none -- `text-xs`'s own explicit 16px
+                // line-height is tighter than the 16.5px this arbitrary
+                // value inherited ambiently, so the card is marginally
+                // shorter, not taller; the row did not wrap to a second
+                // line at either 390 or 1280.
+                <div class="flex items-center justify-between gap-2 mt-2 text-xs text-base-content/70">
                     <div class="flex items-center gap-1 flex-wrap">
                         <span class=badge>{t(MessageKey::PriorityName { label: issue.priority.to_i18n_label() })}</span>
                         {effort_node}

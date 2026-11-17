@@ -141,9 +141,16 @@ fn the_repository_satisfies_the_live_rule() {
             .collect::<Vec<_>>()
             .join("\n")
     );
+    // `TYPE-001` (`§10.60`): population dropped 291 -> 290. `issues.rs`'s
+    // and `projects.rs`'s own `text-[11px]` sites were raised to the
+    // already-used `text-xs`, which removes that arbitrary-value token
+    // from the live tree entirely rather than adding a new one --
+    // `calendar.rs` still has one `text-[10px]` site left (kept, not
+    // raised; see that file's own comment at the site), so the token
+    // itself survives, just with one fewer distinct class string overall.
     assert_eq!(
         (result.population, result.allowlisted),
-        (291, 2),
+        (290, 2),
         "the measured population or allowlist count drifted from this round's own baseline -- \
          re-measure (components/**/*.rs changed) and update this assertion with the reason, \
          never just the numbers"

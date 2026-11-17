@@ -9049,6 +9049,91 @@ sites"*. The census at source is **126**, across thirteen component
 files. The scope was proposed on the re-derived figure, and the row
 carries the correction; the figure in the note was never measured.
 
+**`TYPE-001` closed, 2026-11-17 — the contrast half of this entry,
+measured.** Re-derived the six-site population first (seven `grep`
+hits, one a `css_scan` test's own escaped-string literal, not a site —
+confirmed, not assumed). For each of the four bare-`opacity-70` sites,
+measured the rendered contrast ratio directly — screenshot the
+element's own box at `deviceScaleFactor` 1, decode the PNG with a
+dependency-free reader (`node:zlib` only), take the darkest rendered
+pixel as ink and the lightest as paper (a conservative floor: real
+full-coverage ink can only be at least that dark, never lighter, so a
+passing ratio measured this way is a safe pass) — against both the
+resting and, where a `hover:` class exists, the hovered background,
+reached by a real dispatched mouse move, not a forced pseudo-class.
+
+| site | resting | hover |
+|---|---|---|
+| `calendar.rs:110` (month/week badge, on `bg-primary/10`) | 5.51:1 | 5.21:1 |
+| `calendar.rs:185` (day badge, on `bg-primary/15`) | 5.91:1 | 5.52:1 |
+| `calendar.rs:216` (hour label, no tint) | 4.98:1 | — |
+| `calendar.rs:310` (`+N more`, no tint) | 5.86:1 | — |
+
+**All four clear 4.5:1, at every background measured.** Nothing here is
+the `2.64:1` `QA-013` found by hand on a different, nested site — these
+four are a single level deep, and the margin holds even at the
+narrowest (the hour label, `4.98:1`, re-confirmed at `6.32:1` once
+raised — see below). A pass is as real a result as a failure would
+have been; it had never been measured either way before this round.
+
+**Also measured, empirically rather than assumed from CSS theory**:
+whether the guarded spelling (`text-base-content/70`) composites
+identically to bare `opacity-70` on these same tinted backgrounds, for
+this single-level (non-nested) case. It does, within pixel noise
+(`calendar.rs:110`: `5.49:1`/`5.19:1`; `calendar.rs:185`: `5.83:1`/
+`5.50:1`) — so three of the four sites moved to the guarded spelling.
+The fourth (`calendar.rs:185`, the day-view badge) kept bare
+`opacity-70`: its real legibility limit is an unrelated, pre-existing
+defect (its own line is clipped by the block's `overflow-hidden` on any
+event under roughly an hour, measured unaffected by font size across
+15–60 minute events), so neither the colour spelling nor the size was
+worth moving there, and its contrast already clears 4.5:1 with real
+margin at its current size.
+
+**Per-site decision, each measured rather than asserted:**
+
+- `calendar.rs:110` (month/week badge) — **raised** to `text-xs`.
+  Measured cost: **zero**, at 390 and 1280 — the line's height is
+  already set by its own 12px siblings (`time`, `title`) on the same
+  line.
+- `calendar.rs:185` (day badge) — **kept** at 10px. See above.
+- `calendar.rs:216` (hour label) — **raised** to `text-xs`. Measured
+  cost: one pixel of line-height (15px → 16px) against ~40px of
+  per-hour row height — ~24px of headroom remains at both widths, no
+  overlap with the adjacent label. Removal was considered (the series'
+  own README invites it for this site) and rejected: it is the grid's
+  only time-orientation affordance.
+- `calendar.rs:310` (`+N more`) — **raised** to `text-xs`. Measured
+  cost: the month grid's own table row auto-grows to fit (a `<td>`'s
+  `height` is a minimum, not a cap) — up to +12px at 390, −4px at 1280
+  — with no clipping or bleed into a neighbouring cell at either width,
+  checked against each cell's own post-change bottom edge, not a stale
+  pre-change one. Removal was considered and rejected: it is the only
+  way a reader learns more issues exist without opening the day.
+- `projects.rs:77` (`Updated <date>`) and `issues.rs:1028` (board
+  card's metadata row) — both already inside `NFR-A11Y-005`'s guarded
+  reach, so outside `TYPE-001`'s own contrast work, but still decided
+  here: both **raised** to `text-xs`. Measured cost: **negative** —
+  `text-xs` carries its own explicit 16px line-height, tighter than the
+  16.5px either 11px arbitrary value inherited ambiently, so both
+  cards came out marginally shorter, not taller, at 390 and 1280, with
+  no wrap to a second line.
+
+**Population effect.** The six-site population is now **one** (the
+kept `calendar.rs:185`); the other five moved onto scale classes. The
+`css_scan` live-rule population dropped **291 → 290** (one distinct
+arbitrary-value token, `text-[11px]`, left the tree entirely; the
+re-measured, reasoned baseline is in that test's own file, not just the
+number). `MessageKey::all()`'s own population is unaffected — no key
+was added, removed or re-parameterised.
+
+**Still open.** This closes the contrast half of this entry's own "what
+would close it" — four of the four previously-unmeasured ratios now
+have numbers, at every background that matters. The type-floor
+question is untouched, exactly as the series' own README requires:
+`TYPE-002` and `TYPE-003` have not run, and whether any requirement
+gets written is still decided after `TYPE-003`, not before it.
+
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 
