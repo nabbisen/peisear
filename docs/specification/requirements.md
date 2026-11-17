@@ -8989,7 +8989,7 @@ so the next person meets the boundary as a decision rather than an
 oversight.
 
 
-### 10.60 Nothing governs the size of the text, and the smallest text in the product is the text whose contrast nothing checks — **open**, `TYPE-001`–`TYPE-003`, 0.64.0; opened 2026-11-17 by the architect scoping that release, measuring the owner's own question of 2026-11-04 at source
+### 10.60 Nothing governs the size of the text, and the smallest text in the product is the text whose contrast nothing checks — **closed**, `TYPE-001`–`TYPE-003`, 0.64.0; opened and closed 2026-11-17 by the architect, scoping that release and then deciding its floor — **closed by a recorded decision that no requirement should exist**, the second of the two branches this entry's own closing condition named
 
 **Found while scoping, not by a gate** — which is this entry's first
 property: there is no gate to find it with.
@@ -9248,7 +9248,10 @@ re-measured, reasoned baseline is in that test's own file, not just the
 number). `MessageKey::all()`'s own population is unaffected — no key
 was added, removed or re-parameterised.
 
-**Still open.** This closes the contrast half of this entry's own "what
+**Still open after `TYPE-001`** — superseded by the floor decision at
+the end of this entry, which closes it; this paragraph is kept as the
+round's own dated record, not as a current state. This closes the
+contrast half of this entry's own "what
 would close it" — four of the four previously-unmeasured ratios now
 have numbers, at every background that matters. The type-floor
 question is untouched, exactly as the series' own README requires:
@@ -9396,7 +9399,9 @@ handoff required both rounds. `css_scan`'s live-rule population is
 unaffected — neither round introduced or removed an arbitrary-value or
 bare-opacity token, only moved existing scale classes.
 
-**Still open.** No type floor, no type requirement, no scan over text
+**Still open after `TYPE-002`** — superseded by the floor decision at
+the end of this entry; kept as that round's dated record, not as a
+current state. No type floor, no type requirement, no scan over text
 sizes. `NFR-A11Y-005`, `NFR-A11Y-007`, `contrast_scan` and
 `touch_target_scan`'s own rules are unchanged — only the tree they
 measure moved, and the measurement confirms it still passes.
@@ -9578,7 +9583,21 @@ recommendation is the architect's):
    type: an unrelated, pre-existing `overflow-hidden` clipping defect
    that raising would not have fixed. A simple rule — raise anything
    below the scale's next step, by one step — would have reached the
-   right *size* in 62 of 63 cases.
+   right *size* in 60 of 61 cases.
+
+   *Figure corrected by the architect's review, 2026-11-17.* As first
+   written this read *"62 of 63"*, over `6 + 21 + 36`. **That
+   denominator counts two sites twice**: `projects.rs:77` and
+   `issues.rs:1028` were two of `TYPE-001`'s six, and after that round
+   raised them onto the scale they became `projects.rs:83` and
+   `issues.rs:1034` — **both inside `TYPE-003`'s own 36**, as that
+   round's own report names. So the distinct population read across the
+   three rounds is **61**, of which **60 were raised and 1 kept** — and
+   **two of the 60 moved twice**, not by one step: 11px → 12px in
+   `TYPE-001`, 12px → 14px in `TYPE-003`. The finding is unaffected; the
+   figure is corrected because the floor decision below cites it, and a
+   decision resting on a double-counted denominator is a worse outcome
+   than the slip.
 2. **What would a floor have got wrong if adopted on 2026-11-04?** Not
    the sizes — the surroundings. It would have raised the calendar
    badge for no benefit, obscuring rather than finding the real
@@ -9607,11 +9626,83 @@ recommendation is the architect's):
    have caught either. A rule that said *"no text below 14px"* would
    have been right about the number and silent about all seven.
 
-**Still open.** No type floor, no type requirement, no scan over text
-sizes written by this round. `NFR-A11Y-005`, `NFR-A11Y-007`,
+No type floor, no type requirement and no scan over text sizes was
+written by this round. `NFR-A11Y-005`, `NFR-A11Y-007`,
 `contrast_scan`, `touch_target_scan` and `alignment_scan` are
-unchanged. The floor decision is the architect's, on what these three
-rounds found — not this round's to recommend.
+unchanged.
+
+---
+
+## The floor decision — architect, 2026-11-17: **no requirement is written**, and this entry closes on it
+
+This entry's own *"what would close it"* offered two branches: *either a
+requirement that governs text size, or a recorded decision that none
+should exist* — plus measured ratios for the four contrast sites, which
+`TYPE-001` delivered. **The second branch is taken. This is that
+recorded decision, and `§10.60` is closed by it.**
+
+**1. The size answer converged, and that is the argument against a rule
+rather than for one.** Sixty of sixty-one distinct sites, one step
+each. A rule saying *raise anything below the scale's next step* would
+have been right about the number almost every time — **and the number
+was never the hard part.** A requirement written to capture it would be
+enforced the only way a text-size rule can be enforced, by a scan over
+class tokens, and this project has paid repeatedly for a guard whose
+reach is narrower than its name (`§10.36`'s class, instances now in
+double figures). A `text-xs` ban would pass green over every one of the
+seven costs below.
+
+**2. Seven costs required a reading, and a class-token scan can see
+none of them.** They are listed above and they are the release: a site
+kept for an unrelated clipping defect; `min-h-[2rem]`'s expired reason
+and the vendored-CSS wall behind its obvious fix; four touch-target
+sums keyed to an ambient line-height across two rounds; a textarea's
+and a card's characters-lost cost; a wrap cost that only appears when
+measured in the dimension the site lives in; a browser gate's
+hardcoded class-string dependency; and an exception held up by two
+reasons that could not both be true of the same reader.
+
+**3. Two thirds of the population has not been read.** After this
+release **68 `text-xs` render sites remain**, on sprints, the calendar,
+teams, settings, sprint plan, notification preferences, auth,
+notifications, search and layout. A floor written from three screens
+would govern ten, which is **`rule before design` with the condition's
+own words reversed**. The 2026-11-04 condition was *adopt the floor
+after the views are decided*; three are. Seven are not.
+
+**4. What recurred is not text size.** Across all three rounds the same
+mechanism failed: **a size change propagates into arithmetic written in
+comments, and into literal class strings held inside checks, and
+nothing reads either.** Four `<summary>` touch-target sums
+(`me.rs:332`, `me.rs:373`, `issues.rs:350`, and the two in
+`sprints.rs` still keyed to `text-xs`), one `overflow-gate.mjs` fixture
+regex quoting `text-xs font-medium`, one `min-h-[2rem]` chosen as *two
+lines at `text-xs`* and silently no longer meaning that. **That** is
+`061`'s own principle left unfinished — *make the property true by
+construction, keep the check as a backstop* — and it is a rule about
+derived values, not about typography. **It is carried to
+`ROADMAP.md`'s candidate list rather than bolted onto this release**,
+where it waits for a number like any other candidate.
+
+**What the owner's question of 2026-11-04 now has, and what it does
+not.** The **typography** half is answered for three screens: sixty
+sites raised, every cost measured at 390 and 1280, and the four
+previously-unmeasured contrast ratios measured and passing. The
+**colour** half was already discharged (`NFR-A11Y-005`, Met, `/70`
+floor, `contrast_scan`). The **layout** half is untouched, and the
+seven remaining screens are unread. **Neither absence is a defect
+recorded here** — they are scope the owner has not asked for, and
+saying so is the point of closing this entry rather than leaving it
+open as a standing reproach.
+
+**Why closing is right rather than convenient.** An open register entry
+asserts *this project has a known gap*. After this decision the state
+is *nothing governs text size, deliberately, for stated reasons, with
+the unread screens named*. That is a decision, not a gap. Leaving the
+entry open would make a deliberate absence read as an oversight for
+however many releases it took someone to re-read it — which is the
+exact failure `§10.16` is this register's own warning about, and which
+it carried for twenty-two releases.
 
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0

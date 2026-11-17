@@ -73,7 +73,9 @@ floor, no minimum: `font-size`, *typography*, *text size* and *type
 scale* appear nowhere in `requirements.md` or `external-design.md`.
 That is not an oversight to correct in passing — it is the same shape as
 the ten ungoverned `<details>`, and it is part of the finding. It is
-also why `§10.60` is opened **open** rather than written as a repair.
+also why `§10.60` was opened **open** rather than written as a repair.
+(*It is now **closed** — by a recorded decision that no requirement
+should exist, 2026-11-17. See the floor decision below.*)
 
 ## Rounds
 
@@ -87,7 +89,7 @@ with both. **Do not start a later round early.**
 | TYPE-001 r2 | [what the tree actually says](./TYPE-001-round-2-what-the-tree-actually-says.md) | Three measurements and one piece of reasoning — the badge's cost in the dimension it actually lives in, the hour label's 48 px clearance, and why a guarded spelling is right where the guard cannot verify | TYPE-001 | **Closed 2026-11-17, accepted. Documentation only, no `.rs` touched.** The badge's cost measured in the dimension it lives in: **at 390 px it paints zero pixels in both views, at both sizes, for all three name lengths** — the badge does not reach a phone at all, which is a `TYPE-003` question about whether the information belongs there. At 1280 the pixel budget barely moves, **and the round named the mechanism rather than just observing it**: the badge is the line's last child, so growing it grows the overflow by the same amount; what a fixed budget loses is *characters*, not pixels. The hour label measured at **30.7 px against a 48 px gap — 17.3 px clearance**, and measured rather than taken from the architect's own ~30 px estimate, which is the right relationship to one. **One correction, made in the entry rather than sent back**: the character figures are budgets that do not subtract the ellipsis glyph, which sits exactly where the badge is cut, so painted glyphs are fewer in both columns and the relative cost is larger than *modest*. **One anomaly reported as confirmed that did not happen**: the push CI run for `5404f45` existed and was created nine seconds after the commit — it was in flight, not absent, and a second run was dispatched on that premise. Harmless, same SHA, both green, and **it stayed out of every published document**. `--lib` **246**, `DEC-007` **687** |
 | TYPE-002 | [the first screen after signing in](./TYPE-002-the-first-screen-after-signing-in.md) | `/today`'s own 21 sites, decided by class rather than site-by-site — and the four 44 px controls whose touch-target arithmetic is built on `text-xs`'s line-height | TYPE-001 r2 | **Closed 2026-11-17, accepted on twenty of twenty-one decisions (round 2).** Four headings, eleven chip labels, three italic lines and two value lines raised to `text-sm`; `/today`'s `text-xs` population drops **21 → 1**. **The chip-label question was answered the only way it could be** — live, with every label raised at once, because raising them one at a time measures eleven things that do not happen: row counts `[1,2,2,2]` at 390 and `[1,1,1,1]` at 1280, unchanged, with the two pre-existing wraps named as neither caused nor fixed here. `me.rs:332`'s touch-target sum re-derived from `static/tailwind.css`'s pinned rule (`48px → 52px`) and both gates re-run, with `rhythm` measuring 52 px and `what_do_these_mean` still 48 px — the second number is what *proves* the split held. **The sharpest thing either series has produced**: a fixture bug caught in its own work, four transitions against `SWITCHING_MIN_EVENTS = 5`, found by checking which branch rendered rather than by the numbers, *because the numbers were identical either way* — a measurement that returns the same value on the wrong fixture cannot detect its own fixture being wrong. **The correction**: the glossary container was kept smallest for being *optional* two sentences after removal was rejected because it is **the one place a reader who does not know the terms can learn them**. Both cannot be true of the same reader, and `/today`'s explanation is now smaller than every term it explains |
 | TYPE-002 r2 | [the explanation is the smallest thing](./TYPE-002-round-2-the-explanation-is-the-smallest-thing.md) | Raise the glossary container, and delete the one unmeasured legibility claim in an otherwise measured round | TYPE-002 | **Closed 2026-11-17, accepted, no findings.** The ruling taken in full with no counter-request, and summarised better than the review put it: the two reasons *"described opposite readers, and the second reader is the one this release exists for"*. `/today`'s `text-xs` population reaches **0**. `me.rs:373`'s sum re-derived from `static/tailwind.css` rather than copied from `:332`'s, and **`what_do_these_mean` measured at 52 px** — the number a prediction would have let pass. Round 1's forecast subtree heights **confirmed as measured results** (408 px / 728 px) when nothing obliged it to close that loop. Both unmeasured legibility claims gone from `§10.60` and `CHANGELOG.md`, verified at source. **One real CI failure, handled right**: an external host flaking in the postgres job's setup step, the failed job re-run rather than a fresh push, re-checked at job level, and named in the record — with the contrast to its own previous misread drawn by the round itself |
-| TYPE-003 | [the screens the work lives on](./TYPE-003-the-screens-the-work-lives-on.md) | The project screens' **36** (`issues.rs` 31, `projects.rs` 5) — the form labels, the display name, the table cells, three monospace textareas, and the two containers that carry a touch-target sum and `alignment_scan`'s hardcoded anchor | TYPE-002 r2 | **Open, handed 2026-11-17 — the last read.** It also owes the three questions the floor decision will be made on |
+| TYPE-003 | [the screens the work lives on](./TYPE-003-the-screens-the-work-lives-on.md) | The project screens' **36** (`issues.rs` 31, `projects.rs` 5) — the form labels, the display name, the table cells, three monospace textareas, and the two containers that carry a touch-target sum and `alignment_scan`'s hardcoded anchor | TYPE-002 r2 | **Closed 2026-11-17, accepted with one corrected figure.** All 36 raised; both files reach **zero** `text-xs` render sites. **The four containers were classified by checking their descendants rather than assuming** — two turned out vestigial, every text-bearing child already setting its own size. **`min-h-[2.5rem]` was tried, caught by `css_scan`, and reverted**: that value has no rule in the vendored stylesheet, so the obvious fix would have shipped with zero visual effect — `§10.52`'s own guard earning itself, and the round stopped at the asset-pipeline wall rather than widening scope. **A browser gate was broken by a round that never touched it** — `overflow-gate.mjs`'s fixture validation quoted the literal `text-xs font-medium`; caught by running it, and the inverse of this project's *edit a gate, run that gate* rule. Costs disclosed rather than averaged: a textarea's **~14 %** characters-lost, `issues.rs:2108`'s content-dependent 3→4-line range, and one site whose zero cost is reported **with its own explanation marked incomplete**. The table measured precisely enough to separate *worse within an existing failure* from *a new failure*. **The correction**: the headline *62 of 63* double-counted two sites in both `TYPE-001`'s six and this round's 36 — **61 distinct, 60 raised, 1 kept, and two of the 60 moved twice**. The finding is unaffected and the figure is corrected because the floor decision cites it |
 
 ## Removal is on the table in every round
 
@@ -105,14 +107,46 @@ available and each needs its own recorded reason:
 A round that returns only outcome 2 has probably not considered the
 other two, and will be asked why.
 
-## What this series does not promise
+## The floor decision — made 2026-11-17: **no requirement is written**
 
-- **The floor itself.** Whether a type requirement is written, and what
-  it says, is decided **after** `TYPE-003`. Adopted or deliberately
-  deferred — with the reason recorded either way. **It is the
-  architect's decision, not a round's**, and `TYPE-003` §8 names the
-  three questions it will be made on. A round that arrives with a
-  recommendation has done its own work and then someone else's.
+**Series `062` is complete.** All three reads are closed, `TYPE-001`
+and `TYPE-002` each took a second round, and **`§10.60` is closed by a
+recorded decision that no type requirement should exist** — the second
+of the two branches that entry's own closing condition named. The full
+reasoning is in the entry; in short:
+
+1. **The size answer converged — 60 of 61 distinct sites, one step
+   each — and that is the argument against a rule, not for one.** A
+   rule would have been right about the number, and the number was
+   never the hard part. Enforced the only way a text-size rule can be,
+   by a scan over class tokens, it would pass green over all seven of
+   the costs this release actually paid.
+2. **Seven costs needed a reading.** A site kept for an unrelated
+   clipping defect; `min-h-[2rem]`'s expired reason and the
+   vendored-CSS wall behind its obvious fix; four touch-target sums
+   keyed to an ambient line-height; a textarea's and a card's
+   characters-lost cost; a wrap cost visible only in the dimension the
+   site lives in; a browser gate's hardcoded class string; and an
+   exception held up by two reasons that could not both be true of the
+   same reader.
+3. **Two thirds of the population is unread** — 68 `text-xs` render
+   sites on seven screens nobody has looked at. A floor written from
+   three screens would govern ten, which is *rule before design* with
+   the condition's own words reversed.
+4. **What recurred is not text size.** It is that a size change
+   propagates into arithmetic written in comments and into literal
+   class strings held inside checks, and **nothing reads either**.
+   That is `061`'s principle unfinished — *make the property true by
+   construction, keep the check as a backstop* — and it is a rule about
+   derived values, not typography. It goes to `ROADMAP.md`'s candidate
+   list and waits for a number.
+
+**The owner's question of 2026-11-04 now has its typography half
+answered for three screens, and its colour half was already
+discharged.** The layout half is untouched and seven screens are
+unread; neither is recorded as a defect, because neither is one.
+
+## What this series does not promise
 - **Colour.** `NFR-A11Y-005` is Met and is **cited, not reopened**.
   `TYPE-001` measures the contrast of four specific sites because
   nothing ever has and they are the subject of its own round; that is a
@@ -128,7 +162,9 @@ other two, and will be asked why.
 - **Any global rule applied before the read.** A `text-xs` ban, a root
   `font-size` change, a scan over arbitrary text values — all of them
   are the rule arriving before the design, which is the thing the
-  owner's own condition prohibits.
+  owner's own condition prohibits. **This is now the series' own
+  outcome rather than only its constraint**: the decision above is that
+  no such rule is written at all.
 
 ## Where the numbers in these handoffs come from
 
