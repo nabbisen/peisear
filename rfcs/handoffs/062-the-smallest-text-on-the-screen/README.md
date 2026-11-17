@@ -46,8 +46,9 @@ contribution from outside the team is the public workflow, not this one.
 a read rather than a rule.**
 
 **(1) 12 px is not reserved for metadata.** Measured 2026-11-17 at
-source, `text-xs` appears at **126 sites across `components/`** — and
-reading the sites rather than counting them shows what it carries:
+source, `text-xs` appears at **120 render sites across `components/`**
+— and reading the sites rather than counting them shows what it
+carries:
 every section heading (six of them `uppercase tracking-wide`, which is
 harder again), every chip label that names a number, the form field
 labels **Status**, **Assignee** and **Sort by**, **a person's display
@@ -82,9 +83,10 @@ with both. **Do not start a later round early.**
 
 | ID | Handoff | Subject | Blocked on | State |
 |---|---|---|---|---|
-| TYPE-001 | [below the floor there is no floor](./TYPE-001-below-the-floor-there-is-no-floor.md) | The six sub-12 px sites — the smallest population, the clearest question, and the four whose contrast nothing has ever measured | — | **Open, handed 2026-11-17** |
-| TYPE-002 | — | `/today`'s own 23 `text-xs` sites, decided by class rather than site-by-site, **with the height delta measured at 390 and 1280** | TYPE-001 | Not written — waits on `TYPE-001`'s findings |
-| TYPE-003 | — | The project screens' 35 (`issues.rs` 31, `projects.rs` 4), where the form labels, the display name and the table cells live | TYPE-002 | Not written — waits on `TYPE-002`'s findings |
+| TYPE-001 | [below the floor there is no floor](./TYPE-001-below-the-floor-there-is-no-floor.md) | The six sub-12 px sites — the smallest population, the clearest question, and the four whose contrast nothing has ever measured | — | **Closed 2026-11-17, accepted with one blocking correction (round 2).** All four previously-unmeasured ratios now have numbers and **all four clear 4.5:1** — `5.51`/`5.91`/`4.98`/`5.86` resting, measured as rendered against both tinted and untinted backgrounds, with hover reached by a real dispatched mouse move and a sampling rule that is a conservative floor rather than a point estimate. Five of six sites raised to the scale's own 12 px floor, each cost measured; one kept at 10 px **on a reason that is not about type** — its third line is clipped by the block's `overflow-hidden` under roughly an hour, at either size, which is a defect in its own right now named as found-and-not-fixed. Two removals considered and rejected with reasons. **The correction**: `§10.60` as written said three of four sites moved to the guarded colour spelling and that `calendar.rs:185` kept bare `opacity-70` — **the tree says all four moved**, and the site's own comment says so; `§10.58`'s class two days after it shipped. The code is right; the record was wrong, corrected in the entry by the architect. **It also found the architect's census method wrong**: every published population figure counted comments mentioning a class alongside sites rendering it. `DEC-007` **687** unmoved, `--lib` **246**, `overflow-gate` 120/120, `occlusion-gate` 120/120 |
+| TYPE-001 r2 | [what the tree actually says](./TYPE-001-round-2-what-the-tree-actually-says.md) | Three measurements and one piece of reasoning — the badge's cost in the dimension it actually lives in, the hour label's 48 px clearance, and why a guarded spelling is right where the guard cannot verify | TYPE-001 | **Open, handed 2026-11-17** |
+| TYPE-002 | — | `/today`'s own **21** `text-xs` sites, decided by class rather than site-by-site, **with the height delta measured at 390 and 1280** | TYPE-001 | Not written — waits on `TYPE-001`'s findings |
+| TYPE-003 | — | The project screens' **36** (`issues.rs` 31, `projects.rs` 5), where the form labels, the display name and the table cells live | TYPE-002 | Not written — waits on `TYPE-002`'s findings |
 
 ## Removal is on the table in every round
 
@@ -111,7 +113,7 @@ other two, and will be asked why.
   `TYPE-001` measures the contrast of four specific sites because
   nothing ever has and they are the subject of its own round; that is a
   measurement inside this release, not a reopening of the requirement.
-- **The remaining 68 `text-xs` sites** on settings, teams, sprints,
+- **The remaining 65 `text-xs` sites** on settings, teams, sprints,
   notifications, search and auth. They wait for their own screens to be
   read.
 - **Any global rule applied before the read.** A `text-xs` ban, a root
@@ -124,9 +126,29 @@ other two, and will be asked why.
 Every figure was measured on **2026-11-17** against `0.63.0`'s tree
 (`922f976`). **One of them corrects the architect's own earlier note**:
 that note of 2026-11-04 said *"ninety sites"*, and the census at source
-is **126** — wrong by a third, and wrong in the direction that would
+is **120** — wrong by a third, and wrong in the direction that would
 have made the work look smaller than it is.
 
+**A population here is a count of render sites, and the command that
+measures one excludes comments.** Corrected 2026-11-17 after
+`TYPE-001`: the architect's first figures (126 / 23 / 35 / 68) were a
+plain `grep -c`, which counts a comment that *mentions* a class
+alongside a site that *renders* it. Six such comments pre-existed, and
+`TYPE-001` wrote three more, so the naive census now reads 134 where
+125 sites render. The figures above are render sites only:
+
+```bash
+grep -rn 'text-xs' crates/ --include='*.rs' | grep -vE ':[[:space:]]*//' | wc -l
+```
+
+Writing a class name into a comment is not a fault and nothing should
+change about it. **The census method was what was wrong, and it was the
+architect's to get right** — a handoff that names a population owes the
+command that measures it, and the first version of this one did not.
+`text-sm`, measured the same way, is **151**.
+
 Read each handoff's own §1 before starting, and **where it gives a
-population, re-derive it rather than inheriting it**. This series'
-predecessor was corrected five times by rounds that did exactly that.
+population, re-derive it with the command above rather than inheriting
+the number**. This series' predecessor was corrected five times by
+rounds that did exactly that; this series' first round was handed a
+number that re-deriving would have reproduced wrongly.

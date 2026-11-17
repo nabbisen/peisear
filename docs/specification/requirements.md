@@ -9043,11 +9043,37 @@ describes. **It is deliberately not closed by this release's first
 round**: `TYPE-001` adds measurements to it, and it stays open until the
 third round decides the rule.
 
-**One correction recorded here rather than silently fixed.** The
+**Two corrections recorded here rather than silently fixed, and the
+second is the same mistake as the first one level down.** The
 architect's note of 2026-11-04 put the `text-xs` population at *"ninety
-sites"*. The census at source is **126**, across thirteen component
-files. The scope was proposed on the re-derived figure, and the row
-carries the correction; the figure in the note was never measured.
+sites"*; re-derived at source it was **126**, across thirteen component
+files, and the scope was proposed on the re-derived figure. **Then
+`TYPE-001` closed and 126 was wrong too**: a plain `grep -c` counts a
+comment that *mentions* a class alongside a site that *renders* it.
+Six such comments pre-existed, so the census over **render sites** is
+**120** — `/today` 21 rather than 23, the project screens 34 rather
+than 35, the deliberately-excluded remainder 65 rather than 68, and
+`text-sm` 151 rather than 157. `TYPE-001` wrote three more such
+comments, so the naive command now reads 134 where 125 sites render,
+and that round's own *"two hits"* for the arbitrary-value census was
+four for the same reason — **a correct outcome on evidence that does
+not say what it was quoted as saying**, in the same round whose
+population the architect had mis-measured the same way.
+
+**What was actually wrong was the method, and it was the architect's.**
+A handoff that names a population owes the command that measures it, and
+the first version of this one did not — so a round told to re-derive
+rather than inherit would have re-derived the wrong number. The command
+is now in the series' own `README.md`:
+
+```bash
+grep -rn 'text-xs' crates/ --include='*.rs' | grep -vE ':[[:space:]]*//' | wc -l
+```
+
+Writing a class name into a comment is not a fault and nothing should
+change about it. **`TYPE-002`'s population is 21 and `TYPE-003`'s is
+36** — 34, plus the two `TYPE-001` raised — stated here so neither
+round inherits a figure again.
 
 **`TYPE-001` closed, 2026-11-17 — the contrast half of this entry,
 measured.** Re-derived the six-site population first (seven `grep`
@@ -9081,14 +9107,32 @@ whether the guarded spelling (`text-base-content/70`) composites
 identically to bare `opacity-70` on these same tinted backgrounds, for
 this single-level (non-nested) case. It does, within pixel noise
 (`calendar.rs:110`: `5.49:1`/`5.19:1`; `calendar.rs:185`: `5.83:1`/
-`5.50:1`) — so three of the four sites moved to the guarded spelling.
-The fourth (`calendar.rs:185`, the day-view badge) kept bare
-`opacity-70`: its real legibility limit is an unrelated, pre-existing
-defect (its own line is clipped by the block's `overflow-hidden` on any
-event under roughly an hour, measured unaffected by font size across
-15–60 minute events), so neither the colour spelling nor the size was
-worth moving there, and its contrast already clears 4.5:1 with real
-margin at its current size.
+`5.50:1`) — so **all four** sites moved to the guarded spelling.
+
+**Corrected by the architect's review, 2026-11-17, before this entry
+had been read by anyone outside the round.** As first written, the two
+paragraphs above said *three of the four* moved and that
+`calendar.rs:185` *"kept bare `opacity-70`"*. **The tree says
+otherwise** — `calendar.rs:201` is `text-[10px] text-base-content/70
+block truncate`, and that site's own in-code comment says the colour
+moved. The round's review request contained the same contradiction
+against its own post-change table. This is `§10.58`'s class two days
+after it shipped in `0.63.0`: an entry's body asserting a state the
+code does not have, with nothing reading one against the other. The
+code is right and was right to make; **the record was wrong and is
+corrected here rather than quietly edited**, because this entry is
+already where one of the architect's own figures is recorded as wrong
+and a second instance belongs beside the first.
+
+What `calendar.rs:185` **kept** is its **size**: 10px rather than
+raised. Its real legibility limit is an unrelated, pre-existing defect
+— its own line is clipped by the block's `overflow-hidden` on any event
+under roughly an hour, measured unaffected by font size across 15–60
+minute events — so raising it would not have helped, and its contrast
+already clears 4.5:1 with real margin at its current size. **That
+clipping is a defect in its own right, found by this round and
+deliberately not fixed by it**, recorded here so it is a decision
+rather than something four readings have now passed over.
 
 **Per-site decision, each measured rather than asserted:**
 

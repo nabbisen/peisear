@@ -165,8 +165,17 @@ as non-text by `QA-013 §2` and by `contrast_scan`'s own doc comment.
 - **Must not adopt a type floor, write a type requirement, or add a scan
   over text sizes.** Rule after design; the floor is decided after
   `TYPE-003`.
-- **Must not change `text-xs` sites.** 126 of them exist and 120 belong
-  to the two later rounds. This round's population is six.
+- **Must not change `text-xs` sites.** **120 render sites** exist: 55
+  belong to the two later rounds (21 on `/today`, 34 on the project
+  screens) and 65 are deliberately excluded. **This round's six sites
+  are not among them** — none of the six is a `text-xs` site; that is
+  the point of the round. (*Corrected 2026-11-17 after this round. The
+  sentence first written here said "126 of them exist and 120 belong to
+  the two later rounds", which was wrong twice: 126 was a `grep -c` that
+  counted six comments mentioning the class, and the second figure
+  subtracted this round's six sub-12 px sites from a `text-xs` census
+  they were never in. See the series `README.md`, "Where the numbers in
+  these handoffs come from".*)
 - **Must not reopen `NFR-A11Y-005`.** Measuring four sites it never
   covered is not reopening it. Amending it is a separate decision and it
   is the architect's.
