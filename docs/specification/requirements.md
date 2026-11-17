@@ -8722,7 +8722,7 @@ not measured. `FOCUS-001` measures all four and is where the remedy and
 the missing assertion both land.
 
 
-### 10.58 The helper that satisfies one accessibility requirement silently removes another's affordance — **open**, `DISC-001`, 2026-11-12; found by the architect reading a regenerated screenshot
+### 10.58 The helper that satisfies one accessibility requirement silently removes another's affordance — **closed**, `MARK-002`, 0.63.0; opened by `DISC-001`, 2026-11-12, found by the architect reading a regenerated screenshot
 
 **A collapsed `<summary>` that uses `grow_text()` renders no disclosure
 marker at all.** `grow_text(base)` is
@@ -8802,6 +8802,16 @@ and the scan built against it — and the property is checked
 **positively**: every real `<summary>` is accounted for by name. Both
 shapes fail one consolidated test, including the literal `inline-flex`
 inside the helper's own argument that the previous guard could not see.
+
+*The heading of this entry said `open` until 2026-11-17, two days after
+`0.63.0` shipped asserting it closed.* The closing note above was written
+by the round that closed it; the heading was not, and the heading is what
+a reader scanning this register sees. Found by the architect enumerating
+open entries while scoping `0.64.0` — not by any check, because none
+reads an entry's own heading against its own body. One of the two is
+derivable from the other, which is what makes this cheap to guard and
+worth recording as `§10.36`'s class in a new place: the evidence of a
+closure is an edit in one place, and nothing notices the other.
 
 **Two of the architect's own statements were corrected in the closing.**
 Only **two** sites needed an inner wrapper, not three — `/today`'s
