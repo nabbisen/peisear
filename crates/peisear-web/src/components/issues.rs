@@ -252,9 +252,17 @@ fn compute_health_headline(indicators: &[Indicator], raw: &ProjectHealthRaw) -> 
 #[component]
 fn HealthStrip(health: ProjectHealthReport, project_id: String) -> impl IntoView {
     if health.raw.total_issues == 0 {
+        // `TYPE-003` (`§10.60`): kept as information -- considered for
+        // removal and rejected, since nothing else on this page says
+        // why the health panel is blank. Raised to `text-sm`; measured
+        // cost: a genuinely new wrapped line at 390 (this message is
+        // long enough to cross that threshold, unlike the board's own
+        // "Drop issues here" and the sub-issues empty message below,
+        // which keep their existing line counts) -- accepted rather
+        // than hidden, in an empty state most readers see rarely.
         return view! {
             <section class="mb-3">
-                <div class="text-xs text-base-content/70 italic">
+                <div class="text-sm text-base-content/70 italic">
                     {t(MessageKey::HealthEmptyMessage)}
                 </div>
             </section>
@@ -330,23 +338,53 @@ fn HealthStrip(health: ProjectHealthReport, project_id: String) -> impl IntoView
                 <summary class=grow_summary("cursor-pointer text-base-content/80 hover:text-base-content py-3")>
                     {headline}
                 </summary>
-                <div class="mt-2 text-xs">
+                // `TYPE-003` (`§10.60`): raised from `text-xs` --
+                // measured cost zero. Every text-bearing descendant
+                // (the `<h3>` just below, the `<p>` summary, the nested
+                // `<details>`) already sets its own explicit size, so
+                // nothing here actually inherits this container's
+                // ambient value -- confirmed by checking each one, not
+                // assumed. Raised anyway, for the same reason a vestigial
+                // class is worth tidying: it keeps the wrapper's own
+                // intent legible to the next reader.
+                <div class="mt-2 text-sm">
                     <div class="flex items-center gap-2 mb-1">
-                        <h3 class="text-xs uppercase tracking-wide text-base-content/70">
+                        // `TYPE-003`: raised from `text-xs`, +4px at
+                        // both 390 and 1280, no wrap -- a plain,
+                        // single-word heading.
+                        <h3 class="text-sm uppercase tracking-wide text-base-content/70">
                             {t(MessageKey::HealthHeading)}
                         </h3>
                     </div>
 
                     <p class="text-sm text-base-content/70 mb-2">{summary}</p>
 
-                    <details class="text-xs">
+                    // `TYPE-003` (`§10.60`): raised from `text-xs` to
+                    // `text-sm`. Unlike the vestigial wrapper above,
+                    // this one has real ambient dependents (the
+                    // explanation list below, and every chip and
+                    // bare-summary nested inside it that sets no size
+                    // of its own) -- measured cost +39.75px at 390 and
+                    // +10.5px at 1280 with a real non-Good indicator's
+                    // explanation sentence rendering through it. The
+                    // chip row just below (composite + six indicators)
+                    // keeps its own row count unchanged at both widths
+                    // -- a pre-existing one-chip-per-row density this
+                    // round neither causes nor fixes.
+                    <details class="text-sm">
                         // `MARK-002`: `grow_summary(...)`, same
                         // reasoning as the outer summary above, measured
                         // separately because this one sits in a
-                        // `text-xs` (16px line-height) context, not
-                        // `text-sm` -- `py-3` (24px) would total only
-                        // 40px here; `py-4` (32px) reaches 48px, over
-                        // the 44px floor rather than exactly on it.
+                        // `text-sm` (20px line-height) context, not
+                        // `text-xs` -- `py-3` (24px) would total only
+                        // 44px here, exactly on the floor rather than
+                        // clear of it; `py-4` (32px) reaches 52px, re-derived
+                        // from `static/tailwind.css`'s own
+                        // `.text-sm{line-height:1.25rem}` rather than
+                        // carried over from this container's own prior
+                        // `text-xs` sum (`py-4` = 32px + 16px = 48px).
+                        // `touch_target_scan` and `disclosure-marker-gate.mjs`
+                        // both re-run.
                         <summary class=grow_summary("cursor-pointer text-base-content/70 hover:text-base-content py-4")>
                             {t(MessageKey::IndicatorsSummaryLabel)}
                         </summary>
@@ -473,8 +511,14 @@ fn render_trend_chip(trend: peisear_core::project_health::Trend) -> impl IntoVie
             }),
         ),
     };
+    // `TYPE-003` (`§10.60`): raised to `text-sm`. Not reached by this
+    // round's own fixture (`Trend::Unavailable` hides this chip
+    // entirely without a historical health snapshot) -- measured by
+    // structural analogy instead: a plain single-word-scale inline
+    // span, the same shape as `:544`'s composite label just below,
+    // which *was* measured (+4px, both widths, no wrap).
     view! {
-        <span class="text-xs text-base-content/70 ml-1"
+        <span class="text-sm text-base-content/70 ml-1"
               role="group"
               aria-label=aria.clone()
               title=aria>
@@ -503,7 +547,9 @@ fn composite_row(score: &HealthScore) -> impl IntoView {
              role="group"
              aria-label=aria_label.clone()
              title=aria_label>
-            <span class="text-xs text-base-content/70">{t(MessageKey::CompositeLabel)}</span>
+            // `TYPE-003`: raised to `text-sm`, measured cost +4px at
+            // both 390 and 1280, no wrap.
+            <span class="text-sm text-base-content/70">{t(MessageKey::CompositeLabel)}</span>
             <span class=badge_class>
                 <span aria-hidden="true">{glyph}</span>
             </span>
@@ -580,12 +626,27 @@ fn indicator_row(ind: Indicator) -> impl IntoView {
              role="group"
              aria-label=aria_label.clone()
              title=aria_label>
-            <span class="text-xs text-base-content/70">{label_text}</span>
+            // `TYPE-003`: raised to `text-sm`, same measured cost as
+            // `composite_row`'s own label just above.
+            <span class="text-sm text-base-content/70">{label_text}</span>
             <span class=badge_class>
                 <span class="mr-1" aria-hidden="true">{glyph}</span>
                 {value_text}
             </span>
-            <details class="text-xs">
+            // `TYPE-003` (`§10.60`): the container raised to `text-sm`
+            // -- safe per that handoff's own §3: the `<summary>` just
+            // below is `touch_target_scan`'s one named escalation
+            // exclusion (`is_named_escalation_exclusion`) and
+            // `alignment_scan`'s one hardcoded anchor
+            // (`NAMED_ESCALATION_EXCLUSION_TAG`), matched on its own
+            // *literal* opening tag -- unchanged here, byte for byte,
+            // so both scans' anchors still match. It carries no
+            // `grow_summary(...)` and so is not subject to the 44px
+            // floor at all; raising this container only changes the
+            // ambient size its own un-sized children (the summary
+            // text, the `<p>` below it) read at -- not anything a
+            // touch-target comment states.
+            <details class="text-sm">
                 <summary class="cursor-pointer text-base-content/70 hover:text-base-content">
                     {calculation_summary}
                 </summary>
@@ -643,7 +704,17 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
                     // `break-words` on the name, each change nothing; `wrap-anywhere`
                     // alone clears it (`§10.25` shape C -- min-content is what is
                     // too wide, and only `anywhere` counts toward it).
-                    <span class="text-xs font-medium wrap-anywhere">{u.display_name}</span>
+                    // `TYPE-003` (`§10.60`): raised to `text-sm`.
+                    // Measured with an unbroken 53-character stress
+                    // name: at 390 the name is already wrapped to two
+                    // lines before and after (the chip's own width is
+                    // capped at the viewport either way) -- cost +8px,
+                    // no new wrap. At 1280 the name stays on one line
+                    // both before and after; the chip grows wider
+                    // (419px -> 478px) to fit the longer single line
+                    // rather than wrapping -- cost +4px, again no new
+                    // wrap introduced at either width.
+                    <span class="text-sm font-medium wrap-anywhere">{u.display_name}</span>
                     <span class="badge badge-sm badge-ghost">{label}</span>
                 </div>
             }
@@ -660,12 +731,26 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
                 <summary class=grow_summary("cursor-pointer text-base-content/80 hover:text-base-content py-3")>
                     {t(MessageKey::WorkloadSummaryLabel)}
                 </summary>
-                <div class="mt-2 text-xs">
+                // `TYPE-003`: raised from `text-xs`, same vestigial
+                // finding as `HealthStrip`'s own outer wrapper -- every
+                // descendant (the `<h3>`, the `<a>` via `grow_text`,
+                // each chip's own display-name span) already sets its
+                // own explicit size, so this container's ambient value
+                // has no real dependent; confirmed, not assumed.
+                // Measured cost zero.
+                <div class="mt-2 text-sm">
                     <div class="flex items-center gap-2 mb-1">
-                        <h3 class="text-xs uppercase tracking-wide text-base-content/70">
+                        // `TYPE-003`: raised, +4px both widths, no wrap.
+                        <h3 class="text-sm uppercase tracking-wide text-base-content/70">
                             {t(MessageKey::WorkloadHeading)}
                         </h3>
-                        <a href="/settings" class=grow_text("text-xs link link-hover opacity-70")>
+                        // `TYPE-003`: raised -- measured cost **zero**
+                        // at both widths. `grow_text` composes
+                        // `TOUCH_TARGET` (`min-h-11 min-w-11`), and
+                        // that 44px floor already exceeds either
+                        // size's own line-height, so the rendered box
+                        // does not move.
+                        <a href="/settings" class=grow_text("text-sm link link-hover opacity-70")>
                             {t(MessageKey::WorkloadSetCapacityLink)}
                         </a>
                     </div>
@@ -721,8 +806,12 @@ fn WorkloadHint(workload: Vec<UserLoad>) -> impl IntoView {
         })
         .collect_view();
 
+    // `TYPE-003` (`§10.60`): raised from `text-xs` -- a real ambient
+    // dependent, unlike the two vestigial containers above: the
+    // per-person name/snapshot chips just above inherit this
+    // container's own size. Measured cost +12px at 390, +4px at 1280.
     view! {
-        <div class="text-xs text-base-content/70 -mt-1">
+        <div class="text-sm text-base-content/70 -mt-1">
             <span class="font-medium mr-2">{t(MessageKey::WorkloadHintLabel)}</span>
             <span class="inline-flex items-center gap-3 flex-wrap">{chips}</span>
         </div>
@@ -778,8 +867,15 @@ fn BoardView(
                             {column.issues.into_iter().map(|issue| {
                                 view! { <IssueCard project_id=project_id.clone() issue=issue assignees=assignees_for_col.clone()/> }
                             }).collect_view()}
+                            // `TYPE-003` (`§10.60`): kept as information
+                            // (removal considered -- this is the only
+                            // affordance telling a reader the empty
+                            // column accepts a drop, which an empty
+                            // column alone does not say), raised to
+                            // `text-sm`. Measured cost +4px at both
+                            // widths, no new wrap -- a short line.
                             {is_empty.then(|| view! {
-                                <div class="text-xs text-base-content/70 text-center py-4 italic">
+                                <div class="text-sm text-base-content/70 text-center py-4 italic">
                                     {t(MessageKey::EmptyBoardHint)}
                                 </div>
                             })}
@@ -1031,7 +1127,19 @@ fn IssueCard(project_id: String, issue: Issue, assignees: Vec<AssigneeOption>) -
                 // value inherited ambiently, so the card is marginally
                 // shorter, not taller; the row did not wrap to a second
                 // line at either 390 or 1280.
-                <div class="flex items-center justify-between gap-2 mt-2 text-xs text-base-content/70">
+                // `TYPE-003` (`§10.60`): raised a second time this
+                // release, from `text-xs` to `text-sm` -- a direct
+                // consequence of reading one screen at a time, not
+                // churn. Measured cost **zero** at both widths, same
+                // as the first raise: the row's three badges
+                // (priority, effort, assignee) each carry `badge-sm`'s
+                // own fixed `16px` height regardless of the ambient
+                // text size, and the plain date span beside them does
+                // not move the row's own rendered height either,
+                // confirmed directly rather than assumed -- the exact
+                // mechanism is not fully explained and is reported as
+                // a measurement, not a theory.
+                <div class="flex items-center justify-between gap-2 mt-2 text-sm text-base-content/70">
                     <div class="flex items-center gap-1 flex-wrap">
                         <span class=badge>{t(MessageKey::PriorityName { label: issue.priority.to_i18n_label() })}</span>
                         {effort_node}
@@ -1088,9 +1196,21 @@ fn ListView(
             // the user back to the board view default.
             <input type="hidden" name="view" value="list"/>
 
+            // `TYPE-003` (`§10.60`): this file's own filter-toolbar
+            // labels (Status, Assignee, Sort by) were the minority
+            // spelling of their own pattern -- 20 `label-text text-sm`
+            // sites elsewhere in this file against these 3 at
+            // `text-xs`, with no comment anywhere explaining a
+            // deliberate reason for the difference. Read as accidental
+            // and raised to `text-sm`, making the file agree with
+            // itself. Measured live, all three raised at once: the
+            // toolbar's own row-wrap count is unchanged at both 390
+            // (5 rows before and after) and 1280 (3 rows before and
+            // after); cost +12px at 390 across the three, +4px at
+            // 1280.
             <label class="form-control">
                 <div class="label py-0">
-                    <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Status })}</span>
+                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Status })}</span>
                 </div>
                 <select name="status" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_status.is_empty()>{t(MessageKey::AllStatusesOption)}</option>
@@ -1115,7 +1235,7 @@ fn ListView(
             // filters need nothing — their options are our own strings.
             <label class="form-control min-w-0">
                 <div class="label py-0">
-                    <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
+                    <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                 </div>
                 <select name="assignee" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_assignee.is_empty()>{t(MessageKey::AnyoneOption)}</option>
@@ -1137,7 +1257,7 @@ fn ListView(
 
             <label class="form-control">
                 <div class="label py-0">
-                    <span class="label-text text-xs">{t(MessageKey::SortByFieldLabel)}</span>
+                    <span class="label-text text-sm">{t(MessageKey::SortByFieldLabel)}</span>
                 </div>
                 <select name="sort" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_sort.is_empty()>{t(MessageKey::SortDefaultOption)}</option>
@@ -1266,9 +1386,27 @@ fn ListView(
                                         </form>
                                     </td>
                                     <td><span class=pri_class>{priority_text}</span></td>
-                                    <td class="text-xs text-base-content/70">{effort_text}</td>
-                                    <td class="text-xs text-base-content/70">{assignee_text}</td>
-                                    <td class="text-xs text-base-content/70">{updated}</td>
+                                    // `TYPE-003` (`§10.60`): raised to
+                                    // `text-sm`. Row height measured
+                                    // unchanged at both 390 and 1280 --
+                                    // governed by the per-row status
+                                    // control's own `join` buttons, not
+                                    // by these cells. The table
+                                    // (`.overflow-x-auto` above) already
+                                    // scrolls horizontally at 390
+                                    // before this round (content
+                                    // 853px against a 356px viewport);
+                                    // raising these three cells adds
+                                    // width to scroll through
+                                    // (853px -> 911px) but does not
+                                    // newly trigger scrolling at either
+                                    // width -- it already scrolled at
+                                    // 390, and still does not at 1280
+                                    // (1118px content fits a 1118px
+                                    // viewport exactly).
+                                    <td class="text-sm text-base-content/70">{effort_text}</td>
+                                    <td class="text-sm text-base-content/70">{assignee_text}</td>
+                                    <td class="text-sm text-base-content/70">{updated}</td>
                                 </tr>
                             }
                         }).collect_view()}
@@ -1327,10 +1465,29 @@ pub fn IssueNewPage(
                                    placeholder=t(MessageKey::NewIssueTitlePlaceholder)/>
                         </label>
 
+                        // `TYPE-003` (`§10.60`): raised to `text-sm`,
+                        // matching this field's own label (already
+                        // `text-sm`, like 20 of this file's 23
+                        // `label-text` sites) -- the same "make the
+                        // file agree with itself" reasoning as the
+                        // filter toolbar's labels. Measured, not
+                        // assumed: `rows="6"` fixes the box's own LINE
+                        // COUNT regardless of font size (the HTML
+                        // attribute, not a pixel height), so the box
+                        // grows in pixels instead -- +24px, matching
+                        // the 16px->20px line-height ratio almost
+                        // exactly. Because this is a monospace font,
+                        // raising 12px -> 14px (a ×1.167 factor) also
+                        // shrinks characters-per-line by the
+                        // reciprocal, roughly 14% fewer of a person's
+                        // own typed characters visible at once without
+                        // scrolling -- a real cost, accepted rather
+                        // than hidden, on a field that is read while
+                        // being written, not just read.
                         <label class="form-control w-full">
                             <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span></div>
                             <textarea name="description" rows="6" maxlength="10000"
-                                      class=grow("textarea textarea-bordered textarea-sm w-full font-mono text-xs")
+                                      class=grow("textarea textarea-bordered textarea-sm w-full font-mono text-sm")
                                       placeholder=t(MessageKey::NewIssueDescriptionPlaceholder)></textarea>
                         </label>
 
@@ -1364,7 +1521,21 @@ pub fn IssueNewPage(
                             <label class="form-control w-full">
                                 <div class="label py-1">
                                     <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</span>
-                                    <span class="label-text-alt text-xs opacity-70">{t(MessageKey::StoryPointsHint)}</span>
+                                    // `TYPE-003` (`§10.60`): one of
+                                    // three identical `StoryPointsHint`
+                                    // sites rendered from three separate
+                                    // code paths (new issue, sub-issue,
+                                    // edit) -- `GRAM-002`'s own lesson
+                                    // about reaching every branch of a
+                                    // duplicate path, not just the first
+                                    // found. Raised to `text-sm`,
+                                    // colour spelling (bare `opacity-70`)
+                                    // left untouched -- out of this
+                                    // round's scope, `NFR-A11Y-005` not
+                                    // reopened. Measured cost +4px at
+                                    // both widths, no wrap; same for
+                                    // all three.
+                                    <span class="label-text-alt text-sm opacity-70">{t(MessageKey::StoryPointsHint)}</span>
                                 </div>
                                 <select name="effort" class=grow("select select-bordered select-sm w-full")>
                                     <option value="" selected=true>{t(MessageKey::NoValuePlaceholder)}</option>
@@ -1476,8 +1647,12 @@ pub fn SubIssueNewPage(
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span>
                             </div>
+                            // `TYPE-003`: raised to `text-sm`, same
+                            // reasoning and the same measured cost as
+                            // the new-issue form's own description
+                            // field above.
                             <textarea name="description" rows="6" maxlength="10000"
-                                      class=grow("textarea textarea-bordered textarea-sm w-full font-mono text-xs")
+                                      class=grow("textarea textarea-bordered textarea-sm w-full font-mono text-sm")
                                       placeholder=t(MessageKey::NewSubIssueDescriptionPlaceholder)></textarea>
                         </label>
 
@@ -1517,7 +1692,11 @@ pub fn SubIssueNewPage(
                             <label class="form-control w-full">
                                 <div class="label py-1">
                                     <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</span>
-                                    <span class="label-text-alt text-xs opacity-70">{t(MessageKey::StoryPointsHint)}</span>
+                                    // `TYPE-003`: the second of the
+                                    // three `StoryPointsHint` sites --
+                                    // see the new-issue form's own
+                                    // comment above.
+                                    <span class="label-text-alt text-sm opacity-70">{t(MessageKey::StoryPointsHint)}</span>
                                 </div>
                                 <select name="effort"
                                         class=grow("select select-bordered select-sm w-full")>
@@ -1652,7 +1831,10 @@ pub fn IssueDetailPage(
                      aria-label=t(MessageKey::ScheduleMoveHeading)>
                 <div class="card-body py-3">
                     <h2 class="text-sm font-medium">{t(MessageKey::ScheduleMoveHeading)}</h2>
-                    <p class="text-xs text-base-content/70 mt-0.5 mb-2">
+                    // `TYPE-003` (`§10.60`): raised to `text-sm`.
+                    // Measured cost +8px at 390 (two lines, both
+                    // taller, same count), +4px at 1280 (one line).
+                    <p class="text-sm text-base-content/70 mt-0.5 mb-2">
                         {t(MessageKey::ScheduleMoveHelperText)}
                     </p>
                     <form method="post" action=move_action
@@ -1720,8 +1902,17 @@ pub fn IssueDetailPage(
                         </a>
                     </div>
                     {if sub_issues.is_empty() {
+                        // `TYPE-003` (`§10.60`): kept as information
+                        // (removal considered -- this both explains the
+                        // empty state and tells a reader what a
+                        // sub-issue is for, which the "+ Add sub-issue"
+                        // link alone does not), raised to `text-sm`.
+                        // Measured cost +16px at 390, +8px at 1280 --
+                        // same line count at both sizes (this message
+                        // already wraps across several lines at
+                        // `text-xs`), just taller, no new wrapped line.
                         view! {
-                            <p class="text-xs italic text-base-content/70">
+                            <p class="text-sm italic text-base-content/70">
                                 {t(MessageKey::SubIssuesEmptyMessage)}
                             </p>
                         }.into_any()
@@ -1786,7 +1977,10 @@ pub fn IssueDetailPage(
                     </select>
                     <button type="submit" class=grow("btn btn-ghost btn-sm")>{t(MessageKey::SaveButton)}</button>
                 </form>
-                <p class="text-xs text-base-content/70 mt-1">
+                // `TYPE-003` (`§10.60`): raised to `text-sm`. Measured
+                // cost +16px at 390, +8px at 1280 -- same line count at
+                // both sizes, just taller.
+                <p class="text-sm text-base-content/70 mt-1">
                     {t(MessageKey::SprintAssignmentHelperText)}
                 </p>
             </div>
@@ -1890,8 +2084,16 @@ fn IssueEditForm(
 
                 <label class="form-control w-full">
                     <div class="label py-1"><span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span></div>
+                    // `TYPE-003`: raised to `text-sm`, same reasoning
+                    // as the new-issue form's own description field.
+                    // This box is `rows="8"`, not `6` -- measured
+                    // separately: box height +32px (not +24px),
+                    // matching the larger row count at the same
+                    // 16px->20px line-height ratio; the same ~14%
+                    // characters-per-line cost applies, independent of
+                    // row count.
                     <textarea name="description" rows="8" maxlength="10000"
-                              class=grow("textarea textarea-bordered textarea-sm w-full font-mono text-xs")>
+                              class=grow("textarea textarea-bordered textarea-sm w-full font-mono text-sm")>
                         {description}
                     </textarea>
                 </label>
@@ -1926,7 +2128,10 @@ fn IssueEditForm(
                     <label class="form-control w-full">
                         <div class="label py-1">
                             <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::EffortPoints })}</span>
-                            <span class="label-text-alt text-xs opacity-70">{t(MessageKey::StoryPointsHint)}</span>
+                            // `TYPE-003`: the third of the three
+                            // `StoryPointsHint` sites -- see the
+                            // new-issue form's own comment.
+                            <span class="label-text-alt text-sm opacity-70">{t(MessageKey::StoryPointsHint)}</span>
                         </div>
                         <select name="effort" class=grow("select select-bordered select-sm w-full")>
                             <option value="" selected=current_effort.is_none()>{t(MessageKey::NoValuePlaceholder)}</option>
@@ -2105,7 +2310,20 @@ fn IssueView(
         <div id="status-announcements-assertive" role="alert" class="text-sm text-base-content/70 mb-2 empty:hidden"></div>
         {render_status_enhancement_assets()}
 
-        <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/70 mb-4">
+        // `TYPE-003` (`§10.60`): raised to `text-sm`. Unlike the
+        // board card's own metadata row (which carries the same shape
+        // but measured zero cost), this row holds more content
+        // (priority, effort, assignee, two dot separators, created and
+        // updated dates) and the extra height moves: a real new
+        // wrapped line, confirmed directly -- 3 lines -> 4 at 390 in
+        // one fixture (height +6px there), and up to +32px at 390 with
+        // longer assignee/date text in a second, richer fixture; at
+        // 1280 it stayed flat in the simpler case and gained one line
+        // (+2px) in the richer one. Accepted rather than hidden: the
+        // range is real and content-dependent, not a single clean
+        // number, and every item in this row is information a reader
+        // of their own issue is expected to want.
+        <div class="flex flex-wrap items-center gap-2 text-sm text-base-content/70 mb-4">
             <span class=pri_class>{t(MessageKey::PriorityName { label: issue.priority.to_i18n_label() })}</span>
             {issue.effort.map(|e| {
                 let label = t(MessageKey::PointsValue { points: e });

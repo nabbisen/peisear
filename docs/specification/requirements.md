@@ -9402,6 +9402,217 @@ sizes. `NFR-A11Y-005`, `NFR-A11Y-007`, `contrast_scan` and
 measure moved, and the measurement confirms it still passes.
 `TYPE-003` has not run.
 
+**`TYPE-003` closed, 2026-11-17 — the project screens' own 36 sites,
+the last read.** Re-derived the population first (`grep -rn 'text-xs'
+crates/peisear-web/src/components/issues.rs
+crates/peisear-web/src/components/projects.rs | grep -vE
+':[[:space:]]*//'`): **31 in `issues.rs`, 5 in `projects.rs`**,
+matching the handoff.
+
+**Every one of the 36 raised** — the only round of three with nothing
+kept. `issues.rs`'s own file now carries zero `text-xs` render sites;
+`projects.rs`'s likewise.
+
+**The constraint read first.** Two of the four containers in this
+round's population carry real ambient dependents and a touch-target
+stake (`issues.rs:342`, the Health panel's "Indicators" disclosure,
+and `:588`, each indicator's own "How this is calculated" disclosure);
+two do not (`:333`, `:663` — every text-bearing descendant of each
+already sets its own explicit size, confirmed by checking each one,
+not assumed, so raising them costs nothing and changes nothing
+visible). `:342`'s own nested summary comment is updated
+(`py-4` = 32px + 16px = 48px → 32px + 20px = 52px, re-derived from
+`static/tailwind.css`'s pinned rule rather than carried over) and both
+`touch_target_scan` and `disclosure-marker-gate.mjs` re-run —
+`what_do_these_mean` on `/today` (a different site, raised last round)
+and the board/list `indicators` summary both now measure **52px**,
+matching the recomputed sum. `:588` needed no sum update: its own
+`<summary>` (`:589`) is `touch_target_scan`'s one named escalation
+exclusion and `alignment_scan`'s one hardcoded anchor, matched on its
+exact literal opening tag — unchanged here, byte for byte, confirmed
+rather than assumed, so both scans' anchors still match after the
+container around it moved.
+
+**Per-class decision, each measured, not asserted:**
+
+- **Containers (4)** — all raised. Two vestigial (`:333`, `:663`,
+  cost zero), two real (`:342`, cost +39.75px at 390 / +10.5px at
+  1280, with the chip row inside it keeping its own pre-existing
+  one-chip-per-row density unchanged at either width; `:588`, no
+  measured cost beyond what its own now-`text-sm` leaf content costs).
+- **Form field labels (3)** — raised. These were the minority
+  spelling of their own pattern in `issues.rs` (20 `text-sm` sites
+  against these 3 at `text-xs`, no comment anywhere giving a reason
+  for the difference) — read as accidental, made to agree with the
+  file. Filter-row wrap count measured unchanged at both 390 (5 rows)
+  and 1280 (3 rows); cost +12px / +4px.
+- **Form hints (5)** — raised, including all three identical
+  `StoryPointsHint` sites (`GRAM-002`'s duplicate-path lesson, reached
+  with one edit per literal site). Colour (bare `opacity-70` on three
+  of the five) left untouched — out of this round's scope,
+  `NFR-A11Y-005` not reopened. Cost +4px, no wrap, at every site
+  measured.
+- **Table cells (3)** — raised. Row height measured **unchanged** at
+  both widths — governed by the per-row status control's own buttons,
+  not these cells. The table already scrolls horizontally at 390
+  before this round (853px of content against a 356px viewport);
+  raising these three cells adds width to scroll through
+  (853px → 911px) without newly triggering scrolling at either width.
+- **Monospace textareas (3)** — raised, matching their own
+  already-`text-sm` labels. `rows="6"`/`rows="8"` fixes line *count*
+  regardless of font size (an HTML attribute, not a pixel height), so
+  the box grows in pixels instead (+24px / +32px, matching the
+  16px→20px line-height ratio almost exactly) — and because this is a
+  monospace font, characters-per-line shrinks by the same ratio the
+  font grows (12px→14px, ×1.167), roughly **14% fewer of a person's
+  own typed characters visible at once without scrolling**. Accepted
+  rather than hidden: a real cost on a field read while being written,
+  not just read, the same shape as the calendar badge and the
+  project-card description below, paid because it helps legibility.
+- **A person's display name (1)** — raised. Measured with a
+  53-character unbroken stress name, not a short one: at 390 the name
+  is already wrapped to two lines before and after (chip width capped
+  at the viewport either way), cost +8px, no new wrap; at 1280 the
+  name stays on one line both before and after and the chip widens
+  instead (419px → 478px), cost +4px, again no new wrap at either
+  width. `browser-checks/overflow-gate.mjs`'s own fixture-validation
+  regex hardcoded this site's literal class string
+  (`text-xs font-medium`) to confirm the workload chip rendered at
+  all — found only by running the gate, not predicted, and fixed in
+  that script alongside this change.
+- **Section headings (2)** — raised, +4px uniform, no wrap, trivial
+  single-word labels.
+- **Italic / explanatory prose (3)** — kept as information (each
+  considered for removal and rejected, with its own reason: the
+  health-empty message is the only account of why the panel is blank;
+  the board's empty-column hint is the only sign a column accepts a
+  drop; the sub-issues-empty message both explains the empty state and
+  what a sub-issue is for), raised. One of the three measured a real,
+  disclosed cost the other two did not: the health-empty message is
+  long enough to gain a genuinely new wrapped line at 390 (1 line →
+  2, +24px) — accepted, in a state most readers see rarely. The other
+  two keep their existing line counts, just taller.
+- **Card text (3)** — raised. `projects.rs:83` (`Updated <date>`),
+  +4px, no wrap, raised for the second time this release (`TYPE-001`
+  raised it 11px → 12px; this round takes it 12px → 14px) — a
+  consequence of reading one screen at a time, not churn.
+  `projects.rs:239` (the delete-project warning), +8px / +4px, same
+  line counts. `projects.rs:70` (the project card's own description) —
+  see below, its own paragraph.
+- **Remaining spans and divs (9)** — raised. Most cost +4px with no
+  wrap; two are worth naming. `issues.rs:668` (the workload strip's
+  "set a capacity" link, via `grow_text`) costs **zero** — `grow_text`
+  composes `TOUCH_TARGET`'s 44px floor, which already exceeds either
+  size's own line-height, so the rendered box does not move.
+  `issues.rs:1034` (the board card's own metadata row, already raised
+  once by `TYPE-001`) also measured **zero** at both widths — each of
+  its three badges (`badge-sm`) carries its own fixed 16px height
+  regardless of ambient text size, and the plain date span beside them
+  did not move the row's own rendered height either; reported as a
+  confirmed, reproducible measurement, not a fully explained
+  mechanism. `issues.rs:2108` (the issue detail page's own, denser
+  metadata row — the same shape, more content: priority, effort,
+  assignee, two separators, two dates) did **not** come out zero: a
+  real new wrapped line, confirmed directly — 3 lines → 4 at 390 in
+  one fixture (+6px there), up to +32px at 390 with longer
+  assignee/date text in a richer one; flat at 1280 in the simpler case,
+  one extra line (+2px) in the richer one. Reported as a real,
+  content-dependent range rather than one clean number, and accepted:
+  every item in this row is information a reader of their own issue is
+  expected to want.
+
+**`projects.rs:70`, the one site that pays two costs at once, and the
+one real blocker this round met and resolved.** `line-clamp-2` with
+`min-h-[2rem]` — the floor chosen as exactly two lines at `text-xs`'s
+16px line-height (2 × 16px = 32px = 2rem). Measured with a short, a
+typical and a long description: the short one is unaffected either way
+(fits on one line, the floor still binds); the typical one is not
+clipped at either size and the card grows 130px → 138px as the box's
+own two-line height crosses the floor; the long one was already
+clipped at `text-xs` (`line-clamp-2` showing only its first two of
+several lines) and stays clipped after — not a new regression, but,
+the same mechanism as the textareas above, fewer characters visible
+within those two lines.
+
+**Tried and reverted**: updating the floor to `min-h-[2.5rem]` (two
+lines at `text-sm`'s 20px line-height) to keep its own meaning true —
+`TYPE-001`'s own lesson about a floor keyed to a line-height, here on
+a different surface. `css_scan` caught it immediately, by name:
+`min-h-[2.5rem]` has no rule in either shipped stylesheet. This
+project's CSS is vendored and pinned (`ASSET-001`/`DEC-051`), not
+compiled from source at request time or at build time from this
+round's own edits, so a genuinely new arbitrary value has no rule to
+resolve to and would have shipped a class with **no visual effect at
+all**, silently, exactly the shape of defect this project's own
+checks exist to catch before it reaches a reader. Extending the
+vendored stylesheet is a separate, out-of-scope asset-pipeline change,
+not a text-size decision this round can make. `min-h-[2rem]` is left
+at its prior value, the reason recorded rather than left to look like
+an oversight: for an empty or very short description, the card's own
+reserved space now reads as 1.6 lines (32px ÷ 20px) rather than 2 — a
+minor, named inconsistency that does not matter for anything with real
+content, since the box's own true two-line height already exceeds
+this floor regardless of its value, confirmed above.
+
+**Population effect.** `issues.rs` and `projects.rs` together drop
+from **36 to 0**. `MARK-002`'s touch-target sums move with the one
+site in this round that needed it (`issues.rs:342`'s own nested
+summary: `48px → 52px`); `issues.rs:350`'s own comment (the
+`py-3`-would-total-only-40px one) and `sprints.rs:438`/`:985` are
+untouched, as the handoff required. `css_scan`'s live-rule population
+is unaffected — this round introduced no new arbitrary-value or
+bare-opacity token (the one attempt, `min-h-[2.5rem]`, was reverted
+above) and removed none either.
+
+**The three questions the floor decision will be made on** (the
+handoff's own §8 — answered as findings, not as a recommendation; the
+recommendation is the architect's):
+
+1. **Did a single rule fit all three screens, or did each need its own
+   reading?** The readings converged. Of the 63 sites read across all
+   three rounds (6 + 21 + 36), **62 were raised by exactly one scale
+   step** — 10/11px → 12px in `TYPE-001`, 12px → 14px in `TYPE-002` and
+   `TYPE-003` — each independently measured to cost nothing or a
+   small, disclosed amount. The one exception (the calendar's day-view
+   badge, kept) was kept for a reason that has nothing to do with
+   type: an unrelated, pre-existing `overflow-hidden` clipping defect
+   that raising would not have fixed. A simple rule — raise anything
+   below the scale's next step, by one step — would have reached the
+   right *size* in 62 of 63 cases.
+2. **What would a floor have got wrong if adopted on 2026-11-04?** Not
+   the sizes — the surroundings. It would have raised the calendar
+   badge for no benefit, obscuring rather than finding the real
+   defect. It would not have known `min-h-[2rem]` needed a decision at
+   all, let alone that the "obviously correct" fix is blocked by this
+   project's own vendored CSS. It would not have walked to each
+   touch-target comment a raised ambient size feeds and re-derived its
+   sum from source — the exact defect this series' own `§10.58`
+   recurs on, more than once in this series alone. It would not have
+   measured a textarea's or a card's own characters-visible cost, or
+   found that one browser gate's own fixture validation hardcodes a
+   class string that a blanket rename would have broken invisibly. And
+   it would not have forced anyone to state *why* an exception holds —
+   `TYPE-002`'s own round 1 kept a site on two reasons that could not
+   both be true of the same reader, a failure of reasoning a rule
+   applied mechanically does not protect against either.
+3. **Which costs would a rule not have predicted?** The seven named
+   above: the calendar badge's pre-existing clipping; `min-h-[2rem]`'s
+   expired reason and the vendored-CSS wall behind its "obvious" fix;
+   the touch-target sums keyed to an ambient line-height, at four
+   separate sites across two rounds; a textarea's and a card's own
+   characters-lost cost while being read or written; a wrap-cost
+   measured in the dimension a site actually lives in rather than
+   its height alone; a browser gate's own hardcoded dependency on a
+   class string; and a self-contradicting exception a rule would not
+   have caught either. A rule that said *"no text below 14px"* would
+   have been right about the number and silent about all seven.
+
+**Still open.** No type floor, no type requirement, no scan over text
+sizes written by this round. `NFR-A11Y-005`, `NFR-A11Y-007`,
+`contrast_scan`, `touch_target_scan` and `alignment_scan` are
+unchanged. The floor decision is the architect's, on what these three
+rounds found — not this round's to recommend.
+
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 

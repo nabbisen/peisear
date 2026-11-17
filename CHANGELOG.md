@@ -44,6 +44,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   208px at phone width while open — a cost accepted rather than
   avoided, since nothing above it changes and the person paying it
   asked for it (`TYPE-002`, `§10.60`).
+- **All 36 of the smallest-text sites on the project and issue screens
+  move up one type step.** The form field labels, the per-row effort
+  and assignee and updated-at table cells, the description text areas
+  on every issue form, a person's display name, the health and
+  workload panels' own headings and chips and disclosures, and the
+  project card's own description and "Updated" line all move from
+  12px to 14px. Measured per site: no filter row or table gains a
+  horizontal scroll it did not already have, no chip row gains a wrap
+  it did not already have, and most sites cost nothing or a few
+  pixels. Two real, accepted costs: a description field shows roughly
+  14% fewer of your own typed characters at once without scrolling
+  while you are writing it (the box grows taller instead, since its
+  own row count is fixed); and a project card with a long description,
+  already showing only its first two lines, now shows fewer characters
+  within those two lines. Both are paid for the same reason the rest
+  of this release's changes were: the smaller size was harder to read,
+  and the alternative — leaving it smaller just to show more text at
+  once — was not the trade-off this release exists to protect
+  (`TYPE-003`, `§10.60`).
 
 ## [0.63.0] — 2026-11-15
 

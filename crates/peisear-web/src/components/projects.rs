@@ -67,7 +67,34 @@ fn ProjectCard(project: Project) -> impl IntoView {
         <a href=href class=grow("card bg-base-100 border border-base-300 hover:border-primary hover:shadow-md transition")>
             <div class="card-body p-4">
                 <div class="font-medium truncate">{name}</div>
-                <div class="text-xs text-base-content/70 line-clamp-2 min-h-[2rem]">
+                // `TYPE-003` (`§10.60`): raised to `text-sm`.
+                // `min-h-[2rem]` was chosen as exactly two lines at
+                // `text-xs`'s 16px line-height (2 x 16px = 32px =
+                // 2rem); two lines at `text-sm`'s 20px line-height is
+                // 40px = 2.5rem, not 32px -- `TYPE-001`'s own lesson
+                // about a floor keyed to a line-height, on a different
+                // surface. **Tried and reverted**: `min-h-[2.5rem]`
+                // has no rule in either shipped stylesheet
+                // (`css_scan` caught it immediately, by name) --
+                // nothing in this codebase has used that exact value
+                // before, and this project's CSS is vendored and
+                // pinned (`ASSET-001`/`DEC-051`), not compiled from
+                // source at build time, so a genuinely new arbitrary
+                // value has no rule to resolve to and would silently
+                // do nothing in a browser. Extending the vendored
+                // stylesheet is a separate, out-of-scope asset-pipeline
+                // change, not a text-size decision this round can make.
+                // `min-h-[2rem]` is therefore left at its prior value,
+                // the reason recorded rather than left to look like an
+                // oversight: for an empty or very short description,
+                // the card's own reserved space now reads as 1.6 lines
+                // (32px / 20px) rather than 2 -- a minor, named
+                // inconsistency. It does not matter for anything with
+                // real content, confirmed by measurement: the box's
+                // own true two-line height already exceeds this floor
+                // regardless of its value (130px -> 138px for both the
+                // typical and the long description, below).
+                <div class="text-sm text-base-content/70 line-clamp-2 min-h-[2rem]">
                     {if desc.is_empty() {
                         view! { <span class="italic">{t(MessageKey::NoDescriptionShort)}</span> }.into_any()
                     } else {
@@ -80,7 +107,11 @@ fn ProjectCard(project: Project) -> impl IntoView {
                 // tighter than the 16.5px this 11px arbitrary value
                 // inherited ambiently, so the card is marginally shorter
                 // after the change, not taller, at both 390 and 1280.
-                <div class="text-xs text-base-content/70 mt-2">
+                // `TYPE-003`: raised a second time this release, to
+                // `text-sm` -- a direct consequence of reading one
+                // screen at a time, not churn. Measured cost +4px at
+                // both widths, no wrap -- a short date string.
+                <div class="text-sm text-base-content/70 mt-2">
                     {t(MessageKey::UpdatedAt { formatted: updated })}
                 </div>
             </div>
@@ -143,7 +174,14 @@ pub fn ProjectNewPage(
                             <label class="form-control w-full">
                                 <div class="label py-1">
                                     <span class="label-text text-sm">{t(MessageKey::TeamFieldLabel)}</span>
-                                    <span class="label-text-alt text-xs opacity-70">
+                                    // `TYPE-003` (`§10.60`): raised to
+                                    // `text-sm`, colour (bare
+                                    // `opacity-70`) left untouched --
+                                    // out of scope, `NFR-A11Y-005` not
+                                    // reopened. Measured cost +4px at
+                                    // both widths, no wrap -- a single
+                                    // word.
+                                    <span class="label-text-alt text-sm opacity-70">
                                         {t(MessageKey::OptionalHint)}
                                     </span>
                                 </div>
@@ -152,7 +190,17 @@ pub fn ProjectNewPage(
                                     {team_options}
                                 </select>
                                 <div class="label py-1">
-                                    <span class="label-text-alt text-xs text-base-content/70">
+                                    // `TYPE-003`: raised to `text-sm`.
+                                    // Measured directly (not assumed
+                                    // from the hint above it, a much
+                                    // shorter string): this sentence
+                                    // already wraps across several
+                                    // lines and keeps the same line
+                                    // count after raising -- 3 lines at
+                                    // 390 (48px -> 60px), 2 at 1280
+                                    // (32px -> 40px) -- no new wrap at
+                                    // either width.
+                                    <span class="label-text-alt text-sm text-base-content/70">
                                         {t(MessageKey::TeamHelperText)}
                                     </span>
                                 </div>
@@ -236,7 +284,11 @@ pub fn ProjectEditPage(
                         <div class="flex items-center justify-between">
                             <div>
                                 <div class="font-medium text-error">{t(MessageKey::DeleteProjectHeading)}</div>
-                                <div class="text-xs text-base-content/70">
+                                // `TYPE-003` (`§10.60`): raised to
+                                // `text-sm`. Measured cost +8px at 390
+                                // (two lines, both taller, same count),
+                                // +4px at 1280 (one line).
+                                <div class="text-sm text-base-content/70">
                                     {t(MessageKey::DeleteProjectWarning)}
                                 </div>
                             </div>

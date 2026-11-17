@@ -530,7 +530,12 @@ export async function createFixtures(strings, onRegistered) {
   if (badgeCount(detailHtml) < 1) throw new Error('issue detail (assigned): no assignee <span class="badge"> holding the display name');
   const boardHtml = await fetchPage(`/projects/${projectId}`);
   const boardBadges = badgeCount(boardHtml);
-  const stripChips = [...boardHtml.matchAll(new RegExp(`<span[^>]*text-xs font-medium[^>]*>\\s*${nameRe}\\s*</span>`, 'g'))].length;
+  // `TYPE-003` (`§10.60`): `issues.rs:646`'s own class moved from
+  // `text-xs font-medium` to `text-sm font-medium` -- this check's
+  // own literal substring had to move with it, caught by actually
+  // running this gate rather than assuming a text-size round could
+  // not touch a browser check's own fixture validation.
+  const stripChips = [...boardHtml.matchAll(new RegExp(`<span[^>]*text-sm font-medium[^>]*>\\s*${nameRe}\\s*</span>`, 'g'))].length;
   if (boardBadges < 2) throw new Error(`board: expected two assigned cards (assignee badges), found ${boardBadges}`);
   if (stripChips < 1) throw new Error('board: no workload-strip chip holding the display name');
   const personalCal = await fetchPage('/today/calendar');
