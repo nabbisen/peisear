@@ -9337,21 +9337,43 @@ comment was updated with its new sum rather than left stale.
   shape, itself a child of the same `flex flex-wrap` Patterns row) as
   `700`, which *was* measured. Stated as an analogy, not a
   measurement, in the code's own comment.
-- **The container (1: `me.rs:367`)** — **kept** at `text-xs`, decided
-  separately from every leaf above, as the handoff's own §3 requires.
-  Its subtree (15 descendant text nodes: the glossary's own summary
-  plus 7 definition paragraphs) measured with the `<details>` forced
-  open: raising it costs **+80px at 1280** and **+208px at 390** — real
-  and non-trivial, for content that is optional, disclosure-gated, and
-  already fully legible at its current size. Removal of the glossary
-  itself was also considered and rejected: every chip already carries
-  a hover tooltip or `aria-label`, but a hover tooltip has no touch
+- **The container (1: `me.rs:367`)** — round 1 **kept** it at `text-xs`
+  on two reasons that do not survive being read together: *"optional"*
+  and *"the one place a reader who does not know the terms can learn
+  them"* describe opposite readers, and for the second reader this is
+  the least optional text on the page. **Round 2: raised** to
+  `text-sm`. The +80px (1280) / +208px (390) subtree cost (15
+  descendant text nodes: the glossary's own summary plus 7 definition
+  paragraphs, `<details>` forced open to measure) is **accepted, not
+  avoided** — paid once, only inside a disclosure the reader opened on
+  purpose, by someone reading prose, which is the content type that
+  benefits most from it. The density objection that killed the
+  2026-11-04 proposal was about what a reader is shown *before* asking;
+  nothing above this `<details>` moved. Re-measured after the change
+  against the real rebuilt binary rather than left as the prediction:
+  **728px at 390, 408px at 1280** — both exactly the predicted *after*
+  figures, now confirmed rather than forecast. Removal of the glossary
+  itself was also considered and rejected: every chip already carries a
+  hover tooltip or `aria-label`, but a hover tooltip has no touch
   equivalent, and the glossary is the one place a first-time or
   touch-only reader can read every term at once without discovering
-  each tooltip by trial. Because the container is kept, `me.rs:373`'s
-  own touch-target comment (`32px + 16px = 48px`, ambient from this
-  container) stays true unedited — the split costs nothing in
-  bookkeeping, which is part of why it is the right split.
+  each tooltip by trial. Raising the container moves `me.rs:373`'s own
+  touch-target comment too — `32px + 16px = 48px` (ambient `text-xs`)
+  to `32px + 20px = 52px` (ambient `text-sm`), pinned from
+  `static/tailwind.css`'s own rule exactly as `:332`'s was, not carried
+  over from it — and both `touch_target_scan` and
+  `disclosure-marker-gate.mjs` were re-run: `what_do_these_mean` now
+  measures **52px** at both widths, matching the recomputed sum.
+
+**The cross-screen step, named rather than left implicit.** `/today`'s
+headings and chip labels are now `text-sm` (14px) while the identical
+`text-xs uppercase tracking-wide` pattern on the project screens and in
+`sprints.rs` is still 12px. Not a defect — the direct consequence of
+reading the screens *"carefully one by one"*, and `TYPE-003` holds the
+next one — but an unnamed inconsistency reads as drift six weeks later,
+so it is named here: `TYPE-003` inherits `/today`'s step as a
+**precedent, not a rule**, and whether it becomes one is still decided
+after `TYPE-003`, not before it.
 
 **One fixture bug, self-caught before it reached a number.** The first
 attempt at measuring `me.rs:700`'s live row cycled a test issue through
@@ -9366,12 +9388,13 @@ transitions, not four) and re-verified against the real shipped page,
 not the fixture script alone, before the comment above was written.
 
 **Population effect.** `/today`'s own text-xs population drops from
-**21 to 1** (the kept container). `MARK-002`'s touch-target sums move
-with the one site that changed (`332`: `48px → 52px`); the other
-three (`issues.rs:350`, `sprints.rs:438`/`:985`) are untouched, as the
-handoff required. `css_scan`'s live-rule population is unaffected —
-this round introduced or removed no arbitrary-value or bare-opacity
-token, only moved existing scale classes.
+**21 to 0** (round 2 raised the one site round 1 kept). `MARK-002`'s
+touch-target sums move with the two sites that changed (`332`:
+`48px → 52px`; `373`: `48px → 52px`, round 2); the other three
+(`issues.rs:350`, `sprints.rs:438`/`:985`) are untouched, as the
+handoff required both rounds. `css_scan`'s live-rule population is
+unaffected — neither round introduced or removed an arbitrary-value or
+bare-opacity token, only moved existing scale classes.
 
 **Still open.** No type floor, no type requirement, no scan over text
 sizes. `NFR-A11Y-005`, `NFR-A11Y-007`, `contrast_scan` and

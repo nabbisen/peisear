@@ -391,27 +391,28 @@ pub fn PersonalDashboard(
 
                 {render_burnout_panel(burnout, user_is_active)}
 
-                // `TYPE-002` (`§10.60`): this container decided
-                // separately from every other site in this round's
-                // population, per that handoff's own §3 -- **kept** at
-                // `text-xs`, not raised. Its own subtree (15 descendant
-                // text nodes: this summary plus 7 glossary definition
-                // paragraphs) measured, open, at both widths: raising
-                // it costs +80px at 1280 and +208px at 390 -- real,
-                // non-trivial, and paid by content that is optional,
-                // disclosure-gated, and already fully legible at its
-                // current size. A defensible split, stated as one: the
-                // leaves elsewhere on this page raised, this container
-                // did not.
-                <section class="text-xs text-base-content/70">
+                // `TYPE-002` round 2 (`§10.60`): this container was
+                // first kept at `text-xs` on two reasons that cannot
+                // both be true of the same reader -- "optional" and
+                // "the one place a reader who does not know the terms
+                // can learn them" describe opposite readers. Ruled:
+                // **raised**, to `text-sm`, the +80px (1280) / +208px
+                // (390) subtree cost accepted rather than avoided -- it
+                // is paid only inside a disclosure the reader opened on
+                // purpose, by someone reading prose, which is the
+                // content that benefits most from it.
+                <section class="text-sm text-base-content/70">
                     <details>
                         // MARK-002 (§10.58): grow_summary(), the only
                         // helper a <summary> may take. Ambient context is
-                        // this section's own text-xs (16px line-height),
-                        // so py-4 = 32px + 16px = 48px.
-                        // `TYPE-002`: unchanged -- the container above
-                        // was kept, so this sum stays true without an
-                        // edit here.
+                        // this section's own text-sm (20px line-height),
+                        // so py-4 = 32px + 20px = 52px.
+                        // `TYPE-002` round 2: sum re-derived (was 48px,
+                        // ambient from the container at `text-xs`) now
+                        // that the container above is raised -- pinned
+                        // from `static/tailwind.css`'s own rule
+                        // (`.text-sm{font-size:.875rem;line-height:1.25rem}`),
+                        // not carried over from `:332`'s comment.
                         <summary class=grow_summary("cursor-pointer py-4")>{t(MessageKey::WhatDoTheseMeanLabel)}</summary>
                         <div class="mt-2 space-y-2">
                             <p>
