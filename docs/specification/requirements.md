@@ -9211,9 +9211,27 @@ arithmetic:
   2.5 characters at 10px to roughly 2.1 at 12px in month view; the long
   name's from roughly 4.4 to roughly 3.5. Never a swing from legible to
   clipped or back — every case measured was already showing a handful
-  of characters at most, or none — but a real, if modest, character
-  cost that the height measurement could not see and the pixel measurement
-  almost hides.
+  of characters at most, or none — but a real character cost that the
+  height measurement could not see and the pixel measurement almost
+  hides.
+
+**Caveat added by the architect's review, 2026-11-17 — the figures
+above are optimistic, and `TYPE-003` should not inherit them as
+painted-glyph counts.** The visible-pixel column is the **budget** left
+for the badge after `time` and `title`; it does not subtract the
+**ellipsis glyph**. `text-overflow: ellipsis` paints `…` at the clip
+point, and the badge is the line's last child, so **the ellipsis sits
+exactly where the badge is cut and consumes part of the badge's own
+budget** — roughly 7–8px of it at 12px, roughly 6px at 10px. Because
+the glyph is wider at the larger size, the fixed-budget argument bites
+harder than the table shows: the short name in month view is nearer
+**~1.6 → ~1.2 characters** than 2.5 → 2.1, and the long name nearer
+**~3.1 → ~2.1** than 4.4 → 3.5. **Every conclusion above holds and one
+strengthens**: the badge paints even less than reported, and *"a handful
+of characters at most, or none"* is nearer *"one or two, or none"*. The
+word *modest* has been removed from the sentence above on that basis.
+No re-measurement is owed for it; `TYPE-003` should subtract the glyph
+and say so if it wants exact counts when it reaches this surface.
 
 **`calendar.rs:216`'s hour label, checked against the 48px gap to the
 day view's block column** (`absolute left-0` against the blocks'
