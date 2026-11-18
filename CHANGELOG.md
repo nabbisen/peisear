@@ -28,6 +28,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   14px, matching the label and the control beside them in the same
   row, the same change `0.64.0` made on the screens it read — this
   finishes that edge rather than opening a new one (`LBL-001`).
+- **Four more small-print sites on the sprints screens move from 12px
+  to 14px**, where the smaller size was reading as a second line of
+  the same message rather than a caption for something else: the
+  "sprints are optional" note under the empty-state message, a
+  sprint's own date range (now matching the status line beside it in
+  the same card), and the "show the full table" toggle on both the
+  velocity and burndown charts. The stat-grid labels beneath each
+  chart's numbers, and the explanatory captions under the charts
+  themselves, stay at 12px deliberately — the number is the thing a
+  reader's eye goes to, and a caption explaining a chart is
+  supporting text for it, not a mismatched peer (`SIZE-001`).
 
 ## [0.64.0] — 2026-11-18
 

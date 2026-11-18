@@ -136,7 +136,16 @@ pub fn SprintsListPage(
                             <p class="text-sm text-base-content/70">
                                 {empty_message.clone()}
                             </p>
-                            <p class="text-xs text-base-content/70 mt-1">
+                            // `SIZE-001`: raised to `text-sm`, matching
+                            // the sentence above it in the same
+                            // centered block -- two lines about the
+                            // same empty state, not a caption for
+                            // something else. Measured: +8px at 390
+                            // (2 lines, unchanged wrap count, each
+                            // 4px taller), +4px at 1280 (1 line).
+                            // Contrast **6.42:1** on this
+                            // `bg-base-100` card.
+                            <p class="text-sm text-base-content/70 mt-1">
                                 {t(MessageKey::SprintsOptionalNote)}
                             </p>
                         </div>
@@ -209,7 +218,19 @@ fn render_sprint_card(team_slug: String, s: Sprint, sum: SprintSummary) -> impl 
                         // the dates and summary lines are covered too.
                         <div class="flex-1 min-w-0 break-words">
                             <h3 class="font-medium">{s.name.clone()}</h3>
-                            <p class="text-xs text-base-content/70 mt-1">
+                            // `SIZE-001`: raised to `text-sm`, matching
+                            // the summary line right below it -- two
+                            // lines about the same sprint, not a
+                            // label/value pair with the heading above.
+                            // Measured +4px at both widths, no new
+                            // wrap (the date range stays one line
+                            // either size). The summary line below it
+                            // (already `text-sm`) wraps to two lines
+                            // at 390 for a long fixture string, at
+                            // both the old and the new size -- not a
+                            // cost of this change. Contrast
+                            // **6.42:1** on this `bg-base-100` card.
+                            <p class="text-sm text-base-content/70 mt-1">
                                 {dates}
                             </p>
                             <p class="text-sm text-base-content/70 mt-1">
@@ -431,10 +452,23 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) 
                         {bars}
                     </svg>
                 </div>
-                <details class="text-xs mt-2">
+                <details class="text-sm mt-2">
                     // MARK-002 (§10.58): grow_summary(), the only helper
-                    // a <summary> may take -- py-4 = 32px + text-xs's own
-                    // 16px line-height = 48px.
+                    // a <summary> may take -- py-4 = 32px + text-sm's own
+                    // 20px line-height = 52px.
+                    // `SIZE-001`: raised from `text-xs` (48px sum,
+                    // `0.64.0`'s own figure), matching the majority
+                    // already elsewhere in `grow_summary` disclosure
+                    // triggers (`settings.rs`, `me.rs` set `text-sm`
+                    // directly on their own `<summary>`; this file was
+                    // the only one sizing the ambient `<details>`
+                    // instead). The table inside keeps its own
+                    // `table-sm` size regardless -- that class sets
+                    // its own `font-size` and does not inherit the
+                    // container's. 44px floor unaffected either way
+                    // (`grow_summary()` composes `TOUCH_TARGET`); this
+                    // comment states the arithmetic, it does not hold
+                    // the floor itself.
                     <summary class=grow_summary("cursor-pointer text-base-content/70 hover:text-base-content py-4")>
                         {t(MessageKey::ChartTableSummaryLabel)}
                     </summary>
@@ -997,10 +1031,14 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
                         {t(MessageKey::BurndownLegendCompleted)}
                     </span>
                 </div>
-                <details class="text-xs mt-2">
+                <details class="text-sm mt-2">
                     // MARK-002 (§10.58): grow_summary(), the only helper
-                    // a <summary> may take -- py-4 = 32px + text-xs's own
-                    // 16px line-height = 48px.
+                    // a <summary> may take -- py-4 = 32px + text-sm's own
+                    // 20px line-height = 52px.
+                    // `SIZE-001`: raised from `text-xs` (48px sum,
+                    // `0.64.0`'s own figure) -- same reason as the
+                    // velocity table's own disclosure above, the
+                    // other of this series' own two named sites.
                     <summary class=grow_summary("cursor-pointer text-base-content/70 hover:text-base-content py-4")>
                         {t(MessageKey::ChartTableSummaryLabel)}
                     </summary>
