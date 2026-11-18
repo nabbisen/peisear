@@ -109,6 +109,10 @@ other two, and will be asked why.
 
 ## The floor decision — made 2026-11-17: **no requirement is written**
 
+**The release candidate is
+[`REL-0.64.0`](./REL-0.64.0-release-candidate.md)** — criteria 1–6 met
+and measured, criterion 7 awaiting the owner, criterion 8 at the tag.
+
 **Series `062` is complete.** All three reads are closed, `TYPE-001`
 and `TYPE-002` each took a second round, and **`§10.60` is closed by a
 recorded decision that no type requirement should exist** — the second
