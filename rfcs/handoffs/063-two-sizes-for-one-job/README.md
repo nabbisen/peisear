@@ -73,7 +73,22 @@ so in the round's report rather than working around it.
 | `SIZE-002` | `teams.rs`'s remaining 7 and `sprint_plan.rs`'s remaining 2, and the gate coupling in §6 | 9 |
 | `SIZE-003` | `settings.rs`'s remaining 2 and `auth.rs`'s remaining 3 — including the sign-in page's own flash message, the front door at 12 px | 5 |
 
-15 + 18 + 9 + 5 = **47**, the in-scope census above. **One round at a time**,
+15 + 18 + 9 + 5 = **47**, the in-scope census above.
+
+**Rounds closed so far.** `LBL-001` **accepted** 2026-11-18 (`bb79b15`): all
+15 sites changed — the eight labels by *deleting* the overriding `text-xs`,
+the seven hints by raising to `text-sm` — plus the two `settings.rs`
+dropdowns raised as clusters, `input-xs` leaving the tree, and
+`css_scan`'s population moved `290 → 289` with its reason. **The census is
+now 53.** The round **corrected this series' own handoff**: the
+`24px → 32px` control-height cost it was told to measure cannot happen,
+because `grow()`'s `min-h-11` (44 px) already dominates both classes' own
+heights. **Round 2 is open** —
+[`LBL-001-round-2-the-spelling-the-guard-can-read.md`](./LBL-001-round-2-the-spelling-the-guard-can-read.md):
+six sites measured but left in the spelling `contrast_scan` cannot read, one
+unstated exception on the button tier, one claim wider than its evidence.
+
+**One round at a time**,
 each handed separately and reviewed before the next opens. A round may be
 followed by a second round on the same scope; that is normal and happened
 twice in `062`.
