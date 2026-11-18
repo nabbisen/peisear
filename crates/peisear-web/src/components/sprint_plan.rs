@@ -206,13 +206,23 @@ fn render_filter_form(
     // alone lets the control shrink to the row (measured, 320-414px). The
     // priority select's options are our own strings; it gets the same class
     // so a longer translation cannot reopen the defect.
+    // `LBL-001` (`§10.60`-adjacent, series `063`): these three labels'
+    // own `text-xs` overrode `.label-text`'s already-14px component
+    // class downward -- `tailwind.css` is served last
+    // (`layout.rs:68-70`), so at equal specificity the `text-*` token
+    // wins. Deleted rather than replaced: `.label-text` already says
+    // 14px, confirmed via `getComputedStyle` before and after (12px ->
+    // 14px) rather than inferred from the class name. Measured cost:
+    // the filter row's own wrap count unchanged at both 390 (3 rows)
+    // and 1280 (2 rows); +8px / +4px row height. The row's own
+    // `min-w-0` (this file's own `LAYOUT-010` fix) is untouched.
     view! {
         <form method="get" action=action
               class="flex flex-wrap items-end gap-2 mb-4"
               aria-label=t(MessageKey::BacklogFilterAriaLabel)>
             <label class="form-control min-w-0">
                 <div class="label py-0">
-                    <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Project })}</span>
+                    <span class="label-text">{t(MessageKey::FieldLabel { field: Field::Project })}</span>
                 </div>
                 <select name="project" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_project.is_empty()>{t(MessageKey::AllProjectsOption)}</option>
@@ -227,7 +237,9 @@ fn render_filter_form(
 
             <label class="form-control min-w-0">
                 <div class="label py-0">
-                    <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Priority })}</span>
+                    // `LBL-001`: same deletion, same reasoning, as the
+                    // Project label above.
+                    <span class="label-text">{t(MessageKey::FieldLabel { field: Field::Priority })}</span>
                 </div>
                 <select name="priority" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_priority.is_empty()>{t(MessageKey::AllPrioritiesOption)}</option>
@@ -244,7 +256,8 @@ fn render_filter_form(
 
             <label class="form-control min-w-0">
                 <div class="label py-0">
-                    <span class="label-text text-xs">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
+                    // `LBL-001`: same deletion, same reasoning.
+                    <span class="label-text">{t(MessageKey::FieldLabel { field: Field::Assignee })}</span>
                 </div>
                 <select name="assignee" class=grow("select select-sm select-bordered")>
                     <option value="" selected=active_assignee.is_empty()>{t(MessageKey::AnyoneOption)}</option>

@@ -166,14 +166,34 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                         <label class="form-control w-full">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::SlugFieldLabel)}</span>
-                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::OptionalAutoDerivedHint)}</span>
+                                // `LBL-001` (series `063`): raised to
+                                // `text-sm`. Measured +4px at both
+                                // widths, no new wrap ("optional —
+                                // auto-derived" stays one line at
+                                // either size). Contrast measured
+                                // **6.51:1** on this `bg-base-100`
+                                // card.
+                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::OptionalAutoDerivedHint)}</span>
                             </div>
                             <input type="text" name="slug" maxlength="64"
                                    pattern="[a-z0-9\\-]+"
                                    placeholder=t(MessageKey::SlugPlaceholder)
                                    class=grow("input input-bordered input-sm w-full")/>
                             <div class="label py-1">
-                                <span class="label-text-alt text-xs text-base-content/70">
+                                // `LBL-001`: raised to `text-sm`. This
+                                // is the longest of the seven hints --
+                                // already wraps to two lines at
+                                // `text-xs`, and keeps the same two
+                                // lines at `text-sm`, just taller
+                                // (+8px at 390); one line at 1280
+                                // (+4px, confirmed no new wrap at
+                                // either width, not assumed from the
+                                // shorter hints beside it). Contrast
+                                // measured **6.42:1** (its own colour
+                                // spelling, `text-base-content/70`, not
+                                // bare `opacity-70` like its six
+                                // siblings) -- clears 4.5:1.
+                                <span class="label-text-alt text-sm text-base-content/70">
                                     {t(MessageKey::SlugHelperText)}
                                 </span>
                             </div>
@@ -181,7 +201,11 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                         <label class="form-control w-full">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Description })}</span>
-                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::OptionalHint)}</span>
+                                // `LBL-001`: raised to `text-sm`, same
+                                // measured cost as the slug hint above
+                                // (+4px, no wrap, both widths).
+                                // Contrast **6.51:1**.
+                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="description" rows="3" maxlength="500"
                                       placeholder=t(MessageKey::TeamDescriptionPlaceholder)

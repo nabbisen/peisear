@@ -528,7 +528,18 @@ pub fn SprintNewPage(
                         <label class="form-control w-full">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Goal })}</span>
-                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::OptionalHint)}</span>
+                                // `LBL-001` (series `063`): raised to
+                                // `text-sm`, same reasoning as
+                                // `auth.rs`'s own hint. One of two
+                                // identical `OptionalHint` sites on
+                                // this screen's two code paths (new
+                                // and edit) -- `GRAM-002`'s
+                                // duplicate-path lesson; reach both.
+                                // Measured +4px at both 390 and 1280
+                                // (one line, no wrap, either width).
+                                // Contrast measured **6.51:1** on this
+                                // `bg-base-100` card.
+                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="goal" rows="3" maxlength="500"
                                       placeholder=t(MessageKey::GoalFieldPlaceholder)
@@ -1160,7 +1171,10 @@ pub fn SprintEditPage(
                         <label class="form-control w-full">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::FieldLabel { field: Field::Goal })}</span>
-                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::OptionalHint)}</span>
+                                // `LBL-001`: the second of the two
+                                // identical `OptionalHint` sites -- see
+                                // the new-sprint form's own comment.
+                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="goal" rows="3" maxlength="500"
                                       class=grow("textarea textarea-bordered textarea-sm w-full")>

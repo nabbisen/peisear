@@ -148,9 +148,16 @@ fn the_repository_satisfies_the_live_rule() {
     // `calendar.rs` still has one `text-[10px]` site left (kept, not
     // raised; see that file's own comment at the site), so the token
     // itself survives, just with one fewer distinct class string overall.
+    // `LBL-001` (series `063`): population dropped 290 -> 289.
+    // `settings.rs`'s own five `input-xs` sites (the "Close on" and
+    // "Points edit" dropdowns) all moved to `input-sm` as part of the
+    // cluster raise -- `input-xs` was not used anywhere else in the
+    // tree, so this removes that token entirely rather than merely
+    // relocating it; confirmed with `grep -rn 'input-xs'` over live
+    // `class=` attributes, not assumed from the five sites changed.
     assert_eq!(
         (result.population, result.allowlisted),
-        (290, 2),
+        (289, 2),
         "the measured population or allowlist count drifted from this round's own baseline -- \
          re-measure (components/**/*.rs changed) and update this assertion with the reason, \
          never just the numbers"

@@ -9,6 +9,26 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **A dropdown's own label and the control it labels agree on size
+  again, on three screens.** The sprint-planning backlog's three
+  filter labels (Project, Priority, Assignee) now match their own
+  `<select>`'s 14px, rather than reading smaller than the options
+  inside it. The capacity settings page's two small editing dropdowns
+  (adjusting a row's points/dates/note, and closing an open-ended row)
+  raise their own labels and fields together, so the value a reader
+  types matches the label naming it — measured directly: the control's
+  own rendered height does not change at all (a touch-target floor
+  already set it, independent of either size), only the text each one
+  renders gets larger. Seven short field hints (a password's minimum
+  length, "optional", a slug's auto-derived note) move from 12px to
+  14px, matching the label and the control beside them in the same
+  row, the same change `0.64.0` made on the screens it read — this
+  finishes that edge rather than opening a new one (`LBL-001`).
+
 ## [0.64.0] — 2026-11-18
 
 **The smallest text in the product, read one screen at a time — and the

@@ -89,7 +89,18 @@ pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) 
                         <label class="form-control w-full">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::PasswordFieldLabel)}</span>
-                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::PasswordMinLengthHint)}</span>
+                                // `LBL-001` (series `063`): raised to
+                                // `text-sm`, matching the label and
+                                // the control beside it in the same
+                                // row -- one size per row, the same
+                                // shape `0.64.0` fixed on the five
+                                // screens it read. Measured: +4px at
+                                // both widths, no new wrap (the string
+                                // is short at either size). Contrast
+                                // measured as rendered, on this
+                                // `bg-base-100` page: **6.51:1**,
+                                // clears 4.5:1 with real margin.
+                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::PasswordMinLengthHint)}</span>
                             </div>
                             <input type="password" name="password" autocomplete="new-password"
                                    required=true minlength="8"

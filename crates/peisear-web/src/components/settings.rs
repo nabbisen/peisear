@@ -202,7 +202,13 @@ pub fn SettingsPage(
                         <label class="form-control w-full max-w-xs">
                             <div class="label py-1">
                                 <span class="label-text text-sm">{t(MessageKey::WipLimitLabel)}</span>
-                                <span class="label-text-alt text-xs opacity-70">{t(MessageKey::InProgressIssuesHint)}</span>
+                                // `LBL-001`: raised to `text-sm`, same
+                                // reasoning as `auth.rs`'s own password
+                                // hint. Measured +4px at both widths,
+                                // no new wrap. Contrast measured
+                                // **6.51:1** on this `bg-base-100`
+                                // card.
+                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::InProgressIssuesHint)}</span>
                             </div>
                             <input type="number" name="wip_limit" min="1" max="99"
                                    value=wip_value
@@ -288,15 +294,32 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                          aria-label=t(MessageKey::CloseThisRowAriaLabel)>
                     {t(MessageKey::CloseOnDateSummary)}
                 </summary>
+                // `LBL-001` (series `063`): the label's own `text-xs`
+                // deleted (`.label-text` already says 14px) and the
+                // input raised `input-xs` -> `input-sm` -- a cluster
+                // decision, not a label-alone one, so the value a
+                // reader types matches the label naming it. Measured,
+                // not assumed: the input's own rendered height does
+                // **not** move (44px before and after, at both
+                // widths) -- `grow()` composes `TOUCH_TARGET`
+                // (`min-h-11` = 44px), which already exceeds both
+                // `input-xs`'s 24px and `input-sm`'s 32px, so neither
+                // size's own CSS height ever reaches the DOM; the
+                // genuinely-measured change is `input-sm`'s own
+                // `font-size` (12px -> 14px, confirmed via
+                // `getComputedStyle`), the thing a reader actually
+                // reads. Card height grows only by the label's own
+                // line, +4px, no horizontal overflow at either width
+                // (`scrollWidth` unchanged, `w-64` holds).
                 <div class="dropdown-content card card-compact w-64 p-2 shadow bg-base-100 border border-base-300">
                     <form method="post" action=close_action class="flex gap-2 items-end">
                         <input type="hidden" name="client_updated_at" value=cua_close/>
                         <label class="form-control flex-1">
                             <div class="label py-0">
-                                <span class="label-text text-xs">{t(MessageKey::CloseOnLabel)}</span>
+                                <span class="label-text">{t(MessageKey::CloseOnLabel)}</span>
                             </div>
                             <input type="date" name="period_end" required
-                                   class=grow("input input-bordered input-xs")/>
+                                   class=grow("input input-bordered input-sm")/>
                         </label>
                         <button type="submit" class=grow("btn btn-primary btn-xs")>{t(MessageKey::CloseButton)}</button>
                     </form>
@@ -321,41 +344,49 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                         <span class="font-medium">{row.points}</span>
                         {t(MessageKey::PointsUnitSuffix)}
                     </summary>
+                    // `LBL-001` (series `063`): the cluster raised,
+                    // same reasoning as the "Close on" dropdown above
+                    // -- each label's own `text-xs` deleted, each
+                    // input `input-xs` -> `input-sm`. Measured: input
+                    // height unchanged (44px, `grow()`'s own floor),
+                    // card height +16px (four labels' own lines) at
+                    // both widths, no horizontal overflow (`w-80`
+                    // holds, `scrollWidth` unchanged).
                     <form method="post" action=update_action
                           class="dropdown-content card card-compact w-80 p-3 shadow bg-base-100 border border-base-300 z-10"
                           aria-label=t(MessageKey::EditRowAriaLabel)>
                         <input type="hidden" name="client_updated_at" value=cua_update/>
                         <label class="form-control">
                             <div class="label py-0">
-                                <span class="label-text text-xs">{t(MessageKey::PointsColumnHeading)}</span>
+                                <span class="label-text">{t(MessageKey::PointsColumnHeading)}</span>
                             </div>
                             <input type="number" name="points" min="1" max="999"
                                    value=row.points.to_string()
-                                   class=grow("input input-bordered input-xs")/>
+                                   class=grow("input input-bordered input-sm")/>
                         </label>
                         <label class="form-control mt-1">
                             <div class="label py-0">
-                                <span class="label-text text-xs">{t(MessageKey::FromColumnHeading)}</span>
+                                <span class="label-text">{t(MessageKey::FromColumnHeading)}</span>
                             </div>
                             <input type="date" name="period_start"
                                    value=from_value
-                                   class=grow("input input-bordered input-xs")/>
+                                   class=grow("input input-bordered input-sm")/>
                         </label>
                         <label class="form-control mt-1">
                             <div class="label py-0">
-                                <span class="label-text text-xs">{t(MessageKey::ToColumnHeading)}</span>
+                                <span class="label-text">{t(MessageKey::ToColumnHeading)}</span>
                             </div>
                             <input type="date" name="period_end"
                                    value=to_value
-                                   class=grow("input input-bordered input-xs")/>
+                                   class=grow("input input-bordered input-sm")/>
                         </label>
                         <label class="form-control mt-1">
                             <div class="label py-0">
-                                <span class="label-text text-xs">{t(MessageKey::NoteColumnHeading)}</span>
+                                <span class="label-text">{t(MessageKey::NoteColumnHeading)}</span>
                             </div>
                             <input type="text" name="note" maxlength="120"
                                    value=note_text
-                                   class=grow("input input-bordered input-xs")/>
+                                   class=grow("input input-bordered input-sm")/>
                         </label>
                         <button type="submit" class=grow("btn btn-primary btn-xs mt-2")>
                             {t(MessageKey::SaveButton)}
