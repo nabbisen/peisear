@@ -9,7 +9,24 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.64.0] — 2026-11-18
+
+**The smallest text in the product, read one screen at a time — and the
+decision not to write a rule about it.** Sixty of the sixty-one smallest
+text sites across three screens move up one step, every cost measured at
+a phone width and a desktop width rather than assumed. The four sites
+whose contrast nothing had ever checked were measured; all four pass.
+
+**No type rule was written, deliberately.** The size answer turned out to
+be the easy half — it was the same answer almost every time — and a rule
+capturing it would have been silent about everything that actually
+needed deciding: a label kept small because enlarging it would not have
+fixed what was really wrong with it, a reserved space whose reason had
+quietly expired, four controls whose minimum touch size was computed from
+a line height, a text box that shows less of what you have typed as its
+text grows, and a check that broke because it quoted a style name. The
+reasoning is in the requirements specification; the seven screens nobody
+has read yet keep their current sizes until someone reads them.
 
 ### Changed
 
@@ -63,6 +80,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the alternative — leaving it smaller just to show more text at
   once — was not the trade-off this release exists to protect
   (`TYPE-003`, `§10.60`).
+
+### What this release does not fix
+
+- **The seven screens nobody read.** Sprints, the calendar, teams,
+  settings, sprint plan, notification preferences, auth, notifications,
+  search and the site header still hold 68 of these smallest-text
+  sites, unchanged. They were deliberately left out rather than swept:
+  the point of this release was that each screen needed looking at, and
+  these were not looked at.
+- **The calendar's day-view project badge.** Still the smallest text in
+  the product, and still clipped entirely on any event shorter than
+  about an hour — a defect that has nothing to do with its size, found
+  while measuring and recorded rather than fixed here.
+- **Nothing about layout.** This release answers the typography half of
+  the question it came from. Colour was already answered; layout is
+  untouched.
 
 ## [0.63.0] — 2026-11-15
 
