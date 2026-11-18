@@ -539,7 +539,15 @@ pub fn SprintNewPage(
                                 // (one line, no wrap, either width).
                                 // Contrast measured **6.51:1** on this
                                 // `bg-base-100` card.
-                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::OptionalHint)}</span>
+                                // `LBL-001` round 2: colour moved to
+                                // `text-base-content/70` -- single
+                                // level, no faded ancestor, confirmed;
+                                // reach both code paths (`GRAM-002`'s
+                                // lesson, same as round 1).
+                                // Re-measured: **6.42:1**, unchanged
+                                // within pixel noise from the
+                                // pre-conversion 6.51:1.
+                                <span class="label-text-alt text-sm text-base-content/70">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="goal" rows="3" maxlength="500"
                                       placeholder=t(MessageKey::GoalFieldPlaceholder)
@@ -1174,7 +1182,9 @@ pub fn SprintEditPage(
                                 // `LBL-001`: the second of the two
                                 // identical `OptionalHint` sites -- see
                                 // the new-sprint form's own comment.
-                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::OptionalHint)}</span>
+                                // `LBL-001` round 2: same colour move,
+                                // second of the pair.
+                                <span class="label-text-alt text-sm text-base-content/70">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="goal" rows="3" maxlength="500"
                                       class=grow("textarea textarea-bordered textarea-sm w-full")>

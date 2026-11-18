@@ -208,7 +208,13 @@ pub fn SettingsPage(
                                 // no new wrap. Contrast measured
                                 // **6.51:1** on this `bg-base-100`
                                 // card.
-                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::InProgressIssuesHint)}</span>
+                                // `LBL-001` round 2: colour moved to
+                                // `text-base-content/70` -- single
+                                // level, no faded ancestor, confirmed.
+                                // Re-measured: **6.42:1**, unchanged
+                                // within pixel noise from the
+                                // pre-conversion 6.51:1.
+                                <span class="label-text-alt text-sm text-base-content/70">{t(MessageKey::InProgressIssuesHint)}</span>
                             </div>
                             <input type="number" name="wip_limit" min="1" max="99"
                                    value=wip_value
@@ -321,6 +327,16 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                             <input type="date" name="period_end" required
                                    class=grow("input input-bordered input-sm")/>
                         </label>
+                        // `LBL-001` round 2: this button's own
+                        // `btn-xs` considered and left. The card now
+                        // reads label 14px, typed value 14px, button
+                        // label 12px -- an inconsistency, but raising
+                        // this tier is a product-wide control-density
+                        // decision (`btn-xs` has 19 render sites,
+                        // `select-xs` 3), touching screens this
+                        // series does not read. Not this round's call
+                        // or this series'; recorded as a candidate in
+                        // `ROADMAP.md`.
                         <button type="submit" class=grow("btn btn-primary btn-xs")>{t(MessageKey::CloseButton)}</button>
                     </form>
                 </div>
@@ -388,6 +404,11 @@ fn render_capacity_row(row: CapacityRow) -> impl IntoView {
                                    value=note_text
                                    class=grow("input input-bordered input-sm")/>
                         </label>
+                        // `LBL-001` round 2: same consideration as the
+                        // "Close on" dropdown's own button -- `btn-xs`
+                        // left, a product-wide control-density
+                        // decision this round and this series do not
+                        // take. See that card's own comment.
                         <button type="submit" class=grow("btn btn-primary btn-xs mt-2")>
                             {t(MessageKey::SaveButton)}
                         </button>

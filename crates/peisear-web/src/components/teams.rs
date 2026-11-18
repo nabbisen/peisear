@@ -173,7 +173,16 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                                 // either size). Contrast measured
                                 // **6.51:1** on this `bg-base-100`
                                 // card.
-                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::OptionalAutoDerivedHint)}</span>
+                                // `LBL-001` round 2: colour moved to
+                                // `text-base-content/70` -- single
+                                // level, no faded ancestor, confirmed.
+                                // The row's own helper text just below
+                                // (`:196`) already carried this
+                                // spelling; this hint now agrees with
+                                // it. Re-measured: **6.42:1**,
+                                // unchanged within pixel noise from
+                                // the pre-conversion 6.51:1.
+                                <span class="label-text-alt text-sm text-base-content/70">{t(MessageKey::OptionalAutoDerivedHint)}</span>
                             </div>
                             <input type="text" name="slug" maxlength="64"
                                    pattern="[a-z0-9\\-]+"
@@ -205,7 +214,13 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                                 // measured cost as the slug hint above
                                 // (+4px, no wrap, both widths).
                                 // Contrast **6.51:1**.
-                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::OptionalHint)}</span>
+                                // `LBL-001` round 2: colour moved to
+                                // `text-base-content/70` -- single
+                                // level, no faded ancestor, confirmed.
+                                // Re-measured: **6.42:1**, unchanged
+                                // within pixel noise from the
+                                // pre-conversion 6.51:1.
+                                <span class="label-text-alt text-sm text-base-content/70">{t(MessageKey::OptionalHint)}</span>
                             </div>
                             <textarea name="description" rows="3" maxlength="500"
                                       placeholder=t(MessageKey::TeamDescriptionPlaceholder)

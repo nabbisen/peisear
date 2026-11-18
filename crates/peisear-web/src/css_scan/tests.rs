@@ -151,10 +151,17 @@ fn the_repository_satisfies_the_live_rule() {
     // `LBL-001` (series `063`): population dropped 290 -> 289.
     // `settings.rs`'s own five `input-xs` sites (the "Close on" and
     // "Points edit" dropdowns) all moved to `input-sm` as part of the
-    // cluster raise -- `input-xs` was not used anywhere else in the
-    // tree, so this removes that token entirely rather than merely
-    // relocating it; confirmed with `grep -rn 'input-xs'` over live
-    // `class=` attributes, not assumed from the five sites changed.
+    // cluster raise -- `input-xs` is no longer rendered anywhere
+    // under `components/`, which is this scan's own scope (this
+    // module's doc comment, "Files: `components/**/*.rs` only"), so
+    // the token leaves this count entirely rather than merely
+    // relocating within it; confirmed with `grep -rn 'input-xs'` over
+    // live `class=` attributes, not assumed from the five sites
+    // changed. **`input-xs` itself is not gone from the tree** — it
+    // stays, correctly, in `touch_target_scan.rs`'s own
+    // `SIZING_CLASSES` list, the guard that stops it being
+    // reintroduced; that list is outside this scan's own scope and so
+    // does not affect this number either way.
     assert_eq!(
         (result.population, result.allowlisted),
         (289, 2),

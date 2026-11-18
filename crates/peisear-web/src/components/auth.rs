@@ -100,7 +100,20 @@ pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) 
                                 // measured as rendered, on this
                                 // `bg-base-100` page: **6.51:1**,
                                 // clears 4.5:1 with real margin.
-                                <span class="label-text-alt text-sm opacity-70">{t(MessageKey::PasswordMinLengthHint)}</span>
+                                // `LBL-001` round 2 (`§10.60`'s own
+                                // condition): colour moved to the
+                                // guarded `text-base-content/70` --
+                                // this span is a single level deep
+                                // with no faded ancestor (bare
+                                // `opacity` fades an element and its
+                                // subtree; `/70` fades text only, so
+                                // the two are equivalent here and not
+                                // in general), confirmed before
+                                // converting, not assumed. Re-measured
+                                // after: **6.42:1**, unchanged within
+                                // pixel noise from the pre-conversion
+                                // 6.51:1.
+                                <span class="label-text-alt text-sm text-base-content/70">{t(MessageKey::PasswordMinLengthHint)}</span>
                             </div>
                             <input type="password" name="password" autocomplete="new-password"
                                    required=true minlength="8"
