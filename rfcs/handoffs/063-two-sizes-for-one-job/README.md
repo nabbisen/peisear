@@ -68,7 +68,7 @@ so in the round's report rather than working around it.
 
 | round | what it reads | sites |
 |---|---|---|
-| `LBL-001` | both label conventions, product-wide, decided once | 15 |
+| `LBL-001` | both label conventions, product-wide, decided once — **closed**, two rounds | 15 |
 | `SIZE-001` | `sprints.rs`'s remaining body and meta text, and its two stale comment sums | 18 |
 | `SIZE-002` | `teams.rs`'s remaining 7 and `sprint_plan.rs`'s remaining 2, and the gate coupling in §6 | 9 |
 | `SIZE-003` | `settings.rs`'s remaining 2 and `auth.rs`'s remaining 3 — including the sign-in page's own flash message, the front door at 12 px | 5 |
@@ -83,10 +83,23 @@ dropdowns raised as clusters, `input-xs` leaving the tree, and
 now 53.** The round **corrected this series' own handoff**: the
 `24px → 32px` control-height cost it was told to measure cannot happen,
 because `grow()`'s `min-h-11` (44 px) already dominates both classes' own
-heights. **Round 2 is open** —
-[`LBL-001-round-2-the-spelling-the-guard-can-read.md`](./LBL-001-round-2-the-spelling-the-guard-can-read.md):
-six sites measured but left in the spelling `contrast_scan` cannot read, one
-unstated exception on the button tier, one claim wider than its evidence.
+heights. **Round 2 accepted** 2026-11-18 (`924b88f`), and **`LBL-001` is closed**:
+the six hints converted to `text-base-content/70` after a per-site
+single-level check, zero exceptions, re-measured at **6.42:1** each (from
+`6.51:1`, within the same pixel noise `§10.60` recorded for the two
+spellings); the button tier **stated and not raised** in both cards; and
+`css_scan/tests.rs`'s clause corrected to name that scan's own scope.
+Measured in `components/`: bare `opacity-70` **22 → 16**, guarded
+`text-base-content/70` **149 → 155** — *the round's own report said 150,
+which is the one figure it got wrong, and nothing in the repository carried
+it.* What the conversion buys is bounded and worth stating: `contrast_scan`
+is a **ban** on `/10`–`/60`, not a coverage counter, so a later dimming of
+those six is now refusable where before it was invisible.
+
+**Round 3 is open** —
+[`SIZE-001-the-sprint-screens-own-small-print.md`](./SIZE-001-the-sprint-screens-own-small-print.md):
+`sprints.rs`'s 18 remaining sites, and the **last two `text-xs`-keyed
+comment sums in the product**, which its own Group A moves.
 
 **One round at a time**,
 each handed separately and reviewed before the next opens. A round may be
