@@ -456,15 +456,22 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) 
                     // MARK-002 (§10.58): grow_summary(), the only helper
                     // a <summary> may take -- py-4 = 32px + text-sm's own
                     // 20px line-height = 52px.
-                    // `SIZE-001`: raised from `text-xs` (48px sum,
-                    // `0.64.0`'s own figure), matching the majority
-                    // already elsewhere in `grow_summary` disclosure
-                    // triggers (`settings.rs`, `me.rs` set `text-sm`
-                    // directly on their own `<summary>`; this file was
-                    // the only one sizing the ambient `<details>`
-                    // instead). The table inside keeps its own
-                    // `table-sm` size regardless -- that class sets
-                    // its own `font-size` and does not inherit the
+                    // `SIZE-001` round 2: raised from `text-xs` (48px
+                    // sum, `0.64.0`'s own figure). Corrected precedent
+                    // -- measured, not the round-1 claim: of 13
+                    // `grow_summary()` summaries in the product, 4 set
+                    // a size directly on the `<summary>` itself
+                    // (`settings.rs:146`/`:299`, `me.rs:359`/`:569`)
+                    // and 9 set none, inheriting an ancestor; of those
+                    // 9, `issues.rs` already sizes 4 `<details>`
+                    // containers at `text-sm` (`:329`, `:374`, `:649`,
+                    // `:726`) -- exactly this shape, unsized summary
+                    // inside a sized container. This file was not the
+                    // only one doing it the ambient way; it now
+                    // matches `issues.rs` rather than standing alone.
+                    // The table inside keeps its own `table-sm` size
+                    // regardless -- that class sets its own
+                    // `font-size` and does not inherit the
                     // container's. 44px floor unaffected either way
                     // (`grow_summary()` composes `TOUCH_TARGET`); this
                     // comment states the arithmetic, it does not hold
@@ -587,7 +594,23 @@ pub fn SprintNewPage(
                                       placeholder=t(MessageKey::GoalFieldPlaceholder)
                                       class=grow("textarea textarea-bordered textarea-sm w-full")></textarea>
                         </label>
-                        <p class="text-xs text-base-content/70">
+                        // `SIZE-001` round 2: raised to `text-sm`.
+                        // Read in place, not by role: this sits in
+                        // the same form as the Goal field's label and
+                        // hint (both `text-sm`), directly above the
+                        // submit button -- label 14px, hint 14px,
+                        // notice [was 12px], button. It is also the
+                        // most consequential sentence on the screen
+                        // (start explicitly; dates don't
+                        // auto-promote), so leaving it the smallest
+                        // text in the form was the wrong read of its
+                        // own neighbours, not a defensible aside.
+                        // Measured +12px at 390 (3 lines, unchanged
+                        // wrap count), +8px at 1280 (2 lines,
+                        // unchanged). Submit row moves down with it
+                        // (card auto-height); no new wrap, no
+                        // overflow. Contrast **6.42:1**.
+                        <p class="text-sm text-base-content/70">
                             {t(MessageKey::SprintPlannedNoticeLead)} <strong>{t(MessageKey::CaptionWordPlanned)}</strong>
                             {t(MessageKey::SprintPlannedNoticeTail)}
                         </p>
@@ -1035,10 +1058,12 @@ fn render_burndown(points: Vec<BurndownPoint>) -> impl IntoView {
                     // MARK-002 (§10.58): grow_summary(), the only helper
                     // a <summary> may take -- py-4 = 32px + text-sm's own
                     // 20px line-height = 52px.
-                    // `SIZE-001`: raised from `text-xs` (48px sum,
-                    // `0.64.0`'s own figure) -- same reason as the
-                    // velocity table's own disclosure above, the
-                    // other of this series' own two named sites.
+                    // `SIZE-001` round 2: raised from `text-xs` (48px
+                    // sum, `0.64.0`'s own figure) -- same corrected
+                    // precedent as the velocity table's own
+                    // disclosure above (see its own comment for the
+                    // measured 13-summary/4-direct/9-inherited split
+                    // and `issues.rs`'s own 4 matching sites).
                     <summary class=grow_summary("cursor-pointer text-base-content/70 hover:text-base-content py-4")>
                         {t(MessageKey::ChartTableSummaryLabel)}
                     </summary>
