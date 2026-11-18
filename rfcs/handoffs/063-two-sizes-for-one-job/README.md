@@ -96,10 +96,27 @@ it.* What the conversion buys is bounded and worth stating: `contrast_scan`
 is a **ban** on `/10`–`/60`, not a coverage counter, so a later dimming of
 those six is now refusable where before it was invisible.
 
-**Round 3 is open** —
-[`SIZE-001-the-sprint-screens-own-small-print.md`](./SIZE-001-the-sprint-screens-own-small-print.md):
-`sprints.rs`'s 18 remaining sites, and the **last two `text-xs`-keyed
-comment sums in the product**, which its own Group A moves.
+**`SIZE-001` round 1 accepted** 2026-11-19 (`a9130dd`): **four** of its 18
+sites raised — the empty-state note, a sprint card's date range, and both
+chart `<details>` containers — **fourteen left with a stated reason each**,
+and the **last two `text-xs`-keyed comment sums in the product** re-derived
+to `32px + 20px = 52px`. Census **53 → 49**. The 44 px floor was left
+exactly as it was, which was the instruction.
+
+**Decided here, so no later round re-litigates it**: the eight stat captions
+and five chart captions in `sprints.rs` **stay at 12 px** — thirteen sites —
+because **nothing else in the product does either job at another size**, so
+*two sizes for one job* does not reach them. Reopened only if another screen
+grows the same pattern at `text-sm`.
+
+**Round 2 is open** —
+[`SIZE-001-round-2-what-a-site-is-next-to.md`](./SIZE-001-round-2-what-a-site-is-next-to.md):
+one site whose stated reason does not survive its own markup
+(`sprints.rs:590`, a 12 px behavioural notice in a form whose hint is now
+14 px), four more to re-read in place, and **a precedent written into the
+tree that is wrong** — of 13 `grow_summary()` summaries, 4 set a size
+directly and 9 inherit, and `issues.rs` already sizes four `<details>` at
+`text-sm`, which is the shape this round produced.
 
 **One round at a time**,
 each handed separately and reviewed before the next opens. A round may be
