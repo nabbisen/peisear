@@ -69,7 +69,7 @@ so in the round's report rather than working around it.
 | round | what it reads | sites |
 |---|---|---|
 | `LBL-001` | both label conventions, product-wide, decided once — **closed**, two rounds | 15 |
-| `SIZE-001` | `sprints.rs`'s remaining body and meta text, and its two stale comment sums | 18 |
+| `SIZE-001` | `sprints.rs`'s remaining body and meta text, and its two stale comment sums — **closed**, two rounds, 5 raised / 13 decided as a set | 18 |
 | `SIZE-002` | `teams.rs`'s remaining 7 and `sprint_plan.rs`'s remaining 2, and the gate coupling in §6 | 9 |
 | `SIZE-003` | `settings.rs`'s remaining 2 and `auth.rs`'s remaining 3 — including the sign-in page's own flash message, the front door at 12 px | 5 |
 
@@ -109,14 +109,25 @@ because **nothing else in the product does either job at another size**, so
 *two sizes for one job* does not reach them. Reopened only if another screen
 grows the same pattern at `text-sm`.
 
-**Round 2 is open** —
-[`SIZE-001-round-2-what-a-site-is-next-to.md`](./SIZE-001-round-2-what-a-site-is-next-to.md):
-one site whose stated reason does not survive its own markup
-(`sprints.rs:590`, a 12 px behavioural notice in a form whose hint is now
-14 px), four more to re-read in place, and **a precedent written into the
-tree that is wrong** — of 13 `grow_summary()` summaries, 4 set a size
-directly and 9 inherit, and `issues.rs` already sizes four `<details>` at
-`text-sm`, which is the shape this round produced.
+**`SIZE-001` round 2 accepted** 2026-11-19 (`1fa6226`), and **`SIZE-001` is
+closed**: the new-sprint form's planned-state notice raised (its stated
+reason had not survived its own markup — it sat under a hint `LBL-001` had
+already raised), the other four Group C sites re-read **by neighbour** and
+left with their neighbours named, the precedent comment rewritten from a
+measurement, and the changelog corrected and reframed. **Census `49 → 48`.**
+
+**The method that came out of it, and it is the series' own now**: *a
+site's role is decided by what it is next to.* Name the element above, the
+element below, and their sizes, and decide from that — reading by role name
+is what mislabelled that notice.
+
+**Round 3 is open** —
+[`SIZE-002-the-team-screens-and-the-gate-that-quotes-a-class.md`](./SIZE-002-the-team-screens-and-the-gate-that-quotes-a-class.md):
+`teams.rs`'s 7 and `sprint_plan.rs`'s 2, the **`overflow-gate.mjs:538`
+coupling to delete**, and two carried corrections — one of them a precedent
+sentence of the architect's that is wrong in the tree (`issues.rs:649` wraps
+the product's one *bare* `<summary>`, not an unsized `grow_summary()` one,
+so the real breakdown is `issues.rs` ×3 and `sprints.rs` ×2).
 
 **One round at a time**,
 each handed separately and reviewed before the next opens. A round may be
