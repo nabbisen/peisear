@@ -9,7 +9,25 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.65.0] — 2026-11-21
+
+**Two sizes for one job.** The product had two sizes for the same piece of
+text — a form label, a field hint, a line of small print — and the line
+between them was not a design decision: it was **which screens had been
+read**. The release before this one read three screens and raised their
+small print; this one reads the five it did not. Thirty of the remaining
+forty-seven sites move up one step, each measured at a phone width and a
+desktop width; seventeen stay small, with a reason recorded for every one.
+
+**No rule about text size was written, again deliberately.** Each site was
+decided by what it sits beside — a hint beside a label, a caption beneath a
+number, a notice between a field and a button — and the two patterns with no
+counterpart anywhere else in the product (a caption above a figure, a
+caption under a chart) were decided as sets and written down rather than
+turned into a floor. One colour change was tried and taken back out on
+measurement: inside a warning box, which supplies its own text colour, the
+"safer" spelling reads 2.4 contrast points worse, so the original ships and
+the exception is recorded where someone would otherwise repeat it.
 
 ### Changed
 
@@ -78,6 +96,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   elsewhere, is raised too: the product's own rule for a hint beside
   a label — applied everywhere else regardless of what the label
   itself renders at — reaches it as well (`SIZE-003`).
+
+### What this release does not fix
+
+- **Twenty-one pieces of small print still read at 12px**, on the
+  calendar, the two notification surfaces, the search page and the
+  account menu. They are a different kind of text — calendar density and
+  navigation chrome rather than a label beside a field — and nobody has
+  read them yet. They keep their current size until someone does.
+- **Thirteen captions stay at 12px on purpose**, not by omission: the
+  numbers on a sprint's summary card and the explanations under its two
+  charts. Nothing else in the product pairs a caption with a figure or a
+  chart, so there is no second size for either to disagree with.
+- **A small control's text is still smaller than the field beside it** in
+  two settings dialogs: the button says "Save" at 12px next to a value you
+  type at 14px. Changing that is a decision about every small button in the
+  product — nineteen of them — and it was not this release's to take.
+- **The documentation site has not published since 18 November.** A GitHub
+  Pages deployment is stuck in a state its own API refuses to cancel, and
+  everything behind it waits. The site's content is current as of that
+  date; what this release changed in it will appear when the queue clears.
+  The link check that runs beside it was unblocked in the meantime.
 
 ## [0.64.0] — 2026-11-18
 
