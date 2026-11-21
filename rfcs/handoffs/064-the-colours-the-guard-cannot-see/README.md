@@ -91,12 +91,53 @@ baseline 3 passed, planted FAILED, naming the file and the class value. The
 round also corrected the handoff's own *"thirteen repairs"* to **fifteen**,
 and recorded the correction in the entry.
 
-**Round 2 is open** —
-[`CLR-003-round-2-the-exclusion-that-is-two-words.md`](./CLR-003-round-2-the-exclusion-that-is-two-words.md):
-the `"text-primary"` exclusion is the shortest possible class value, so a
-future `class="text-primary"` body-text site would be excluded by name with
-both new tests green. The fix is an exact-count assertion per exclusion
-(2 and 1), planted — the `css_scan` population shape.
+**`CLR-003` round 2 accepted** 2026-11-22 (`566e224`), and **series `064`
+is closed.** Each exclusion is now paired with its **exact live count**
+(1 and 2), the test renamed to say so, and the failure message explains both
+directions — stale at zero, an inherited exemption above. Planted by the
+round and **re-planted independently by the architect**: a third
+`text-primary` site makes it fail by name.
+
+---
+
+## The series, closed
+
+**Three rounds, four reports. Fifteen of fifteen failing sites repaired**,
+three excluded by their own exact class value *and* by exact count,
+`contrast_scan` widened from one token family to four, `NFR-A11Y-005`
+amended, `§10.61` opened and closed. **Both guards were planted and watched
+failing, and both plants were re-run independently.** `DEC-007`: **687 →
+689**. `css_scan`: **289 → 287**.
+
+| round | what it read | sites | outcome |
+|---|---|---|---|
+| `CLR-001` | seven destructive affordances carrying `text-error`/`btn-error` | 7 | **closed** — colour dropped on all seven, sizes untouched; hover read from the pinned sheet because this environment reports no hover capability at all |
+| `CLR-002` | five `link-primary` links and one `text-success` status line | 6 | **closed** — colour dropped; both tokens left `components/` entirely |
+| `CLR-003` | the last two `text-error` headings, the guard, the amendment, the entry | 2 + the guard | **closed** over two rounds — the ban planted, then its exclusion list given exact counts |
+
+**Five figures or instructions of the architect's were corrected by these
+rounds**: a ratio asserted against the wrong background (three sites at
+**2.50:1**, not 3.08:1); an after-figure that ignored ambient opacity
+(**6.42:1**, not 17.21:1); a hover measurement this environment cannot
+produce; *thirteen* repairs where the total is fifteen; and a stale
+`DEC-007` figure (687) that a later round caught and the architect's own
+review had let through. **A sixth was caught by the architect in this cut's
+own sweep**: two invented section numbers in a specification header.
+
+**What this series leaves behind, recorded rather than implied**: nine
+`link link-hover` sites with no underline at rest (an affordance question);
+the fifteen bare-`opacity` sites, carrying two conditions each, one of which
+compounds a `format!`-built fade and so hides from two scans rather than
+one; the `xs` control tier; and the 21 remaining smallest-text sites.
+
+**What it deliberately did not do**: change the theme. `--er`/`--su`/`--p`
+are shared with every solid variant that already passes — 37 `btn-primary`
+sites, `confirmation.rs:64`'s own red confirm at 6.83:1, every solid badge —
+so darkening them to repair these fifteen would have risked all of those for
+a property the repairs hold without it.
+
+**Nothing here cuts a release.** `0.66.0`'s candidate is the architect's to
+write against exit criteria 1–6; criterion 7 is the owner's.
 
 ---
 
