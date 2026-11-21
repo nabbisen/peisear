@@ -62,6 +62,29 @@ sites**, measures **4.83:1** — a pass by 0.33, on exactly the reasoning
 `confirmation.rs:64`'s solid `btn-error` is **6.83:1**: the pattern the
 repairs borrow.
 
+**Rounds closed so far.** `CLR-001` **accepted** 2026-11-21 (`bf02b24`):
+seven destructive affordances repaired, and it **corrected this series' own
+headline table** — three of the seven sit on `base-200` (the page body), not
+on a card, so their *before* figures were **2.50:1**, worse than the 3.08:1
+the handoff asserted. It also found that **this environment cannot produce
+`:hover`** (`(hover: hover): false`, verified independently by the
+architect), so daisyUI's `@media (hover: hover)`-gated rules cannot be
+triggered here by any technique; the working method is to read the
+declaration from the pinned sheet and, where it changes a paintable value,
+apply that value inline and screenshot the composite. `CLR-002`
+**accepted** 2026-11-21 (`56ed15b`): six sites repaired, and it corrected
+the handoff again — the anchors carry no colour of their own, so after the
+repair they inherit an ancestor's `/70` and read **6.42:1**, not the
+17.21:1 predicted. **A ratio belongs to a site, not to a token: the
+background and the ambient opacity are both part of it.** `css_scan`
+population `289 → 287`; `link-primary` and `text-success` have left
+`components/` entirely.
+
+**Round 3 is open** —
+[`CLR-003-the-guard-that-reads-one-family.md`](./CLR-003-the-guard-that-reads-one-family.md):
+the last two headings, **the guard**, `NFR-A11Y-005`'s amendment, `§10.61`,
+and the series' closing.
+
 ---
 
 ## 3. Method
