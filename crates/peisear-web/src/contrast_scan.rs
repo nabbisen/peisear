@@ -161,7 +161,26 @@ pub(crate) const SEMANTIC_FAMILIES: [&str; 7] = [
 /// 1.4.3. `primary` on `base-100` measures 4.21:1, which clears 3:1
 /// with room. Both sites render the identical literal; one entry
 /// covers both.
+///
+/// `CLR-003` round 2: a bare "matches something" check does not carry
+/// the `alignment_scan` precedent's own weight for `"text-primary"` —
+/// two words, not a long opening tag, and exactly the class value a
+/// future ordinary-body-text site would write (4.21:1, the violation
+/// this series exists to prevent) would have been excluded by name,
+/// silently, with both this list's own guard tests still green. Each
+/// entry below is now paired with the **exact** live count
+/// ([`NAMED_EXCLUSION_COUNTS`]), the `css_scan` population shape, so a
+/// third occurrence fails by name rather than being inherited.
 const NAMED_EXCLUSION_CLASS_VALUES: [&str; 2] = ["text-5xl font-bold text-error", "text-primary"];
+
+/// The exact number of live `components/**` elements each
+/// [`NAMED_EXCLUSION_CLASS_VALUES`] entry must match, same index —
+/// re-derived by `grep`, not copied forward: **1** for the status
+/// number (`error_page.rs:18` alone), **2** for the brand bullet
+/// (`auth.rs:15` and `layout.rs:211`, and no third site). A count that
+/// grows past this is a new site claiming an old exemption, which
+/// must be measured and justified on its own, not inherited silently.
+const NAMED_EXCLUSION_COUNTS: [usize; 2] = [1, 2];
 
 /// A `components/**` class token this scan bans outright: a semantic
 /// family spelled as `text-{family}` or `link-{family}`, bare or with

@@ -81,19 +81,23 @@ fn no_semantic_colour_in_a_text_position() {
     );
 }
 
-/// An exclusion that matches nothing is itself a defect — the
-/// `SIZE-002`/`css_scan` allowlist precedent, applied to
-/// [`NAMED_EXCLUSION_CLASS_VALUES`]: each literal must still be the
-/// exact class value of some live `components/**` element, not a
-/// stale entry a since-edited site has moved past.
+/// An exclusion that matches the wrong number of live sites is itself
+/// a defect — zero means stale (the `SIZE-002`/`css_scan` allowlist
+/// precedent), but **more than expected is the sharper failure**:
+/// `CLR-003` round 2 found that a bare "matches something" check lets
+/// a short, generic literal (`"text-primary"`) absorb a brand-new
+/// violation of the exact shape this guard exists to catch, silently,
+/// because the exclusion itself reads as satisfied either way. Each
+/// [`NAMED_EXCLUSION_CLASS_VALUES`] entry must match its own
+/// [`NAMED_EXCLUSION_COUNTS`] exactly — not "at least one."
 #[test]
-fn every_named_exclusion_still_matches_a_live_class_value() {
+fn every_named_exclusion_matches_its_exact_live_count() {
     let dir = components_dir();
     let mut files = Vec::new();
     collect_rs_files(&dir, &mut files);
     assert!(!files.is_empty());
 
-    let mut found = [false; NAMED_EXCLUSION_CLASS_VALUES.len()];
+    let mut counts = [0usize; NAMED_EXCLUSION_CLASS_VALUES.len()];
     for path in &files {
         let raw =
             fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
@@ -105,18 +109,23 @@ fn every_named_exclusion_still_matches_a_live_class_value() {
             let content = &stripped[content_start..content_end];
             for (i, exclusion) in NAMED_EXCLUSION_CLASS_VALUES.iter().enumerate() {
                 if content == *exclusion {
-                    found[i] = true;
+                    counts[i] += 1;
                 }
             }
         }
     }
 
     for (i, exclusion) in NAMED_EXCLUSION_CLASS_VALUES.iter().enumerate() {
-        assert!(
-            found[i],
-            "NAMED_EXCLUSION_CLASS_VALUES[{i}] ({exclusion:?}) matches no live \
-             class value under components/ -- the site it was written for has \
-             moved or changed, and this exclusion is now stale"
+        assert_eq!(
+            counts[i], NAMED_EXCLUSION_COUNTS[i],
+            "NAMED_EXCLUSION_CLASS_VALUES[{i}] ({exclusion:?}) matches {} live \
+             class value(s) under components/, not the {} this module's own \
+             constant records -- if it dropped to zero, the site it was \
+             written for has moved or changed and this exclusion is now \
+             stale; if it grew, a new site is claiming this exemption and \
+             must be measured and justified on its own, not inherited \
+             silently",
+            counts[i], NAMED_EXCLUSION_COUNTS[i]
         );
     }
 }
