@@ -148,6 +148,47 @@ visibility is the wrong trade in this series —
 which also fixes a broken intra-doc link `SIZE-002` left in `css_scan.rs`
 and which this review had accepted without catching.
 
+**`SIZE-003` round 2 accepted** 2026-11-21 (`b21a408`), and **series `063`
+is closed.** The one conversion reverted and re-measured back to its
+original **9.01:1**, the exception recorded at the site for any later sweep,
+`css_scan.rs`'s module doc reconciled (the retired test name now appears
+nowhere in the tree), population back to `(289, 3)`, census **38**
+unchanged, and the changelog corrected to describe what ships rather than
+what was tried.
+
+---
+
+## The series, closed
+
+**Four rounds, six reports. 47 in-scope sites: 30 raised, 17 left with a
+stated reason each. Census 68 → 38.** No register entry and no type rule —
+`§10.60` stayed closed, which is what `0.64.0` decided and what this series
+honoured rather than quietly reopening.
+
+**Six recorded reasons in this series were wrong and were corrected in
+place; three of the six were the architect's** — a `24px → 32px` cost that
+`min-h-11` made impossible, a precedent member (`issues.rs:649`) that was
+not the shape it was cited as, and the *"the two colour spellings composite
+identically"* generalization carried forward for three rounds until
+`SIZE-003` measured it and found **2.4 points**. Every one was caught by a
+round re-deriving rather than trusting a handoff, which is why each handoff
+ends with *if a measurement contradicts this file, the measurement wins.*
+
+**What this series leaves behind, recorded rather than implied**: the 21
+out-of-scope sites (`calendar.rs` 11, `notification_preferences.rs` 4,
+`notifications.rs` 3, `search.rs` 2, `layout.rs` 1); the 13 `sprints.rs`
+captions decided as a set; `teams.rs:419`/`:577` and
+`sprint_plan.rs:423`/`:532`, left with reasons; the 54 redundant
+`label-text text-sm` tokens; the `xs` control tier; and the fifteen
+remaining bare-`opacity` sites, which now carry **two** conditions each —
+`§10.60`'s single-level check **and** *does the element's colour come from a
+component token?*
+
+**Nothing here cuts a release.** `0.65.0`'s candidate is the architect's to
+write against exit criteria 1–6; criterion 7 is the owner's.
+
+---
+
 **Round 4, the last, was opened as** —
 [`SIZE-003-the-front-door-and-the-last-five.md`](./SIZE-003-the-front-door-and-the-last-five.md):
 `auth.rs`'s 3 — including **the public pages' own flash alert**, the front
