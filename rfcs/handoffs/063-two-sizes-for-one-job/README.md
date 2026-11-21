@@ -71,7 +71,7 @@ so in the round's report rather than working around it.
 | `LBL-001` | both label conventions, product-wide, decided once — **closed**, two rounds | 15 |
 | `SIZE-001` | `sprints.rs`'s remaining body and meta text, and its two stale comment sums — **closed**, two rounds, 5 raised / 13 decided as a set | 18 |
 | `SIZE-002` | `teams.rs`'s remaining 7 and `sprint_plan.rs`'s remaining 2, and the gate coupling in §6 — **closed**, 4 raised / 5 left, coupling deleted | 9 |
-| `SIZE-003` | `settings.rs`'s remaining 2 and `auth.rs`'s remaining 3 — including the sign-in page's own flash message, the front door at 12 px | 5 |
+| `SIZE-003` | `settings.rs`'s remaining 2 and `auth.rs`'s remaining 3 — including the sign-in page's own flash message, the front door at 12 px — **round 1 accepted**, 6 raised with the carried re-read; round 2 open (one conversion reverted, one doc link fixed) | 5 |
 
 15 + 18 + 9 + 5 = **47**, the in-scope census above.
 
@@ -132,7 +132,23 @@ exists to catch was **planted** to prove it. Census **48 → 44**; `(289, 3)`,
 population unchanged because `css_scan` counts an allowlisted token outside
 it.
 
-**Round 4, the last, is open** —
+**`SIZE-003` round 1 accepted** 2026-11-21 (`58dd2be`): six sites raised —
+`auth.rs`'s three (the public pages' flash alert and both centred lines),
+`settings.rs`'s two, and the carried `teams.rs:311` re-read — the final
+census stated at **38**, the rounds table reconciled, and what the series
+leaves behind named. It also **measured the two colour spellings in
+isolation and found a 2.4-point difference** (`opacity-80` **9.01:1** against
+`text-base-content/80` **6.61:1** inside `alert-warning`, which supplies its
+own `--wac` foreground token), contradicting a *"composite identically"*
+sentence that every earlier round and both architect handoffs had carried
+forward as general. **Round 2 therefore reverts that one conversion** and
+keeps the size raise: a 2.4-point legibility loss bought for guard
+visibility is the wrong trade in this series —
+[`SIZE-003-round-2-the-colour-the-alert-owns.md`](./SIZE-003-round-2-the-colour-the-alert-owns.md),
+which also fixes a broken intra-doc link `SIZE-002` left in `css_scan.rs`
+and which this review had accepted without catching.
+
+**Round 4, the last, was opened as** —
 [`SIZE-003-the-front-door-and-the-last-five.md`](./SIZE-003-the-front-door-and-the-last-five.md):
 `auth.rs`'s 3 — including **the public pages' own flash alert**, the front
 door's warning at the smallest size in the product — `settings.rs`'s 2, one
