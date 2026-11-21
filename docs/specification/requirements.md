@@ -2869,14 +2869,26 @@ that said otherwise would be the shape `§10.17` records.
 **NFR-A11Y-005 — Contrast**
 Text and background combinations MUST meet WCAG AA (4.5:1).
 *Source*: `SPEC §40.1`. *Acceptance*: `peisear-web`'s `contrast_scan` —
-`text-base-content/{10..60}` may not appear under `src/`. *Status*:
-**Measured and repaired (`QA-012`, `QA-013`, post-0.27.0)** — was *Not
-verified* from 0.19.1 through 0.27.0. *Priority*: P1.
+`text-base-content/{10..60}` may not appear under `src/components/**`
+(the muted-tier floor), **and no `text-{family}`/`link-{family}`
+semantic colour, nor `btn-outline` paired with `btn-{family}`, may
+appear there either** (`§10.61`), both subject to their own named,
+measured exclusions. *Status*: **Measured and repaired (`QA-012`,
+`QA-013`, post-0.27.0; `CLR-001`–`CLR-003`, series `064`, 0.66.0)** —
+was *Not verified* from 0.19.1 through 0.27.0. *Priority*: P1.
 
-*What was found.* The theme's own tokens were never the problem —
-`base-content` on `base-100` is 17.21:1. **The 130 opacity modifiers this
-project applied to them were**, and 111 sites sat below AA. `/70` is now the
-floor: 6.36:1 on `base-100`, 5.76:1 on `base-200`, 5.15:1 on `base-300`.
+*What was found, corrected 0.66.0.* "The theme's own tokens were never
+the problem" was true of `base-content` (`base-content` on `base-100`
+is 17.21:1) and **false of `success`, `error` and `primary`** —
+`§10.61` measured all three below AA against every real background
+this theme defines, and fifteen shipped sites used one of them on
+text or a link, **every destructive action in the product among
+them**. The sentence generalised past the one family it had actually
+measured; see `§10.61` for the full account. **The 130 opacity
+modifiers this project applied to `base-content`** were also a real,
+separate problem, and 111 sites sat below AA on that account. `/70` is
+now the floor: 6.36:1 on `base-100`, 5.76:1 on `base-200`, 5.15:1 on
+`base-300`.
 
 *Why a floor rather than a repair.* `/60` measured **4.54:1 on `base-100` — a
 pass by 0.04** — while failing at 4.23:1 on `base-200`, where three real uses
@@ -9705,6 +9717,131 @@ however many releases it took someone to re-read it — which is the
 exact failure `§10.16` is this register's own warning about, and which
 it carried for twenty-two releases.
 
+### 10.61 A guard measured one token family and the requirement generalised to all of them — **closed**, `CLR-001`–`CLR-003`, 0.66.0; opened and closed 2026-11-21 by the architect, scoping `064` and then widening the guard the same round it was found in
+
+**Found by scoping a release, not by any check** — the same property
+`§10.60` opened on. `QA-012`/`QA-013` measured `text-base-content/N`
+honestly, against the one theme this product ships, and closed
+`NFR-A11Y-005` as **Met**. The entry's own closing sentence — *"the
+theme's own tokens were never the problem"* — was true of the one
+family it had actually measured and was read as true of all of them.
+Nothing re-checked that reading for four semantic colours this theme
+also defines and this product also renders as text, because
+`contrast_scan` had never been asked to.
+
+**What scoping `064` found, measured against the shipped theme rather
+than assumed from the class name.** `success`, `error` and `primary`
+all fail 4.5:1 against every one of `base-100`/`base-200`/`base-300`
+(3.03/2.47/1.98, 3.08/2.50/2.01, 4.21/3.42/2.75 — `base-content`'s own
+17.21/14.01/11.25 for comparison). **Fifteen shipped sites** used one
+of them on text or a link — `CLR-001`'s seven, `CLR-002`'s six,
+`CLR-003`'s own two — and **every destructive action in the product
+was among them**: Sign out, removing a team member or a capacity row,
+deleting an issue, a sprint or a project, and the two headings on the
+pages that ask "are you sure." None of the fifteen needed the colour
+— four reached a confirmation page already carrying a solid,
+AA-passing warning (`error-content` on `error`, 6.83:1); two sat
+behind a native `confirm()` dialog; one (Sign out) was not destructive
+at all, so its red was wrong independent of contrast; the links
+already underlined at rest; and the one status line's own checkmark
+and sentence already carried the state the colour repeated.
+
+**Three sites measured as correctly using a semantic colour, and
+excluded by their own exact literal rather than left for a second
+rule**: `error_page.rs:18`'s 48px status number (large text, WCAG's
+3:1 route, `error` on `base-100` clears it at 3.08:1), and the two
+identical decorative brand bullets `auth.rs:15`/`layout.rs:211` (a
+glyph standing in for a bullet point, not text carrying a reader's own
+meaning — WCAG 1.4.11's 3:1, not 1.4.3's 4.5:1; `primary` on
+`base-100` clears it at 4.21:1).
+
+**One pairing a plain `text-*`/`link-*` grep would have missed**:
+`projects.rs`'s own project-delete link read its colour through
+`btn-outline` paired with `btn-error` rather than a text class —
+found reading `CLR-001`'s own repair, not assumed from the family
+list, and named in the guard's own rule rather than left as a second
+exception to rediscover.
+
+**Two of this round's own figures were corrected by the rounds that
+measured them, both in the same direction**: *a ratio belongs to a
+site, not to a token.* Three of `CLR-001`'s seven sat on `base-200`
+(the page body, `layout.rs:72`), not the `base-100` card this entry's
+own handoff assumed, so their *before* figures were **2.50:1**, worse
+than the 3.08:1 written down. And `CLR-002`'s five links and one
+status line carry no colour of their own at rest — after the repair
+they inherit an ancestor's own faded `text-base-content/N`, reading
+**6.42:1**/**7.87:1**/**14.05:1** depending on which ancestor and
+which background, not the **17.21:1** this entry's own handoff
+predicted for all of them uniformly. Both corrections survive: every
+site still clears 4.5:1, but the figures were the token's, not the
+site's — the same distinction `§10.60` drew between a size answer and
+the seven costs a class-token scan could not see.
+
+**One count this entry itself gets right only on the second attempt**:
+the handoff that opened this entry's own closing section said
+*"thirteen repairs"*; the tree says **fifteen** — `CLR-001`'s seven
+plus `CLR-002`'s six plus `CLR-003`'s own two — matching the fifteen
+this entry opened on. Corrected here rather than carried, on
+`§10.60`'s own precedent for a wrong figure found in the entry meant
+to close it.
+
+**Two narrow passes, recorded so a theme change has something to
+re-measure against, not re-derive.** `btn-primary`, the product's main
+action at 37 sites, measures **4.83:1** — a pass by 0.33, on exactly
+the reasoning that picked `/70` over `/60` for the muted-text floor.
+`confirmation.rs:64`'s solid `btn-error` measures **6.83:1**: the
+pattern every repair in this entry reuses rather than inventing a new
+colour.
+
+**The guard, widened the same round it was found wanting.**
+`contrast_scan` now refuses, in `src/components/**`: `text-{family}`
+or `link-{family}` for `success`/`error`/`warning`/`info`/`primary`/
+`secondary`/`accent` (bare or with any `/N` suffix), and `btn-outline`
+paired with `btn-{family}` on one element — checked per element, via
+the same per-element token list `css_scan` already extracts correctly
+(continuations joined, interpolation skipped: `css_scan`'s own
+`quoted_string_spans`/`is_token_source`/`tokens_from_content` are now
+`pub(crate)` and shared rather than duplicated a second time, the
+`strip_line_comments` reasoning applied to three more helpers that
+carry state). The three exclusions are matched by exact class-value
+literal, the `alignment_scan::NAMED_ESCALATION_EXCLUSION_TAG`
+precedent: a different element carrying the same class is still
+caught. **Planted and watched failing** before being trusted —
+`projects.rs`'s own repaired delete link, restored to `btn-outline
+btn-error btn-sm` on a scratch edit, reverted once the guard's failure
+message named the exact pairing — and a second guard asserts neither
+named exclusion has gone stale (matches no live element).
+
+`warning`, `info`, `secondary` and `accent` render at **zero** sites
+in `components/` today — banned on the same reasoning as the three
+measured families rather than left to be found the hard way, and
+measured if a use is ever proposed rather than guessed now.
+
+**Does not compute a per-site ratio, and does not try to.** Which
+background an element actually renders on is this guard's one
+question it cannot answer from source — `CLR-001` demonstrated,
+twice, on sites this entry's own handoff got wrong, that only the
+rendered tree answers it. The guard stays a ban on tokens, the shape
+`BANNED_MODIFIERS` already used for the muted-tier floor, not a
+computation it cannot do honestly.
+
+**What this closes, and what it does not.** `NFR-A11Y-005` stays
+**Met**, now on a guard that reads four token families instead of
+one; its own entry (above) is amended with this correction rather
+than a second, separate finding. **No change to the theme itself**:
+`--er`/`--su`/`--p` are shared with every solid variant that already
+passes (`btn-primary`'s own 37 sites, `confirmation.rs:64`'s
+`btn-error`, every `badge-success`/`badge-error`), so repairing these
+fifteen sites by darkening the theme would have put all of them at
+risk for a property the repairs already hold without it. **Left
+behind, named rather than implied**: nine `link link-hover` sites
+found while measuring `CLR-002` (a use-of-colour and affordance
+question, not a contrast one — recorded as a `ROADMAP.md` candidate);
+the fifteen bare-`opacity` sites and their now-two conditions per
+site; and one more fact added to that candidate by `CLR-002`: a
+read-notification's own card wraps in a bare `opacity-70` built by a
+`format!` call, which is invisible to `css_scan`'s own token scan as
+well as to `contrast_scan` — a site two scans miss, not one.
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 

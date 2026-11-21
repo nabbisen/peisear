@@ -181,7 +181,17 @@ fn stylesheet_text() -> String {
 /// `(quote_pos, content_start, content_end)`. Identical in shape to
 /// `touch_target_scan::quoted_string_spans`: handles `\"` escapes,
 /// does not attempt raw strings or any other Rust string form.
-fn quoted_string_spans(source: &str) -> Vec<(usize, usize, usize)> {
+///
+/// `pub(crate)`, along with [`is_token_source`] and
+/// [`tokens_from_content`] below (`CLR-003`): `contrast_scan`'s own
+/// semantic-colour ban needs the same per-element token list this
+/// scan already extracts correctly (continuations joined,
+/// interpolation skipped) to check `btn-outline`/`btn-{family}`
+/// co-occurrence *on one element*, not merely in one file. These
+/// three carry state and edge cases (`GRD-001`'s own reasoning for
+/// `strip_line_comments`), so they are shared rather than
+/// duplicated a second time.
+pub(crate) fn quoted_string_spans(source: &str) -> Vec<(usize, usize, usize)> {
     let bytes = source.as_bytes();
     let mut spans = Vec::new();
     let mut i = 0;
@@ -238,7 +248,7 @@ fn enclosing_call_text(source: &str, quote_pos: usize) -> Option<&str> {
 /// is one of this scan's three token sources: a `class=` attribute
 /// value, or the (possibly `if`/`else`-wrapped) sole argument of a
 /// `grow(...)` or `grow_text(...)` call.
-fn is_token_source(source: &str, quote_pos: usize) -> bool {
+pub(crate) fn is_token_source(source: &str, quote_pos: usize) -> bool {
     if source[..quote_pos].trim_end().ends_with("class=") {
         return true;
     }
@@ -286,7 +296,7 @@ fn join_line_continuations(content: &str) -> String {
 /// token-source literal's content — line continuations joined first,
 /// then any token carrying `{` or `}` dropped (interpolated, value
 /// unknowable to this scan).
-fn tokens_from_content(content: &str) -> Vec<String> {
+pub(crate) fn tokens_from_content(content: &str) -> Vec<String> {
     join_line_continuations(content)
         .split_whitespace()
         .filter(|t| !t.contains('{') && !t.contains('}'))

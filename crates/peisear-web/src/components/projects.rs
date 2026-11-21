@@ -283,7 +283,18 @@ pub fn ProjectEditPage(
                     <div class="card-body">
                         <div class="flex items-center justify-between">
                             <div>
-                                <div class="font-medium text-error">{t(MessageKey::DeleteProjectHeading)}</div>
+                                // `CLR-003`: `text-error` dropped
+                                // (3.08:1 -> 17.21:1, measured). 16px
+                                // medium is nowhere near the large-text
+                                // threshold, so this never had the 3:1
+                                // route either. Size unchanged
+                                // (`TYPE-003` set it, measured there).
+                                // The card's own `border-error/30` and
+                                // the `btn-outline` confirm beside it
+                                // (also colour-dropped, `CLR-001`)
+                                // already read as a danger zone without
+                                // this heading's own colour.
+                                <div class="font-medium">{t(MessageKey::DeleteProjectHeading)}</div>
                                 // `TYPE-003` (`§10.60`): raised to
                                 // `text-sm`. Measured cost +8px at 390
                                 // (two lines, both taller, same count),

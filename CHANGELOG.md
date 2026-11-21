@@ -43,6 +43,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the same way — the checkmark and the sentence already carry the
   state — moving from 2.47:1 to 14.05:1 against the page's own
   background; its size is unchanged.
+- **The last two sites — a delete page's own heading, and a project's
+  own danger-zone label — repaired the same way**, closing out this
+  pass: both read as `text-error` at 3.08:1, and neither reaches the
+  large-text route; both move to the product's own base text colour
+  (17.21:1), with sizes unchanged. `contrast_scan` now refuses a
+  semantic colour (`success`/`error`/`warning`/`info`/`primary`/
+  `secondary`/`accent`) on any text or link in a component, including
+  the one spelling a plain grep missed — `btn-outline` carrying the
+  colour instead of a text class — with three sites it measured and
+  kept excluded by name: a large status number and a decorative brand
+  glyph, neither of which needed the repair.
 
 ## [0.65.0] — 2026-11-21
 

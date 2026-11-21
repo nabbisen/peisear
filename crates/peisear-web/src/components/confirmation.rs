@@ -53,7 +53,27 @@ pub fn ConfirmDeletePage(
                     // here covers both. Serves the issue and the project
                     // delete interstitials alike.
                     <div class="card-body break-words">
-                        <h1 class="text-lg font-semibold text-error">{heading}</h1>
+                        // `CLR-003`: `text-error` dropped (3.08:1 ->
+                        // 17.21:1, measured) -- 18px semibold is below
+                        // WCAG's 18.66px-bold large-text threshold, so
+                        // this never had the 3:1 route. The card's own
+                        // `border-error/30` and the solid `btn-error`
+                        // confirm below (6.83:1) already carry the
+                        // warning structurally; this heading's colour
+                        // was tonal, not load-bearing. The alternative
+                        // -- `text-xl font-bold` (20px bold, which
+                        // would clear 3.08:1 as large text and keep the
+                        // red) -- was measured, not rejected on
+                        // assumption: identical box height at both
+                        // widths (84px/56px, same as today, with a
+                        // long project name), no new wrap, the same
+                        // 12px gap to the consequence line below. The
+                        // layout cost is zero either way; the decision
+                        // is a colour one, not a size one, and this
+                        // series has consistently preferred removing a
+                        // colour the structure does not need over
+                        // introducing a new size to keep it.
+                        <h1 class="text-lg font-semibold">{heading}</h1>
                         <p class="text-sm text-base-content/70 mt-1">{consequence}</p>
                         <div class="card-actions justify-end mt-4">
                             <a href=cancel_href class=grow("btn btn-ghost btn-sm")>
