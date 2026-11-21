@@ -2253,7 +2253,21 @@ fn IssueView(
             <h1 class="text-xl font-semibold tracking-tight min-w-0 break-words">{issue.title}</h1>
             <div class="flex gap-2 shrink-0">
                 <a href=edit_href.clone() class=grow("btn btn-ghost btn-sm")>{t(MessageKey::EditWord)}</a>
-                <a href=delete_href class=grow("btn btn-ghost btn-sm text-error")>
+                // `CLR-001`: `text-error` dropped. This page's own
+                // background is `base-200` (confirmed by render, not
+                // assumed `base-100`), so the real move is 2.50:1 ->
+                // 14.01:1 (series `064` README §1's own table), not
+                // the headline 3.08:1/17.21:1 figure measured against
+                // `base-100`. This link only reaches the confirmation
+                // interstitial (`confirmation.rs`), which already
+                // carries the warning properly: a solid `btn-error`
+                // at 6.83:1. The colour on the way in was decoration
+                // failing contrast while the step that commits was
+                // already correct. Hover/focus: same `.btn-ghost`/
+                // `.btn:focus-visible` reasoning as `layout.rs:417`'s
+                // own comment -- the measured hover composite on this
+                // page's own `base-200` background reads 14.05:1.
+                <a href=delete_href class=grow("btn btn-ghost btn-sm")>
                     {t(MessageKey::DeleteButton)}
                 </a>
             </div>

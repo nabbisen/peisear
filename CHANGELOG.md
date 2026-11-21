@@ -9,6 +9,25 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Every destructive action's own colour failed contrast, and the
+  colour was decoration rather than the warning.** Sign out, removing
+  a team member or a capacity row, and the links to delete an issue,
+  a sprint or a project all rendered red (`#ff5861` on the product's
+  own background) at 3.08:1 against the 4.5:1 a reader is owed —
+  below the floor on every one of the seven places the product asks
+  "are you sure," because `contrast_scan` reads one token family and
+  none of these used it. None of the seven needed the colour: four
+  reach a confirmation page that already carries a solid, AA-passing
+  warning (6.83:1); two sit behind the browser's own `confirm()`
+  dialog; and Sign out is not destructive at all, so its red was
+  wrong independent of contrast. The colour is dropped on all seven
+  (17.21:1 against a white card, 14.01:1 against the issue and sprint
+  detail pages' own grey background); sizes are unchanged throughout.
+
 ## [0.65.0] — 2026-11-21
 
 **Two sizes for one job.** The product had two sizes for the same piece of

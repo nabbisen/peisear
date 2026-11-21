@@ -413,8 +413,36 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                                 // target -- reusing the .btn family (already
                                 // guarded, already centers correctly) rather
                                 // than hand-building flex centering.
+                                //
+                                // `CLR-001`: `text-error` dropped, both as an
+                                // AA repair (3.08:1 -> 17.21:1, measured) and
+                                // as a meaning correction -- signing out is
+                                // reversible and is not a destructive action,
+                                // so the colour was wrong independent of
+                                // contrast. Box/size unchanged (`grow()`'s own
+                                // `min-h-11` floor, confirmed by render).
+                                //
+                                // Hover: `.btn-ghost:hover` only changes
+                                // `background-color`/`border-color` in the
+                                // pinned sheet, never `color` -- confirmed by
+                                // reading the rule, since this measurement
+                                // session's headless browser reports
+                                // `(hover: hover): false` unconditionally (no
+                                // virtual pointing device on this display),
+                                // which blocks every `@media (hover: hover)`
+                                // daisyUI gates its hover rules behind,
+                                // regardless of dispatched input or forced
+                                // pseudo-state -- see the review-request
+                                // report. The declared hover value
+                                // (`oklch(var(--bc)/.2)`) applied directly and
+                                // screenshotted over this card's own white
+                                // background measures **16.66:1**, still far
+                                // past 4.5:1. Focus: `.btn:focus-visible`
+                                // only draws an `outline` in `currentColor`
+                                // (the text's own colour), introducing no new
+                                // contrast question.
                                 <button type="submit"
-                                        class=grow("btn btn-ghost btn-sm text-error w-full justify-start normal-case")>
+                                        class=grow("btn btn-ghost btn-sm w-full justify-start normal-case")>
                                     {t(MessageKey::NavSignOut)}
                                 </button>
                             </form>

@@ -616,7 +616,17 @@ fn render_member_row(
             <td class="text-right">
                 <form method="post" action=remove_action
                       onsubmit="return confirm('Remove this member from the team?')">
-                    <button type="submit" class=grow("btn btn-ghost btn-xs text-error")
+                    // `CLR-001`: `text-error` dropped (3.08:1 ->
+                    // 17.21:1, measured) -- the warning is the native
+                    // `confirm()` dialog this `onsubmit` already
+                    // shows, not this button's own colour. Size
+                    // (`btn-xs`) is unchanged; that tier is a
+                    // separate, recorded candidate. Hover/focus: same
+                    // `.btn-ghost`/`.btn:focus-visible` reasoning as
+                    // `layout.rs:417`'s own comment -- neither touches
+                    // `color`, and the measured hover composite
+                    // (16.66:1 on this card's white background) holds.
+                    <button type="submit" class=grow("btn btn-ghost btn-xs")
                             aria-label=t(MessageKey::RemoveMemberAriaLabel)>
                         {t(MessageKey::RemoveButton)}
                     </button>

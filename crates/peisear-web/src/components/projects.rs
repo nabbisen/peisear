@@ -292,7 +292,22 @@ pub fn ProjectEditPage(
                                     {t(MessageKey::DeleteProjectWarning)}
                                 </div>
                             </div>
-                            <a href=delete_href class=grow("btn btn-error btn-outline btn-sm")>
+                            // `CLR-001`: `btn-error` dropped (3.08:1
+                            // -> 17.21:1, measured) -- this is the
+                            // one site a `text-error` grep misses, the
+                            // colour reaching the text through
+                            // `btn-outline`+`btn-error` instead. Same
+                            // spelling three other outline buttons in
+                            // the product already use
+                            // (`teams.rs:444`, `me.rs:251`,
+                            // `sprints.rs:836`): `btn btn-outline
+                            // btn-sm`. `.btn-outline:hover` inverts to
+                            // a solid `base-content` background with
+                            // `base-100` text (read in the pinned
+                            // sheet, not assumed) -- the same two
+                            // tokens already measured at 17.21:1, just
+                            // swapped, so hover does not reopen this.
+                            <a href=delete_href class=grow("btn btn-outline btn-sm")>
                                 {t(MessageKey::DeleteButton)}
                             </a>
                         </div>

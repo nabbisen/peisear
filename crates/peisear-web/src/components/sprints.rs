@@ -716,7 +716,17 @@ pub fn SprintDetailPage(
                     </button>
                 </form>
                 <a href=edit_href class=grow("btn btn-ghost btn-sm")>{t(MessageKey::EditWord)}</a>
-                <a href=delete_href.clone() class=grow("btn btn-ghost btn-sm text-error")>
+                // `CLR-001`: `text-error` dropped -- same reasoning as
+                // `issues.rs:2256`: this link only reaches the
+                // confirmation interstitial (6.83:1), and this page's
+                // own background is `base-200` (confirmed by render),
+                // so the real move is 2.50:1 -> 14.01:1, not the
+                // headline `base-100` figure. Hover/focus: same
+                // `.btn-ghost`/`.btn:focus-visible` reasoning as
+                // `layout.rs:417`'s own comment -- the measured hover
+                // composite on this `base-200` background reads
+                // 14.05:1.
+                <a href=delete_href.clone() class=grow("btn btn-ghost btn-sm")>
                     {t(MessageKey::DeleteButton)}
                 </a>
             </div>
@@ -744,7 +754,11 @@ pub fn SprintDetailPage(
                         {t(MessageKey::ReopenSprintLabel)}
                     </button>
                 </form>
-                <a href=delete_href class=grow("btn btn-ghost btn-sm text-error")>
+                // `CLR-001`: `text-error` dropped -- the other code
+                // path to the same confirmation interstitial as the
+                // planned-sprint link above; same reasoning and the
+                // same `base-200` background (2.50:1 -> 14.01:1).
+                <a href=delete_href class=grow("btn btn-ghost btn-sm")>
                     {t(MessageKey::DeleteButton)}
                 </a>
             </div>
