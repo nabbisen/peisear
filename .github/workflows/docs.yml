@@ -7,7 +7,10 @@ name: Docs
 # DEC-007 entry for a Rust test that doesn't exist.
 #
 # The build runs on every push and pull request, so a broken internal link is
-# caught before it reaches `main`; only a push to `main` deploys.
+# caught before it reaches `main`; only a push to `main` deploys. **The
+# `pages` concurrency lock is on the deploy job alone** -- see its own
+# comment: at workflow level, one deployment stuck in `waiting` stopped the
+# link check on every later commit for three days.
 
 on:
   push:
@@ -17,10 +20,6 @@ on:
 
 permissions:
   contents: read
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
 
 env:
   CARGO_TERM_COLOR: always
@@ -72,6 +71,34 @@ jobs:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     needs: build
     runs-on: ubuntu-latest
+    # The `pages` lock lives on this job, not on the workflow, since
+    # 2026-11-21. Only one Pages deployment may be in flight at a time;
+    # **building the book and checking its links has no such
+    # constraint**, and holding the lock at workflow level meant one
+    # stuck deployment stopped the checking too.
+    #
+    # It did. Run 44281512009 (head `9202290`, 2026-11-18T10:05:12Z)
+    # reached `status: waiting` on the `github-pages` environment and
+    # never left it: its own `mdbook build (with link check)` job had
+    # already passed, and the deployment simply never advanced to
+    # `queued`. With the lock at workflow level, every later commit's
+    # whole run queued behind it -- so for three days no push's links
+    # were checked by anything, while `CI` stayed green and said
+    # nothing about it. GitHub refused to clear the run by every route
+    # available, with three answers that contradict each other:
+    # `cancel` said "run is completed", `force-cancel` said "has not
+    # been queued yet", and a deployment rejection said "no pending
+    # deployment requests". It may sit there indefinitely.
+    #
+    # So the lock moves to the step that actually needs it. A wedged
+    # deployment now costs the deployment and nothing else, and the
+    # gate keeps running. `cancel-in-progress` stays `false`: a Pages
+    # deploy is not safe to interrupt, and GitHub keeps only the newest
+    # *pending* run per group anyway, which is the supersession already
+    # observed on every commit behind the wedge.
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
     permissions:
       pages: write
       id-token: write
