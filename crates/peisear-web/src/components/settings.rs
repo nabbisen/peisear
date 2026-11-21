@@ -78,7 +78,38 @@ pub fn SettingsPage(
                  aria-live="polite">
                 <span class="font-medium">{t(MessageKey::ConflictLabel)}</span>
                 <span>{msg.clone()}</span>
-                <p class="text-xs mt-1 opacity-80">
+                // `SIZE-003`: raised to `text-sm`, matching this
+                // paragraph's own two siblings above (the label and
+                // the message, both unsized and inheriting the
+                // outer div's explicit `text-sm`, 14px) -- the one
+                // smaller line in a block that is `aria-live="polite"`
+                // text a reader is being asked to act on. Measured:
+                // +28px at 390 (2 lines -> 3, a real new wrap), +8px
+                // at 1280 (2 lines, unchanged), no horizontal overflow
+                // at either width. Spelling converted under
+                // `§10.60`'s condition: single level, no faded
+                // ancestor (the alert div carries no opacity/fade
+                // modifier of its own) -- `text-base-content/80`,
+                // already in use at `me.rs:569`.
+                //
+                // **Measured, not assumed, and the two spellings are
+                // not equivalent here.** Isolated from the size
+                // change (both held at `text-sm`): bare `opacity-80`
+                // measures **9.01:1**, `text-base-content/80`
+                // measures **6.61:1** -- a real drop, not pixel
+                // noise, because this `<p>` sits inside
+                // `alert-warning`, which sets its own foreground
+                // token; `opacity-80` dims *that* colour, while
+                // `text-base-content/80` switches to the page's base
+                // text colour at 80% -- a different hue, not the same
+                // hue dimmed. The `/70`-equivalence this series
+                // recorded at `LBL-001`/`me.rs:569` held on a plain
+                // `bg-base-100` card with no colour token of its own;
+                // it does not generalise to a coloured alert, and is
+                // not claimed to here. Both readings clear 4.5:1 with
+                // real margin, so the conversion still holds -- on
+                // its own measurement, not the inherited one.
+                <p class="text-sm mt-1 text-base-content/80">
                     {t(MessageKey::CapacityOverlapGuidanceLead)}
                     <em>{t(MessageKey::CloseOnDateActionWord)}</em>
                     {t(MessageKey::CapacityOverlapGuidanceTail)}
@@ -184,7 +215,19 @@ pub fn SettingsPage(
                                     {t(MessageKey::AddRowButton)}
                                 </button>
                             </form>
-                            <p class="mt-2 text-xs text-base-content/70">
+                            // `SIZE-003`: raised to `text-sm`, same
+                            // shape as `SIZE-002`'s own
+                            // `teams.rs:338` raise -- every field
+                            // label in this form (Points/From/To/Note,
+                            // all `text-sm`) sits directly above it,
+                            // and this closing note is the one
+                            // smaller line in the disclosure. Spelling
+                            // already guarded (`text-base-content/70`),
+                            // no conversion needed. Measured: +36px at
+                            // 390 (4 lines -> 5, a real new wrap),
+                            // +8px at 1280 (2 lines, unchanged), no
+                            // horizontal overflow at either width.
+                            <p class="mt-2 text-sm text-base-content/70">
                                 {t(MessageKey::CapacityOverlapHelperText)}
                             </p>
                         </details>

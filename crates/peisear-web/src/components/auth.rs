@@ -21,7 +21,15 @@ fn Brand(subtitle: String) -> impl IntoView {
 
 #[component]
 fn FlashInline(flash: Option<String>) -> impl IntoView {
-    flash.map(|msg| view! { <div class="alert alert-warning text-xs py-2">{msg}</div> })
+    // `SIZE-003`: raised to `text-sm`. This was the one `alert
+    // alert-warning` in the product rendered at `text-xs` -- every
+    // other instance (`teams.rs` x4, `settings.rs:77`, `sprints.rs`
+    // x4, enumerated by grep, 9 of 9) is already `text-sm`. The front
+    // door's own warning, read by someone whose sign-in or
+    // registration just failed, was the one screen this series had
+    // not read yet. Measured: +8px at both widths, no new wrap (the
+    // message is one line at both widths on this fixture's string).
+    flash.map(|msg| view! { <div class="alert alert-warning text-sm py-2">{msg}</div> })
 }
 
 /// Login form page.
@@ -50,7 +58,16 @@ pub fn LoginPage(flash: Option<String>, email: String) -> impl IntoView {
                         </label>
 
                         <button type="submit" class=grow("btn btn-primary btn-sm mt-2")>{t(MessageKey::SignInWord)}</button>
-                        <div class="text-center text-xs mt-1 text-base-content/70">
+                        // `SIZE-003`: raised to `text-sm`, decided as
+                        // a pair with `RegisterPage`'s own identical
+                        // line below. Neighbour above is the submit
+                        // button (`btn-sm`, 14px); this line's own
+                        // anchor already carries `grow()`'s `min-h-11`
+                        // floor, so the row's height (44px) is
+                        // unchanged at either width. Measured: no new
+                        // wrap, one line at both widths on this
+                        // string.
+                        <div class="text-center text-sm mt-1 text-base-content/70">
                             {t(MessageKey::NoAccountPrompt)}
                             <a href="/register" class=grow("link link-primary inline-flex items-center align-middle")>{t(MessageKey::CreateOneLinkWord)}</a>
                         </div>
@@ -121,7 +138,10 @@ pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) 
                         </label>
 
                         <button type="submit" class=grow("btn btn-primary btn-sm mt-2")>{t(MessageKey::CreateAccountButton)}</button>
-                        <div class="text-center text-xs mt-1 text-base-content/70">
+                        // `SIZE-003`: raised to `text-sm`, the pair
+                        // decision with `LoginPage`'s own line above
+                        // -- same reasoning, same measured result.
+                        <div class="text-center text-sm mt-1 text-base-content/70">
                             {t(MessageKey::AlreadyHaveAccountPrompt)}
                             <a href="/login" class=grow("link link-primary inline-flex items-center align-middle")>{t(MessageKey::SignInWord)}</a>
                         </div>

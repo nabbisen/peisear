@@ -332,7 +332,33 @@ pub fn TeamDetailPage(
                 <summary class=grow_summary("cursor-pointer")>
                     <div class="card-body py-3 inline-flex flex-row items-center gap-2">
                         <span class="font-medium">{t(MessageKey::InviteMemberSummary)}</span>
-                        <span class="text-xs text-base-content/70">{t(MessageKey::ByEmailHint)}</span>
+                        // `SIZE-002` left this at `text-xs` on the
+                        // claim that no second instance of this shape
+                        // existed to converge toward. `SIZE-003`
+                        // re-reads it: `settings.rs`'s own capacity
+                        // row summary (`points` + its unit suffix) is
+                        // the shape named as a counter-example, and
+                        // measured there, both halves render at one
+                        // size because that summary sits in a
+                        // `table-sm`. This pair does not share that
+                        // ambient -- `card-body` alone (no
+                        // `card-compact`) carries no font-size rule of
+                        // its own, confirmed in the stylesheet and by
+                        // render, so the label beside it inherits the
+                        // page's own 16px, unsized, same as every
+                        // other `grow_summary()` heading this series
+                        // declined to regulate (`§10.60`). What
+                        // decides this is not that comparison but the
+                        // rule `LBL-001` already applied product-wide:
+                        // a hint beside a label raises to `text-sm`
+                        // regardless of what the label itself measures
+                        // -- every hint conversion this series has
+                        // made did exactly that, independent of its
+                        // label's own size. This is that rule applied,
+                        // not a new judgment call. Measured: no new
+                        // wrap at either width (the string is static,
+                        // "by email", not a rendered address).
+                        <span class="text-sm text-base-content/70">{t(MessageKey::ByEmailHint)}</span>
                     </div>
                 </summary>
                 <div class="px-4 pb-4">

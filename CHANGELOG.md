@@ -56,6 +56,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   parenthetical tag on a name, not a second line pairing with
   anything, and nothing else in the product does that job at another
   size yet (`SIZE-002`).
+- **The sign-in and registration pages' own small print moves from
+  12px to 14px.** The flash warning shown after a failed sign-in or a
+  rejected registration was the one `alert-warning` in the product
+  still at the smaller size — every other warning banner already
+  reads at 14px — and the "No account? Create one" / "Already have an
+  account? Sign in" line under each form now matches the submit
+  button above it; both pages were decided together. The capacity
+  settings page's own conflict guidance (inside the live-region box a
+  reader is asked to act on) and its "add a row" helper note move the
+  same step, each sitting beside text already at 14px. The conflict
+  guidance's colour also moves off a bare `opacity-80` onto the
+  guarded spelling `contrast_scan` can check — measured as a real,
+  larger contrast change than the equivalent conversions elsewhere in
+  this series (an `alert-warning` box supplies its own foreground
+  colour, which the bare and guarded spellings do not dim the same
+  way), and both readings still clear the floor with room. The
+  invite-a-member panel's "by email" qualifier, left small in the
+  previous round on a claimed absence of any similar pairing
+  elsewhere, is raised too: the product's own rule for a hint beside
+  a label — applied everywhere else regardless of what the label
+  itself renders at — reaches it as well (`SIZE-003`).
 
 ## [0.64.0] — 2026-11-18
 
