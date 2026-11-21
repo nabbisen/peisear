@@ -80,10 +80,23 @@ background and the ambient opacity are both part of it.** `css_scan`
 population `289 → 287`; `link-primary` and `text-success` have left
 `components/` entirely.
 
-**Round 3 is open** —
-[`CLR-003-the-guard-that-reads-one-family.md`](./CLR-003-the-guard-that-reads-one-family.md):
-the last two headings, **the guard**, `NFR-A11Y-005`'s amendment, `§10.61`,
-and the series' closing.
+**`CLR-003` round 1 accepted** 2026-11-21 (`e74ac95`): the last two headings
+repaired, the failing population **zero**, `contrast_scan` widened from one
+token family to four with three sites excluded by their own exact class
+value, `NFR-A11Y-005` amended (its *"the theme's own tokens were never the
+problem"* sentence **corrected rather than deleted**), and `§10.61` opened
+and closed with the measured figures. **The guard fails on the shape it
+bans** — re-planted independently by the architect in a throwaway worktree:
+baseline 3 passed, planted FAILED, naming the file and the class value. The
+round also corrected the handoff's own *"thirteen repairs"* to **fifteen**,
+and recorded the correction in the entry.
+
+**Round 2 is open** —
+[`CLR-003-round-2-the-exclusion-that-is-two-words.md`](./CLR-003-round-2-the-exclusion-that-is-two-words.md):
+the `"text-primary"` exclusion is the shortest possible class value, so a
+future `class="text-primary"` body-text site would be excluded by name with
+both new tests green. The fix is an exact-count assertion per exclusion
+(2 and 1), planted — the `css_scan` population shape.
 
 ---
 
