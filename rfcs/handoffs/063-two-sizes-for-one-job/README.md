@@ -70,7 +70,7 @@ so in the round's report rather than working around it.
 |---|---|---|
 | `LBL-001` | both label conventions, product-wide, decided once — **closed**, two rounds | 15 |
 | `SIZE-001` | `sprints.rs`'s remaining body and meta text, and its two stale comment sums — **closed**, two rounds, 5 raised / 13 decided as a set | 18 |
-| `SIZE-002` | `teams.rs`'s remaining 7 and `sprint_plan.rs`'s remaining 2, and the gate coupling in §6 | 9 |
+| `SIZE-002` | `teams.rs`'s remaining 7 and `sprint_plan.rs`'s remaining 2, and the gate coupling in §6 — **closed**, 4 raised / 5 left, coupling deleted | 9 |
 | `SIZE-003` | `settings.rs`'s remaining 2 and `auth.rs`'s remaining 3 — including the sign-in page's own flash message, the front door at 12 px | 5 |
 
 15 + 18 + 9 + 5 = **47**, the in-scope census above.
@@ -121,13 +121,25 @@ site's role is decided by what it is next to.* Name the element above, the
 element below, and their sizes, and decide from that — reading by role name
 is what mislabelled that notice.
 
-**Round 3 is open** —
-[`SIZE-002-the-team-screens-and-the-gate-that-quotes-a-class.md`](./SIZE-002-the-team-screens-and-the-gate-that-quotes-a-class.md):
-`teams.rs`'s 7 and `sprint_plan.rs`'s 2, the **`overflow-gate.mjs:538`
-coupling to delete**, and two carried corrections — one of them a precedent
-sentence of the architect's that is wrong in the tree (`issues.rs:649` wraps
-the product's one *bare* `<summary>`, not an unsized `grow_summary()` one,
-so the real breakdown is `issues.rs` ×3 and `sprints.rs` ×2).
+**`SIZE-002` accepted** 2026-11-21 (`ae6fcf0`): four of its nine sites
+raised, five left with their neighbours named and measured, `teams.rs:577`'s
+spelling converted under `§10.60`'s condition, and **the `overflow-gate.mjs`
+coupling deleted** — the chip carries a named hook (`workload-chip-name`)
+and the gate matches that instead of a style class that had already drifted
+once. The allowlist's own integrity guard was **widened rather than
+exempted** (both consumer kinds, both asserted non-empty), and the rename it
+exists to catch was **planted** to prove it. Census **48 → 44**; `(289, 3)`,
+population unchanged because `css_scan` counts an allowlisted token outside
+it.
+
+**Round 4, the last, is open** —
+[`SIZE-003-the-front-door-and-the-last-five.md`](./SIZE-003-the-front-door-and-the-last-five.md):
+`auth.rs`'s 3 — including **the public pages' own flash alert**, the front
+door's warning at the smallest size in the product — `settings.rs`'s 2, one
+carried re-read (`teams.rs:311`, left on a universal claim a measurement
+contradicts), and **the series' own closing**: the final census, a
+reconciled rounds table, and what the series leaves behind, named rather
+than implied.
 
 **One round at a time**,
 each handed separately and reviewed before the next opens. A round may be
@@ -168,7 +180,17 @@ twice in `062`.
    `DEC-051`), not compiled, so an invented arbitrary value resolves to
    nothing at all. `css_scan` enforces this; `text-sm` and `text-xs` both
    exist, `min-h-11` exists, a new `text-[13px]` does not and will not.
-6. **The stylesheet is the authority on what a class does, not its name.**
+6. **A universal claim needs the search that justifies it.** *"Nothing else
+   in the product does this"* decides sites, so it is evidence and must be
+   produced as such: name what you searched and what you found, or write the
+   bounded form — *"I found no other instance after looking at X"*. **Three
+   population claims in this series were asserted rather than enumerated,
+   and one of the three was the architect's.**
+7. **A site's role is decided by what it is next to.** Name the element
+   above, the element below, and their measured sizes, and decide from that.
+   Reading by role name is what mislabelled `sprints.rs`'s planned-state
+   notice; reading the neighbours is what caught it.
+8. **The stylesheet is the authority on what a class does, not its name.**
    `§10.52` is the entry for reasoning about CSS from Rust: three review
    rounds, a required prop and a compile-error plant all passed while the
    shipped navigation computed `display: none` at every width.
