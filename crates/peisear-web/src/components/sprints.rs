@@ -457,18 +457,28 @@ fn render_velocity_chart(data: Vec<(Sprint, SprintSummary)>, show_median: bool) 
                     // a <summary> may take -- py-4 = 32px + text-sm's own
                     // 20px line-height = 52px.
                     // `SIZE-001` round 2: raised from `text-xs` (48px
-                    // sum, `0.64.0`'s own figure). Corrected precedent
-                    // -- measured, not the round-1 claim: of 13
-                    // `grow_summary()` summaries in the product, 4 set
+                    // sum, `0.64.0`'s own figure). Precedent corrected
+                    // again, `SIZE-002`'s own §0.1 -- the round-2 claim
+                    // that `issues.rs` sizes four `text-sm` `<details>`
+                    // all wrapping an unsized `grow_summary()` summary
+                    // was wrong about one member: `issues.rs:649`'s own
+                    // `<summary>` is bare (no `grow_summary()` call at
+                    // all), the product's one `alignment_scan`
+                    // exclusion by exact literal tag, not one of the
+                    // 13 `grow_summary()` summaries counted here.
+                    // Verified by reading inside each container, not
+                    // copied: of 13 `grow_summary()` summaries, 4 set
                     // a size directly on the `<summary>` itself
                     // (`settings.rs:146`/`:299`, `me.rs:359`/`:569`)
                     // and 9 set none, inheriting an ancestor; of those
-                    // 9, `issues.rs` already sizes 4 `<details>`
-                    // containers at `text-sm` (`:329`, `:374`, `:649`,
-                    // `:726`) -- exactly this shape, unsized summary
-                    // inside a sized container. This file was not the
-                    // only one doing it the ambient way; it now
-                    // matches `issues.rs` rather than standing alone.
+                    // 9, **5** sit in a sized container --
+                    // `sprints.rs` ×2 (here) and `issues.rs` ×3
+                    // (`:329`, `:374`, `:726`; `:649`'s own container
+                    // wraps the bare summary instead). This file was
+                    // not the only one doing it the ambient way; it
+                    // now matches `issues.rs` rather than standing
+                    // alone. A precedent is a population, and a
+                    // population needs its members read, not tallied.
                     // The table inside keeps its own `table-sm` size
                     // regardless -- that class sets its own
                     // `font-size` and does not inherit the

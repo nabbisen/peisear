@@ -105,20 +105,27 @@ fn an_if_else_branch_resolves_to_its_enclosing_grow_call() {
 }
 
 #[test]
-fn every_allowlist_entry_is_queried_by_some_static_js() {
-    let files = static_js_files();
+fn every_allowlist_entry_is_queried_by_some_consumer() {
+    let js_files = static_js_files();
     assert!(
-        !files.is_empty(),
+        !js_files.is_empty(),
         "found no static/*.js files -- the layout assumption this scan depends on may have changed"
     );
+    let gate_files = browser_check_files();
+    assert!(
+        !gate_files.is_empty(),
+        "found no browser-checks/*.mjs files -- the layout assumption this scan depends on may have changed"
+    );
     for (name, note) in JS_HOOK_ALLOWLIST {
-        let found = files
+        let found = js_files
             .iter()
+            .chain(gate_files.iter())
             .any(|p| contains_whole_selector(&fs::read_to_string(p).unwrap_or_default(), name));
         assert!(
             found,
-            "allowlist entry {name:?} ({note}) is not queried by any static/*.js file -- \
-             an allowlist entry that nothing queries is itself a defect"
+            "allowlist entry {name:?} ({note}) is not queried by any static/*.js or \
+             browser-checks/*.mjs file -- an allowlist entry that nothing queries is itself \
+             a defect"
         );
     }
 }
@@ -162,9 +169,25 @@ fn the_repository_satisfies_the_live_rule() {
     // `SIZING_CLASSES` list, the guard that stops it being
     // reintroduced; that list is outside this scan's own scope and so
     // does not affect this number either way.
+    // `SIZE-002`: allowlisted 2 -> 3, population unchanged at 289.
+    // `issues.rs:717`'s workload chip carries a new named hook,
+    // `workload-chip-name`, added so `overflow-gate.mjs` could stop
+    // matching the chip by quoting a style class (`text-sm
+    // font-medium`) that had already drifted once and, by this
+    // round, matched seven sites. A named hook with no style of its
+    // own is allowlisted rather than counted against the population
+    // -- it is a new *distinct token*, so it adds one to
+    // `allowlisted`, but nothing a stylesheet rule was ever checked
+    // against left or joined the tree, so `population` does not
+    // move. The four raised sites and the one converted spelling
+    // this round touched (`teams.rs`) only changed which *existing*
+    // token a site already in the population renders -- `text-xs`
+    // and `text-sm`, `opacity-70` and `text-base-content/70`, are
+    // each still rendered elsewhere -- so none of those five moved
+    // this number either.
     assert_eq!(
         (result.population, result.allowlisted),
-        (289, 2),
+        (289, 3),
         "the measured population or allowlist count drifted from this round's own baseline -- \
          re-measure (components/**/*.rs changed) and update this assertion with the reason, \
          never just the numbers"

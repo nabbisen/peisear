@@ -102,9 +102,13 @@ use std::path::{Path, PathBuf};
 
 use crate::scan_support::strip_line_comments;
 
-/// Class selectors `static/*.js` queries directly and that carry no
-/// style of their own — each entry names the file and call that
-/// queries it, so a stale entry has something to point back at.
+/// Class selectors a script queries directly and that carry no style
+/// of their own — most often `static/*.js`'s own client-side lookups,
+/// but also a browser-check's own fixture-validation query (`SIZE-002`:
+/// a literal style-class match in a gate broke once already when the
+/// style moved under a size round, so the gate now matches a named
+/// hook instead) — each entry names the file and call that queries
+/// it, so a stale entry has something to point back at.
 const JS_HOOK_ALLOWLIST: &[(&str, &str)] = &[
     (
         "issue-card",
@@ -113,6 +117,10 @@ const JS_HOOK_ALLOWLIST: &[(&str, &str)] = &[
     (
         "js-status-form",
         "static/dm.js's `.js-status-form` submit-on-select wiring",
+    ),
+    (
+        "workload-chip-name",
+        "browser-checks/overflow-gate.mjs's own workload-chip name lookup",
     ),
 ];
 
@@ -438,6 +446,25 @@ fn static_js_files() -> Vec<PathBuf> {
         .filter_map(|e| e.ok())
         .map(|e| e.path())
         .filter(|p| p.extension().is_some_and(|e| e == "js"))
+        .collect()
+}
+
+/// `browser-checks/*.mjs` — `SIZE-002`'s own second category of
+/// consumer: a gate script that matches a named hook in fetched HTML
+/// rather than `static/*.js`'s client-side `querySelector`. One
+/// directory up from `static_dir()`'s own `crates/peisear-web`.
+fn browser_check_files() -> Vec<PathBuf> {
+    let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../browser-checks")
+        .canonicalize()
+        .unwrap_or_else(|e| panic!("resolve browser-checks dir: {e}"));
+    let Ok(entries) = fs::read_dir(&dir) else {
+        return Vec::new();
+    };
+    entries
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|e| e == "mjs"))
         .collect()
 }
 

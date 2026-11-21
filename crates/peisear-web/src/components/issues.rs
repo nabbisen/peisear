@@ -714,7 +714,16 @@ fn WorkloadStrip(workload: Vec<UserLoad>) -> impl IntoView {
                     // (419px -> 478px) to fit the longer single line
                     // rather than wrapping -- cost +4px, again no new
                     // wrap introduced at either width.
-                    <span class="text-sm font-medium wrap-anywhere">{u.display_name}</span>
+                    // `SIZE-002`: `workload-chip-name` is a named
+                    // hook, not a style -- `overflow-gate.mjs` used to
+                    // match this span by quoting `text-sm
+                    // font-medium` literally, which already broke
+                    // once in `0.64.0` and now matches seven sites in
+                    // this file. The hook carries no rule of its own
+                    // (`css_scan`'s `JS_HOOK_ALLOWLIST`), so a later
+                    // size round cannot break the gate by raising
+                    // this span again.
+                    <span class="workload-chip-name text-sm font-medium wrap-anywhere">{u.display_name}</span>
                     <span class="badge badge-sm badge-ghost">{label}</span>
                 </div>
             }

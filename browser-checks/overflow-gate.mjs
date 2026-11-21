@@ -532,10 +532,14 @@ export async function createFixtures(strings, onRegistered) {
   const boardBadges = badgeCount(boardHtml);
   // `TYPE-003` (`§10.60`): `issues.rs:646`'s own class moved from
   // `text-xs font-medium` to `text-sm font-medium` -- this check's
-  // own literal substring had to move with it, caught by actually
-  // running this gate rather than assuming a text-size round could
-  // not touch a browser check's own fixture validation.
-  const stripChips = [...boardHtml.matchAll(new RegExp(`<span[^>]*text-sm font-medium[^>]*>\\s*${nameRe}\\s*</span>`, 'g'))].length;
+  // own literal substring had to move with it once already, and by
+  // `SIZE-002` the same literal matched seven sites in `issues.rs`
+  // rather than one. `SIZE-002` deletes the style coupling: the chip
+  // now carries a named hook, `.workload-chip-name`
+  // (`css_scan`'s own `JS_HOOK_ALLOWLIST`), that carries no style of
+  // its own and so cannot be moved out from under this gate by a
+  // later size round.
+  const stripChips = [...boardHtml.matchAll(new RegExp(`<span[^>]*\\bworkload-chip-name\\b[^>]*>\\s*${nameRe}\\s*</span>`, 'g'))].length;
   if (boardBadges < 2) throw new Error(`board: expected two assigned cards (assignee badges), found ${boardBadges}`);
   if (stripChips < 1) throw new Error('board: no workload-strip chip holding the display name');
   const personalCal = await fetchPage('/today/calendar');

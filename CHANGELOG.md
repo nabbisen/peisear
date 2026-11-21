@@ -44,6 +44,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   section), stay at 12px: nothing else in the product pairs a label
   with a number or a chart the same way, so there is no second size
   for either job to converge toward yet (`SIZE-001`).
+- **Four small-print sites on the team screens move from 12px to
+  14px**, where the same test applies: the teams list's own
+  empty-state note, the new-team and edit-team forms' own notices (a
+  reader becomes admin; a slug can't be changed later), and the
+  invite-a-member panel's own helper text — each sits in a form or
+  block whose other lines were already 14px, or doubles a message
+  already at 14px right beside it. The `(you)` marker beside a
+  member's own name changes its colour spelling (to the one
+  `contrast_scan` can check) but stays 12px deliberately: it is a
+  parenthetical tag on a name, not a second line pairing with
+  anything, and nothing else in the product does that job at another
+  size yet (`SIZE-002`).
 
 ## [0.64.0] — 2026-11-18
 

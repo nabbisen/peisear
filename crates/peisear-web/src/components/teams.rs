@@ -66,7 +66,15 @@ pub fn TeamsListPage(
                             <p class="text-sm text-base-content/70">
                                 {t(MessageKey::TeamsEmptyIntro)}
                             </p>
-                            <p class="text-xs text-base-content/70 mt-1">
+                            // `SIZE-002`: raised to `text-sm`, the same
+                            // empty-state shape `SIZE-001` round 1
+                            // raised on `sprints.rs:139` -- two lines
+                            // of the same message in one centered
+                            // block, not a caption for something
+                            // else. Measured +8px at 390 (2 lines,
+                            // unchanged), +4px at 1280 (1 line,
+                            // unchanged). Contrast **6.42:1**.
+                            <p class="text-sm text-base-content/70 mt-1">
                                 {t(MessageKey::TeamsEmptyCta)}
                             </p>
                         </div>
@@ -226,7 +234,23 @@ pub fn TeamNewPage(user: CurrentUser, unread_count: i64, error: Option<String>) 
                                       placeholder=t(MessageKey::TeamDescriptionPlaceholder)
                                       class=grow("textarea textarea-bordered textarea-sm w-full")></textarea>
                         </label>
-                        <p class="text-xs text-base-content/70">
+                        // `SIZE-002`: raised to `text-sm`. Read in
+                        // place, the same shape `SIZE-001` round 2
+                        // raised at `sprints.rs:590`: this form's own
+                        // Name and Description fields' labels and
+                        // hints are all `text-sm`, this notice sits
+                        // directly above the submit row, and it tells
+                        // the reader a consequential fact (they
+                        // become admin; invites happen after
+                        // creation) -- not a defensible smallest line
+                        // in its own form. Measured +28px at 390 (2
+                        // lines -> 3; the larger glyphs genuinely
+                        // wrap once more at this width, a real cost
+                        // rather than an assumed one), +8px at 1280
+                        // (2 lines, unchanged). Card-actions row moves
+                        // down with it; no overflow either width.
+                        // Contrast **6.42:1**.
+                        <p class="text-sm text-base-content/70">
                             {t(MessageKey::NewTeamIntro)}
                         </p>
                         <div class="card-actions justify-end mt-2">
@@ -335,7 +359,14 @@ pub fn TeamDetailPage(
                         </label>
                         <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::AddButton)}</button>
                     </form>
-                    <p class="text-xs text-base-content/70 mt-2">
+                    // `SIZE-002`: raised to `text-sm`, same shape as
+                    // the form's own Email/Role field labels (both
+                    // `text-sm`) just above it -- a substantive
+                    // constraint (the invitee must already have an
+                    // account), not a defensible aside. Measured
+                    // +12px at 390 (3 lines, unchanged), +8px at 1280
+                    // (2 lines, unchanged). Contrast **6.42:1**.
+                    <p class="text-sm text-base-content/70 mt-2">
                         {t(MessageKey::InviteHelperText)}
                     </p>
                 </div>
@@ -574,7 +605,21 @@ fn render_member_row(
     view! {
         <tr>
             <td>{display_name}{is_self.then(|| view! {
-                <span class="text-xs opacity-70 ml-1">{t(MessageKey::YouSuffix)}</span>
+                // `SIZE-002`: size left at `text-xs` -- a
+                // parenthetical marker directly beside a name, not a
+                // stacked line pairing with this row's own `text-sm`
+                // cells (which render a different value each, not a
+                // second half of this marker's own message). No
+                // other such inline marker exists elsewhere in the
+                // product to converge toward; a first decision,
+                // stated. Spelling converted: this is the series'
+                // last in-scope bare `opacity-*` site -- single
+                // level, no faded ancestor (`§10.60`'s own
+                // condition), confirmed before converting. Size
+                // unchanged, so no layout cost. Re-measured contrast:
+                // **6.42:1**, unchanged within pixel noise from the
+                // pre-conversion bare `opacity-70`'s own 6.51:1.
+                <span class="text-xs text-base-content/70 ml-1">{t(MessageKey::YouSuffix)}</span>
             })}</td>
             <td class="text-sm text-base-content/70">{email}</td>
             {role_cell}
@@ -638,7 +683,15 @@ pub fn TeamEditPage(
                                 {team_description}
                             </textarea>
                         </label>
-                        <p class="text-xs text-base-content/70">
+                        // `SIZE-002`: raised to `text-sm`, the same
+                        // shape as `229`/`338` above and `590` in
+                        // series' round 2 -- Name and Description
+                        // fields' labels are `text-sm`, this notice
+                        // sits directly above the submit row.
+                        // Measured +4px at both widths, no new wrap
+                        // (one line, either size, either width).
+                        // Contrast **6.42:1**.
+                        <p class="text-sm text-base-content/70">
                             {t(MessageKey::SlugFixedNotice)}
                         </p>
                         <div class="card-actions justify-end mt-2">
