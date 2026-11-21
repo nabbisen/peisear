@@ -53,14 +53,16 @@
 //!
 //! ## The allowlist
 //!
-//! [`JS_HOOK_ALLOWLIST`]: two selectors `static/*.js` queries directly
-//! and neither intended to carry style — `issue-card` (`board.js`'s
-//! drag-handle lookup) and `js-status-form` (`dm.js`'s
-//! submit-on-select wiring). **An allowlist entry that nothing queries
-//! is itself a defect**:
-//! [`tests::every_allowlist_entry_is_queried_by_some_static_js`]
+//! [`JS_HOOK_ALLOWLIST`]: three selectors queried directly and none
+//! intended to carry style — `issue-card` (`board.js`'s drag-handle
+//! lookup) and `js-status-form` (`dm.js`'s submit-on-select wiring),
+//! both `static/*.js`; and `workload-chip-name`
+//! (`browser-checks/overflow-gate.mjs`'s own workload-chip lookup,
+//! `SIZE-002`), a second consumer kind this scan also watches. **An
+//! allowlist entry that nothing queries is itself a defect**:
+//! [`tests::every_allowlist_entry_is_queried_by_some_consumer`]
 //! asserts each name is still the target of a live `querySelectorAll`
-//! call in some `static/*.js` file.
+//! call in some `static/*.js` file or `browser-checks/*.mjs` gate.
 //!
 //! ## Bounds — what this scan does not see
 //!

@@ -66,13 +66,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   settings page's own conflict guidance (inside the live-region box a
   reader is asked to act on) and its "add a row" helper note move the
   same step, each sitting beside text already at 14px. The conflict
-  guidance's colour also moves off a bare `opacity-80` onto the
-  guarded spelling `contrast_scan` can check — measured as a real,
-  larger contrast change than the equivalent conversions elsewhere in
-  this series (an `alert-warning` box supplies its own foreground
-  colour, which the bare and guarded spellings do not dim the same
-  way), and both readings still clear the floor with room. The
-  invite-a-member panel's "by email" qualifier, left small in the
+  guidance's colour was briefly tried at the guarded spelling and put
+  back: measured in isolation from the size change, it reads 2.4
+  points darker than the bare spelling it would have replaced, because
+  this line sits inside `alert-warning`, which supplies its own
+  foreground colour rather than an incidental one — a real legibility
+  loss, not the "composite identically" case the guarded spelling
+  exists for, so the colour ships unchanged. The invite-a-member
+  panel's "by email" qualifier, left small in the
   previous round on a claimed absence of any similar pairing
   elsewhere, is raised too: the product's own rule for a hint beside
   a label — applied everywhere else regardless of what the label

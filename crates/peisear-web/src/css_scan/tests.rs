@@ -186,22 +186,22 @@ fn the_repository_satisfies_the_live_rule() {
     // each still rendered elsewhere -- so none of those five moved
     // this number either.
     // `SIZE-003`: population dropped 289 -> 288. `settings.rs:81`'s
-    // own bare `opacity-80` converts to `text-base-content/80`
-    // (`§10.60`'s single-level condition, re-measured: the two
-    // spellings are not contrast-equivalent on this `alert-warning`
-    // background -- see the review-request report -- but both clear
-    // 4.5:1) -- `opacity-80` was rendered at exactly that one site
-    // under `components/`, confirmed with `grep -rn 'opacity-80'`
-    // over live `class=` attributes, not assumed from the one site
-    // changed, so the token leaves this count entirely rather than
-    // relocating within it. The five remaining raises this round made
-    // (`auth.rs` x3, `settings.rs:187`, `teams.rs:311`) only moved
-    // `text-xs` -> `text-sm`, both already rendered elsewhere, so
-    // none of those moved this number. Allowlisted unchanged at 3 --
-    // nothing this round added or removed a named hook.
+    // own bare `opacity-80` converted to `text-base-content/80`,
+    // which removed that token from `components/` entirely (it was
+    // rendered at exactly that one site).
+    // `SIZE-003` round 2: population returns 288 -> 289. The
+    // conversion above is reverted -- `§10.60`'s single-level check
+    // is necessary but not sufficient; this site's colour comes from
+    // `alert-warning`'s own foreground token (`--wac`), not an
+    // incidental one, and the guarded spelling measured a real
+    // contrast drop here (9.01:1 -> 6.61:1) rather than the
+    // equivalence the condition assumes. `opacity-80` re-enters
+    // `components/` as a distinct token at that one site, confirmed
+    // with `grep -rn 'opacity-80'` over live `class=` attributes, not
+    // assumed from the one site reverted. Allowlisted unchanged at 3.
     assert_eq!(
         (result.population, result.allowlisted),
-        (288, 3),
+        (289, 3),
         "the measured population or allowlist count drifted from this round's own baseline -- \
          re-measure (components/**/*.rs changed) and update this assertion with the reason, \
          never just the numbers"
