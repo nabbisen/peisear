@@ -452,15 +452,34 @@ fn render_explanation_row(
                 // on hover, so at rest this read as an unmarked
                 // continuation of the sentence it follows -- unlike
                 // the `<details>` chips beside it, which carry a
-                // native disclosure triangle at rest. `link-primary`
-                // gives it the same always-visible affordance
-                // `auth.rs`'s "Create one"/"Sign in" links and
+                // native disclosure triangle at rest. `link` gives it
+                // the same always-visible affordance `auth.rs`'s
+                // "Create one"/"Sign in" links and
                 // `notifications.rs`'s settings link already use;
                 // this is the one call site that needed it, not a
                 // sweep of the other nine `link-hover` uses, whose
                 // own position (a project name, a team name, a
                 // search result) already reads as a link without it.
-                <a href=basis_href class=grow("link link-primary inline-flex items-center") aria-label=basis_aria>
+                //
+                // `CLR-002`: `link-primary` dropped. `.link` itself
+                // underlines at rest (confirmed in the pinned sheet),
+                // which is what this comment's own "always-visible
+                // affordance" actually rests on, not the colour --
+                // WCAG F73's 3:1-against-surrounding-text route
+                // already passed here (`#4d6eff` vs `base-content`
+                // `#181a2a`: 4.09:1), so the colour was never the
+                // affordance; it just failed its own 4.5:1 floor
+                // against the background. This anchor has no colour
+                // of its own, so at rest it inherits the enclosing
+                // `<ul>`'s own `text-base-content/80` (`issues.rs`,
+                // the explanation list, not this file's own `text-xs`
+                // sites) -- and that list sits directly on this page's
+                // body (`HealthStrip` has no card of its own), so the
+                // background is `base-200`, not `base-100`: measured
+                // **3.42:1 -> 7.87:1** (`base-content/80` on
+                // `base-200`, confirmed by render, not the series'
+                // own `base-100` headline figure).
+                <a href=basis_href class=grow("link inline-flex items-center") aria-label=basis_aria>
                     {basis_text}
                 </a>
             })}

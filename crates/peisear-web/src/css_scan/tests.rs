@@ -199,9 +199,20 @@ fn the_repository_satisfies_the_live_rule() {
     // `components/` as a distinct token at that one site, confirmed
     // with `grep -rn 'opacity-80'` over live `class=` attributes, not
     // assumed from the one site reverted. Allowlisted unchanged at 3.
+    // `CLR-001`: population unchanged at 289. `text-error` and
+    // `btn-error` both still render at the three sites `CLR-003`
+    // owns (`error_page.rs:18`, `confirmation.rs:56`/`:64`,
+    // `projects.rs:286`), confirmed by `grep -rn`, so neither token
+    // left the tree -- this round only moved which sites render an
+    // already-present token.
+    // `CLR-002`: population dropped 289 -> 287. `link-primary` and
+    // `text-success` both leave `components/` entirely -- confirmed
+    // by `grep -rn 'link-primary\b'` / `'text-success\b'` returning
+    // no render sites, not assumed from the six sites changed.
+    // Allowlisted unchanged at 3.
     assert_eq!(
         (result.population, result.allowlisted),
-        (289, 3),
+        (287, 3),
         "the measured population or allowlist count drifted from this round's own baseline -- \
          re-measure (components/**/*.rs changed) and update this assertion with the reason, \
          never just the numbers"

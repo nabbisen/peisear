@@ -169,7 +169,13 @@ pub fn InboxPage(
                                 // `touch_target_scan`'s guard looks for -- countable,
                                 // greppable, and not a heuristic (`DEC-050` §"Why the
                                 // exception is declared, not detected").
-                                <a href="/settings/notifications" class="link link-primary" data-inline-text-link="">{t(MessageKey::SettingsLinkWord)}</a>
+                                // `CLR-002`: `link-primary` dropped --
+                                // `.link` underlines at rest
+                                // regardless. No colour of its own, so
+                                // it inherits this `<p>`'s own
+                                // `text-base-content/70` -- measured as
+                                // rendered: **6.42:1**.
+                                <a href="/settings/notifications" class="link" data-inline-text-link="">{t(MessageKey::SettingsLinkWord)}</a>
                                 {t(MessageKey::InboxEmptyFooterTail)}
                             </p>
                         </div>
@@ -254,7 +260,34 @@ fn render_row(n: Notification) -> impl IntoView {
                                 </span>
                             })}
                             {link_target.map(|target| view! {
-                                <a href={target} class=grow_text("link link-primary")>
+                                // `CLR-002`: `link-primary` dropped --
+                                // `.link` underlines at rest
+                                // regardless. No colour of its own, so
+                                // it inherits this `div`'s own
+                                // `text-base-content/70`, the same
+                                // shape as `notifications.rs:172` and
+                                // both `auth.rs` links -- cited at
+                                // their measured **6.42:1** rather than
+                                // re-rendered: a notification row
+                                // cannot be produced through this
+                                // product's own routes
+                                // (`browser-checks/README.md`'s own
+                                // `GATE-004` finding), only by the
+                                // background snapshot job. Named, not
+                                // assumed away: an *already-read* row
+                                // also wraps this whole card in a bare
+                                // `opacity-70` (`card_class`, above),
+                                // which would compound with this
+                                // link's own `/70` -- a pre-existing
+                                // shape this round's own six sites do
+                                // not reach, left for whoever reads
+                                // that bare-`opacity` candidate next.
+                                // The 44px touch target comes from
+                                // `grow_text()`'s own `TOUCH_TARGET`,
+                                // unaffected by a colour edit
+                                // (confirmed by render elsewhere in
+                                // this file).
+                                <a href={target} class=grow_text("link")>
                                     {t(MessageKey::ViewContextLinkLabel)}
                                 </a>
                             })}

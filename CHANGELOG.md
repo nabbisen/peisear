@@ -27,6 +27,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wrong independent of contrast. The colour is dropped on all seven
   (17.21:1 against a white card, 14.01:1 against the issue and sprint
   detail pages' own grey background); sizes are unchanged throughout.
+- **Five links and one status line failed contrast the same way —
+  the colour was never the affordance.** The register/sign-in page's
+  own cross-links, the inbox's empty-state link to notification
+  settings, a notification's own link to its target, and a project
+  health figure's "why" link all rendered blue (`#4d6eff`) at
+  4.21:1; none needed it — the underline already marks each one as
+  a link at rest, confirmed in the pinned sheet, and WCAG's
+  colour-alone test for a link inside running text already passed on
+  its own terms. The colour is dropped, leaving the underline; each
+  site now reads at whatever its own surrounding text already reads
+  at (6.42:1 beside a 70%-faded paragraph, 7.87:1 beside an 80%-faded
+  one, both on their own real backgrounds, not a single assumed
+  figure). The "email opt-in is on" status line drops its green
+  the same way — the checkmark and the sentence already carry the
+  state — moving from 2.47:1 to 14.05:1 against the page's own
+  background; its size is unchanged.
 
 ## [0.65.0] — 2026-11-21
 

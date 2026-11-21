@@ -63,8 +63,19 @@ pub fn PreferencesPage(
         .collect_view();
 
     let email_status = if email_globally_on {
+        // `CLR-002`: `text-success` dropped to `text-base-content` --
+        // the checkmark glyph and the sentence already carry the
+        // state; the green was decoration on text that still has to
+        // clear 4.5:1 and did not. This line sits directly on the
+        // page body (no card), so the background is `base-200`, not
+        // `base-100`: measured as rendered, **2.47:1 -> 14.05:1**
+        // (triggered live via `/inbox/email-opt-in`, the route that
+        // actually writes this flag -- the per-kind table's own email
+        // checkboxes do not). Size unchanged (`text-xs`): that is one
+        // of the 21 small-print sites a later row reads as a set, not
+        // this series' own business.
         view! {
-            <span class="text-xs text-success">{t(MessageKey::EmailOptInOnStatus)}</span>
+            <span class="text-xs text-base-content">{t(MessageKey::EmailOptInOnStatus)}</span>
         }
         .into_any()
     } else {

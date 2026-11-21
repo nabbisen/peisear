@@ -67,9 +67,22 @@ pub fn LoginPage(flash: Option<String>, email: String) -> impl IntoView {
                         // unchanged at either width. Measured: no new
                         // wrap, one line at both widths on this
                         // string.
+                        // `CLR-002`: `link-primary` dropped, decided
+                        // as a pair with `RegisterPage`'s own line
+                        // below -- `.link` underlines at rest
+                        // regardless, so the affordance is unchanged.
+                        // This anchor has no colour of its own, so it
+                        // inherits the surrounding `div`'s own
+                        // `text-base-content/70` -- measured as
+                        // rendered: **6.42:1**, not the series'
+                        // headline `base-content`-at-full-opacity
+                        // figure (the ancestor's own `/70` composes
+                        // in, confirmed by render rather than
+                        // assumed). This is one of the first links a
+                        // new reader meets.
                         <div class="text-center text-sm mt-1 text-base-content/70">
                             {t(MessageKey::NoAccountPrompt)}
-                            <a href="/register" class=grow("link link-primary inline-flex items-center align-middle")>{t(MessageKey::CreateOneLinkWord)}</a>
+                            <a href="/register" class=grow("link inline-flex items-center align-middle")>{t(MessageKey::CreateOneLinkWord)}</a>
                         </div>
                     </form>
                 </div>
@@ -141,9 +154,12 @@ pub fn RegisterPage(flash: Option<String>, email: String, display_name: String) 
                         // `SIZE-003`: raised to `text-sm`, the pair
                         // decision with `LoginPage`'s own line above
                         // -- same reasoning, same measured result.
+                        // `CLR-002`: `link-primary` dropped, the pair
+                        // decision with `LoginPage`'s own line above
+                        // -- same inherited `/70`, same **6.42:1**.
                         <div class="text-center text-sm mt-1 text-base-content/70">
                             {t(MessageKey::AlreadyHaveAccountPrompt)}
-                            <a href="/login" class=grow("link link-primary inline-flex items-center align-middle")>{t(MessageKey::SignInWord)}</a>
+                            <a href="/login" class=grow("link inline-flex items-center align-middle")>{t(MessageKey::SignInWord)}</a>
                         </div>
                     </form>
                 </div>
