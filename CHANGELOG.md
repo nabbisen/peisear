@@ -9,7 +9,25 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.66.0] — 2026-11-22
+
+**The colours the check could not see.** Fifteen places in this product put
+text in front of a reader at a contrast a reader is not owed — **every
+destructive action among them**, and the two links a new account meets
+first — while the requirement that forbids exactly that stood recorded as
+met. The check behind it read **one** of the four colour families this
+product's theme defines, and the sentence that closed that requirement —
+*"the theme's own tokens were never the problem"* — was true of the one it
+had measured and was read as true of all of them.
+
+**All fifteen are repaired by removing a colour, not by adding one.** The
+theme itself is untouched, deliberately: the same tokens are what make the
+product's solid buttons and badges pass, so darkening them would have put
+those at risk to fix these. **The one red that passes stays exactly where it
+was** — the confirm button on the page that actually deletes. And the check
+now reads all four families, with three measured exceptions kept by name
+*and by count*, so a later site cannot quietly inherit an exemption written
+for a decorative glyph.
 
 ### Fixed
 
@@ -54,6 +72,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   colour instead of a text class — with three sites it measured and
   kept excluded by name: a large status number and a decorative brand
   glyph, neither of which needed the repair.
+
+### What this release does not fix
+
+- **Nine links still show nothing at rest.** They underline when you point
+  at them, which means that until you do, they look exactly like the words
+  around them. That is a question about how a link announces itself rather
+  than about contrast, and it is written down rather than guessed at.
+- **Fifteen places still fade text by fading the whole element.** A check
+  can read the product's own way of fading text; it cannot read this one.
+  One of the fifteen sits inside a card that fades itself the same way, so
+  the two stack — and that card's styling is assembled in code, which puts
+  it out of reach of a second check as well.
+- **Small controls still carry smaller labels than the fields beside them**
+  — eighteen buttons whose text reads a step down from the value you type
+  next to them. Changing that is a decision about every small button in the
+  product, and this release did not take it.
+- **Twenty-one pieces of small print still read at 12px** — on the calendar,
+  the two notification surfaces, the search page and the account menu.
+  Nobody has read them yet; they keep their size until someone does.
+- **The documentation site has not published since 18 November.** A hosting
+  deployment is stuck in a state its own interface refuses to cancel, and
+  everything behind it waits. The site's content is current as of that date;
+  the checks that run beside it were unblocked in the meantime.
 
 ## [0.65.0] — 2026-11-21
 
