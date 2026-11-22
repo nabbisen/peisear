@@ -50,7 +50,7 @@ architect's figures that way.
 | round | family | sites |
 |---|---|---|
 | `PLC-001` | form placeholders — `issues.rs` 4, `teams.rs` 4, `settings.rs` 3, `projects.rs` 2, `sprints.rs` 2, `search.rs` 1, `layout.rs` 1 | **17** |
-| `PLC-002` | the account menu's email line (`layout.rs:383`) and every `<thead>` (8 sites across 11 tables) | **9** |
+| `PLC-002` | the account menu's email line (`layout.rs:383`) and every `<thead>` (8 sites across 11 tables) — **handed 2026-11-23**, sequenced after `PLC-001` since both edit `app.css` | **9** |
 | `PLC-003` | the guard, `NFR-A11Y-005`'s second amendment in two releases, one register entry, and `app.css`'s own stale comment | — |
 
 In the two served sheets, **109 selectors** set a text colour below the
