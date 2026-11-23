@@ -2,26 +2,22 @@
 
 **Document type**: External design (basic design)
 **Document status**: Baseline
-**Covers release**: `0.66.0` (**nothing in this document is amended** —
-series `064` repairs fifteen sites whose text fell below WCAG AA, and this
-document states no colour for any of them: **checked rather than assumed**,
-its only colour rules are **`§3.1`**'s *unread count … never colour alone*
-(`NFR-A11Y-004`) and **`SCR-05`**'s notification row (*unread marked by
-glyph + text, not colour alone*) — located by reading the document, not by
-citing a number from memory — neither touched, and it describes no link
-styling and no destructive-action colour anywhere. No
-screen, route, state or externally observable copy changed — the repairs
-remove a colour and add none. `0.65.0` before it changed none of those
-either (30 pieces of small print grew a step, and this document describes no
-text sizes); `0.62.0` added **`§5.10`** — a screen's first content is the
-reader's own work, and analysis about it is one line until asked for — and
-made `§3.1`'s diagram, `§3.2`'s responsibility table and `SCR-04`'s own name
-read `Me`)
+**Covers release**: `0.67.0` (**nothing in this document is amended** —
+series `065` repairs eighteen sites whose text fell below WCAG AA and
+re-floors eight more, and **every repair changes a colour this document
+does not state**. Checked rather than assumed: its only live mentions of a
+placeholder are the `§3` design note — *a `placeholder` disappears the
+moment a reader types, so it was never the label* — and `SCR`-level rows
+requiring an explicit `<label>` rather than placeholder-only, **neither of
+which this release touches or contradicts**; the muted tier's own floor
+appears in Appendix C's `0.28.0` row as history, not as a live statement.
+No screen, route, state or externally observable copy changed. `0.66.0`
+before it changed none of those either)
 **Supersedes**: [`history/peisear-0.19.1-external-design-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.19.1-external-design-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 retained unedited as the record of that release
 **Language**: English (normative)
-**Prepared**: 2026-10-07 · **Amended**: 2026-11-12 (0.62.0 — `§5.10` added, `§3.1`/`§3.2`/`SCR-04` renamed to `Me`; `0.63.0` through `0.66.0` amend nothing in this document, each checked at its own cut rather than assumed. This field read `2026-11-01 (0.60.0)` through three cuts — `§10.36` instance 8)
+**Prepared**: 2026-10-07 · **Amended**: 2026-11-12 (0.62.0 — `§5.10` added, `§3.1`/`§3.2`/`SCR-04` renamed to `Me`; `0.63.0` through `0.67.0` amend nothing in this document, each checked at its own cut rather than assumed. This field read `2026-11-01 (0.60.0)` through three cuts — `§10.36` instance 8)
 **Location**: `docs/specification/external-design.md`. **Normative**, English
 only, placed 2026-09-24 (`DEC-020`, closed). See
 [the directory README](./README.md) for how its citations resolve
@@ -2431,7 +2427,8 @@ entries about what is executed by nothing.
 | Version | Change |
 |---|---|
 | GUI v0.1 | Original GUI external specification, based on `0.16.0` |
-| **0.66.0 (this baseline)** | **Nothing in this document is amended, and the check that says so names what it read.** Series `064` repaired fifteen sites whose text fell below WCAG AA — seven destructive affordances, five links, two headings, one status line — by **removing** a semantic colour at each and adding none. This document states no colour for any of them: its only colour rules are **`§3.1`**'s *unread count … never colour alone* (`NFR-A11Y-004`) and **`SCR-05`**'s notification row (*unread marked by glyph + text, not colour alone*), **both located by reading the document rather than cited from memory, and both untouched**, and it describes no link styling and no destructive-action colour. No screen, route, state or externally observable copy changed; the interstitial `§17.4` requires for a destructive delete is unchanged, and its own confirm button — the one red that passes, at 6.83:1 — is exactly where this release left the colour. `requirements.md`'s `§10.61` carries the full finding, including that the defect stood behind a **P1** recorded `Met` because its acceptance read one of the theme's four token families |
+| **0.67.0 (this baseline)** | **Nothing in this document is amended, and the check that says so names what it read.** Series `065` repaired eighteen sites below WCAG AA and re-floored eight more by changing colours **this document does not state**: `input::placeholder`'s own grey, `.menu-title`'s `/40`, and `.table :where(thead,tfoot)`'s `/60`, all applied by the served stylesheets rather than by any class a component writes. This document's only live mentions of a placeholder are `§3`'s design note — *a `placeholder` disappears the moment a reader types, so it was never the label* — and the `SCR`-level rows requiring an explicit `<label>` rather than placeholder-only; **both re-read, neither touched, and neither contradicted** by a repair that only darkens the hint text. The muted tier's `/60` → `/70` move appears in Appendix C's own `0.28.0` row as history, not as a live design statement, so there is nothing there to amend either. No screen, route, state or externally observable copy changed. `requirements.md`'s `§10.62` carries the finding |
+| 0.66.0 | **Nothing in this document is amended, and the check that says so names what it read.** Series `064` repaired fifteen sites whose text fell below WCAG AA — seven destructive affordances, five links, two headings, one status line — by **removing** a semantic colour at each and adding none. This document states no colour for any of them: its only colour rules are **`§3.1`**'s *unread count … never colour alone* (`NFR-A11Y-004`) and **`SCR-05`**'s notification row (*unread marked by glyph + text, not colour alone*), **both located by reading the document rather than cited from memory, and both untouched**, and it describes no link styling and no destructive-action colour. No screen, route, state or externally observable copy changed; the interstitial `§17.4` requires for a destructive delete is unchanged, and its own confirm button — the one red that passes, at 6.83:1 — is exactly where this release left the colour. `requirements.md`'s `§10.61` carries the full finding, including that the defect stood behind a **P1** recorded `Met` because its acceptance read one of the theme's four token families |
 | 0.65.0 | **Nothing in this document is amended, and the check that says so was run rather than assumed.** Series `063` changed the rendered size of 30 pieces of small print across five screens and **this document describes no text sizes at all** — `§5.9` governs the order of items within a list and `§5.10` the order of a screen's own sections; neither reaches type. No screen, route, state or externally observable copy changed: the only strings touched were class tokens. **What does belong here is this document's own record of itself.** The same sweep found two defects in it, both the architect's: its **`Amended`** field read `2026-11-01 (0.60.0)` while `0.62.0` had added `§5.10` and rewritten `§3.1`/`§3.2`/`SCR-04` to read `Me` — two releases stale, in the field `§10.36` instance 7 asked every later sweep to check; and the three newest rows of this very table (`0.62.0`, `0.63.0`, `0.64.0`) sat **above** its header and delimiter, so the pinned `mdbook` rendered them as paragraph text with literal pipes rather than as rows — **measured by rendering the fragment, not inferred**. Three consecutive cuts prepended a row that way and the sweep's own evidence, *a row exists*, could not tell the difference. Both repaired here; `requirements.md`'s `§10.36` instance 8 carries the full finding, and this document is two thirds of what it is about |
 | 0.64.0 | **No screen, route, state or copy changed.** Sixty text sites across three screens move up one step in the type scale, and **this document describes no text sizes at all** — `font-size`, *typography*, *text size* and *type scale* appear nowhere in it, which is itself the finding `§10.60` of `requirements.md` opened on. `§5.10` governs **section order**, which no size change touches; no route, no state, no screen's content and no string of copy is altered. **Stated rather than left silent**, on `0.59.0`'s own lesson below: this row exists because the release happened, not because the content changed, and *"nothing for this document to amend"* is a finding that has to be written down to be distinguishable from a sweep nobody ran. **Deliberately not amended either**: this release decided that **no requirement should govern text size**, so there is no new rule here to describe to a reader of this document |
 | 0.63.0 | **No screen, route, state or copy changed, and the copy exception is agreement alone.** `0.63.0` repairs three defects without touching anything this document describes: a `<summary>`'s missing `::marker` is a rendering defect against `NFR-A11Y-007`'s affordance, not a change to any screen's content; seventeen counted sentences now read *"1 issue"* where they read *"1 issues"*, which is the same sentence saying the same thing correctly; and the site header's search field and account control stop overlapping at 768–800 px, which restores the layout `§3.1` already describes rather than altering it. **Stated rather than left silent**, on `0.59.0`'s own lesson below: this row exists because the release happened, not because the content changed, and *"nothing for this document to amend"* is a finding that has to be written down to be distinguishable from a sweep nobody ran |
