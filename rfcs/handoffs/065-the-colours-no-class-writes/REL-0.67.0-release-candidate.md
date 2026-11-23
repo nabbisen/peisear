@@ -168,6 +168,16 @@ committed by the person who has cited that entry at others in four
 consecutive series. Recorded in memory; the round's handling of it was
 exactly right.
 
+**And it happened a second time, on this candidate's own commit.** `d07c5ed`
+turned CI red the same way — this document cites `§10.23` for the same
+historical fact, moving that counted population 4 → 5. **This time the
+watcher was armed**, the failure was read from the job's own log, the
+population was **re-derived by hand** (three historical citations plus my
+two), and the constant moved with its reason. The recurrence is structural
+and is now a recorded candidate: `docs_scan` rule 5 excludes
+`rfcs/handoffs/` as *execution records*, and this count does not, so every
+handoff that mentions one of four numbers reddens `main`.
+
 **Five more of my figures or instructions were corrected by these rounds**:
 the claim that all three families failed; a predicted 6.34:1 where three
 methods settle on **6.42:1**; an instruction to measure a placeholder *per

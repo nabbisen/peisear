@@ -162,6 +162,22 @@ fn rule_1_is_clean_on_the_real_tree() {
 /// reason rule 1 does not run over `rfcs/` at all) -- population
 /// changed, so the recorded count moves with it, per this test's own
 /// doc comment.
+///
+/// **4 -> 5 at the `0.67.0` candidate, and the second move in two
+/// commits, both the architect's.** `REL-0.67.0-release-candidate.md`
+/// cites `§10.23` for the same historical fact (`app.css`'s own stale
+/// CDN comment, stale since `0.32.0`). Re-derived by hand rather than
+/// incremented: three historical citations
+/// (`011`'s candidate and `013`'s `LAYOUT-003` for `§10.24`, `014`'s
+/// candidate for `§10.23`) plus those two -- five.
+///
+/// **Recorded as a candidate rather than worked around**: `docs_scan`
+/// rule 5 excludes `rfcs/handoffs/` by name as *execution records, not
+/// documentation*, and this count includes them, so every handoff or
+/// release candidate that mentions one of four numbers moves a counted
+/// population and turns CI red. Twice now. Whether this count should
+/// share rule 5's own exclusion is a decision, not a cleanup, and it
+/// belongs in `ROADMAP.md` until someone takes it.
 #[test]
 fn rfcs_citations_to_the_four_numbers_are_counted_not_enforced() {
     let root = repo_root();
@@ -180,7 +196,7 @@ fn rfcs_citations_to_the_four_numbers_are_counted_not_enforced() {
         }
     }
     assert_eq!(
-        count, 4,
+        count, 5,
         "SPEC-001 §3's own measured count of dangling-number citations inside rfcs/ -- a \
          historical record, not enforced; update this count only if the real population changed"
     );
