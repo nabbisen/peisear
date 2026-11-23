@@ -129,3 +129,58 @@ fn every_named_exclusion_matches_its_exact_live_count() {
         );
     }
 }
+
+/// `PLC-003` (`§10.62`): no `components/**`-reachable element meets a
+/// below-`/70` text colour through a rule the *stylesheet* applies by
+/// element/pseudo-element selector or by a component's own baked-in
+/// class — a colour no `components/**` class token itself carries,
+/// which is exactly what the two scans above cannot see. Every such
+/// rule must be named in `ACKNOWLEDGED_SHEET_RULES` (what beats it) or
+/// `EXEMPT_SHEET_RULES` (why it is exempt); one that is neither fails
+/// here, not downstream in a screenshot nobody takes.
+#[test]
+fn every_reachable_sheet_leak_is_acknowledged() {
+    let result = sheet_leak_scan();
+    assert!(
+        result.unacknowledged.is_empty(),
+        "these stylesheet rules apply a below-/70 text colour to an \
+         element, or to a class some component actually writes, and \
+         nothing in ACKNOWLEDGED_SHEET_RULES/EXEMPT_SHEET_RULES names \
+         what beats them or why they're exempt -- see this module's own \
+         doc comment (`PLC-001`-`PLC-003`, `§10.62`):\n{}",
+        result
+            .unacknowledged
+            .iter()
+            .map(|r| format!("  {} -> {}", r.selector, r.value))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
+
+/// An acknowledgement that no longer points at anything live is itself
+/// a defect, in either of its two parts: the underlying sheet rule
+/// could have moved or been removed by a vendored-CSS version bump
+/// (`stale_acknowledgements`), or the thing this acknowledgement
+/// claims beats the rule could have been reverted without the
+/// acknowledgement itself being touched (`no_longer_beaten`) — the
+/// exact shape `PLC-003`'s own second plant (removing `app.css`'s
+/// placeholder override in a scratch worktree) was written to catch.
+#[test]
+fn every_acknowledged_sheet_rule_is_still_live_and_still_beaten() {
+    let result = sheet_leak_scan();
+    assert!(
+        result.stale_acknowledgements.is_empty(),
+        "these ACKNOWLEDGED_SHEET_RULES selectors no longer appear as a \
+         below-/70 color: rule in any served sheet -- the vendored CSS \
+         moved or changed and this acknowledgement is now stale:\n{}",
+        result.stale_acknowledgements.join("\n")
+    );
+    assert!(
+        result.no_longer_beaten.is_empty(),
+        "these ACKNOWLEDGED_SHEET_RULES entries' own beaten_by_needle no \
+         longer appears in beaten_by_file -- the thing that was supposed \
+         to stop this rule reaching a reader is gone, but the \
+         acknowledgement does not know that:\n{}",
+        result.no_longer_beaten.join("\n")
+    );
+}

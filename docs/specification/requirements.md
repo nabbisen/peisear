@@ -24,7 +24,7 @@ and through it
 (on GitHub; excluded from this book, see `docs/README.md`).
 Both retained unedited as the record of their releases
 **Language**: English (normative)
-**Prepared**: 2026-07-27 · **Amended**: 2026-11-22 (0.66.0 — `NFR-A11Y-005`'s acceptance widened to all four token families, `§10.61` opened and closed. Before it, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — **checked again at this cut, and it moved**)
+**Prepared**: 2026-07-27 · **Amended**: 2026-11-23 (0.67.0 — `NFR-A11Y-005`'s acceptance widened a second time, to a third mechanism covering colours no component class writes at all; `§10.62` opened and closed. Before it, 2026-11-22 (0.66.0 — the same entry's acceptance widened to all four token families, `§10.61` opened and closed); before that, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — **checked again at this cut, and it moved, two cuts running**)
 **Location**: `docs/specification/requirements.md`. **This document is the
 normative source of truth** — English only, placed 2026-09-24 (`DEC-020`,
 closed). See [the directory README](./README.md) for how its citations
@@ -2869,13 +2869,33 @@ that said otherwise would be the shape `§10.17` records.
 **NFR-A11Y-005 — Contrast**
 Text and background combinations MUST meet WCAG AA (4.5:1).
 *Source*: `SPEC §40.1`. *Acceptance*: `peisear-web`'s `contrast_scan` —
-`text-base-content/{10..60}` may not appear under `src/components/**`
-(the muted-tier floor), **and no `text-{family}`/`link-{family}`
-semantic colour, nor `btn-outline` paired with `btn-{family}`, may
-appear there either** (`§10.61`), both subject to their own named,
-measured exclusions. *Status*: **Measured and repaired (`QA-012`,
-`QA-013`, post-0.27.0; `CLR-001`–`CLR-003`, series `064`, 0.66.0)** —
-was *Not verified* from 0.19.1 through 0.27.0. *Priority*: P1.
+three mechanisms, not restated as the requirement widens, each closing
+a gap the one before it could not see. `text-base-content/{10..60}`
+may not appear under `src/components/**` (the muted-tier floor), **and
+no `text-{family}`/`link-{family}` semantic colour, nor `btn-outline`
+paired with `btn-{family}`, may appear there either** (`§10.61`), both
+subject to their own named, measured exclusions. **And no
+`components/**`-reachable element may meet a below-`/70` text colour
+through a rule the *served stylesheets* apply by element/pseudo-element
+selector or by a component's own baked-in class — a colour no
+component class token itself carries, which the first two mechanisms
+cannot see at all** (`§10.62`): every such rule in `tailwind.css`/
+`daisyui.min.css`/`app.css` must be named in a static acknowledgement
+(what beats it) or a named exemption (WCAG 1.4.3's inactive-component
+carve-out), or the scan fails. *Status*: **Measured and repaired
+(`QA-012`, `QA-013`, post-0.27.0; `CLR-001`–`CLR-003`, series `064`,
+0.66.0; `PLC-001`–`PLC-003`, series `065`, 0.67.0)** — was *Not
+verified* from 0.19.1 through 0.27.0. *Priority*: P1.
+
+*The floor was never the whole story, and this is the second time that
+sentence has had to be said.* `/70` governs what a component's own
+class writes. `§10.61` governs *which colour families* a component
+may write in a text position. `§10.62` governs a colour **no
+component class writes at all** — the stylesheet applies it by
+selector, and a component's only part in it is emitting the element or
+reusing a class written for something else (`.menu-title`, `.table`'s
+own `thead`/`tfoot`). Three mechanisms, three different kinds of gap,
+one requirement.
 
 *What was found, corrected 0.66.0.* "The theme's own tokens were never
 the problem" was true of `base-content` (`base-content` on `base-100`
@@ -9842,6 +9862,75 @@ site; and one more fact added to that candidate by `CLR-002`: a
 read-notification's own card wraps in a bare `opacity-70` built by a
 `format!` call, which is invisible to `css_scan`'s own token scan as
 well as to `contrast_scan` — a site two scans miss, not one.
+
+### 10.62 A check that reads what components write cannot see what the stylesheet applies — **closed**, `PLC-001`–`PLC-003`, series `065`, 0.67.0; opened and closed 2026-11-23 by the architect, scoping `065` and then building the guard the same series it was found in
+
+**Second instance in two releases of a guard's own reach being
+narrower than its requirement's words** — `§10.61` was the first.
+`contrast_scan` reads a class a component writes. It cannot read a
+colour the *served stylesheet* applies by a bare element or
+pseudo-element selector (`input::placeholder`), or bakes into a class
+a component writes for an unrelated reason (`.menu-title`, `.table`'s
+own `thead`/`tfoot` descendant rule) — which is exactly how all
+twenty-six sites this series measured got here, invisible to both
+`/70` and `§10.61` at once.
+
+**The honest split, and it took two rounds to state correctly.**
+**Eighteen sites were actually failing**: `PLC-001`'s seventeen form
+placeholders at **2.54:1**, and `PLC-002`'s one account-menu line at
+**1.85:1** — the reader's own e-mail address, the worst figure in this
+series, where two fades multiplied rather than one applying twice:
+`.menu-title`'s own `/.4` on the `<li>`, compounded by the `<span>`'s
+own bare `opacity-70`. **Eight more — the table headers — sat on the
+exact `/60` tier this requirement already rejected as a floor**
+(4.53:1, a pass by 0.03, failing at 4.23:1 the moment a table header
+ever renders on `base-200`, where none does today), not on an active
+failure. The series' own handoffs and ROADMAP row said all three
+families failed outright; that was true of the first two and false of
+the third, corrected here rather than carried.
+
+**The two cascade directions, planted separately rather than assumed
+from either file's position in `layout.rs:68-70`.** `tailwind.css`'s
+own `input::placeholder{color:#9ca3af}` is served *last* and still had
+to be out-specified — `app.css`'s repair wins on specificity (a class
+plus a pseudo-element beats a bare element plus a pseudo-element),
+not on order. `daisyui.min.css`'s own `.table :where(thead,tfoot)` is
+served *first* and was beaten on order instead — an equal-specificity
+rule later in the concatenated sheet wins. Both commented out in a
+scratch worktree and watched the defect value return before being
+trusted; neither assumed from reading the rule alone.
+
+**What the architect got wrong, named rather than silently
+reconciled**: the row's own claim that all three families read below
+4.5:1 (true of two, not the third), and a predicted **6.34:1** for the
+repaired placeholder text where three independent methods actually
+agree on **6.42:1** — the same figure this series has read for
+`text-base-content/70` on `base-100` since `LBL-001`.
+
+**The guard, a static acknowledgement list — this project's own
+established shape for exactly this situation** (`css_scan`'s
+allowlist, `§10.61`'s own named exclusions), not a browser-rendered
+sweep (named as a `ROADMAP.md` candidate with its own cost, not
+built): every below-`/70` `color:` rule in the three served sheets,
+restricted to a selector some component can actually reach (a bare
+element/pseudo-element always can; a class-based one only if some
+component writes that literal class — the same written-token
+population `css_scan` already computes), must be named in
+`ACKNOWLEDGED_SHEET_RULES` with the exact literal that proves what
+beats it, or in `EXEMPT_SHEET_RULES` under WCAG 1.4.3 (text that is
+part of an inactive UI component — the disabled tiers, zero sites
+today). `.stat-title`/`.stat-desc` (`/.6`, zero sites today) need
+neither: unreachable rules are not acknowledged, so the guard fails
+the day one is first written rather than needing a pre-emptive entry.
+**Planted twice, both failures quoted in the round's own review
+request**: a component made to write `stat-title` (a below-floor rule
+becoming newly reachable); `app.css`'s own placeholder override
+removed in a scratch worktree (an acknowledged rule's own proof that
+something beats it going missing, caught independently of whether the
+underlying sheet rule is still present).
+
+**Found by scoping a release, not by any check** — the same property
+`§10.60` and `§10.61` both opened on.
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 

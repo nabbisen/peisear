@@ -155,6 +155,13 @@ fn rule_1_is_clean_on_the_real_tree() {
 /// either way -- this round is still open -- so excluding it is not
 /// the shipped-history precedent rule 1 itself relies on; it is
 /// simply not part of what the census was ever about.
+///
+/// **`PLC-003` (series `065`): 3 -> 4.** `rfcs/handoffs/065-the-colours-
+/// no-class-writes/PLC-003-...md:120` cites `§10.23` once, a closed
+/// handoff's own historical fact rather than a live defect (the same
+/// reason rule 1 does not run over `rfcs/` at all) -- population
+/// changed, so the recorded count moves with it, per this test's own
+/// doc comment.
 #[test]
 fn rfcs_citations_to_the_four_numbers_are_counted_not_enforced() {
     let root = repo_root();
@@ -173,7 +180,7 @@ fn rfcs_citations_to_the_four_numbers_are_counted_not_enforced() {
         }
     }
     assert_eq!(
-        count, 3,
+        count, 4,
         "SPEC-001 §3's own measured count of dangling-number citations inside rfcs/ -- a \
          historical record, not enforced; update this count only if the real population changed"
     );

@@ -1,5 +1,14 @@
-/* Supplemental styles. Tailwind's play CDN covers the bulk of styling;
-   a few small niceties live here so we don't have to ship a Node build. */
+/* This project's own stylesheet -- the one file under `static/` not
+   vendored (`tailwind.css`/`daisyui.min.css` are pinned by version and
+   SHA-256, `ASSET-001`/`DEC-051`). The product stopped loading CSS from
+   a CDN at 0.32.0 (`§10.23`); this comment went stale then and was left
+   that way through two releases that each added a rule here, found and
+   corrected in `PLC-003` (series 065, `§10.62`). Two small niceties
+   (below) plus two colour overrides this series added, each beating a
+   below-floor text colour the two vendored sheets apply by element or
+   baked-in class rather than by a token `contrast_scan` can read --
+   `PLC-001`'s form placeholders and `PLC-002`'s table headers; see each
+   rule's own comment for the cascade reason. */
 
 /* Line clamp with vendor prefixes for older renderers. */
 .line-clamp-2 {
@@ -24,9 +33,20 @@
    seventeen in-scope sites carry .input or .textarea, checked by
    rendering, not assumed from the class list. Lands on base-content/70,
    the floor contrast_scan already enforces on a component class, so
-   this rule and that guard agree by construction. */
+   this rule and that guard agree by construction.
+
+   `PLC-003`: `tailwind.css` also ships `input::-moz-placeholder,
+   textarea::-moz-placeholder{color:#9ca3af;opacity:1}` -- a real,
+   separate gap this rule did not cover (a different pseudo-element
+   selector, not reached by `::placeholder` alone), found while
+   building this round's own guard rather than left unacknowledged.
+   Added below rather than exempted: this environment cannot render
+   `-moz-` at all (Chromium-only), so it is unmeasured here, but the
+   rule still ships to every reader and the fix is one line. */
 .input::placeholder,
-.textarea::placeholder {
+.textarea::placeholder,
+.input::-moz-placeholder,
+.textarea::-moz-placeholder {
     color: oklch(var(--bc) / 0.7);
 }
 

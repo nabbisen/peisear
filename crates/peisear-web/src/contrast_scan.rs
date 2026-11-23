@@ -112,6 +112,73 @@
 //! figures got wrong — that only the rendered tree answers it. This
 //! stays a ban on tokens, the shape `BANNED_MODIFIERS` already uses,
 //! not a computation this scan cannot do honestly.
+//!
+//! ## `PLC-001`–`PLC-003`, `§10.62` — a third mechanism: colours no
+//! `components/**` class token ever carries
+//!
+//! The two mechanisms above both read a class token a component
+//! writes. Series `065` found a third shape neither can see: a text
+//! colour the *stylesheet itself* applies, by a bare element or
+//! pseudo-element selector (`input::placeholder`), or baked into a
+//! class a component writes for an unrelated reason (`.menu-title`,
+//! `.table`'s own `thead`/`tfoot` descendant rule) — eighteen sites
+//! read below 4.5:1 this way (`PLC-001`'s seventeen placeholders at
+//! 2.54:1, `PLC-002`'s one account-menu line at 1.85:1, the fade
+//! compounding with the span's own `opacity-70`) and eight more sat on
+//! the exact `/60` tier this requirement already rejected as a floor
+//! (4.53:1 — a pass by 0.03, failing the moment a table header ever
+//! renders on `base-200`).
+//!
+//! **A scan that flags every below-floor rule in the served sheets
+//! does not work, because this series' own repairs are rules too.**
+//! `tailwind.css`'s `input::placeholder{color:#9ca3af}` still exists —
+//! `app.css`'s own override beats it in the browser, which no class
+//! token says. The guard has to tell *a rule that reaches a reader*
+//! from *a rule something else beats*, which [`ACKNOWLEDGED_SHEET_RULES`]
+//! does by naming, for each reachable below-floor rule, the exact
+//! literal that proves what beats it — an `app.css` override
+//! ([`AcknowledgedSheetRule::beaten_by_needle`] found in
+//! `beaten_by_file`), or, for `.menu-title`'s one site, the child
+//! `<span>`'s own `text-base-content/70` winning by ordinary
+//! inheritance rather than a second stylesheet rule.
+//!
+//! **Reachable is load-bearing, not decorative.** `.stat-title`/
+//! `.stat-desc` resolve to `/60` in the pinned sheet unconditionally,
+//! but zero `components/**` sites write either class today — so they
+//! need no acknowledgement, and [`selector_is_reachable`] (reusing the
+//! same written-token population `css_scan` computes) is what lets
+//! this scan tell that apart from a rule that *is* reached: a bare
+//! element/pseudo-element selector is always reachable (no component
+//! can avoid emitting an `<input>` or a `<thead>`); a class-based one
+//! is reachable only if some component writes that literal class.
+//! [`EXEMPT_SHEET_RULES`] (the disabled tiers, WCAG 1.4.3 — text that
+//! is part of an inactive UI component) skip this gate entirely and
+//! are acknowledged regardless, because their own first class token
+//! (`.input`, `.menu`) is written everywhere independent of whether
+//! the `:disabled`/`.disabled` half is ever triggered — a reachability
+//! check would read these as live when they are not.
+//! [`NON_TEXT_SHEET_SELECTORS`] (`.toggle`) are excluded for a
+//! different reason: the `color` property there feeds `currentColor`
+//! into a border and background, painting no text at all — WCAG
+//! 1.4.11, out of this scan's own scope.
+//!
+//! **Two failures, planted separately** (`PLC-003`'s own review
+//! request has both, quoted): a `components/**` site made to write
+//! `stat-title` (a below-floor rule becoming newly reachable, caught
+//! as unacknowledged); `app.css`'s own placeholder override removed in
+//! a scratch worktree (an acknowledged rule's `beaten_by_needle` going
+//! missing, caught by [`fn@sheet_leak_scan`]'s own liveness half,
+//! separately from whether the underlying sheet rule itself is still
+//! present).
+//!
+//! **Not built: a browser-rendered sweep.** The only check that
+//! resolves a cascade *correctly* in every case renders the page and
+//! samples a computed colour, the same method this series used by
+//! hand throughout (`§10.52`). This guard is a static acknowledgement
+//! list instead — this project's own established shape for exactly
+//! this situation (`css_scan`'s allowlist, `contrast_scan`'s own named
+//! exclusions above) — named as a `ROADMAP.md` candidate with its own
+//! cost rather than built here.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -265,6 +332,437 @@ fn components_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("src")
         .join("components")
+}
+
+fn static_dir() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("static")
+}
+
+/// The three stylesheets `layout.rs:68-70` serves, read separately —
+/// `css_scan::stylesheet_text` concatenates them for a token-presence
+/// check that does not care which file wins; this scan does, so each
+/// stays addressable by name. Comments stripped: `app.css`'s own
+/// prose (this series' repairs quote the exact rule they beat, e.g.
+/// `color:oklch(var(--bc)/.6)`, for a reader) would otherwise read as
+/// a second, spurious below-floor declaration.
+fn served_sheets() -> [(&'static str, String); 3] {
+    let dir = static_dir();
+    let read = |name: &str| {
+        let path = dir.join(name);
+        let raw =
+            fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        strip_css_comments(&raw)
+    };
+    [
+        ("daisyui.min.css", read("daisyui.min.css")),
+        ("tailwind.css", read("tailwind.css")),
+        ("app.css", read("app.css")),
+    ]
+}
+
+/// Strips every `/* ... */` block comment, replacing its content with
+/// spaces rather than removing it — byte positions this module's own
+/// `abs` offsets rely on stay valid, and `enclosing_selector`'s own
+/// backward brace-walk never crosses into what was a comment.
+fn strip_css_comments(source: &str) -> String {
+    let bytes = source.as_bytes();
+    let mut out: Vec<u8> = bytes.to_vec();
+    let mut i = 0;
+    while i + 1 < bytes.len() {
+        if bytes[i] == b'/' && bytes[i + 1] == b'*' {
+            let start = i;
+            i += 2;
+            while i + 1 < bytes.len() && !(bytes[i] == b'*' && bytes[i + 1] == b'/') {
+                i += 1;
+            }
+            let end = (i + 2).min(bytes.len());
+            for b in out.iter_mut().take(end).skip(start) {
+                if *b != b'\n' {
+                    *b = b' ';
+                }
+            }
+            i = end;
+        } else {
+            i += 1;
+        }
+    }
+    String::from_utf8(out).expect("stylesheet stays valid UTF-8 after comment-blanking")
+}
+
+/// Parses a CSS alpha fraction's textual form (`"1"`, `"0"`, `".4"`,
+/// `".65"`) into hundredths (`100`, `0`, `40`, `65`) — the unit this
+/// module's own `/70` floor is already stated in.
+fn parse_fraction_hundredths(text: &str) -> Option<u32> {
+    if let Some(decimal) = text.strip_prefix('.') {
+        let value: u32 = decimal.parse().ok()?;
+        match decimal.len() {
+            1 => Some(value * 10),
+            2 => Some(value),
+            _ => None,
+        }
+    } else {
+        let value: u32 = text.parse().ok()?;
+        Some(value * 100)
+    }
+}
+
+/// The nearest `:` before `pos`, stopping at a declaration boundary
+/// (`;`/`{`) rather than crossing into an unrelated property —
+/// **not** "the immediately preceding character," since DaisyUI wraps
+/// every resolved colour as `color:var(--fallback-bc,oklch(var(--bc)/.4))`,
+/// so several bytes of that wrapper sit between the property's own
+/// `:` and the `oklch(` this module searches for.
+fn colon_immediately_before(text: &str, pos: usize) -> Option<usize> {
+    let bytes = text.as_bytes();
+    let mut i = pos;
+    while i > 0 {
+        i -= 1;
+        match bytes[i] {
+            b':' => return Some(i),
+            b';' | b'{' => return None,
+            _ => continue,
+        }
+    }
+    None
+}
+
+/// The declaration's own property name immediately before `colon_pos`
+/// — back to the previous `;`/`{` (or file start), trimmed. `"color"`
+/// matches `color:` only, never `background-color:`/`border-color:`
+/// — the boundary character excludes them, the same shape
+/// [`colon_immediately_before`] uses to exclude a wrong declaration.
+fn property_name_before(text: &str, colon_pos: usize) -> &str {
+    let before = &text[..colon_pos];
+    let start = before.rfind([';', '{']).map(|i| i + 1).unwrap_or(0);
+    before[start..].trim()
+}
+
+/// The selector immediately enclosing the declaration at `pos` —
+/// walks backward tracking brace depth, the same shape
+/// [`crate::css_scan::quoted_string_spans`]'s own sibling
+/// `enclosing_call_text` already proved for parentheses, so this
+/// finds the *innermost* rule even inside `@media`, never a media
+/// query's own outer condition.
+fn enclosing_selector(text: &str, pos: usize) -> String {
+    let bytes = text.as_bytes();
+    let mut i = pos;
+    let mut depth: i32 = 0;
+    let mut open = None;
+    while i > 0 {
+        i -= 1;
+        match bytes[i] {
+            b'}' => depth += 1,
+            b'{' => {
+                if depth == 0 {
+                    open = Some(i);
+                    break;
+                }
+                depth -= 1;
+            }
+            _ => {}
+        }
+    }
+    let Some(open) = open else {
+        return String::new();
+    };
+    let mut j = open;
+    while j > 0 {
+        j -= 1;
+        if bytes[j] == b'}' {
+            j += 1;
+            break;
+        }
+    }
+    normalize_selector(text[j..open].trim())
+}
+
+/// Collapses a selector's own insignificant whitespace (a line wrap,
+/// the space `app.css`'s hand-formatted rules carry after a comma) to
+/// the single-space form the vendored sheets' minified text already
+/// uses, so one literal in [`ACKNOWLEDGED_SHEET_RULES`] matches either
+/// source without a second, looser copy per file.
+fn normalize_selector(raw: &str) -> String {
+    raw.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .replace(", ", ",")
+}
+
+/// Every below-`/70` `color:` declaration's `(selector, value)` pair
+/// in `sheet` — the `oklch(var(--bc)/N)` shape every in-scope DaisyUI
+/// rule uses, plus the one literal hex `tailwind.css` hardcodes for
+/// its placeholder rule instead of `var(--bc)`.
+fn below_floor_declarations(sheet: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+
+    let bc_needle = "oklch(var(--bc)/";
+    let mut search_from = 0;
+    while let Some(rel) = sheet[search_from..].find(bc_needle) {
+        let abs = search_from + rel;
+        let value_start = abs + bc_needle.len();
+        search_from = value_start;
+        let Some(close_rel) = sheet[value_start..].find(')') else {
+            break;
+        };
+        let fraction_text = &sheet[value_start..value_start + close_rel];
+        let Some(hundredths) = parse_fraction_hundredths(fraction_text) else {
+            continue;
+        };
+        if hundredths >= 70 {
+            continue;
+        }
+        let Some(colon_pos) = colon_immediately_before(sheet, abs) else {
+            continue;
+        };
+        if property_name_before(sheet, colon_pos) == "color" {
+            let selector = enclosing_selector(sheet, abs);
+            out.push((selector, format!("oklch(var(--bc)/{fraction_text})")));
+        }
+    }
+
+    let hex_needle = "#9ca3af";
+    let mut search_from = 0;
+    while let Some(rel) = sheet[search_from..].find(hex_needle) {
+        let abs = search_from + rel;
+        search_from = abs + hex_needle.len();
+        let Some(colon_pos) = colon_immediately_before(sheet, abs) else {
+            continue;
+        };
+        if property_name_before(sheet, colon_pos) == "color" {
+            let selector = enclosing_selector(sheet, abs);
+            out.push((selector, hex_needle.to_string()));
+        }
+    }
+
+    out
+}
+
+/// Every class token written by some `components/**` element —
+/// recomputed here rather than exposing `css_scan`'s own private
+/// population, to decide whether a below-floor sheet rule is actually
+/// reachable: `.stat-title`/`.stat-desc` are in the pinned sheet
+/// unconditionally but reach no reader until a component writes that
+/// class.
+fn written_class_tokens() -> std::collections::BTreeSet<String> {
+    let dir = components_dir();
+    let mut files = Vec::new();
+    collect_rs_files(&dir, &mut files);
+    let mut tokens = std::collections::BTreeSet::new();
+    for path in &files {
+        let raw =
+            fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+        let stripped = strip_line_comments(&raw);
+        for (quote_pos, content_start, content_end) in quoted_string_spans(&stripped) {
+            if !is_token_source(&stripped, quote_pos) {
+                continue;
+            }
+            for token in tokens_from_content(&stripped[content_start..content_end]) {
+                tokens.insert(token);
+            }
+        }
+    }
+    tokens
+}
+
+/// True if any comma-separated alternative in `selector` is reachable:
+/// a bare element/pseudo-element alternative (no leading class) always
+/// is, since no component can avoid emitting an `<input>` or a
+/// `<thead>`; a class-based alternative is reachable only if some
+/// component writes that alternative's own first class token.
+fn selector_is_reachable(selector: &str, written: &std::collections::BTreeSet<String>) -> bool {
+    selector
+        .split(',')
+        .any(|alt| alternative_is_reachable(alt.trim(), written))
+}
+
+/// The first class token of one selector alternative, unescaping CSS's
+/// own `\` selector-escape (the inverse of
+/// [`crate::css_scan::escape_css_token`]) — `None` if the alternative
+/// does not start with `.` at all (a bare element/pseudo-element,
+/// always reachable).
+fn alternative_is_reachable(alt: &str, written: &std::collections::BTreeSet<String>) -> bool {
+    let bytes = alt.as_bytes();
+    if bytes.first() != Some(&b'.') {
+        return true;
+    }
+    let mut class = String::new();
+    let mut i = 1;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'\\' if i + 1 < bytes.len() => {
+                class.push(bytes[i + 1] as char);
+                i += 2;
+            }
+            b':' | b'[' | b'>' | b'~' | b'+' | b'(' | b')' => break,
+            b if (b as char).is_ascii_whitespace() => break,
+            b => {
+                class.push(b as char);
+                i += 1;
+            }
+        }
+    }
+    written.contains(&class)
+}
+
+/// A below-floor sheet rule reachable by a component, with the exact
+/// literal that must still be found before this rule is trusted to
+/// never reach a reader.
+struct AcknowledgedSheetRule {
+    /// The selector exactly as [`below_floor_declarations`] extracts
+    /// it (comma-joined, normalized whitespace — see
+    /// [`normalize_selector`]).
+    selector: &'static str,
+    /// Path from `CARGO_MANIFEST_DIR`: either the `app.css` override
+    /// rule, or the one component file whose own repair beats this
+    /// rule by ordinary inheritance rather than a second stylesheet
+    /// rule.
+    beaten_by_file: &'static str,
+    /// A literal substring of `beaten_by_file` proving the thing that
+    /// beats this rule is still there.
+    beaten_by_needle: &'static str,
+}
+
+/// Every reachable below-`/70` sheet rule this series found, and what
+/// beats each one before it reaches a reader — `PLC-003`'s own
+/// acceptance item 2: "paired with its exact count," here a literal
+/// needle rather than a count, since each of these is beaten by one
+/// named thing rather than claiming an exemption shared across sites.
+///
+/// `.menu-title` (`/.4`): `layout.rs`'s own one rendering site wraps
+/// its text in a child `<span>` carrying an explicit
+/// `text-base-content/70`, which wins for that text by ordinary
+/// inheritance — not a second stylesheet rule, so `beaten_by_file`
+/// names the component rather than `app.css`.
+///
+/// `.table :where(thead,tfoot)` (`/.6`) and
+/// `input::placeholder,textarea::placeholder` /
+/// `input::-moz-placeholder,textarea::-moz-placeholder` (`#9ca3af`):
+/// each beaten by `app.css`'s own override rule, `PLC-001`/`PLC-002`/
+/// `PLC-003` in turn — see each rule's own comment there for why the
+/// cascade reason differs between the table rule (sheet order) and
+/// the placeholder rules (specificity).
+const ACKNOWLEDGED_SHEET_RULES: &[AcknowledgedSheetRule] = &[
+    AcknowledgedSheetRule {
+        selector: ".menu-title",
+        beaten_by_file: "src/components/layout.rs",
+        beaten_by_needle: "<span class=\"text-xs text-base-content/70 truncate\">",
+    },
+    AcknowledgedSheetRule {
+        selector: ".table :where(thead,tfoot)",
+        beaten_by_file: "static/app.css",
+        beaten_by_needle: ".table :where(thead, tfoot) {",
+    },
+    AcknowledgedSheetRule {
+        selector: "input::placeholder,textarea::placeholder",
+        beaten_by_file: "static/app.css",
+        beaten_by_needle: ".input::placeholder",
+    },
+    AcknowledgedSheetRule {
+        selector: "input::-moz-placeholder,textarea::-moz-placeholder",
+        beaten_by_file: "static/app.css",
+        beaten_by_needle: ".input::-moz-placeholder",
+    },
+];
+
+/// Exempt under WCAG 1.4.3 — text that is part of an inactive
+/// user-interface component — acknowledged unconditionally, **not**
+/// gated on [`selector_is_reachable`]: each compound selector's own
+/// first class token (`.input`, `.select`, `.textarea`, `.menu`) is
+/// written everywhere regardless of whether the `:disabled`/
+/// `.disabled` half is ever triggered, so that check would read these
+/// as live findings when, today, none of the four disabled states
+/// renders anywhere in `components/**` (confirmed by grep: no call
+/// site sets `disabled` on an input/select/textarea or a menu `<li>`).
+/// If one ever does, it stays exempt on the same WCAG reasoning, not
+/// a newly-required acknowledgement.
+const EXEMPT_SHEET_RULES: &[&str] = &[
+    ".menu li.disabled",
+    ".input-disabled,.input:disabled,.input:has(> input[disabled]),.input[disabled]",
+    ".select-disabled,.select:disabled,.select[disabled]",
+    ".textarea-disabled,.textarea:disabled,.textarea[disabled]",
+];
+
+/// Not a text colour: `.toggle`'s own `color` property is read back
+/// only via `currentColor`, by its own `border-color`/
+/// `background-color` — no text node is ever painted by this rule.
+/// WCAG 1.4.11 (non-text contrast), not 1.4.3, and out of this scan's
+/// own scope (text a reader reads).
+const NON_TEXT_SHEET_SELECTORS: &[&str] = &[".toggle"];
+
+fn beaten_by_file_text(rel_path: &str) -> String {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(rel_path);
+    fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()))
+}
+
+/// One below-floor sheet rule found reachable by a component but named
+/// in neither [`ACKNOWLEDGED_SHEET_RULES`] nor [`EXEMPT_SHEET_RULES`]
+/// — the failure this guard exists to raise before a theme bump or a
+/// new DaisyUI class ships a faded colour unnoticed.
+#[derive(Debug)]
+struct UnacknowledgedSheetRule {
+    selector: String,
+    value: String,
+}
+
+/// This scan's full result — see each field; a scan that finds
+/// everything empty is a pass, same as the two scans above, but a
+/// scan that silently examined zero sheets must not read as one
+/// (`§10.36`), which is why `sheet_leak_scan` panics rather than
+/// returning empty on a missing file.
+struct SheetLeakResult {
+    unacknowledged: Vec<UnacknowledgedSheetRule>,
+    /// An [`ACKNOWLEDGED_SHEET_RULES`] selector no longer found as a
+    /// below-floor rule in any served sheet — the vendored CSS moved
+    /// or changed and this acknowledgement is now stale.
+    stale_acknowledgements: Vec<&'static str>,
+    /// An [`ACKNOWLEDGED_SHEET_RULES`] entry whose own
+    /// `beaten_by_needle` no longer appears in `beaten_by_file` — the
+    /// thing that was supposed to stop this rule reaching a reader is
+    /// gone, but the acknowledgement does not know that.
+    no_longer_beaten: Vec<&'static str>,
+}
+
+fn sheet_leak_scan() -> SheetLeakResult {
+    let sheets = served_sheets();
+    let written = written_class_tokens();
+
+    let mut all_selectors: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+    let mut unacknowledged = Vec::new();
+
+    for (_name, text) in &sheets {
+        for (selector, value) in below_floor_declarations(text) {
+            all_selectors.insert(selector.clone());
+            if NON_TEXT_SHEET_SELECTORS.contains(&selector.as_str())
+                || EXEMPT_SHEET_RULES.contains(&selector.as_str())
+                || ACKNOWLEDGED_SHEET_RULES
+                    .iter()
+                    .any(|r| r.selector == selector)
+            {
+                continue;
+            }
+            if selector_is_reachable(&selector, &written) {
+                unacknowledged.push(UnacknowledgedSheetRule { selector, value });
+            }
+        }
+    }
+
+    let mut stale_acknowledgements = Vec::new();
+    let mut no_longer_beaten = Vec::new();
+    for rule in ACKNOWLEDGED_SHEET_RULES {
+        if !all_selectors.contains(rule.selector) {
+            stale_acknowledgements.push(rule.selector);
+            continue;
+        }
+        if !beaten_by_file_text(rule.beaten_by_file).contains(rule.beaten_by_needle) {
+            no_longer_beaten.push(rule.selector);
+        }
+    }
+
+    SheetLeakResult {
+        unacknowledged,
+        stale_acknowledgements,
+        no_longer_beaten,
+    }
 }
 
 #[cfg(test)]

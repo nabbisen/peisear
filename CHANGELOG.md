@@ -30,6 +30,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   own accessibility rules had already ruled out for being one theme
   tweak from failing; they now read at the same floor too. Nothing
   else about either one changed.
+- **The placeholder fix above missed one browser.** The grey hint text
+  also has its own rule for Firefox specifically (`::-moz-placeholder`),
+  which the first fix did not reach — found while building the guard
+  below, not reported by anything this project's own checks can see
+  (they only ever run against one browser engine), and fixed the same
+  way, to the same floor.
+- **A guard now refuses to ship a text colour that reaches a reader
+  through the stylesheet itself rather than through a class a
+  developer writes** — the mechanism behind every fix above.
+  **Eighteen sites were genuinely below the 4.5:1 a reader is owed**
+  (the seventeen placeholders and the account-menu line); **the eight
+  table headers were not** — they read 4.53:1, a pass, but on a
+  contrast tier this product's own accessibility rules had already
+  rejected as too fragile to trust, which is why they are fixed
+  anyway. Either kind now fails a build unless a developer names, in
+  code, what stops that colour from reaching a reader.
 
 ## [0.66.0] — 2026-11-22
 
