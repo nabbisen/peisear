@@ -169,8 +169,11 @@ consecutive series. Recorded in memory; the round's handling of it was
 exactly right.
 
 **And it happened a second time, on this candidate's own commit.** `d07c5ed`
-turned CI red the same way — this document cites `§10.23` for the same
-historical fact, moving that counted population 4 → 5. **This time the
+turned CI red the same way — this document cites the same dangling register
+number, for the same historical fact, moving that counted population
+4 → 5. *(The number is deliberately not repeated in this paragraph: writing
+it here is what moved the count to 6 on the fix commit, which is the
+clearest demonstration available of why the recurrence is structural.)* **This time the
 watcher was armed**, the failure was read from the job's own log, the
 population was **re-derived by hand** (three historical citations plus my
 two), and the constant moved with its reason. The recurrence is structural
