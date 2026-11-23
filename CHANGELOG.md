@@ -9,7 +9,27 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.67.0] — 2026-11-23
+
+**The colours no class writes.** The release before this one taught the
+contrast check to read all four of the theme's colour families. **It reads
+only the colours the product's own code asks for** — and eighteen pieces of
+text got theirs from the stylesheets instead, which is why nothing caught
+them: every form's placeholder hint, and the account menu's own line showing
+your e-mail address, which at **1.85:1** was the least readable text in the
+product.
+
+**Every repair takes a colour away rather than adding one**, and the theme
+is untouched: the same colours make the solid buttons and badges readable,
+so changing them would have traded one problem for several. The one red that
+passes stays where it was, on the button that actually deletes. Eight table
+headers were re-floored with them — they passed, by a margin of about one
+part in a hundred and fifty, on a tier this project had already rejected for
+exactly that reason.
+
+**And the check now reads the stylesheets too**, with every exception
+written down: what beats it, or why it is exempt. It was planted twice and
+watched failing both ways before being trusted.
 
 ### Fixed
 
@@ -46,6 +66,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rejected as too fragile to trust, which is why they are fixed
   anyway. Either kind now fails a build unless a developer names, in
   code, what stops that colour from reaching a reader.
+
+### What this release does not fix
+
+- **Twenty-one pieces of small print still read at 12px** — on the calendar,
+  the two notification surfaces, the search page and the account menu.
+  Nobody has read them yet; they keep their size until someone does.
+- **Nine links still show nothing at rest.** They underline when you point
+  at them, so until then they look like the words around them.
+- **Fifteen places still fade text by fading the whole element**, which the
+  checks cannot read; one of them sits inside a card that fades itself the
+  same way, so the two stack.
+- **Small controls still carry smaller labels than the fields beside them** —
+  eighteen buttons whose text reads a step down from what you type next to
+  them.
+- **One check still cannot resolve a stylesheet the way a browser does.**
+  The only way to be certain is to measure a rendered page, which this
+  release does by hand and does not yet automate.
+- **The documentation site has not published since 18 November.** A hosting
+  deployment is stuck in a state its own interface refuses to cancel. The
+  site's content is current as of that date; the checks beside it still run.
 
 ## [0.66.0] — 2026-11-22
 
