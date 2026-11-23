@@ -66,3 +66,37 @@
 .table :where(thead, tfoot) {
     color: oklch(var(--bc) / 0.7);
 }
+
+/* EDG-001 (series 066): daisyui.min.css's own `.input:focus,
+   .input:focus-within{outline-color:oklch(var(--bc)/.2)}` (same for
+   `.select`/`.textarea`) is 1.52:1 on base-100, ~1.51:1 on the page
+   body -- WCAG 1.4.11 asks 3:1 for a control's own state, and a focus
+   ring is exactly that. A keyboard reader tabbing through any of this
+   product's 67 text controls cannot see where they landed.
+
+   The same sheet already knows better: `.checkbox:focus-visible`
+   rings in full `base-content` (17.21:1), and `.btn`/`a` ring in
+   `currentColor`. Measured both full base-content (17.21:1 on
+   base-100, 14.05:1 on page body) and `/70` (6.42:1 / 5.84:1, this
+   project's own text floor) before choosing: both clear 3:1 with
+   room, so nothing in contrast terms decides it. Chose full strength
+   -- the checkbox's own tier, not a new one -- on the reasoning
+   `README.md §3.5` names: a reader who cannot see where they are is
+   worse served than one who finds a strong ring heavy, and it gives
+   every focusable control in this product one ring language instead
+   of two. `daisyui.min.css` is served first (layout.rs:68-70), so an
+   equal-specificity rule here wins on order, but `.input:focus` is a
+   class plus a pseudo-class -- the override matches that shape, not
+   just the bare class, or it loses. `outline-width`/`outline-offset`
+   untouched (2px/2px, already enough); this rule changes a colour
+   only. `:focus-within` carries no distinct site in this product
+   today -- every `.input` here is a plain `<input>`, never a
+   DaisyUI "input group" wrapper with a focusable child -- kept for
+   the day one exists, since it's the sheet's own selector rather
+   than one this rule invented. */
+.input:focus,
+.input:focus-within,
+.select:focus,
+.textarea:focus {
+    outline-color: oklch(var(--bc) / 1);
+}

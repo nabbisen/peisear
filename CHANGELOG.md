@@ -9,6 +9,19 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Tabbing to a text field, a dropdown, or a multi-line box did not
+  show you where you were.** The highlight that is supposed to appear
+  around a focused field was there, but too faint to see against the
+  page or the card around it — a keyboard user moving through a form
+  had no way to tell which field their next keystroke would land in.
+  It now shows clearly, the same strength the product already uses
+  for a checkbox's own focus ring, on every text field, dropdown, and
+  multi-line box in the product.
+
 ## [0.67.0] — 2026-11-23
 
 **The colours no class writes.** The release before this one taught the
