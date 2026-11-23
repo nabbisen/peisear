@@ -22,6 +22,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   than a class a guard could see. It now matches the product's own
   muted-text floor (6.42:1), the same colour already used everywhere
   else a reader is shown secondary text.
+- **The account menu's own line showing your email address was the
+  lowest-contrast text in the product** — two fades stacked on top of
+  each other brought it down to 1.85:1. It now reads at 6.42:1, the
+  same floor as everything else. **Every table's own column headings**
+  — eight tables across the product — read at a tier this product's
+  own accessibility rules had already ruled out for being one theme
+  tweak from failing; they now read at the same floor too. Nothing
+  else about either one changed.
 
 ## [0.66.0] — 2026-11-22
 

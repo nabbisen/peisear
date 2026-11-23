@@ -380,7 +380,28 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                         // the escaped width drove the whole document's horizontal
                         // scroll. `overflow-hidden` + `truncate` keep it inside the
                         // box in both the closed and open states.
-                        <li class="menu-title w-full min-w-0 overflow-hidden"><span class="text-xs opacity-70 truncate">{user.email}</span></li>
+                        // `PLC-002`: `opacity-70` dropped for an
+                        // explicit `text-base-content/70` -- a
+                        // component class, so `contrast_scan` already
+                        // governs it, and it beats the `<li>`'s own
+                        // inherited `.menu-title` fade (`base-content/40`)
+                        // outright: no stylesheet rule needed for this
+                        // one site. Measured as rendered: **1.85:1 ->
+                        // 6.42:1** -- this was the lowest-contrast text
+                        // in the product, and it is the reader's own
+                        // email address. `menu-title` itself is kept
+                        // rather than dropped: the alternative was
+                        // measured, not dismissed -- box size is
+                        // identical at both widths and both dropdown
+                        // states, but dropping it loses the section
+                        // label's own bold weight (700 -> 400, nothing
+                        // else restores it) and, reading the sheet's
+                        // own selector, would make this plain-text row
+                        // start matching `.menu`'s hover/grid treatment
+                        // for ordinary clickable items
+                        // (`li:not(.menu-title) > …:hover`), implying
+                        // interactivity this row does not have. Kept.
+                        <li class="menu-title w-full min-w-0 overflow-hidden"><span class="text-xs text-base-content/70 truncate">{user.email}</span></li>
                         // `TT-004`: DaisyUI's own `.menu` selector already
                         // blockifies a plain <a> here to `display: grid` with
                         // `align-items: center`, so the target grows without

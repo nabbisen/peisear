@@ -29,3 +29,20 @@
 .textarea::placeholder {
     color: oklch(var(--bc) / 0.7);
 }
+
+/* PLC-002 (series 065): daisyui.min.css's own
+   `.table :where(thead, tfoot){color:oklch(var(--bc)/.6)}` is the
+   same /60 tier NFR-A11Y-005's own entry already rejected as a floor
+   (a pass by 0.04 on base-100, failing on base-200) -- all eight
+   in-scope sites measured as rendered sit on a base-100 card today
+   (checked, not assumed from two named candidates), so none fails
+   outright, but the tier itself is the one this project's own policy
+   already ruled out for its margin. daisyui.min.css is served first
+   (layout.rs:68-70), so an equal-specificity rule here wins on sheet
+   order -- the opposite reason from the placeholder rule above; the
+   cascade still has to be read, not assumed, which is why this is a
+   separate rule rather than a shared one. Lands on base-content/70,
+   the same floor and the same reason. */
+.table :where(thead, tfoot) {
+    color: oklch(var(--bc) / 0.7);
+}
