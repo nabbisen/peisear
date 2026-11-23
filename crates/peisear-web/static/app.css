@@ -14,3 +14,18 @@
     outline: 2px dashed hsl(var(--p));
     outline-offset: -4px;
 }
+
+/* PLC-001 (series 065): tailwind.css's own `input::placeholder,
+   textarea::placeholder{color:#9ca3af;opacity:1}` is 2.54:1 on
+   base-100, 2.07:1 on the page body -- below NFR-A11Y-005's 4.5:1.
+   tailwind.css is served last (layout.rs:68-70), so a bare element
+   selector here loses on sheet order at equal specificity; a class
+   plus pseudo-element out-specifies it regardless of order. All
+   seventeen in-scope sites carry .input or .textarea, checked by
+   rendering, not assumed from the class list. Lands on base-content/70,
+   the floor contrast_scan already enforces on a component class, so
+   this rule and that guard agree by construction. */
+.input::placeholder,
+.textarea::placeholder {
+    color: oklch(var(--bc) / 0.7);
+}

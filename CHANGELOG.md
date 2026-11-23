@@ -9,6 +9,20 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Every form field's own placeholder text failed contrast.** The
+  grey hint shown in an empty name, description, title, goal, note,
+  slug or search box — seventeen fields across every form in the
+  product, including the header's own search box on every
+  authenticated page — read at 2.54:1 against the 4.5:1 a reader is
+  owed, because that colour came from the stylesheet itself rather
+  than a class a guard could see. It now matches the product's own
+  muted-text floor (6.42:1), the same colour already used everywhere
+  else a reader is shown secondary text.
+
 ## [0.66.0] — 2026-11-22
 
 **The colours the check could not see.** Fifteen places in this product put
