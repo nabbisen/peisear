@@ -74,7 +74,23 @@ architect's figures that way.
 | `PLC-002` | the account menu's email line (`layout.rs:383`) and every `<thead>` (8 sites across 11 tables) — **handed 2026-11-23**, sequenced after `PLC-001` since both edit `app.css` | **9** |
 | `PLC-001` | **closed** 2026-11-23 (`2be1002`) — one `app.css` rule, all 17 reached, cascade planted; **6.42:1** after | 17 |
 | `PLC-002` | **closed** 2026-11-23 (`4d4ed28`) — the account line to **6.42:1** from 1.85:1, the eight headers to 6.42:1 from 4.53:1, the `menu-title` alternative measured and rejected on hover semantics rather than on box size (which does not move) | 9 |
-| `PLC-003` | the guard, `NFR-A11Y-005`'s second amendment in two releases, one register entry, and `app.css`'s own stale comment — **handed 2026-11-23** | — |
+| `PLC-003` | the guard, `NFR-A11Y-005`'s second amendment in two releases, one register entry, and `app.css`'s own stale comment — **closed** 2026-11-23 (`6f82875`) | — |
+
+---
+
+## The series, closed
+
+**Three rounds, three reports. Eighteen sites were failing and are repaired** — seventeen placeholders at **2.54:1** and the account menu's own e-mail line at **1.85:1**, the worst text in the product, where two fades multiplied. **Eight more sat on the `/60` tier `NFR-A11Y-005` had already rejected** (4.53:1, a pass by 0.03) and were repaired as policy consistency, not as an active failure — *the series' own row and index said otherwise until `PLC-002` measured it, and that overstatement was the architect's.*
+
+**A tenth rule nobody had named**: `PLC-003` enumerated the pinned sheets rather than trusting the three families this series was scoped on, and found **ten** below-floor text-colour rules — including `input::-moz-placeholder`, which `PLC-001`'s own override never reached. **Fixed although it cannot be measured here**: this environment is Chromium-only, and the defect ships to readers regardless of what this container can sample.
+
+**The guard, and what it is honest about.** `contrast_scan` now carries a third mechanism: below-floor rules in the served sheets, restricted to selectors a component can reach, each **acknowledged with what beats it** or **exempt with its reason** (WCAG 1.4.3, in the code). **Planted twice and watched failing both ways** — a newly reachable class, and an acknowledgement whose override had vanished — and both plants re-run independently by the architect. What it cannot do is resolve a cascade in general; the browser-rendered sweep that could is **named as a candidate with its cost, not built**.
+
+**Two cascade directions, both planted**: `tailwind.css` is served **last** and had to be out-specified; `daisyui.min.css` is served **first** and was beaten on order. Neither was believed from the file — `§10.52` is why.
+
+**What the rounds corrected in the architect's own work**: the claim that all three families failed; a predicted 6.34:1 where three methods settle on **6.42:1**; an instruction to measure a placeholder *per background* when the control paints its own; an instruction to measure a search box at 390 px where the responsive design hides it; and — the serious one — **a red `main` on his own handing commit, which he had not watched**.
+
+**Nothing here cuts a release.** `0.67.0`'s candidate is the architect's to write against exit criteria 1–6; criterion 7 is the owner's.
 
 In the two served sheets, **109 selectors** set a text colour below the
 `/70` floor. The product reaches **three** families today, which is why this
