@@ -6,8 +6,18 @@
 **`0.66.0` taught `contrast_scan` to read all four of the theme's colour
 families. It reads only the classes a component writes.** Three kinds of
 text get their colour from the served stylesheets instead — by element
-selector, or baked into a component class — and all three are below
-`NFR-A11Y-005`'s 4.5:1 on the one theme this product ships.
+selector, or baked into a component class.
+
+**Corrected 2026-11-23, by the round that measured it.** This index first
+said all three were below `NFR-A11Y-005`'s 4.5:1. **Two are** — the
+seventeen placeholders at **2.54:1** and the account menu's own line at
+**1.85:1**. The eight table headers read **4.53:1**, which *passes by
+0.03*: all eight sit inside a `card bg-base-100`, including the two this
+index offered as "page body" candidates. They are repaired anyway, because
+**4.53:1 is the exact `/60` tier `NFR-A11Y-005` already rejected as a
+floor** and it fails the moment a table renders on the page body — but that
+is policy consistency on a fragile tier, not an active failure, and the
+difference is the architect's to have stated correctly the first time.
 
 ---
 
@@ -20,13 +30,24 @@ the conversion checked against daisyUI's published hexes — the method
 
 | what | where the colour comes from | resolved | `base-100` | `base-200` |
 |---|---|---|---|---|
-| form placeholders | `input::placeholder` in **both** served sheets | `#9ca3af` | **2.54:1** | **2.07:1** |
+| form placeholders | `input::placeholder` in **both** served sheets | `#9ca3af` | **2.54:1** | *n/a — see below* |
 | the account menu's email line | `.menu-title` = `base-content/40`, **plus** that site's own `opacity-70` | `#bebfc3` | **1.84:1** | — |
 | every table header | `.table :where(thead, tfoot)` = `base-content/60` | `#74767f` | **4.53:1** | **4.25:1** |
 | **the floor this project chose** | `base-content/70` | `#5d5f6a` | **6.34:1** | — |
 
 **AA is 4.5:1 for normal text; 3:1 for large text** (≥24 px, or ≥18.66 px
 bold). None of the three is large text.
+
+**And a placeholder has no page background at all** — `PLC-001`'s own
+finding, measured rather than argued: `.input`/`.textarea` set their own
+`background-color` from `--b1` unconditionally, so the control paints white
+whatever it sits on. Proved by sampling the lightest pixel inside a search
+box that sits directly on the grey page body and getting pure white. The
+`base-200` column above does not apply to placeholders. **After the repair
+they read 6.42:1** — not the 6.34:1 this index first predicted; three
+methods differ in the last decimal (composite 6.34, the requirement's own
+record 6.36, the rendered pixels 6.42) and **the rendered pixels are what a
+reader sees**.
 
 Two facts about that table worth carrying rather than re-deriving:
 
@@ -51,7 +72,9 @@ architect's figures that way.
 |---|---|---|
 | `PLC-001` | form placeholders — `issues.rs` 4, `teams.rs` 4, `settings.rs` 3, `projects.rs` 2, `sprints.rs` 2, `search.rs` 1, `layout.rs` 1 | **17** |
 | `PLC-002` | the account menu's email line (`layout.rs:383`) and every `<thead>` (8 sites across 11 tables) — **handed 2026-11-23**, sequenced after `PLC-001` since both edit `app.css` | **9** |
-| `PLC-003` | the guard, `NFR-A11Y-005`'s second amendment in two releases, one register entry, and `app.css`'s own stale comment | — |
+| `PLC-001` | **closed** 2026-11-23 (`2be1002`) — one `app.css` rule, all 17 reached, cascade planted; **6.42:1** after | 17 |
+| `PLC-002` | **closed** 2026-11-23 (`4d4ed28`) — the account line to **6.42:1** from 1.85:1, the eight headers to 6.42:1 from 4.53:1, the `menu-title` alternative measured and rejected on hover semantics rather than on box size (which does not move) | 9 |
+| `PLC-003` | the guard, `NFR-A11Y-005`'s second amendment in two releases, one register entry, and `app.css`'s own stale comment — **handed 2026-11-23** | — |
 
 In the two served sheets, **109 selectors** set a text colour below the
 `/70` floor. The product reaches **three** families today, which is why this
