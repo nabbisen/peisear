@@ -27,6 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   thing saying a field was there at all. It now shows clearly on
   every text field, dropdown, multi-line box, and checkbox in the
   product, whether or not it is currently focused.
+- **A guard now refuses to ship a border colour or a focus-outline
+  colour that reaches a reader through the stylesheet itself, below
+  the 3:1 a control's own edge and a keyboard's own ring are owed** —
+  the mechanism behind both fixes above, so neither can quietly
+  regress the next time the product's styling changes.
 
 ## [0.67.0] — 2026-11-23
 

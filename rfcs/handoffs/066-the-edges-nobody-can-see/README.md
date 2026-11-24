@@ -56,7 +56,7 @@ architect eleven times that way.
 |---|---|---|
 | `EDG-001` | focus rings — every `.input` (35), `.select` (23) and `.textarea` (9) — **closed** 2026-11-24 (`5878974`): full `base-content`, **17.21:1** on a card and 14.05:1 on the page body, the losing `/70` candidate measured (6.42/5.84) and its figures recorded at the rule | **67** |
 | `EDG-002` | boundaries — the same 67 plus `.checkbox` (3) — **closed** 2026-11-24 (`07b2151`): `/70`, after measuring that the architect's recommended `/50` fails at **2.73:1** on the page body | **70** |
-| `EDG-003` | the guard, the specification work, one register entry, and the `rfcs/` counted-population exclusion — **handed 2026-11-24** | — |
+| `EDG-003` | the guard, the specification work, one register entry, and the `rfcs/` counted-population exclusion — **closed** 2026-11-24: `contrast_scan` gains `boundary_leak_scan` (`§10.63`), `§10.62`'s own acknowledgement machinery moved from `color` to `border-color`/`outline-color`, planted twice; `NFR-A11Y-010` widened rather than the handoff's own recommended `NFR-A11Y-013` (a finding — `010` already named "the boundaries of interactive controls," unmeasured since 0.42.0); `rfcs/` citation count now shares `docs_scan` rule 5's exclusion of `rfcs/handoffs/`, re-derived to **zero** | — |
 
 **Every `.input`/`.select`/`.textarea` site in the product carries
 `-bordered`** — 35/35, 23/23, 9/9, checked rather than assumed — so the two
@@ -104,6 +104,16 @@ once for the ring that appears when a reader tabs to them.
   grep. The guard in `EDG-003` should fail the day one appears rather than
   pre-empting it here.
 - **`/today`'s content** — the owner's own open question.
+
+**Named a third time at the series' own close (`EDG-003`), which is itself
+worth recording**: none of the four items above moved during `066` — card
+and alert borders stay decoration beside a shadow, the text/type
+candidates stay text questions `NFR-A11Y-005` governs, `.radio`/`.toggle`
+still render at zero sites (confirmed by grep the same way, immediately
+before `EDG-003`'s own plant made one reachable in a scratch worktree and
+removed it again), and `/today` stays the owner's own question. Nothing
+here argues for widening; everything here is a candidate someone would
+have to scope on its own.
 
 ---
 

@@ -1,7 +1,30 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.67.0` (**the colours no class writes.**
+**Covers release**: `0.68.0` (**the edges nobody can see.**
+**`NFR-A11Y-010`'s own first sentence had named "the boundaries of
+interactive controls" since 0.42.0; this release is the first to measure
+that half of it.** Every `.input`/`.select`/`.textarea`/`.checkbox`
+boundary (70 sites) and every one of their own focus rings (67 sites) read
+`base-content/20` — **1.52:1** on a card, **1.50:1** on the page body —
+against WCAG 1.4.11's 3:1, the line that is often the only thing saying a
+field exists or where the keyboard landed. Raised to `/70` (**6.42:1** /
+**5.24:1**, the boundary) and full `base-content` (**17.21:1**, the ring),
+both tiers the product already had (`EDG-001`, `EDG-002`). **A correction
+along the way**: the series' own recommended `/50` tier would have shipped
+failing at **2.73:1** against the one page-body site this project keeps
+finding — a semi-transparent border composites over the control's own
+white fill, not the page behind it, which the series' own index had
+assumed — found by measuring both candidates rather than one, not by
+reading the rule (`EDG-002`). **`contrast_scan` gains a fourth mechanism,
+`§10.63`** — `§10.62`'s own static acknowledgement, one property over
+(`border-color`/`outline-color`, never `color`), naming what beats each
+reachable below-floor rule or why it is left, never computing a ratio;
+planted twice and watched failing both ways. **Widened `NFR-A11Y-010`
+rather than adding a recommended new sibling entry** — the entry already
+named the gap this series closed, so no new register number was spent and
+`Appendix A`'s counts are unchanged. The release before it, `0.67.0`, is
+**the colours no class writes.**
 **`NFR-A11Y-005` is amended a second time in two releases and `§10.62`
 opens and closes**: eighteen shipped sites rendered text below WCAG AA
 through a colour **no component class carries** — seventeen form
@@ -25,7 +48,7 @@ and through it
 (on GitHub; excluded from this book, see `docs/README.md`).
 Both retained unedited as the record of their releases
 **Language**: English (normative)
-**Prepared**: 2026-07-27 · **Amended**: 2026-11-23 (0.67.0 — `NFR-A11Y-005`'s acceptance widened a second time, to a third mechanism covering colours no component class writes at all; `§10.62` opened and closed. Before it, 2026-11-22 (0.66.0 — the same entry's acceptance widened to all four token families, `§10.61` opened and closed); before that, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — **checked again at this cut, and it moved, two cuts running**)
+**Prepared**: 2026-07-27 · **Amended**: 2026-11-24 (0.68.0 — `NFR-A11Y-010`'s acceptance widened to the other half of its own first sentence, the boundaries of interactive controls, unmeasured since 0.42.0; `§10.63` opened and closed. Before it, 2026-11-23 (0.67.0 — `NFR-A11Y-005`'s acceptance widened a second time, to a third mechanism covering colours no component class writes at all; `§10.62` opened and closed. Before it, 2026-11-22 (0.66.0 — the same entry's acceptance widened to all four token families, `§10.61` opened and closed); before that, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — checked again at that cut, and it moved, two cuts running))
 **Location**: `docs/specification/requirements.md`. **This document is the
 normative source of truth** — English only, placed 2026-09-24 (`DEC-020`,
 closed). See [the directory README](./README.md) for how its citations
@@ -2851,21 +2874,59 @@ meaning survives the loss of **hue**; this asks whether it survives low
 **contrast**, which is a different reader and a different failure.
 *Source*: derived; added 0.42.0 after `A11Y-001` measured the gap and
 `NFR-A11Y-004`'s 0.41.0 wording was found not to cover it.
-*Status*: **Met at 0.42.0** (`A11Y-007`) — both charts now separate their
-series at **3.40 : 1** and the worst series-to-background pairing at
-**4.22 : 1**, where they were 2.09 / 1.77 and 1.86. One pair of single-hue
-values is shared by both charts where four were tuned separately, and every
-figure was produced by **two independent OKLab→sRGB conversions agreeing to
-the 8-bit value**.
+*Status*: **Met at 0.42.0** (`A11Y-007`) for chart series — both charts
+separate their series at **3.40 : 1** and the worst series-to-background
+pairing at **4.22 : 1**, where they were 2.09 / 1.77 and 1.86. One pair of
+single-hue values is shared by both charts where four were tuned separately,
+and every figure was produced by **two independent OKLab→sRGB conversions
+agreeing to the 8-bit value**. **Widened and met again at 0.68.0**
+(`EDG-001`–`EDG-003`) for the other half of this entry's own first
+sentence — *the boundaries of interactive controls* — unmeasured since the
+words were written here at 0.42.0: every `.input`/`.select`/`.textarea`/
+`.checkbox` boundary (70 sites) read **1.52 : 1** on a card and **1.50 : 1**
+on the page body, and every one of their own focus rings (67 sites) read
+the same **1.52 : 1**/**1.50 : 1** — both against this entry's own 3:1, and
+both the only thing saying a field exists or where the keyboard landed.
+Raised to **6.42 : 1**/**5.24 : 1** (the boundary, `base-content/70`) and
+**17.21 : 1** (the ring, full `base-content` — the tier
+`.checkbox:focus-visible` already used), both tiers the product already
+had, no new colour. `contrast_scan`'s `boundary_leak_scan` (`§10.63`) holds
+the mechanism: `§10.62`'s own static acknowledgement, one property over
+(`border-color`/`outline-color` rather than `color`), naming what beats
+each reachable below-3:1 rule rather than computing a ratio.
 *Priority*: P1 — same reader `NFR-A11Y-005` protects, and the same product
-decision: a chart nobody can read is a chart that is not there.
-*Scope, stated so this is checkable*: it covers chart series, the median
-reference line, and any element whose shape or position carries meaning. It
-does **not** restate `NFR-A11Y-005` for text, and `contrast_scan`'s
-`text-base-content/{10..60}` rule is that requirement's, not this one's.
-*What is not claimed*: no audit of every graphical element has been done. Two
-charts were measured; the figure for anything else is unknown, and a status
-that said otherwise would be the shape `§10.17` records.
+decision: a chart nobody can read, or a control nobody can see the edge of
+or find with a keyboard, is not there.
+*Scope, stated so this is checkable*: chart series, the median reference
+line, any element whose shape or position carries meaning, and — since
+0.68.0 — the resting boundary and the focus indicator of `.input`/
+`.select`/`.textarea`/`.checkbox`. It does **not** restate `NFR-A11Y-005`
+for text, and `contrast_scan`'s `text-base-content/{10..60}` rule is that
+requirement's, not this one's. **Card and alert borders, `.radio`/
+`.toggle` (zero sites today), and the focused border left under its own
+ring on purpose** (`EDG-002 §4`: `.input:focus` outranks the bare class on
+specificity, so the ring alone carries the focus state, checked by
+screenshot) **are named and out** — `rfcs/handoffs/066-the-edges-nobody-
+can-see/README.md §4`.
+*What is not claimed*: no audit of every graphical or interactive element
+has been done. Two charts and the four form-control families above were
+measured; the figure for anything else — a card border, an alert border, a
+future `.radio`/`.toggle` site — is unknown, and a status that said
+otherwise would be the shape `§10.17` records.
+
+**A finding against the handoff's own recommendation, not a quiet
+substitution.** `EDG-003`'s own handoff (`rfcs/handoffs/066-the-edges-
+nobody-can-see/EDG-003-the-fifth-way-a-colour-escapes.md §2`) recommended
+adding a new sibling, `NFR-A11Y-013 — Non-text contrast`, the next free
+number in the family. **This entry already carries that exact title and
+WCAG 1.4.11's own criterion, and its own first sentence has named "the
+boundaries of interactive controls" since 0.42.0** — the gap `EDG-001`–
+`EDG-003` closed was that half of this sentence standing unmeasured, not
+that no entry existed to measure it against. A second entry of the same
+name would have duplicated this one rather than closing the gap it names.
+Widened here instead: no new number spent, so `Appendix A`'s Accessibility
+row (still twelve entries) and `spec_scan`'s 171-entry population are both
+unchanged by this round — recorded in `§10.63` as the correction it is.
 
 **NFR-A11Y-005 — Contrast**
 Text and background combinations MUST meet WCAG AA (4.5:1).
@@ -9932,6 +9993,94 @@ underlying sheet rule is still present).
 
 **Found by scoping a release, not by any check** — the same property
 `§10.60` and `§10.61` both opened on.
+
+### 10.63 The guard that reads a colour a component writes cannot read a non-text property the same sheet applies the same way — **closed**, `EDG-001`–`EDG-003`, series `066`, 0.68.0; opened and closed 2026-11-24 by the architect, scoping `066` and then building the guard the same series it was found in
+
+**Fourth instance, one property over.** `§10.60`–`§10.62` each found a
+below-floor `color:` reaching a reader some way the guard before it could
+not see. `EDG-001`/`EDG-002` found the same shape one property over:
+`daisyui.min.css` draws every `.input`/`.select`/`.textarea`/`.checkbox`
+boundary, and every one of their own focus outlines, at `base-content/20`
+— **1.52:1** on a card, **1.50:1** on the page body — against WCAG
+1.4.11's 3:1, not 1.4.3's 4.5:1, so no mechanism built for `color:` was
+ever in reach of it (`contrast_scan`'s own `NON_TEXT_SHEET_SELECTORS`
+comment had named this exact gap "out of this scan's own scope" at
+`§10.62`, without yet closing it).
+
+**The defect, named plainly**: a keyboard reader tabbing to any of the
+product's 67 text controls could not see where they landed, and on a card
+the resting `1.52:1` border was the only thing saying a field existed at
+all. Both repaired on tiers the product already had, no new colour:
+every focus ring to full `base-content` (**17.21:1**, `.checkbox:focus-
+visible`'s own existing tier), every resting boundary to `/70`
+(**6.42:1** on a card, **5.24:1** on the page body).
+
+**The architect's own error, the fifth across three series where a
+measurement was available and a figure he held in his head was not.**
+`EDG-002`'s own handoff recommended `/50`, predicting **3.16:1** against
+the page body by compositing the border over the page. **A browser does
+not do that**: `background-clip: border-box` is the default, so a
+semi-transparent border composites over *the control's own white fill*
+first — `/50` actually reads **2.73:1** there, below 3:1, which would have
+shipped the recommended tier as an active failure on the one page-body
+site this series keeps finding. Found by measuring both candidates rather
+than one, and re-deriving the contrast formula against a second,
+independent implementation before trusting the discrepancy — not by
+reading the rule, which is exactly what produced the wrong figure in the
+first place. The architect reproduced both figures and their cause
+independently on review and corrected the series index and the
+authorized row in the same commit as his acceptance.
+
+**The guard, `§10.62`'s own acknowledgement machinery moved one property
+over, not reinvented**: every below-`/70` `border-color:`/
+`outline-color:` declaration in the three served sheets, restricted to a
+selector some component can reach (`written_class_tokens()`, unchanged),
+must be named in `ACKNOWLEDGED_BOUNDARY_RULES` with the exact literal
+proving what beats it, or in `EXEMPT_BOUNDARY_RULES` for a rule left on
+purpose and checked by screenshot (the three focused-border sites — the
+ring alone carries the focus state, `EDG-002 §4`). **Resolving the alpha
+fraction is not computing the ratio**: the pinned sheet names it either
+inline or through a `--tw-border-opacity`/`--tw-outline-opacity` custom
+property re-declared by nearly every rule with a different value, and the
+guard reads either, within the one rule block the reference came from,
+without ever asking what the fraction composites against, which side of
+the border the adjacent colour sits on, or what the control's own fill
+paints — the three facts the architect's own `/50` figure needed and did
+not have. The figure beside each acknowledged selector is a human's,
+measured by screenshot; the test asserts the acknowledgement names a
+live rule and still-present proof, never that a ratio is right. **Planted
+twice**: `.toggle:focus-visible` (`/20`, zero `components/**` sites
+writing `class="toggle"` today) made reachable in a scratch worktree,
+caught unacknowledged by name; one of `app.css`'s own `EDG-001`/`EDG-002`
+overrides removed in another, caught as an acknowledgement whose proof
+had gone missing, also by name.
+
+**A finding against the handoff's own recommendation for where the
+specification entry goes, resolved by widening rather than adding.**
+`EDG-003`'s own handoff recommended a new sibling, `NFR-A11Y-013 —
+Non-text contrast`, the next free register number. `NFR-A11Y-010`
+already carries that exact title and WCAG 1.4.11's own criterion, and its
+own first sentence has named *"the boundaries of interactive controls"*
+since 0.42.0 — the gap this series closed was that the words had stood
+unmeasured for twenty-six releases, not that no entry existed to measure
+them against. Widened `NFR-A11Y-010`'s own *Status*/*Scope* instead of
+adding `NFR-A11Y-013`: no new register number spent, so `Appendix A`'s
+Accessibility row (still twelve entries, nine Implemented, one Deferred,
+two residual/unguarded) and `spec_scan`'s 171-entry population are both
+unchanged by this round — re-derived, not assumed, before this entry was
+written.
+
+**`spec_scan`'s own `rfcs/` citation count now shares `docs_scan` rule
+5's exclusion of `rfcs/handoffs/`** (execution records, not
+documentation) — the disagreement the architect's own `0.67.0` candidate
+reddened `main` on twice. Re-derived by hand over the remaining
+population (`rfcs/accepted/`, `rfcs/done/`, `rfcs/README.md`): **zero**
+citations of the four dangling numbers, stated as the record it is rather
+than the test being deleted.
+
+**Found by scoping a release, like `§10.60`–`§10.62`** — the fourth time
+this project's own guard population and a requirement's own words have
+turned out to disagree about where a check's reach actually ends.
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 

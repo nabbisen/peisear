@@ -179,6 +179,76 @@
 //! this situation (`css_scan`'s allowlist, `contrast_scan`'s own named
 //! exclusions above) — named as a `ROADMAP.md` candidate with its own
 //! cost rather than built here.
+//!
+//! ## `EDG-001`–`EDG-003`, `§10.63` — a fourth mechanism: the two
+//! colours above are not the only ones a sheet applies
+//!
+//! Every mechanism above reads `color:` — text a reader reads. Series
+//! `066` measured a **non-text** channel this scan had explicitly
+//! named out of its own scope ([`NON_TEXT_SHEET_SELECTORS`]'s own
+//! doc comment: "WCAG 1.4.11 ... out of this scan's own scope"):
+//! `border-color` and `outline-color`, the colours that say a control
+//! exists and where the keyboard is. `daisyui.min.css` draws every
+//! `.input`/`.select`/`.textarea`/`.checkbox` boundary and every one
+//! of their own focus outlines at `base-content/20` — **1.52:1** on a
+//! card, **1.50:1** on the page body, against WCAG 1.4.11's 3:1 — the
+//! exact shape `§10.62` found for text, one property over: a colour
+//! the *stylesheet* applies, reachable by a component's own written
+//! class, invisible to a scan that reads only `color:`.
+//!
+//! **`EDG-001`/`EDG-002` repaired both**, on the product's own existing
+//! tiers, no new colour: every focus ring to full `base-content`
+//! (**17.21:1**, the tier `.checkbox:focus-visible` already used),
+//! every resting boundary to `/70` (**6.42:1** on a card, **5.24:1** on
+//! the page body) — **not** the `/50` this series' own handoff
+//! recommended, which measured at **2.73:1** against the page body
+//! (a semi-transparent border composites over the *control's own
+//! white fill*, not the page behind it — `EDG-002`'s own correction,
+//! reproduced independently by the architect's review). The focused
+//! border is left at `/20` on purpose: `.input:focus` outranks the
+//! bare class on specificity, so the ring alone carries the focus
+//! state, checked by screenshot rather than assumed (`EDG-002 §4`).
+//!
+//! **The guard, [`boundary_leak_scan`], is `§10.62`'s own shape moved
+//! one property over, not reinvented.** [`below_floor_boundary_declarations`]
+//! enumerates every `border-color:`/`outline-color:` declaration in
+//! the three served sheets resolving (by the same `/70` floor
+//! already established, never a computed ratio — see below) below it,
+//! restricted to a selector [`selector_is_reachable`] admits. Each
+//! must be named in [`ACKNOWLEDGED_BOUNDARY_RULES`] (the exact literal
+//! proving what beats it) or [`EXEMPT_BOUNDARY_RULES`] (a deliberate,
+//! visually-checked choice to leave it, `EDG-002 §4`'s own three
+//! sites) — unnamed and reachable fails here, same as `§10.62`.
+//!
+//! **Resolving the fraction is not computing the ratio.** A
+//! `border-color`/`outline-color` declaration in the pinned sheet
+//! names its alpha one of two ways: inline (`oklch(var(--bc)/.2)`,
+//! `app.css`'s own repairs), or through a sibling custom property
+//! re-declared by nearly every rule with a different value
+//! (`.checkbox{border-color:…oklch(var(--bc)/var(--tw-border-opacity))…;
+//! --tw-border-opacity:0.2}`) — [`resolve_boundary_fraction`] reads
+//! either, within the one rule block the reference came from
+//! ([`enclosing_block_span`]), and compares the result to this
+//! project's own already-measured `/70` floor. **It never asks what
+//! that fraction composites against, which side of the border the
+//! adjacent colour sits on, or what the control's own fill paints** —
+//! the three facts `EDG-002` needed and the architect's own `/50`
+//! recommendation got wrong holding all three in his head. The figure
+//! beside each selector below is a human's, measured by screenshot,
+//! not this scan's: the test asserts the acknowledgement names a real
+//! rule and still-present proof, never that a ratio is right.
+//!
+//! **Planted twice** (`EDG-003`'s own review request has both):
+//! `.toggle:focus-visible` is `/.2` in the pinned sheet and zero
+//! `components/**` sites write `class="toggle"` today — made reachable
+//! in a scratch worktree, caught unacknowledged; one of `app.css`'s
+//! own `EDG-001`/`EDG-002` overrides removed in another, caught as an
+//! acknowledgement whose proof went missing.
+//!
+//! **Found by scoping a release, like `§10.60`–`§10.62`** — the fourth
+//! `010`'s own first sentence had always named ("the boundaries of
+//! interactive controls") and the fourth time this project's own
+//! `/50` figure needed a measurement to be trusted.
 
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -762,6 +832,353 @@ fn sheet_leak_scan() -> SheetLeakResult {
         unacknowledged,
         stale_acknowledgements,
         no_longer_beaten,
+    }
+}
+
+/// `border-color` and `outline-color` — the two non-text channels
+/// `§10.63` watches. `color` is `§10.62`'s own, deliberately not
+/// repeated here.
+const BOUNDARY_PROPERTIES: [&str; 2] = ["border-color", "outline-color"];
+
+/// Parses a CSS alpha fraction in *either* shape this project's
+/// pinned sheet actually uses — `".2"`/`".65"` (bare, `app.css`'s own
+/// inline literals before this round, and most of `daisyui.min.css`'s
+/// inline ones) or `"0.2"`/`"0.7"` (`app.css`'s own `EDG-001`/`EDG-002`
+/// repairs, and every `--tw-border-opacity`/`--tw-outline-opacity`
+/// sibling declaration) — into hundredths. [`parse_fraction_hundredths`]
+/// (`§10.62`'s own, used only by the `color:` scan above) does not
+/// parse the leading-zero form, because no `color:` declaration in any
+/// served sheet has ever used it; this round's own repairs do, so a
+/// second parser is honest about covering a shape the first was never
+/// asked to.
+fn parse_boundary_fraction(text: &str) -> Option<u32> {
+    let text = text.trim();
+    if let Some(decimal) = text.strip_prefix("0.") {
+        return match decimal.len() {
+            1 => Some(decimal.parse::<u32>().ok()? * 10),
+            2 => decimal.parse().ok(),
+            _ => None,
+        };
+    }
+    parse_fraction_hundredths(text)
+}
+
+/// The `base-content` fraction inside a `border-color`/`outline-color`
+/// value's own inline `oklch(var(--bc) / N)` or `oklch(var(--bc)/N)` —
+/// searched for *within* the value, not required as its prefix,
+/// because the pinned sheet wraps every resolved colour as
+/// `var(--fallback-bc,oklch(var(--bc)/N))`. `app.css`'s hand-formatted
+/// spaces around `/` differ from `daisyui.min.css`'s minified none, so
+/// both are accepted here rather than normalizing the sheet text
+/// first. Returns `None` if `oklch(var(--bc)` is absent, **or** if
+/// what follows its `/` is not a literal fraction at all — the
+/// `--tw-border-opacity`/`--tw-outline-opacity` custom-property shape
+/// (`.checkbox`'s own rule) reads `oklch(var(--bc)/var(--tw-border-
+/// opacity))` here, which [`resolve_boundary_fraction`] must fall
+/// through on rather than mistake for an unparsed literal.
+fn inline_bc_fraction(value: &str) -> Option<&str> {
+    let idx = value.find("oklch(var(--bc)")?;
+    let rest = &value[idx + "oklch(var(--bc)".len()..];
+    let rest = rest.trim_start().strip_prefix('/')?;
+    let rest = rest.trim_start();
+    let close = rest.find(')')?;
+    Some(rest[..close].trim())
+}
+
+/// The `{`...`}` span of the rule enclosing the declaration at `pos`,
+/// exclusive of the braces — the forward counterpart to
+/// [`enclosing_selector`]'s backward walk, needed only here: a
+/// `--tw-border-opacity`/`--tw-outline-opacity` custom property is
+/// re-declared by nearly every rule in the pinned sheet with a
+/// different value each time, so resolving one means staying inside
+/// the single rule block the reference came from, never the sheet at
+/// large.
+fn enclosing_block_span(text: &str, pos: usize) -> (usize, usize) {
+    let bytes = text.as_bytes();
+    let mut i = pos;
+    let mut depth: i32 = 0;
+    let mut open = None;
+    while i > 0 {
+        i -= 1;
+        match bytes[i] {
+            b'}' => depth += 1,
+            b'{' => {
+                if depth == 0 {
+                    open = Some(i);
+                    break;
+                }
+                depth -= 1;
+            }
+            _ => {}
+        }
+    }
+    let open = open.expect("a border-color/outline-color declaration has an enclosing rule");
+    let mut j = open + 1;
+    let mut close_depth: i32 = 1;
+    while j < bytes.len() && close_depth > 0 {
+        match bytes[j] {
+            b'{' => close_depth += 1,
+            b'}' => close_depth -= 1,
+            _ => {}
+        }
+        j += 1;
+    }
+    (open + 1, j - 1)
+}
+
+/// The `base-content` fraction (in hundredths) a `border-color`/
+/// `outline-color` declaration's own `value` resolves to, or `None`
+/// if it is not a `base-content` fraction at all (`currentColor`,
+/// `transparent`, a semantic-family token — out of this floor's own
+/// concept, the same bound [`below_floor_declarations`] draws for
+/// `color:`). **Never composites, never asks what is adjacent, never
+/// asks what the control's own fill paints** — see this module's own
+/// `§10.63` doc comment for why that line is not crossed.
+fn resolve_boundary_fraction(sheet: &str, decl_pos: usize, value: &str) -> Option<u32> {
+    if let Some(frac) = inline_bc_fraction(value)
+        && let Some(hundredths) = parse_boundary_fraction(frac)
+    {
+        return Some(hundredths);
+    }
+    let var_name = if value.contains("var(--tw-border-opacity)") {
+        "--tw-border-opacity"
+    } else if value.contains("var(--tw-outline-opacity)") {
+        "--tw-outline-opacity"
+    } else {
+        return None;
+    };
+    let (block_start, block_end) = enclosing_block_span(sheet, decl_pos);
+    let block = &sheet[block_start..block_end];
+    let needle = format!("{var_name}:");
+    let pos = block.find(&needle).unwrap_or_else(|| {
+        panic!(
+            "{var_name} referenced in a border/outline-color declaration but not \
+             set in the same rule -- this scan's assumption about how the vendored \
+             sheet shapes this custom property no longer holds, re-derive by hand"
+        )
+    });
+    let value_start = pos + needle.len();
+    let value_end = block[value_start..]
+        .find([';', '}'])
+        .map(|i| value_start + i)
+        .unwrap_or(block.len());
+    parse_boundary_fraction(block[value_start..value_end].trim())
+}
+
+/// Every below-`/70` `border-color:`/`outline-color:` declaration's
+/// `(selector, property, value)` in `sheet` — `§10.63`'s own
+/// counterpart to [`below_floor_declarations`], one property name at
+/// a time since the same selector can carry one acknowledged property
+/// and one exempt one (`.input:focus,.input:focus-within`'s own
+/// `outline-color`, acknowledged, and `border-color`, exempt).
+fn below_floor_boundary_declarations(sheet: &str) -> Vec<(String, &'static str, String)> {
+    let mut out = Vec::new();
+    for property in BOUNDARY_PROPERTIES {
+        let needle = format!("{property}:");
+        let mut search_from = 0;
+        while let Some(rel) = sheet[search_from..].find(needle.as_str()) {
+            let abs = search_from + rel;
+            let colon_pos = abs + property.len();
+            let value_end = sheet[colon_pos + 1..]
+                .find([';', '}'])
+                .map(|i| colon_pos + 1 + i)
+                .unwrap_or(sheet.len());
+            let value = sheet[colon_pos + 1..value_end].trim();
+            search_from = colon_pos + 1;
+            let Some(hundredths) = resolve_boundary_fraction(sheet, abs, value) else {
+                continue;
+            };
+            if hundredths >= 70 {
+                continue;
+            }
+            let selector = enclosing_selector(sheet, abs);
+            out.push((
+                selector,
+                property,
+                format!("{value} ({hundredths} hundredths)"),
+            ));
+        }
+    }
+    out
+}
+
+/// A below-floor `border-color`/`outline-color` rule reachable by a
+/// component, with the exact literal that must still be found before
+/// it is trusted to never reach a reader — `§10.62`'s own
+/// [`AcknowledgedSheetRule`], keyed by `(selector, property)` since
+/// one selector can carry findings on both properties.
+struct AcknowledgedBoundaryRule {
+    selector: &'static str,
+    property: &'static str,
+    /// Path from `CARGO_MANIFEST_DIR` of the `app.css` rule that beats
+    /// this one.
+    beaten_by_file: &'static str,
+    /// A literal substring of `beaten_by_file` proving the repair is
+    /// still there.
+    beaten_by_needle: &'static str,
+}
+
+/// Every reachable below-`/70` boundary/focus rule `EDG-001`/`EDG-002`
+/// repaired, and what beats each — the selector exactly as the pinned
+/// sheet itself writes it (`daisyui.min.css` gives `.input-bordered`,
+/// `.select-bordered`, `.textarea-bordered` and `.checkbox` each their
+/// own single-class rule, never one joined selector, even though
+/// `app.css`'s own repair covers all four in one), normalized the same
+/// way [`ACKNOWLEDGED_SHEET_RULES`] already is.
+const ACKNOWLEDGED_BOUNDARY_RULES: &[AcknowledgedBoundaryRule] = &[
+    AcknowledgedBoundaryRule {
+        selector: ".input-bordered",
+        property: "border-color",
+        beaten_by_file: "static/app.css",
+        beaten_by_needle: "border-color: oklch(var(--bc) / 0.7)",
+    },
+    AcknowledgedBoundaryRule {
+        selector: ".select-bordered",
+        property: "border-color",
+        beaten_by_file: "static/app.css",
+        beaten_by_needle: "border-color: oklch(var(--bc) / 0.7)",
+    },
+    AcknowledgedBoundaryRule {
+        selector: ".textarea-bordered",
+        property: "border-color",
+        beaten_by_file: "static/app.css",
+        beaten_by_needle: "border-color: oklch(var(--bc) / 0.7)",
+    },
+    AcknowledgedBoundaryRule {
+        selector: ".checkbox",
+        property: "border-color",
+        beaten_by_file: "static/app.css",
+        beaten_by_needle: "border-color: oklch(var(--bc) / 0.7)",
+    },
+    AcknowledgedBoundaryRule {
+        selector: ".input:focus,.input:focus-within",
+        property: "outline-color",
+        beaten_by_file: "static/app.css",
+        beaten_by_needle: "outline-color: oklch(var(--bc) / 1)",
+    },
+    AcknowledgedBoundaryRule {
+        selector: ".select:focus",
+        property: "outline-color",
+        beaten_by_file: "static/app.css",
+        beaten_by_needle: "outline-color: oklch(var(--bc) / 1)",
+    },
+    AcknowledgedBoundaryRule {
+        selector: ".textarea:focus",
+        property: "outline-color",
+        beaten_by_file: "static/app.css",
+        beaten_by_needle: "outline-color: oklch(var(--bc) / 1)",
+    },
+];
+
+/// A below-floor `border-color`/`outline-color` rule left exactly as
+/// the pinned sheet draws it, on purpose, checked rather than
+/// assumed: `EDG-002 §4` screenshotted a focused field and found the
+/// ring (acknowledged above, full `base-content`, 17.21:1) carries the
+/// focus state alone, 2px outside a border specificity leaves faint —
+/// raising it too would spend effort on a state the ring already
+/// makes unambiguous. Exempt regardless of reachability (all three are
+/// reachable; the reason is a visual decision, not an absence of a
+/// reader), the same shape [`EXEMPT_SHEET_RULES`] uses for a different
+/// reason.
+struct ExemptBoundaryRule {
+    selector: &'static str,
+    property: &'static str,
+}
+
+const EXEMPT_BOUNDARY_RULES: &[ExemptBoundaryRule] = &[
+    ExemptBoundaryRule {
+        selector: ".input:focus,.input:focus-within",
+        property: "border-color",
+    },
+    ExemptBoundaryRule {
+        selector: ".select:focus",
+        property: "border-color",
+    },
+    ExemptBoundaryRule {
+        selector: ".textarea:focus",
+        property: "border-color",
+    },
+];
+
+/// One below-floor boundary/focus rule found reachable by a component
+/// but named in neither [`ACKNOWLEDGED_BOUNDARY_RULES`] nor
+/// [`EXEMPT_BOUNDARY_RULES`] — `§10.62`'s own
+/// [`UnacknowledgedSheetRule`], one property over.
+#[derive(Debug)]
+struct UnacknowledgedBoundaryRule {
+    selector: String,
+    property: &'static str,
+    value: String,
+}
+
+/// This scan's full result — `§10.62`'s own [`SheetLeakResult`], widened
+/// with [`stale_exemptions`][Self::stale_exemptions] since
+/// [`EXEMPT_BOUNDARY_RULES`] (unlike [`EXEMPT_SHEET_RULES`]) names a
+/// specific rule rather than an unconditional carve-out, so it can go
+/// stale the same way an acknowledgement can.
+struct BoundaryLeakResult {
+    unacknowledged: Vec<UnacknowledgedBoundaryRule>,
+    stale_acknowledgements: Vec<(&'static str, &'static str)>,
+    no_longer_beaten: Vec<(&'static str, &'static str)>,
+    /// An [`EXEMPT_BOUNDARY_RULES`] entry no longer found as a
+    /// below-floor rule in any served sheet.
+    stale_exemptions: Vec<(&'static str, &'static str)>,
+}
+
+fn boundary_leak_scan() -> BoundaryLeakResult {
+    let sheets = served_sheets();
+    let written = written_class_tokens();
+
+    let mut all_pairs: std::collections::BTreeSet<(String, &'static str)> =
+        std::collections::BTreeSet::new();
+    let mut unacknowledged = Vec::new();
+
+    for (_name, text) in &sheets {
+        for (selector, property, value) in below_floor_boundary_declarations(text) {
+            all_pairs.insert((selector.clone(), property));
+            if EXEMPT_BOUNDARY_RULES
+                .iter()
+                .any(|r| r.selector == selector && r.property == property)
+                || ACKNOWLEDGED_BOUNDARY_RULES
+                    .iter()
+                    .any(|r| r.selector == selector && r.property == property)
+            {
+                continue;
+            }
+            if selector_is_reachable(&selector, &written) {
+                unacknowledged.push(UnacknowledgedBoundaryRule {
+                    selector,
+                    property,
+                    value,
+                });
+            }
+        }
+    }
+
+    let mut stale_acknowledgements = Vec::new();
+    let mut no_longer_beaten = Vec::new();
+    for rule in ACKNOWLEDGED_BOUNDARY_RULES {
+        if !all_pairs.contains(&(rule.selector.to_string(), rule.property)) {
+            stale_acknowledgements.push((rule.selector, rule.property));
+            continue;
+        }
+        if !beaten_by_file_text(rule.beaten_by_file).contains(rule.beaten_by_needle) {
+            no_longer_beaten.push((rule.selector, rule.property));
+        }
+    }
+
+    let mut stale_exemptions = Vec::new();
+    for rule in EXEMPT_BOUNDARY_RULES {
+        if !all_pairs.contains(&(rule.selector.to_string(), rule.property)) {
+            stale_exemptions.push((rule.selector, rule.property));
+        }
+    }
+
+    BoundaryLeakResult {
+        unacknowledged,
+        stale_acknowledgements,
+        no_longer_beaten,
+        stale_exemptions,
     }
 }
 

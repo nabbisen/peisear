@@ -171,21 +171,33 @@ fn rule_1_is_clean_on_the_real_tree() {
 /// (`011`'s candidate and `013`'s `LAYOUT-003` for `§10.24`, `014`'s
 /// candidate for `§10.23`) plus those two -- five.
 ///
-/// **Recorded as a candidate rather than worked around**: `docs_scan`
-/// rule 5 excludes `rfcs/handoffs/` by name as *execution records, not
-/// documentation*, and this count includes them, so every handoff or
-/// release candidate that mentions one of four numbers moves a counted
-/// population and turns CI red. Twice now. Whether this count should
-/// share rule 5's own exclusion is a decision, not a cleanup, and it
-/// belongs in `ROADMAP.md` until someone takes it.
+/// **`EDG-003` (`§10.63`): this count now shares `docs_scan` rule 5's
+/// own exclusion of `rfcs/handoffs/`** (execution records, not
+/// documentation) — the disagreement between the two scans' own
+/// populations that reddened `main` twice at `0.67.0`, named above as
+/// a candidate rather than worked around. The old filter (dropping
+/// only `rfcs/handoffs/050-the-specification-checks-itself/`, this
+/// series' own self-referential prose) is now redundant — it names a
+/// subdirectory of `rfcs/handoffs/`, which the new filter already
+/// drops wholesale — and is removed rather than kept beside it.
+///
+/// **5 -> 0.** Every one of the five citations this test's own history
+/// recorded (`011`'s and `014`'s release candidates, `013`'s
+/// `LAYOUT-003`, `PLC-003`'s own handoff, `0.67.0`'s own release
+/// candidate) lived inside `rfcs/handoffs/` — re-walked by hand against
+/// the remaining population (`rfcs/accepted/`, `rfcs/done/`,
+/// `rfcs/README.md`) to confirm zero, not assumed from the arithmetic.
+/// **Stated as the record it is, not deleted**: a dangling-citation
+/// count of zero inside the two scans' now-shared population is still
+/// a fact worth re-deriving the next time either scope changes, the
+/// same reasoning `§10.36` gives for every other counted-not-enforced
+/// population in this file.
 #[test]
 fn rfcs_citations_to_the_four_numbers_are_counted_not_enforced() {
     let root = repo_root();
     let mut files = Vec::new();
     walk_markdown_unfiltered(&root, &root.join("rfcs"), &mut files);
-    files.retain(|(path, _)| {
-        !path.starts_with("rfcs/handoffs/050-the-specification-checks-itself/")
-    });
+    files.retain(|(path, _)| !path.starts_with("rfcs/handoffs/"));
     let dangling: BTreeSet<u32> = [20, 22, 23, 24].into_iter().collect();
     let mut count = 0usize;
     for (_, text) in &files {
@@ -196,8 +208,9 @@ fn rfcs_citations_to_the_four_numbers_are_counted_not_enforced() {
         }
     }
     assert_eq!(
-        count, 5,
-        "SPEC-001 §3's own measured count of dangling-number citations inside rfcs/ -- a \
+        count, 0,
+        "SPEC-001 §3's own measured count of dangling-number citations inside rfcs/, now \
+         sharing docs_scan rule 5's own exclusion of rfcs/handoffs/ (EDG-003, §10.63) -- a \
          historical record, not enforced; update this count only if the real population changed"
     );
 }

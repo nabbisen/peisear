@@ -184,3 +184,87 @@ fn every_acknowledged_sheet_rule_is_still_live_and_still_beaten() {
         result.no_longer_beaten.join("\n")
     );
 }
+
+/// `EDG-001`–`EDG-003` (`§10.63`): no `components/**`-reachable element
+/// meets a below-`/70` `border-color` or `outline-color` through a rule
+/// the *stylesheet* applies — `§10.62`'s own shape, one property over.
+/// Every such rule must be named in `ACKNOWLEDGED_BOUNDARY_RULES` (what
+/// beats it) or `EXEMPT_BOUNDARY_RULES` (a deliberate, visually-checked
+/// choice to leave it, `EDG-002 §4`); one that is neither fails here,
+/// not downstream in a screenshot nobody takes.
+#[test]
+fn every_reachable_boundary_leak_is_acknowledged_or_exempt() {
+    let result = boundary_leak_scan();
+    assert!(
+        result.unacknowledged.is_empty(),
+        "these stylesheet rules apply a below-/70 border-color or \
+         outline-color to an element, or to a class some component \
+         actually writes, and nothing in ACKNOWLEDGED_BOUNDARY_RULES/\
+         EXEMPT_BOUNDARY_RULES names what beats them or why they're left \
+         -- see this module's own doc comment (`EDG-001`-`EDG-003`, \
+         `§10.63`):\n{}",
+        result
+            .unacknowledged
+            .iter()
+            .map(|r| format!("  {} {} -> {}", r.selector, r.property, r.value))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
+
+/// An acknowledgement that no longer points at anything live is itself
+/// a defect, in either of its two parts — `§10.62`'s own
+/// [`every_acknowledged_sheet_rule_is_still_live_and_still_beaten`],
+/// one property over.
+#[test]
+fn every_acknowledged_boundary_rule_is_still_live_and_still_beaten() {
+    let result = boundary_leak_scan();
+    assert!(
+        result.stale_acknowledgements.is_empty(),
+        "these ACKNOWLEDGED_BOUNDARY_RULES (selector, property) pairs no \
+         longer appear as a below-/70 rule in any served sheet -- the \
+         vendored CSS moved or changed and this acknowledgement is now \
+         stale:\n{}",
+        result
+            .stale_acknowledgements
+            .iter()
+            .map(|(s, p)| format!("  {s} {p}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+    assert!(
+        result.no_longer_beaten.is_empty(),
+        "these ACKNOWLEDGED_BOUNDARY_RULES entries' own beaten_by_needle \
+         no longer appears in beaten_by_file -- the thing that was \
+         supposed to stop this rule reaching a reader is gone, but the \
+         acknowledgement does not know that:\n{}",
+        result
+            .no_longer_beaten
+            .iter()
+            .map(|(s, p)| format!("  {s} {p}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
+
+/// An exemption that no longer points at anything live is the same
+/// defect shape as a stale acknowledgement, named separately because
+/// `EXEMPT_BOUNDARY_RULES` (unlike `EXEMPT_SHEET_RULES`'s unconditional
+/// WCAG 1.4.3 carve-out) names a specific rule and can go stale the
+/// same way.
+#[test]
+fn every_exempt_boundary_rule_is_still_live() {
+    let result = boundary_leak_scan();
+    assert!(
+        result.stale_exemptions.is_empty(),
+        "these EXEMPT_BOUNDARY_RULES (selector, property) pairs no longer \
+         appear as a below-/70 rule in any served sheet -- the vendored \
+         CSS moved and this exemption is now stale:\n{}",
+        result
+            .stale_exemptions
+            .iter()
+            .map(|(s, p)| format!("  {s} {p}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
