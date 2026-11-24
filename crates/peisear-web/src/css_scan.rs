@@ -465,7 +465,14 @@ fn static_js_files() -> Vec<PathBuf> {
 /// consumer: a gate script that matches a named hook in fetched HTML
 /// rather than `static/*.js`'s client-side `querySelector`. One
 /// directory up from `static_dir()`'s own `crates/peisear-web`.
-fn browser_check_files() -> Vec<PathBuf> {
+///
+/// `pub(crate)` since `GATE-001` (`dec_007_ci_scan`): the same file
+/// listing this scan already walks to check the `JS_HOOK_ALLOWLIST` is
+/// what "every gate is wired into `test.yml`" needs to know the
+/// population of, and re-walking the directory a second, subtly
+/// different way is exactly what `for_loop_targets`'s own cross-module
+/// reuse (`TT-003`) already avoids for the analogous case.
+pub(crate) fn browser_check_files() -> Vec<PathBuf> {
     let dir = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../browser-checks")
         .canonicalize()

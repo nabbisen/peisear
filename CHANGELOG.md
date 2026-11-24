@@ -9,6 +9,18 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **A check that catches a disclosure control losing its own marker or
+  its own touch target was written, passed every time it was run by
+  hand, and nothing ever ran it except a person typing its name.**
+  Thirteen "show more" controls across the product — on the project
+  board, settings, today's summary, and more — had no one actually
+  confirming they still worked, release after release. It now runs on
+  every change, the same as every other check in the product.
+
 ## [0.68.0] — 2026-11-24
 
 **The edges nobody can see.** Three releases went into the colours of the

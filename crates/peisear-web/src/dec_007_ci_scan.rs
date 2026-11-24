@@ -94,7 +94,34 @@
 //! merely "some `--test` job for `peisear-web` exists somewhere" —
 //! narrowing the `Test` shape's claim for this one crate without
 //! touching what it means for any other.
+//!
+//! ## `GATE-001` — a second inventory this module now joins: `browser-checks/`'s own gates
+//!
+//! Everything above answers "does `test.yml` run what `DEC-007`'s own
+//! block names." `browser-checks/*.mjs` is not in that block at all
+//! (`browser-checks/README.md` says so in its own words — a Rust
+//! integration test here would put Chromium on every `cargo test
+//! --workspace`), so nothing joined its own population —
+//! [`browser_check_files`], already walked by `css_scan` to check its
+//! allowlist — against this module's own [`test_yml_run_lines`]. The
+//! gap that left: `disclosure-marker-gate.mjs` passed locally since
+//! `DISC-001` (series `060`) and was never run by anything but a human
+//! typing its name, found only because `git log -S` on `test.yml`
+//! returns no commits mentioning it.
+//!
+//! **The population is not a `*-gate.mjs` glob.** `undo-mousedown-trap.mjs`
+//! is a real gate — wired, load-bearing (`A11Y-005`'s own defect) — and
+//! does not end in `-gate.mjs`; a glob would have passed while it sat
+//! outside its own population, the exact shape this mechanism exists
+//! to prevent one level up. So the population is **every** `.mjs` file
+//! `browser_check_files()` finds, minus [`EXEMPT_BROWSER_CHECK_FILES`]
+//! (each with its own named reason), and every remaining file must
+//! appear, by its own bare filename, inside some [`test_yml_run_lines`]
+//! entry — `node browser-checks/<name>` is the only shape any wired
+//! gate's own `run:` line takes, checked across all five before this
+//! was trusted.
 
+use crate::css_scan::browser_check_files;
 use crate::dec_007_scan::{appears_at_word_boundary, dec_007_block};
 use std::fs;
 use std::path::Path;
@@ -245,6 +272,36 @@ pub(crate) fn for_loop_targets(block: &str) -> Vec<String> {
         .split_whitespace()
         .filter(|tok| *tok != "\\")
         .map(str::to_string)
+        .collect()
+}
+
+/// A `browser-checks/*.mjs` file this scan does not require to appear
+/// in any `test.yml` `run:` line, with the reason — `GATE-001`'s own
+/// shape, `PLC-003`/`EDG-003`'s acknowledgement lists one directory
+/// over: a named exclusion carrying its own reason, never a glob.
+const EXEMPT_BROWSER_CHECK_FILES: &[(&str, &str)] = &[
+    ("cdp.mjs", "the shared CDP harness, not a gate itself"),
+    (
+        "doc-screenshots.mjs",
+        "not a gate -- asserts nothing, exits 0 whenever the pages render, and \
+         browser-checks/README.md says in its own words that it must not be \
+         added to the browser-overflow-gate CI job",
+    ),
+];
+
+/// Every `browser-checks/*.mjs` file's own bare filename, found by
+/// [`browser_check_files`] and not named in
+/// [`EXEMPT_BROWSER_CHECK_FILES`], that does not appear inside any
+/// [`test_yml_run_lines`] entry — `node browser-checks/<name>` is the
+/// only shape a wired gate's own `run:` line takes, so a bare substring
+/// match is enough and does not need a second parser.
+fn unwired_browser_check_files() -> Vec<String> {
+    let run_lines = test_yml_run_lines();
+    browser_check_files()
+        .into_iter()
+        .filter_map(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+        .filter(|name| !EXEMPT_BROWSER_CHECK_FILES.iter().any(|(n, _)| n == name))
+        .filter(|name| !run_lines.iter().any(|line| line.contains(name.as_str())))
         .collect()
 }
 

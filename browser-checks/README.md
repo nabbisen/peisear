@@ -86,6 +86,20 @@ attention.
   gate's own five widths, on the pages it already visits," literally,
   not a second list kept in sync by hand. Its own port (`4177`), own
   scratch server and database.
+- `disclosure-marker-gate.mjs` — **a fifth gate** (`DISC-001`, `060`;
+  `MARK-001`/`MARK-002`, `061`; wired by `GATE-001`, `067`, `§10.58`).
+  Asserts the one property no source scan can see: a `<summary>`'s own
+  computed `display` stays `list-item` — its native `::marker` box
+  survives `grow_text()`'s `inline-flex items-center` — while its own
+  box still measures at least 44×44, read together per site since
+  either one failing alone is a different defect. Covers all thirteen
+  checkable `<summary>` controls this product has, across six pages, at
+  two widths; the fourteenth (`issues.rs`'s own named escalation
+  exclusion) is deliberately below 44×44 and out of this gate's own
+  scope. Written alongside `DISC-001`/`MARK-001`/`MARK-002` but never
+  wired into a CI job until `GATE-001` — a human typing its name was
+  the only thing that had ever run it. Its own port (`4233`), own
+  scratch server and database.
 - `doc-screenshots.mjs` — **not a gate** (`DOCS-004`, owner request;
   `DOCS-007` closed its own escalation). Starts its own scratch instance on
   its own port (`4176` by default) and reuses `overflow-gate.mjs`'s own
@@ -129,6 +143,7 @@ node browser-checks/overflow-gate.mjs
 node browser-checks/undo-mousedown-trap.mjs
 node browser-checks/drag-outcome-gate.mjs
 node browser-checks/occlusion-gate.mjs
+node browser-checks/disclosure-marker-gate.mjs
 ```
 
 Needs a Chrome-family browser on `$PATH` (`google-chrome-stable`,
@@ -136,16 +151,17 @@ Needs a Chrome-family browser on `$PATH` (`google-chrome-stable`,
 pointing at one. `PEISEAR_BIN` overrides the binary path (default
 `target/debug/peisear`); `PEISEAR_PORT` overrides the scratch port.
 
-**The four scripts default to different ports — `4173`, `4174`,
-`4175` and `4177` — and each starts and tears down its own server and
-scratch database.** That is why they share one CI job safely. **But
-`PEISEAR_PORT` is read by all four**, so setting it gives them the
-*same* port. Sequentially that is harmless, since each script's
-`finally` block kills its server before the next starts. **In parallel
-it is a silent collision**, and `PEISEAR_PORT` is the reason: if these
-are ever run concurrently, give each its own port rather than assuming
-the defaults still apply. Recorded here because the defaults make the
-hazard invisible until someone parallelises the job to save a minute.
+**The five scripts default to different ports — `4173`, `4174`,
+`4175`, `4177` and `4233` — and each starts and tears down its own
+server and scratch database.** That is why they share one CI job
+safely. **But `PEISEAR_PORT` is read by all five**, so setting it
+gives them the *same* port. Sequentially that is harmless, since each
+script's `finally` block kills its server before the next starts. **In
+parallel it is a silent collision**, and `PEISEAR_PORT` is the reason:
+if these are ever run concurrently, give each its own port rather than
+assuming the defaults still apply. Recorded here because the defaults
+make the hazard invisible until someone parallelises the job to save a
+minute.
 
 ## `DEC-048`, condition by condition
 

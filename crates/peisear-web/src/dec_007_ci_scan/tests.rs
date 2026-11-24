@@ -82,3 +82,54 @@ fn every_dec_007_for_loop_target_has_a_matching_ci_run_line() {
             .join("\n")
     );
 }
+
+/// `GATE-001`: every `browser-checks/*.mjs` file is either named in
+/// `EXEMPT_BROWSER_CHECK_FILES` (with its own reason) or appears inside
+/// some `test.yml` `run:` line — `disclosure-marker-gate.mjs`'s own
+/// shape (written, passing, never wired) fails here by name rather
+/// than by a human noticing `git log -S` returns nothing.
+#[test]
+fn every_browser_check_is_wired_or_exempt() {
+    let files = browser_check_files();
+    assert!(
+        !files.is_empty(),
+        "found no browser-checks/*.mjs files -- the layout assumption this scan \
+         depends on may have changed"
+    );
+    let unwired = unwired_browser_check_files();
+    assert!(
+        unwired.is_empty(),
+        "these browser-checks/*.mjs files are neither named in \
+         EXEMPT_BROWSER_CHECK_FILES nor found inside any test.yml `run:` line -- a \
+         gate that passes locally and nothing in CI ever runs:\n{}",
+        unwired
+            .iter()
+            .map(|n| format!("  {n}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
+
+/// An exclusion that no longer names a real file is stale the same way
+/// a stale acknowledgement is elsewhere in this codebase
+/// (`PLC-003`/`EDG-003`) -- caught here rather than silently covering
+/// nothing.
+#[test]
+fn every_exempt_browser_check_file_still_exists() {
+    let names: Vec<String> = browser_check_files()
+        .into_iter()
+        .filter_map(|p| p.file_name().map(|n| n.to_string_lossy().into_owned()))
+        .collect();
+    let stale: Vec<&str> = EXEMPT_BROWSER_CHECK_FILES
+        .iter()
+        .map(|(n, _)| *n)
+        .filter(|n| !names.contains(&n.to_string()))
+        .collect();
+    assert!(
+        stale.is_empty(),
+        "these EXEMPT_BROWSER_CHECK_FILES entries no longer name a real \
+         browser-checks/*.mjs file -- renamed or removed, and this exclusion is \
+         now stale:\n{}",
+        stale.join("\n")
+    );
+}

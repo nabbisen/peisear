@@ -135,8 +135,19 @@ jobs:
   # `WIDTHS`/`createFixtures`/`buildPages` rather than a second copy of
   # either, so it sweeps the same five widths on the same pages by
   # construction. Port `4177`, its own scratch server and database.
+  #
+  # `GATE-001` (`067`, `§10.58`): a fifth gate, written for `DISC-001`
+  # (series `060`) and extended by `MARK-001`/`MARK-002` (series `061`)
+  # but never wired into any job until now -- a human typing its name
+  # was the only thing that had ever run it. Asserts the one property
+  # `touch_target_scan` cannot see from source: a `<summary>`'s own
+  # computed `display` stays `list-item` (so its native `::marker` box
+  # survives `grow_text()`'s `inline-flex items-center`) while its box
+  # still measures >=44x44, across all thirteen checkable disclosures
+  # this product has, at two widths. Port `4233`, its own scratch
+  # server and database.
   browser-overflow-gate:
-    name: browser checks (overflow gate + undo mousedown trap + drag outcome + occlusion)
+    name: browser checks (overflow gate + undo mousedown trap + drag outcome + occlusion + disclosure marker)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -147,6 +158,7 @@ jobs:
       - run: node browser-checks/undo-mousedown-trap.mjs
       - run: node browser-checks/drag-outcome-gate.mjs
       - run: node browser-checks/occlusion-gate.mjs
+      - run: node browser-checks/disclosure-marker-gate.mjs
 
   # NFR-REL-011: README.md's third install path (`cargo install
   # peisear`) exercised end to end by CI, on the artefact that path
