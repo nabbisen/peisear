@@ -21,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   It now shows clearly, the same strength the product already uses
   for a checkbox's own focus ring, on every text field, dropdown, and
   multi-line box in the product.
+- **The outline around an empty text field, dropdown, or checkbox was
+  too faint to see it at rest, before you ever click or tab to it.**
+  On a plain background, the line was nearly invisible — the only
+  thing saying a field was there at all. It now shows clearly on
+  every text field, dropdown, multi-line box, and checkbox in the
+  product, whether or not it is currently focused.
 
 ## [0.67.0] — 2026-11-23
 

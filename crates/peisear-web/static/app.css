@@ -100,3 +100,48 @@
 .textarea:focus {
     outline-color: oklch(var(--bc) / 1);
 }
+
+/* EDG-002 (series 066): daisyui.min.css's own `.input-bordered`/
+   `.select-bordered`/`.textarea-bordered`/`.checkbox` all set
+   `border-color` to `base-content/20` -- 1.52:1 on a card, ~1.51:1 on
+   the page body, below WCAG 1.4.11's 3:1 for the line that is often
+   the only thing saying a field is there (these controls paint their
+   own white fill, 1.00:1 against the card around them).
+
+   **A correction to this round's own handoff, found by measuring
+   rather than assumed from its table**: the recommended `/50` tier
+   is the first that clears 3:1 on `base-100` (**3.35:1**, matching
+   the handoff's own figure), but reads **2.73:1 on `base-200`** --
+   below 3:1, not the 3.16:1 the handoff's own index predicted, on
+   the one genuine page-body site this series keeps finding
+   (`search.rs`'s own inline search form). `/50` would have shipped
+   an active failure under the name of "the minimum tier that
+   passes." `/70` (the text floor) is the first tier that actually
+   clears 3:1 everywhere this product renders one of these controls:
+   6.42:1 on `base-100`, 5.24:1 on `base-200`.
+
+   The focused state is left alone on purpose: `.input:focus` (and
+   its siblings) sets `border-color` to the same `/20` at a higher
+   specificity than this rule, so a focused field's border stays
+   faint while its ring (`EDG-001`) draws at full strength 2px outside
+   it. Checked, not assumed: a focused field reads as a strong ring
+   around a plain white box, not as a broken or half-coloured control
+   -- the ring alone already carries the focus state at 17.21:1, far
+   past what the border's own colour could add, so raising it too
+   would be effort spent on a state that is already unambiguous.
+
+   `daisyui.min.css` is served first (layout.rs:68-70); each of these
+   four selectors is a single class, so a single-class override here
+   wins on order. `.checkbox`'s own border reaches through
+   `--tw-border-opacity` rather than a literal fraction, but a plain
+   `border-color` declaration here still wins by the same cascade
+   rule and does not need to touch that variable -- confirmed by
+   measuring the rendered border, not by reading the mechanism. The
+   checked state (`--chkbg`, full `base-content`, 17.36:1) is
+   untouched -- this rule sets no `background-color`. */
+.input-bordered,
+.select-bordered,
+.textarea-bordered,
+.checkbox {
+    border-color: oklch(var(--bc) / 0.7);
+}
