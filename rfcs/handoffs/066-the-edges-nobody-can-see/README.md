@@ -23,8 +23,19 @@ the method the last three releases used:
 | `.input-bordered`/`.select-bordered`/`.textarea-bordered`/`.checkbox` border — `base-content/20` | `#d1d1d4` | **1.52:1** | **1.50:1** |
 | `.input:focus`/`:focus-within`, `.select:focus`, `.textarea:focus` **outline** — the same `/20` | `#d1d1d4` | **1.52:1** | **1.50:1** |
 | `base-content/30`, for comparison | `#bababf` | 1.93:1 | 1.89:1 |
-| **`base-content/50`** — the first tier that clears 3:1 on both | `#8c8c94` | **3.34:1** | **3.16:1** |
+| `base-content/50` — **not** the first tier that clears 3:1; see the correction below | `#8c8c94` | 3.34:1 | **2.73:1 — fails** |
+| **`base-content/70`** — the first tier that actually clears 3:1 everywhere measured | `#5d5f6a` | **6.42:1** | **5.24:1** |
 | `.checkbox:focus-visible` outline — **full `base-content`**, which daisyUI already uses | `#181a2a` | **17.21:1** | 14.01:1 |
+
+**Corrected 2026-11-24, by the round that measured it.** This index said
+`/50` was the first tier clearing 3:1 on both backgrounds. It is not: a
+semi-transparent border composites over **the element's own background**
+(`background-clip: border-box` is the default), and these controls paint
+their own white fill — so `/50` resolves to `#8c8c94` and reads **2.73:1**
+against the page body, below the requirement. The architect's own figure
+composited the border over the page instead, which is not what a browser
+does. **`/70` shipped**, and `EDG-002` chose it as the only valid candidate
+rather than as a preference.
 
 **And the fill does not rescue the boundary.** These controls paint
 `base-100`, so a field on a white card is **1.00:1** against its own
@@ -44,7 +55,7 @@ architect eleven times that way.
 | round | family | sites |
 |---|---|---|
 | `EDG-001` | focus rings — every `.input` (35), `.select` (23) and `.textarea` (9) — **closed** 2026-11-24 (`5878974`): full `base-content`, **17.21:1** on a card and 14.05:1 on the page body, the losing `/70` candidate measured (6.42/5.84) and its figures recorded at the rule | **67** |
-| `EDG-002` | boundaries — the same 67 plus `.checkbox` (3) | **70** |
+| `EDG-002` | boundaries — the same 67 plus `.checkbox` (3) — **closed** 2026-11-24 (`07b2151`): `/70`, after measuring that the architect's recommended `/50` fails at **2.73:1** on the page body | **70** |
 | `EDG-003` | the guard, the specification work, one register entry, and the `rfcs/` counted-population exclusion | — |
 
 **Every `.input`/`.select`/`.textarea` site in the product carries
