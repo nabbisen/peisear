@@ -56,7 +56,7 @@ architect eleven times that way.
 |---|---|---|
 | `EDG-001` | focus rings — every `.input` (35), `.select` (23) and `.textarea` (9) — **closed** 2026-11-24 (`5878974`): full `base-content`, **17.21:1** on a card and 14.05:1 on the page body, the losing `/70` candidate measured (6.42/5.84) and its figures recorded at the rule | **67** |
 | `EDG-002` | boundaries — the same 67 plus `.checkbox` (3) — **closed** 2026-11-24 (`07b2151`): `/70`, after measuring that the architect's recommended `/50` fails at **2.73:1** on the page body | **70** |
-| `EDG-003` | the guard, the specification work, one register entry, and the `rfcs/` counted-population exclusion | — |
+| `EDG-003` | the guard, the specification work, one register entry, and the `rfcs/` counted-population exclusion — **handed 2026-11-24** | — |
 
 **Every `.input`/`.select`/`.textarea` site in the product carries
 `-bordered`** — 35/35, 23/23, 9/9, checked rather than assumed — so the two
