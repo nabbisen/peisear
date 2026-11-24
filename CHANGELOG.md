@@ -9,7 +9,26 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.68.0] — 2026-11-24
+
+**The edges nobody can see.** Three releases went into the colours of the
+*words* on these screens. This one is about the lines: the outline that is
+supposed to show which field your keyboard is in, and the border that is
+supposed to show a field is there at all. **Both were drawn so faintly that
+neither did its job** — about one and a half to one against what sits
+behind them, where a reader is owed three. On a white card, where a text box
+is also white, that border was the only thing distinguishing the box from
+the page.
+
+**Both now use strengths this product already had elsewhere**, so nothing
+new was invented and the palette is untouched: the focus outline is drawn at
+the same strength as the one already used for a checkbox, and the resting
+border at the same strength as the product's own muted text.
+
+**And the check that watches for this kind of thing learned a fourth
+lesson.** It reads the colours of words; it now also reads the colours of
+edges. Every one of its four parts exists because a colour slipped past a
+rule that, read plainly, already forbade it.
 
 ### Fixed
 
@@ -32,6 +51,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the 3:1 a control's own edge and a keyboard's own ring are owed** —
   the mechanism behind both fixes above, so neither can quietly
   regress the next time the product's styling changes.
+
+### What this release does not fix
+
+- **A card's own border is still faint** — about one and a third to one.
+  That is deliberate: a card is identified by its shadow and its filled
+  surface as much as its outline, so the rule this release follows does not
+  reach it. If that reads wrong to you on a real screen, it is worth
+  saying — it was a judgement, not a measurement.
+- **Twenty-one pieces of small print still read at 12px**, and **nine links
+  still show nothing at rest** until you point at them.
+- **Fifteen places still fade text by fading the whole element**, which the
+  checks cannot read.
+- **Small controls still carry smaller labels than the fields beside them.**
+- **One check still cannot resolve a stylesheet the way a browser does.**
+  Measuring a rendered page by hand is still the only way to be certain,
+  and this release does that by hand for the third time without automating
+  it.
+- **The documentation site has not published since 18 November.** A hosting
+  deployment is stuck in a state its own interface refuses to cancel.
 
 ## [0.67.0] — 2026-11-23
 
