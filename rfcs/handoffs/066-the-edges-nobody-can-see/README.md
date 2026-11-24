@@ -65,6 +65,56 @@ once for the ring that appears when a reader tabs to them.
 
 ---
 
+## The series, closed — 2026-11-24
+
+**Three rounds. 67 focus rings raised to full `base-content` (17.21:1) and
+70 boundaries to `/70`** (6.42:1 on a card, 5.24:1 on the page body) against
+WCAG 1.4.11's 3:1, where every one of them had been **1.52:1**. A keyboard
+reader can now see where they are, and on a card the line that says a field
+exists is visible.
+
+**`contrast_scan` gains a fourth mechanism** — boundary and focus colours in
+the served sheets, restricted to selectors a component can reach, each
+**acknowledged with the literal that beats it** or **exempt with a
+visually-checked reason**. Planted twice and watched failing both ways, and
+**the first plant re-run independently by the architect**: with
+`class="checkbox toggle"` planted, the guard failed naming
+`.toggle:focus-visible outline-color -> …oklch(var(--bc)/.2)`. **It
+deliberately does not compute ratios** — `EDG-002` proved that arithmetic
+needs `background-clip` semantics, the element's own fill and which side of
+the border the adjacent colour sits on, and the code says so, so that nobody
+later "improves" it into computing.
+
+**Four mechanisms now exist, and every one was built because a colour
+escaped a guard whose requirement's words covered it** — a muted class, a
+semantic family used as text, a colour the stylesheet applies with no class
+involved, and a non-text property. `§10.63` carries that table, because the
+pattern is the finding rather than any instance.
+
+**`NFR-A11Y-010` was widened, not duplicated.** The architect's handoff
+recommended a new `NFR-A11Y-013 — Non-text contrast`; **that entry has
+existed since `0.42.0`**, naming *"the boundaries of interactive controls"*
+in its own first sentence and measured only for chart series. `EDG-003` read
+the document before writing and widened it instead — no register number
+spent, Appendix A unchanged, `spec_scan`'s 171 confirmed green before and
+after.
+
+**The `rfcs/` citation tax is over**: that counted population now shares
+`docs_scan` rule 5's own exclusion of `rfcs/handoffs/` and asserts **0**,
+re-derived by hand on both sides. It had reddened `main` three times at
+`0.67.0`.
+
+**Two of the architect's own instructions were corrected here, both
+load-bearing**: a recommended `/50` tier that would have shipped failing at
+**2.73:1**, and a recommended requirement that already existed. Both were
+caught by a round reading the thing itself — the rendered pixels, and the
+document — rather than the sentence handed to it.
+
+**Nothing here cuts a release.** `0.68.0`'s candidate is the architect's to
+write against exit criteria 1–6; criterion 7 is the owner's.
+
+---
+
 ## 3. Method
 
 1. **No new colour.** Every repair lands on a tier the product already
