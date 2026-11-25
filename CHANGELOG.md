@@ -9,7 +9,22 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.69.0] — 2026-11-25
+
+**The checks nobody ran.** Everything in this release was already written
+down somewhere. A check that confirms thirteen "show more" controls still
+behave like controls had been written, passed every time anyone ran it, and
+**nothing ever ran it except a person typing its name.** Whether the
+container image a release publishes can actually be pulled by a stranger was
+never asked — only whether the push had been attempted. And the
+specification's own rule for which of an entry's status lines is the current
+one existed only inside the program that reads the file, never in a sentence
+a reader could find.
+
+**None of this changes a screen.** It changes what the project can honestly
+say about itself — which, after a release where a wrong figure in a
+planning document reached a published changelog, is the thing that needed
+work.
 
 ### Fixed
 
@@ -33,6 +48,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   which was current — a reader going top to bottom met the wrong one
   first. The document's own rule for which line counts is now stated
   once, and each affected entry marks its own older line.
+
+### What this release does not fix
+
+- **One requirement still says its own evidence does not hold.** A
+  human-language explanation on the health view is implemented, and the test
+  that was supposed to prove it does not really test it. The status says
+  *unverified* and stays that way: writing the real test is work this release
+  did not do, and softening the word would have been worse than leaving it.
+- **A rule in a document only helps a reader who looks for it.** The new
+  check catches a *writer* who leaves a superseded status unmarked. Nothing
+  can stop a reader quoting the first line they reach — that is what the
+  sentence is for, and it is honest about its own limit.
+- **The container-image check has never run.** It only fires when a release
+  is published, so this release is the first time it will — by design, and
+  stated rather than implied.
+- **Twenty-one of the smaller text and colour items remain**: seventeen
+  pieces of small print still at 12px, nineteen places that fade text by
+  fading the whole element, nine links invisible until pointed at, and the
+  small-control size tier.
+- **One check still cannot resolve a stylesheet the way a browser does.**
+  Measuring a rendered page by hand remains the only certain way, and this
+  is the fifth release to say so.
+- **The documentation site has not published since 18 November**, stuck in a
+  hosting state its own interface refuses to cancel.
 
 ## [0.68.0] — 2026-11-24
 
