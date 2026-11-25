@@ -59,49 +59,45 @@ with `overflow-gate` (120 cells, 0 failing) and `occlusion-gate` (120 cells,
 not a failing one.** Its port is `4233`; the four in CI use `4173`, `4174`,
 `4175`, `4177`.
 
-### 1.2 A status that asserts an absence, false for eight releases
+### 1.2 ~~A status that asserts an absence, false for eight releases~~ — **corrected 2026-11-25 by `IMG-001`**
 
-```bash
-T=$(curl -s 'https://ghcr.io/token?scope=repository%3Anabbisen%2Fpeisear%3Apull&service=ghcr.io' | jq -r .token)
-curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $T" \
-  https://ghcr.io/v2/nabbisen/peisear/manifests/0.68.0
-curl -s -H "Authorization: Bearer $T" https://ghcr.io/v2/nabbisen/peisear/tags/list
-```
+**This section was wrong in both of its claims, and both errors were the
+architect's.** It read: *"`NFR-REL-010` reads `Divergent` — 'no image has
+ever been published' … the tags list reads `0.61.0` … `0.68.0` — eight
+releases … the only genuinely `Divergent` entry of the 171."*
 
-`NFR-REL-010 — Published container image` reads *Status*: **Divergent** —
-*"no image has ever been published, and `0.53.0` is the first Release that
-can publish one."* **The image is published and publicly pullable**:
-manifests for `0.68.0`, `0.67.0` and `latest` all return **200**, and the
-tags list reads `0.61.0` … `0.68.0` — **eight releases**. GHCR issues an
-anonymous pull token for a public package, so this needs **no credentials**.
+1. **The registry holds eighteen tags**, `0.53.0`–`0.68.0` plus `latest`.
+   The architect's own command ended `jq '.tags[-8:]'` — **he read his own
+   slice as the data.** `IMG-001` re-read the full list twice and said
+   plainly that nothing in the registry, the workflow source or the run
+   history explained the disagreement. Nothing could: it was in his shell.
+2. **`NFR-REL-010` reads `Implemented` (0.53.0)**, and has throughout. The
+   entry carries **two** `*Status*:` lines, and
+   `spec_scan::governing_status_token` takes the **last** —
+   `body.rfind("*Status*:")`, by design. His parser took the first.
+   `rule_b` cross-checks Appendix A against governing statuses and **was
+   green the whole time.** Appendix A's `| Release |` row holds no
+   `Divergent`: `NFR-REL-004` is `Partial`, `NFR-REL-005` is `Not defined`.
 
-It is the **only** genuinely `Divergent` entry of the 171 (the register's
-two other `Divergent` strings are prose about entries that moved on, and
-**the count was taken by parsing entries, not grepping lines** — a
-line-anchored `^\*Status\*:` pattern cannot see a field wrapped onto the
-next line, which is how the architect reported *"zero Divergent statuses"*
-at `0.68.0`).
+**What was genuinely missing**: nothing ever asked the registry. `IMG-001`
+added an anonymous post-publish pullability check to `image.yml` — planted
+failing and passing, and re-run by the architect at review (`0.68.0` → 200
+and present, a nonexistent tag → 404 and absent).
 
-### 1.3 The population behind both
+### 1.3 ~~The population behind both~~ — **corrected 2026-11-25**
 
-**Eight** of the 171 statuses assert an absence — *never*, *no image*, *not
-yet*, *has not been*:
+The *"eight of the 171 statuses assert an absence"* table came from that
+same first-match parse. Re-derived against **governing** statuses: **one**,
+`FR-HLT-005` (*Implemented, unverified*). The other seven were superseded
+openings the document keeps deliberately.
 
-| entry | the absence it asserts |
-|---|---|
-| `NFR-REL-010` | *"no image has ever been published"* — **false, measured above** |
-| `NFR-REL-009` | *"no Release has ever carried one"* |
-| `NFR-REL-011` | *"`release.yml` … never extracts one"* |
-| `NFR-SEC-004` | *"the generated branch never runs"* (`§10.40`, reopened) |
-| `FR-HLT-005` | **Implemented, unverified** |
-| `FR-DM-002` | *"the keyboard path was never the thing being added afterward"* |
-| `FR-TEAM-005` | *"never in its source"* |
-| `FR-PLAN-004` | *"never a hard limit or a target"* — a clause about the product, not a claim about the world |
-
-**An absence claim is a measurement with no re-test**: nothing fails when the
-world changes under it. That is `§10.36`'s own open class — *a check that
-cannot tell nothing wrong from nothing examined* — one layer out, in the
-document rather than in the scans.
+**What is actually there, measured**: **four** of 171 entries carry more
+than one `*Status*:` line — `FR-NAV-003`, `NFR-REL-009`, `NFR-REL-010`,
+`NFR-CMP-007` (seven) — only **one** marking its earlier status as
+superseded near the line, and **the rule that the last one governs is
+stated nowhere in this document — only in `spec_scan`'s Rust.** A reader
+going top-down meets the superseded value first. That is round 3's subject,
+and the architect is its first recorded victim.
 
 ---
 
@@ -110,13 +106,14 @@ document rather than in the scans.
 | round | what it owes | state |
 |---|---|---|
 | [`GATE-001`](./GATE-001-the-gate-that-never-ran.md) | the gate wired, and a guard that keeps gates wired | **closed** 2026-11-25 (`29f6f7f`) — accepted, no findings; the gate now runs on the runner and passes there, and the guard was re-planted three ways at review |
-| [`IMG-001`](./IMG-001-the-image-that-was-there-all-along.md) | `NFR-REL-010` corrected, and a check that asks the registry | **handed** 2026-11-25 |
-| `ABS-001` | the eight absence statuses walked, and `§10.36`'s next instance | not yet written |
+| [`IMG-001`](./IMG-001-the-image-that-was-there-all-along.md) | `NFR-REL-010` corrected, and a check that asks the registry | **closed** 2026-11-25 (`4c6a7ab`) — accepted; it found the round's own premise false, left the status alone, and built the check that was genuinely missing |
+| [`STAT-001`](./STAT-001-the-rule-that-lived-only-in-the-checker.md) | the document's own reading rule, the four multi-status entries, and `FR-HLT-005`'s one real absence claim | **handed** 2026-11-25 — replaces the voided `ABS-001` (its population was eight only under a first-match parse; it is one) |
 
 **Dependency order is the table's order.** `GATE-001` stands alone.
 `IMG-001` needs nothing from it but shares its shape (*a claim nothing
-executes*). `ABS-001` reads `IMG-001`'s finding as one of its eight, so it
-goes last.
+executes*). `STAT-001` reads `IMG-001`'s finding as its own
+starting point, so it goes last — and it exists because `ABS-001`, as
+scoped, turned out not to.
 
 ---
 
