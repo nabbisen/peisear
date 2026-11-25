@@ -1,7 +1,33 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.68.0` (**the edges nobody can see.**
+**Covers release**: `0.69.0` (**the gate that never ran.**
+**Two things nothing ever executed, and the class behind both.**
+`browser-checks/disclosure-marker-gate.mjs` passed every time a person
+typed its name since series `060` and was never wired into CI
+(`GATE-001`); nothing ever asked the container registry whether a
+release's own image was actually pullable, though `NFR-REL-010` reads
+`Implemented` and has since `0.53.0` (`IMG-001`). **Both are now wired
+and asked, respectively.** `§10.64` is the series' own real subject:
+**a document whose reading rule — the last `*Status*:` line governs,
+not the first — lived only in `spec_scan`'s Rust.** Three entries
+(`FR-NAV-003`, `NFR-REL-009`, `NFR-REL-010`) carried a superseded
+opening status with nothing marking it so; `§0.6` now states the rule
+itself, each entry's earlier line is marked, and a `spec_scan` test
+keeps a fifth one from shipping unmarked. **The series' own ledger,
+stated plainly**: one of its three rounds was real exactly as scoped
+(`GATE-001`); one found its own premise false and built what was
+genuinely missing instead (`IMG-001`); one exists only because a third
+premise — *"eight of 171 statuses assert an absence"* — was itself the
+same reading error, one level up (`STAT-001`, replacing the voided
+`ABS-001`). **Four instances of one pattern recorded together in
+`§10.64`**: `NFR-REL-010`'s status, the absence census, this round's
+own multi-status population (the handoff's own table said four
+entries; the fourth, `NFR-CMP-007`, measured at one `*Status*:` line,
+not seven), and — not a document defect, named in the same entry
+because the shape is identical — a `jq '.tags[-8:]'` slice the
+architect wrote and then read back as the registry's own full list.
+The release before it, `0.68.0`, is **the edges nobody can see.**
 **`NFR-A11Y-010`'s own first sentence had named "the boundaries of
 interactive controls" since 0.42.0; this release is the first to measure
 that half of it.** Every `.input`/`.select`/`.textarea`/`.checkbox`
@@ -48,7 +74,7 @@ and through it
 (on GitHub; excluded from this book, see `docs/README.md`).
 Both retained unedited as the record of their releases
 **Language**: English (normative)
-**Prepared**: 2026-07-27 · **Amended**: 2026-11-24 (0.68.0 — `NFR-A11Y-010`'s acceptance widened to the other half of its own first sentence, the boundaries of interactive controls, unmeasured since 0.42.0; `§10.63` opened and closed. Before it, 2026-11-23 (0.67.0 — `NFR-A11Y-005`'s acceptance widened a second time, to a third mechanism covering colours no component class writes at all; `§10.62` opened and closed. Before it, 2026-11-22 (0.66.0 — the same entry's acceptance widened to all four token families, `§10.61` opened and closed); before that, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — checked again at that cut, and it moved, two cuts running))
+**Prepared**: 2026-07-27 · **Amended**: 2026-11-25 (0.69.0 — the register's own reading rule (last `*Status*:` line governs) stated in `§0.6` for the first time; three multi-status entries marked; `§10.64` opened and closed. Before it, 2026-11-24 (0.68.0 — `NFR-A11Y-010`'s acceptance widened to the other half of its own first sentence, the boundaries of interactive controls, unmeasured since 0.42.0; `§10.63` opened and closed. Before it, 2026-11-23 (0.67.0 — `NFR-A11Y-005`'s acceptance widened a second time, to a third mechanism covering colours no component class writes at all; `§10.62` opened and closed. Before it, 2026-11-22 (0.66.0 — the same entry's acceptance widened to all four token families, `§10.61` opened and closed); before that, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — checked again at that cut, and it moved, two cuts running)))
 **Location**: `docs/specification/requirements.md`. **This document is the
 normative source of truth** — English only, placed 2026-09-24 (`DEC-020`,
 closed). See [the directory README](./README.md) for how its citations
@@ -301,6 +327,16 @@ Identifiers are permanent. A withdrawn requirement is marked
 | `Deferred` | Accepted as a requirement, deliberately postponed to a named phase. |
 | `Divergent` | Implementation exists but contradicts the requirement — see §10. |
 | `Withdrawn` | No longer a requirement; retained for history. |
+
+**When an entry carries more than one status line, the last one in its
+own body governs** — the same rule `spec_scan`'s own
+`governing_status_token` implements (`body.rfind` on the marker, not
+the first match), stated here for the first time rather than left to
+exist only in that one file's Rust (`STAT-001`, `067`). An earlier
+status line is kept on the record, the same reason `§0.5` keeps a
+withdrawn identifier rather than deleting it; it is marked `superseded`
+at the point a later line replaces it, and a reader going top-down
+should look for that word before citing the first line reached.
 
 ### 0.7 Priority vocabulary
 
@@ -681,7 +717,9 @@ parent context.
 `team_detail_breadcrumb_full_chain`. **All four detail screens**, each
 asserting the `/today` root, `aria-current="page"` on the current node, and
 the back link.
-*Status*: **Met at 0.46.0** (`COV-001`, `NAV-001`).
+*Status*: **Met at 0.46.0** (`COV-001`, `NAV-001`) — **superseded below;
+the governing line, further down, agrees in substance but is the one
+that counts** (`STAT-001`, `067`).
 *Corrected twice **within this release**, and the second correction found a
 defect the first had framed as missing proof.* `REQ-005`'s amendment first
 made this entry read *"team detail and sprint detail render breadcrumbs and
@@ -1267,6 +1305,17 @@ is the *"in place of raw computed values"* clause as an absence.
 *This needs no browser.* The explanations are server-rendered and the existing
 HTTP harness already receives them — it is a fixture-control problem, not a
 rendering one, and must not be scheduled behind `§10.15`'s browser question.
+
+*Re-confirmed 2026-11-25 (`STAT-001`, `067`), not verified.* This series'
+own subject is a reading rule, not a new test — read
+`crates/peisear-web/tests/health_explainability.rs`'s own
+`human_explanation_omits_good_indicators` (the cited test named above)
+directly: it is still the identical smoke-check body quoted at
+`QA-018`, unchanged since. Writing the real test the paragraph above
+("What a real test would assert") already describes is feature work
+this round did not take on; the status stays `Implemented, unverified`
+rather than being softened on the strength of a citation that still
+does not hold.
 
 **FR-HLT-006 — Explanation neutrality**
 Explanation text MUST be descriptive and MUST NOT contain evaluative
@@ -3815,7 +3864,9 @@ archives, named and laid out per `NFR-REL-002`. **The check is the
 artefact being there**, not a workflow existing that would produce it.
 *Source*: `FIV-002`'s own escalation, 2026-10-15, raised by the round
 rather than written by it. *Status*: **Implemented** — no Release has
-ever carried one, and `0.53.0` is the first that can. *Why this
+ever carried one, and `0.53.0` is the first that can. **(superseded
+below — written before the first Release existed; the governing line
+is further down)** (`STAT-001`, `067`). *Why this
 requirement exists rather than being folded into `NFR-REL-002`.* That
 entry governs an archive's **shape if one exists**; it cannot be
 violated by producing none. A Release published with all five matrix
@@ -3876,7 +3927,9 @@ workflow existing that would push it.
 rather than written by it — the same escalation `FIV-002` made that
 became `NFR-REL-009`, and granted for the same reason. *Status*:
 **Divergent** — no image has ever been published, and `0.53.0` is the
-first Release that can publish one. *Why a second entry rather than
+first Release that can publish one. **(superseded below — written
+before the first Release existed; the governing line is further
+down)** (`STAT-001`, `067`). *Why a second entry rather than
 widening `NFR-REL-009`.* That entry is about archives attached to a
 Release; this is about a tag in a different registry, pushed by a
 different workflow, and either can be absent while the other is
@@ -10121,6 +10174,68 @@ than the test being deleted.
 **Found by scoping a release, like `§10.60`–`§10.62`** — the fourth time
 this project's own guard population and a requirement's own words have
 turned out to disagree about where a check's reach actually ends.
+
+### 10.64 A document whose own reading rule lived only in its checker — **closed**, `STAT-001`, series `067`, 0.69.0; opened and closed 2026-11-25 by the architect, found reading his own first-match parse against `spec_scan`'s own last-match one
+
+**`§10.36`'s family — "a check that cannot tell nothing wrong from
+nothing examined" — but the opposite failure direction.** Every prior
+instance of that entry is a guard that stayed green while examining
+nothing. Here the guard (`spec_scan::governing_status_token`) was
+**right and green the whole time**: it takes an entry's **last**
+`*Status*:` line, by design (`body.rfind`, not `find`). **A human read
+the same file by a different rule and believed the opposite** — the
+first line, going top-down, the way a reader with no stated rule to
+follow naturally would.
+
+**Four instances, three in the document and one in a shell, recorded
+together because the pattern is one pattern: reading the shape of your
+own output as the shape of the world, not the world itself.**
+
+1. **`NFR-REL-010`'s status.** Read as `Divergent` from its own opening
+   sentence; the entry's own last `*Status*:` line, several sentences
+   later, already read `Implemented` (0.53.0). `IMG-001` found it;
+   `STAT-001` confirmed the scanner's own rule and the entry by hand.
+2. **The absence census.** *"Eight of the 171 statuses assert an
+   absence"* was the same first-match parse, one level up: seven of
+   the eight were superseded openings the document keeps on purpose.
+   Re-derived against governing statuses: **one** — `FR-HLT-005`,
+   *Implemented, unverified* — the only entry whose cited test still
+   does not hold on inspection.
+3. **The multi-status population itself, caught by this very round.**
+   The handoff that opened this round named **four** multi-status
+   entries, one `NFR-CMP-007` at "7 status lines." Re-measured by
+   walking its own entry span directly: **one** `*Status*:` line, not
+   seven — it is not a multi-status entry at all. The real population
+   is **three**: `FR-NAV-003`, `NFR-REL-009`, `NFR-REL-010`. **The
+   round built to fix three instances of a reading error opened with
+   a fourth instance of the same error, about its own population** —
+   named here rather than silently corrected, since the pattern is the
+   finding.
+4. **The tag count — not a document defect at all, named in the same
+   entry because the shape is identical.** *"The tags list reads
+   `0.61.0`…`0.68.0` — eight releases"* came from the architect's own
+   `jq '.tags[-8:]? // .'`, written to keep terminal output short, then
+   read back as the registry's own data rather than his own slice of
+   it. The registry held (and holds) **eighteen**. `IMG-001` re-read
+   the full list twice and said plainly that nothing in the registry,
+   the workflow, or the run history explained the disagreement — the
+   explanation was never in any of those places; it was in the shell
+   that produced the figure.
+
+**Closed by `STAT-001` itself**: `§0.6` now states the governing rule
+in the register's own reading preamble, beside the status vocabulary
+table, rather than leaving it to exist only in `spec_scan`'s Rust; the
+three real multi-status entries each mark their earlier line
+`superseded` at the point it stops governing; a `spec_scan` test
+(`unmarked_superseded_statuses`) asserts every multi-status entry does
+so, planted both ways with a synthetic entry rather than a real file
+— this module's own established shape, pure functions over text. **What
+the guard cannot do, stated so nobody mistakes closing this for
+closing the whole class**: it stops a *future* unmarked line from
+shipping silently; it does not stop a reader, human or otherwise, from
+parsing the first field in a document instead of the last. Only this
+entry and `§0.6`'s own sentence do that, and only for as long as a
+reader looks for the word before citing the line.
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 

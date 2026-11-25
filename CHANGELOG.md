@@ -26,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fact.** Every release now asks the registry itself, with no
   credentials, right after publishing, and fails that release's own
   workflow if the image is not there.
+- **A requirement's own status could be corrected without anything
+  saying which of its two conflicting sentences to believe.** Three
+  entries in the project's specification kept an old, since-corrected
+  status sentence sitting next to the new one with nothing marking
+  which was current — a reader going top to bottom met the wrong one
+  first. The document's own rule for which line counts is now stated
+  once, and each affected entry marks its own older line.
 
 ## [0.68.0] — 2026-11-24
 

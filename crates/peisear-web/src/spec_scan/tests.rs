@@ -348,6 +348,50 @@ fn governing_status_token_matches_known_multi_word_tokens_before_falling_back() 
     );
 }
 
+/// `STAT-001` (`067`): a multi-status entry whose earlier line carries
+/// no `superseded` marker before the next one is caught by name —
+/// planted with a synthetic entry, the same "no real file" shape this
+/// module's own doc comment says every rule here is built for, rather
+/// than a scratch worktree.
+#[test]
+fn an_unmarked_superseded_status_is_caught() {
+    let text = "**FR-X-001 — Title**\n*Status*: **Met at 0.46.0**.\nSome correction narrative.\n*Status*: Implemented. *Priority*: P2.\n";
+    let entries = requirement_entries(text);
+    let unmarked = unmarked_superseded_statuses(&entries);
+    assert_eq!(unmarked, vec!["FR-X-001".to_string()]);
+}
+
+/// The same shape, marked — the guard reports nothing once the earlier
+/// line carries the word, confirming the positive direction rather
+/// than only the failing one.
+#[test]
+fn a_marked_superseded_status_is_not_caught() {
+    let text = "**FR-X-001 — Title**\n*Status*: **Met at 0.46.0** (superseded below).\nSome correction narrative.\n*Status*: Implemented. *Priority*: P2.\n";
+    let entries = requirement_entries(text);
+    assert!(unmarked_superseded_statuses(&entries).is_empty());
+}
+
+/// `STAT-001`'s own population on the real tree: the three entries this
+/// round found and marked (`FR-NAV-003`, `NFR-REL-009`, `NFR-REL-010`),
+/// run **after** the edit, not before.
+#[test]
+fn every_superseded_status_line_is_marked_on_the_real_tree() {
+    let input = real_input();
+    let entries = requirement_entries(&input.requirements);
+    let unmarked = unmarked_superseded_statuses(&entries);
+    assert!(
+        unmarked.is_empty(),
+        "these entries carry more than one *Status*: line and at least one earlier \
+         occurrence is not marked 'superseded' before the next one -- a reader going \
+         top-down will stop at a status that is not the governing one:\n{}",
+        unmarked
+            .iter()
+            .map(|id| format!("  {id}"))
+            .collect::<Vec<_>>()
+            .join("\n")
+    );
+}
+
 #[test]
 fn requirement_entries_is_171_on_the_real_tree() {
     // SPEC-002 §1: 99 FR + 71 NFR, matching Appendix A's own totals --

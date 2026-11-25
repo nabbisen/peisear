@@ -91,13 +91,20 @@ same first-match parse. Re-derived against **governing** statuses: **one**,
 `FR-HLT-005` (*Implemented, unverified*). The other seven were superseded
 openings the document keeps deliberately.
 
-**What is actually there, measured**: **four** of 171 entries carry more
-than one `*Status*:` line — `FR-NAV-003`, `NFR-REL-009`, `NFR-REL-010`,
-`NFR-CMP-007` (seven) — only **one** marking its earlier status as
-superseded near the line, and **the rule that the last one governs is
-stated nowhere in this document — only in `spec_scan`'s Rust.** A reader
-going top-down meets the superseded value first. That is round 3's subject,
-and the architect is its first recorded victim.
+**What was said to be there, and what actually is — corrected a second
+time, by `STAT-001` itself.** This section's own first correction (above)
+named **four** entries carrying more than one `*Status*:` line —
+`FR-NAV-003`, `NFR-REL-009`, `NFR-REL-010`, `NFR-CMP-007` at "seven"
+— with only **one** marking its earlier status as superseded. `STAT-001`
+walked each entry's own span directly rather than trusting the table:
+`NFR-CMP-007` carries **one** `*Status*:` line, not seven — it is not a
+multi-status entry at all. **The real population is three**
+(`FR-NAV-003`, `NFR-REL-009`, `NFR-REL-010`), and none of the three
+marked its earlier line before this round. **The rule that the last one
+governs was stated nowhere in this document — only in `spec_scan`'s
+Rust** — this part held; `§0.6` states it now. A reader going top-down
+met the superseded value first. That was round 3's subject, and the
+architect was its first recorded victim, twice over in this file alone.
 
 ---
 
@@ -107,13 +114,44 @@ and the architect is its first recorded victim.
 |---|---|---|
 | [`GATE-001`](./GATE-001-the-gate-that-never-ran.md) | the gate wired, and a guard that keeps gates wired | **closed** 2026-11-25 (`29f6f7f`) — accepted, no findings; the gate now runs on the runner and passes there, and the guard was re-planted three ways at review |
 | [`IMG-001`](./IMG-001-the-image-that-was-there-all-along.md) | `NFR-REL-010` corrected, and a check that asks the registry | **closed** 2026-11-25 (`4c6a7ab`) — accepted; it found the round's own premise false, left the status alone, and built the check that was genuinely missing |
-| [`STAT-001`](./STAT-001-the-rule-that-lived-only-in-the-checker.md) | the document's own reading rule, the four multi-status entries, and `FR-HLT-005`'s one real absence claim | **handed** 2026-11-25 — replaces the voided `ABS-001` (its population was eight only under a first-match parse; it is one) |
+| [`STAT-001`](./STAT-001-the-rule-that-lived-only-in-the-checker.md) | the document's own reading rule, the real multi-status entries, and `FR-HLT-005`'s one real absence claim | **closed** 2026-11-25 — `§0.6` states the rule, three entries marked (not four — `NFR-CMP-007` re-measured at one `*Status*:` line, not seven, a fifth instance of the same pattern caught by this round's own re-derivation), `§10.64` opened and closed, `FR-HLT-005` re-confirmed unverified; replaces the voided `ABS-001` (its population was eight only under a first-match parse; it is one) |
 
 **Dependency order is the table's order.** `GATE-001` stands alone.
 `IMG-001` needs nothing from it but shares its shape (*a claim nothing
 executes*). `STAT-001` reads `IMG-001`'s finding as its own
 starting point, so it goes last — and it exists because `ABS-001`, as
 scoped, turned out not to.
+
+---
+
+## 6. Series closed — the ledger, stated plainly
+
+**One of its three rounds was real exactly as scoped. One found its
+own premise false and built what was genuinely missing instead. One
+exists only because a third premise — stated in this very file at
+`§1.3` — was itself the same reading error, one level up.**
+
+- `GATE-001`: `disclosure-marker-gate.mjs`, passing and unwired since
+  series `060`, now runs in CI. No finding against the round.
+- `IMG-001`: `NFR-REL-010` was never `Divergent` at the point anyone in
+  this series read it — its own last `*Status*:` line already said
+  `Implemented`. The round left the status alone, corrected the
+  misreading in place, and built the anonymous post-publish
+  pullability check that was genuinely missing.
+- `STAT-001`: `§1.3`'s own *"eight of 171 statuses assert an
+  absence"* was the identical first-line-not-last-line error that
+  produced `§1.2`'s wrong `NFR-REL-010` reading, one level up. The
+  real population is **one** (`FR-HLT-005`). `§0.6` now states which
+  line governs; the three real multi-status entries
+  (`FR-NAV-003`, `NFR-REL-009`, `NFR-REL-010`) mark theirs; `§10.64`
+  records all four instances of the pattern this series found,
+  including the jq slice that produced `§1.2`'s own tag count and the
+  fourth multi-status entry this very round's own table named and
+  then found was not one.
+
+`Covers release`/`Amended` moved to `0.69.0` in `requirements.md`
+itself, here at the close, per `§3.1`'s own instruction and `IMG-001`'s
+own deferral of it.
 
 ---
 

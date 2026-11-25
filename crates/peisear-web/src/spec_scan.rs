@@ -691,6 +691,45 @@ fn status_column(token: &str) -> Option<&'static str> {
     }
 }
 
+/// `STAT-001` (`067`): every `*Status*:` occurrence in an entry's body
+/// **except the last** — the one [`governing_status_token`] reads —
+/// must have the literal word `superseded` somewhere between itself
+/// and the next occurrence. **This is the exact shape the architect
+/// read wrong three times before this round**: an earlier status line
+/// left looking current, with nothing at that point in the text
+/// telling a top-down reader otherwise. A population of four on the
+/// real tree at this round's own writing (`FR-NAV-003`, `NFR-REL-009`,
+/// `NFR-REL-010` — `NFR-CMP-007` was a fourth candidate the handoff's
+/// own table named and this round's own re-measurement found carries
+/// only one `*Status*:` line, not seven).
+///
+/// Returns every offending entry's own id, never a count alone —
+/// `§10.36`'s own shape for naming what a scope decision would
+/// otherwise hide.
+fn unmarked_superseded_statuses(entries: &[ReqEntry]) -> Vec<String> {
+    let marker = "*Status*:";
+    entries
+        .iter()
+        .filter_map(|e| {
+            let mut positions = Vec::new();
+            let mut from = 0;
+            while let Some(rel) = e.body[from..].find(marker) {
+                positions.push(from + rel);
+                from += rel + marker.len();
+            }
+            if positions.len() < 2 {
+                return None;
+            }
+            for i in 0..positions.len() - 1 {
+                if !e.body[positions[i]..positions[i + 1]].contains("superseded") {
+                    return Some(e.id.clone());
+                }
+            }
+            None
+        })
+        .collect()
+}
+
 /// One Appendix A row's own six numbers, in table order: `[Total,
 /// Implemented, Partial, Specified, Deferred, Divergent]`.
 pub(crate) struct AppendixRow {
