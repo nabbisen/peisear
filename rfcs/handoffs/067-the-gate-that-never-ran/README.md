@@ -109,8 +109,8 @@ document rather than in the scans.
 
 | round | what it owes | state |
 |---|---|---|
-| [`GATE-001`](./GATE-001-the-gate-that-never-ran.md) | the gate wired, and a guard that keeps gates wired | **handed** 2026-11-25 |
-| `IMG-001` | `NFR-REL-010` corrected, and a check that asks the registry | not yet written |
+| [`GATE-001`](./GATE-001-the-gate-that-never-ran.md) | the gate wired, and a guard that keeps gates wired | **closed** 2026-11-25 (`29f6f7f`) — accepted, no findings; the gate now runs on the runner and passes there, and the guard was re-planted three ways at review |
+| [`IMG-001`](./IMG-001-the-image-that-was-there-all-along.md) | `NFR-REL-010` corrected, and a check that asks the registry | **handed** 2026-11-25 |
 | `ABS-001` | the eight absence statuses walked, and `§10.36`'s next instance | not yet written |
 
 **Dependency order is the table's order.** `GATE-001` stands alone.
