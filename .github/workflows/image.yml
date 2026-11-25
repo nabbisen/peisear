@@ -19,6 +19,20 @@ name: Image
 # project, recreate the container on the same volume, confirm the
 # session still works -- without ever logging in to ghcr.io or pushing
 # anything, same shape as release.yml's own test path.
+#
+# IMG-001 (`067`, `NFR-REL-010`): until this round, the only thing that
+# ever confirmed a release's own image was actually public and
+# pullable was a person's one-off `curl` against the registry -- the
+# requirement's own check ("the tag existing in the registry") was
+# never a job doing it. The step below asks the registry itself,
+# anonymously, in the same run as the push, right after it: a
+# credentialed read (the job's own `github.token`) would pass even on
+# a private package and prove the wrong property, so it gets a fresh
+# anonymous pull token instead, the same one any reader of
+# `install.md` would get. No third-party action, same rule as the rest
+# of this file. Not a Rust test -- `cargo test --workspace` must not
+# reach the network, the same reasoning `browser-checks/README.md`
+# gives for staying out of `DEC-007`'s inventory.
 
 on:
   release:
@@ -128,3 +142,31 @@ jobs:
           docker tag peisear:walk "$IMAGE:latest"
           docker push "$IMAGE:${{ github.event.release.tag_name }}"
           docker push "$IMAGE:latest"
+
+      # IMG-001: confirms the property NFR-REL-010 actually asserts --
+      # public pullability, not merely that a push command exited 0 --
+      # using a token nobody authenticated to get. The registry's own
+      # shape is the trap named in the handoff: a manifest request
+      # without every one of these media types in `Accept` can answer
+      # `404` for an image that exists.
+      - name: Confirm the published image is anonymously pullable
+        if: github.event_name == 'release'
+        run: |
+          set -euo pipefail
+          tag="${{ github.event.release.tag_name }}"
+          anon_token=$(curl -sf 'https://ghcr.io/token?scope=repository%3Anabbisen%2Fpeisear%3Apull&service=ghcr.io' | jq -r .token)
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+            -H "Authorization: Bearer $anon_token" \
+            -H "Accept: application/vnd.oci.image.index.v1+json,application/vnd.docker.distribution.manifest.list.v2+json,application/vnd.docker.distribution.manifest.v2+json,application/vnd.oci.image.manifest.v1+json" \
+            "https://ghcr.io/v2/nabbisen/peisear/manifests/$tag")
+          echo "anonymous manifest resolution for $tag: $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::manifest for $tag did not resolve anonymously (got $code) -- the image is not publicly pullable, or the push above did not actually land"
+            exit 1
+          fi
+          tags_json=$(curl -sf -H "Authorization: Bearer $anon_token" https://ghcr.io/v2/nabbisen/peisear/tags/list)
+          if ! echo "$tags_json" | jq -e --arg t "$tag" '.tags | index($t) != null' > /dev/null; then
+            echo "::error::$tag is not in the anonymous tags/list response: $tags_json"
+            exit 1
+          fi
+          echo "$tag confirmed publicly pullable with no credentials: $tags_json"

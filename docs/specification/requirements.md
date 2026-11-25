@@ -3895,6 +3895,46 @@ artefact, not the workflow**, which is what this entry's own check
 requires. *Status*: **Implemented** (0.53.0).
 *Priority*: P2.
 
+*Re-verified 2026-11-25 (`IMG-001`), and a misreading corrected rather
+than a status fixed.* **This entry already read `Implemented` — series
+`067`'s own `README.md §1.2` and `IMG-001`'s own handoff both quoted
+this entry's superseded opening sentence ("no image has ever been
+published") as its current status, without reading to the same
+paragraph's own later correction above.** `spec_scan`'s
+`governing_status_token` (the entry's own *last* status line, not its
+first — the exact rule this misreading ignored) already
+resolved it to `Implemented`, and `rule_b_is_clean_on_the_real_tree`
+already passed on the unmodified tree; `Appendix A`'s own `| Release |`
+row's one `Divergent` entry is `NFR-REL-010`'s own escalation sibling
+`NFR-REL-005` (*Reproducibility*, `Not defined`), not this one.
+**Re-measured anyway, since a correct status is not evidence that
+stops needing re-checking**: anonymous token, no credentials (the
+property this entry asserts is *public* pullability, not that a
+credentialed client can see it), `https://ghcr.io/v2/nabbisen/peisear/tags/list`
+read twice, independently, moments apart — both reads return
+`["0.53.0","latest","0.54.0","0.55.0","0.56.0","0.57.0","0.58.0","0.58.1","0.59.0","0.60.0","0.61.0","0.62.0","0.63.0","0.64.0","0.65.0","0.66.0","0.67.0","0.68.0"]`,
+**not** the eight tags (`0.61.0` onward) `README.md §1.2` quoted.
+Every manifest from `0.53.0` through `0.68.0` resolves `200` with the
+registry's own OCI/Docker `Accept` headers. **No gap exists** between
+the first publish and today: `image.yml`'s 24 runs (`git log`/`gh run
+list`, cross-checked) show the workflow succeeding on `release:
+published` for every tag from `0.53.0` onward, the file itself
+unchanged since `FIV-003` (three commits, confirmed by `git log
+--follow`), and every one of those tags is still live. The one real,
+checkable shape change in the registry's own data — `0.53.0`–`0.60.0`
+resolve a plain `docker.distribution.manifest.v2+json`; `0.61.0`
+onward resolve an OCI image index wrapping the same single `amd64`
+image plus a BuildKit provenance-attestation manifest
+(`platform: unknown/unknown`) — is the hosted runner's own Docker/
+BuildKit default changing provenance behaviour, external to this
+unchanged workflow file, and affects neither pullability nor this
+entry's own claim. **Where this was checked and found not to explain
+the quoted narrower list**: the workflow source (unchanged), the run
+history (matches the oldest-run date and count both documents already
+cite), and the registry twice. Why the quoted command returned eight
+tags rather than eighteen is not established by anything this round
+could find; said plainly rather than guessed at.
+
 **NFR-REL-011 — The documented install paths are exercised**
 Every install path `docs/getting-started/install.md` offers MUST be
 exercised end to end **by CI**, on the artefact that path actually

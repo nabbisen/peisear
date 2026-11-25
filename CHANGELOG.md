@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   board, settings, today's summary, and more — had no one actually
   confirming they still worked, release after release. It now runs on
   every change, the same as every other check in the product.
+- **Whether a release's container image actually reached the public
+  registry and could be pulled with no account was, until now,
+  confirmed only by a person running a command by hand after the
+  fact.** Every release now asks the registry itself, with no
+  credentials, right after publishing, and fails that release's own
+  workflow if the image is not there.
 
 ## [0.68.0] — 2026-11-24
 
