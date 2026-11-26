@@ -40,6 +40,17 @@
 //! [`violations`] -- because that is a format decision and format decisions are
 //! the owner's.
 //!
+//! **Two widenings were decided by the owner on 2026-11-26 and are not
+//! implemented here yet** -- recorded so a green run is not read as covering
+//! them: **rule 4 does not look at an archive's own links at all** (17 are
+//! dead on the tree today, every relative link the `DEC-055` moves carried),
+//! and **rule 6 accepts the workspace version's section only in
+//! `CHANGELOG.md`**, which is what makes `DEC-055`'s *"in its own commit"*
+//! impossible to keep green; the decided clause also accepts the linked
+//! archive when that version is already released. Both are scheduled with a
+//! plant each -- `docs/development/changelog-and-releases.md` and `ROADMAP.md`'s
+//! *Unscheduled work*.
+//!
 //! **What this does not check**, so nobody reads more into a green run: that an
 //! external URL (including the release-notes link in a tag message) resolves --
 //! nothing here goes to the network; that a tag's message carries the link --

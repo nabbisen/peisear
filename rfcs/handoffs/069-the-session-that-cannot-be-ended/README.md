@@ -7,6 +7,16 @@ recommendation this series does not write).
 **Governing document: `RFC 024` — The session that can be ended**
 ([`rfcs/proposed/024-the-session-that-can-be-ended.md`](../../proposed/024-the-session-that-can-be-ended.md)).
 
+> **⚠ `RFC 024` was amended 2026-11-26, the same day it was filed and before
+> this series opened.** The owner asked for it to be reviewed against his
+> fundamental philosophy, and **the mechanism changed**: a session
+> **generation counter** on `users`, not a timestamp compared against the
+> token's `iat`, and the check in **one** place rather than in both
+> extractors. `SES-001` `§2`–`§5` and `§7` are the amended instructions;
+> `RFC 024` `§4.1` carries the measurement that forced the change and `§4.4`
+> the withdrawn alternative. **Nothing had been started, so nothing is to be
+> redone.**
+
 > **⚠ Entry criterion 1 is not yet met, and this is the one thing that gates
 > the work.** `RFC 024` is **Proposed**, and `rfcs/README.md` says of that
 > folder: *"open for review; implementer should not start."* **Do not start
@@ -74,8 +84,10 @@ I know if the answer were nothing?**
   scope the owner has not authorized.
 - **Do not weaken `PRIV-002`/`DEC-058`.** `RequesterId` must stay
   constructible only by `jwt::verify`. What this round trades is
-  `Requester`'s documented *no-I/O* property for ten handlers — a performance
-  note, not a safety one — and the doc comment that states it must be
+  `Requester`'s documented *no-I/O* property — a performance note, not a
+  safety one. The claim stops being true wherever `Requester` is used, even
+  though the **net** reads per request rise only for the ten handlers that
+  take it alone (`SES-001` `§3`), and the doc comment that states it must be
   corrected, not quietly invalidated.
 - **Do not open a new `FR`/`NFR` number.** `FR-AUTH-003`'s own text already
   requires this; its **acceptance** widens.

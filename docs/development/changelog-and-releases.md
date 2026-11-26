@@ -173,7 +173,22 @@ never copied, into one file each under [`changelog/`](https://github.com/nabbise
 - **From 1.0.0 a series is one major version**: `changelog/1.x.md` when 2.0.0
   ships.
 - **An archive is written once**, when its series ends, and is not edited
-  afterwards. Each version appears in exactly one file.
+  afterwards. Each version appears in exactly one file. **One exception,
+  added 2026-11-26: an archive may be corrected to make a link resolve, or to
+  remove a link that never could** — and that commit's diff shows nothing but
+  link targets. The prose is never touched.
+- **A link in a changelog file is either a sibling under `changelog/` or an
+  absolute URL pinned to a tag** (added 2026-11-26). This is what makes the
+  two sentences above survivable: a relative path written to resolve from
+  `CHANGELOG.md` at the repository root resolves nowhere once the section
+  moves one directory deeper, so *verbatim* and *written once* would otherwise
+  guarantee dead links at every rollover. **Measured at `0.70.0`'s own
+  rollover: of 24 relative links under `changelog/`, 7 are each archive's own
+  `../CHANGELOG.md` back-link and the other 17 — every one of them moved
+  text — are dead.** Twelve resolve from the repository root but not from
+  `changelog/`; five name `docs/spec/peisear-feature-spec-v2.1.md`, a path
+  `git log --all` shows this repository has never contained, so those were
+  dead the day they were written.
 - **The move is done with the release that starts the new series**, in its own
   commit, by moving the old sections verbatim.
 
@@ -194,9 +209,9 @@ is the owner's to settle if it ever matters. **Not settled here** — named so
 the next series boundary, roughly ten releases away, starts from this
 paragraph rather than from scratch.
 
-**That boundary arrived at `0.70.0`, 2026-11-26, and the answer is now
-measured rather than conventional: `changelog_scan` makes a separate commit
-impossible to keep green, either way round.** Move first and the version is
+**That boundary arrived at `0.70.0`, 2026-11-26, and the answer was first
+measured and then settled. The measurement: `changelog_scan` made a separate
+commit impossible to keep green, either way round.** Move first and the version is
 still `0.69.0`, so rule 6 fails — `CHANGELOG.md` has no section for the
 workspace version, because the section that was there has just left; that is
 the exact shape `changelog_scan`'s own unit test plants as *"a version bump
@@ -207,12 +222,31 @@ rather than a shape he reasoned about. **So `0.70.0`'s move is in the
 release commit**, and the reviewability this sentence exists for was checked
 the way `REL-0.60.0`'s review checked it: the moved range extracted from the
 parent commit's own `CHANGELOG.md` and `diff`ed against the new archive's
-body — **959 lines, byte-identical**. **The honest reading is that "in its own
-commit" is now a sentence this project's own checker contradicts**, and
-narrowing it to *"reviewable as pure deletion plus pure addition, verified by
-that diff"* would make it true of all three moves so far. **Still the owner's
-to settle**, and now with the reason it cannot hold literally rather than only
-the observation that it never has.
+body — **959 lines, byte-identical**. **Settled by the owner 2026-11-26, and not by narrowing the sentence**, which
+was the architect's recommendation and is withdrawn: **rule 6 is what was
+wrong.** It demands the workspace version's dated section be in `CHANGELOG.md`
+and nowhere else, which the mid-state of a move-first commit cannot satisfy by
+construction. **Rule 6 gains one clause: the archive may hold that section
+when the workspace version is already released — a real `git tag`**, which
+rule 7 already reads, so no new input and no network. At the move-first
+mid-state `0.69.0` is tagged and the commit is green; at a cut the version
+being prepared is **untagged**, so rule 6 keeps its full force exactly where
+it matters. **"In its own commit" then becomes true as written for the first
+time**, and the sentence needs no narrowing at all.
+
+Two things to carry to the next boundary rather than rediscover. **The move
+commit also carries rule 5's pointer rewrites** — ten at this rollover, every
+document that linked a section by name into `CHANGELOG.md` — which is part of
+the move, not a violation of *pure deletion plus pure addition*. And the
+clause has a **named residual**: between a tag and the next version bump it
+would also permit a premature rollover of the live series. That is a smaller
+hole than the one it closes, which forced the rule to be broken every ten
+releases.
+
+**The check is not written yet.** The decision above is the owner's and is
+made; the rule-6 clause, rule 4's widening to archives and the 17-link repair
+are scheduled as their own round, with a plant each — see `ROADMAP.md`'s
+*Unscheduled work*.
 
 **Known limit:** a link someone outside the project made to a section of
 `CHANGELOG.md` on `main` stops working when its series moves. Links pinned to a
@@ -229,9 +263,11 @@ in CI's `peisear-web --lib` step). Each rule has a test that breaks it.
 | Each version appears in exactly one file across `CHANGELOG.md` and `changelog/` | `changelog_scan` | in place |
 | `CHANGELOG.md` holds only the current series (the workspace version's) | same | in place |
 | Each archive holds one whole series, the one its name says, and no `[Unreleased]` | same | in place |
-| Every archive is linked from `CHANGELOG.md`, and every relative link there resolves | same | in place |
+| Every archive is linked from `CHANGELOG.md`, and every relative link there resolves | same | in place — **`CHANGELOG.md`'s own links only** |
+| **Every link in an archive resolves, or is an absolute URL pinned to a real tag** | **nothing yet — rule 4's widening, decided 2026-11-26, scheduled** | **not checked: 17 dead links on the tree today** |
 | No markdown file links to a changelog section that is not in the file it names | same | in place |
-| The workspace version has a dated section | same | in place |
+| The workspace version has a dated section | same | in place — **in `CHANGELOG.md` only**, which is what made *"in its own commit"* unachievable |
+| **…or in the linked archive, when that version is already released** | **nothing yet — rule 6's new clause, decided 2026-11-26, scheduled** | **not checked** |
 | Every released version (a real `git tag`) has a section somewhere | same | in place, since `REL-0.55.0` round 2 |
 | ~~From 0.41.0, a dated section opens with `### Highlights`~~ | **nothing — withdrawn 2026-09-25 before it took effect** | **not a rule** |
 | **A released version's section is dated the day its tag was made** | **nobody — by hand, and it diverged for the first time at `0.60.0`** | **not checked** |
