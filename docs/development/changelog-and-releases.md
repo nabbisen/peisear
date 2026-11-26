@@ -194,6 +194,26 @@ is the owner's to settle if it ever matters. **Not settled here** — named so
 the next series boundary, roughly ten releases away, starts from this
 paragraph rather than from scratch.
 
+**That boundary arrived at `0.70.0`, 2026-11-26, and the answer is now
+measured rather than conventional: `changelog_scan` makes a separate commit
+impossible to keep green, either way round.** Move first and the version is
+still `0.69.0`, so rule 6 fails — `CHANGELOG.md` has no section for the
+workspace version, because the section that was there has just left; that is
+the exact shape `changelog_scan`'s own unit test plants as *"a version bump
+with no section"*. Bump first and rule 2 fails ten times over — `CHANGELOG.md`
+holds ten versions that are no longer in the current series, **which is the
+failure the architect actually hit at this cut**, printed once per version,
+rather than a shape he reasoned about. **So `0.70.0`'s move is in the
+release commit**, and the reviewability this sentence exists for was checked
+the way `REL-0.60.0`'s review checked it: the moved range extracted from the
+parent commit's own `CHANGELOG.md` and `diff`ed against the new archive's
+body — **959 lines, byte-identical**. **The honest reading is that "in its own
+commit" is now a sentence this project's own checker contradicts**, and
+narrowing it to *"reviewable as pure deletion plus pure addition, verified by
+that diff"* would make it true of all three moves so far. **Still the owner's
+to settle**, and now with the reason it cannot hold literally rather than only
+the observation that it never has.
+
 **Known limit:** a link someone outside the project made to a section of
 `CHANGELOG.md` on `main` stops working when its series moves. Links pinned to a
 tag — including the one in every tag message — are not affected.
