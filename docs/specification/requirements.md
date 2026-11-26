@@ -1,33 +1,7 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.71.0` (**the session that cannot be ended.**
-`FR-AUTH-003` is P0 and read `Implemented`: *"a user MUST be able to
-end their session, after which protected routes are inaccessible with
-the prior credentials."* `logout` removed the client's own cookie and
-touched no storage — a replayed credential kept working for the rest
-of its 7-day lifetime, on every route, including `/api/*` (`RFC 024`
-§1, `§10.66`). **Its own acceptance test is why nobody noticed**:
-`logout_clears_session_and_redirects` verified that a cookie-jar
-client forgot the credential, never that the credential itself stopped
-working — `§10.36`'s fourth instance in two days and its first with a
-real security exposure behind it. **Fixed with a session generation,
-not a clock**: one integer column on `users`, advanced by `logout`,
-stamped into the token at issue, checked in exactly one place
-(`verified_requester_id`) every extractor already funnelled through —
-a stored instant compared against the token's own whole-second `iat`
-was proposed first and withdrawn on the owner's own philosophy review,
-since it reproduces the identical window a prior migration
-(`0021_updated_at_millisecond_precision.sql`) already paid to close for
-`updated_at`. `SES-001`'s own three mechanism tests prove the counter
-where a clock would have failed: an immediate re-login after logout
-still works, a token minted before this column existed still verifies,
-and the second of two sessions for the same account is refused once
-the first logs out. `Requester`'s doc comment corrected (no longer
-no-I/O); `FR-AUTH-001`'s own second clause — no plaintext password
-persisted or logged — gains its first real test, found with zero prior
-evidence anywhere in the repository and measured clean. The release
-before it, `0.70.0`, is **the colour the browser actually paints.**
+**Covers release**: `0.70.0` (**the colour the browser actually paints.**
 Four releases taught `contrast_scan` to read a *declaration* — a class
 token, a stylesheet rule, a non-text property. **None of them ever
 asked a browser what it painted.** `browser-checks/contrast-gate.mjs`
@@ -125,7 +99,7 @@ and through it
 (on GitHub; excluded from this book, see `docs/README.md`).
 Both retained unedited as the record of their releases
 **Language**: English (normative)
-**Prepared**: 2026-07-27 · **Amended**: 2026-11-26 (0.71.0 — `FR-AUTH-003`'s acceptance replaced (verified the credential itself, not that the client forgot it) and `FR-AUTH-001`'s second clause given its first real test; `§10.66` opened and closed, `§10.36` gains instance 10. Before it, 2026-11-26 (0.70.0 — `NFR-A11Y-005` widened a fourth time and `NFR-A11Y-010` a third, to the browser-rendered check covering both at once; `§10.65` opened and closed; and at that release's own cut, **`§10.36` gains instance 9** — three rules whose only evidence is a person following them (a release tag's own message, a relative link that a `DEC-055` archive move relocates, a doc link written on a private item), all three the architect's, none fixed at the cut and all three measured — together with two stale counts inside that entry, one of them its own. Before it, 2026-11-25 (0.69.0 — the register's own reading rule (last `*Status*:` line governs) stated in `§0.6` for the first time; three multi-status entries marked; `§10.64` opened and closed. Before it, 2026-11-24 (0.68.0 — `NFR-A11Y-010`'s acceptance widened to the other half of its own first sentence, the boundaries of interactive controls, unmeasured since 0.42.0; `§10.63` opened and closed. Before it, 2026-11-23 (0.67.0 — `NFR-A11Y-005`'s acceptance widened a second time, to a third mechanism covering colours no component class writes at all; `§10.62` opened and closed. Before it, 2026-11-22 (0.66.0 — the same entry's acceptance widened to all four token families, `§10.61` opened and closed); before that, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — checked again at that cut, and it moved, two cuts running)))))
+**Prepared**: 2026-07-27 · **Amended**: 2026-11-26 (0.71.0, **not yet cut** — the entries below were amended during its cycle, and `Covers release` above moves at the cut, not before (`DEC-028`, and `§10.36` instances 7 and 8 are both this field and that one drifting apart): `FR-AUTH-003`'s acceptance replaced (verified the credential itself, not that the client forgot it) and `FR-AUTH-001`'s second clause given its first real test; `§10.66` opened and closed, `§10.36` gains instance 10. Before it, 2026-11-26 (0.70.0 — `NFR-A11Y-005` widened a fourth time and `NFR-A11Y-010` a third, to the browser-rendered check covering both at once; `§10.65` opened and closed; and at that release's own cut, **`§10.36` gains instance 9** — three rules whose only evidence is a person following them (a release tag's own message, a relative link that a `DEC-055` archive move relocates, a doc link written on a private item), all three the architect's, none fixed at the cut and all three measured — together with two stale counts inside that entry, one of them its own. Before it, 2026-11-25 (0.69.0 — the register's own reading rule (last `*Status*:` line governs) stated in `§0.6` for the first time; three multi-status entries marked; `§10.64` opened and closed. Before it, 2026-11-24 (0.68.0 — `NFR-A11Y-010`'s acceptance widened to the other half of its own first sentence, the boundaries of interactive controls, unmeasured since 0.42.0; `§10.63` opened and closed. Before it, 2026-11-23 (0.67.0 — `NFR-A11Y-005`'s acceptance widened a second time, to a third mechanism covering colours no component class writes at all; `§10.62` opened and closed. Before it, 2026-11-22 (0.66.0 — the same entry's acceptance widened to all four token families, `§10.61` opened and closed); before that, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — checked again at that cut, and it moved, two cuts running)))))
 **Location**: `docs/specification/requirements.md`. **This document is the
 normative source of truth** — English only, placed 2026-09-24 (`DEC-020`,
 closed). See [the directory README](./README.md) for how its citations
@@ -688,9 +662,13 @@ credential, never that the credential itself stopped working. Fixed by
 `RFC 024`'s own mechanism (a session generation on `users`, advanced by
 `logout`, checked in `verified_requester_id` — the one place every
 extractor funnels through) and replaced with a test that replays the
-captured, still-held credential and asserts it is refused. Recorded
-`Divergent` in `§10.66` for the span of this round and closed by it in
-the same release, per that entry's own exit condition.
+captured, still-held credential and asserts it is refused. **The status was never moved to
+`Divergent`, and that is a deliberate departure from the handoff's own
+instruction** (`SES-001` `§6`, which asked for it until the fix landed):
+the gap and its repair landed in the same round, so a status true for the
+span of one commit would have recorded nothing a reader could use, and
+`§10.66` — opened and closed in this release — is the durable record exit
+criterion 3 asks for. Reviewed and accepted as written, 2026-11-27.
 
 **FR-AUTH-004 — Unauthenticated HTML access**
 Unauthenticated requests to protected HTML routes MUST redirect to the
