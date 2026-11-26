@@ -468,6 +468,29 @@ fn Navbar(user: CurrentUser, unread_count: i64) -> impl IntoView {
                                 </button>
                             </form>
                         </li>
+                        // `SES-001` (`RFC 024` §5 item 1): "where the
+                        // action is taken" -- the semantic a reader
+                        // could be surprised by (signing out ends
+                        // every session this account holds, not just
+                        // this one), stated beside the control rather
+                        // than discovered on another device. `.menu`'s
+                        // own stylesheet rule gives any plain child of
+                        // a non-`.menu-title` `<li>` the same
+                        // grid/hover treatment as a clickable item
+                        // (`li:not(.menu-title) > :not(ul,details,
+                        // .menu-title,.btn)`) -- `menu-title` is the
+                        // one exemption, the same reason the email row
+                        // above uses it for its own non-interactive
+                        // text. `text-base-content/70`, not the
+                        // class's own inherited `/40` (below this
+                        // project's own measured floor): the exact
+                        // override shape `PLC-002` already used on the
+                        // email row, acknowledged in `contrast_scan`.
+                        <li class="menu-title w-full min-w-0">
+                            <span class="text-sm text-base-content/70 font-normal">
+                                {t(MessageKey::SignOutEndsAllSessionsHint)}
+                            </span>
+                        </li>
                     </ul>
                 </div>
             </div>

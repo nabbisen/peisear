@@ -9,6 +9,26 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- **Pressing "Log out" now actually ends the session, everywhere.**
+  Until now, it only removed the browser's own copy of the
+  credential — anyone who still had it (a copied cookie, a browser
+  left signed in) could keep using it for the rest of its normal
+  week-long lifetime. Logging out now invalidates that credential on
+  the server, immediately, on every device signed in as that
+  account.
+
+### Changed
+
+- The account menu now says, next to "Sign out", that it ends
+  sessions on every device — the one thing about logging out that
+  used to be a surprise.
+- Signing in again right after signing out works immediately, with
+  no delay.
+
 ## [0.70.0] — 2026-11-26
 
 **The colour the browser actually paints.** Four releases taught this

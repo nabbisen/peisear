@@ -1,7 +1,33 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.70.0` (**the colour the browser actually paints.**
+**Covers release**: `0.71.0` (**the session that cannot be ended.**
+`FR-AUTH-003` is P0 and read `Implemented`: *"a user MUST be able to
+end their session, after which protected routes are inaccessible with
+the prior credentials."* `logout` removed the client's own cookie and
+touched no storage — a replayed credential kept working for the rest
+of its 7-day lifetime, on every route, including `/api/*` (`RFC 024`
+§1, `§10.66`). **Its own acceptance test is why nobody noticed**:
+`logout_clears_session_and_redirects` verified that a cookie-jar
+client forgot the credential, never that the credential itself stopped
+working — `§10.36`'s fourth instance in two days and its first with a
+real security exposure behind it. **Fixed with a session generation,
+not a clock**: one integer column on `users`, advanced by `logout`,
+stamped into the token at issue, checked in exactly one place
+(`verified_requester_id`) every extractor already funnelled through —
+a stored instant compared against the token's own whole-second `iat`
+was proposed first and withdrawn on the owner's own philosophy review,
+since it reproduces the identical window a prior migration
+(`0021_updated_at_millisecond_precision.sql`) already paid to close for
+`updated_at`. `SES-001`'s own three mechanism tests prove the counter
+where a clock would have failed: an immediate re-login after logout
+still works, a token minted before this column existed still verifies,
+and the second of two sessions for the same account is refused once
+the first logs out. `Requester`'s doc comment corrected (no longer
+no-I/O); `FR-AUTH-001`'s own second clause — no plaintext password
+persisted or logged — gains its first real test, found with zero prior
+evidence anywhere in the repository and measured clean. The release
+before it, `0.70.0`, is **the colour the browser actually paints.**
 Four releases taught `contrast_scan` to read a *declaration* — a class
 token, a stylesheet rule, a non-text property. **None of them ever
 asked a browser what it painted.** `browser-checks/contrast-gate.mjs`
@@ -99,7 +125,7 @@ and through it
 (on GitHub; excluded from this book, see `docs/README.md`).
 Both retained unedited as the record of their releases
 **Language**: English (normative)
-**Prepared**: 2026-07-27 · **Amended**: 2026-11-26 (0.70.0 — `NFR-A11Y-005` widened a fourth time and `NFR-A11Y-010` a third, to the browser-rendered check covering both at once; `§10.65` opened and closed; and at that release's own cut, **`§10.36` gains instance 9** — three rules whose only evidence is a person following them (a release tag's own message, a relative link that a `DEC-055` archive move relocates, a doc link written on a private item), all three the architect's, none fixed at the cut and all three measured — together with two stale counts inside that entry, one of them its own. Before it, 2026-11-25 (0.69.0 — the register's own reading rule (last `*Status*:` line governs) stated in `§0.6` for the first time; three multi-status entries marked; `§10.64` opened and closed. Before it, 2026-11-24 (0.68.0 — `NFR-A11Y-010`'s acceptance widened to the other half of its own first sentence, the boundaries of interactive controls, unmeasured since 0.42.0; `§10.63` opened and closed. Before it, 2026-11-23 (0.67.0 — `NFR-A11Y-005`'s acceptance widened a second time, to a third mechanism covering colours no component class writes at all; `§10.62` opened and closed. Before it, 2026-11-22 (0.66.0 — the same entry's acceptance widened to all four token families, `§10.61` opened and closed); before that, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — checked again at that cut, and it moved, two cuts running))))
+**Prepared**: 2026-07-27 · **Amended**: 2026-11-26 (0.71.0 — `FR-AUTH-003`'s acceptance replaced (verified the credential itself, not that the client forgot it) and `FR-AUTH-001`'s second clause given its first real test; `§10.66` opened and closed, `§10.36` gains instance 10. Before it, 2026-11-26 (0.70.0 — `NFR-A11Y-005` widened a fourth time and `NFR-A11Y-010` a third, to the browser-rendered check covering both at once; `§10.65` opened and closed; and at that release's own cut, **`§10.36` gains instance 9** — three rules whose only evidence is a person following them (a release tag's own message, a relative link that a `DEC-055` archive move relocates, a doc link written on a private item), all three the architect's, none fixed at the cut and all three measured — together with two stale counts inside that entry, one of them its own. Before it, 2026-11-25 (0.69.0 — the register's own reading rule (last `*Status*:` line governs) stated in `§0.6` for the first time; three multi-status entries marked; `§10.64` opened and closed. Before it, 2026-11-24 (0.68.0 — `NFR-A11Y-010`'s acceptance widened to the other half of its own first sentence, the boundaries of interactive controls, unmeasured since 0.42.0; `§10.63` opened and closed. Before it, 2026-11-23 (0.67.0 — `NFR-A11Y-005`'s acceptance widened a second time, to a third mechanism covering colours no component class writes at all; `§10.62` opened and closed. Before it, 2026-11-22 (0.66.0 — the same entry's acceptance widened to all four token families, `§10.61` opened and closed); before that, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — checked again at that cut, and it moved, two cuts running)))))
 **Location**: `docs/specification/requirements.md`. **This document is the
 normative source of truth** — English only, placed 2026-09-24 (`DEC-020`,
 closed). See [the directory README](./README.md) for how its citations
@@ -621,6 +647,18 @@ Argon2 hash.
 with password ≥ 8 characters; no plaintext password is persisted or
 logged. *Status*: Implemented. *Priority*: P0.
 
+**The second clause had zero evidence before `SES-001` (`069`,
+`0.71.0`)** — *"no plaintext password is persisted or logged"* matched
+nothing in `tests/` or `peisear-auth` (`RFC 024` §2). Measured true,
+not assumed: a distinctive marker password left **0** occurrences in
+the stored row, **0** in tracing output captured at `debug` for the
+registering request, and the ≥8-character rule held. Now a real test,
+`a_distinctive_password_never_reaches_storage_or_logs` (`smoke.rs`),
+planted against the storage half (bypassing the hash step is caught by
+name) — no equivalent plant exists for the log half, because nothing
+in the request path ever logs the field at all; see that test's own
+doc comment.
+
 **FR-AUTH-002 — Login and session establishment**
 The system MUST authenticate a registered user by email and password and
 establish a server-verified session carried in an HTTP-only cookie.
@@ -631,8 +669,28 @@ wrong. *Status*: Implemented. *Priority*: P0.
 **FR-AUTH-003 — Logout**
 The system MUST allow a user to end their session, after which protected
 routes are inaccessible with the prior credentials.
-*Source*: `KICK §3.1`. *Acceptance*: `logout_clears_session_and_redirects`.
-*Status*: Implemented. *Priority*: P0.
+*Source*: `KICK §3.1`. *Acceptance*:
+`a_credential_captured_before_logout_is_refused_after_it_html_and_api`
+(`smoke.rs`), covering an HTML route (303 to `/login`) and an
+`/api/*` route (401 JSON) — both rejection shapes
+`verified_requester_id` produces. *Status*: Implemented (`SES-001`,
+series `069`, `0.71.0`). *Priority*: P0.
+
+**This entry read `Implemented` while the sentence above was false,
+and its own acceptance citation was the reason nobody noticed**
+(`RFC 024` §2, `§10.66`, `§10.36` instance 10). `logout` removed the
+client's own cookie and touched no storage; the credential kept
+working for the rest of its 7-day lifetime, on every route, including
+`/api/*`. The citation, `logout_clears_session_and_redirects`, drove a
+cookie-jar client that logged out and then asked for a protected route
+**with no cookie** — it verified that the client forgot the
+credential, never that the credential itself stopped working. Fixed by
+`RFC 024`'s own mechanism (a session generation on `users`, advanced by
+`logout`, checked in `verified_requester_id` — the one place every
+extractor funnels through) and replaced with a test that replays the
+captured, still-held credential and asserts it is refused. Recorded
+`Divergent` in `§10.66` for the span of this round and closed by it in
+the same release, per that entry's own exit condition.
 
 **FR-AUTH-004 — Unauthenticated HTML access**
 Unauthenticated requests to protected HTML routes MUST redirect to the
@@ -7528,8 +7586,8 @@ and state what was checked.**
 the assertion is right and **its input is empty for a reason it never asks
 about**, so it reports success having looked at nothing.
 
-**Nine** instances, all measured. The first five were all from the two
-releases before 0.50.0; instances 6 through 9 are later, and **the count in
+**Ten** instances, all measured. The first five were all from the two
+releases before 0.50.0; instances 6 through 10 are later, and **the count in
 this sentence is corrected each time a row is added** rather than left
 reading *five* over a longer table, which would be this entry's own
 class applied to this entry.
@@ -7545,6 +7603,7 @@ class applied to this entry.
 | 7 | **`DEC-028`'s sweep reported run over both specifications while one of them was never touched.** `external-design.md` received no amendment at 0.58.0 or 0.58.1 (last commit `692c20f`, the 0.57.0 cut); `requirements.md`'s Appendix C has no row for 0.57.0, 0.58.0 or 0.58.1; both documents' headers have read *Covers release: `0.53.0`* since 2026-10-15, through six releases. **The evidence of the sweep is a document edit, and no edit is indistinguishable from a sweep that found nothing to edit** — 0.54.0 through 0.57.0 each wrote an Appendix C row saying *"no screen, route, state or copy changed"*, so the row is owed by the release happening, not by the content changing. 0.58.1's candidate searched the document for that release's new identifiers, found zero hits, and inferred no amendment was owed; the search was right and the inference was not. No guard exists: `spec_scan`'s four rules read `§10.N` citations, the four-digit `RFC` form and Appendix A's arithmetic and census, and none reads a document header | Found by the architect while assembling `REL-0.59.0`, 2026-10-31; repaired at that cut (`REL-0.59.0` §3), and a `spec_scan` rule for it is a `ROADMAP.md` candidate rather than scheduled. **The lapse is the architect's**, in both candidates and both reviews |
 | 8 | **The same class again, three cuts later, in three places at once — and instance 7's own instruction to check went unfollowed.** Found by the `0.65.0` candidate's own `DEC-028` sweep, 2026-11-21, by reading the two documents rather than by any check. **(a)** `requirements.md`'s header read **`Covers release: 0.64.0`** while its parenthetical described `0.63.0`'s three closures, named `0.62.0` as *"the release before it"*, and ended *"implementation through `0.63.0`"* — the version moved at the cut and the body did not. **(b)** Both documents' **`Amended`** field read `2026-11-01 (0.60.0)` while `0.62.0` had amended `FR-DM-006`, closed `NFR-A11Y-012`'s last exception and added `external-design §5.10` — two releases stale, in the very field instance 7 above says it recorded *"so the next sweep checks whether it moved rather than assuming it does"*. Two sweeps did not. **(c)** In **both** documents the three newest Appendix C rows (`0.62.0`, `0.63.0`, `0.64.0`) sat **above** the table's header and delimiter lines, so they were not rows at all: rendered with the pinned `mdbook 0.5.4`, the fragment comes out as `<p>| <strong>0.64.0 (this baseline)</strong> | …` — paragraph text with literal pipes, in the published book, for three releases. **Measured by rendering, not reasoned from the CommonMark table rule.** The shape is this entry's own: the sweep's evidence is *a row exists* and *a header names a version*, and neither can tell a row inside a table from a row above it, or a version bump from a description that moved with it | All three repaired at the `0.65.0` candidate: the header rewritten, both `Amended` fields corrected with the release that actually amended them, and nine rows relocated below their delimiters in the two documents. **The lapse is the architect's**, in three consecutive cuts and in every candidate and review that accepted them — instance 7 was his too, and its remedy was a sentence asking the next sweep to look |
 | 9 | **Three rules at once whose only evidence is a person following them, found at the `0.70.0` cut, 2026-11-26, and all three the architect's.** **(a)** *The tag carries the link* (`changelog-and-releases.md`) requires every release tag's message to carry a `CHANGELOG.md` URL pinned to that tag; **`0.68.0`'s and `0.69.0`'s tag bodies are empty**, and `0.61.0`/`0.62.0` carry a different shape, while every other tag from `0.40.0` on is correct — so a regression, not an unimplemented rule, and **nothing reads a tag message**, although `changelog_scan` rule 7 already shells out to `git tag`. **(b)** `DEC-055`'s archive move relocates a section one directory deeper, which breaks every relative link written inside it: **four broken in `changelog/0.60-0.69.md`** at this very cut and **three in `changelog/0.50-0.59.md` since it was written at `0.60.0`**, unnoticed for ten releases. `changelog_scan` rule 4 resolves `CHANGELOG.md`'s links and **does not read an archive's at all**; rule 5 reports only a *fragment* that no longer exists. **(c)** CI's `rustdoc-links` job renders the public half of the workspace, so a doc link written **on a private item** is never resolved — **two are broken on this tree**. **The shape all three share is the narrower half of this entry's own class**: not a check that examines nothing, but a check whose reach is narrower than its name, so a reader takes its green for a claim it never made. Found by reading the artefacts — the tag objects, the moved file's links, rustdoc's output — and in (a) and (c) by the architect predicting what a tool would say and then measuring that it says otherwise | **None is fixed at this cut, deliberately.** (a) is unrewritable after publication by that document's own rule and `0.40.0`'s precedent, so `0.70.0`'s tag is written correctly and the two empty ones stand; (b) is a conflict between `DEC-055`'s *verbatim* and *written once* sentences that only the owner can settle, so the move was made strictly verbatim (**959 lines, byte-identical to the parent's own copy**) and all four links left broken and counted rather than quietly repaired; (c) is pre-existing. **All three are `ROADMAP.md` candidates with their populations measured**, and the checks are small in every case — which is the point: what was missing was somebody reading the artefact, not somebody able to |
+| 10 | **`FR-AUTH-003`'s own acceptance — the fourth instance of this class in two days, and the first with a P0 product defect behind it rather than a tooling or documentation gap.** `logout_clears_session_and_redirects` (`smoke.rs`) drove a cookie-jar client: logged out, then asked for `/projects` **with no cookie**, and asserted a redirect. **It verified that the client forgot the credential. It never asked whether the credential still worked.** The credential kept working for the rest of its 7-day lifetime, on every route, including `/api/*` — `RFC 024` §2's own measurement, against a debug build of the `0.70.0` release commit | Fixed by `SES-001` (`069`, `0.71.0`): replaced with `a_credential_captured_before_logout_is_refused_after_it_html_and_api`, which replays the captured, still-held credential rather than observing an empty jar, over both an HTML route (303) and an `/api/*` route (401) |
 
 **Instance 5 is the one worth stating plainly.** The class was already written
 down and under review when a careful round reintroduced it anyway, while
@@ -10423,6 +10482,105 @@ too. Zero `disabled` sites exist on this tree to exercise the
 inactive-control exemption this gate carries in code — live, unused,
 same posture `contrast_scan.rs`'s own `EXEMPT_SHEET_RULES` already
 takes for the same reason.
+
+### 10.66 A P0 requirement's own acceptance verified the symptom, not the defect — closed, `SES-001`, series `069`, 0.71.0; opened and closed 2026-11-26 by the architect, via `RFC 024` and the round it governs
+
+**`FR-AUTH-003` read `Implemented` while the sentence it states was
+false.** *"A user MUST be able to end their session, after which
+protected routes are inaccessible with the prior credentials"* —
+`logout` (`handlers/auth.rs`) removed the client's own cookie and
+touched no storage. Measured against a debug build of `cfa45d9` (the
+`0.70.0` release commit): register, confirm a protected route with the
+token, `POST /logout` carrying it, then **replay the same token** —
+`200` on `/projects`, `200` on `/today`, `200` on `/api/search`. No
+`jti`, no session table, no denylist anywhere in `crates/*/src`. The
+credential stayed valid for the rest of `SESSION_TTL_SECS` (seven
+days), and neither the user nor the operator could shorten that.
+
+**Why it survived, which is the part worth reading over the defect
+itself** (`§10.36` instance 10): the acceptance citation,
+`logout_clears_session_and_redirects`, drove a cookie-jar client that
+logged out and then asked for a protected route **with no cookie**. It
+verified that the client forgot the credential. It never asked whether
+the credential itself still worked — the narrower half of `§10.36`'s
+own class, its fourth instance in two days and the first with a real
+security exposure behind it.
+
+**The rule, from `RFC 024` §3**: *a credential is valid only if it was
+issued under the subject's current session generation; ending a
+session advances the generation.* **One integer column on `users`**
+(`session_generation`, `INTEGER NOT NULL DEFAULT 0`, migration
+`0024`), advanced by `logout`, stamped into `Claims.ses` at issue, and
+checked in exactly one place: `verified_requester_id`
+(`extractors.rs`) — the function every one of the five extractors
+(`AuthUser`, `Requester` directly; `ApiRequester` through `Requester`;
+`ApiAuthUser`, `MaybeAuthUser` through `AuthUser`) already funnelled
+through for signature and expiry verification, so the revocation check
+inherits the same unforgeability property `PRIV-002`/`DEC-058` rests
+on — a check placed in "both extractors" would be a rule a sixth one
+skips, which is this defect's own shape rebuilt inside its fix.
+
+**Why a generation counter and not the token's own `iat` compared
+against a stored instant** (`RFC 024` §4.1, recorded as a withdrawn
+alternative in that RFC's own §4.4): `iat` is whole-second resolution,
+and this project already paid one migration
+(`0021_updated_at_millisecond_precision.sql`) to close the identical
+window for `updated_at`. Compared at that resolution, a credential
+replayed inside logout's own second is admitted; compared finer, a
+user who logs out and immediately logs back in is refused for the
+remainder of that second — the owner's own *"UI/UX for users not to be
+confused"* broken by the fix itself. **A counter has neither case**: no
+resolution, no timezone, no `DATETIME`-versus-`TIMESTAMPTZ` divergence
+between the two backends, and the test is `!=` on an integer.
+`migrations-postgres/0023_rowid_surrogate_for_ordering.sql` had no
+SQLite counterpart, so `0023` was free on one backend and already
+spent on the other — the real next number free on both,
+`migration_drift.rs` confirmed, is `0024`, not the handoff's own
+`0023`.
+
+**Measured, not assumed, that the fix costs what `RFC 024` said it
+would**: `Requester`'s own doc comment claimed *"no DB round-trip,
+unlike `AuthUser`"* — no longer true, since `verified_requester_id`
+now reads the user row on every request to check the generation, and
+the comment is corrected rather than left asserting a property the
+code no longer has. The row is memoised in `parts.extensions`
+(`CachedAuth`) so the 29 handlers extracting both `AuthUser` and
+`Requester`/`ApiRequester` pay one read per request, not two — the
+same memoisation also removes a double JWT decode that already
+existed. Ten handlers (all mutations of the requester's own personal
+data: notification preferences, notifications, capacity rows) gain a
+read that is new, which is the argument for the check, not against it.
+
+**Three mechanism tests beside the acceptance test itself**, each
+covering a property a reader would otherwise have to trust rather than
+see asserted: logging out and immediately back in, in the same test
+with no sleep, establishes a working session (the exact case a
+clock-based mechanism fails, `RFC 024` §4.1 — stated here as the
+reason a clock is not being compared, not merely asserted without a
+counter-example); a token minted before this column existed (no `ses`
+claim) still verifies, against the row's own default; and the second
+of two independent sessions for the same account is refused once the
+first logs out — the one-sentence statement of this whole entry.
+
+**Planted, both ways**: against the pre-`SES-001` tree, the new
+`FR-AUTH-003` acceptance test and the "second device" mechanism test
+both fail (`200` where `303` is asserted) — confirmed in a scratch
+worktree, not assumed from the diff's own shape. `FR-AUTH-001`'s own
+second clause (*"no plaintext password is persisted or logged"*,
+previously zero evidence anywhere in `tests/` or `peisear-auth`) is
+now a real test too, planted against its storage half by bypassing the
+hash step in a second scratch worktree.
+
+**What this does not fix.** The 7-day TTL stays, deliberately — without
+revocation it was the exposure; with revocation it is a policy, and
+`RFC 024` §7 declines to move both in one release. No password
+change, reset, e-mail verification, device list, or operator
+revocation command — each is new user-facing scope the owner has not
+authorized, named in `RFC 024` §7 so the next person who reaches for
+one of them finds it already considered. `FR-AUTH-004`/`FR-AUTH-005`
+are not re-derived here (audited at `0.46.0`); `FR-AUTH-002` is
+satisfied as written. `Claims.email` is still named but not re-argued
+(`sui-id`'s own R4 raised the identical shape upstream).
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 

@@ -696,6 +696,11 @@ pub enum MessageKey {
     /// removes from the five destinations this requirement names.
     NavMenuLabel,
     NavSignOut,
+    /// `SES-001` (`RFC 024` §5 item 1): the semantic a reader could
+    /// be surprised by, stated where the action is taken rather than
+    /// discovered on another device — signing out here ends every
+    /// session this account holds, not just this one.
+    SignOutEndsAllSessionsHint,
     /// `NAV-001`: the primary navigation's own wrapping `<nav>`
     /// `aria-label` -- there are now two `<nav>` landmarks on every
     /// authenticated page (this one, [`MessageKey::BreadcrumbNavLabel`]
@@ -1923,6 +1928,14 @@ pub enum MessageKey {
     /// symmetry (`I18N-005e` §3/§9).
     InvalidCredentialsMessage,
     EmailAlreadyExistsMessage,
+    /// `SES-001` (`RFC 024` §5 item 2): where the consequence lands.
+    /// A revoked credential used to produce a bare `/login` redirect
+    /// with nothing distinguishing it from an ordinary expiry or from
+    /// never having signed in — this is the flash that tells the
+    /// *other* device which one happened. Carries copy only, never
+    /// anything about the user (`error.rs`'s own redirect never
+    /// writes an identifier or an email into the query string).
+    SessionRevokedFlash,
     /// `handlers.rs::format_validation`'s fallback when a `validator`
     /// error fires without a custom `message` — reachable only
     /// defensively today (every derive rule in this codebase
@@ -2639,6 +2652,7 @@ impl MessageKey {
             MessageKey::NavMenuLabel,
             MessageKey::NavPrimaryLabel,
             MessageKey::NavSignOut,
+            MessageKey::SignOutEndsAllSessionsHint,
             MessageKey::BreadcrumbNavLabel,
             MessageKey::ErrorPageTitle,
             MessageKey::ErrorPageGoHomeLink,
@@ -3269,6 +3283,7 @@ impl MessageKey {
             MessageKey::AlreadyHaveAccountPrompt,
             MessageKey::InvalidCredentialsMessage,
             MessageKey::EmailAlreadyExistsMessage,
+            MessageKey::SessionRevokedFlash,
             MessageKey::InvalidInputFallbackMessage,
             MessageKey::InvalidAssigneeMessage,
             MessageKey::SubIssueCannotNestLongMessage,

@@ -15,9 +15,16 @@ enum — framework-agnostic, no HTTP awareness.
 peisear_auth::password::hash(password)        -> AuthResult<String>
 peisear_auth::password::verify(pw, hash)      -> AuthResult<bool>
 
-peisear_auth::jwt::issue(user_id, email, secret) -> AuthResult<String>
-peisear_auth::jwt::verify(token, secret)         -> AuthResult<Claims>
+peisear_auth::jwt::issue(user_id, email, session_generation, secret) -> AuthResult<String>
+peisear_auth::jwt::verify(token, secret)                              -> AuthResult<(RequesterId, i64)>
 ```
+
+`Claims` itself is private to `jwt` and was never surrendered by
+`verify` even before `SES-001` — this entry read `AuthResult<Claims>`
+incorrectly before that round touched it; corrected rather than
+carried. `verify`'s second return value is the session generation the
+token was issued under (`RFC 024` §4); the caller compares it against
+the subject's current generation.
 
 ## Defaults
 

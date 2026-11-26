@@ -244,6 +244,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::NavMenuLabel => "Menu".to_string(),
         MessageKey::NavPrimaryLabel => "Primary".to_string(),
         MessageKey::NavSignOut => "Sign out".to_string(),
+        MessageKey::SignOutEndsAllSessionsHint => {
+            "Signing out ends your sessions on every device.".to_string()
+        }
         MessageKey::BreadcrumbNavLabel => "Breadcrumb".to_string(),
         MessageKey::BackToSection { section } => format!("Back to {}", nav_section(section)),
         MessageKey::ErrorPageTitle => "Error".to_string(),
@@ -1121,6 +1124,9 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::InvalidCredentialsMessage => "Invalid email or password.".to_string(),
         MessageKey::EmailAlreadyExistsMessage => {
             "An account with this email already exists.".to_string()
+        }
+        MessageKey::SessionRevokedFlash => {
+            "You were signed out because this session was ended on another device.".to_string()
         }
         MessageKey::InvalidInputFallbackMessage => "Invalid input.".to_string(),
 

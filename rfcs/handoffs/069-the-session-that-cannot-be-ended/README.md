@@ -98,9 +98,9 @@ I know if the answer were nothing?**
 
 ## 4. The rounds
 
-| Round | Unit | Subject |
-|---|---|---|
-| `SES-001` | [the session that cannot be ended](./SES-001-the-session-that-cannot-be-ended.md) | Make logout end the session server-side, and give the `FR-AUTH` family acceptance evidence that matches its own words |
+| Round | Unit | Subject | State |
+|---|---|---|---|
+| `SES-001` | [the session that cannot be ended](./SES-001-the-session-that-cannot-be-ended.md) | Make logout end the session server-side, and give the `FR-AUTH` family acceptance evidence that matches its own words | **closed** 2026-11-26 — the generation check lands in `verified_requester_id` alone, `logout` advances it, the acceptance test replays a captured credential and is refused on both an HTML and an `/api/*` route, planted red against the old behaviour and green against the fix |
 
 **One round, not three.** `0.70.0`'s own scope was wrong when it was
 authorized and the owner caught it by asking for a philosophy review; the flaw

@@ -7,7 +7,7 @@ use axum::{
 };
 use axum_extra::extract::CookieJar;
 use peisear_auth::jwt::{self, RequesterId};
-use peisear_core::CurrentUser;
+use peisear_core::{CurrentUser, User};
 use peisear_storage::users;
 
 use crate::{ApiAppError, AppError, AppState};
@@ -15,15 +15,43 @@ use crate::{ApiAppError, AppError, AppState};
 /// Name of the auth cookie holding the JWT.
 pub const AUTH_COOKIE: &str = "it_session";
 
-/// Shared by [`AuthUser`] and [`Requester`]: read the session cookie and
-/// return a verified [`RequesterId`] -- the only way either extractor (or
-/// anything else in the workspace) can obtain one, per `jwt`'s own module
-/// doc comment.
-async fn verified_requester_id<S>(parts: &mut Parts, state: &S) -> Result<RequesterId, AppError>
+/// `SES-001` (`RFC 024` §4.3): [`verified_requester_id`]'s own result,
+/// memoised in `parts.extensions` so a handler whose signature extracts
+/// both [`AuthUser`] and [`Requester`]/[`ApiRequester`] (29 of them) pays
+/// for the JWT decode and the user-row read once per request, not twice
+/// — the double decode already happened before this round (`Requester`'s
+/// own doc comment called it cheap because it was I/O-free); the row
+/// read is the new cost this cache removes a second time over.
+#[derive(Clone)]
+struct CachedAuth {
+    requester_id: RequesterId,
+    user: User,
+}
+
+/// Shared by [`AuthUser`] and [`Requester`]: read the session cookie,
+/// verify the token, and check it against the subject's current session
+/// generation -- the only way either extractor (or anything else in the
+/// workspace) can obtain a [`RequesterId`], per `jwt`'s own module doc
+/// comment, and now also the one and only place `RFC 024` §4's
+/// revocation check is made (§4.2: "nowhere else" -- a rule placed in
+/// both extractors is a rule a sixth one skips).
+///
+/// Returns the user row too, not only the id: this function already
+/// needs it to read `session_generation`, so [`AuthUser`] no longer
+/// makes its own second `users::find_by_id` -- the row is fetched once
+/// and handed to whichever caller asked.
+async fn verified_requester_id<S>(
+    parts: &mut Parts,
+    state: &S,
+) -> Result<(RequesterId, User), AppError>
 where
     S: Send + Sync,
     AppState: FromRef<S>,
 {
+    if let Some(cached) = parts.extensions.get::<CachedAuth>() {
+        return Ok((cached.requester_id.clone(), cached.user.clone()));
+    }
+
     let State(app): State<AppState> = State::from_request_parts(parts, state)
         .await
         .map_err(|_| AppError::Internal("failed to extract state".into()))?;
@@ -36,7 +64,31 @@ where
         .ok_or(AppError::Unauthorized)?
         .value()
         .to_owned();
-    jwt::verify(&token, &app.jwt_secret).map_err(|_| AppError::Unauthorized)
+    let (requester_id, token_generation) =
+        jwt::verify(&token, &app.jwt_secret).map_err(|_| AppError::Unauthorized)?;
+
+    // Re-hydrate the user from the DB so deleted or altered accounts
+    // are immediately invalidated rather than waiting for the JWT to
+    // expire -- unchanged from before this round, just moved here from
+    // `AuthUser` since this function now needs the row regardless.
+    let user = users::find_by_id(&app.db, requester_id.as_str())
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
+    // `RFC 024` §3: a credential is valid only if it was issued under
+    // the subject's *current* session generation. A mismatch gets its
+    // own error variant, not a bare `Unauthorized` -- the HTML path
+    // uses it to show the other device *why* it landed back at
+    // `/login` (`RFC 024` §5) rather than a bare, unexplained redirect.
+    if user.session_generation != token_generation {
+        return Err(AppError::SessionRevoked);
+    }
+
+    parts.extensions.insert(CachedAuth {
+        requester_id: requester_id.clone(),
+        user: user.clone(),
+    });
+    Ok((requester_id, user))
 }
 
 /// Extractor that requires an authenticated user. Returns
@@ -52,28 +104,19 @@ where
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let requester_id = verified_requester_id(parts, state).await?;
-        let State(app): State<AppState> = State::from_request_parts(parts, state)
-            .await
-            .map_err(|_| AppError::Internal("failed to extract state".into()))?;
-
-        // Re-hydrate the user from the DB so deleted or altered accounts
-        // are immediately invalidated rather than waiting for the JWT to
-        // expire.
-        let user = users::find_by_id(&app.db, requester_id.as_str())
-            .await?
-            .ok_or(AppError::Unauthorized)?;
+        let (_, user) = verified_requester_id(parts, state).await?;
         Ok(AuthUser(user.into()))
     }
 }
 
 /// Extractor for handlers that call personal-data storage (`PRIV-002`,
-/// `DEC-058`). Carries only a verified [`RequesterId`] -- no DB
-/// round-trip, unlike [`AuthUser`], since nothing here needs the email or
-/// display name. A handler that also needs those extracts both; the JWT
-/// is decoded twice per such request, which is cheap (no I/O) next to the
-/// guarantee: `RequesterId` cannot be constructed from anything but a
-/// token that just passed signature and expiry verification.
+/// `DEC-058`). Carries only a verified [`RequesterId`]. `SES-001`:
+/// **no longer no-I/O** -- `verified_requester_id` now reads the user
+/// row on every request (to check the session generation), so this
+/// extractor pays that read too, unlike before. A handler that also
+/// needs the email or display name extracts [`AuthUser`] as well; both
+/// extractors funnel through the same choke point, which memoises the
+/// row (`CachedAuth`) so that costs one read, not two.
 pub struct Requester(pub RequesterId);
 
 impl<S> FromRequestParts<S> for Requester
@@ -84,7 +127,8 @@ where
     type Rejection = AppError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        Ok(Requester(verified_requester_id(parts, state).await?))
+        let (requester_id, _) = verified_requester_id(parts, state).await?;
+        Ok(Requester(requester_id))
     }
 }
 
@@ -103,7 +147,9 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         match Requester::from_request_parts(parts, state).await {
             Ok(Requester(rid)) => Ok(ApiRequester(rid)),
-            Err(AppError::Unauthorized) => Err(ApiAppError::Unauthorized),
+            Err(AppError::Unauthorized) | Err(AppError::SessionRevoked) => {
+                Err(ApiAppError::Unauthorized)
+            }
             Err(AppError::Internal(msg)) => Err(ApiAppError::Internal(msg)),
             Err(other) => {
                 tracing::error!(?other, "unexpected AppError from Requester in ApiRequester");
@@ -129,7 +175,7 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         match AuthUser::from_request_parts(parts, state).await {
             Ok(AuthUser(u)) => Ok(MaybeAuthUser(Some(u))),
-            Err(AppError::Unauthorized) => Ok(MaybeAuthUser(None)),
+            Err(AppError::Unauthorized) | Err(AppError::SessionRevoked) => Ok(MaybeAuthUser(None)),
             Err(e) => Err(e),
         }
     }
@@ -161,7 +207,9 @@ where
         // extractors pick it up.
         match AuthUser::from_request_parts(parts, state).await {
             Ok(AuthUser(u)) => Ok(ApiAuthUser(u)),
-            Err(AppError::Unauthorized) => Err(ApiAppError::Unauthorized),
+            Err(AppError::Unauthorized) | Err(AppError::SessionRevoked) => {
+                Err(ApiAppError::Unauthorized)
+            }
             Err(AppError::Internal(msg)) => Err(ApiAppError::Internal(msg)),
             // The remaining AppError variants (Forbidden,
             // NotFound, Validation, etc.) shouldn't arise from

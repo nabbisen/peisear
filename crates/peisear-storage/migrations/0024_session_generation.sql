@@ -1,0 +1,38 @@
+-- 0024_session_generation.sql
+--
+-- `SES-001` (`RFC 024` §4). `logout` (`handlers/auth.rs`) removed the
+-- client's own cookie and touched no storage -- there was nothing
+-- server-side to end, so a replayed credential kept working for the
+-- rest of its 7-day lifetime (`FR-AUTH-003`, P0). This column is the
+-- one thing the fix needs: a credential is valid only if it was
+-- issued under the subject's current session generation, and ending
+-- a session advances the generation.
+--
+-- **Re-derived rather than trusted: the handoff's own "Add 0023_*"
+-- is wrong by one.** `migrations-postgres/0023_rowid_surrogate_for_ordering.sql`
+-- already exists with no SQLite counterpart (`migration_drift.rs`'s
+-- own `POSTGRES_ONLY` exception), so `0023` is free on this side but
+-- already spent on that one -- `migration_drift.rs` compares full
+-- filenames across both directories, so a migration meant to exist
+-- on *both* backends must carry the same number in both, and the
+-- first number free on both is `0024`, not `0023`.
+--
+-- `session_generation`, not `sessions_epoch` (the RFC's own prose
+-- name) -- "epoch" reads as a Unix timestamp to a reader who has not
+-- read `§4.1`, which is the exact confusion a generation counter
+-- exists to avoid; the RFC's own text says this name is the
+-- implementer's to improve, not to shorten into something cryptic.
+--
+-- An integer, not an instant: no resolution, no timezone, no
+-- `DATETIME`-versus-`TIMESTAMPTZ` divergence between the two
+-- backends -- `RFC 024` §4.1 measures why a stored instant compared
+-- against the token's own whole-second `iat` reproduces the exact
+-- window `0021_updated_at_millisecond_precision.sql` already paid a
+-- migration to close once.
+--
+-- `DEFAULT 0` so every existing row starts at the generation every
+-- token already carries implicitly (no token has ever named one) --
+-- `jwt.rs`'s own `Claims.ses` reads `#[serde(default)]` for the same
+-- reason, on the other side of this same compatibility question.
+
+ALTER TABLE users ADD COLUMN session_generation INTEGER NOT NULL DEFAULT 0;

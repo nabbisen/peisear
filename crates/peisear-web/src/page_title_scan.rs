@@ -96,7 +96,10 @@ mod tests {
             // samples added, one per count-bearing field this round
             // touched (three for DriftAriaLabel's own Up/Down/Steady
             // triple).
-            748,
+            // `SES-001` (`069`): 748 -> 750, two new keys
+            // (`SignOutEndsAllSessionsHint`, `SessionRevokedFlash`),
+            // each added once to `MessageKey::all()`.
+            750,
             "MessageKey::all()'s own population moved -- re-measure before trusting this guard \
              examined anything"
         );

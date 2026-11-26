@@ -25,8 +25,15 @@ use super::server::{JWT_SECRET, TestApp};
 /// to produce one the same way production does, which is the property
 /// `DEC-058` asks for, not a bypass of it.
 pub fn requester_id_for(user_id: &str) -> RequesterId {
-    let token = jwt::issue(user_id, "unused@example.test", JWT_SECRET).expect("issue a test token");
-    jwt::verify(&token, JWT_SECRET).expect("verify the just-issued test token")
+    // `SES-001`: generation `0` — this path never goes through
+    // `verified_requester_id`, so no row's own generation is ever
+    // compared against it; the literal matches what every user's row
+    // starts at regardless.
+    let token =
+        jwt::issue(user_id, "unused@example.test", 0, JWT_SECRET).expect("issue a test token");
+    jwt::verify(&token, JWT_SECRET)
+        .expect("verify the just-issued test token")
+        .0
 }
 
 /// `PRIV-003`: a [`SubjectId`] for `user_id`, via `From<&RequesterId>` --

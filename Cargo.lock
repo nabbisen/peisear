@@ -2217,6 +2217,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "include_dir",
+ "jsonwebtoken",
  "leptos",
  "peisear-auth",
  "peisear-core",

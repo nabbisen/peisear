@@ -36,6 +36,12 @@ pub struct User {
     /// `capacity_points` — see migration
     /// `0005_personal_limits.sql` for the rationale.
     pub wip_limit: Option<i64>,
+    /// `SES-001` (`RFC 024` §4): advanced by one every time this
+    /// user's `logout` runs. A credential (the JWT's own `ses`
+    /// claim) is honoured only while it matches this value — see
+    /// `peisear-web::extractors::verified_requester_id`, the one
+    /// place that check is made.
+    pub session_generation: i64,
     pub created_at: DateTime<Utc>,
 }
 

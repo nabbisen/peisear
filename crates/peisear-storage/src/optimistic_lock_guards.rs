@@ -98,9 +98,11 @@ fn cleanup(_db: &pool::TestDatabase) {}
 /// A real `RequesterId` — obtainable only from [`verify`], so a test that
 /// needs one goes through [`issue`] first, exactly as a login would.
 fn requester(id: &str) -> RequesterId {
-    let token = issue(id, &format!("{id}@example.test"), "store002-test-secret")
+    let token = issue(id, &format!("{id}@example.test"), 0, "store002-test-secret")
         .expect("issue a test token");
-    verify(&token, "store002-test-secret").expect("verify the token just issued")
+    verify(&token, "store002-test-secret")
+        .expect("verify the token just issued")
+        .0
 }
 
 async fn seed_user(pool: &Pool, id: &str) {

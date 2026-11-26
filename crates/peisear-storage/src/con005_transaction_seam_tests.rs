@@ -63,9 +63,11 @@ async fn migrated_pool() -> Pool {
 /// A real `RequesterId` — obtainable only from [`verify`], exactly as
 /// a login would produce one.
 fn requester(id: &str) -> RequesterId {
-    let token =
-        issue(id, &format!("{id}@example.test"), "con005-test-secret").expect("issue a test token");
-    verify(&token, "con005-test-secret").expect("verify the token just issued")
+    let token = issue(id, &format!("{id}@example.test"), 0, "con005-test-secret")
+        .expect("issue a test token");
+    verify(&token, "con005-test-secret")
+        .expect("verify the token just issued")
+        .0
 }
 
 /// How long the "still blocked" assertion waits before checking the

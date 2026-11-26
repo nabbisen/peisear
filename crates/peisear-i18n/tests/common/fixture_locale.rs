@@ -146,6 +146,7 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::NavMenuLabel => "[fx-menu]".to_string(),
         MessageKey::NavPrimaryLabel => "[fx-primary]".to_string(),
         MessageKey::NavSignOut => "[fx-sign-out]".to_string(),
+        MessageKey::SignOutEndsAllSessionsHint => "[fx-sign-out-ends-all-sessions]".to_string(),
         MessageKey::BreadcrumbNavLabel => "[fx-breadcrumb]".to_string(),
         MessageKey::BackToSection { section } => format!("[fx-back-to] {}", nav_section(section)),
         MessageKey::ErrorPageTitle => "[fx-error-title]".to_string(),
@@ -775,6 +776,7 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::AlreadyHaveAccountPrompt => "[fx-already-have-account]".to_string(),
         MessageKey::InvalidCredentialsMessage => "[fx-invalid-credentials]".to_string(),
         MessageKey::EmailAlreadyExistsMessage => "[fx-email-already-exists]".to_string(),
+        MessageKey::SessionRevokedFlash => "[fx-session-revoked]".to_string(),
         MessageKey::InvalidInputFallbackMessage => "[fx-invalid-input-fallback]".to_string(),
 
         // ---- I18N-005e: handlers/issues.rs ----

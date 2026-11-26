@@ -154,22 +154,221 @@ async fn legacy_notifications_post_endpoints_redirect_with_308() {
     assert_eq!(location, "/inbox/some-notif-id/read");
 }
 
+/// `SES-001` (`RFC 024`, `FR-AUTH-003`). Replaces
+/// `logout_clears_session_and_redirects`, which drove a cookie-jar
+/// client that logged out, then asked for `/projects` **with no
+/// cookie**, and asserted a redirect — it verified that the client
+/// forgot the credential, never that the credential itself stopped
+/// working (`§10.36` instance 10). This test captures the token
+/// *before* logging out and replays that exact value afterwards, on
+/// both an HTML route (303 to `/login`) and an `/api/*` route (401
+/// JSON) — the two rejection shapes `verified_requester_id` produces,
+/// both exercised here rather than assumed symmetric.
+///
+/// **Plant**: run against the pre-`SES-001` tree (no `session_generation`
+/// check in `verified_requester_id`), this test fails — the replayed
+/// cookie still reaches `/projects` with a `200` and `/api/search`
+/// with a `200`, not the `303`/`401` asserted below. Confirmed red
+/// before this round's own fix landed, not assumed.
 #[tokio::test]
-async fn logout_clears_session_and_redirects() {
+async fn a_credential_captured_before_logout_is_refused_after_it_html_and_api() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("carol");
-    register_and_login(&app, &user).await;
 
-    // Verify authenticated first.
+    // Capture the live session cookie as `register` issues it — a
+    // subsequent request's own response carries no `Set-Cookie` (the
+    // server only sets one at register/login time), so it has to be
+    // read from here, not re-derived from a later page load.
+    let register_resp = app
+        .server
+        .post("/register")
+        .form(&[
+            ("email", user.email.as_str()),
+            ("password", user.password.as_str()),
+            ("display_name", user.display_name.as_str()),
+        ])
+        .await;
+    register_resp.assert_status(StatusCode::SEE_OTHER);
+    let captured = register_resp
+        .cookies()
+        .iter()
+        .next()
+        .expect("a session cookie")
+        .clone()
+        .into_owned();
+
+    // Verify authenticated first (the server's own jar now carries
+    // the same cookie, set by the `register` call above).
     let resp = app.server.get("/projects").await;
     resp.assert_status_ok();
 
-    // Log out.
+    // Log out (through the server's own jar, which is a separate
+    // copy from `captured` above).
     let resp = app.server.post("/logout").await;
     resp.assert_status(StatusCode::SEE_OTHER);
 
-    // Now /projects should redirect to /login again.
+    // The captured credential, replayed on an HTML route: refused,
+    // not merely "the jar is empty" — `clear_cookies()` first proves
+    // this request carries *only* the stale token, nothing else.
+    let resp = app
+        .server
+        .get("/projects")
+        .clear_cookies()
+        .add_cookie(captured.clone())
+        .await;
+    assert_eq!(resp.status_code(), StatusCode::SEE_OTHER);
+
+    // Same stale credential, an `/api/*` route: 401 JSON, the other
+    // rejection shape `ApiRequester`/`ApiAuthUser` produce.
+    let resp = app
+        .server
+        .get("/api/search?q=foo")
+        .clear_cookies()
+        .add_cookie(captured)
+        .await;
+    assert_eq!(resp.status_code(), StatusCode::UNAUTHORIZED);
+}
+
+/// `RFC 024` §4.1: the case a timestamp mechanism fails and a counter
+/// does not. Immediately after logging out, in the same test, with no
+/// sleep: logging back in must produce a session that works. A clock-
+/// based revocation compared at whole-second resolution would admit a
+/// same-second replay (wrong direction); compared finer, it would
+/// refuse this exact re-login for the rest of that second (the
+/// opposite failure, and the one a sleep in this test would have
+/// papered over rather than proven absent).
+#[tokio::test]
+async fn logging_back_in_immediately_after_logout_establishes_a_working_session() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("dana");
+    register_and_login(&app, &user).await;
+
+    let resp = app.server.post("/logout").await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    // No sleep between logout and login — the whole point.
+    let resp = app
+        .server
+        .post("/login")
+        .form(&[
+            ("email", user.email.as_str()),
+            ("password", user.password.as_str()),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
     let resp = app.server.get("/projects").await;
+    resp.assert_status_ok();
+}
+
+/// `RFC 024` §4.3: a token minted before `session_generation` existed
+/// (any `0.70.0` token) must keep working after the upgrade — the
+/// `#[serde(default)]` property on `Claims.ses`. Minted by hand here,
+/// since `jwt::issue` always stamps a generation now and `Claims`
+/// stays private to `peisear_auth::jwt` on purpose; this is the exact
+/// historical shape a real `0.70.0` cookie has, re-signed with the
+/// same test secret the app under test verifies against.
+#[tokio::test]
+async fn a_pre_upgrade_token_with_no_generation_claim_still_verifies() {
+    #[derive(serde::Serialize)]
+    struct PreUpgradeClaims {
+        sub: String,
+        email: String,
+        exp: i64,
+        iat: i64,
+        // Deliberately no `ses` field — this is the shape every
+        // token minted before SES-001 actually has.
+    }
+
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("erin");
+    let user_id = register_and_login(&app, &user).await;
+
+    let now = chrono::Utc::now().timestamp();
+    let claims = PreUpgradeClaims {
+        sub: user_id,
+        email: user.email.clone(),
+        iat: now,
+        exp: now + 60 * 60 * 24 * 7,
+    };
+    let token = jsonwebtoken::encode(
+        &jsonwebtoken::Header::default(),
+        &claims,
+        &jsonwebtoken::EncodingKey::from_secret(common::server::JWT_SECRET.as_bytes()),
+    )
+    .expect("encode a pre-upgrade-shaped token");
+
+    // A raw `Cookie:` header rather than `.add_cookie()` -- the typed
+    // builder needs the `cookie` crate named directly, which this
+    // integration-test binary has no reason to depend on for one
+    // header value.
+    let resp = app
+        .server
+        .get("/projects")
+        .clear_cookies()
+        .add_header(axum::http::header::COOKIE, format!("it_session={token}"))
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::OK,
+        "a pre-SES-001 token (no `ses` claim) must still verify -- the row's own \
+         session_generation default (0) must match the claim's default (also 0)"
+    );
+}
+
+/// `RFC 024` §3/§5, the one-sentence statement of the whole round:
+/// ending a session ends it *everywhere*, not just on the device that
+/// pressed Log out. Two independent sessions for the same account
+/// (simulating two devices), captured separately; logging out through
+/// one refuses the other's own, never-replayed-until-now credential.
+#[tokio::test]
+async fn logging_out_on_one_device_refuses_the_other_devices_session() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("frank");
+    register_and_login(&app, &user).await;
+
+    let cookie_of = |resp: axum_test::TestResponse| {
+        resp.cookies()
+            .iter()
+            .next()
+            .expect("a session cookie")
+            .clone()
+            .into_owned()
+    };
+
+    // "Device B": a second, independent login for the same account.
+    let device_b_login = app
+        .server
+        .post("/login")
+        .form(&[
+            ("email", user.email.as_str()),
+            ("password", user.password.as_str()),
+        ])
+        .await;
+    device_b_login.assert_status(StatusCode::SEE_OTHER);
+    let device_b_cookie = cookie_of(device_b_login);
+
+    // Confirm device B's own session works before any logout.
+    let resp = app
+        .server
+        .get("/projects")
+        .clear_cookies()
+        .add_cookie(device_b_cookie.clone())
+        .await;
+    resp.assert_status_ok();
+
+    // Log out through the server's own jar ("device A").
+    let resp = app.server.post("/logout").await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    // Device B's own credential, captured before any logout and never
+    // itself used to log out, is refused too.
+    let resp = app
+        .server
+        .get("/projects")
+        .clear_cookies()
+        .add_cookie(device_b_cookie)
+        .await;
     assert_eq!(resp.status_code(), StatusCode::SEE_OTHER);
 }
 
@@ -272,5 +471,102 @@ async fn a_second_navigation_does_not_refetch_the_asset_body() {
         second.as_bytes().is_empty(),
         "a 304 must carry no body -- wire bytes on the second navigation: {}",
         second.as_bytes().len()
+    );
+}
+
+/// `FR-AUTH-001`'s second clause -- *"no plaintext password is
+/// persisted or logged"* -- had zero matches for `plaintext` anywhere
+/// in `tests/` or `peisear-auth` before `SES-001`/`RFC 024` §2: true,
+/// and evidenced by nobody. This is the real test. A distinctive
+/// marker password that cannot appear by coincidence, checked absent
+/// from the stored row **and** from tracing output captured at
+/// `debug` for the one request that carries it — the level the
+/// architect's own manual walk used (`RFC 024` §2), not the default a
+/// production deployment runs at.
+///
+/// **Plant**: in `register_submit`, replace `password::hash(&form.password)?`
+/// with `form.password.clone()` in a scratch worktree and this test's
+/// own storage assertion fails, naming the marker in `password_hash`
+/// directly -- confirmed, not assumed (see the round's own report).
+/// No equivalent plant for the log half: nothing in this crate's
+/// request path ever formats the word `password`, and
+/// `TraceLayer::new_for_http()` is unconfigured (its defaults log
+/// method/path/status/latency, never a body), so there is no call
+/// site to break in a way this test would need to catch — the
+/// structural absence *is* the property, not a gap this plant leaves
+/// unchecked.
+#[tokio::test]
+async fn a_distinctive_password_never_reaches_storage_or_logs() {
+    #[derive(Clone, Default)]
+    struct SharedBuf(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+    impl std::io::Write for SharedBuf {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.0
+                .lock()
+                .expect("log buffer lock")
+                .extend_from_slice(buf);
+            Ok(buf.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for SharedBuf {
+        type Writer = SharedBuf;
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
+    }
+
+    let app = TestApp::spawn().await;
+    let marker_password = "Mrk3r-9f3a7c21-PlaintextCanary!";
+    let email = "plaintext-marker@example.org";
+
+    let buf = SharedBuf::default();
+    let subscriber = tracing_subscriber::fmt()
+        .with_writer(buf.clone())
+        .with_env_filter("debug")
+        .finish();
+
+    // Thread-local, not process-global (`tracing::subscriber::set_default`,
+    // not `set_global_default`) -- `TestApp::spawn`'s own postgres path
+    // already installs a global one, and a second `try_init` there is a
+    // no-op; this reaches the request this test cares about either way,
+    // since `#[tokio::test]` defaults to a current-thread runtime and the
+    // guard stays live across the `.await` below without crossing threads.
+    let _log_guard = tracing::subscriber::set_default(subscriber);
+    let resp = app
+        .server
+        .post("/register")
+        .form(&[
+            ("email", email),
+            ("password", marker_password),
+            ("display_name", "Plaintext Marker Test"),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+    drop(_log_guard);
+
+    let logged = String::from_utf8_lossy(&buf.0.lock().expect("log buffer lock")).into_owned();
+    assert!(
+        !logged.contains(marker_password),
+        "the marker password leaked into tracing output captured at debug:\n{logged}"
+    );
+
+    let stored = peisear_storage::users::find_by_email(&app.db, email)
+        .await
+        .expect("query the just-registered row")
+        .expect("the row exists");
+    assert!(
+        !stored.password_hash.contains(marker_password),
+        "the marker password leaked into password_hash: {:?}",
+        stored.password_hash
+    );
+    assert!(
+        stored.password_hash.starts_with("$argon2"),
+        "password_hash does not look like an Argon2 hash: {:?}",
+        stored.password_hash
     );
 }

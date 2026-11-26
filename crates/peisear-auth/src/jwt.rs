@@ -17,6 +17,12 @@
 //! `extractors.rs`'s `AuthUser`), so there is no reason for a second,
 //! fully-public-fielded, trivially-forgeable struct to keep existing
 //! outside `verify`'s own use for signing and decoding.
+//!
+//! `SES-001` (`RFC 024` §4): [`verify`] now surrenders a second
+//! value, the session generation the token was issued under -- **a
+//! value, not the struct**, so the shape above survives unchanged.
+//! Nothing outside this module can see `Claims` itself; `verify`'s
+//! own two return values are the only things it ever gives up.
 
 use argon2::password_hash::rand_core::{OsRng, RngCore};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
@@ -65,15 +71,30 @@ struct Claims {
     exp: i64,
     /// Issued-at (seconds since epoch).
     iat: i64,
+    /// `SES-001` (`RFC 024` §4.3): the session generation this token
+    /// was issued under. `#[serde(default)]` so a token minted before
+    /// this claim existed (any `0.70.0` token) deserialises as `0` --
+    /// the column's own default -- rather than failing to parse.
+    /// Without the default, upgrading to `0.71.0` would refuse every
+    /// outstanding token at once, which is exactly the silent mass
+    /// logout `RFC 024` §4.3 names as the cost of getting this wrong.
+    #[serde(default)]
+    ses: i64,
 }
 
-pub fn issue(user_id: &str, email: &str, secret: &str) -> AuthResult<String> {
+pub fn issue(
+    user_id: &str,
+    email: &str,
+    session_generation: i64,
+    secret: &str,
+) -> AuthResult<String> {
     let now = chrono::Utc::now().timestamp();
     let claims = Claims {
         sub: user_id.to_string(),
         email: email.to_string(),
         iat: now,
         exp: now + SESSION_TTL_SECS,
+        ses: session_generation,
     };
     Ok(encode(
         &Header::default(),
@@ -82,11 +103,18 @@ pub fn issue(user_id: &str, email: &str, secret: &str) -> AuthResult<String> {
     )?)
 }
 
-pub fn verify(token: &str, secret: &str) -> AuthResult<RequesterId> {
+/// Verifies signature and expiry, same as before `SES-001`, and
+/// additionally surrenders the token's own session generation as a
+/// plain `i64` -- the caller (`verified_requester_id`, the one place
+/// `RFC 024` §4.2 puts this check) compares it against the subject's
+/// current generation. Returning a value rather than `Claims` itself
+/// keeps this module's own `DEC-058` shape: nothing outside `jwt` has
+/// ever been able to name `Claims`, and that stays true.
+pub fn verify(token: &str, secret: &str) -> AuthResult<(RequesterId, i64)> {
     let data = decode::<Claims>(
         token,
         &DecodingKey::from_secret(secret.as_bytes()),
         &Validation::default(),
     )?;
-    Ok(RequesterId(data.claims.sub))
+    Ok((RequesterId(data.claims.sub), data.claims.ses))
 }

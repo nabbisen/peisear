@@ -23,6 +23,17 @@ pub enum AppError {
     #[error("authentication required")]
     Unauthorized,
 
+    /// `SES-001` (`RFC 024` §3/§5): the credential verified (signature,
+    /// expiry) but was issued under a session generation the subject
+    /// has since ended. Distinct from [`Self::Unauthorized`] only in
+    /// the HTML redirect it produces — `/login` with a flash saying
+    /// *why*, rather than a bare redirect indistinguishable from an
+    /// expiry or from never having signed in (`RFC 024` §5 item 2).
+    /// `/api/*` routes still just get a 401; a JSON response has
+    /// nowhere to put a flash.
+    #[error("session revoked")]
+    SessionRevoked,
+
     #[error("permission denied")]
     Forbidden,
 
@@ -68,7 +79,7 @@ pub enum AppError {
 impl AppError {
     pub fn status(&self) -> StatusCode {
         match self {
-            Self::Unauthorized => StatusCode::UNAUTHORIZED,
+            Self::Unauthorized | Self::SessionRevoked => StatusCode::UNAUTHORIZED,
             Self::Forbidden => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Validation(_) => StatusCode::BAD_REQUEST,
@@ -117,6 +128,10 @@ impl AppError {
             // that guard would degrade to a generic message instead of
             // panicking.
             Self::Unauthorized => "authentication required".to_string(),
+            // Same posture as `Unauthorized`'s own arm, just above:
+            // `IntoResponse` redirects this to `/login?flash=...`
+            // before `public_message()` is ever called.
+            Self::SessionRevoked => "session revoked".to_string(),
             Self::Forbidden => t(MessageKey::Forbidden),
             Self::NotFound => t(MessageKey::NotFound),
             Self::Internal(_) => t(MessageKey::InternalError),
@@ -207,6 +222,19 @@ impl IntoResponse for AppError {
         // of rendering a 401 page, which matches typical web UX.
         if matches!(self, Self::Unauthorized) {
             return Redirect::to("/login").into_response();
+        }
+
+        // `SES-001` (`RFC 024` §5 item 2): a revoked credential gets
+        // the same redirect, plus a flash saying why — the one case
+        // `Unauthorized`'s bare redirect above cannot distinguish
+        // from an ordinary expiry or from never having signed in.
+        // Pressing "Log out" on an already-ended session also lands
+        // here via `Requester`'s own rejection, which is the polite
+        // `/login` landing `RFC 024` §5's last paragraph asks for —
+        // nobody had to add an error page for it.
+        if matches!(self, Self::SessionRevoked) {
+            let flash = crate::handlers::percent_encode_query(&t(MessageKey::SessionRevokedFlash));
+            return Redirect::to(&format!("/login?flash={flash}")).into_response();
         }
 
         let status = self.status();

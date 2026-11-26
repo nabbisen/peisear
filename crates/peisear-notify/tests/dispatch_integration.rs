@@ -110,8 +110,8 @@ async fn create_user_subscribed_to_email(pool: &Pool) -> String {
 const TEST_JWT_SECRET: &str = "test-jwt-secret-must-not-be-used-in-production";
 
 fn test_requester_id(user_id: &str) -> RequesterId {
-    let token = jwt::issue(user_id, "unused@example.test", TEST_JWT_SECRET).unwrap();
-    jwt::verify(&token, TEST_JWT_SECRET).unwrap()
+    let token = jwt::issue(user_id, "unused@example.test", 0, TEST_JWT_SECRET).unwrap();
+    jwt::verify(&token, TEST_JWT_SECRET).unwrap().0
 }
 
 /// `PRIV-003`: `SubjectId` via `From<&RequesterId>` -- a requester is

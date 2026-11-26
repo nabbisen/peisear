@@ -16,7 +16,11 @@ use serde::Deserialize;
 use time::Duration as TimeDuration;
 use validator::Validate;
 
-use crate::{AppError, AppResult, AppState, components, components::t, extractors::AUTH_COOKIE};
+use crate::{
+    AppError, AppResult, AppState, components,
+    components::t,
+    extractors::{AUTH_COOKIE, Requester},
+};
 
 #[derive(Debug, Deserialize)]
 pub struct AuthQuery {
@@ -68,7 +72,10 @@ pub async fn register_submit(
     let id = uuid::Uuid::new_v4().to_string();
     users::insert(&state.db, &id, &email, &hash, &display_name).await?;
 
-    let token = jwt::issue(&id, &email, &state.jwt_secret)?;
+    // `SES-001`: a brand-new row starts at generation 0 (the column's
+    // own default), so the freshly-inserted user has never been read
+    // back here — stamping the literal rather than a wasted query.
+    let token = jwt::issue(&id, &email, 0, &state.jwt_secret)?;
     let jar = jar.add(build_session_cookie(token, state.cookie_secure));
 
     Ok((jar, Redirect::to("/projects")))
@@ -112,17 +119,37 @@ pub async fn login_submit(
     }
     let user = user.expect("ok implies user present");
 
-    let token = jwt::issue(&user.id, &user.email, &state.jwt_secret)?;
+    // `SES-001`: stamp the row's own current generation into the new
+    // token. `user` was just loaded above to check the password, so
+    // this is no new read — `RFC 024` §4's own point.
+    let token = jwt::issue(
+        &user.id,
+        &user.email,
+        user.session_generation,
+        &state.jwt_secret,
+    )?;
     let jar = jar.add(build_session_cookie(token, state.cookie_secure));
 
     Ok((jar, Redirect::to("/projects")))
 }
 
-pub async fn logout(jar: CookieJar) -> (CookieJar, Redirect) {
+/// `SES-001` (`RFC 024` §3/§4): server-side now, not merely a cookie
+/// removal. `Requester` both supplies whose generation to advance and
+/// rejects an already-ended session before this body ever runs — the
+/// "land politely at `/login`" requirement for that case (`RFC 024`
+/// §5's last paragraph) is `AppError`'s own `SessionRevoked` redirect,
+/// not a second error page written here.
+pub async fn logout(
+    State(state): State<AppState>,
+    Requester(rid): Requester,
+    jar: CookieJar,
+) -> AppResult<(CookieJar, Redirect)> {
+    users::advance_session_generation(&state.db, rid.as_str()).await?;
+
     let mut removal = Cookie::new(AUTH_COOKIE, "");
     removal.set_path("/");
     let jar = jar.remove(removal);
-    (jar, Redirect::to("/login"))
+    Ok((jar, Redirect::to("/login")))
 }
 
 fn build_session_cookie(token: String, secure: bool) -> Cookie<'static> {

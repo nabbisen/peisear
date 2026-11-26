@@ -64,3 +64,10 @@ sqlx                        = { workspace = true }
 serde_urlencoded            = { workspace = true }
 tempfile                    = { workspace = true }
 tracing-subscriber          = { workspace = true }
+# `SES-001`: a pre-upgrade token (no `ses` claim) has to be minted by
+# hand, since `jwt::issue` always stamps one now and `jwt::Claims`
+# stays private to that module on purpose (`DEC-058`) — there is
+# nothing to construct one from outside it. Encoding an equivalent,
+# independently-defined struct with this crate is the only way to
+# produce that exact historical shape.
+jsonwebtoken                = { workspace = true }
