@@ -1,10 +1,11 @@
 # `SES-001` — The session that cannot be ended
 
 **Series** [069](./README.md) · **Release `0.71.0`** · **Governing**
-[`RFC 024`](../../proposed/024-the-session-that-can-be-ended.md)
+[`RFC 024`](../../accepted/024-the-session-that-can-be-ended.md)
 
-> **Do not start until `RFC 024` is in `rfcs/accepted/`.** See the series
-> README's entry-criterion note.
+> **Cleared to start: `RFC 024` was accepted by the owner 2026-11-26** and is
+> in `rfcs/accepted/`, which is release-cycle entry criterion 1. See the
+> series README.
 
 **One round.** Make `FR-AUTH-003`'s own sentence true, and give the `FR-AUTH`
 family acceptance evidence that matches its words.

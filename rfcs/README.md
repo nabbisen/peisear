@@ -31,6 +31,7 @@ Design settled. Implementation may begin.
 
 | ID | Title | Target |
 |----|-------|--------|
+| 024 | [The session that can be ended](./accepted/024-the-session-that-can-be-ended.md) — **accepted 2026-11-26**, proposed and amended the same day, with `0.71.0`'s row. **`FR-AUTH-003` is a P0 whose normative text the shipped product does not satisfy and whose status reads `Implemented`**: it requires that after logout *"protected routes are inaccessible with the prior credentials"*, and `logout` removes a cookie from the client's jar and nothing else — the same token replayed returns **200** on `/projects`, `/today` and `/api/search`, measured against `cfa45d9`, and stays valid for the rest of the **7 days** the TTL grants it. **It survived because the acceptance check verifies that the client forgot the credential, never that the credential stopped working.** The rule: *a credential is valid only if it was issued under the subject's current session generation*. The mechanism, **amended 2026-11-26 before acceptance** after the owner asked for it to be reviewed against his philosophy: **one integer column on `users`** — a session generation advanced by `logout`, carried in the claims and compared as two integers. **The withdrawn version compared the token's `iat` against a stored instant** (`§4.4`), and `§4.1` is why: `iat` is whole seconds, this repository already shipped `0021_updated_at_millisecond_precision.sql` to close exactly that window once, and reusing it here would have meant choosing between a replay inside the logout's own second and refusing a user who logs out and immediately logs back in. No table to prune, and compatible with a later per-device `jti`. **Its one user-visible consequence is named rather than discovered**: Log out ends that user's sessions everywhere. **It also records that release-cycle entry criterion 1 went unmet and unmentioned for six consecutive series**, `063`–`068`, all the architect's | 0.71.0 |
 | 020 | [The first thing it says](./accepted/020-the-first-thing-it-says.md) — **accepted 2026-10-15**, owner-raised while ruling on `§10.40`: *"Just design issue: Give user initialization wizard or warning etc."* **The startup refusal shipped separately** (`FIV-001` rounds 2–3, 0.53.0); this is the other half. Asks how much of the getting-started documentation exists because the product does not speak — a first run with no configuration asks five questions with working defaults and writes the `.env` it describes, so the file and the explanation cannot disagree. **Skipped entirely when configuration exists or stdin is not a terminal**, so a container never meets it. **Names its own alternative**: do nothing beyond the refusal, since everything here is improvement rather than repair | 0.58.0 |
 | 017 | [The first five minutes](./accepted/017-the-first-five-minutes.md) — **accepted 2026-10-14**, owner-raised: *"the current installation on documentation was too poor for unskilled users."* **There is nothing to install** — zero assets on every release (re-measured 0.48 through 0.52), no `Dockerfile`, and `installation.md` is 48 lines about installing `rustc`. Prebuilt binaries and a container image remove barriers 1–2; **a generated-and-persisted `JWT_SECRET` removes 3 and 4 and closes a P0** — `config.rs:31`'s published literal is the key that signs sessions on any unconfigured instance, which left `NFR-SEC-004` `Divergent` (`§10.40`) — and the bind default moves to loopback with it. **The security half lands first**: making startup easier without it is a one-command start into that state | 0.53.0, [handoffs 046](./handoffs/046-the-first-five-minutes/README.md) |
 | 019 | [What belongs in documentation](./accepted/019-what-is-in-the-repository.md) — **accepted 2026-10-12**. The owner's two parts: a link into the project's private working area is either **lack of documentation** (the claim depends on what only the private file says) or a **useless link** (the document already carries the substance). 137 occurrences repo-wide, but **83 of the 104 files are handoffs**, which are execution records — **inside documentation there are 19**, four of them not defects. Writes down what documentation is, and the rule for decisions: **stated once, in the document it governs, at a location the other mentions point to** | 0.51.0 |
@@ -52,11 +53,22 @@ RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 Open for review. Design may still change.
 
-| ID | Title | Target |
-|----|-------|--------|
-| 024 | [The session that can be ended](./proposed/024-the-session-that-can-be-ended.md) — **proposed 2026-11-26**, with `0.71.0`'s row. **`FR-AUTH-003` is a P0 whose normative text the shipped product does not satisfy and whose status reads `Implemented`**: it requires that after logout *"protected routes are inaccessible with the prior credentials"*, and `logout` removes a cookie from the client's jar and nothing else — the same token replayed returns **200** on `/projects`, `/today` and `/api/search`, measured against `cfa45d9`, and stays valid for the rest of the **7 days** the TTL grants it. **It survived because the acceptance check verifies that the client forgot the credential, never that the credential stopped working.** The rule: *a credential is valid only if it was issued under the subject's current session generation*. The mechanism, **amended 2026-11-26 before acceptance** after the owner asked for it to be reviewed against his philosophy: **one integer column on `users`** — a session generation advanced by `logout`, carried in the claims and compared as two integers. **The withdrawn version compared the token's `iat` against a stored instant** (`§4.4`), and `§4.1` is why: `iat` is whole seconds, this repository already shipped `0021_updated_at_millisecond_precision.sql` to close exactly that window once, and reusing it here would have meant choosing between a replay inside the logout's own second and refusing a user who logs out and immediately logs back in. No table to prune, and compatible with a later per-device `jti`. **Its one user-visible consequence is named rather than discovered**: Log out ends that user's sessions everywhere. **It also records that release-cycle entry criterion 1 went unmet and unmentioned for six consecutive series**, `063`–`068`, all the architect's | 0.71.0 |
+**None today.** `RFC 024` was proposed, amended and accepted on 2026-11-26 and
+is listed above; before it, `RFC 020` was the last document to pass through
+here, accepted 2026-10-15.
 
-*Before this, `RFC 020` was the last one here, accepted 2026-10-15.*
+**One thing to know before reading an empty section as a fact.** This line
+first read *"None today"* on **2026-10-14** (`c94d1e9`) and read it for 43
+days — interrupted for one day by `RFC 023` on 2026-11-11 — while
+**`proposed/` did not exist at all**: the folder was created when `RFC 024`
+was filed into it on 2026-11-26, and `RFC 024` `§6` records that finding.
+**`git` does not track an empty directory**, so now that `024` has moved to
+`accepted/` the folder is again absent from the repository even though it
+exists on the architect's disk. So *"the folder is the source of truth for an
+RFC's state"* (**Layout**, above) cannot tell *nothing is proposed* from *no
+folder* — the table above is what states it. **Whether a tracked placeholder
+should hold the folder open is the owner's, since it is a file in a structure
+he laid out; nothing here creates one.**
 
 ## Implemented
 
@@ -94,6 +106,17 @@ uncovers a design conflict, the RFC is amended first.
 
 Handoffs have no lifecycle of their own. Their state is inherited from
 the RFC number they are keyed to.
+
+**The table below is not the source of truth, and measured on 2026-11-26 it
+is not even complete**: it lists **41 directories, the highest numbered
+`036`, while `rfcs/handoffs/` holds 75 — so 33 series, every one since
+`036`, are absent from it**, including `069`. A series' own
+`handoffs/NNN-slug/README.md` is what states its state, and `ROADMAP.md`'s
+*What ships next* says which release it targets. **Whether this table should
+be completed or retired as historical is the owner's**; nothing here does
+either, and the finding is recorded rather than left for the next reader to
+re-derive. It is the same class as `RFC 024` `§6`'s two: an index trusted
+because nothing contradicts it.
 
 | Directory | Governing RFC |
 |---|---|
@@ -147,7 +170,12 @@ the RFC number they are keyed to.
 - Moving a file between folders is what changes its state. Update the
   `Status` field and this index in the same change, and sweep inbound
   links (`grep -rn 'NNN-slug' rfcs ROADMAP.md docs`).
-- Take the next free number when opening an RFC: **008**.
+- Take the next free number when opening an RFC: **025**. *(This line read
+  **008** until 2026-11-26 — stale by sixteen numbers, and it is how `RFC 024`
+  came to be filed first as `023`, a number spent on the branching policy
+  withdrawn into `DEC-060` on 2026-11-11. Re-derive it from the folders rather
+  than trusting it: `014`, `016`–`022` and `024` are in `accepted/`, `000`–`013`
+  and `015` in `done/`, and `023` is spent with no file anywhere.)*
 
 ## What an RFC is for
 

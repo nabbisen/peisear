@@ -4,8 +4,9 @@
 the cut**: exit criterion 7 is a separate decision against a release
 recommendation this series does not write).
 
-**Governing document: `RFC 024` — The session that can be ended**
-([`rfcs/proposed/024-the-session-that-can-be-ended.md`](../../proposed/024-the-session-that-can-be-ended.md)).
+**Governing RFC: `RFC 024` — The session that can be ended**
+([`rfcs/accepted/024-the-session-that-can-be-ended.md`](../../accepted/024-the-session-that-can-be-ended.md)),
+**accepted by the owner 2026-11-26**.
 
 > **⚠ `RFC 024` was amended 2026-11-26, the same day it was filed and before
 > this series opened.** The owner asked for it to be reviewed against his
@@ -17,11 +18,14 @@ recommendation this series does not write).
 > the withdrawn alternative. **Nothing had been started, so nothing is to be
 > redone.**
 
-> **⚠ Entry criterion 1 is not yet met, and this is the one thing that gates
-> the work.** `RFC 024` is **Proposed**, and `rfcs/README.md` says of that
-> folder: *"open for review; implementer should not start."* **Do not start
-> `SES-001` until `RFC 024` is in `rfcs/accepted/`.** The architect found,
-> while filing it, that series `063`–`068` opened with this criterion unmet
+> **✓ Entry criterion 1 is met: `RFC 024` is in `rfcs/accepted/`, accepted
+> 2026-11-26. `SES-001` may start.** Criteria 2–4 with it: the RFC leaves no
+> open question but the exact copy, which `§5` delegates to the implementer to
+> propose and the architect to review; the handoff exists in this directory;
+> and `0.70.0`'s requirements amendments were applied at its own cut.
+> **Read the amendment note above before `SES-001` `§2`** — the mechanism
+> changed after the row was authorized. The architect found, while filing the
+> RFC, that series `063`–`068` opened with this criterion unmet
 > and unmentioned six times running — all six his own lapse — so this series
 > states its own entry state instead of inheriting the habit.
 

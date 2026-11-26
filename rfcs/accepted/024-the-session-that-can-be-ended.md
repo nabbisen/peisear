@@ -1,7 +1,10 @@
 # RFC 024: The session that can be ended — logout, and what a credential means after it
 
-**Status**: **Proposed** 2026-11-26, with `0.71.0`'s row (`ROADMAP.md`,
-authorized the same day — **the row, not this document**). *Numbered 024, not
+**Status**: **Accepted** 2026-11-26 by the owner, after the amendment below.
+*Proposed the same day, with `0.71.0`'s row (`ROADMAP.md`, authorized then
+too — the row, the amendment and this acceptance were three separate
+decisions, taken in that order.)* **This is release-cycle entry criterion 1,
+and `SES-001` may now start.** *Numbered 024, not
 023: `RFC 023` was used once — the branching policy, proposed `60cc0ff`
 **2026-11-11** and withdrawn into `DEC-060` the same day, `bf4893c` — and its
 file was **deleted rather than moved to `archive/`**, so the number is spent
@@ -18,7 +21,8 @@ intent, the scope and the priority are unchanged.
 **Author**: the architect. **Supersedes nothing.** Opens `§10.66`.
 **Related requirements**: `FR-AUTH-001`, `FR-AUTH-002`, `FR-AUTH-003` (P0),
 `NFR-SEC-*` (read in full; none governs session lifetime — see `§7`).
-**Why it exists as an RFC and not only a register entry**: `§6`.
+**Why it exists as an RFC and not only a register entry**: `§6` — and since
+2026-11-26 that is no longer a choice, by the owner's ruling recorded there.
 
 ## Summary
 
