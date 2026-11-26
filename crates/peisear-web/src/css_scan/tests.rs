@@ -210,9 +210,19 @@ fn the_repository_satisfies_the_live_rule() {
     // by `grep -rn 'link-primary\b'` / `'text-success\b'` returning
     // no render sites, not assumed from the six sites changed.
     // Allowlisted unchanged at 3.
+    // `SWP-001` (`068`): population dropped 287 -> 286. `issues.rs`'s
+    // Board/List toggle dropped `btn-active` from its two
+    // `board_classes`/`list_classes` literals (measured **3.87:1** in
+    // a rendered sweep, below WCAG 1.4.3's 4.5:1 -- `.btn-active`
+    // darkens `.btn-primary`'s own background against this theme's
+    // near-black primary-content) -- `btn-active` was rendered at
+    // exactly those two sites, confirmed by `grep -rn 'btn-active'`
+    // over live `class=`/`grow(...)` literals returning no render
+    // sites afterward, so the token leaves `components/` entirely
+    // rather than relocating. Allowlisted unchanged at 3.
     assert_eq!(
         (result.population, result.allowlisted),
-        (287, 3),
+        (286, 3),
         "the measured population or allowlist count drifted from this round's own baseline -- \
          re-measure (components/**/*.rs changed) and update this assertion with the reason, \
          never just the numbers"

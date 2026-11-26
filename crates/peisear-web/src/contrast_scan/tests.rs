@@ -61,9 +61,10 @@ fn no_semantic_colour_in_a_text_position() {
          this scan depends on may have moved"
     );
 
+    let exclusions = named_exclusions();
     let mut offenders = Vec::new();
     for path in &files {
-        offenders.extend(semantic_violations_in(path));
+        offenders.extend(semantic_violations_in(path, &exclusions));
     }
 
     assert!(
@@ -88,8 +89,10 @@ fn no_semantic_colour_in_a_text_position() {
 /// a short, generic literal (`"text-primary"`) absorb a brand-new
 /// violation of the exact shape this guard exists to catch, silently,
 /// because the exclusion itself reads as satisfied either way. Each
-/// [`NAMED_EXCLUSION_CLASS_VALUES`] entry must match its own
-/// [`NAMED_EXCLUSION_COUNTS`] exactly — not "at least one."
+/// `contrast-exclusions.json` entry's `classValue` must match its own
+/// `liveCount` exactly — not "at least one." `SWP-001`: unchanged in
+/// substance by the move to a shared file; the count is still read and
+/// enforced only here.
 #[test]
 fn every_named_exclusion_matches_its_exact_live_count() {
     let dir = components_dir();
@@ -97,7 +100,13 @@ fn every_named_exclusion_matches_its_exact_live_count() {
     collect_rs_files(&dir, &mut files);
     assert!(!files.is_empty());
 
-    let mut counts = [0usize; NAMED_EXCLUSION_CLASS_VALUES.len()];
+    let exclusions = named_exclusions();
+    assert!(
+        !exclusions.is_empty(),
+        "contrast-exclusions.json parsed to zero entries -- the file moved \
+         or its shape changed"
+    );
+    let mut counts = vec![0usize; exclusions.len()];
     for path in &files {
         let raw =
             fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
@@ -107,25 +116,24 @@ fn every_named_exclusion_matches_its_exact_live_count() {
                 continue;
             }
             let content = &stripped[content_start..content_end];
-            for (i, exclusion) in NAMED_EXCLUSION_CLASS_VALUES.iter().enumerate() {
-                if content == *exclusion {
+            for (i, exclusion) in exclusions.iter().enumerate() {
+                if content == exclusion.class_value {
                     counts[i] += 1;
                 }
             }
         }
     }
 
-    for (i, exclusion) in NAMED_EXCLUSION_CLASS_VALUES.iter().enumerate() {
+    for (i, exclusion) in exclusions.iter().enumerate() {
         assert_eq!(
-            counts[i], NAMED_EXCLUSION_COUNTS[i],
-            "NAMED_EXCLUSION_CLASS_VALUES[{i}] ({exclusion:?}) matches {} live \
-             class value(s) under components/, not the {} this module's own \
-             constant records -- if it dropped to zero, the site it was \
-             written for has moved or changed and this exclusion is now \
-             stale; if it grew, a new site is claiming this exemption and \
-             must be measured and justified on its own, not inherited \
-             silently",
-            counts[i], NAMED_EXCLUSION_COUNTS[i]
+            counts[i], exclusion.live_count,
+            "contrast-exclusions.json entry {:?} matches {} live class \
+             value(s) under components/, not the liveCount ({}) the file \
+             records -- if it dropped to zero, the site it was written for \
+             has moved or changed and this exclusion is now stale; if it \
+             grew, a new site is claiming this exemption and must be \
+             measured and justified on its own, not inherited silently",
+            exclusion.class_value, counts[i], exclusion.live_count
         );
     }
 }

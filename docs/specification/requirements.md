@@ -1,7 +1,32 @@
 # peisear — Software Requirements Specification
 
 **Document status**: Baseline
-**Covers release**: `0.69.0` (**the gate that never ran.**
+**Covers release**: `0.70.0` (**the colour the browser actually paints.**
+Four releases taught `contrast_scan` to read a *declaration* — a class
+token, a stylesheet rule, a non-text property. **None of them ever
+asked a browser what it painted.** `browser-checks/contrast-gate.mjs`
+renders the fixture's 24 pages at five widths and reads the real
+composited pixel, covering WCAG 1.4.3 and 1.4.11 together (`SWP-001`,
+`§10.65`). **Re-measured rather than carried**: 4813 text-bearing
+elements, 217 repaired-family boundary elements, matching the
+architect's own working prototype exactly. **One real defect found and
+repaired**: `components/issues.rs`'s Board/List toggle read **3.87:1**
+— `.btn-active` darkening `.btn-primary`'s own background against this
+theme's near-black primary-content — raised to **4.83:1** by dropping
+`btn-active`, the tier this same file already uses elsewhere to mark a
+selected segment. **Two measurement artefacts found and corrected
+before being trusted, neither a product defect**: an autofocused
+field's own "resting" border is already its focused state by the time
+anything reads it, and a checked `.checkbox`'s border is painted the
+same colour as its own now-opaque fill by construction of the checked
+state, not by a defect. **The shared exclusion list moved to one JSON
+file** both `contrast_scan` and the gate read — the cost (a field only
+the Rust side still needs) stated rather than hidden, the two-lists
+shape the owner's review had already rejected once this series.
+`GATE-001`'s own wiring guard failed before this gate was wired in, and
+passed once it was. `NFR-A11Y-005` and `NFR-A11Y-010` are each widened
+again rather than given a new sibling; no new register number spent.
+The release before it, `0.69.0`, is **the gate that never ran.**
 **Two things nothing ever executed, and the class behind both.**
 `browser-checks/disclosure-marker-gate.mjs` passed every time a person
 typed its name since series `060` and was never wired into CI
@@ -74,7 +99,7 @@ and through it
 (on GitHub; excluded from this book, see `docs/README.md`).
 Both retained unedited as the record of their releases
 **Language**: English (normative)
-**Prepared**: 2026-07-27 · **Amended**: 2026-11-25 (0.69.0 — the register's own reading rule (last `*Status*:` line governs) stated in `§0.6` for the first time; three multi-status entries marked; `§10.64` opened and closed. Before it, 2026-11-24 (0.68.0 — `NFR-A11Y-010`'s acceptance widened to the other half of its own first sentence, the boundaries of interactive controls, unmeasured since 0.42.0; `§10.63` opened and closed. Before it, 2026-11-23 (0.67.0 — `NFR-A11Y-005`'s acceptance widened a second time, to a third mechanism covering colours no component class writes at all; `§10.62` opened and closed. Before it, 2026-11-22 (0.66.0 — the same entry's acceptance widened to all four token families, `§10.61` opened and closed); before that, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — checked again at that cut, and it moved, two cuts running)))
+**Prepared**: 2026-07-27 · **Amended**: 2026-11-26 (0.70.0 — `NFR-A11Y-005` widened a fourth time and `NFR-A11Y-010` a third, to the browser-rendered check covering both at once; `§10.65` opened and closed. Before it, 2026-11-25 (0.69.0 — the register's own reading rule (last `*Status*:` line governs) stated in `§0.6` for the first time; three multi-status entries marked; `§10.64` opened and closed. Before it, 2026-11-24 (0.68.0 — `NFR-A11Y-010`'s acceptance widened to the other half of its own first sentence, the boundaries of interactive controls, unmeasured since 0.42.0; `§10.63` opened and closed. Before it, 2026-11-23 (0.67.0 — `NFR-A11Y-005`'s acceptance widened a second time, to a third mechanism covering colours no component class writes at all; `§10.62` opened and closed. Before it, 2026-11-22 (0.66.0 — the same entry's acceptance widened to all four token families, `§10.61` opened and closed); before that, 2026-11-12 (0.62.0); `0.63.0`, `0.64.0` and `0.65.0` amend no entry. This field read `2026-11-01 (0.60.0)` through three cuts, which is the drift `§10.36` instance 7 asked each sweep to check and instances 7 and 8 both record — checked again at that cut, and it moved, two cuts running))))
 **Location**: `docs/specification/requirements.md`. **This document is the
 normative source of truth** — English only, placed 2026-09-24 (`DEC-020`,
 closed). See [the directory README](./README.md) for how its citations
@@ -2943,19 +2968,32 @@ had, no new colour. `contrast_scan`'s `boundary_leak_scan` (`§10.63`) holds
 the mechanism: `§10.62`'s own static acknowledgement, one property over
 (`border-color`/`outline-color` rather than `color`), naming what beats
 each reachable below-3:1 rule rather than computing a ratio.
+**Widened and met a third time at 0.70.0** (`SWP-001`, series `068`,
+`§10.65`): `browser-checks/contrast-gate.mjs` renders the fixture's 24
+pages at five widths and reads the real painted pixel for both this
+entry and `NFR-A11Y-005` together — the figures `§10.63` named from the
+stylesheet are confirmed directly rather than only argued from it, over
+217 repaired-family elements, and a planted regression on each
+property (text, border) is watched failing before being trusted.
 *Priority*: P1 — same reader `NFR-A11Y-005` protects, and the same product
 decision: a chart nobody can read, or a control nobody can see the edge of
 or find with a keyboard, is not there.
 *Scope, stated so this is checkable*: chart series, the median reference
 line, any element whose shape or position carries meaning, and — since
 0.68.0 — the resting boundary and the focus indicator of `.input`/
-`.select`/`.textarea`/`.checkbox`. It does **not** restate `NFR-A11Y-005`
-for text, and `contrast_scan`'s `text-base-content/{10..60}` rule is that
-requirement's, not this one's. **Card and alert borders, `.radio`/
-`.toggle` (zero sites today), and the focused border left under its own
-ring on purpose** (`EDG-002 §4`: `.input:focus` outranks the bare class on
-specificity, so the ring alone carries the focus state, checked by
-screenshot) **are named and out** — `rfcs/handoffs/066-the-edges-nobody-
+`.select`/`.textarea`/`.checkbox`, **measured directly in a rendered
+sweep since 0.70.0** rather than argued from the stylesheet alone — the
+broader population of every visibly-bordered element is counted by
+that sweep and not asserted on, so this scope stays the repaired
+families, not widened by the tool that measures it. It does **not**
+restate `NFR-A11Y-005` for text, and `contrast_scan`'s
+`text-base-content/{10..60}` rule is that requirement's, not this
+one's. **Card and alert borders, `.radio`/`.toggle` (zero sites
+today), and the focused border left under its own ring on purpose**
+(`EDG-002 §4`: `.input:focus` outranks the bare class on specificity,
+so the ring alone carries the focus state, checked by screenshot, and
+confirmed by `contrast-gate.mjs`'s own logged-not-failed reading of it
+every run) **are named and out** — `rfcs/handoffs/066-the-edges-nobody-
 can-see/README.md §4`.
 *What is not claimed*: no audit of every graphical or interactive element
 has been done. Two charts and the four form-control families above were
@@ -2996,7 +3034,25 @@ cannot see at all** (`§10.62`): every such rule in `tailwind.css`/
 carve-out), or the scan fails. *Status*: **Measured and repaired
 (`QA-012`, `QA-013`, post-0.27.0; `CLR-001`–`CLR-003`, series `064`,
 0.66.0; `PLC-001`–`PLC-003`, series `065`, 0.67.0)** — was *Not
-verified* from 0.19.1 through 0.27.0. *Priority*: P1.
+verified* from 0.19.1 through 0.27.0. **Widened a fourth time at
+0.70.0** (`SWP-001`, series `068`) — not a fifth static mechanism, but
+`browser-checks/contrast-gate.mjs`, the rendered check the four static
+mechanisms above were each built in place of (`§10.62`, `§10.63`
+neither one built it; `§10.65` is where it lands). *Priority*: P1.
+
+**The authority rule this acceptance has needed since its first static
+mechanism, stated once rather than left implicit** (`068/README.md`
+§1): *source is total and approximate — every one of the four
+mechanisms above reads a class token or a stylesheet rule in every
+component file, rendered or not; rendered is exact and
+fixture-bounded — `contrast-gate.mjs` reads only what the fixture's 24
+pages actually paint, at five widths. Where they disagree, the
+renderer is right about what it reached, and silent about the rest.*
+Neither supersedes the other: the brand dot is a named, counted
+exclusion in `contrast_scan` **and** a real sub-4.5:1 value in a
+rendered sweep, and both are correct statements about two different
+things — the token is banned-with-an-exception; the pixel is what the
+exception says it may be.
 
 *The floor was never the whole story, and this is the second time that
 sentence has had to be said.* `/70` governs what a component's own
@@ -10236,6 +10292,131 @@ shipping silently; it does not stop a reader, human or otherwise, from
 parsing the first field in a document instead of the last. Only this
 entry and `§0.6`'s own sentence do that, and only for as long as a
 reader looks for the word before citing the line.
+
+### 10.65 A check that reads a declaration cannot resolve a cascade — closed, `SWP-001`, series `068`, 0.70.0; opened and closed 2026-11-26 by the architect, scoping `068` then building the renderer-driven gate the same series it was found in
+
+**`§10.60`–`§10.63`'s own closing line, four times over**: a guard
+built to read source can only ever be *total and approximate*, never
+*exact*. Each of those four entries repairs a mechanism that reads a
+class token or a stylesheet rule; none of them, and nothing before
+this round, ever asked a browser what colour it actually painted.
+`068/README.md §1` states the relationship those four entries left
+implicit: *source is total and approximate; rendered is exact and
+fixture-bounded; where they disagree, the renderer is right about
+what it reached, and silent about the rest. Neither supersedes the
+other.* The brand dot proves the sentence rather than illustrating
+it: a named, counted exclusion in `contrast_scan` **and** a real
+sub-4.5:1 pixel in a rendered sweep, both true of the same glyph for
+different reasons.
+
+**Built: `browser-checks/contrast-gate.mjs`**, covering WCAG 1.4.3 and
+1.4.11 together by painting — a 1×1 canvas receives each element's own
+ancestor background chain outermost-first, then its foreground colour,
+read back with `getImageData`, never by parsing a `getComputedStyle`
+string (which this Chrome can return as a literal `oklch(...)` that a
+canvas `fillStyle` round-trips unchanged rather than converting — the
+exact probe the architect's own first two prototypes tripped on,
+reproduced independently here: `examined=0` from a regex colour
+parser, `examined=1906, failures=1906` from the round-trip
+assumption). **Re-measured rather than carried**: 4813 text-bearing
+elements across 120 cells (24 pages × 5 widths), matching the
+architect's own working third attempt exactly; 217 elements in the
+repaired families (`.input-bordered`, `.select-bordered`,
+`.textarea-bordered`, `.checkbox`).
+
+**The defect, confirmed independently and repaired**:
+`components/issues.rs`'s Board/List toggle measured **3.87:1** in the
+browser — `join-item btn btn-sm btn-active btn-primary`, where
+`.btn-active` darkens `.btn-primary`'s background toward black while
+the theme's own `--pc` (primary-content) is itself a near-black
+`oklch` value, so the one state this product calls "selected" was the
+one state this requirement's own 4.5:1 failed. Repaired by dropping
+`btn-active` — the tier this same file already uses twice elsewhere
+(the status segment control, `issues.rs`'s own comment: *"the active
+segment uses `btn-primary` so it stands out against the inactive
+`btn-ghost` siblings"*) to mark a selected state without it. Measured
+again after: **4.83:1**, the same figure `§10.61` already recorded for
+plain `btn-primary` — no new colour, the `EDG-001`/`EDG-002`
+precedent.
+
+**Two measurement artefacts found and corrected before being
+trusted, neither a product defect**: an `<input>`/`<select>` carrying
+`autofocus` is already the page's `document.activeElement` on load, so
+reading its border *before* this script's own `el.focus()` call reads
+the already-**focused** state, not resting — misread once as a
+resting-border failure at exactly the `EXEMPT_BOUNDARY_RULES` figure
+(1.52:1) before this was understood; and `.checkbox:checked` gives the
+control an opaque fill (`--chkbg`) with its border painted in the same
+colour at 0.7 alpha *over that fill*, so border-vs-fill collapses
+toward 1:1 by construction of the checked state, not by a defect
+`EDG-001`/`EDG-002` left unrepaired (they never measured or needed to
+repair the checked state — a reader's own answer to "is this checked"
+comes from the fill and the checkmark, not a now-redundant 1px edge).
+Both states are skipped in the resting-border check and still measured
+correctly by the focused-state branch; found by debugging a real
+measurement rather than assumed from the acknowledgement list's own
+shape.
+
+**Population: the repaired families, per the handoff's own lean, not
+every bordered element.** `0.68.0` (`§10.63`) ruled card and alert
+borders decoration, out of 1.4.11's own test; a browser gate that
+quietly asserted on every visibly-bordered element would reopen that
+by tooling rather than by a recorded decision. The broader population
+(2298 visible bordered elements on this tree) is counted and logged
+every run, never asserted on.
+
+**One exclusion list, one home, the cost stated rather than
+hidden.** `contrast-exclusions.json` (`browser-checks/`) replaces
+`contrast_scan.rs`'s own `NAMED_EXCLUSION_CLASS_VALUES`/
+`NAMED_EXCLUSION_COUNTS` constants; both the Rust scan and the gate
+read the same file by the same `classValue` field. `liveCount` is read
+and enforced on the Rust side only — the gate has no source population
+to check a count against — a field one reader ignores, which is the
+honest cost of one home over the two-lists-plus-a-comparison shape the
+owner's review rejected for this file one series earlier (`067/README.md
+§1.3`'s own table, before it was corrected, was a case of exactly that
+shape going wrong a level up).
+
+**§3.2's own population and sanity assertions, all four built**: a
+2000-element floor (measured population is 4813) and a per-page floor
+(every one of the 24 pages contributes at least one examined element);
+`unpaintable == 0`, a hard failure rather than a skip; a known-good
+control (`/today`'s own `<h1>`, re-measured every run — **14.05:1**,
+matching the architect's own `base-content`-on-`base-200` figure);
+and a check that the *raw* (pre-exclusion) violation rate is neither
+0% nor 100% of the population — both of the architect's own broken
+prototypes would have failed exactly this assertion, and it keeps
+working after this round's own repair because the brand dot's named
+exclusion and the three `EXEMPT_BOUNDARY_RULES` focused-border sites
+are real, counted, sub-threshold pixels by design, not zero.
+
+**Planted both ways, each in a scratch worktree, `git status` clean
+either side**: `issues.rs`'s own repair reverted (re-adding
+`btn-active`) — caught by name at the exact pre-repair 3.87:1; one of
+`app.css`'s `EDG-001`/`EDG-002` border-color repairs reverted from
+`/.7` to `/.2` — caught by name at the exact pre-repair 1.52:1, across
+every one of the repaired-family's own pages. `GATE-001`'s own wiring
+guard (`§10.58`) failed before this gate was wired into
+`test.yml` — the first new gate since that guard shipped, quoted in
+the round's own report — and passed once wired.
+
+**`NFR-A11Y-005` widened a fourth time, `NFR-A11Y-010` widened a third
+time, no new register number spent** — both already carried this
+round's own subject in their own words (`§10.62`'s and `§10.63`'s own
+precedent for widening rather than adding a sibling). The authority
+rule above is now stated once, in `NFR-A11Y-005`'s own entry, rather
+than left for the next person to infer from a disagreement.
+
+**What this does not do.** Card and alert borders stay decoration, out
+of scope, per `0.68.0`'s own recorded decision. This method does not
+composite the CSS `opacity` property (which dims an element and its
+subtree as one unit, never folded into `color`) — the same named limit
+`contrast_scan.rs` already states for the identical reason, and the
+fifteen bare-`opacity` sites that entry named stay unmeasured here
+too. Zero `disabled` sites exist on this tree to exercise the
+inactive-control exemption this gate carries in code — live, unused,
+same posture `contrast_scan.rs`'s own `EXEMPT_SHEET_RULES` already
+takes for the same reason.
 
 ### 10.20 The project-detail toolbar does not fit a phone — **closed**, `LAYOUT-002`, 0.32.0
 

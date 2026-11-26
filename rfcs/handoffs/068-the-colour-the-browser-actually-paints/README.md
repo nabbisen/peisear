@@ -46,7 +46,7 @@ than confusing.
 
 | round | what it owes | state |
 |---|---|---|
-| [`SWP-001`](./SWP-001-the-colour-the-browser-actually-paints.md) | the gate, both criteria, its own population and sanity assertions, one exclusion home, the defect, the register, the wiring, and the close | **handed** 2026-11-26 |
+| [`SWP-001`](./SWP-001-the-colour-the-browser-actually-paints.md) | the gate, both criteria, its own population and sanity assertions, one exclusion home, the defect, the register, the wiring, and the close | **closed** 2026-11-26 — the gate wired and passing, `issues.rs`'s selected segment repaired (3.87:1 → 4.83:1, measured both times), the exclusion list moved to one shared file, two measurement artefacts (autofocus, `.checkbox:checked`) found and corrected before being trusted |
 
 ## 2. What was measured before this series was scoped
 
@@ -190,3 +190,40 @@ not fail on its first run for a reason the project decided deliberately.
 - **Anything about identity or authentication.** A relying-party obligation
   list arrived from an upstream project this week; it is a candidate, not
   this series.
+
+---
+
+## 6. Series closed — the one round, stated plainly
+
+**`SWP-001` was real exactly as scoped**, and it was larger than this
+series' own usual round, as §0 warned it might be — it did not need
+splitting. The gate renders, covers both criteria at once, and found
+one real defect this project had shipped for an unknown number of
+releases: the project board's own selected view (Board or List) read
+**3.87:1**, below the 4.5:1 this requirement has asked for since
+`0.27.0`. Repaired on an existing tier, no new colour, re-measured in
+the browser at **4.83:1**.
+
+**Two things found along the way, neither a product defect, both
+recorded rather than silently worked around**: an autofocused field's
+own "resting" border is already its focused state by the time anything
+reads it, and a checked `.checkbox`'s border is painted the same
+colour as its own now-opaque fill by construction — both are
+measurement artefacts in the gate's own first draft, found by
+debugging a surprising figure rather than trusting the acknowledgement
+list's shape, the discipline `§1`'s own authority rule asks for.
+
+**The population choice went the architect's own way**: the repaired
+families, not every bordered element, with the broader population
+(2298 elements) counted and logged rather than asserted on, so
+`0.68.0`'s own decision about card and alert borders stays made.
+
+**The exclusion list moved to one shared file**, with its one real
+cost — `liveCount` unread by one of its two readers — stated in the
+round's own report rather than hidden, per this file's own §3.3
+instruction not to pay for a shared file "whatever it costs."
+
+`§10.65` opens and closes this round. `NFR-A11Y-005` and
+`NFR-A11Y-010` are each widened again; no new register number spent.
+`Covers release`/`Amended` in `requirements.md` moved to `0.70.0`,
+nesting `0.69.0`'s own text, at this round's own close.

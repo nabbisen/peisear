@@ -9,6 +9,24 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Four releases taught the specification's own static check to read a
+  class name or a stylesheet rule for colour contrast. None of them
+  ever asked a browser what colour it actually painted.** A new
+  check now renders every page the product's own test fixture builds
+  and reads the real colour back — covering both text contrast and
+  the contrast of a control's own border and focus outline together,
+  in one pass. It found one real site this way: the selected view on
+  a project's board/list toggle read below the readable threshold,
+  fixed by reusing the same highlighted-tab look already used
+  elsewhere in the product rather than inventing a new colour.
+- The one list naming which two sites are deliberately excluded from
+  the contrast check now has a single home that both the specification
+  check and the new rendered check read, instead of being duplicated.
+
 ## [0.69.0] — 2026-11-25
 
 **The checks nobody ran.** Everything in this release was already written

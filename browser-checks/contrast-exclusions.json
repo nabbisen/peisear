@@ -1,0 +1,12 @@
+[
+  {
+    "classValue": "text-5xl font-bold text-error",
+    "liveCount": 1,
+    "reason": "error_page.rs:18, a 48px status number -- WCAG 1.4.3's large-text route (>=24px) applies, not 4.5:1; error on base-100 measures 3.08:1, which clears 3:1."
+  },
+  {
+    "classValue": "text-primary",
+    "liveCount": 2,
+    "reason": "auth.rs:15 and layout.rs:211, the decorative brand bullet glyph -- not text a reader reads, so WCAG 1.4.11 (non-text, 3:1) applies instead of 1.4.3; primary on base-100 measures 4.21:1, which clears 3:1."
+  }
+]

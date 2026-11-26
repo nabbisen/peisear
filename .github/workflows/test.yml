@@ -147,7 +147,7 @@ jobs:
   # this product has, at two widths. Port `4233`, its own scratch
   # server and database.
   browser-overflow-gate:
-    name: browser checks (overflow gate + undo mousedown trap + drag outcome + occlusion + disclosure marker)
+    name: browser checks (overflow gate + undo mousedown trap + drag outcome + occlusion + disclosure marker + contrast)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -159,6 +159,7 @@ jobs:
       - run: node browser-checks/drag-outcome-gate.mjs
       - run: node browser-checks/occlusion-gate.mjs
       - run: node browser-checks/disclosure-marker-gate.mjs
+      - run: node browser-checks/contrast-gate.mjs
 
   # NFR-REL-011: README.md's third install path (`cargo install
   # peisear`) exercised end to end by CI, on the artefact that path

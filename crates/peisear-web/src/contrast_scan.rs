@@ -253,6 +253,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use serde::Deserialize;
+
 use crate::css_scan::{is_token_source, quoted_string_spans, tokens_from_content};
 use crate::scan_support::strip_line_comments;
 
@@ -308,16 +310,44 @@ pub(crate) const SEMANTIC_FAMILIES: [&str; 7] = [
 /// entry below is now paired with the **exact** live count
 /// ([`NAMED_EXCLUSION_COUNTS`]), the `css_scan` population shape, so a
 /// third occurrence fails by name rather than being inherited.
-const NAMED_EXCLUSION_CLASS_VALUES: [&str; 2] = ["text-5xl font-bold text-error", "text-primary"];
-
-/// The exact number of live `components/**` elements each
-/// [`NAMED_EXCLUSION_CLASS_VALUES`] entry must match, same index —
-/// re-derived by `grep`, not copied forward: **1** for the status
-/// number (`error_page.rs:18` alone), **2** for the brand bullet
-/// (`auth.rs:15` and `layout.rs:211`, and no third site). A count that
+/// One [`NAMED_EXCLUSIONS_PATH`] entry — the exact class-attribute
+/// literal, the exact number of live `components/**` elements it must
+/// match (re-derived by `grep`, not copied forward — a count that
 /// grows past this is a new site claiming an old exemption, which
-/// must be measured and justified on its own, not inherited silently.
-const NAMED_EXCLUSION_COUNTS: [usize; 2] = [1, 2];
+/// must be measured and justified on its own, not inherited silently),
+/// and why the exclusion holds. `reason` is read by a human, not this
+/// scan — kept so the file stays the one place either reader needs to
+/// understand an exclusion, not just apply it.
+#[derive(Deserialize)]
+struct ExclusionEntry {
+    #[serde(rename = "classValue")]
+    class_value: String,
+    #[serde(rename = "liveCount")]
+    live_count: usize,
+    #[allow(dead_code)]
+    reason: String,
+}
+
+/// `SWP-001` (`068`): moved out of this module's own Rust constants and
+/// into one file both readers read — `contrast_scan` here, and
+/// `browser-checks/contrast-gate.mjs` in Node, which needs the same
+/// exact class-value literal to exempt the identical two sites from a
+/// *rendered* 1.4.3 check for the same reason. **`liveCount` is read
+/// only on this side** — `contrast-gate.mjs` has no source population
+/// to check a count against, so it reads `classValue` alone and
+/// ignores the rest of each entry; that is the cost of one home
+/// instead of two lists, stated rather than hidden. The alternative
+/// (keep this a Rust-only const, let the gate hardcode its own copy of
+/// the two literals) is the two-lists-plus-a-comparison shape the
+/// owner's review already rejected for this exact file, one series
+/// earlier.
+const NAMED_EXCLUSIONS_PATH: &str = "../../browser-checks/contrast-exclusions.json";
+
+fn named_exclusions() -> Vec<ExclusionEntry> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(NAMED_EXCLUSIONS_PATH);
+    let raw = fs::read_to_string(&path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
+    serde_json::from_str(&raw).unwrap_or_else(|e| panic!("parse {}: {e}", path.display()))
+}
 
 /// A `components/**` class token this scan bans outright: a semantic
 /// family spelled as `text-{family}` or `link-{family}`, bare or with
@@ -346,7 +376,7 @@ fn has_banned_outline_pairing(tokens: &[String]) -> bool {
 /// `grow_text(...)` literal is read once as a whole token list, so the
 /// outline pairing is checked against sibling tokens from the same
 /// element, not merely the same file.
-fn semantic_violations_in(path: &Path) -> Vec<(String, String)> {
+fn semantic_violations_in(path: &Path, exclusions: &[ExclusionEntry]) -> Vec<(String, String)> {
     let raw = fs::read_to_string(path).unwrap_or_else(|e| panic!("read {}: {e}", path.display()));
     let stripped = strip_line_comments(&raw);
     let display = path.display().to_string();
@@ -356,7 +386,7 @@ fn semantic_violations_in(path: &Path) -> Vec<(String, String)> {
             continue;
         }
         let content = &stripped[content_start..content_end];
-        if NAMED_EXCLUSION_CLASS_VALUES.contains(&content) {
+        if exclusions.iter().any(|e| e.class_value == content) {
             continue;
         }
         let tokens = tokens_from_content(content);

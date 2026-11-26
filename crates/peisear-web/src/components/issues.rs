@@ -54,15 +54,24 @@ pub fn ProjectDetailPage(
     let project_id_for_list = project.id.clone();
     let project_id_for_health = project.id.clone();
 
+    // `SWP-001` (`068`): no `btn-active`. `.btn-primary.btn-active`
+    // darkens the background toward black (`color-mix(... 90%, #000)`),
+    // and `--pc` (primary-content) in the pinned theme is itself a
+    // near-black oklch value -- the combination measured **3.87:1** in
+    // a rendered sweep, below WCAG 1.4.3's 4.5:1. Plain `btn-primary`
+    // (no `-active`) is the tier this same file already uses to mark a
+    // selected segment without it (the status toggle below, and on
+    // the issue-detail page) -- reused here rather than inventing a
+    // colour, the `EDG-001`/`EDG-002` precedent.
     let board_classes = grow(if is_board {
-        "join-item btn btn-sm btn-active btn-primary"
+        "join-item btn btn-sm btn-primary"
     } else {
         "join-item btn btn-sm btn-ghost"
     });
     let list_classes = grow(if is_board {
         "join-item btn btn-sm btn-ghost"
     } else {
-        "join-item btn btn-sm btn-active btn-primary"
+        "join-item btn btn-sm btn-primary"
     });
 
     let desc_node = if project.description.is_empty() {

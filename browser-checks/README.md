@@ -100,6 +100,39 @@ attention.
   wired into a CI job until `GATE-001` — a human typing its name was
   the only thing that had ever run it. Its own port (`4233`), own
   scratch server and database.
+- `contrast-gate.mjs` — **a sixth gate** (`SWP-001`, `068`, `§10.65`).
+  Covers WCAG 1.4.3 and 1.4.11 together by rendering: a 1×1 canvas
+  paints each element's ancestor background chain, then its own
+  foreground colour, and reads the real composited pixel back with
+  `getImageData` — the one thing `contrast_scan`'s four static
+  mechanisms cannot do, and the only honest way to resolve a cascade
+  this project has ever measured by (`§10.52`, `EDG-002`). 1.4.3's
+  population is every element with its own visible text (4813 on this
+  tree); 1.4.11's is the families `EDG-001`/`EDG-002` actually
+  repaired (`.input-bordered`, `.select-bordered`, `.textarea-bordered`,
+  `.checkbox`) — the broader bordered-element population is counted
+  and logged, not asserted on, so `0.68.0`'s own decision that card and
+  alert borders are decoration is not reopened by a tool. Imports
+  `overflow-gate.mjs`'s own `WIDTHS`/`ADVERSARIAL_STRINGS`/
+  `createFixtures`/`buildPages`, the same reuse `occlusion-gate.mjs`
+  established. Reads `contrast-exclusions.json` (below) for the two
+  named sites `contrast_scan.rs` already excludes by exact class
+  value. Carries its own population and sanity assertions — a floor on
+  elements examined, `unpaintable == 0`, a known-good `<h1>` pair
+  re-measured every run, and a check that the raw (pre-exclusion)
+  violation rate is neither 0% nor 100% — because a sweep that cannot
+  tell *nothing wrong* from *nothing examined* is `§10.36` with a
+  browser attached, and both of this round's own first two prototypes
+  read that way before this one was built. Its own port (`4280`), own
+  scratch server and database.
+- `contrast-exclusions.json` — not a gate; the one shared list
+  `contrast-gate.mjs` (Node) and `contrast_scan.rs` (Rust) both read,
+  so a site excluded for a measured reason is excluded once, not in
+  two lists kept in sync by hand. Each entry carries the exact
+  class-attribute literal, the exact number of live sites it must
+  match (read and enforced on the Rust side only — the gate has no
+  source population to check a count against), and the reason the
+  exclusion holds.
 - `doc-screenshots.mjs` — **not a gate** (`DOCS-004`, owner request;
   `DOCS-007` closed its own escalation). Starts its own scratch instance on
   its own port (`4176` by default) and reuses `overflow-gate.mjs`'s own
@@ -144,6 +177,7 @@ node browser-checks/undo-mousedown-trap.mjs
 node browser-checks/drag-outcome-gate.mjs
 node browser-checks/occlusion-gate.mjs
 node browser-checks/disclosure-marker-gate.mjs
+node browser-checks/contrast-gate.mjs
 ```
 
 Needs a Chrome-family browser on `$PATH` (`google-chrome-stable`,
@@ -151,10 +185,10 @@ Needs a Chrome-family browser on `$PATH` (`google-chrome-stable`,
 pointing at one. `PEISEAR_BIN` overrides the binary path (default
 `target/debug/peisear`); `PEISEAR_PORT` overrides the scratch port.
 
-**The five scripts default to different ports — `4173`, `4174`,
-`4175`, `4177` and `4233` — and each starts and tears down its own
-server and scratch database.** That is why they share one CI job
-safely. **But `PEISEAR_PORT` is read by all five**, so setting it
+**The six scripts default to different ports — `4173`, `4174`,
+`4175`, `4177`, `4233` and `4280` — and each starts and tears down its
+own server and scratch database.** That is why they share one CI job
+safely. **But `PEISEAR_PORT` is read by all six**, so setting it
 gives them the *same* port. Sequentially that is harmless, since each
 script's `finally` block kills its server before the next starts. **In
 parallel it is a silent collision**, and `PEISEAR_PORT` is the reason:
