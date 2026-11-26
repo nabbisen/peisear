@@ -52,8 +52,11 @@ RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 Open for review. Design may still change.
 
-**None today.** `RFC 020` was the last one here and was accepted
-2026-10-15.
+| ID | Title | Target |
+|----|-------|--------|
+| 024 | [The session that can be ended](./proposed/024-the-session-that-can-be-ended.md) — **proposed 2026-11-26**, with `0.71.0`'s row. **`FR-AUTH-003` is a P0 whose normative text the shipped product does not satisfy and whose status reads `Implemented`**: it requires that after logout *"protected routes are inaccessible with the prior credentials"*, and `logout` removes a cookie from the client's jar and nothing else — the same token replayed returns **200** on `/projects`, `/today` and `/api/search`, measured against `cfa45d9`, and stays valid for the rest of the **7 days** the TTL grants it. **It survived because the acceptance check verifies that the client forgot the credential, never that the credential stopped working.** The rule: *a credential is valid only if it was issued after the subject's sessions were last ended*. The mechanism: **one `users` column** and the `iat` the claims already carry — no table to prune, and compatible with a later per-device `jti`. **Its one user-visible consequence is named rather than discovered**: Log out ends that user's sessions everywhere. **It also records that release-cycle entry criterion 1 went unmet and unmentioned for six consecutive series**, `063`–`068`, all the architect's | 0.71.0 |
+
+*Before this, `RFC 020` was the last one here, accepted 2026-10-15.*
 
 ## Implemented
 
