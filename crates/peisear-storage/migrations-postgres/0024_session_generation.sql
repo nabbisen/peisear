@@ -11,5 +11,16 @@
 -- handoff's own `0023` -- already spent on this backend by
 -- `0023_rowid_surrogate_for_ordering.sql`, which has no SQLite
 -- counterpart).
+--
+-- `BIGINT`, not `INTEGER` -- caught by this crate's own
+-- `no_column_in_this_schemas_own_tables_is_narrower_than_eight_bytes`
+-- (`postgres_tests.rs`), run only against a real server and so not
+-- reachable by this round's own local build/clippy pass: SQLite's
+-- `INTEGER` affinity already holds any width up to 8 bytes
+-- regardless of the declared type, but PostgreSQL's bare `integer`
+-- is 4 bytes, and every integer column in this crate's own Rust
+-- layer decodes as `i64`. The two migrations stay "the same integer"
+-- in the sense that matters (no resolution, no timezone, no
+-- rounding) while using each backend's own correctly-sized type.
 
-ALTER TABLE users ADD COLUMN session_generation INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN session_generation BIGINT NOT NULL DEFAULT 0;

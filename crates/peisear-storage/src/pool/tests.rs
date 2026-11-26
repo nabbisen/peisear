@@ -448,17 +448,22 @@ async fn connect_still_rejects_a_bare_path_on_the_postgres_branch() {
 
 /// `PG-002`'s own gate (§5): "the migration suite applied cleanly
 /// on both... a fresh PostgreSQL database... reaching the same
-/// version number." No longer the same number as SQLite's own
-/// highest, since `PG-004`'s `0023` is named, reasoned exception:
-/// a surrogate `rowid` column PostgreSQL needs and SQLite already
-/// has for free, so there is nothing for `migrations/0023` to port
-/// (`migration_drift.rs`'s own `POSTGRES_ONLY` list, not a drift).
-/// Reads `DATABASE_URL`, same convention as
+/// version number." Briefly *not* the same number as SQLite's own
+/// highest, between `PG-004`'s `0023` (a named, reasoned exception --
+/// a surrogate `rowid` column PostgreSQL needs and SQLite already has
+/// for free, so there was nothing for `migrations/0023` to port,
+/// `migration_drift.rs`'s own `POSTGRES_ONLY` list, not a drift) and
+/// `SES-001`'s `0024` (on both backends, confirmed by
+/// `migration_drift::tests::the_real_directories_agree`): SQLite's own
+/// highest-numbered file jumped straight from `0022` to `0024`,
+/// skipping the gap at `23` that only PostgreSQL ever filled, so both
+/// backends reach **24** again -- coincidentally equal, not because
+/// the gap closed. Reads `DATABASE_URL`, same convention as
 /// `connect_opens_a_real_connection_against_a_real_postgresql_server`
 /// -- CI's service container, not a local one.
 #[cfg(all(feature = "postgres", not(feature = "sqlite")))]
 #[tokio::test]
-async fn migrate_reaches_version_23_from_a_fresh_database() {
+async fn migrate_reaches_version_24_from_a_fresh_database() {
     let url = std::env::var("DATABASE_URL")
         .expect("DATABASE_URL must point at a real PostgreSQL server for this test");
     let pool = connect(&url).await.expect("connect");
@@ -470,9 +475,9 @@ async fn migrate_reaches_version_23_from_a_fresh_database() {
         .await
         .expect("read _sqlx_migrations");
     assert_eq!(
-        version, 23,
-        "expected PostgreSQL's own highest version, one ahead of SQLite's 22 \
-         for PG-004's named-exception 0023"
+        version, 24,
+        "expected PostgreSQL's own highest version -- 24 on both backends now, \
+         since SQLite's own highest file jumped 22 -> 24 past PG-004's 0023 gap"
     );
 }
 
