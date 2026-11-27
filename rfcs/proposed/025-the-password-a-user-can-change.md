@@ -12,8 +12,14 @@ first two numbers free in that family — **and the mechanism for only one of
 them**, for the reason in `§4.3`.
 **Related requirements**: `FR-AUTH-001` (registration, and the no-plaintext
 clause), `FR-AUTH-002` (login), `FR-AUTH-003` (logout, P0, met at `0.71.0`),
-`NFR-SEC-003` (password storage), `FR-NTF-007` (the deferred email opt-in,
-whose config-dependent surface is the precedent `§4.3` leans on).
+`NFR-SEC-003` (password storage), **`FR-NTF-008` — Graceful degradation without
+SMTP** (P1, `Implemented`), which is the requirement that makes `§4.3`'s
+first prerequisite a consequence rather than a judgement call.
+*Corrected after writing: this line first cited `FR-NTF-007`, the deferred
+email opt-in, which is about **when** the opt-in appears and not about a
+config-dependent surface at all — the same mis-citation failure this
+architect made with `NFR-REL-011` earlier the same day, caught here by
+reading the entry instead of remembering it.*
 
 ---
 
@@ -70,9 +76,16 @@ question is one they would ask.
 Measured rather than assumed:
 
 - **Hashing**: `peisear-auth/src/password.rs` — `Argon2::default()`, hash and
-  verify, already the only route by which `password_hash` is written.
-  `NFR-SEC-003` governs it and `FR-AUTH-001`'s second clause (no plaintext
-  persisted or logged) gained its first real test at `0.71.0`.
+  verify. `NFR-SEC-003` governs it and `FR-AUTH-001`'s second clause (no
+  plaintext persisted or logged) gained its first real test at `0.71.0`.
+  **Counted rather than asserted, and the count is useful**: `password_hash`
+  has exactly **one** production write site, the `INSERT` at
+  `peisear-storage/src/users.rs:111`, and **zero `UPDATE` sites anywhere**.
+  So `FR-AUTH-006` adds the first path that ever changes a stored credential,
+  which is why `§4.1` step 3 insists the write and the generation bump share
+  one transaction. *(Three test fixtures also insert a `password_hash`
+  directly, with non-Argon2 values; an earlier draft of this line called
+  Argon2 “the only route”, which those fixtures contradict.)*
 - **Session invalidation**: `session_generation` on `users`, advanced by one
   `UPDATE`, checked at the single choke point `verified_requester_id`
   (`RFC 024` §4.2). **A password change that leaves the old password's
@@ -171,15 +184,25 @@ email"* on an instance with no mail configured is left waiting for something
 that will never arrive, with no way to learn that. **That is the philosophy's
 second sentence failing worse than the absence this RFC is written to fix.**
 
+**And this is not the architect's opinion about mail — it is already a P1
+requirement.** `FR-NTF-008` reads: *with SMTP unconfigured, the system MUST
+log a warning at startup and continue operating with in-app notifications.*
+`§1.1` of the external design calls the relay **optional** in its own words.
+**So the specification already requires this product to work without mail**,
+and a credential-recovery path that only works with mail would be the first
+feature to contradict that posture. That makes `§4.3(a)` a consequence of an
+accepted requirement rather than a preference.
+
 The remedy is not a better error message after the fact. **The affordance
 must not appear where it cannot work**: no *"Forgot your password?"* link on
 `SCR-02` when SMTP is unconfigured, and a direct visit to the route stating
 plainly that this instance cannot send mail and naming who to ask.
-`FR-NTF-007`'s deferred email opt-in is the precedent for a surface that
-depends on configuration.
 
-**(b) Nothing in this product rate-limits anything.** Measured: **0** hits
-for `rate_limit`, `RateLimit` or `governor` across every crate's `src`. A
+**(b) Nothing in this product rate-limits anything.** Measured, and widened
+after the first draft: **0** hits for `rate_limit`, `ratelimit`, `governor`,
+`tower-governor`, `leaky bucket` or `throttl*` across **every** crate's
+`.rs` **and** `.toml`, tests included — not a dependency, not a middleware,
+not a helper. A
 reset endpoint without one is a mail cannon that any stranger can point at
 any address in the instance. **The reset half would be the first thing here
 to need a rate limiter, and a rate limiter is its own design** — where the
@@ -189,8 +212,15 @@ line inside a password feature.
 **(c) A mail-less instance leaves a locked-out user permanently locked out,
 and this RFC does not solve that.** If the affordance is correctly hidden
 when SMTP is unconfigured, then on those instances the answer is an operator
-action, and **no operator action exists** — there is no administrative CLI
-and `§2.2`'s administrator boundary is a management role, not an account one.
+action, and **no operator action exists**. Measured: `crates/peisear` has one
+binary target and `src/` holds only `lib.rs` and `main.rs`, with no
+subcommand parsing of any kind — **there is no administrative CLI**.
+*And the specification has no operator-account concept to appeal to either.
+`§2.2`'s administrator boundary — which an earlier draft of this paragraph
+cited as though it covered this — is about a **team** administrator's
+authority over membership and sprint lifecycle and their lack of authority
+over personal data. It does not speak to instance operators at all, so the
+gap is an absence in the specification rather than a limit stated by it.*
 **Named, not solved**: it is a third feature, and pretending otherwise is how
 a release grows a scope nobody authorized.
 
