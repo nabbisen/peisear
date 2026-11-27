@@ -94,8 +94,9 @@ one retired assertion. Log: 2,627 lines, kept privately.
 | `cargo clippy --workspace --all-targets -- -D warnings` | exit **0** |
 | `… --no-default-features --features postgres -- -D warnings` | exit **0** |
 | `cargo build --release -p peisear` | exit **0** |
-| `CI` (`test.yml`) on `c42171d`, `1770697` and `efdcd40` | **50 jobs, 0 not-success** on each, read per job, `headSha` matched in full |
-| `Docs` (`docs.yml`) on the same three | `mdbook build (with link check)` **success** on all three. The workflow's own conclusion is **not** success — `cancelled`, `cancelled`, `pending` — and **every one of those comes from `Deploy to GitHub Pages` alone** (below) |
+| `CI` (`test.yml`) on `1770697`, `c42171d`, `efdcd40` and `65271fe` | **50 jobs, 0 not-success** on each, read per job with no `--limit`, `headSha` matched in full |
+| `Docs` (`docs.yml`) on the same three, and on `65271fe` | `mdbook build (with link check)` **success** on all four. No workflow conclusion is success — `cancelled`, `cancelled`, `pending`, `pending` — and **every one of those comes from `Deploy to GitHub Pages` alone** (below) |
+| `peisear-web and peisear-storage (postgres feature, real server)` | **success** on all four, read per job. The second backend is exercised against a real server by CI on every commit, which §4's walk is not and does not claim to be |
 | `env-example-walk.yml` | did not run, correctly — its path filter matches none of these commits' files |
 
 **The block ran before this cut's document edits, so the document scans were
@@ -179,9 +180,18 @@ session notice, measured; and `alert alert-warning` is what made §5.3's and
 artefact rather than inferred from the source.
 
 **What this walk does not cover**: one backend (SQLite), one platform, one
-user, one locale. It does not exercise PostgreSQL — `clippy` covers that
-feature set and `migration_drift.rs` covers the migration pair, but no
-PostgreSQL instance was started here.
+user, one locale. **No PostgreSQL instance was started *in this walk*** —
+and that caveat was worded narrowly enough to be true and widely enough to be
+read as a gap in the release, which it is not. **PostgreSQL is covered, by
+CI**: `test.yml` runs a job called **`peisear-web and peisear-storage
+(postgres feature, real server)`** against a real server, and it is
+`success` on **all four** commits this document cites — `1770697`,
+`c42171d`, `efdcd40` and `65271fe`, read per job on each. `clippy`'s postgres
+feature set and `migration_drift.rs`'s filename pairing are *additional* to
+that, not substitutes for it. This correction is `§10.36` instance 12's
+second occurrence, in the same document and at the same cut — a caveat read
+wider than its reach, this time understating the project's own coverage
+rather than overstating it.
 
 ---
 
