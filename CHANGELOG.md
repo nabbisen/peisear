@@ -29,6 +29,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Signing in again right after signing out works immediately, with
   no delay.
 
+### What this release does not fix
+
+- **There is still no way to change or reset your password.** No
+  screen in the product does it. Someone who thinks their password
+  has been seen can now genuinely end every session this account
+  holds, which is worth having and is **not** the thing that is
+  missing — whoever knows the password can sign in again straight
+  away.
+- **Signing out is all or nothing.** There is no list of the devices
+  signed in as you, and no way to end one of them while keeping
+  another. Ending a session ends them all.
+- **Upgrading does not sign anybody out.** A credential issued by
+  the previous version keeps working until it expires or until the
+  next sign-out, on purpose: an upgrade that logged out every user
+  of every self-hosted instance would be a worse surprise than the
+  one this release removes.
+
 ## [0.70.0] — 2026-11-26
 
 **The colour the browser actually paints.** Four releases taught this

@@ -2,22 +2,33 @@
 
 **Document type**: External design (basic design)
 **Document status**: Baseline
-**Covers release**: `0.70.0` (**nothing in this document is amended**, and
-the check was a reading rather than an assumption. Series `068` built a
-rendered contrast gate and repaired one control: the Board/List view
-switcher on `SCR-08` drew its **selected** segment below WCAG 1.4.3, and the
-repair removed a darkening modifier. **This document specifies no appearance
-for that switcher** — `SCR-08`'s own rows govern what the screen shows, not
-how a selected segment is filled — and the selected state is still carried
-by a filled segment against transparent siblings, the pattern two other
-controls in the same component already use. No screen, route, state or
-externally observable copy changed; `0.68.0` and `0.69.0` before it changed
-none of those either)
+**Covers release**: `0.71.0` (**this document is amended for the first time
+since `0.62.0`, and the run of eight releases that amended nothing ends on a
+release that changes what a user can see.** Series `069` made signing out
+actually end a session: `FR-AUTH-003` is P0 and read `Implemented`, and a
+credential replayed after logout kept working on every route for the rest of
+its seven-day life. **Four sections change.** `§9` gains two rows for a
+credential that **verifies and is refused anyway** — a state this table could
+not express because it did not exist. `§5.3` gains a fourth flash kind, the
+**session notice**, which is neither a success nor a correctable error and so
+could not be filed under an existing row. `SCR-02` gains a fourth state, and
+it is the first this screen reaches **without the reader having done anything
+on it** — the consequence of an action taken on another device. `§3.1`'s
+layout diagram and `§4.2`'s `/logout` row record one line of new copy and an
+action whose reach is now stated. **And the sweep found two statements about
+this product that were already wrong**: `§5.3`'s `Role` column and `§3.1`'s
+flash-region obligation both named `role="status"` for a carrier that **no
+renderer has ever given it**, through every release that shipped both of the
+two renderers in question. Corrected to what ships, on the merits rather than
+by default, with the reason written down and the absent check recorded as
+unscheduled work rather than invented at a cut. Before this release,
+`0.63.0` through `0.70.0` amended nothing here, each checked at its own cut
+rather than assumed)
 **Supersedes**: [`history/peisear-0.19.1-external-design-en.md`](https://github.com/nabbisen/peisear/blob/main/docs/specification/history/peisear-0.19.1-external-design-en.md)
 (on GitHub; excluded from this book, see `docs/README.md`),
 retained unedited as the record of that release
 **Language**: English (normative)
-**Prepared**: 2026-10-07 · **Amended**: 2026-11-12 (0.62.0 — `§5.10` added, `§3.1`/`§3.2`/`SCR-04` renamed to `Me`; `0.63.0` through `0.70.0` amend nothing in this document, each checked at its own cut rather than assumed. This field read `2026-11-01 (0.60.0)` through three cuts — `§10.36` instance 8)
+**Prepared**: 2026-10-07 · **Amended**: 2026-11-27 (0.71.0 — `§9` gains two rows (a credential that verifies and is refused, HTML and API), `§5.3` a fourth flash kind, `SCR-02` a fourth state and a fourth entry, `§3.1`'s diagram one line, `§4.2`'s `/logout` row its real reach; **and two pre-existing claims corrected to what ships** — `§5.3`'s `Role` column and `§3.1`'s flash-region obligation both named `role="status"` for a carrier neither renderer has ever carried, and no check reads either row. Before it, 2026-11-12 (0.62.0 — `§5.10` added, `§3.1`/`§3.2`/`SCR-04` renamed to `Me`); `0.63.0` through `0.70.0` amend nothing in this document, each checked at its own cut rather than assumed. This field read `2026-11-01 (0.60.0)` through three cuts — `§10.36` instance 8)
 **Location**: `docs/specification/external-design.md`. **Normative**, English
 only, placed 2026-09-24 (`DEC-020`, closed). See
 [the directory README](./README.md) for how its citations resolve
@@ -318,6 +329,7 @@ Every authenticated screen renders inside a common shell:
 │     Me · Inbox · Projects · Teams ·                        │
 │     Search [search box: role="search"]                     │
 │   · account menu (Settings, sign out)                      │
+│       sign out states its own scope (0.71.0)               │
 ├────────────────────────────────────────────────────────────┤
 │ MAIN (main, id="main-content")                             │
 │   ┌──────────────────────────────────────────────────────┐ │
@@ -340,6 +352,18 @@ one of them** — it sits in the account menu. Below `md` (768 px) the
 five collapse behind one control labelled **Menu**, never the reader's
 username. The diagram was not amended when the layout changed; it is
 amended here, in the release that cuts that work.
+
+*Amended 0.71.0 (`SES-001`, `RFC 024` §5 item 1).* **The account menu gains
+a line of copy, and it is in the diagram because it is the only place in the
+product where a reader is told what signing out reaches.** `0.71.0` makes
+sign out end every session this account holds — the behaviour `FR-AUTH-003`
+always required and no release before it delivered — and that scope is a
+thing a reader can be surprised by *on another device*, after the fact. The
+remedy is stated **where the action is taken**, beside the control, not
+discovered later: shipped wording *"Signing out ends your sessions on every
+device."* The line is non-interactive and is not a menu item; like the email
+row above it, it is marked so that the menu's own hover and grid treatment
+for clickable items does not imply otherwise.
 ```
 
 Region obligations:
@@ -355,7 +379,7 @@ Region obligations:
 | Nav | `<nav>` | Current item marked `aria-current="page"`. |
 | Main | `<main>` | Exactly one per page. |
 | Breadcrumb | `<nav aria-label="Breadcrumb">` + ordered list | Present on all detail screens → `FR-NAV-003`. |
-| Flash region | `role="status"` or `role="alert"` | `alert` reserved for immediate errors. |
+| Flash region | Authenticated shell: `role="alert"`. Public shell (`/login`, `/register`): **no role**. | **Corrected 0.71.0 to what ships** — `§5.3`'s amendment note (b) has the reading. This row stated a choice of two roles and a reservation (`alert` for immediate errors only); the authenticated renderer carries `role="alert"` on an ordinary success flash, the public one carries no role, and **nothing checks either**. Corrected rather than imposed: a flash arrives with its document, so announcement is not what a live region is for here. |
 
 ### 3.2 Navigation model
 
@@ -561,7 +585,7 @@ describes what the user is looking at.
 | GET | `/health` | Liveness probe (no UI) | Any |
 | GET, POST | `/login` | SCR-02 | Anonymous |
 | GET, POST | `/register` | SCR-03 | Anonymous |
-| POST | `/logout` | End session | User |
+| POST | `/logout` | End this account's sessions, on every device (0.71.0) | User |
 | GET | `/today` | SCR-04 | Self |
 | GET | `/inbox` | SCR-05 | Self |
 | POST | `/inbox/mark-all-read` | Mark all read | Self |
@@ -733,12 +757,55 @@ colouring MUST NOT represent health state → `NFR-LANG-002`.
 
 | Kind | Carrier | Role | Persistence |
 |---|---|---|---|
-| Success flash | `?flash=` query parameter | `role="status"` | Until next navigation |
+| Success flash | `?flash=` query parameter | `role="alert"` on the authenticated shell; **no role** on the public shell (`/login`, `/register`) | Until next navigation |
+| **Session notice** | `?flash=` on `/login`, reached by 303 from any protected route | The public shell's renderer, as above | Until next navigation |
 | Recoverable error | `?error=` query parameter or inline | `role="alert"` | Until corrected |
 | Field validation | Inline, adjacent to field | `aria-describedby` | Until corrected |
 
 Errors MUST preserve the user's input → `GUI §9`. A rejected form
 re-renders with the submitted values intact.
+
+*Amended 0.71.0 (`SES-001`, `RFC 024` §5).* **A fourth kind, and a
+correction to the first row's `Role` column that this release's own sweep
+found.** Two separate things, and the second is the older one.
+
+**(a) The session notice is a kind of its own, which is why a row had to be
+added rather than an existing one stretched.** It is not a success — nothing
+the reader asked for succeeded — and it is not a recoverable error — there is
+nothing to correct, no input to preserve, and no form to re-render. It states
+that **a credential this reader still held has been invalidated somewhere
+else**, and the only action available is to sign in again. It exists because a
+bare 303 to `/login` is indistinguishable from an ordinary expiry and from
+never having signed in, which would leave the reader to guess which of the
+three happened (§9's new row; `RFC 024` §5 item 2). The shipped wording is:
+
+> You were signed out because this session was ended on another device.
+
+**Not** a §10.3 fixed text: no byte-identity test binds it, so unlike the two
+footnotes there, this document quotes what ships rather than governs it. That
+is stated rather than left implicit, because a quoted string nothing checks is
+a string that drifts — the shape `§10.36` registers.
+
+**(b) This row read `role="status"`, and no `?flash=` renderer has ever
+carried that role.** Read at this cut rather than assumed. The authenticated
+shell's flash (`components/layout.rs`'s `FlashBar`) is `role="alert"` with
+`alert alert-info`. The public shell's (`components/auth.rs`'s `FlashInline`)
+— the one this release now routes a security notice through — carries **no
+role at all**, as `alert alert-warning`. The product's `role="status"` sites are
+**eight**, counted at this cut: five JavaScript announcement regions for
+in-place status changes (`#status-announcements`, `NFR-A11Y-008`, `QA-011`
+§2) and three static regions stating a current value or a standing notice.
+**Not one of them carries `?flash=`** — a different mechanism, a different
+carrier and a different politeness.
+
+**The document is corrected to the code, not the reverse**, and on the merits
+rather than by default: a flash arrives *with* the document on a full page
+load, and a live region exists to announce content **inserted** into a page
+already on screen, so neither renderer is wrong about announcement. What was
+wrong was the row — **one role claimed for two renderers, neither of which has
+it**, through every release that shipped both. **Nothing checks this row**,
+which is how it stayed wrong; the gap is recorded as unscheduled work rather
+than closed with a check written at a cut.
 
 *Design note.* Flash state travels in the URL rather than a session
 cookie so that a redirect-after-post is idempotent, the resulting page
@@ -964,7 +1031,9 @@ elements · states · actions · messages · privacy · accessibility.
 
 **Purpose.** Authenticate an existing account holder.
 **Entry.** SCR-01 when unauthenticated; any protected route (303
-redirect); link from SCR-03.
+redirect); **any protected route when the credential this reader still
+holds was issued under an ended session** (303 carrying §5.3's session
+notice — `§9`, added 0.71.0); link from SCR-03.
 **Access.** Anonymous.
 
 **Layout.**
@@ -990,10 +1059,21 @@ redirect); link from SCR-03.
 | Submit | `button[type=submit]` | Primary action. |
 | Register link | `<a>` | To SCR-03. |
 
-**States.** Default · validation error · authentication failure.
+**States.** Default · validation error · authentication failure ·
+**signed out elsewhere** (0.71.0).
 
 **Messages.** Authentication failure MUST NOT disclose which field was
 wrong → `FR-AUTH-002`. A single neutral message covers both cases.
+
+*Amended 0.71.0 (`SES-001`).* **A fourth state, and the first one this
+screen reaches without the reader having done anything on it.** The other
+three are consequences of what the reader just typed or just tried; this one
+is a consequence of an action taken on another device, possibly minutes
+earlier. It renders as §5.3's session notice above the form, and the form
+itself is in its default state — **no field is pre-filled**, including the
+email address, because this screen cannot know the reader is the same person
+who was signed out. The notice says what happened; it does not name an
+account, which would disclose one to whoever is holding the browser now.
 
 **Accessibility.** Labels associated with inputs; error linked by
 `aria-describedby`; submit reachable by keyboard.
@@ -1611,6 +1691,8 @@ subject to the vocabulary rules in §10.
 | Renamed route | 308 | Redirect, method preserved | `FR-NAV-002` |
 | Unauthenticated, HTML | 303 → `/login` | Redirect | `FR-AUTH-004` |
 | Unauthenticated, API | 401 | JSON | `FR-AUTH-005` |
+| **Credential revoked, HTML** | 303 → `/login?flash=` | Redirect carrying §5.3's session notice | `FR-AUTH-003` |
+| **Credential revoked, API** | 401 | JSON | `FR-AUTH-003` |
 | Cross-user personal data, **named by a user id** | 403 | JSON / page | `FR-API-003` |
 | Cross-user personal data, **named by a resource id** | 404 | Page | Identical whether the row is absent or another user's, so it enumerates neither accounts nor rows — `GUI §3.4`'s access-safe denial. Measured 2026-09-23 |
 | Non-existent user's data | 403 | Identical to above | `NFR-PRIV-006` |
@@ -1618,6 +1700,28 @@ subject to the vocabulary rules in §10.
 | Validation failure | 400 | Re-rendered form / JSON | §7 |
 | Concurrency conflict | 409 | Structured | `NFR-CONC-006` |
 | Unexpected failure | 500 | Neutral page | §10 |
+
+*Amended 0.71.0 (`SES-001`, `RFC 024` §5).* **Two rows are added, and the
+distinction they draw is the whole point of the release.** Until `0.71.0` a
+credential that had been signed out was indistinguishable, to this table, from
+a credential that was never valid — because it *was* still valid. Now a
+credential can **verify and still be refused**: its signature holds, it has
+not expired, and the session generation it was issued under is no longer the
+subject's current one.
+
+**The HTML row is a different landing from `Unauthenticated, HTML`**, and
+deliberately so. Both reach `/login`, but a bare redirect leaves the reader
+unable to tell *being signed out elsewhere* from *an expiry* from *never
+having signed in*, so this case carries §5.3's session notice and the other
+two do not. **The API row is identical to `Unauthenticated, API`**, and that
+is accepted rather than overlooked: a 401 JSON body has nowhere to put a
+flash, and an API caller has no reader to inform. The asymmetry is between
+what the two surfaces can carry, not between two judgements.
+
+**Pressing sign out on an already-ended session lands on the HTML row**, by
+construction — `/logout` is itself a protected route, so the same refusal
+produces the same polite `/login` landing, and no error screen exists or is
+needed for it.
 
 *Note on 403 versus 404.* Personal data uses 403 uniformly so that
 existence is not disclosed. Team membership uses 404 so that a
@@ -2427,7 +2531,8 @@ entries about what is executed by nothing.
 | Version | Change |
 |---|---|
 | GUI v0.1 | Original GUI external specification, based on `0.16.0` |
-| **0.70.0 (this baseline)** | **Nothing in this document is amended, and one rendered appearance changed inside a treatment it never specified.** Series `068` built `contrast-gate.mjs`, which measures what the browser paints rather than what a stylesheet declares, and it found the **selected** segment of `SCR-08`'s Board/List switcher at **3.87:1** against WCAG 1.4.3's 4.5. The repair **removed** `.btn-active` rather than adding a colour. **Re-read at this cut**: `SCR-08`'s own rows state what the screen renders and in what order; **no section states how a selected segment is filled**, and the selected state still reads as a filled segment beside transparent siblings — the same treatment two other controls in that component already use. The release's own subject is a check and a rule (`requirements.md`'s `NFR-A11Y-005`: source is total and approximate, rendered is exact and fixture-bounded), neither of which is an external-design statement. No screen, route, state or externally observable copy changed |
+| **0.71.0 (this baseline)** | **The session that cannot be ended — and the first amendment to this document since `0.62.0`.** Series `069`, **one round** (`SES-001`), governed by `RFC 024`: **the first series in seven to meet the release cycle's entry criterion 1**. `FR-AUTH-003` is P0 and read `Implemented` — *a user MUST be able to end their session, after which protected routes are inaccessible with the prior credentials* — and `logout` removed the client's own cookie and touched no storage. **Measured against `cfa45d9`, the `0.70.0` release commit**: the same credential replayed after a `303` logout returned **200** on `/projects`, `/today` and `/api/search`, and would have for the rest of its seven-day life, with no way for the user or the operator to shorten it. **Four sections change here, and each one is a state or a surface this document could not previously express.** `§9` gains **Credential revoked, HTML** (`303 → /login?flash=`) and **Credential revoked, API** (`401`): until this release a signed-out credential was indistinguishable, to that table, from one that was never valid — because it *was* still valid. `§5.3` gains a fourth kind, the **session notice**: not a success (nothing the reader asked for succeeded) and not a recoverable error (nothing to correct, no input to preserve), reaching the reader as a flash on `/login` because a bare redirect there cannot be told apart from an expiry or from never having signed in. `SCR-02` gains a fourth state and a fourth entry path, **the first it reaches without the reader having done anything on this screen**, with no field pre-filled — not even the email address, which this screen cannot assume belongs to whoever is holding the browser now. `§3.1`'s diagram and `§4.2`'s `/logout` row record the one line of new copy (*"Signing out ends your sessions on every device."*, stated beside the control rather than discovered on another device) and an action whose reach is now written down. **Two pre-existing claims were found wrong by this cut's own sweep and corrected to what ships**: `§5.3`'s `Role` column and `§3.1`'s flash-region obligation both named `role="status"`, and **no `?flash=` renderer has ever carried it** — the authenticated shell's is `role="alert"` with `alert alert-info`, the public shell's carries no role at all, and the product's **eight** `role="status"` sites, counted at this cut, are five JavaScript announcement regions for in-place changes (`NFR-A11Y-008`) and three static value or notice regions — **none of them a `?flash=` carrier**. Corrected on the merits, not by default: a flash arrives **with** its document, and a live region exists to announce an insertion into a page already on screen. **Nothing checks either row**, which is how both stayed wrong through every release that shipped both renderers; the absent check is recorded as unscheduled work rather than written at a cut. **What this release does not change here**: the revocation is account-wide by construction, so this document states no per-device or per-session scope, and there is still **no password change or reset on any screen** — a reader who believes their password is compromised can now genuinely end every session, which is a partial remedy and is not the missing one. |
+| 0.70.0 | **Nothing in this document is amended, and one rendered appearance changed inside a treatment it never specified.** Series `068` built `contrast-gate.mjs`, which measures what the browser paints rather than what a stylesheet declares, and it found the **selected** segment of `SCR-08`'s Board/List switcher at **3.87:1** against WCAG 1.4.3's 4.5. The repair **removed** `.btn-active` rather than adding a colour. **Re-read at this cut**: `SCR-08`'s own rows state what the screen renders and in what order; **no section states how a selected segment is filled**, and the selected state still reads as a filled segment beside transparent siblings — the same treatment two other controls in that component already use. The release's own subject is a check and a rule (`requirements.md`'s `NFR-A11Y-005`: source is total and approximate, rendered is exact and fixture-bounded), neither of which is an external-design statement. No screen, route, state or externally observable copy changed |
 | 0.69.0 | **Nothing in this document is amended, and what it already said is why.** Series `067` wired `disclosure-marker-gate.mjs` into CI — a check, never run by anything but a person typing its name, over the thirteen `<summary>` controls' own marker and 44×44 target. **Both properties are already specified here**: `§5.1` fixes the mechanism as native `<details>`/`<summary>` with no scripting, and the target-size rule names *“disclosure toggles”* among the surfaces it applies to — both re-read at this cut. The release adds the **confirmation**, not the property, and a confirmation belongs to the gate inventory rather than to an external-design statement. The other two rounds corrected `requirements.md`'s own reading rule (`§0.6`, `§10.64`) and added an anonymous post-publish pullability check to `image.yml`. No screen, route, state or externally observable copy changed |
 | 0.68.0 | **Nothing in this document is amended, and the check that says so names what it read.** Series `066` raised the focus ring (67 controls) and the resting boundary (70) of every form control from `base-content/20` — **1.52:1** — to **17.21:1** and **6.42:1**, against WCAG 1.4.11's 3:1. **This document states neither**: `§5.5 Focus behaviour` is a table of focus *destinations* (page load, skip link, validation failure, disclosure, post-action redirect) and `§5.6` requires every flow to complete with the keyboard — **both re-read, neither stating how a focus indicator looks** — and no section anywhere describes a control's border. The repairs change the appearance of a state this document requires to exist, not the state itself; no screen, route, state or externally observable copy changed. `requirements.md`'s `§10.63` carries the finding, and `NFR-A11Y-010` — widened there rather than duplicated — is where the criterion lives |
 | 0.67.0 | **Nothing in this document is amended, and the check that says so names what it read.** Series `065` repaired eighteen sites below WCAG AA and re-floored eight more by changing colours **this document does not state**: `input::placeholder`'s own grey, `.menu-title`'s `/40`, and `.table :where(thead,tfoot)`'s `/60`, all applied by the served stylesheets rather than by any class a component writes. This document's only live mentions of a placeholder are `§3`'s design note — *a `placeholder` disappears the moment a reader types, so it was never the label* — and the `SCR`-level rows requiring an explicit `<label>` rather than placeholder-only; **both re-read, neither touched, and neither contradicted** by a repair that only darkens the hint text. The muted tier's `/60` → `/70` move appears in Appendix C's own `0.28.0` row as history, not as a live design statement, so there is nothing there to amend either. No screen, route, state or externally observable copy changed. `requirements.md`'s `§10.62` carries the finding |
