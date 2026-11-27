@@ -53,13 +53,17 @@ RFC 008 shipped in 0.29.0 and moved to `done/`.
 
 Open for review. Design may still change.
 
-**None today.** `RFC 024` was proposed, amended and accepted on 2026-11-26 and
-is listed above; before it, `RFC 020` was the last document to pass through
-here, accepted 2026-10-15.
+| # | Title | Proposed | For |
+|---|---|---|---|
+| 025 | [The password a user can change](./proposed/025-the-password-a-user-can-change.md) — **proposed 2026-11-27**, not accepted. **`0.71.0` shipped half a remedy and said so in its own notes**: a user who thinks their password has been seen can end every session on every device, and then cannot stop whoever knows that password from signing straight back in. **Measured first**: `requirements.md` specifies password change or reset **nowhere** — no status, no phase, *password* appearing 13 times and never as a requirement to change one — and the product agrees, with 0 hits in `app.rs`'s 68 route registrations and 0 in `handlers/settings.rs`. So this is an **absence**, not a defect, which is why it proposes two requirements (`FR-AUTH-006`, `FR-AUTH-007`) before any mechanism. **And it proposes the mechanism for only one of them.** The change half needs nothing new: the existing Argon2 hasher, the current password re-asked (an open tab is otherwise a takeover), and `session_generation + 1` in the same transaction — which `0.71.0` built, since a change that leaves the old password's sessions alive is not a change. **The reset half is recorded `Deferred` with three measured prerequisites**: SMTP is *optional* in this product, so a user told *"check your email"* on a mail-less instance waits forever, which fails the philosophy's second sentence worse than the absence does; **nothing here rate-limits anything** (0 hits for `rate_limit`/`governor` across every crate), and a reset endpoint without one is a mail cannon pointed at a stranger; and a correctly-hidden affordance leaves a locked-out user on a mail-less instance needing an operator action **that does not exist**. **This reversed the architect's own recommendation of the same morning** — *both halves, reset first* — and `§6` records that rather than dropping it | 0.72.0, on acceptance |
 
-**One thing to know before reading an empty section as a fact.** This line
-first read *"None today"* on **2026-10-14** (`c94d1e9`) and read it for 43
-days — interrupted for one day by `RFC 023` on 2026-11-11 — while
+**`RFC 024`** was proposed, amended and accepted on 2026-11-26 and is listed
+above; before it, `RFC 020` was the last document to pass through here,
+accepted 2026-10-15.
+
+**One thing to know before reading an empty section as a fact**, kept now that
+the section is not empty, because it will be again. This line read *"None
+today"* from **2026-10-14** (`c94d1e9`) for 43 days — interrupted for one day by `RFC 023` on 2026-11-11 — while
 **`proposed/` did not exist at all**: the folder was created when `RFC 024`
 was filed into it on 2026-11-26, and `RFC 024` `§6` records that finding.
 **`git` does not track an empty directory**, so now that `024` has moved to
@@ -170,12 +174,12 @@ because nothing contradicts it.
 - Moving a file between folders is what changes its state. Update the
   `Status` field and this index in the same change, and sweep inbound
   links (`grep -rn 'NNN-slug' rfcs ROADMAP.md docs`).
-- Take the next free number when opening an RFC: **025**. *(This line read
+- Take the next free number when opening an RFC: **026**. *(`025` was taken 2026-11-27 by the password RFC above. This line read
   **008** until 2026-11-26 — stale by sixteen numbers, and it is how `RFC 024`
   came to be filed first as `023`, a number spent on the branching policy
   withdrawn into `DEC-060` on 2026-11-11. Re-derive it from the folders rather
   than trusting it: `014`, `016`–`022` and `024` are in `accepted/`, `000`–`013`
-  and `015` in `done/`, and `023` is spent with no file anywhere.)*
+  and `015` in `done/`, `023` is spent with no file anywhere, and `025` is now in `proposed/`.)*
 
 ## What an RFC is for
 
