@@ -104,17 +104,28 @@ Measured rather than assumed:
 
 **`FR-AUTH-006` — Password change.** A signed-in user MUST be able to change
 their own password. The current password MUST be required and verified before
-the new one is accepted. On success, every session of that user's account MUST
-become invalid, **including the one that made the change**, and the user MUST
-be returned to sign-in with the reason stated. The new password MUST be
-subject to the same constraints registration applies.
+the new one is accepted. On success, **every other session of that account
+MUST become invalid, and the session that made the change MUST remain
+valid** — the user is not signed out of the browser they are using. The new
+password MUST be subject to the same constraints registration applies.
 *Priority*: **P1**. *Source*: this RFC, on the owner's decision.
+
+**Amended 2026-11-27, before acceptance, on the owner's philosophy review.**
+This entry first read *"every session … **including the one that made the
+change**, and the user MUST be returned to sign-in"*. **That was wrong, and it
+was wrong in the normative sentence rather than in the prose around it** —
+`§4.1` and `§6` carry the reasoning and the withdrawn version.
 
 **`FR-AUTH-007` — Password reset.** A user who cannot sign in MUST be able to
 regain access to their account without an operator's intervention, by proving
 control of the address the account was registered with.
-*Priority*: **P1**. *Status*: **`Deferred`** — accepted as a requirement,
-postponed to a named phase, with the three prerequisites in `§4.3`.
+*Priority*: **P1**. *Status*: **`Deferred`**, and the status table's own
+definition is *“accepted as a requirement, deliberately postponed to a named
+phase”* — **so the phase is named here and it is not a release number**: a
+release after the three prerequisites in `§4.3` are met, each of which is a
+round in its own right. **Stated plainly because this register is full of
+entries whose status claimed more than was true**: no number is assigned, and
+pretending one is would be the drift `§10.36` collects.
 *Source*: this RFC, on the owner's decision.
 
 **Why the second is written now rather than when it is built**: so that the
@@ -134,13 +145,16 @@ Four things, and none of them is new machinery:
 2. The handler verifies the current password with `peisear_auth::password`'s
    existing verify, rejecting with the same neutral framing `FR-AUTH-002`
    uses, and **never** disclosing which field was wrong.
-3. On success: hash the new password with the existing hasher, write it, and
-   **advance `session_generation` in the same transaction**. One statement,
-   already proven at `0.71.0`.
-4. The response is the `SessionRevoked` landing `0.71.0` already built:
-   `303 → /login?flash=…`, with its own copy rather than the
-   ended-on-another-device wording, because this reader knows exactly what
-   happened and should not be told it happened elsewhere.
+3. On success, in one transaction: hash the new password with the existing
+   hasher, write it, and **advance `session_generation`**. Every credential
+   issued under the old generation — every other device, every stolen cookie
+   — is dead at the next request, by the mechanism `0.71.0` already proved.
+4. **Then re-issue this session under the new generation and set the cookie on
+   the same response**, which is the two lines `login_submit` already runs:
+   `jwt::issue(&id, &email, user.session_generation, &secret)` followed by
+   `jar.add(build_session_cookie(…))`. The user stays signed in, on the page
+   they were on, with a success flash. **No `/login` detour and no new copy on
+   that screen.**
 
 **Step 2 is the half that is easy to get wrong.** A change form that does not
 re-ask the current password turns an unattended browser into an account
@@ -148,11 +162,25 @@ takeover — the attacker does not need the password, only the open tab. This
 is the one place in this RFC where a convenience and a security property
 conflict, and the security property wins without argument.
 
-**Step 3's consequence is deliberate and must be stated in the UI, not
-discovered**: changing a password signs the user out of the browser they are
-changing it in. The alternative — exempting the current session — means the
-one session an attacker might be holding is the one that survives, which
-defeats the point.
+**Step 4 is a correction to this RFC's own first draft, made on the owner's
+philosophy review and kept visible rather than quietly fixed.** That draft
+signed the user out of the browser they changed the password in, and argued:
+*exempting the current session means the one session an attacker might be
+holding is the one that survives.*
+
+**That argument inverts the facts.** Step 2 has just required proof of the
+**current password**. An attacker holding a stolen cookie cannot supply it —
+that is the entire reason step 2 exists. **So the session performing the
+change is the legitimate user's, with as much confidence as this product ever
+has about anyone**, and it is the one session that must *not* be revoked.
+Revoking it ends the user's own session to protect them from themselves,
+drops them at a sign-in screen for doing the right thing, and buys **nothing**
+— every session that could be an attacker's is already dead from step 3.
+
+**And the corrected version is smaller**: one fewer screen transition, one
+fewer copy string, and `§5`'s second site disappears. Where a design choice
+and *less is more* point the same way, the first draft was usually reasoning
+backwards from a mechanism it had already chosen.
 
 ### §4.2 — the reset's shape, specified but not built
 
@@ -236,28 +264,44 @@ half when it comes, not spent here.
 
 Two copy sites, and the second is the one a reader will remember:
 
-1. **`SCR-22`'s new section** states, beside the control and before it is
-   used, that changing the password signs out every device including this
-   one. Stated where the action is taken, which is the rule `RFC 024 §5`
-   established and `0.71.0` shipped.
-2. **The landing after a successful change** reuses `§5.3`'s *session
-   notice* kind — the fourth flash kind `0.71.0` added — with its own
-   wording. **Not** the ended-on-another-device text: this reader did it
-   themselves, here, a second ago, and telling them it happened on another
-   device would be false.
+**One copy site, not two — and that is a consequence of `§4.1` step 4 rather
+than a saving sought for its own sake.**
+
+**`SCR-22`'s new section** states, beside the control and before it is used,
+that changing the password signs out **every other device** and keeps this
+one. Stated where the action is taken, which is the rule `RFC 024 §5`
+established and `0.71.0` shipped — and it is now a sentence a user is glad to
+read rather than a warning they must accept.
+
+**There is no second site.** The first draft of this RFC needed one: a landing
+on `/login` explaining why the user had just been signed out. `§4.1` step 4
+removed the reason for it, so `§5.3`'s *session notice* kind is **not** reused
+here and keeps exactly the one meaning `0.71.0` gave it — *a credential you
+held was invalidated somewhere else*. Stretching it to cover *you changed your
+own password a second ago, here* would have made the fourth flash kind mean
+two different things within one release of its being added.
 
 `external-design.md` gains: a fifth row in `SCR-22`'s section table, a state
-on that screen, and one row in `§9` if the rejection status differs from
-`FR-AUTH-002`'s — which `§4.1` step 2 says it must not.
+on that screen, and **no new `§9` row** — the rejection reuses
+`FR-AUTH-002`'s status and framing, which `§4.1` step 2 requires, and the
+success is a `303` back to `SCR-22`, which `§9`'s *Success (mutation)* row
+already covers.
 
 ---
 
 ## §6 — alternatives, named so they are not rediscovered
 
 - **A change form that does not re-ask the current password.** Rejected in
-  `§4.1`; an open tab becomes a takeover.
-- **Exempting the current session from invalidation.** Rejected in `§4.1`;
-  it preserves exactly the session worth revoking.
+  `§4.1`; an open tab becomes a takeover. This is the one rejection in this
+  document that survived its own review unchanged.
+- **Signing the acting session out along with the others.** **This RFC's own
+  first draft, withdrawn on the owner's philosophy review** (`§4.1` step 4).
+  It argued that exempting the current session preserves the session an
+  attacker might hold — which inverts step 2, where that attacker has just
+  failed to supply the current password. It cost a screen transition, a copy
+  string and a stretched meaning for `§5.3`'s newest flash kind, and bought
+  nothing. **Recorded rather than deleted**, the same way `RFC 024 §4.4`
+  records the `iat` mechanism this architect also recommended first.
 - **Both halves in one release.** Rejected in `§4.3`, and this is a change
   from the architect's own recommendation of 2026-11-27 earlier the same day,
   which was *both halves, with reset as the half that justifies the
