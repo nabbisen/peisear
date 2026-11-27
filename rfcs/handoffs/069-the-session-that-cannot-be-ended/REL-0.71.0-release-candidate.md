@@ -61,8 +61,8 @@ before the work started, which is the gate the owner settled on 2026-11-26.
 | # | Criterion | State |
 |---|---|---|
 | 1 | Every handoff reviewed and accepted, one commit per handoff, in dependency order | **Met**, with one thing said plainly — one handoff, **two commits**: `1372883` and the CI fix-forward `c636c55` (`BIGINT` not `INTEGER` on PostgreSQL, a version literal 23 → 24). One review unit, so the criterion's purpose — telling one unit's work from another's — holds; recorded rather than papered over |
-| 2 | `fmt`, `clippy -D warnings`, the full per-crate suite, with captured logs | **Met** — §3 |
-| 3 | Requirements amendments applied; nothing `Divergent` without a gap entry | **Met** — `FR-AUTH-003`'s acceptance replaced, `FR-AUTH-001`'s second clause given its first real test, `§10.66` opened and closed, `§10.36` gains instances 10 and 11. **No entry is left `Divergent`**, and `FR-AUTH-003` never carried that status: the gap and its repair landed in the same round, so `§10.66` is the durable record instead (reviewed and accepted as a deliberate departure from the handoff's own instruction) |
+| 2 | `fmt`, `clippy -D warnings`, the full per-crate suite, with captured logs | **Met** — §3, and **re-derived independently by the dev team at this same tree**: all 42 commands, 0 non-zero exits, 703/0/0 over 53 result lines, every figure matching. Its evidence row was also where this cut found `§10.36` instance 12 (§3) |
+| 3 | Requirements amendments applied; nothing `Divergent` without a gap entry | **Met** — `FR-AUTH-003`'s acceptance replaced, `FR-AUTH-001`'s second clause given its first real test, `§10.66` opened and closed, `§10.36` gains instances 10, 11 and 12 — the last two found at this cut, and 12 in this document's own criterion-2 row. **No entry is left `Divergent`**, and `FR-AUTH-003` never carried that status: the gap and its repair landed in the same round, so `§10.66` is the durable record instead (reviewed and accepted as a deliberate departure from the handoff's own instruction) |
 | 4 | `CHANGELOG.md` records the *why* | **Met** — `[Unreleased]` carries one Security entry and two Changed, and gained its **What this release does not fix** section at this cut (§6). The section's narrative lead is written in the release commit, when the heading is dated |
 | 5 | Affected documentation updated in the same release | **Met, and by amendment rather than by reading** — the first for `external-design.md` since `0.62.0`. §5 |
 | 6 | Tarball built and extraction verified | **Met**, and the walk reproduced the published exploit against the artefact and watched it refused — §4 |
@@ -94,8 +94,9 @@ one retired assertion. Log: 2,627 lines, kept privately.
 | `cargo clippy --workspace --all-targets -- -D warnings` | exit **0** |
 | `… --no-default-features --features postgres -- -D warnings` | exit **0** |
 | `cargo build --release -p peisear` | exit **0** |
-| CI on `c42171d` (this candidate's own commit) | **50 jobs, 0 not-success**, read per job, `headSha` matched in full |
-| CI on `1770697` (the round itself) | **50 jobs, 0 not-success**, read per job on that sha |
+| `CI` (`test.yml`) on `c42171d`, `1770697` and `efdcd40` | **50 jobs, 0 not-success** on each, read per job, `headSha` matched in full |
+| `Docs` (`docs.yml`) on the same three | `mdbook build (with link check)` **success** on all three. The workflow's own conclusion is **not** success — `cancelled`, `cancelled`, `pending` — and **every one of those comes from `Deploy to GitHub Pages` alone** (below) |
+| `env-example-walk.yml` | did not run, correctly — its path filter matches none of these commits' files |
 
 **The block ran before this cut's document edits, so the document scans were
 re-run against the tree that will be tagged** — every one of them reads its
@@ -110,15 +111,34 @@ changelog_scan 9/9   spec_scan 42/42   docs_scan 46/46   prose_scan 4/4
 page_title_scan 2/2  contrast_scan 8/8  css_scan 9/9
 ```
 
-**Both figures were read per job rather than from a run summary**, and
-`c42171d`'s `headSha` was matched in full (`c42171df8f8d…`) rather than by the
-short sha, because a watcher is a claim like any other and this project has
-twice had one report a state that was not real.
+**This table named one workflow and was read as naming the tree, which is
+`§10.36` instance 12 and mine.** Its earlier wording was *CI on `c42171d` —
+50 jobs, 0 not-success*. True of `test.yml`, whose workflow is literally
+called `CI`; silent about the fact that **two** push-triggered workflows run
+on `main`. **An independent re-verification at this same tree then read the
+row as a statement about the tree and wrote that down**, from a single
+`--limit 1`-shaped read of the one workflow the row named. **A row whose name
+is wider than its reach does not fail; it gets believed** — and that reading,
+made by someone who was deliberately checking rather than trusting, is the
+measurement.
 
-**The only change after `c42171d` is this table and this paragraph** — two
-lines of documentation recording that commit's own result. No code, no
-specification and no changelog text moved, so every measurement above still
-describes the tree that will be tagged.
+**Measured properly, nothing is broken, and that is why this is an instance
+rather than a defect.** Every non-success conclusion on all three commits
+comes from **one job**: `Deploy to GitHub Pages`, the deployment wedged since
+2026-11-18 that `ROADMAP.md`'s *Unscheduled work* already records.
+`docs.yml` moved the `pages` lock off workflow level on 2026-11-21 **so that
+this wedge could not stop the link check** — and these three commits are the
+evidence it worked, with `mdbook build (with link check)` green on each.
+**`0.70.0`'s own release commit `cfa45d9` was tagged in exactly this state**,
+as was every commit on `main` back past `245314f`.
+
+**Before leg 2**, the release commit's own runs are read per job across
+**both** workflows, and the tag waits on `CI` plus `Docs`'s build job — not
+on the Pages deployment, which no commit has cleared since 2026-11-18.
+
+**Nothing but this section and `§10.36`'s new row has changed since
+`c42171d`.** No code, no specification requirement, no changelog text, so
+every measurement in §3–§5 still describes the tree that will be tagged.
 
 ---
 
@@ -266,8 +286,11 @@ In the changelog, for a reader, and here for the record:
   specification. It is `proc-macro-error2`'s shape, one tool over: a warning
   in a green gate's log that nobody had read. Written down here rather than
   chased at a cut.
-- **`proc-macro-error2`** and the **Pages deployment wedged since
-  2026-11-18** are unchanged.
+- **`proc-macro-error2`** is unchanged, and **the Pages deployment is still
+  wedged** — no `Docs` run on `main` has concluded `success` in the last 60,
+  `0.70.0`'s release commit included. The link check is unaffected by design
+  and green throughout (§3); nothing in this release touches the deployment,
+  and the tag does not wait on it.
 
 ---
 
