@@ -731,6 +731,59 @@ what it had. **The reason to fix a citation that under-reports** is that the
 next reader audits the gap rather than the requirement — which is what
 happened here, twice, before it was read correctly.
 
+**FR-AUTH-006 — Password change**
+A signed-in user MUST be able to change their own password. The current
+password MUST be required and verified before the new one is accepted. On
+success, **every other session of that account MUST become invalid, and the
+session that made the change MUST remain valid** — the user is not signed out
+of the browser they are using. The new password MUST be subject to the same
+constraints registration applies (`FR-AUTH-001`).
+*Rationale*: `FR-AUTH-003` lets a user end every session, which answers a
+stolen **credential**. It does not answer a stolen **password**: whoever knows
+it signs straight back in. `0.71.0`'s own release notes said so, naming this
+as *a partial remedy and not the missing one*.
+*Source*: `RFC 025`, accepted 2026-11-27 by the owner. Not derived from
+`SPEC`, `BRIEF` or `KICK` — **none of them specifies password management at
+all**, which is why this is a new entry rather than a widened acceptance.
+*Status*: **Specified** — design accepted, not yet built.
+*Acceptance*: none yet; the handoff names it. *Priority*: P1.
+*Note on the invalidation rule, which was amended before acceptance.*
+`RFC 025` first required **every** session to end, *including the one that
+made the change*, returning the user to sign-in. That inverts this entry's own
+second sentence: an attacker holding a stolen cookie cannot supply the current
+password, which is the entire reason it is asked, so the acting session is the
+legitimate user's and is the one session that must survive. The corrected rule
+is also smaller — no `/login` detour, no second copy string, and `§5.3`'s
+session-notice flash keeps the single meaning `0.71.0` gave it. `RFC 025 §6`
+records the withdrawn version.
+
+**FR-AUTH-007 — Password reset**
+A user who cannot sign in MUST be able to regain access to their account
+without an operator's intervention, by proving control of the address the
+account was registered with.
+*Rationale*: `FR-AUTH-006` serves the user who can still sign in. A user who
+cannot has no path at all, and on a self-hosted instance there is no operator
+command either.
+*Source*: `RFC 025`, accepted 2026-11-27 by the owner.
+*Status*: **Deferred** — accepted as a requirement, postponed to **a release
+after the three prerequisites in `RFC 025` §4.3 are met**, each of which is a
+round in its own right. **No release number is assigned, and that is stated
+rather than implied**: claiming one would be the drift `§10.36` collects.
+The three, measured 2026-11-27: **(a)** SMTP is optional here — `FR-NTF-008`
+(P1) requires this product to run with it unconfigured, and `§1.1` calls the
+relay *optional*, so a user told *"check your email"* on a mail-less instance
+waits forever; the affordance must be absent where it cannot work.
+**(b)** Nothing in this product rate-limits anything — 0 hits for
+`rate_limit`, `ratelimit`, `governor`, `tower-governor`, `leaky bucket` or
+`throttl*` across every crate's `.rs` and `.toml` — and a reset endpoint
+without one is a mail cannon pointed at a stranger. **(c)** With the
+affordance correctly absent, a locked-out user on a mail-less instance needs
+an operator action that **does not exist**: one binary target, `src/` holding
+only `lib.rs` and `main.rs`, no subcommand parsing. `§2.2`'s administrator
+boundary does not cover this — it governs a *team* administrator's authority
+over membership and sprint lifecycle, not instance operation.
+*Priority*: P1.
+
 ### 4.2 Navigation and information architecture — `FR-NAV`
 
 **FR-NAV-001 — Five primary entry points**
@@ -10669,7 +10722,7 @@ it is in progress, not deferred.
 
 | Area | Total | Implemented | Partial | Specified | Deferred | Divergent |
 |---|---|---|---|---|---|---|
-| Authentication | 5 | 5 | — | — | — | — |
+| Authentication | 7 | 5 | — | 1 | 1 | — |
 | Navigation | 6 | 6 | — | — | — | — |
 | Projects | 4 | 4 | — | — | — | — |
 | Issues | 7 | 7 | — | — | — | — |
@@ -10685,7 +10738,7 @@ it is in progress, not deferred.
 | Settings | 3 | 3 | — | — | — | — |
 | API | 6 | 5 | — | 1 | — | — |
 | Direct manipulation | 7 | 7 | — | — | — | — |
-| **Functional total** | **100** | **98** | **1** | **1** | **0** | **0** |
+| **Functional total** | **102** | **98** | **1** | **2** | **1** | **0** |
 | Privacy | 8 | 8 | — | — | — | — |
 | Concurrency | 7 | 7 | — | — | — | — |
 | Accessibility | 12 | 9 | — | — | 1 | 2 (residual, unguarded) |

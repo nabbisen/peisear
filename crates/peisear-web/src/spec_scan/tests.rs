@@ -393,7 +393,7 @@ fn every_superseded_status_line_is_marked_on_the_real_tree() {
 }
 
 #[test]
-fn requirement_entries_is_171_on_the_real_tree() {
+fn requirement_entries_is_173_on_the_real_tree() {
     // SPEC-002 §1: 99 FR + 71 NFR, matching Appendix A's own totals --
     // the population this whole round's checks depend on.
     //
@@ -405,12 +405,22 @@ fn requirement_entries_is_171_on_the_real_tree() {
     // quietly: it is the population assertion §10.36 exists to require,
     // and it went red before Appendix A's own rules did. Change it only
     // alongside a counted change to the specification itself.
+    //
+    // 0.72.0: 171 -> 173, FR-AUTH-006 (password change, Specified) and
+    // FR-AUTH-007 (password reset, Deferred) added on the owner's
+    // acceptance of RFC 025, 2026-11-27 -- the first entries in this
+    // document sourced from an RFC since RFC 001, and the first new FR
+    // numbers since the baseline. Renamed rather than silently
+    // re-numbered, the same way migrate_reaches_version_24 was at 0.71.0:
+    // a guard whose name states a population must say which one.
+    // It went red first again, before Appendix A's rule b, which is the
+    // third consecutive time that order has held.
     let input = real_input();
     let entries = requirement_entries(&input.requirements);
-    assert_eq!(entries.len(), 171, "expected 100 FR + 71 NFR entries");
+    assert_eq!(entries.len(), 173, "expected 102 FR + 71 NFR entries");
     assert_eq!(
         entries.iter().filter(|e| e.id.starts_with("FR-")).count(),
-        100
+        102
     );
     assert_eq!(
         entries.iter().filter(|e| e.id.starts_with("NFR-")).count(),

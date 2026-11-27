@@ -1,8 +1,12 @@
 # RFC 025: The password a user can change — and the reset that cannot ship with it
 
-**Status**: **Proposed** 2026-11-27 by the architect. Not accepted. Until the
-owner accepts it, release-cycle **entry criterion 1 is unmet** for `0.72.0`
-and no handoff may start.
+**Status**: **Accepted** 2026-11-27 by the owner, after the amendment in `§3`.
+*Proposed the same day and amended twice before acceptance: once by the
+architect's own audit of this document's unverified claims (`§2`, `§4.3`), and
+once on the owner's philosophy review, which **changed the normative rule in
+`§3`** — see `§4.1` step 4 and `§6`.* **This is release-cycle entry criterion
+1 for `0.72.0`, and it is now met.** The two requirements it proposes are
+written: `FR-AUTH-006` **Specified**, `FR-AUTH-007` **Deferred**.
 *Numbered 025, re-derived from the folders rather than trusted: `000`–`013`
 and `015` are in `done/`, `014`, `016`–`022` and `024` in `accepted/`, and
 `023` is spent with no file anywhere (the withdrawn branching policy).*
