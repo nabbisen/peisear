@@ -9,7 +9,25 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.71.0] — 2026-11-27
+
+**The session that can be ended.** Until this release, pressing "Log out"
+removed your browser's own copy of the credential and did nothing else. **The
+credential itself kept working** — for the rest of its week-long life, on
+every page and every API route — so anyone who still held a copy still held
+the account. There was nothing on the server to end, and no setting an
+operator could use to shorten it.
+
+**Nothing caught it, because the check that was supposed to prove logout
+worked never asked the question.** It logged out and then asked for a page
+**with no credential at all**, and found it was refused. That proves the
+browser forgot. It never asked whether the credential had stopped working.
+
+**Logging out now ends the session on the server**, for every account that
+credential belonged to and on every device signed in as it, immediately. The
+account menu says so beside the control, rather than leaving it to be
+discovered on another device. Signing back in works straight away, and
+upgrading signs nobody out.
 
 ### Security
 
