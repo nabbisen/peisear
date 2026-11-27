@@ -13,12 +13,17 @@
 > review. Criterion 3: this directory. Criterion 4: `0.71.0`'s amendments were
 > applied at its own cut.
 >
-> **⚠ But the `0.72.0` row is still only *Proposed*, so do not start yet.**
-> In this project, **accepting an RFC is not authorizing a row, and
-> authorizing a row is not approving a cut** — three decisions, and the owner
-> has taken one. The architect has brought the row ready. **When the row is
-> authorized this note is replaced with a go-ahead**; until then, read and
-> question, build nothing.
+> **✓ The `0.72.0` row was authorized by the owner 2026-11-28. `PWD-001` may
+> start.** All four entry criteria are met: the governing RFC is in
+> `rfcs/accepted/` (1), it leaves only the copy open (2), this directory
+> exists (3), and `0.71.0`'s amendments were applied at its own cut (4).
+>
+> **What is *not* authorized is the cut.** In this project, accepting an RFC,
+> authorizing a row and approving a cut are three decisions — taken here on
+> two separate days — and the third has not been taken. `DEC-056`'s four legs
+> run only after exit criterion 7, and **never by the dev team**. Build,
+> test, and hand back; the release is not yours to make and not yet anyone's
+> to make.
 >
 > **⚠ `RFC 025` was amended twice before acceptance, and the second amendment
 > changed its normative rule.** Its first draft required a password change to
