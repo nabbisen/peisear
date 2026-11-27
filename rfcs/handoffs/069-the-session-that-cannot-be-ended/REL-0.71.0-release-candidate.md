@@ -94,7 +94,8 @@ one retired assertion. Log: 2,627 lines, kept privately.
 | `cargo clippy --workspace --all-targets -- -D warnings` | exit **0** |
 | `… --no-default-features --features postgres -- -D warnings` | exit **0** |
 | `cargo build --release -p peisear` | exit **0** |
-| CI on `1770697` | **50 jobs, 0 not-success**, read per job on that sha |
+| CI on `c42171d` (this candidate's own commit) | **50 jobs, 0 not-success**, read per job, `headSha` matched in full |
+| CI on `1770697` (the round itself) | **50 jobs, 0 not-success**, read per job on that sha |
 
 **The block ran before this cut's document edits, so the document scans were
 re-run against the tree that will be tagged** — every one of them reads its
@@ -109,10 +110,15 @@ changelog_scan 9/9   spec_scan 42/42   docs_scan 46/46   prose_scan 4/4
 page_title_scan 2/2  contrast_scan 8/8  css_scan 9/9
 ```
 
-**This commit's own CI has not run yet**, and that is stated rather than
-implied: the figure above is `1770697`, the last sha CI has rated. The
-sweep commit's result is reported before the cut, and the cut is four legs
-that run after the owner's approval in any case.
+**Both figures were read per job rather than from a run summary**, and
+`c42171d`'s `headSha` was matched in full (`c42171df8f8d…`) rather than by the
+short sha, because a watcher is a claim like any other and this project has
+twice had one report a state that was not real.
+
+**The only change after `c42171d` is this table and this paragraph** — two
+lines of documentation recording that commit's own result. No code, no
+specification and no changelog text moved, so every measurement above still
+describes the tree that will be tagged.
 
 ---
 
