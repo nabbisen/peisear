@@ -80,6 +80,8 @@ pub mod pool;
 pub mod project_health;
 pub mod projects;
 pub mod search;
+#[cfg(test)]
+mod session_generation_write_race;
 pub mod sprints;
 pub mod subjects;
 pub mod teams;

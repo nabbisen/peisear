@@ -107,22 +107,39 @@ pub async fn advance_session_generation(pool: &Pool, user_id: &str) -> StorageRe
 /// columns commits both or neither, so a write that changed the hash
 /// but failed to advance the generation — leaving every stolen session
 /// alive against a password that no longer opens them — cannot happen.
-pub async fn change_password(pool: &Pool, user_id: &str, new_hash: &str) -> StorageResult<()> {
-    let res = sqlx::query(&crate::dialect::sql(
+///
+/// `PWD-002`: returns the generation this statement actually committed,
+/// via `RETURNING`, rather than leaving the caller to add one to a row
+/// read before the write — `session_generation = session_generation +
+/// 1` is relative to whatever the row holds *at commit*, not to a value
+/// read earlier, and a concurrent writer (`advance_session_generation`,
+/// the `logout` path) in between the two can move it by more than one.
+/// `users` carries no trigger (unlike `issues.rs`'s own `updated_at`,
+/// whose `RETURNING` rejection is specific to its `AFTER` trigger and
+/// does not transfer here — checked, not assumed), so `RETURNING` hands
+/// back exactly the value this statement wrote, with no second read.
+/// `RowNotFound` replaces the old `rows_affected() == 0` check: same
+/// shape, same meaning, mapped the way `teams::add_member` maps a
+/// specific `sqlx::Error` variant rather than letting `?` fall through
+/// to `StorageError::Database`.
+pub async fn change_password(pool: &Pool, user_id: &str, new_hash: &str) -> StorageResult<i64> {
+    let new_generation: i64 = sqlx::query_scalar(&crate::dialect::sql(
         r#"
         UPDATE users
         SET password_hash = ?2, session_generation = session_generation + 1
         WHERE id = ?1
+        RETURNING session_generation
         "#,
     ))
     .bind(user_id)
     .bind(new_hash)
-    .execute(pool)
-    .await?;
-    if res.rows_affected() == 0 {
-        return Err(StorageError::NotFound);
-    }
-    Ok(())
+    .fetch_one(pool)
+    .await
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => StorageError::NotFound,
+        other => other.into(),
+    })?;
+    Ok(new_generation)
 }
 
 pub async fn insert(

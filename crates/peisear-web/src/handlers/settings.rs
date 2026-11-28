@@ -181,15 +181,20 @@ pub struct ChangePasswordForm {
 /// in this product to change a stored credential.
 ///
 /// Order matters here, and is the order `§3` gives: validate the new
-/// password's shape first (cheap, no I/O): then load the row and
+/// password's shape first (cheap, no I/O); then load the row and
 /// verify the *current* password (the one check a convenience-minded
 /// form would be tempted to skip, and the one this RFC says a
 /// security property wins over without argument); only then write.
-/// `§3` step 5's own instruction — "take the generation from the
-/// value you just wrote, not from a re-read, and not from the stale
-/// row you loaded" — is `new_generation` below: computed from the row
-/// already in hand plus the one the storage layer's single `UPDATE`
-/// is guaranteed to have applied, never a second `SELECT`.
+///
+/// `PWD-002`: `new_generation` comes from `users::change_password`'s
+/// own `RETURNING` clause — the value the `UPDATE` actually
+/// committed, not `user.session_generation + 1` computed from the
+/// row read above. Between that read and this write sit two Argon2
+/// operations (`password::verify`, `password::hash`); a concurrent
+/// `logout` landing in that window used to leave the re-issued
+/// cookie one generation behind the row, signing the acting session
+/// out on its very next request — `PWD-002` `§1`, measured, not
+/// hypothetical.
 pub async fn change_password(
     Requester(rid): Requester,
     State(state): State<AppState>,
@@ -216,8 +221,7 @@ pub async fn change_password(
     }
 
     let new_hash = password::hash(&form.new_password)?;
-    users::change_password(&state.db, &user.id, &new_hash).await?;
-    let new_generation = user.session_generation + 1;
+    let new_generation = users::change_password(&state.db, &user.id, &new_hash).await?;
 
     let token = jwt::issue(&user.id, &user.email, new_generation, &state.jwt_secret)?;
     let jar = jar.add(build_session_cookie(token, state.cookie_secure));

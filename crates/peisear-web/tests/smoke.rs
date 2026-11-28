@@ -589,6 +589,15 @@ async fn a_distinctive_password_never_reaches_storage_or_logs() {
 /// is the test that would have caught the RFC's own withdrawn first
 /// draft, which returned the user to `/login` instead.
 ///
+/// `PWD-002` §4.2: the previous version of this test only reused the
+/// client's existing cookie against `/projects` afterwards, which
+/// would pass identically against a handler that set no cookie at
+/// all -- a check narrower than its own name (`§10.36`). It now
+/// captures the registration's own cookie first and asserts the
+/// `/settings/password` response carries a *different* one: the
+/// re-issue `RFC 025 §4.1` step 4 requires, not merely a session that
+/// happens to still work.
+///
 /// **Plant**: on a tree with no `/settings/password` route at all
 /// (pre-`PWD-001`), the `POST` below 404s and this test fails before
 /// reaching its own assertion — confirmed red in a worktree copy of
@@ -597,7 +606,24 @@ async fn a_distinctive_password_never_reaches_storage_or_logs() {
 async fn changing_the_password_works_and_the_acting_session_survives() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("grace");
-    register_and_login(&app, &user).await;
+
+    let register_resp = app
+        .server
+        .post("/register")
+        .form(&[
+            ("email", user.email.as_str()),
+            ("password", user.password.as_str()),
+            ("display_name", user.display_name.as_str()),
+        ])
+        .await;
+    register_resp.assert_status(StatusCode::SEE_OTHER);
+    let original_cookie = register_resp
+        .cookies()
+        .iter()
+        .next()
+        .expect("a session cookie")
+        .clone()
+        .into_owned();
 
     let resp = app
         .server
@@ -610,24 +636,50 @@ async fn changing_the_password_works_and_the_acting_session_survives() {
         .await;
     resp.assert_status(StatusCode::SEE_OTHER);
 
-    // The same `TestServer` jar, now carrying whatever `Set-Cookie`
-    // the response above sent -- `login_submit`'s own re-issue shape,
-    // not a bare "nothing changed" absence of a new cookie.
+    let reissued_cookie = resp
+        .cookies()
+        .iter()
+        .next()
+        .expect("the password-change response must carry a session Set-Cookie")
+        .clone()
+        .into_owned();
+    assert_ne!(
+        reissued_cookie.value(),
+        original_cookie.value(),
+        "the re-issued cookie must carry a different token from the one the client already \
+         held -- the generation moved, so the token must too"
+    );
+
+    // The same `TestServer` jar, now carrying the re-issued cookie
+    // above (`axum-test`'s own `save_cookies`).
     let resp = app.server.get("/projects").await;
     resp.assert_status_ok();
 }
 
 /// `PWD-001` §4 item 2 (`RFC 025` §3, the normative rule's other
-/// half): every *other* session must die. Two independent sessions
-/// for one account, mirroring
-/// `logging_out_on_one_device_refuses_the_other_devices_session`'s own
-/// shape -- a password change through one must refuse the other's
-/// still-held, never-replayed-until-now credential, on both rejection
-/// shapes `verified_requester_id` produces.
+/// half): every credential issued under the old generation must die.
+/// Mirrors `logging_out_on_one_device_refuses_the_other_devices_
+/// session`'s own shape -- a password change through one session must
+/// refuse a still-held, never-replayed-until-now credential, on both
+/// rejection shapes `verified_requester_id` produces.
+///
+/// **Renamed by `PWD-002` §4.1** (was
+/// `changing_the_password_refuses_the_other_devices_session`). Its
+/// assertions are unchanged; what changed is the name's own claim.
+/// `jwt.rs`'s `iat` is whole-seconds (`jwt.rs:95`), so two logins for
+/// one account inside the same second -- as both logins in this test
+/// are -- produce identical claims and a byte-identical token. The
+/// "device B" cookie captured below is therefore almost certainly the
+/// *same* token the acting session also holds, not a distinct second
+/// session the product has no way to mint within one second (`RFC 024`
+/// §4.5's deferred per-device `jti` question). This test still proves
+/// everything `FR-AUTH-006` requires -- a credential from before the
+/// change is refused -- it does not prove a second, independent
+/// session died, and its old name claimed that it did.
 ///
 /// **Plant**: as above -- 404s pre-`PWD-001`.
 #[tokio::test]
-async fn changing_the_password_refuses_the_other_devices_session() {
+async fn changing_the_password_refuses_a_credential_issued_before_it() {
     let app = TestApp::spawn().await;
     let user = TestUser::new("heidi");
     register_and_login(&app, &user).await;
