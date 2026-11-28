@@ -2,8 +2,11 @@
 
 **Governing RFC**: [`rfcs/accepted/025-the-password-a-user-can-change.md`](../../accepted/025-the-password-a-user-can-change.md),
 **accepted 2026-11-27** by the owner.
-**One unit**: [`PWD-001`](./PWD-001-password-change.md).
-**Release**: `0.72.0` — *proposed, not yet authorized* (see below).
+**Two units**: [`PWD-001`](./PWD-001-password-change.md) — reviewed and
+**accepted 2026-11-28** — and [`PWD-002`](./PWD-002-the-generation-it-committed.md),
+**open**, which this series was **reopened** for.
+**Release**: `0.72.0` — **row authorized 2026-11-28; the cut is held for
+`PWD-002`** (see below).
 
 ---
 
@@ -25,6 +28,22 @@
 > test, and hand back; the release is not yours to make and not yet anyone's
 > to make.
 >
+> **⚠ This series was reopened on 2026-11-28, and `PWD-002` is why.**
+> `PWD-001` is **accepted** — nothing reopens that. But the architect's review
+> walked a release binary and found two things neither package held: the
+> handler takes its new session generation from the row it **read** rather
+> than the one the `UPDATE` **wrote**, leaving a measured **16.6 ms** window
+> (two Argon2 operations) in which a concurrent logout signs the user out of
+> the browser `FR-AUTH-006` promises will stay signed in; and two of the five
+> acceptance tests are named for more than they establish. **The defect is
+> mostly the architect's** — `PWD-001` `§3` step 5 was self-contradictory and
+> you implemented the only reading it left available.
+>
+> **`0.72.0`'s cut is held for this unit, and the reason is the register, not
+> the window.** `FR-AUTH-006` would ship `Implemented` with a `MUST` that
+> measurement contradicts, citing a test that cannot show what the citation
+> claims. `PWD-002` `§2` has the whole argument.
+
 > **⚠ `RFC 025` was amended twice before acceptance, and the second amendment
 > changed its normative rule.** Its first draft required a password change to
 > end **every** session *including the one making the change*, sending the
@@ -79,8 +98,19 @@ assumed:
 ## What the architect owes this series
 
 - The row's authorization is the owner's, and the architect brings it.
+  **Done, 2026-11-28.**
 - `external-design.md`'s amendment at the cut, per `DEC-028`: a fifth row in
   `SCR-22`'s section table and a state on that screen. **Not** a new `§9`
   row and **not** a second use of `§5.3`'s session-notice flash — `RFC 025`
-  `§5` says why.
-- The review of your proposed copy.
+  `§5` says why. **Still owed; it lands in the release commit.**
+- The review of your proposed copy. **Done** — all of it accepted, and the
+  architect's own *never disclose which field was wrong* instruction
+  **withdrawn**: `FR-AUTH-002`'s neutrality defeats account enumeration at
+  sign-in, and there is nothing to enumerate on an authenticated change
+  screen. *Current password is incorrect.* is right.
+- **`FR-AUTH-006`'s acceptance citation**, reworded at the cut to match
+  `PWD-002` `§4.1`'s rename — it currently claims a second session died, and
+  the product cannot mint two distinguishable tokens inside one second.
+- **`§10.36`'s next instance**, for a shape the register does not yet hold: a
+  requirement whose own `MUST` the code leaves a window in, caught by no
+  check at all.
