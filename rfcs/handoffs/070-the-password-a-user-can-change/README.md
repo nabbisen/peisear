@@ -5,8 +5,12 @@
 **Two units**: [`PWD-001`](./PWD-001-password-change.md) — reviewed and
 **accepted 2026-11-28** — and [`PWD-002`](./PWD-002-the-generation-it-committed.md),
 **open**, which this series was **reopened** for.
-**Release**: `0.72.0` — **row authorized 2026-11-28; the cut is held for
-`PWD-002`** (see below).
+**Release**: `0.72.0` — **cut 2026-11-28**. Both rounds are accepted and the
+candidate is
+[`REL-0.72.0-release-candidate.md`](./REL-0.72.0-release-candidate.md). The
+hold for `PWD-002` is lifted; the record of why it existed stays below,
+because the defect was the architect's handoff and that is the part worth
+keeping.
 
 ---
 

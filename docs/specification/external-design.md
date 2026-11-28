@@ -2,7 +2,27 @@
 
 **Document type**: External design (basic design)
 **Document status**: Baseline
-**Covers release**: `0.71.0` (**this document is amended for the first time
+**Covers release**: `0.72.0` (**this document is amended in two consecutive
+releases for the first time since `0.58.0`, and on both occasions because a
+user could see the difference.** Series `070` gave a signed-in user a way to
+change their own password — the half `0.71.0`'s all-or-nothing sign-out could
+not answer. **One screen changes, and no new status row does.** `SCR-22` gains
+a **fifth section**, placed second, immediately after Profile: identity beside
+identity. `§5.10` governs destructive confirmations and does not reach this
+screen, so that position is a design choice and is written down as one rather
+than left to look inevitable. The screen **states its sign-out scope before
+the control is used** — every other device out, this one kept — and the
+response re-issues this session's own credential, which is the counterpart to
+`§4.2`'s `/logout` row. `§8` gains the route and the form. **Deliberately
+absent**: no new `§9` row, because every rejection is an ordinary validation
+error already expressible there, and **no second use of `§5.3`'s session
+notice**, so that flash kind keeps the single meaning `0.71.0` gave it. **And
+one departure from `§9`'s sign-in neutrality is stated rather than left
+implicit**: the rejections name which field was wrong, because
+`FR-AUTH-002`'s neutral framing exists to defeat account enumeration at
+sign-in and an authenticated screen has no account to enumerate — the
+architect's own instruction to the contrary was withdrawn at review. The
+release before it, `0.71.0`, was **the first amendment to this document
 since `0.62.0`, and the run of eight releases that amended nothing ends on a
 release that changes what a user can see.** Series `069` made signing out
 actually end a session: `FR-AUTH-003` is P0 and read `Implemented`, and a
@@ -28,7 +48,12 @@ rather than assumed)
 (on GitHub; excluded from this book, see `docs/README.md`),
 retained unedited as the record of that release
 **Language**: English (normative)
-**Prepared**: 2026-10-07 · **Amended**: 2026-11-27 (0.71.0 — `§9` gains two rows (a credential that verifies and is refused, HTML and API), `§5.3` a fourth flash kind, `SCR-02` a fourth state and a fourth entry, `§3.1`'s diagram one line, `§4.2`'s `/logout` row its real reach; **and two pre-existing claims corrected to what ships** — `§5.3`'s `Role` column and `§3.1`'s flash-region obligation both named `role="status"` for a carrier neither renderer has ever carried, and no check reads either row. Before it, 2026-11-12 (0.62.0 — `§5.10` added, `§3.1`/`§3.2`/`SCR-04` renamed to `Me`); `0.63.0` through `0.70.0` amend nothing in this document, each checked at its own cut rather than assumed. This field read `2026-11-01 (0.60.0)` through three cuts — `§10.36` instance 8)
+**Prepared**: 2026-10-07 · **Amended**: 2026-11-28 (0.72.0 — `SCR-22` gains
+a fifth section (change password), its own behaviour paragraph stating the
+sign-out scope and the re-issue, `§8` the route and form rows, and the
+screen-to-requirement table `FR-AUTH-006`; **no new `§9` row and no second
+use of `§5.3`'s session notice**, both deliberate and both recorded in
+`RFC 025` `§5`. Before it, 2026-11-27 (0.71.0 — `§9` gains two rows (a credential that verifies and is refused, HTML and API), `§5.3` a fourth flash kind, `SCR-02` a fourth state and a fourth entry, `§3.1`'s diagram one line, `§4.2`'s `/logout` row its real reach; **and two pre-existing claims corrected to what ships** — `§5.3`'s `Role` column and `§3.1`'s flash-region obligation both named `role="status"` for a carrier neither renderer has ever carried, and no check reads either row. Before it, 2026-11-12 (0.62.0 — `§5.10` added, `§3.1`/`§3.2`/`SCR-04` renamed to `Me`); `0.63.0` through `0.70.0` amend nothing in this document, each checked at its own cut rather than assumed. This field read `2026-11-01 (0.60.0)` through three cuts — `§10.36` instance 8))
 **Location**: `docs/specification/external-design.md`. **Normative**, English
 only, placed 2026-09-24 (`DEC-020`, closed). See
 [the directory README](./README.md) for how its citations resolve
@@ -629,6 +654,7 @@ describes what the user is looking at.
 | POST | `/teams/{slug}/sprints/{sprint_id}/plan/add` | Move issue into sprint (0.22.0) | `admin` / `member` |
 | POST | `/teams/{slug}/sprints/{sprint_id}/plan/remove` | Move issue out of sprint (0.22.0) | `admin` / `member` |
 | GET | `/settings` | SCR-22 | Self |
+| POST | `/settings/password` | Change password (0.72.0); re-issues this session | Self |
 | POST | `/settings/wip-limit` | Set WIP limit | Self |
 | POST | `/settings/capacity` | Create capacity period | Self |
 | POST | `/settings/capacity/{id}` | Update capacity period | Self |
@@ -1459,9 +1485,28 @@ signed-in user and is visible to nobody else → `FR-SET-001`.
 | Section | Contents |
 |---|---|
 | Profile | Display name, email |
+| Change password (0.72.0) | Current password, new password, confirmation; states its own sign-out scope before the control is used |
 | WIP limit | Personal concurrent-work limit; default and effect explained |
 | Capacity | Period rows: points, optional start and end, note; add / edit / close / delete |
 | Notifications | Link to SCR-23 |
+
+**Changing the password (0.72.0).** Placed **second, immediately after
+Profile** — identity beside identity — rather than last: `§5.10` governs
+destructive confirmations and does not reach this screen, so the ordering
+is a design choice and is recorded as one. The current password is asked
+and verified before the new one is accepted → `FR-AUTH-006`. **The screen
+states the scope before the control is used, not after**: changing the
+password signs the account out of every *other* device and keeps this one.
+On success the user stays on this screen with a flash saying so, and the
+response **re-issues this session's own credential** — `§4.2`'s `/logout`
+row is the all-or-nothing counterpart, and this is the half that keeps the
+browser you are using. Three rejections are stated in text, each naming
+its own cause: a wrong current password, a confirmation that does not
+match, and a new password below the length `FR-AUTH-001` sets for
+registration. **Naming the wrong field is deliberate here and departs from
+`§9`'s sign-in neutrality**: `FR-AUTH-002`'s neutral framing exists to
+defeat account enumeration at sign-in, and on an authenticated screen
+there is no account to enumerate.
 
 **Capacity rules.** Periods MUST NOT overlap; a rejected submission
 explains the overlap in text, not only visually. Open-ended periods can
@@ -1558,6 +1603,7 @@ the oversight posture the product refuses.
 | Issue status | `…/issues/{iid}/status` | POST | status, token | One of open / in_progress / done | Event appended; refresh |
 | Sub-issue create | `…/sub-issues/new` | POST | title | As create; parent must be top-level | → parent SCR-11 |
 | Sprint assignment | `…/issues/{iid}/sprint` | POST | sprint_id (optional) | Completed sprint rejected; sub-issue rejected | Refresh SCR-11 |
+| Change password (0.72.0) | `/settings/password` | POST | current, new, confirmation | Current verified; new ≥ 8; confirmation matches | Refresh SCR-22; every other session ends, this one re-issued |
 | Capacity create | `/settings/capacity` | POST | points, dates | No overlap; valid range | Refresh SCR-22 |
 | Capacity edit | `/settings/capacity/{id}` | POST | points, token | As create; concurrency | Refresh SCR-22 |
 | Capacity close | `…/{id}/close` | POST | date, token | Date required | Refresh SCR-22 |
@@ -2468,7 +2514,7 @@ surfaces (SCR-26..28).
 | SCR-13 Sub-issue create | `FR-SUB-001..004`, `FR-SUB-007` |
 | SCR-16 Team detail | `FR-TEAM-001..005`, `NFR-PRIV-003` |
 | SCR-20 Sprint detail | `FR-SPR-001..003`, `FR-SUB-008`, `NFR-A11Y-003` |
-| SCR-22 Settings | `FR-SET-001`, `FR-PER-002`, `FR-PER-003` |
+| SCR-22 Settings | `FR-SET-001`, `FR-PER-002`, `FR-PER-003`, `FR-AUTH-006` (0.72.0) |
 | SCR-24 Search | `FR-SCH-001..004` |
 | SCR-26 Sprint plan | `FR-PLAN-001..005` |
 | SCR-27/28 Calendar | `FR-CAL-001..008` |
@@ -2531,7 +2577,8 @@ entries about what is executed by nothing.
 | Version | Change |
 |---|---|
 | GUI v0.1 | Original GUI external specification, based on `0.16.0` |
-| **0.71.0 (this baseline)** | **The session that cannot be ended — and the first amendment to this document since `0.62.0`.** Series `069`, **one round** (`SES-001`), governed by `RFC 024`: **the first series in seven to meet the release cycle's entry criterion 1**. `FR-AUTH-003` is P0 and read `Implemented` — *a user MUST be able to end their session, after which protected routes are inaccessible with the prior credentials* — and `logout` removed the client's own cookie and touched no storage. **Measured against `cfa45d9`, the `0.70.0` release commit**: the same credential replayed after a `303` logout returned **200** on `/projects`, `/today` and `/api/search`, and would have for the rest of its seven-day life, with no way for the user or the operator to shorten it. **Four sections change here, and each one is a state or a surface this document could not previously express.** `§9` gains **Credential revoked, HTML** (`303 → /login?flash=`) and **Credential revoked, API** (`401`): until this release a signed-out credential was indistinguishable, to that table, from one that was never valid — because it *was* still valid. `§5.3` gains a fourth kind, the **session notice**: not a success (nothing the reader asked for succeeded) and not a recoverable error (nothing to correct, no input to preserve), reaching the reader as a flash on `/login` because a bare redirect there cannot be told apart from an expiry or from never having signed in. `SCR-02` gains a fourth state and a fourth entry path, **the first it reaches without the reader having done anything on this screen**, with no field pre-filled — not even the email address, which this screen cannot assume belongs to whoever is holding the browser now. `§3.1`'s diagram and `§4.2`'s `/logout` row record the one line of new copy (*"Signing out ends your sessions on every device."*, stated beside the control rather than discovered on another device) and an action whose reach is now written down. **Two pre-existing claims were found wrong by this cut's own sweep and corrected to what ships**: `§5.3`'s `Role` column and `§3.1`'s flash-region obligation both named `role="status"`, and **no `?flash=` renderer has ever carried it** — the authenticated shell's is `role="alert"` with `alert alert-info`, the public shell's carries no role at all, and the product's **eight** `role="status"` sites, counted at this cut, are five JavaScript announcement regions for in-place changes (`NFR-A11Y-008`) and three static value or notice regions — **none of them a `?flash=` carrier**. Corrected on the merits, not by default: a flash arrives **with** its document, and a live region exists to announce an insertion into a page already on screen. **Nothing checks either row**, which is how both stayed wrong through every release that shipped both renderers; the absent check is recorded as unscheduled work rather than written at a cut. **What this release does not change here**: the revocation is account-wide by construction, so this document states no per-device or per-session scope, and there is still **no password change or reset on any screen** — a reader who believes their password is compromised can now genuinely end every session, which is a partial remedy and is not the missing one. |
+| **0.72.0 (this baseline)** | **The password a user can change — and the second consecutive amendment to this document, after a run of eight that amended nothing.** `SCR-22` gains a fifth section (change password), placed **second, immediately after Profile**; the position is a design choice and is recorded as one, because `§5.10` governs destructive confirmations and does not reach this screen. The section's own paragraph states the sign-out scope **before the control is used** — every other device out, this one kept — and the re-issue of this session's credential, which is the counterpart to `§4.2`'s `/logout` row from `0.71.0`. `§8` gains the route (`POST /settings/password`) and the form; the screen-to-requirement table gains `FR-AUTH-006`. **What is deliberately absent, and why, since an absence is the thing a later reader cannot reconstruct**: no new `§9` row, because all three rejections are ordinary validation errors that table already expresses; and no second use of `§5.3`'s **session notice**, so that flash kind keeps the single meaning `0.71.0` gave it (`RFC 025` `§5`). **One departure from `§9`'s sign-in neutrality is stated rather than implied**: the rejections name which field was wrong, because `FR-AUTH-002`'s neutrality defeats account enumeration at *sign-in* and an authenticated screen has no account to enumerate — the architect's own instruction requiring neutrality here was **withdrawn at review**, on the dev team's proposed copy being right | 
+| 0.71.0 | **The session that cannot be ended — and the first amendment to this document since `0.62.0`.** Series `069`, **one round** (`SES-001`), governed by `RFC 024`: **the first series in seven to meet the release cycle's entry criterion 1**. `FR-AUTH-003` is P0 and read `Implemented` — *a user MUST be able to end their session, after which protected routes are inaccessible with the prior credentials* — and `logout` removed the client's own cookie and touched no storage. **Measured against `cfa45d9`, the `0.70.0` release commit**: the same credential replayed after a `303` logout returned **200** on `/projects`, `/today` and `/api/search`, and would have for the rest of its seven-day life, with no way for the user or the operator to shorten it. **Four sections change here, and each one is a state or a surface this document could not previously express.** `§9` gains **Credential revoked, HTML** (`303 → /login?flash=`) and **Credential revoked, API** (`401`): until this release a signed-out credential was indistinguishable, to that table, from one that was never valid — because it *was* still valid. `§5.3` gains a fourth kind, the **session notice**: not a success (nothing the reader asked for succeeded) and not a recoverable error (nothing to correct, no input to preserve), reaching the reader as a flash on `/login` because a bare redirect there cannot be told apart from an expiry or from never having signed in. `SCR-02` gains a fourth state and a fourth entry path, **the first it reaches without the reader having done anything on this screen**, with no field pre-filled — not even the email address, which this screen cannot assume belongs to whoever is holding the browser now. `§3.1`'s diagram and `§4.2`'s `/logout` row record the one line of new copy (*"Signing out ends your sessions on every device."*, stated beside the control rather than discovered on another device) and an action whose reach is now written down. **Two pre-existing claims were found wrong by this cut's own sweep and corrected to what ships**: `§5.3`'s `Role` column and `§3.1`'s flash-region obligation both named `role="status"`, and **no `?flash=` renderer has ever carried it** — the authenticated shell's is `role="alert"` with `alert alert-info`, the public shell's carries no role at all, and the product's **eight** `role="status"` sites, counted at this cut, are five JavaScript announcement regions for in-place changes (`NFR-A11Y-008`) and three static value or notice regions — **none of them a `?flash=` carrier**. Corrected on the merits, not by default: a flash arrives **with** its document, and a live region exists to announce an insertion into a page already on screen. **Nothing checks either row**, which is how both stayed wrong through every release that shipped both renderers; the absent check is recorded as unscheduled work rather than written at a cut. **What this release does not change here**: the revocation is account-wide by construction, so this document states no per-device or per-session scope, and there is still **no password change or reset on any screen** — a reader who believes their password is compromised can now genuinely end every session, which is a partial remedy and is not the missing one. |
 | 0.70.0 | **Nothing in this document is amended, and one rendered appearance changed inside a treatment it never specified.** Series `068` built `contrast-gate.mjs`, which measures what the browser paints rather than what a stylesheet declares, and it found the **selected** segment of `SCR-08`'s Board/List switcher at **3.87:1** against WCAG 1.4.3's 4.5. The repair **removed** `.btn-active` rather than adding a colour. **Re-read at this cut**: `SCR-08`'s own rows state what the screen renders and in what order; **no section states how a selected segment is filled**, and the selected state still reads as a filled segment beside transparent siblings — the same treatment two other controls in that component already use. The release's own subject is a check and a rule (`requirements.md`'s `NFR-A11Y-005`: source is total and approximate, rendered is exact and fixture-bounded), neither of which is an external-design statement. No screen, route, state or externally observable copy changed |
 | 0.69.0 | **Nothing in this document is amended, and what it already said is why.** Series `067` wired `disclosure-marker-gate.mjs` into CI — a check, never run by anything but a person typing its name, over the thirteen `<summary>` controls' own marker and 44×44 target. **Both properties are already specified here**: `§5.1` fixes the mechanism as native `<details>`/`<summary>` with no scripting, and the target-size rule names *“disclosure toggles”* among the surfaces it applies to — both re-read at this cut. The release adds the **confirmation**, not the property, and a confirmation belongs to the gate inventory rather than to an external-design statement. The other two rounds corrected `requirements.md`'s own reading rule (`§0.6`, `§10.64`) and added an anonymous post-publish pullability check to `image.yml`. No screen, route, state or externally observable copy changed |
 | 0.68.0 | **Nothing in this document is amended, and the check that says so names what it read.** Series `066` raised the focus ring (67 controls) and the resting boundary (70) of every form control from `base-content/20` — **1.52:1** — to **17.21:1** and **6.42:1**, against WCAG 1.4.11's 3:1. **This document states neither**: `§5.5 Focus behaviour` is a table of focus *destinations* (page load, skip link, validation failure, disclosure, post-action redirect) and `§5.6` requires every flow to complete with the keyboard — **both re-read, neither stating how a focus indicator looks** — and no section anywhere describes a control's border. The repairs change the appearance of a state this document requires to exist, not the state itself; no screen, route, state or externally observable copy changed. `requirements.md`'s `§10.63` carries the finding, and `NFR-A11Y-010` — widened there rather than duplicated — is where the criterion lives |

@@ -9,7 +9,20 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.72.0] — 2026-11-28
+
+**The password a user can change.** `0.71.0` made *Log out* genuinely end
+every session on every device, and its own notes had to say that this was **a
+partial remedy and not the missing one**: ending sessions answers a stolen
+*credential*, and nothing in this product answered a stolen *password* —
+whoever knew it signed straight back in. There was no way to change a
+password anywhere in peisear, and no requirement asking for one.
+
+There is now. Settings gains a **Change password** section, placed second,
+right after Profile. You enter your current password and a new one; every
+*other* device signed in as your account is signed out immediately, and the
+browser you used stays signed in. The screen says so **before** you use it,
+not afterwards.
 
 ### Security
 
