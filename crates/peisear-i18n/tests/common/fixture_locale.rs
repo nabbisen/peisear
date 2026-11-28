@@ -636,6 +636,19 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::EditRowAriaLabel => "[fx-edit-row-aria]".to_string(),
         MessageKey::RemoveThisRowAriaLabel => "[fx-remove-row-aria]".to_string(),
 
+        // ---- PWD-001 (RFC 025): components/settings.rs ----
+        MessageKey::ChangePasswordSectionAriaLabel => {
+            "[fx-change-password-section-aria]".to_string()
+        }
+        MessageKey::ChangePasswordHeading => "[fx-change-password-heading]".to_string(),
+        MessageKey::ChangePasswordEndsOtherSessionsHint => {
+            "[fx-change-password-ends-other-sessions]".to_string()
+        }
+        MessageKey::CurrentPasswordFieldLabel => "[fx-current-password-field]".to_string(),
+        MessageKey::NewPasswordFieldLabel => "[fx-new-password-field]".to_string(),
+        MessageKey::ConfirmNewPasswordFieldLabel => "[fx-confirm-new-password-field]".to_string(),
+        MessageKey::ChangePasswordButton => "[fx-change-password-button]".to_string(),
+
         // ---- I18N-005d: components/{notification_preferences,notifications} ----
         MessageKey::EmailNotificationsHeading => "[fx-email-notifications-heading]".to_string(),
         MessageKey::FirstTimeEmailPromptAriaLabel => "[fx-first-time-email-aria]".to_string(),
@@ -771,6 +784,7 @@ pub fn render(key: MessageKey) -> String {
         MessageKey::PasswordFieldLabel => "[fx-password-field]".to_string(),
         MessageKey::DisplayNameFieldLabel => "[fx-display-name-field]".to_string(),
         MessageKey::PasswordMinLengthHint => "[fx-password-hint]".to_string(),
+        MessageKey::PasswordLengthMessage => "[fx-password-length]".to_string(),
         MessageKey::NoAccountPrompt => "[fx-no-account-prompt]".to_string(),
         MessageKey::CreateOneLinkWord => "[fx-create-one-link]".to_string(),
         MessageKey::AlreadyHaveAccountPrompt => "[fx-already-have-account]".to_string(),
@@ -810,6 +824,15 @@ pub fn render(key: MessageKey) -> String {
             "[fx-period-start-date-format]".to_string()
         }
         MessageKey::PeriodEndMustBeDateFormatMessage => "[fx-period-end-date-format]".to_string(),
+
+        // ---- PWD-001 (RFC 025): handlers/settings.rs ----
+        MessageKey::CurrentPasswordIncorrectMessage => {
+            "[fx-current-password-incorrect]".to_string()
+        }
+        MessageKey::NewPasswordConfirmationMismatchMessage => {
+            "[fx-new-password-confirmation-mismatch]".to_string()
+        }
+        MessageKey::PasswordChangedFlash => "[fx-password-changed]".to_string(),
 
         // ---- I18N-006: peisear-core/src/lib.rs ----
         MessageKey::IndicatorDescription { label } => {

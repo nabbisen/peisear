@@ -266,6 +266,51 @@ pub fn SettingsPage(
                         </div>
                     </form>
                 </section>
+
+                // `PWD-001` (`RFC 025` §5): the one copy site, stated
+                // beside the control and before it is used -- the same
+                // rule `0.71.0` applied to the Sign Out control, not
+                // left to be discovered on another device. A form
+                // post, not a script, per `§5.8`'s no-JavaScript
+                // obligation (`RFC 025` `§3` step 1).
+                <section class="card bg-base-100 border border-base-300 shadow-sm"
+                         aria-label=t(MessageKey::ChangePasswordSectionAriaLabel)>
+                    <form method="post" action="/settings/password"
+                          class="card-body gap-3">
+                        <h2 class="text-base font-medium">{t(MessageKey::ChangePasswordHeading)}</h2>
+                        <p class="text-sm text-base-content/70">
+                            {t(MessageKey::ChangePasswordEndsOtherSessionsHint)}
+                        </p>
+                        <label class="form-control w-full max-w-xs">
+                            <div class="label py-1">
+                                <span class="label-text text-sm">{t(MessageKey::CurrentPasswordFieldLabel)}</span>
+                            </div>
+                            <input type="password" name="current_password"
+                                   autocomplete="current-password" required
+                                   class=grow("input input-bordered input-sm w-full")/>
+                        </label>
+                        <label class="form-control w-full max-w-xs">
+                            <div class="label py-1">
+                                <span class="label-text text-sm">{t(MessageKey::NewPasswordFieldLabel)}</span>
+                                <span class="label-text-alt text-sm text-base-content/70">{t(MessageKey::PasswordMinLengthHint)}</span>
+                            </div>
+                            <input type="password" name="new_password"
+                                   autocomplete="new-password" required
+                                   class=grow("input input-bordered input-sm w-full")/>
+                        </label>
+                        <label class="form-control w-full max-w-xs">
+                            <div class="label py-1">
+                                <span class="label-text text-sm">{t(MessageKey::ConfirmNewPasswordFieldLabel)}</span>
+                            </div>
+                            <input type="password" name="confirm_password"
+                                   autocomplete="new-password" required
+                                   class=grow("input input-bordered input-sm w-full")/>
+                        </label>
+                        <div class="card-actions justify-end mt-2">
+                            <button type="submit" class=grow("btn btn-primary btn-sm")>{t(MessageKey::ChangePasswordButton)}</button>
+                        </div>
+                    </form>
+                </section>
             </div>
         </AppShell>
     }

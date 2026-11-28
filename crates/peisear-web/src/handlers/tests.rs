@@ -1,4 +1,4 @@
-/// The seven `#[validate(message = "...")]` literals `t()` cannot
+/// The six `#[validate(message = "...")]` literals `t()` cannot
 /// reach — `validator`'s `message` argument parses to a plain
 /// `String` at macro-expansion time, so the derive attributes below
 /// cannot reference this array, and it must be kept in sync by hand.
@@ -8,6 +8,19 @@
 /// the derive attributes is accepted here and only here, per the
 /// handoff — a duplicated literal is a drift risk if either copy is
 /// reworded without the other.
+///
+/// **Was seven, until `PWD-001` (`RFC 025` §2).** `RegisterForm.password`
+/// used to carry exactly this shape — its own
+/// `#[validate(length(message = "..."))]` literal, listed here and
+/// guarded below. `PWD-001` needed the same rule on a second struct
+/// (`handlers::settings::ChangePasswordForm::new_password`) without a
+/// second copy of the constraint, so both fields now validate through
+/// `handlers::auth::validate_password_strength`, a `custom` validator
+/// whose message is `peisear_i18n::MessageKey::PasswordLengthMessage`
+/// — reachable by `t()`, covered by the crate-wide vocabulary and
+/// exhaustiveness guards over `MessageKey::all()` (`peisear-i18n`'s
+/// own `tests/guard.rs`), and removed from this hand-synced table
+/// because it is no longer this table's shape of problem.
 ///
 /// `I18N-007` §4 closes that drift risk: `validator_derive_messages_
 /// still_match_their_source_files` asserts each literal below still
@@ -25,11 +38,6 @@ const VALIDATOR_DERIVE_MESSAGES: &[(&str, &str, &str)] = &[
         "handlers/auth.rs",
         "RegisterForm.display_name",
         "Display name must be between 1 and 80 characters.",
-    ),
-    (
-        "handlers/auth.rs",
-        "RegisterForm.password",
-        "Password must be at least 8 characters.",
     ),
     (
         "handlers/projects.rs",

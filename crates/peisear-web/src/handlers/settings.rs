@@ -22,15 +22,19 @@ use axum::{
     extract::{Path, Query, State},
     response::{IntoResponse, Redirect},
 };
+use axum_extra::extract::CookieJar;
 use chrono::NaiveDate;
+use peisear_auth::{jwt, password};
 use peisear_i18n::{Field, Locale, MessageKey};
 use peisear_storage::{notifications as notif_store, subjects::SubjectId, user_capacities, users};
 use serde::Deserialize;
+use validator::Validate;
 
 use crate::{
     AppError, AppResult, AppState, components,
     components::t,
     extractors::{AuthUser, Requester},
+    handlers::auth::{build_session_cookie, validate_password_strength},
 };
 
 #[derive(Debug, Deserialize)]
@@ -145,6 +149,82 @@ pub async fn update_wip_limit(
     let flash =
         super::percent_encode_query(&Locale::English.render(MessageKey::WipLimitSavedFlash));
     Ok(Redirect::to(&format!("/settings?flash={flash}")))
+}
+
+/// `PWD-001` (`RFC 025` §4.1): `new_password` shares its strength rule
+/// with `handlers::auth::RegisterForm::password` via
+/// [`validate_password_strength`] rather than carrying a second
+/// `#[validate(length(...))]` copy.
+///
+/// `confirm_password` carries no derive attribute: `validator`'s own
+/// `must_match` splices its `message` as a literal at compile time
+/// (`quote!(err.message = Some(Cow::from(#m)))`), which cannot call
+/// into `peisear_i18n::t` — every other message in this product goes
+/// through a `MessageKey`, so the comparison is a plain `!=` in
+/// [`change_password`] below instead of a derive rule that would have
+/// to bypass the one text source this crate otherwise never bypasses.
+///
+/// `current_password` carries no `#[validate(...)]` attribute either:
+/// an empty or wrong value is rejected by [`password::verify`] below
+/// like any other wrong value, which is also why `§4` item 4's "a
+/// wrong current password changes nothing" holds for an empty
+/// submission too, with no special case.
+#[derive(Debug, Deserialize, Validate)]
+pub struct ChangePasswordForm {
+    pub current_password: String,
+    #[validate(custom(function = "validate_password_strength"))]
+    pub new_password: String,
+    pub confirm_password: String,
+}
+
+/// `PWD-001` (`RFC 025` §4.1, `§3` of the handoff): the first handler
+/// in this product to change a stored credential.
+///
+/// Order matters here, and is the order `§3` gives: validate the new
+/// password's shape first (cheap, no I/O): then load the row and
+/// verify the *current* password (the one check a convenience-minded
+/// form would be tempted to skip, and the one this RFC says a
+/// security property wins over without argument); only then write.
+/// `§3` step 5's own instruction — "take the generation from the
+/// value you just wrote, not from a re-read, and not from the stale
+/// row you loaded" — is `new_generation` below: computed from the row
+/// already in hand plus the one the storage layer's single `UPDATE`
+/// is guaranteed to have applied, never a second `SELECT`.
+pub async fn change_password(
+    Requester(rid): Requester,
+    State(state): State<AppState>,
+    jar: CookieJar,
+    Form(form): Form<ChangePasswordForm>,
+) -> AppResult<(CookieJar, Redirect)> {
+    form.validate()
+        .map_err(|e| AppError::Validation(super::format_validation(&e)))?;
+
+    if form.confirm_password != form.new_password {
+        return Err(AppError::Validation(t(
+            MessageKey::NewPasswordConfirmationMismatchMessage,
+        )));
+    }
+
+    let user = users::find_by_id(&state.db, rid.as_str())
+        .await?
+        .ok_or(AppError::Unauthorized)?;
+
+    if !password::verify(&form.current_password, &user.password_hash)? {
+        return Err(AppError::Validation(t(
+            MessageKey::CurrentPasswordIncorrectMessage,
+        )));
+    }
+
+    let new_hash = password::hash(&form.new_password)?;
+    users::change_password(&state.db, &user.id, &new_hash).await?;
+    let new_generation = user.session_generation + 1;
+
+    let token = jwt::issue(&user.id, &user.email, new_generation, &state.jwt_secret)?;
+    let jar = jar.add(build_session_cookie(token, state.cookie_secure));
+
+    let flash =
+        super::percent_encode_query(&Locale::English.render(MessageKey::PasswordChangedFlash));
+    Ok((jar, Redirect::to(&format!("/settings?flash={flash}"))))
 }
 
 /// Insert a new capacity row.

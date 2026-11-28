@@ -969,6 +969,19 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::EditRowAriaLabel => "Edit row".to_string(),
         MessageKey::RemoveThisRowAriaLabel => "Remove this row".to_string(),
 
+        // ---- PWD-001 (RFC 025): components/settings.rs ----
+        MessageKey::ChangePasswordSectionAriaLabel => "Change password".to_string(),
+        MessageKey::ChangePasswordHeading => "Change password".to_string(),
+        MessageKey::ChangePasswordEndsOtherSessionsHint => {
+            "Changing your password signs you out of every other device. This one stays \
+             signed in."
+                .to_string()
+        }
+        MessageKey::CurrentPasswordFieldLabel => "Current password".to_string(),
+        MessageKey::NewPasswordFieldLabel => "New password".to_string(),
+        MessageKey::ConfirmNewPasswordFieldLabel => "Confirm new password".to_string(),
+        MessageKey::ChangePasswordButton => "Change password".to_string(),
+
         // ---- I18N-005d: components/{notification_preferences,notifications} ----
         MessageKey::EmailNotificationsHeading => "Email notifications".to_string(),
         MessageKey::FirstTimeEmailPromptAriaLabel => "First-time email setup prompt".to_string(),
@@ -1118,6 +1131,7 @@ pub(crate) fn render(key: MessageKey) -> String {
         MessageKey::PasswordFieldLabel => "Password".to_string(),
         MessageKey::DisplayNameFieldLabel => "Display name".to_string(),
         MessageKey::PasswordMinLengthHint => "8+ characters".to_string(),
+        MessageKey::PasswordLengthMessage => "Password must be at least 8 characters.".to_string(),
         MessageKey::NoAccountPrompt => "No account? ".to_string(),
         MessageKey::CreateOneLinkWord => "Create one".to_string(),
         MessageKey::AlreadyHaveAccountPrompt => "Already have an account? ".to_string(),
@@ -1174,6 +1188,15 @@ pub(crate) fn render(key: MessageKey) -> String {
         }
         MessageKey::PeriodEndMustBeDateFormatMessage => {
             "Period end must be in YYYY-MM-DD format.".to_string()
+        }
+
+        // ---- PWD-001 (RFC 025): handlers/settings.rs ----
+        MessageKey::CurrentPasswordIncorrectMessage => "Current password is incorrect.".to_string(),
+        MessageKey::NewPasswordConfirmationMismatchMessage => {
+            "New password and confirmation do not match.".to_string()
+        }
+        MessageKey::PasswordChangedFlash => {
+            "Password changed. Every other device has been signed out.".to_string()
         }
 
         // ---- I18N-006: peisear-core/src/lib.rs ----

@@ -99,6 +99,32 @@ pub async fn advance_session_generation(pool: &Pool, user_id: &str) -> StorageRe
     Ok(())
 }
 
+/// `PWD-001` (`RFC 025` §4.1 step 3): the first `UPDATE` `password_hash`
+/// has ever received — until this round it had exactly one production
+/// write site, the `INSERT` in [`insert`] below (`RFC 025` §2).
+/// `session_generation` moves in the same statement, which is already
+/// the one transaction step 3 asks for: a single `UPDATE` touching both
+/// columns commits both or neither, so a write that changed the hash
+/// but failed to advance the generation — leaving every stolen session
+/// alive against a password that no longer opens them — cannot happen.
+pub async fn change_password(pool: &Pool, user_id: &str, new_hash: &str) -> StorageResult<()> {
+    let res = sqlx::query(&crate::dialect::sql(
+        r#"
+        UPDATE users
+        SET password_hash = ?2, session_generation = session_generation + 1
+        WHERE id = ?1
+        "#,
+    ))
+    .bind(user_id)
+    .bind(new_hash)
+    .execute(pool)
+    .await?;
+    if res.rows_affected() == 0 {
+        return Err(StorageError::NotFound);
+    }
+    Ok(())
+}
+
 pub async fn insert(
     pool: &Pool,
     id: &str,

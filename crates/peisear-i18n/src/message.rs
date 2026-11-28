@@ -1725,6 +1725,22 @@ pub enum MessageKey {
     EditRowAriaLabel,
     RemoveThisRowAriaLabel,
 
+    // ---- PWD-001 (RFC 025): components/settings.rs, the password-
+    // ---- change section. `§2` names one copy site; `§5`/the series
+    // ---- README delegate the exact wording to the implementer, for
+    // ---- the architect to review. ----
+    ChangePasswordSectionAriaLabel,
+    ChangePasswordHeading,
+    /// `RFC 025` `§5`'s one copy site: stated beside the control and
+    /// before it is used, not discovered on another device —
+    /// `RFC 024 §5`'s own rule, which `0.71.0` already established for
+    /// the sign-out control one card above this one.
+    ChangePasswordEndsOtherSessionsHint,
+    CurrentPasswordFieldLabel,
+    NewPasswordFieldLabel,
+    ConfirmNewPasswordFieldLabel,
+    ChangePasswordButton,
+
     // ---- I18N-005d: components/{notification_preferences,notifications} ----
     EmailNotificationsHeading,
     FirstTimeEmailPromptAriaLabel,
@@ -1914,6 +1930,19 @@ pub enum MessageKey {
     PasswordFieldLabel,
     DisplayNameFieldLabel,
     PasswordMinLengthHint,
+    /// `PWD-001` (`RFC 025` §2): the one password-length rule in this
+    /// product. Until this round it was a raw string literal on
+    /// `RegisterForm::password`'s own `#[validate(length(...))]`
+    /// attribute, invisible to `peisear_i18n` entirely. Both
+    /// `RegisterForm::password` and
+    /// `handlers::settings::ChangePasswordForm::new_password` now
+    /// validate through the one shared function
+    /// (`handlers::auth::validate_password_strength`) that returns
+    /// this key's text, so the rule has exactly one place to drift
+    /// from — the RFC's own "if the two could drift, say so" is
+    /// answered by making drift structurally impossible rather than
+    /// flagged.
+    PasswordLengthMessage,
     NoAccountPrompt,
     CreateOneLinkWord,
     AlreadyHaveAccountPrompt,
@@ -1980,6 +2009,19 @@ pub enum MessageKey {
     WipLimitMustBePositiveIntegerMessage,
     PeriodStartMustBeDateFormatMessage,
     PeriodEndMustBeDateFormatMessage,
+
+    // ---- PWD-001 (RFC 025): handlers/settings.rs, password change ----
+    /// `RFC 025` `§4.1` step 2/`PWD-001` `§3` step 3: the neutral
+    /// framing `FR-AUTH-002` established for login, carried to this
+    /// context's own single credential field rather than reused
+    /// verbatim — `FR-AUTH-002`'s own text names "email or password",
+    /// which this form has no email field to make sense of.
+    CurrentPasswordIncorrectMessage,
+    NewPasswordConfirmationMismatchMessage,
+    /// `RFC 025` `§4.1` step 4: the one thing a user needs to be told
+    /// — not only that the write succeeded, but what it just did
+    /// everywhere else they were signed in.
+    PasswordChangedFlash,
 
     // ---- I18N-006: peisear-core/src/lib.rs ----
     /// The six indicator explanation sentences. Replaces
@@ -3188,6 +3230,13 @@ impl MessageKey {
             MessageKey::CloseButton,
             MessageKey::EditRowAriaLabel,
             MessageKey::RemoveThisRowAriaLabel,
+            MessageKey::ChangePasswordSectionAriaLabel,
+            MessageKey::ChangePasswordHeading,
+            MessageKey::ChangePasswordEndsOtherSessionsHint,
+            MessageKey::CurrentPasswordFieldLabel,
+            MessageKey::NewPasswordFieldLabel,
+            MessageKey::ConfirmNewPasswordFieldLabel,
+            MessageKey::ChangePasswordButton,
             MessageKey::EmailNotificationsHeading,
             MessageKey::FirstTimeEmailPromptAriaLabel,
             MessageKey::EmailOptInPromptBody,
@@ -3278,6 +3327,7 @@ impl MessageKey {
             MessageKey::PasswordFieldLabel,
             MessageKey::DisplayNameFieldLabel,
             MessageKey::PasswordMinLengthHint,
+            MessageKey::PasswordLengthMessage,
             MessageKey::NoAccountPrompt,
             MessageKey::CreateOneLinkWord,
             MessageKey::AlreadyHaveAccountPrompt,
@@ -3299,6 +3349,9 @@ impl MessageKey {
             MessageKey::WipLimitMustBePositiveIntegerMessage,
             MessageKey::PeriodStartMustBeDateFormatMessage,
             MessageKey::PeriodEndMustBeDateFormatMessage,
+            MessageKey::CurrentPasswordIncorrectMessage,
+            MessageKey::NewPasswordConfirmationMismatchMessage,
+            MessageKey::PasswordChangedFlash,
             // -- I18N-006: peisear-core/src/lib.rs --
             MessageKey::WipAriaLabel {
                 current_wip: 5,

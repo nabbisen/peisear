@@ -745,8 +745,26 @@ as *a partial remedy and not the missing one*.
 *Source*: `RFC 025`, accepted 2026-11-27 by the owner. Not derived from
 `SPEC`, `BRIEF` or `KICK` — **none of them specifies password management at
 all**, which is why this is a new entry rather than a widened acceptance.
-*Status*: **Specified** — design accepted, not yet built.
-*Acceptance*: none yet; the handoff names it. *Priority*: P1.
+*Status*: **Implemented** — `PWD-001`, series `070`, 0.72.0.
+*Acceptance*: five tests in `smoke.rs`, covering the handoff's own six
+acceptance points (the last one folds two: plaintext absence and the
+Argon2 check share one request, so one test states both rather than
+registering a second user to split them), each planted and watched fail
+against the pre-`PWD-001` tree before this round's own fix landed (confirmed
+in a worktree copy, not assumed): `changing_the_password_works_and_the_
+acting_session_survives` (the acting session's own cookie keeps working,
+the rule this entry's own amendment exists for); `changing_the_password_
+refuses_the_other_devices_session` (a second, never-replayed session dies
+on both the HTML and `/api/*` rejection shapes, `§9`'s own pair from
+`0.71.0`); `the_old_password_no_longer_signs_in_and_the_new_one_does`;
+`a_wrong_current_password_is_refused_and_changes_nothing` (byte-identical
+hash, unmoved `session_generation` — a rejection that bumped the generation
+would log the user out for a typo); `a_distinctive_new_password_never_
+reaches_storage_or_logs_and_is_argon2` (plaintext absent from a log capture
+asserted non-empty, the new hash Argon2 and different from the old one —
+`§10.36` instance 13 below is this same test's own predecessor, found while
+building this one).
+*Priority*: P1.
 *Note on the invalidation rule, which was amended before acceptance.*
 `RFC 025` first required **every** session to end, *including the one that
 made the change*, returning the user to sign-in. That inverts this entry's own
@@ -7643,7 +7661,7 @@ and state what was checked.**
 the assertion is right and **its input is empty for a reason it never asks
 about**, so it reports success having looked at nothing.
 
-**Twelve** instances, all measured. The first five were all from the two
+**Thirteen** instances, all measured. The first five were all from the two
 releases before 0.50.0; instances 6 through 10 are later, and **the count in
 this sentence is corrected each time a row is added** rather than left
 reading *five* over a longer table, which would be this entry's own
@@ -7663,6 +7681,7 @@ class applied to this entry.
 | 10 | **`FR-AUTH-003`'s own acceptance — the fourth instance of this class in two days, and the first with a P0 product defect behind it rather than a tooling or documentation gap.** `logout_clears_session_and_redirects` (`smoke.rs`) drove a cookie-jar client: logged out, then asked for `/projects` **with no cookie**, and asserted a redirect. **It verified that the client forgot the credential. It never asked whether the credential still worked.** The credential kept working for the rest of its 7-day lifetime, on every route, including `/api/*` — `RFC 024` §2's own measurement, against a debug build of the `0.70.0` release commit | Fixed by `SES-001` (`069`, `0.71.0`): replaced with `a_credential_captured_before_logout_is_refused_after_it_html_and_api`, which replays the captured, still-held credential rather than observing an empty jar, over both an HTML route (303) and an `/api/*` route (401) |
 | 11 | **Two rows of `external-design.md` describing the flash carrier, both naming a role no renderer has ever carried — found at the `0.71.0` cut, 2026-11-27, by the `DEC-028` sweep this release owed that document.** `§5.3`'s `Role` column read `role="status"` for `?flash=`, and `§3.1`'s region-obligation row read *`role="status"` or `role="alert"`, `alert` reserved for immediate errors*. **Neither is what ships, and neither has been for as long as both renderers have existed**: the authenticated shell's flash (`FlashBar`) is `role="alert"` with `alert alert-info` — on an ordinary success flash, which that reservation forbids — and the public shell's (`FlashInline`, the one `0.71.0` now routes a security notice through) carries **no role at all**. **Counted rather than asserted**: the product has **eight** `role="status"` sites — five JavaScript announcement regions for in-place changes (`#status-announcements`, `NFR-A11Y-008`) and three static regions stating a current value or a standing notice — and **not one of them is a `?flash=` carrier**. A different mechanism, a different carrier, read by a different check. **This instance is the narrow half of the class in its purest form: the reach of what reads these rows is a person, and the rows are normative.** It is instance 9's shape, one release later, in the document instance 7 was about | **Corrected at the cut, not guarded** — both rows now state what ships, with the reason the correction went that way rather than the other (a flash arrives *with* its document; a live region announces an insertion into a page already on screen, so neither renderer is wrong about announcement — the rows were wrong about the renderers). **The check is absent and is recorded as absent**: a scan reading the rendered role out of the two flash components is a round with a plant, not an edit at a cut, and it is in `ROADMAP.md`'s *Unscheduled work* beside the three rules `0.70.0`'s instance 9 left there. **Open** |
 | 12 | **My own criterion-2 evidence row in `REL-0.71.0`, and the proof that its reach was narrower than its name is that an independent reader widened it in writing.** The row read *CI on `c42171d` — 50 jobs, 0 not-success, read per job*. **Literally true**: `test.yml`'s workflow is named `CI` and it was green on every commit cited. **But two push-triggered workflows run on `main`** — `CI` and `Docs` — and the row named one, said nothing about the other, and so invited exactly one reading. **An independent re-verification at this same tree then made that reading and recorded it as a property of the tree**, from a single `gh run list --limit 1`-shaped read of the one workflow the row named. **The tree did not have that property**: `Docs` concluded `cancelled` on `1770697` and `c42171d` and was `pending` on `efdcd40`. **That second party's inference is the measurement**: a row whose name is wider than its reach does not fail, it gets believed | **Nothing was actually broken, and finding that out is what makes this an instance rather than a defect.** Read per job across both workflows: `mdbook build (with link check)` is **success** on all three commits, and **every** non-success conclusion comes from `Deploy to GitHub Pages` alone — the Pages deployment wedged since 2026-11-18 that `ROADMAP.md`'s *Unscheduled work* already records, and which `docs.yml` moved the `pages` lock off workflow level on 2026-11-21 specifically so it could not stop the link check. The design worked; the row describing it did not. **Fixed in the candidate at the cut**: criterion 2's evidence now names both push-triggered workflows, states the deploy job as the sole source of every non-success, and says `0.70.0`'s own release commit was tagged in the same state. **And the same class turned up a second time in the same document, which is recorded here rather than given its own number.** That candidate's walk said *no PostgreSQL instance was started here* — narrow enough to be true, wide enough to be read as a gap in the release, and read that way in writing by the same independent re-verification. **It is not a gap**: `test.yml` runs `peisear-web and peisear-storage (postgres feature, real server)` against a real server, `success` on all four commits the candidate cites, read per job. The first occurrence overstated what was green; the second understated it. **Same defect, opposite direction**, which is the useful thing about having both: the fault is not optimism, it is a caveat whose reach is not stated. **Closed** |
+| 13 | **`a_distinctive_password_never_reaches_storage_or_logs` (`SES-001`, `0.71.0`) asserts a captured log buffer never contains a marker password, and never asserts the buffer held anything at all.** Named in the `PWD-001` handoff itself, not found independently: a dropped subscriber guard, a misconfigured filter, or a request that never reached the handler would all leave `logged` empty, and `!logged.contains(marker_password)` passes on an empty string exactly as readily as on a real capture. The architect's own probe (`RFC 024` §2) measured **854** bytes there, so the floor is real; nothing in the test checked it | Fixed at `PWD-001`: both the original test and its own new sibling (`a_distinctive_new_password_never_reaches_storage_or_logs_and_is_argon2`, which starts with the floor already in place rather than needing a second round to add it) now assert `logged.len() > 100` before the absence check — a conservative floor, not pinned to 854, so an unrelated change to `tower_http`'s own span fields doesn't fail a test about plaintext passwords |
 
 **Instance 5 is the one worth stating plainly.** The class was already written
 down and under review when a careful round reintroduced it anyway, while
@@ -10722,7 +10741,7 @@ it is in progress, not deferred.
 
 | Area | Total | Implemented | Partial | Specified | Deferred | Divergent |
 |---|---|---|---|---|---|---|
-| Authentication | 7 | 5 | — | 1 | 1 | — |
+| Authentication | 7 | 6 | — | — | 1 | — |
 | Navigation | 6 | 6 | — | — | — | — |
 | Projects | 4 | 4 | — | — | — | — |
 | Issues | 7 | 7 | — | — | — | — |
@@ -10738,7 +10757,7 @@ it is in progress, not deferred.
 | Settings | 3 | 3 | — | — | — | — |
 | API | 6 | 5 | — | 1 | — | — |
 | Direct manipulation | 7 | 7 | — | — | — | — |
-| **Functional total** | **102** | **98** | **1** | **2** | **1** | **0** |
+| **Functional total** | **102** | **99** | **1** | **1** | **1** | **0** |
 | Privacy | 8 | 8 | — | — | — | — |
 | Concurrency | 7 | 7 | — | — | — | — |
 | Accessibility | 12 | 9 | — | — | 1 | 2 (residual, unguarded) |

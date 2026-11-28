@@ -42,6 +42,8 @@ pub fn build_router(state: AppState) -> Router {
             post(settings::close_capacity),
         )
         .route("/settings/wip-limit", post(settings::update_wip_limit))
+        // `PWD-001` (`RFC 025`, `FR-AUTH-006`)
+        .route("/settings/password", post(settings::change_password))
         // Notification preferences
         .route(
             "/settings/notifications",

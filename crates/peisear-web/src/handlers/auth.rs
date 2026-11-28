@@ -35,6 +35,28 @@ pub async fn register_page(Query(q): Query<AuthQuery>) -> impl IntoResponse {
     components::auth::render_register(q.flash, String::new(), String::new())
 }
 
+/// `PWD-001` (`RFC 025` §2): the one password-strength rule in this
+/// product. `RegisterForm::password` below and
+/// `handlers::settings::ChangePasswordForm::new_password` both
+/// validate through this function rather than each carrying their own
+/// `#[validate(length(...))]` copy — "find that rule rather than
+/// restating it", and a second copy is the drift the RFC asked to
+/// avoid rather than merely flag. `validator`'s own `length` validator
+/// counts `.chars()`, which this matches, so moving to a `custom`
+/// validator changes nothing about what passed before.
+pub(crate) fn validate_password_strength(password: &str) -> Result<(), validator::ValidationError> {
+    let len = password.chars().count();
+    if (8..=128).contains(&len) {
+        Ok(())
+    } else {
+        Err(
+            validator::ValidationError::new("length").with_message(std::borrow::Cow::Owned(t(
+                MessageKey::PasswordLengthMessage,
+            ))),
+        )
+    }
+}
+
 #[derive(Debug, Deserialize, Validate)]
 pub struct RegisterForm {
     #[validate(email(message = "Please enter a valid email address."))]
@@ -45,11 +67,7 @@ pub struct RegisterForm {
         message = "Display name must be between 1 and 80 characters."
     ))]
     pub display_name: String,
-    #[validate(length(
-        min = 8,
-        max = 128,
-        message = "Password must be at least 8 characters."
-    ))]
+    #[validate(custom(function = "validate_password_strength"))]
     pub password: String,
 }
 
@@ -152,7 +170,11 @@ pub async fn logout(
     Ok((jar, Redirect::to("/login")))
 }
 
-fn build_session_cookie(token: String, secure: bool) -> Cookie<'static> {
+/// `PWD-001`: shared with `handlers::settings::change_password`, which
+/// re-issues the acting session on the same response `login_submit`
+/// above already does — one cookie-building function, not a second
+/// copy in `settings.rs`.
+pub(crate) fn build_session_cookie(token: String, secure: bool) -> Cookie<'static> {
     let mut cookie = Cookie::new(AUTH_COOKIE, token);
     cookie.set_http_only(true);
     cookie.set_same_site(SameSite::Lax);

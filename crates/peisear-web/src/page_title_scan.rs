@@ -99,7 +99,13 @@ mod tests {
             // `SES-001` (`069`): 748 -> 750, two new keys
             // (`SignOutEndsAllSessionsHint`, `SessionRevokedFlash`),
             // each added once to `MessageKey::all()`.
-            750,
+            // `PWD-001` (`070`), measured by this same runner rather
+            // than counted by hand: 750 -> 761, eleven new keys (the
+            // password-change section's copy, its two form errors
+            // and its success flash, and the one shared
+            // `PasswordLengthMessage` that replaced a raw string
+            // literal on `RegisterForm::password`).
+            761,
             "MessageKey::all()'s own population moved -- re-measure before trusting this guard \
              examined anything"
         );

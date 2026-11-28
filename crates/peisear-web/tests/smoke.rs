@@ -550,6 +550,19 @@ async fn a_distinctive_password_never_reaches_storage_or_logs() {
     drop(_log_guard);
 
     let logged = String::from_utf8_lossy(&buf.0.lock().expect("log buffer lock")).into_owned();
+    // `PWD-001` §4 item 5: a population floor. Without this, an
+    // empty capture (a misconfigured subscriber, a dropped guard, a
+    // request that never reached the handler) would pass this test
+    // having examined nothing (`§10.36`). The architect's own probe
+    // measured 854 bytes here; the floor below is conservative
+    // rather than pinned to that figure, which would make this test
+    // fail on an unrelated change to `tower_http`'s own span fields.
+    assert!(
+        logged.len() > 100,
+        "the log capture is empty or near-empty ({} bytes) -- this assertion would pass having \
+         examined nothing",
+        logged.len()
+    );
     assert!(
         !logged.contains(marker_password),
         "the marker password leaked into tracing output captured at debug:\n{logged}"
@@ -568,5 +581,300 @@ async fn a_distinctive_password_never_reaches_storage_or_logs() {
         stored.password_hash.starts_with("$argon2"),
         "password_hash does not look like an Argon2 hash: {:?}",
         stored.password_hash
+    );
+}
+
+/// `PWD-001` §4 item 1 (`RFC 025` §4.1 step 4, the amended rule):
+/// changing the password must not sign the acting session out. This
+/// is the test that would have caught the RFC's own withdrawn first
+/// draft, which returned the user to `/login` instead.
+///
+/// **Plant**: on a tree with no `/settings/password` route at all
+/// (pre-`PWD-001`), the `POST` below 404s and this test fails before
+/// reaching its own assertion — confirmed red in a worktree copy of
+/// the pre-round tree, not assumed.
+#[tokio::test]
+async fn changing_the_password_works_and_the_acting_session_survives() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("grace");
+    register_and_login(&app, &user).await;
+
+    let resp = app
+        .server
+        .post("/settings/password")
+        .form(&[
+            ("current_password", user.password.as_str()),
+            ("new_password", "NewPassword-5678"),
+            ("confirm_password", "NewPassword-5678"),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    // The same `TestServer` jar, now carrying whatever `Set-Cookie`
+    // the response above sent -- `login_submit`'s own re-issue shape,
+    // not a bare "nothing changed" absence of a new cookie.
+    let resp = app.server.get("/projects").await;
+    resp.assert_status_ok();
+}
+
+/// `PWD-001` §4 item 2 (`RFC 025` §3, the normative rule's other
+/// half): every *other* session must die. Two independent sessions
+/// for one account, mirroring
+/// `logging_out_on_one_device_refuses_the_other_devices_session`'s own
+/// shape -- a password change through one must refuse the other's
+/// still-held, never-replayed-until-now credential, on both rejection
+/// shapes `verified_requester_id` produces.
+///
+/// **Plant**: as above -- 404s pre-`PWD-001`.
+#[tokio::test]
+async fn changing_the_password_refuses_the_other_devices_session() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("heidi");
+    register_and_login(&app, &user).await;
+
+    let device_b_login = app
+        .server
+        .post("/login")
+        .form(&[
+            ("email", user.email.as_str()),
+            ("password", user.password.as_str()),
+        ])
+        .await;
+    device_b_login.assert_status(StatusCode::SEE_OTHER);
+    let device_b_cookie = device_b_login
+        .cookies()
+        .iter()
+        .next()
+        .expect("a session cookie")
+        .clone()
+        .into_owned();
+
+    // Confirm device B's own session works before any change.
+    let resp = app
+        .server
+        .get("/projects")
+        .clear_cookies()
+        .add_cookie(device_b_cookie.clone())
+        .await;
+    resp.assert_status_ok();
+
+    // Change the password through "device A" (the server's own jar).
+    let resp = app
+        .server
+        .post("/settings/password")
+        .form(&[
+            ("current_password", user.password.as_str()),
+            ("new_password", "NewPassword-5678"),
+            ("confirm_password", "NewPassword-5678"),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    // Device B's credential, captured before the change and never
+    // itself used to make it, is refused on both rejection shapes.
+    let resp = app
+        .server
+        .get("/projects")
+        .clear_cookies()
+        .add_cookie(device_b_cookie.clone())
+        .await;
+    assert_eq!(resp.status_code(), StatusCode::SEE_OTHER);
+
+    let resp = app
+        .server
+        .get("/api/search?q=foo")
+        .clear_cookies()
+        .add_cookie(device_b_cookie)
+        .await;
+    assert_eq!(resp.status_code(), StatusCode::UNAUTHORIZED);
+}
+
+/// `PWD-001` §4 item 3: the old password no longer signs in; the new
+/// one does.
+///
+/// **Plant**: as above -- 404s pre-`PWD-001`.
+#[tokio::test]
+async fn the_old_password_no_longer_signs_in_and_the_new_one_does() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("ivan");
+    register_and_login(&app, &user).await;
+
+    let resp = app
+        .server
+        .post("/settings/password")
+        .form(&[
+            ("current_password", user.password.as_str()),
+            ("new_password", "NewPassword-5678"),
+            ("confirm_password", "NewPassword-5678"),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+
+    let resp = app
+        .server
+        .post("/login")
+        .form(&[
+            ("email", user.email.as_str()),
+            ("password", user.password.as_str()),
+        ])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::BAD_REQUEST,
+        "the old password must no longer sign in"
+    );
+
+    let resp = app
+        .server
+        .post("/login")
+        .form(&[
+            ("email", user.email.as_str()),
+            ("password", "NewPassword-5678"),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+}
+
+/// `PWD-001` §4 item 4: a wrong current password is refused and
+/// changes nothing -- the stored hash and `session_generation` must
+/// both be untouched. A rejection that still bumped the generation
+/// would log the user out for a typo.
+///
+/// **Plant**: as above -- 404s pre-`PWD-001`; against a tree that had
+/// the route but skipped the current-password check, this test
+/// catches it directly rather than relying on the route's absence.
+#[tokio::test]
+async fn a_wrong_current_password_is_refused_and_changes_nothing() {
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("judy");
+    let user_id = register_and_login(&app, &user).await;
+
+    let before = peisear_storage::users::find_by_id(&app.db, &user_id)
+        .await
+        .expect("query the user row")
+        .expect("the row exists");
+
+    let resp = app
+        .server
+        .post("/settings/password")
+        .form(&[
+            ("current_password", "definitely-the-wrong-password"),
+            ("new_password", "NewPassword-5678"),
+            ("confirm_password", "NewPassword-5678"),
+        ])
+        .await;
+    assert_eq!(
+        resp.status_code(),
+        StatusCode::BAD_REQUEST,
+        "a wrong current password must be refused"
+    );
+
+    let after = peisear_storage::users::find_by_id(&app.db, &user_id)
+        .await
+        .expect("query the user row")
+        .expect("the row exists");
+    assert_eq!(
+        before.password_hash, after.password_hash,
+        "a rejected change must not touch the stored hash"
+    );
+    assert_eq!(
+        before.session_generation, after.session_generation,
+        "a rejected change must not advance the session generation -- that would sign the \
+         user out for a typo"
+    );
+}
+
+/// `PWD-001` §4 items 5/6: the new password is never persisted or
+/// logged in plaintext, and the stored hash is Argon2 and differs
+/// from the old one. Same shape as
+/// `a_distinctive_password_never_reaches_storage_or_logs`, with the
+/// population floor that test was missing from the start -- see that
+/// test's own fix above.
+///
+/// **Plant**: as above -- 404s pre-`PWD-001`.
+#[tokio::test]
+async fn a_distinctive_new_password_never_reaches_storage_or_logs_and_is_argon2() {
+    #[derive(Clone, Default)]
+    struct SharedBuf(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+    impl std::io::Write for SharedBuf {
+        fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+            self.0
+                .lock()
+                .expect("log buffer lock")
+                .extend_from_slice(buf);
+            Ok(buf.len())
+        }
+        fn flush(&mut self) -> std::io::Result<()> {
+            Ok(())
+        }
+    }
+
+    impl<'a> tracing_subscriber::fmt::MakeWriter<'a> for SharedBuf {
+        type Writer = SharedBuf;
+        fn make_writer(&'a self) -> Self::Writer {
+            self.clone()
+        }
+    }
+
+    let app = TestApp::spawn().await;
+    let user = TestUser::new("kyle");
+    let user_id = register_and_login(&app, &user).await;
+
+    let before = peisear_storage::users::find_by_id(&app.db, &user_id)
+        .await
+        .expect("query the user row")
+        .expect("the row exists");
+
+    let marker_password = "Mrk3r-change-7e21c9fa-PlaintextCanary!";
+
+    let buf = SharedBuf::default();
+    let subscriber = tracing_subscriber::fmt()
+        .with_writer(buf.clone())
+        .with_env_filter("debug")
+        .finish();
+    let _log_guard = tracing::subscriber::set_default(subscriber);
+    let resp = app
+        .server
+        .post("/settings/password")
+        .form(&[
+            ("current_password", user.password.as_str()),
+            ("new_password", marker_password),
+            ("confirm_password", marker_password),
+        ])
+        .await;
+    resp.assert_status(StatusCode::SEE_OTHER);
+    drop(_log_guard);
+
+    let logged = String::from_utf8_lossy(&buf.0.lock().expect("log buffer lock")).into_owned();
+    assert!(
+        logged.len() > 100,
+        "the log capture is empty or near-empty ({} bytes) -- this assertion would pass having \
+         examined nothing",
+        logged.len()
+    );
+    assert!(
+        !logged.contains(marker_password),
+        "the marker password leaked into tracing output captured at debug:\n{logged}"
+    );
+
+    let after = peisear_storage::users::find_by_id(&app.db, &user_id)
+        .await
+        .expect("query the user row")
+        .expect("the row exists");
+    assert!(
+        !after.password_hash.contains(marker_password),
+        "the marker password leaked into password_hash: {:?}",
+        after.password_hash
+    );
+    assert!(
+        after.password_hash.starts_with("$argon2"),
+        "password_hash does not look like an Argon2 hash: {:?}",
+        after.password_hash
+    );
+    assert_ne!(
+        before.password_hash, after.password_hash,
+        "the hash must actually change -- a no-op write would pass every assertion above \
+         having changed nothing"
     );
 }

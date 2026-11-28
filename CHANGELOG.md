@@ -9,6 +9,25 @@ and found is in
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- **You can now change your password from Settings, without being
+  signed out.** Enter your current password and a new one; every
+  *other* device signed in as your account is signed out
+  immediately, and the one you used to make the change stays
+  signed in. `0.71.0` let you end every session if you thought your
+  password had been seen; this is the other half — whoever knew
+  that password no longer can.
+
+### What this release does not fix
+
+- **There is still no way to reset a forgotten password.** Changing
+  one requires signing in and knowing the current password; someone
+  locked out entirely still has no path back in. That is a separate,
+  larger piece of work, recorded as a requirement but not yet built.
+
 ## [0.71.0] — 2026-11-27
 
 **The session that can be ended.** Until this release, pressing "Log out"
